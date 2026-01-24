@@ -7,6 +7,7 @@ import haxe.macro.Expr.Unop;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.Type.TConstant;
+import haxe.macro.TypedExprTools;
 
 import reflaxe.ocaml.CompilationContext;
 import reflaxe.ocaml.ast.OcamlAssignOp;
@@ -30,8 +31,15 @@ class OcamlBuilder {
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
 
+	// Set while compiling a function body to decide whether TVar locals become `ref` or immutable `let`.
+	var currentMutatedLocalIds:Null<Map<Int, Bool>> = null;
+
 	public function new(ctx:CompilationContext) {
 		this.ctx = ctx;
+	}
+
+	inline function isRefLocalId(id:Int):Bool {
+		return refLocals.exists(id) && refLocals.get(id) == true;
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
@@ -49,10 +57,7 @@ class OcamlBuilder {
 			case TUnop(op, postFix, inner):
 				buildUnop(op, postFix, inner);
 			case TFunction(tfunc):
-				final params = tfunc.args.length == 0
-					? [OcamlPat.PConst(OcamlConst.CUnit)]
-					: tfunc.args.map(a -> OcamlPat.PVar(a.v.name));
-				OcamlExpr.EFun(params, buildExpr(tfunc.expr));
+				buildFunction(tfunc);
 			case TIf(cond, eif, eelse):
 				OcamlExpr.EIf(buildExpr(cond), buildExpr(eif), eelse != null ? buildExpr(eelse) : OcamlExpr.EConst(OcamlConst.CUnit));
 			case TBlock(el):
@@ -105,7 +110,7 @@ class OcamlBuilder {
 
 	function buildLocal(v:TVar):OcamlExpr {
 		final name = renameVar(v.name);
-		final isRef = refLocals.exists(v.id) && refLocals.get(v.id) == true;
+		final isRef = isRefLocalId(v.id);
 		return isRef ? OcamlExpr.EUnop(OcamlUnop.Deref, OcamlExpr.EIdent(name)) : OcamlExpr.EIdent(name);
 	}
 
@@ -122,9 +127,16 @@ class OcamlBuilder {
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {
 		// Kept for compatibility when TVar occurs outside of a block (rare in typed output).
 		// Prefer `buildBlock` handling for correct scoping.
-		refLocals.set(v.id, true);
 		final initExpr = init != null ? buildExpr(init) : OcamlExpr.EConst(OcamlConst.CUnit);
-		return OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
+		final isMutable = currentMutatedLocalIds != null
+			&& currentMutatedLocalIds.exists(v.id)
+			&& currentMutatedLocalIds.get(v.id) == true;
+		if (isMutable) {
+			refLocals.set(v.id, true);
+			return OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
+		}
+		refLocals.remove(v.id);
+		return initExpr;
 	}
 
 	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr):OcamlExpr {
@@ -132,8 +144,26 @@ class OcamlBuilder {
 			case OpAssign:
 				// Handle local ref assignment: x = v  ->  x := v
 				switch (e1.expr) {
-					case TLocal(v) if (refLocals.exists(v.id)):
+					case TLocal(v) if (isRefLocalId(v.id)):
 						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), buildExpr(e2));
+					case _:
+						OcamlExpr.EConst(OcamlConst.CUnit);
+				}
+			case OpAssignOp(inner):
+				// Handle compound assignment for ref locals:
+				// x += v  ->  x := (!x) + v
+				switch (e1.expr) {
+					case TLocal(v) if (isRefLocalId(v.id)):
+						final lhs = buildLocal(v);
+						final rhs = switch (inner) {
+							case OpAdd: OcamlExpr.EBinop(OcamlBinop.Add, lhs, buildExpr(e2));
+							case OpSub: OcamlExpr.EBinop(OcamlBinop.Sub, lhs, buildExpr(e2));
+							case OpMult: OcamlExpr.EBinop(OcamlBinop.Mul, lhs, buildExpr(e2));
+							case OpDiv: OcamlExpr.EBinop(OcamlBinop.Div, lhs, buildExpr(e2));
+							case OpMod: OcamlExpr.EBinop(OcamlBinop.Mod, lhs, buildExpr(e2));
+							case _: OcamlExpr.EConst(OcamlConst.CUnit);
+						}
+						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
@@ -161,13 +191,33 @@ class OcamlBuilder {
 				OcamlExpr.EUnop(OcamlUnop.Not, buildExpr(e));
 			case OpNeg:
 				OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
+			case OpIncrement, OpDecrement:
+				// ++x / x++ / --x / x--: support for ref locals only (M3).
+				switch (e.expr) {
+					case TLocal(v) if (isRefLocalId(v.id)):
+						final delta = op == OpIncrement ? 1 : -1;
+						final next = OcamlExpr.EBinop(
+							OcamlBinop.Add,
+							buildLocal(v),
+							OcamlExpr.EConst(OcamlConst.CInt(delta))
+						);
+						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), next);
+					case _:
+						OcamlExpr.EConst(OcamlConst.CUnit);
+				}
 			case _:
 				OcamlExpr.EConst(OcamlConst.CUnit);
 		}
 	}
 
 	function buildBlock(exprs:Array<TypedExpr>):OcamlExpr {
-		return buildBlockFromIndex(exprs, 0);
+		// Mutability inference: decide which locals become `ref` by scanning for assignments.
+		final mutatedIds = collectMutatedLocalIdsFromExprs(exprs);
+		final prev = currentMutatedLocalIds;
+		currentMutatedLocalIds = mutatedIds;
+		final result = buildBlockFromIndex(exprs, 0);
+		currentMutatedLocalIds = prev;
+		return result;
 	}
 
 	function buildBlockFromIndex(exprs:Array<TypedExpr>, index:Int):OcamlExpr {
@@ -176,10 +226,17 @@ class OcamlBuilder {
 		final e = exprs[index];
 		return switch (e.expr) {
 			case TVar(v, init):
-				// Default for M2: locals are refs so we can compile assignments and while counters.
-				refLocals.set(v.id, true);
 				final initExpr = init != null ? buildExpr(init) : OcamlExpr.EConst(OcamlConst.CUnit);
-				final rhs = OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
+				final isMutable = currentMutatedLocalIds != null
+					&& currentMutatedLocalIds.exists(v.id)
+					&& currentMutatedLocalIds.get(v.id) == true;
+				final rhs = if (isMutable) {
+					refLocals.set(v.id, true);
+					OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
+				} else {
+					refLocals.remove(v.id);
+					initExpr;
+				}
 				OcamlExpr.ELet(renameVar(v.name), rhs, buildBlockFromIndex(exprs, index + 1), false);
 			case TReturn(ret):
 				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
@@ -197,6 +254,78 @@ class OcamlBuilder {
 					}
 				}
 		}
+	}
+
+	function buildFunction(tfunc:haxe.macro.Type.TFunc):OcamlExpr {
+		final mutatedIds = collectMutatedLocalIds(tfunc.expr);
+
+		// Determine parameters and wrap mutated parameters as refs inside the body.
+		final params = tfunc.args.length == 0
+			? [OcamlPat.PConst(OcamlConst.CUnit)]
+			: tfunc.args.map(a -> OcamlPat.PVar(renameVar(a.v.name)));
+
+		final prev = currentMutatedLocalIds;
+		currentMutatedLocalIds = mutatedIds;
+		for (a in tfunc.args) {
+			if (mutatedIds.exists(a.v.id) && mutatedIds.get(a.v.id) == true) {
+				refLocals.set(a.v.id, true);
+			}
+		}
+
+		var body = buildExpr(tfunc.expr);
+
+		// Shadow mutated params as refs (`let x = ref x in ...`).
+		for (a in tfunc.args) {
+			if (mutatedIds.exists(a.v.id) && mutatedIds.get(a.v.id) == true) {
+				final n = renameVar(a.v.name);
+				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
+			}
+		}
+
+		currentMutatedLocalIds = prev;
+		return OcamlExpr.EFun(params, body);
+	}
+
+	static function collectMutatedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
+		final mutated:Map<Int, Bool> = [];
+		for (e in exprs) {
+			collectMutatedLocalIdsInto(e, mutated);
+		}
+		return mutated;
+	}
+
+	static function collectMutatedLocalIds(e:TypedExpr):Map<Int, Bool> {
+		final mutated:Map<Int, Bool> = [];
+		collectMutatedLocalIdsInto(e, mutated);
+		return mutated;
+	}
+
+	static function collectMutatedLocalIdsInto(e:TypedExpr, mutated:Map<Int, Bool>):Void {
+		function visit(e:TypedExpr):TypedExpr {
+			switch (e.expr) {
+				case TBinop(OpAssign, lhs, _):
+					switch (lhs.expr) {
+						case TLocal(v):
+							mutated.set(v.id, true);
+						case _:
+					}
+				case TBinop(OpAssignOp(_), lhs, _):
+					switch (lhs.expr) {
+						case TLocal(v):
+							mutated.set(v.id, true);
+						case _:
+					}
+				case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
+					switch (inner.expr) {
+						case TLocal(v):
+							mutated.set(v.id, true);
+						case _:
+					}
+				case _:
+			}
+			return TypedExprTools.map(e, visit);
+		}
+		visit(e);
 	}
 
 	function buildSwitch(

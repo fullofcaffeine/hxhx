@@ -9,6 +9,7 @@
     "haxe": "haxe",
     "test:printer": "haxe test/ocaml_ast_printer_test.hxml",
     "test:m2": "haxe test/m2_integration_test.hxml",
-    "test": "npm run test:printer && npm run test:m2"
+    "test:m3": "haxe test/m3_integration_test.hxml",
+    "test": "npm run test:printer && npm run test:m2 && npm run test:m3"
   }
 }

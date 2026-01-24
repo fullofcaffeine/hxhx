@@ -5,6 +5,12 @@ class M2IntegrationTest {
 		}
 	}
 
+	static function assertNotContains(haystack:String, needle:String, label:String):Void {
+		if (haystack.indexOf(needle) >= 0) {
+			throw label + ": expected to NOT find '" + needle + "'";
+		}
+	}
+
 	static function hasCommand(cmd:String):Bool {
 		try {
 			final p = new sys.io.Process(cmd, ["--version"]);
@@ -58,6 +64,7 @@ class M2IntegrationTest {
 		assertContains(content, "while", "while loop");
 		assertContains(content, "match", "switch->match");
 		assertContains(content, "| 1 | 2 ->", "multi-case or-pattern");
+		assertNotContains(content, "let y = ref", "immutable y");
 
 		final exeName = exeNameFromOutDir(outDir);
 		final entryPath = outDir + "/" + exeName + ".ml";
