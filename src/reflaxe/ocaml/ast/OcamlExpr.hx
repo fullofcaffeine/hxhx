@@ -8,6 +8,7 @@ import reflaxe.ocaml.ast.OcamlRecordField;
 
 enum OcamlBinop {
 	Add;
+	Concat; // ^
 	Sub;
 	Mul;
 	Div;

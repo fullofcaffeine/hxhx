@@ -56,6 +56,7 @@ class OcamlASTPrinter {
 	static inline final PREC_CMP = 20;
 	static inline final PREC_CONS = 25;
 	static inline final PREC_ADD = 30;
+	static inline final PREC_CONCAT = 29;
 	static inline final PREC_MUL = 40;
 	static inline final PREC_ASSIGN = 5;
 	static inline final PREC_APP = 80;
@@ -78,6 +79,7 @@ class OcamlASTPrinter {
 					case And: PREC_AND;
 					case Eq, Neq, Lt, Lte, Gt, Gte: PREC_CMP;
 					case Cons: PREC_CONS;
+					case Concat: PREC_CONCAT;
 					case Add, Sub: PREC_ADD;
 					case Mul, Div, Mod: PREC_MUL;
 				}
@@ -177,6 +179,7 @@ class OcamlASTPrinter {
 	function printBinop(op:OcamlBinop, left:OcamlExpr, right:OcamlExpr, indentLevel:Int):String {
 		final opStr = switch (op) {
 			case Add: "+";
+			case Concat: "^";
 			case Sub: "-";
 			case Mul: "*";
 			case Div: "/";
@@ -193,7 +196,7 @@ class OcamlASTPrinter {
 		}
 
 		final p = exprPrec(OcamlExpr.EBinop(op, left, right));
-		final isRightAssoc = op == Cons;
+		final isRightAssoc = op == Cons || op == Concat;
 		final l = printExprCtx(left, isRightAssoc ? (p + 1) : p, indentLevel);
 		final r = printExprCtx(right, isRightAssoc ? p : (p + 1), indentLevel);
 		return l + " " + opStr + " " + r;

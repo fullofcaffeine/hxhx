@@ -69,6 +69,20 @@ class OcamlBuilder {
 		return cls.pack != null && cls.pack.length == 0 && cls.name == "Array";
 	}
 
+	static inline function isStdStringClass(cls:ClassType):Bool {
+		return cls.pack != null && cls.pack.length == 0 && cls.name == "String";
+	}
+
+	static function isStringType(t:Type):Bool {
+		return switch (t) {
+			case TInst(cRef, _):
+				final c = cRef.get();
+				isStdStringClass(c);
+			case _:
+				false;
+		}
+	}
+
 	static function unwrap(e:TypedExpr):TypedExpr {
 		var current = e;
 		while (true) {
@@ -134,6 +148,17 @@ class OcamlBuilder {
 				}
 			case TCall(fn, args):
 				switch (fn.expr) {
+					case TField(_, FStatic(clsRef, cfRef)):
+						final cls = clsRef.get();
+						final cf = cfRef.get();
+						if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [buildExpr(args[0])]);
+						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
+							buildStdString(args[0]);
+						} else {
+							final builtArgs = args.map(buildExpr);
+							OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+						}
 					case TField(objExpr, FInstance(clsRef, _, cfRef)):
 						final cf = cfRef.get();
 						switch (cf.kind) {
@@ -196,6 +221,120 @@ class OcamlBuilder {
 											#if macro
 											guardrailError(
 												"reflaxe.ocaml (M6): unsupported Array method '" + cf.name + "'. (bd: haxe.ocaml-28t.7.3)",
+												e.pos
+											);
+											#end
+											OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+								} else if (isStdStringClass(cls)) {
+									final self = buildExpr(objExpr);
+									switch (cf.name) {
+										case "toUpperCase":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toUpperCase"),
+												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case "toLowerCase":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toLowerCase"),
+												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case "charAt":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "charAt"),
+												[self, buildExpr(args[0])]
+											);
+										case "charCodeAt":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "charCodeAt"),
+												[self, buildExpr(args[0])]
+											);
+										case "indexOf":
+											final startExpr = if (args.length > 1) {
+												final unwrapped = unwrap(args[1]);
+												switch (unwrapped.expr) {
+													case TConst(TNull):
+														OcamlExpr.EConst(OcamlConst.CInt(0));
+													case _:
+														buildExpr(args[1]);
+												}
+											} else {
+												OcamlExpr.EConst(OcamlConst.CInt(0));
+											}
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "indexOf"),
+												[self, buildExpr(args[0]), startExpr]
+											);
+										case "lastIndexOf":
+											final defaultStart = OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"),
+												[self]
+											);
+											final startExpr = if (args.length > 1) {
+												final unwrapped = unwrap(args[1]);
+												switch (unwrapped.expr) {
+													case TConst(TNull):
+														defaultStart;
+													case _:
+														buildExpr(args[1]);
+												}
+											} else {
+												defaultStart;
+											}
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "lastIndexOf"),
+												[self, buildExpr(args[0]), startExpr]
+											);
+										case "split":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "split"),
+												[self, buildExpr(args[0])]
+											);
+										case "substr":
+											final lenExpr = if (args.length > 1) {
+												final unwrapped = unwrap(args[1]);
+												switch (unwrapped.expr) {
+													case TConst(TNull):
+														OcamlExpr.EConst(OcamlConst.CInt(-1));
+													case _:
+														buildExpr(args[1]);
+												}
+											} else {
+												OcamlExpr.EConst(OcamlConst.CInt(-1));
+											}
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "substr"),
+												[self, buildExpr(args[0]), lenExpr]
+											);
+										case "substring":
+											final defaultEnd = OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"),
+												[self]
+											);
+											final endExpr = if (args.length > 1) {
+												final unwrapped = unwrap(args[1]);
+												switch (unwrapped.expr) {
+													case TConst(TNull):
+														defaultEnd;
+													case _:
+														buildExpr(args[1]);
+												}
+											} else {
+												defaultEnd;
+											}
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "substring"),
+												[self, buildExpr(args[0]), endExpr]
+											);
+										case "toString":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toString"),
+												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case _:
+											#if macro
+											guardrailError(
+												"reflaxe.ocaml (M6): unsupported String method '" + cf.name + "'. (bd: haxe.ocaml-28t.7.4)",
 												e.pos
 											);
 											#end
@@ -314,6 +453,54 @@ class OcamlBuilder {
 		}
 	}
 
+	function buildStdString(inner:TypedExpr):OcamlExpr {
+		final e = unwrap(inner);
+		switch (e.expr) {
+			case TConst(TNull):
+				return OcamlExpr.EConst(OcamlConst.CString("null"));
+			case _:
+		}
+
+		return switch (e.t) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				switch (a.name) {
+					case "Int":
+						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_int"), [buildExpr(e)]);
+					case "Float":
+						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(e)]);
+					case "Bool":
+						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(e)]);
+					default:
+						OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
+				}
+			case TInst(cRef, _):
+				final c = cRef.get();
+				if (isStdStringClass(c)) {
+					buildExpr(e);
+				} else {
+					var hasToString = false;
+					try {
+						for (f in c.fields.get()) {
+							if (f.name == "toString") {
+								hasToString = true;
+								break;
+							}
+						}
+					} catch (_:Dynamic) {}
+
+					if (hasToString) {
+						final modName = moduleIdToOcamlModuleName(c.module);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(modName), "toString"), [buildExpr(e), OcamlExpr.EConst(OcamlConst.CUnit)]);
+					} else {
+						OcamlExpr.EConst(OcamlConst.CString("<object>"));
+					}
+				}
+			case _:
+				OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
+		}
+	}
+
 	function buildConst(c:TConstant):OcamlConst {
 		return switch (c) {
 			case TInt(v): OcamlConst.CInt(v);
@@ -384,7 +571,13 @@ class OcamlBuilder {
 					case TLocal(v) if (isRefLocalId(v.id)):
 						final lhs = buildLocal(v);
 						final rhs = switch (inner) {
-							case OpAdd: OcamlExpr.EBinop(OcamlBinop.Add, lhs, buildExpr(e2));
+							case OpAdd:
+								if (isStringType(v.t) || isStringType(e2.t)) {
+									final r = isStringType(e2.t) ? buildExpr(e2) : buildStdString(e2);
+									OcamlExpr.EBinop(OcamlBinop.Concat, lhs, r);
+								} else {
+									OcamlExpr.EBinop(OcamlBinop.Add, lhs, buildExpr(e2));
+								}
 							case OpSub: OcamlExpr.EBinop(OcamlBinop.Sub, lhs, buildExpr(e2));
 							case OpMult: OcamlExpr.EBinop(OcamlBinop.Mul, lhs, buildExpr(e2));
 							case OpDiv: OcamlExpr.EBinop(OcamlBinop.Div, lhs, buildExpr(e2));
@@ -395,7 +588,14 @@ class OcamlBuilder {
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
-			case OpAdd: OcamlExpr.EBinop(OcamlBinop.Add, buildExpr(e1), buildExpr(e2));
+			case OpAdd:
+				if (isStringType(e1.t) || isStringType(e2.t)) {
+					final lhs = isStringType(e1.t) ? buildExpr(e1) : buildStdString(e1);
+					final rhs = isStringType(e2.t) ? buildExpr(e2) : buildStdString(e2);
+					OcamlExpr.EBinop(OcamlBinop.Concat, lhs, rhs);
+				} else {
+					OcamlExpr.EBinop(OcamlBinop.Add, buildExpr(e1), buildExpr(e2));
+				}
 			case OpSub: OcamlExpr.EBinop(OcamlBinop.Sub, buildExpr(e1), buildExpr(e2));
 			case OpMult: OcamlExpr.EBinop(OcamlBinop.Mul, buildExpr(e1), buildExpr(e2));
 			case OpDiv: OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(e1), buildExpr(e2));
@@ -779,6 +979,10 @@ class OcamlBuilder {
 				}
 			case FStatic(clsRef, cfRef):
 				final cls = clsRef.get();
+				final cf = cfRef.get();
+				if (isStdStringClass(cls) && cf.name == "fromCharCode") {
+					return OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode");
+				}
 				#if macro
 				if (!ctx.currentIsHaxeStd && cls.pack != null && cls.pack.length == 0 && (cls.name == "Type" || cls.name == "Reflect")) {
 					guardrailError(
@@ -789,7 +993,7 @@ class OcamlBuilder {
 				}
 				#end
 				final modName = moduleIdToOcamlModuleName(cls.module);
-				OcamlExpr.EField(OcamlExpr.EIdent(modName), cfRef.get().name);
+				OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
 			case FInstance(clsRef, _, cfRef):
 				final cls = clsRef.get();
 				final cf = cfRef.get();
@@ -797,6 +1001,8 @@ class OcamlBuilder {
 					case FVar(_, _):
 						if (isStdArrayClass(cls) && cf.name == "length") {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
+						} else if (isStdStringClass(cls) && cf.name == "length") {
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
 						} else {
 							OcamlExpr.EField(buildExpr(obj), cf.name);
 						}
