@@ -1,0 +1,28 @@
+{
+  "name": "reflaxe.ocaml",
+  "url": "https://github.com/fullofcaffeine/reflaxe.ocaml",
+  "license": "GPL-3.0",
+  "tags": [
+    "cross",
+    "ocaml",
+    "native",
+    "reflaxe",
+    "macro"
+  ],
+  "description": "A Haxe compilation target for OCaml (via Reflaxe), enabling native OCaml output, OCaml interop, and a path toward Haxe-in-Haxe bootstrapping.",
+  "version": "0.1.0",
+  "classPath": "src",
+  "releasenote": "Initial scaffolding.",
+  "contributors": [
+    "fullofcaffeine"
+  ],
+  "dependencies": {
+    "reflaxe": "^4.0.0"
+  },
+  "main": "reflaxe.ocaml.OcamlCompiler",
+  "reflaxe": {
+    "name": "OCaml",
+    "abbv": "ocaml",
+    "stdPaths": ["std", "std/ocaml"]
+  }
+}

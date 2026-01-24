@@ -1,0 +1,21 @@
+# Reflaxe.OCaml Library Configuration
+#
+# Self-referential configuration for local development.
+# Allows projects/tests to use `-lib reflaxe.ocaml` while pointing at this repo.
+
+# Include the compiler source code (paths relative to project root via SCOPE_DIR)
+-cp ${SCOPE_DIR}/src/
+
+# Include stdlib definitions (portable + ocaml-native surface)
+-cp ${SCOPE_DIR}/std/
+# Target-specific overrides (std/_std) are injected conditionally by CompilerBootstrap
+# to avoid leaking OCaml-only helpers into non-OCaml compilation contexts.
+
+# Depend on Reflaxe
+-lib reflaxe
+
+# Library version define
+-D reflaxe.ocaml=0.1.0
+
+# Initialize/register the compiler
+--macro reflaxe.ocaml.CompilerInit.Start()

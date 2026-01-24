@@ -1,0 +1,7 @@
+# Reflaxe.OCaml build outputs (local dev)
+out_ocaml*/
+out_ocaml_*/
+
+# OS/editor
+.DS_Store
+
