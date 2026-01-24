@@ -45,6 +45,10 @@ class OcamlBuilder {
 		return refLocals.exists(id) && refLocals.get(id) == true;
 	}
 
+	static inline function isOcamlNativeEnumType(e:EnumType, name:String):Bool {
+		return e.pack != null && e.pack.length == 1 && e.pack[0] == "ocaml" && e.name == name;
+	}
+
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		return switch (e.expr) {
 			case TConst(c):
@@ -70,10 +74,21 @@ class OcamlBuilder {
 				// so that scope covers the remainder of the block.
 				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TCall(fn, args):
-				// Enum constructors with multiple args take a tuple in OCaml: `C (a, b)`.
 				switch (fn.expr) {
-					case TField(_, FEnum(_, _)) if (args.length > 1):
-						OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))]);
+					case TField(_, FEnum(eRef, ef)):
+						final en = eRef.get();
+
+						// ocaml.List.Cons(h, t) -> h :: t
+						if (isOcamlNativeEnumType(en, "List") && ef.name == "Cons" && args.length == 2) {
+							OcamlExpr.EBinop(OcamlBinop.Cons, buildExpr(args[0]), buildExpr(args[1]));
+						} else if (isOcamlNativeEnumType(en, "List") && ef.name == "Nil" && args.length == 0) {
+							OcamlExpr.EList([]);
+						} else if (args.length > 1) {
+							// Enum constructors with multiple args take a tuple in OCaml: `C (a, b)`.
+							OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))]);
+						} else {
+							OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+						}
 					case _:
 						OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
 				}
@@ -448,7 +463,13 @@ class OcamlBuilder {
 
 		final modName = moduleIdToOcamlModuleName(enumType.module);
 		final isSameModule = ctx.currentModuleId != null && enumType.module == ctx.currentModuleId;
-		final ctorName = isSameModule ? field.name : (modName + "." + field.name);
+		final ctorName = if (isOcamlNativeEnumType(enumType, "Option") || isOcamlNativeEnumType(enumType, "Result")) {
+			field.name;
+		} else if (isOcamlNativeEnumType(enumType, "List")) {
+			field.name == "Nil" ? "[]" : (field.name == "Cons" ? "::" : field.name);
+		} else {
+			isSameModule ? field.name : (modName + "." + field.name);
+		}
 
 		final argCount = switch (field.type) {
 			case TFun(args, _): args.length;
@@ -472,9 +493,15 @@ class OcamlBuilder {
 				OcamlPat.PConst(buildConst(c));
 			case TField(_, FEnum(eRef, ef)):
 				final e = eRef.get();
-				final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
-				final ctorName = isSameModule ? ef.name : (moduleIdToOcamlModuleName(e.module) + "." + ef.name);
-				OcamlPat.PConstructor(ctorName, []);
+				if (isOcamlNativeEnumType(e, "List") && ef.name == "Nil") {
+					OcamlPat.PConstructor("[]", []);
+				} else if (isOcamlNativeEnumType(e, "Option") || isOcamlNativeEnumType(e, "Result")) {
+					OcamlPat.PConstructor(ef.name, []);
+				} else {
+					final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
+					final ctorName = isSameModule ? ef.name : (moduleIdToOcamlModuleName(e.module) + "." + ef.name);
+					OcamlPat.PConstructor(ctorName, []);
+				}
 			case _:
 				OcamlPat.PAny;
 		}
@@ -486,8 +513,14 @@ class OcamlBuilder {
 				switch (fn.expr) {
 					case TField(_, FEnum(eRef, ef)):
 						final e = eRef.get();
-						final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
-						final ctorName = isSameModule ? ef.name : (moduleIdToOcamlModuleName(e.module) + "." + ef.name);
+						final ctorName = if (isOcamlNativeEnumType(e, "Option") || isOcamlNativeEnumType(e, "Result")) {
+							ef.name;
+						} else if (isOcamlNativeEnumType(e, "List") && ef.name == "Cons") {
+							"::";
+						} else {
+							final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
+							isSameModule ? ef.name : (moduleIdToOcamlModuleName(e.module) + "." + ef.name);
+						}
 
 						final enumParams:Map<String, String> = [];
 						final patArgs:Array<OcamlPat> = [];
@@ -519,12 +552,22 @@ class OcamlBuilder {
 		return switch (fa) {
 			case FEnum(eRef, ef):
 				final e = eRef.get();
-				final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
-				if (isSameModule) {
+				if (isOcamlNativeEnumType(e, "Option") || isOcamlNativeEnumType(e, "Result")) {
 					OcamlExpr.EIdent(ef.name);
+				} else if (isOcamlNativeEnumType(e, "List")) {
+					switch (ef.name) {
+						case "Nil": OcamlExpr.EList([]);
+						case "Cons": OcamlExpr.EIdent("::");
+						case _: OcamlExpr.EConst(OcamlConst.CUnit);
+					}
 				} else {
-					final modName = moduleIdToOcamlModuleName(e.module);
-					OcamlExpr.EField(OcamlExpr.EIdent(modName), ef.name);
+					final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
+					if (isSameModule) {
+						OcamlExpr.EIdent(ef.name);
+					} else {
+						final modName = moduleIdToOcamlModuleName(e.module);
+						OcamlExpr.EField(OcamlExpr.EIdent(modName), ef.name);
+					}
 				}
 			case FStatic(clsRef, cfRef):
 				final cls = clsRef.get();

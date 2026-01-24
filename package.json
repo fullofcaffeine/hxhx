@@ -11,6 +11,7 @@
     "test:m2": "haxe test/m2_integration_test.hxml",
     "test:m3": "haxe test/m3_integration_test.hxml",
     "test:m4:enum": "haxe test/m4_enum_integration_test.hxml",
-    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum"
+    "test:m4:ocaml-native": "haxe test/m4_ocaml_native_integration_test.hxml",
+    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native"
   }
 }

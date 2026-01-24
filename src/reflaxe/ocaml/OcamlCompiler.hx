@@ -168,6 +168,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public function compileEnumImpl(enumType:EnumType, options:Array<EnumOptionData>):Null<String> {
 		final fullName = (enumType.pack ?? []).concat([enumType.name]).join(".");
 
+		// ocaml.* surface types map to native Stdlib types; do not emit duplicate type decls.
+		if (enumType.pack != null && enumType.pack.length == 1 && enumType.pack[0] == "ocaml") {
+			switch (enumType.name) {
+				case "List", "Option", "Result":
+					return null;
+				case _:
+			}
+		}
+
 		final typeName = ocamlTypeName(enumType.name);
 		final typeParams = enumType.params.map(p -> ocamlTypeParam(p.name));
 

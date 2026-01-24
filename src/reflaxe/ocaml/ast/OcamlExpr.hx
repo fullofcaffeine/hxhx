@@ -12,6 +12,7 @@ enum OcamlBinop {
 	Mul;
 	Div;
 	Mod;
+	Cons; // ::
 
 	Eq;
 	Neq;

@@ -54,6 +54,7 @@ class OcamlASTPrinter {
 	static inline final PREC_OR = 10;
 	static inline final PREC_AND = 11;
 	static inline final PREC_CMP = 20;
+	static inline final PREC_CONS = 25;
 	static inline final PREC_ADD = 30;
 	static inline final PREC_MUL = 40;
 	static inline final PREC_ASSIGN = 5;
@@ -76,6 +77,7 @@ class OcamlASTPrinter {
 					case Or: PREC_OR;
 					case And: PREC_AND;
 					case Eq, Neq, Lt, Lte, Gt, Gte: PREC_CMP;
+					case Cons: PREC_CONS;
 					case Add, Sub: PREC_ADD;
 					case Mul, Div, Mod: PREC_MUL;
 				}
@@ -179,6 +181,7 @@ class OcamlASTPrinter {
 			case Mul: "*";
 			case Div: "/";
 			case Mod: "mod";
+			case Cons: "::";
 			case Eq: "=";
 			case Neq: "<>";
 			case Lt: "<";
@@ -190,8 +193,9 @@ class OcamlASTPrinter {
 		}
 
 		final p = exprPrec(OcamlExpr.EBinop(op, left, right));
-		final l = printExprCtx(left, p, indentLevel);
-		final r = printExprCtx(right, p + 1, indentLevel);
+		final isRightAssoc = op == Cons;
+		final l = printExprCtx(left, isRightAssoc ? (p + 1) : p, indentLevel);
+		final r = printExprCtx(right, isRightAssoc ? p : (p + 1), indentLevel);
 		return l + " " + opStr + " " + r;
 	}
 
@@ -248,6 +252,11 @@ class OcamlASTPrinter {
 			case POr(items):
 				items.map(printPat).join(" | ");
 			case PConstructor(name, args):
+				if (name == "[]" && args.length == 0) {
+					"[]";
+				} else if (name == "::" && args.length == 2) {
+					printPatCtx(args[0], true) + " :: " + printPatCtx(args[1], true);
+				} else
 				if (args.length == 0) {
 					name;
 				} else if (args.length == 1) {
