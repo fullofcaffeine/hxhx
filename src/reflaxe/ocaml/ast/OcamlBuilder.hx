@@ -387,7 +387,10 @@ class OcamlBuilder {
 			case TWhile(cond, body, normalWhile):
 				// do {body} while(cond) not supported yet; lower as while for now
 				if (!normalWhile) {
-					OcamlExpr.ESeq([buildExpr(body), OcamlExpr.EWhile(buildExpr(cond), buildExpr(body))]);
+					OcamlExpr.ESeq([
+						OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]),
+						OcamlExpr.EWhile(buildExpr(cond), buildExpr(body))
+					]);
 				} else {
 					OcamlExpr.EWhile(buildExpr(cond), buildExpr(body));
 				}
@@ -401,7 +404,10 @@ class OcamlBuilder {
 				final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 				final seq:Array<OcamlExpr> = [];
 				for (item in items) {
-					seq.push(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [OcamlExpr.EIdent(tmp), buildExpr(item)]));
+					seq.push(OcamlExpr.EApp(
+						OcamlExpr.EIdent("ignore"),
+						[OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [OcamlExpr.EIdent(tmp), buildExpr(item)])]
+					));
 				}
 				seq.push(OcamlExpr.EIdent(tmp));
 				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
@@ -532,7 +538,7 @@ class OcamlBuilder {
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {
 		// Kept for compatibility when TVar occurs outside of a block (rare in typed output).
 		// Prefer `buildBlock` handling for correct scoping.
-		final initExpr = init != null ? buildExpr(init) : OcamlExpr.EConst(OcamlConst.CUnit);
+		final initExpr = init != null ? buildExpr(init) : defaultValueForType(v.t);
 		final isMutable = currentMutatedLocalIds != null
 			&& currentMutatedLocalIds.exists(v.id)
 			&& currentMutatedLocalIds.get(v.id) == true;
@@ -542,6 +548,27 @@ class OcamlBuilder {
 		}
 		refLocals.remove(v.id);
 		return initExpr;
+	}
+
+	function defaultValueForType(t:Type):OcamlExpr {
+		return switch (t) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				switch (a.name) {
+					case "Int": OcamlExpr.EConst(OcamlConst.CInt(0));
+					case "Float": OcamlExpr.EConst(OcamlConst.CFloat("0."));
+					case "Bool": OcamlExpr.EConst(OcamlConst.CBool(false));
+					default: OcamlExpr.EConst(OcamlConst.CUnit);
+				}
+			case TInst(cRef, _):
+				final c = cRef.get();
+				switch (c.name) {
+					case "String": OcamlExpr.EConst(OcamlConst.CString(""));
+					case _: OcamlExpr.EConst(OcamlConst.CUnit);
+				}
+			case _:
+				OcamlExpr.EConst(OcamlConst.CUnit);
+		}
 	}
 
 	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr):OcamlExpr {
@@ -654,7 +681,7 @@ class OcamlBuilder {
 		final e = exprs[index];
 		return switch (e.expr) {
 			case TVar(v, init):
-				final initExpr = init != null ? buildExpr(init) : OcamlExpr.EConst(OcamlConst.CUnit);
+				final initExpr = init != null ? buildExpr(init) : defaultValueForType(v.t);
 				final isMutable = currentMutatedLocalIds != null
 					&& currentMutatedLocalIds.exists(v.id)
 					&& currentMutatedLocalIds.get(v.id) == true;
@@ -673,12 +700,13 @@ class OcamlBuilder {
 				if (index == exprs.length - 1) {
 					current;
 				} else {
+					final currentUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [current]);
 					final rest = buildBlockFromIndex(exprs, index + 1);
 					switch (rest) {
 						case ESeq(items):
-							OcamlExpr.ESeq([current].concat(items));
+							OcamlExpr.ESeq([currentUnit].concat(items));
 						case _:
-							OcamlExpr.ESeq([current, rest]);
+							OcamlExpr.ESeq([currentUnit, rest]);
 					}
 				}
 		}

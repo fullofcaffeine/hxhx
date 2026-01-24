@@ -8,3 +8,7 @@ npm-debug.log*
 
 # OS/editor
 .DS_Store
+
+# Local CI artifacts
+gitleaks
+gitleaks.tar.gz

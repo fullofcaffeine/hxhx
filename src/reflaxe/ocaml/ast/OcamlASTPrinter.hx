@@ -221,8 +221,19 @@ class OcamlASTPrinter {
 	function printApp(fn:OcamlExpr, args:Array<OcamlExpr>, indentLevel:Int):String {
 		final f = printExprCtx(fn, PREC_APP, indentLevel);
 		if (args.length == 0) return f;
-		final renderedArgs = args.map(a -> printExprCtx(a, PREC_ATOM, indentLevel)).join(" ");
+		final renderedArgs = args.map(function(a) {
+			final rendered = printExprCtx(a, PREC_ATOM, indentLevel);
+			return needsExprParensInApp(a) ? ("(" + rendered + ")") : rendered;
+		}).join(" ");
 		return f + " " + renderedArgs;
+	}
+
+	function needsExprParensInApp(e:OcamlExpr):Bool {
+		return switch (e) {
+			case EConst(CInt(v)): v < 0;
+			case EConst(CFloat(v)): v.startsWith("-");
+			case _: false;
+		}
 	}
 
 	function printLetIn(name:String, value:OcamlExpr, body:OcamlExpr, isRec:Bool, indentLevel:Int):String {

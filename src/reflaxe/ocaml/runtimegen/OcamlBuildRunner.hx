@@ -60,14 +60,6 @@ class OcamlBuildRunner {
 					? Err("dune build failed with exit code " + buildExit)
 					: Ok("dune build failed with exit code " + buildExit + " (skipping)");
 			} else {
-				// Best-effort copy into output root for convenience.
-				final built = builtExePath(cfg.exeName, mode);
-				if (sys.FileSystem.exists(built)) {
-					try {
-						sys.io.File.copy(built, Path.withoutDirectory(built));
-					} catch (_) {}
-				}
-
 				if (cfg.run) {
 					final runExit = Sys.command("dune", ["exec", target]);
 					if (runExit != 0) {
