@@ -1,8 +1,16 @@
 {
   "name": "reflaxe-ocaml-dev",
+  "version": "0.1.0",
   "private": true,
   "devDependencies": {
-    "lix": "16.0.2"
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.3",
+    "@semantic-release/release-notes-generator": "^14.0.3",
+    "lix": "16.0.2",
+    "semantic-release": "^24.2.5"
   },
   "scripts": {
     "download": "lix download",
@@ -19,5 +27,37 @@
     "test:m6:array": "haxe test/m6_array_integration_test.hxml",
     "test:m6:string": "haxe test/m6_string_integration_test.hxml",
     "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:array && npm run test:m6:string"
+  },
+  "release": {
+    "branches": [
+      "master",
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      [
+        "@semantic-release/exec",
+        {
+          "prepareCmd": "node scripts/release/sync-versions.js ${nextRelease.version}"
+        }
+      ],
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "package.json",
+            "package-lock.json",
+            "haxelib.json",
+            "haxe_libraries/reflaxe.ocaml.hxml",
+            "README.md",
+            "CHANGELOG.md"
+          ],
+          "message": "chore(release): ${nextRelease.version} [skip ci]\\n\\n${nextRelease.notes}"
+        }
+      ],
+      "@semantic-release/github"
+    ]
   }
 }

@@ -1,5 +1,7 @@
 # reflaxe.ocaml
 
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)]
+
 Haxe → OCaml target built on Reflaxe.
 
 This repo is currently in early scaffolding (see `prd.md` for the roadmap).
