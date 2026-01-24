@@ -59,7 +59,8 @@ class M2IntegrationTest {
 		assertContains(content, "match", "switch->match");
 		assertContains(content, "| 1 | 2 ->", "multi-case or-pattern");
 
-		final entryPath = outDir + "/entry.ml";
+		final exeName = exeNameFromOutDir(outDir);
+		final entryPath = outDir + "/" + exeName + ".ml";
 		if (!sys.FileSystem.exists(entryPath)) throw "missing output: " + entryPath;
 		final entry = sys.io.File.getContent(entryPath);
 		assertContains(entry, "Main.main ()", "entrypoint");
@@ -68,7 +69,6 @@ class M2IntegrationTest {
 		if (hasCommand("dune") && hasCommand("ocamlc")) {
 			final prev = Sys.getCwd();
 			Sys.setCwd(outDir);
-			final exeName = exeNameFromOutDir(outDir);
 			final exit = Sys.command("dune", ["build", "./" + exeName + ".exe"]);
 			if (exit == 0) {
 				final builtExe = "_build/default/" + exeName + ".exe";

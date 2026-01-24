@@ -23,7 +23,7 @@ npx haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
 
 `-D ocaml_output=<dir>` is required; it enables the compiler and selects the output folder.
 
-By default, the target also emits a minimal `dune-project`, `dune`, and `entry.ml` so the output directory is a runnable OCaml project.
+By default, the target also emits a minimal `dune-project`, `dune`, and an executable entry module (`<exeName>.ml`) so the output directory is a runnable OCaml project.
 
 Optional flags:
 
