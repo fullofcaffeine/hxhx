@@ -51,6 +51,11 @@ class OcamlBuilder {
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		return switch (e.expr) {
+			case TConst(TThis):
+				OcamlExpr.EIdent("self");
+			case TConst(TSuper):
+				// Inheritance isn't supported yet; treat as `self` for now.
+				OcamlExpr.EIdent("self");
 			case TConst(c):
 				OcamlExpr.EConst(buildConst(c));
 			case TLocal(v):
@@ -73,8 +78,29 @@ class OcamlBuilder {
 				// Variable declarations should generally be handled by `buildBlock`
 				// so that scope covers the remainder of the block.
 				OcamlExpr.EConst(OcamlConst.CUnit);
+			case TNew(clsRef, _, args):
+				final cls = clsRef.get();
+				final modName = moduleIdToOcamlModuleName(cls.module);
+				final fn = OcamlExpr.EField(OcamlExpr.EIdent(modName), "create");
+				final builtArgs = args.map(buildExpr);
+				OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 			case TCall(fn, args):
 				switch (fn.expr) {
+					case TField(objExpr, FInstance(clsRef, _, cfRef)):
+						final cf = cfRef.get();
+						switch (cf.kind) {
+							case FMethod(_):
+								final cls = clsRef.get();
+								final modName = moduleIdToOcamlModuleName(cls.module);
+								final callFn = OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+								final builtArgs = [buildExpr(objExpr)].concat(args.map(buildExpr));
+								// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+								if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+								OcamlExpr.EApp(callFn, builtArgs);
+							case _:
+								final builtArgs = args.map(buildExpr);
+								OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+						}
 					case TField(_, FEnum(eRef, ef)):
 						final en = eRef.get();
 
@@ -90,7 +116,8 @@ class OcamlBuilder {
 							OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
 						}
 					case _:
-						OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+						final builtArgs = args.map(buildExpr);
+						OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 				}
 			case TField(obj, fa):
 				buildField(obj, fa);
@@ -178,6 +205,14 @@ class OcamlBuilder {
 				switch (e1.expr) {
 					case TLocal(v) if (isRefLocalId(v.id)):
 						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), buildExpr(e2));
+					case TField(obj, FInstance(_, _, cfRef)):
+						final cf = cfRef.get();
+						switch (cf.kind) {
+							case FVar(_, _):
+								OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(buildExpr(obj), cf.name), buildExpr(e2));
+							case _:
+								OcamlExpr.EConst(OcamlConst.CUnit);
+						}
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
@@ -288,7 +323,35 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildFunction(tfunc:haxe.macro.Type.TFunc):OcamlExpr {
+	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr):OcamlExpr {
+		final mutatedIds = collectMutatedLocalIds(bodyExpr);
+
+		final params = args.length == 0
+			? [OcamlPat.PConst(OcamlConst.CUnit)]
+			: args.map(a -> OcamlPat.PVar(renameVar(a.name)));
+
+		final prev = currentMutatedLocalIds;
+		currentMutatedLocalIds = mutatedIds;
+		for (a in args) {
+			if (mutatedIds.exists(a.id) && mutatedIds.get(a.id) == true) {
+				refLocals.set(a.id, true);
+			}
+		}
+
+		var body = buildExpr(bodyExpr);
+
+		for (a in args) {
+			if (mutatedIds.exists(a.id) && mutatedIds.get(a.id) == true) {
+				final n = renameVar(a.name);
+				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
+			}
+		}
+
+		currentMutatedLocalIds = prev;
+		return OcamlExpr.EFun(params, body);
+	}
+
+	public function buildFunction(tfunc:haxe.macro.Type.TFunc):OcamlExpr {
 		final mutatedIds = collectMutatedLocalIds(tfunc.expr);
 
 		// Determine parameters and wrap mutated parameters as refs inside the body.
@@ -573,6 +636,15 @@ class OcamlBuilder {
 				final cls = clsRef.get();
 				final modName = moduleIdToOcamlModuleName(cls.module);
 				OcamlExpr.EField(OcamlExpr.EIdent(modName), cfRef.get().name);
+			case FInstance(_, _, cfRef):
+				final cf = cfRef.get();
+				switch (cf.kind) {
+					case FVar(_, _):
+						OcamlExpr.EField(buildExpr(obj), cf.name);
+					case _:
+						// Methods are handled at the callsite; as a value, treat as module function.
+						OcamlExpr.EConst(OcamlConst.CUnit);
+				}
 			case _:
 				// For now, treat unknown field access as unit.
 				OcamlExpr.EConst(OcamlConst.CUnit);

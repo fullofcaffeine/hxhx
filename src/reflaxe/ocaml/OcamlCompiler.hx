@@ -18,9 +18,11 @@ import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlLetBinding;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlPat;
+import reflaxe.ocaml.ast.OcamlRecordField;
 import reflaxe.ocaml.ast.OcamlTypeDecl;
 import reflaxe.ocaml.ast.OcamlTypeDeclKind;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
@@ -91,22 +93,107 @@ class OcamlCompiler extends DirectToStringCompiler {
 			expr: OcamlExpr.EConst(OcamlConst.CUnit)
 		}], false));
 
-		// Only attempt to compile function bodies for now (M2); everything else is stubbed.
 		final lets:Array<OcamlLetBinding> = [];
+
+		// Instance surface (M5): record type + create + instance methods.
+		final instanceVars = varFields.filter(v -> !v.isStatic);
+		final hasInstanceVars = instanceVars.length > 0;
+
+		var ctorFunc:Null<ClassFuncData> = null;
+		final instanceMethods:Array<ClassFuncData> = [];
+		for (f in funcFields) {
+			if (f.expr == null) continue;
+			if (f.isStatic) continue;
+			if (f.field.name == "new") {
+				ctorFunc = f;
+			} else {
+				instanceMethods.push(f);
+			}
+		}
+
+		final hasInstanceSurface = hasInstanceVars || instanceMethods.length > 0 || ctorFunc != null;
+		if (hasInstanceSurface) {
+			final typeFields:Array<OcamlTypeRecordField> = hasInstanceVars
+				? instanceVars.map(v -> ({
+					name: v.field.name,
+					isMutable: true,
+					typ: ocamlTypeExprFromHaxeType(v.field.type)
+				}))
+				: [];
+
+			final typeDecl:OcamlTypeDecl = {
+				name: "t",
+				params: [],
+				kind: hasInstanceVars
+					? OcamlTypeDeclKind.Record(typeFields)
+					: OcamlTypeDeclKind.Alias(OcamlTypeExpr.TIdent("unit"))
+			};
+			items.push(OcamlModuleItem.IType([typeDecl], false));
+
+			// create: allocate record, run ctor body, return self
+			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
+			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
+			if (ctorFunc != null && ctorFunc.expr != null) {
+				final argInfo = ctorFunc.args.map(a -> ({
+					id: a.tvar != null ? a.tvar.id : -1,
+					name: a.getName()
+				}));
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr)) {
+						case OcamlExpr.EFun(params, body):
+							createParams = params;
+							ctorBody = body;
+						case _:
+				}
+			}
+
+			final selfInit:OcamlExpr = if (hasInstanceVars) {
+				final fields:Array<OcamlRecordField> = [];
+				for (v in instanceVars) {
+					final init = v.findDefaultExpr();
+					final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+					fields.push({ name: v.field.name, value: value });
+				}
+				OcamlExpr.ERecord(fields);
+			} else {
+				OcamlExpr.EConst(OcamlConst.CUnit);
+			}
+
+			final createBody = OcamlExpr.ELet(
+				"self",
+				selfInit,
+				OcamlExpr.ESeq([ctorBody, OcamlExpr.EIdent("self")]),
+				false
+			);
+			lets.push({ name: "create", expr: OcamlExpr.EFun(createParams, createBody) });
+
+			for (f in instanceMethods) {
+				final compiled = {
+					final argInfo = f.args.map(a -> ({
+						id: a.tvar != null ? a.tvar.id : -1,
+						name: a.getName()
+					}));
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
+						case OcamlExpr.EFun(params, b):
+							OcamlExpr.EFun([OcamlPat.PVar("self")].concat(params), b);
+						case _:
+							OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
+					}
+				};
+				lets.push({ name: f.field.name, expr: compiled });
+			}
+		}
+
+		// Static functions (M2+)
 		for (f in funcFields) {
 			if (f.expr == null) continue;
 			if (!f.isStatic) continue;
 
 			final name = f.field.name;
-			final body = builder.buildExpr(f.expr);
-
-			// Usually `f.expr` is a `TFunction(...)` and the builder returns `EFun(...)`.
-			// Fallback: wrap non-function bodies as `fun () -> body` so we can still call `name ()`.
-			final compiled = switch (body) {
-				case OcamlExpr.EFun(_, _): body;
-				case _:
-					OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], body);
-			}
+			final argInfo = f.args.map(a -> ({
+				id: a.tvar != null ? a.tvar.id : -1,
+				name: a.getName()
+			}));
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr);
 
 			lets.push({ name: name, expr: compiled });
 		}
@@ -297,6 +384,27 @@ class OcamlCompiler extends DirectToStringCompiler {
 				OcamlTypeExpr.TIdent("Obj.t");
 			case TFun(_, _):
 				OcamlTypeExpr.TIdent("Obj.t");
+		}
+	}
+
+	function defaultValueForType(t:Type):OcamlExpr {
+		return switch (t) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				switch (a.name) {
+					case "Int": OcamlExpr.EConst(OcamlConst.CInt(0));
+					case "Float": OcamlExpr.EConst(OcamlConst.CFloat("0."));
+					case "Bool": OcamlExpr.EConst(OcamlConst.CBool(false));
+					default: OcamlExpr.EConst(OcamlConst.CUnit);
+				}
+			case TInst(cRef, _):
+				final c = cRef.get();
+				switch (c.name) {
+					case "String": OcamlExpr.EConst(OcamlConst.CString(""));
+					default: OcamlExpr.EConst(OcamlConst.CUnit);
+				}
+			case _:
+				OcamlExpr.EConst(OcamlConst.CUnit);
 		}
 	}
 }
