@@ -5,9 +5,6 @@
 
 -lib reflaxe
 
-# Start Reflaxe pipeline hooks (AfterTyping/AfterGenerate)
---macro reflaxe.ReflectCompiler.Start()
-
 # Reflaxe target configuration
 -D reflaxe-target=ocaml
 -D reflaxe-output-dir=out_ocaml
@@ -15,6 +12,3 @@
 
 # Retain untyped metadata through typing phase for extern inlines / __ocaml__
 -D retain-untyped-meta
-
-# Register the OCaml compiler with Reflaxe
---macro reflaxe.ocaml.CompilerInit.Start()

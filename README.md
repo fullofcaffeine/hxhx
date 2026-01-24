@@ -6,6 +6,14 @@ This repo is currently in early scaffolding (see `prd.md` for the roadmap).
 
 ## Usage (current scaffold)
 
+This repo is set up for **Lix** (via `lix.client` / haxeshim-style `haxe_libraries`).
+
+First-time setup:
+
+```bash
+lix download
+```
+
 Generate `.ml` files into an output directory:
 
 ```bash
