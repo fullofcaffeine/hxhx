@@ -32,6 +32,8 @@ class OcamlBuilder {
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
 
+	var tmpId:Int = 0;
+
 	// Set while compiling a function body to decide whether TVar locals become `ref` or immutable `let`.
 	var currentMutatedLocalIds:Null<Map<Int, Bool>> = null;
 
@@ -40,6 +42,11 @@ class OcamlBuilder {
 
 	public function new(ctx:CompilationContext) {
 		this.ctx = ctx;
+	}
+
+	inline function freshTmp(prefix:String):String {
+		tmpId += 1;
+		return "__" + prefix + "_" + tmpId;
 	}
 
 	#if macro
@@ -56,6 +63,26 @@ class OcamlBuilder {
 
 	static inline function isOcamlNativeEnumType(e:EnumType, name:String):Bool {
 		return e.pack != null && e.pack.length == 1 && e.pack[0] == "ocaml" && e.name == name;
+	}
+
+	static inline function isStdArrayClass(cls:ClassType):Bool {
+		return cls.pack != null && cls.pack.length == 0 && cls.name == "Array";
+	}
+
+	static function unwrap(e:TypedExpr):TypedExpr {
+		var current = e;
+		while (true) {
+			switch (current.expr) {
+				case TParenthesis(inner):
+					current = inner;
+				case TMeta(_, inner):
+					current = inner;
+				case TCast(inner, _):
+					current = inner;
+				case _:
+					return current;
+			}
+		}
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
@@ -97,10 +124,14 @@ class OcamlBuilder {
 				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TNew(clsRef, _, args):
 				final cls = clsRef.get();
-				final modName = moduleIdToOcamlModuleName(cls.module);
-				final fn = OcamlExpr.EField(OcamlExpr.EIdent(modName), "create");
-				final builtArgs = args.map(buildExpr);
-				OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+				if (isStdArrayClass(cls) && args.length == 0) {
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				} else {
+					final modName = moduleIdToOcamlModuleName(cls.module);
+					final fn = OcamlExpr.EField(OcamlExpr.EIdent(modName), "create");
+					final builtArgs = args.map(buildExpr);
+					OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+				}
 			case TCall(fn, args):
 				switch (fn.expr) {
 					case TField(objExpr, FInstance(clsRef, _, cfRef)):
@@ -108,12 +139,76 @@ class OcamlBuilder {
 						switch (cf.kind) {
 							case FMethod(_):
 								final cls = clsRef.get();
-								final modName = moduleIdToOcamlModuleName(cls.module);
-								final callFn = OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
-								final builtArgs = [buildExpr(objExpr)].concat(args.map(buildExpr));
-								// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
-								if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-								OcamlExpr.EApp(callFn, builtArgs);
+								if (isStdArrayClass(cls)) {
+									switch (cf.name) {
+										case "push":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
+												[buildExpr(objExpr), buildExpr(args[0])]
+											);
+										case "pop":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "pop"),
+												[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case "shift":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "shift"),
+												[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case "unshift":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "unshift"),
+												[buildExpr(objExpr), buildExpr(args[0])]
+											);
+										case "insert":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "insert"),
+												[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]
+											);
+										case "remove":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "remove"),
+												[buildExpr(objExpr), buildExpr(args[0])]
+											);
+										case "splice":
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "splice"),
+												[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]
+											);
+										case "slice":
+											final endExpr = if (args.length > 1) {
+												final unwrapped = unwrap(args[1]);
+												switch (unwrapped.expr) {
+													case TConst(TNull):
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(objExpr)]);
+													case _:
+														buildExpr(args[1]);
+												}
+											} else {
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(objExpr)]);
+											}
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "slice"),
+												[buildExpr(objExpr), buildExpr(args[0]), endExpr]
+											);
+										case _:
+											#if macro
+											guardrailError(
+												"reflaxe.ocaml (M6): unsupported Array method '" + cf.name + "'. (bd: haxe.ocaml-28t.7.3)",
+												e.pos
+											);
+											#end
+											OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+								} else {
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final callFn = OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+									final builtArgs = [buildExpr(objExpr)].concat(args.map(buildExpr));
+									// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+									if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+									OcamlExpr.EApp(callFn, builtArgs);
+								}
 							case _:
 								final builtArgs = args.map(buildExpr);
 								OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
@@ -159,9 +254,18 @@ class OcamlBuilder {
 				}
 			case TSwitch(scrutinee, cases, edef):
 				buildSwitch(scrutinee, cases, edef);
+			case TArray(arr, idx):
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [buildExpr(arr), buildExpr(idx)]);
 			case TArrayDecl(items):
-				// Placeholder: represent Haxe Array literals as OCaml lists for now.
-				OcamlExpr.EList(items.map(buildExpr));
+				// Haxe array literal: build runtime array and push all values.
+				final tmp = freshTmp("arr");
+				final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				final seq:Array<OcamlExpr> = [];
+				for (item in items) {
+					seq.push(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [OcamlExpr.EIdent(tmp), buildExpr(item)]));
+				}
+				seq.push(OcamlExpr.EIdent(tmp));
+				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
 			case TObjectDecl(_):
 				// Placeholder until class/anon-struct strategy lands.
 				OcamlExpr.EConst(OcamlConst.CUnit);
@@ -268,6 +372,8 @@ class OcamlBuilder {
 							case _:
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
+					case TArray(arr, idx):
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [buildExpr(arr), buildExpr(idx), buildExpr(e2)]);
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
@@ -546,22 +652,6 @@ class OcamlBuilder {
 		return OcamlExpr.EMatch(buildExpr(scrutinee), arms);
 	}
 
-	static function unwrap(e:TypedExpr):TypedExpr {
-		var current = e;
-		while (true) {
-			switch (current.expr) {
-				case TParenthesis(inner):
-					current = inner;
-				case TMeta(_, inner):
-					current = inner;
-				case TCast(inner, _):
-					current = inner;
-				case _:
-					return current;
-			}
-		}
-	}
-
 	function buildEnumIndexCasePat(enumType:EnumType, indexExpr:TypedExpr):Null<{pat:OcamlPat, enumParams:Map<String, String>}> {
 		final idx:Null<Int> = switch (indexExpr.expr) {
 			case TConst(TInt(v)): v;
@@ -700,11 +790,16 @@ class OcamlBuilder {
 				#end
 				final modName = moduleIdToOcamlModuleName(cls.module);
 				OcamlExpr.EField(OcamlExpr.EIdent(modName), cfRef.get().name);
-			case FInstance(_, _, cfRef):
+			case FInstance(clsRef, _, cfRef):
+				final cls = clsRef.get();
 				final cf = cfRef.get();
 				switch (cf.kind) {
 					case FVar(_, _):
-						OcamlExpr.EField(buildExpr(obj), cf.name);
+						if (isStdArrayClass(cls) && cf.name == "length") {
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
+						} else {
+							OcamlExpr.EField(buildExpr(obj), cf.name);
+						}
 					case _:
 						#if macro
 						guardrailError(
