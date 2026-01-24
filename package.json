@@ -15,6 +15,7 @@
   "scripts": {
     "download": "lix download",
     "haxe": "haxe",
+    "ci:guards": "node scripts/ci/version-sync-check.js",
     "test:printer": "haxe test/ocaml_ast_printer_test.hxml",
     "test:m2": "haxe test/m2_integration_test.hxml",
     "test:m3": "haxe test/m3_integration_test.hxml",
