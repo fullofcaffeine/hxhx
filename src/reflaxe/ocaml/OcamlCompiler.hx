@@ -27,6 +27,7 @@ import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
+import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.GenericCompiler;
 import reflaxe.output.DataAndFileInfo;
 
@@ -297,6 +298,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 				exeName: DuneProjectEmitter.defaultExeName(outDir),
 				mainModuleId: mainModuleId
 			});
+		}
+
+		final noRuntime = haxe.macro.Context.defined("ocaml_no_runtime");
+		if (!noRuntime) {
+			RuntimeCopier.copy(output, "runtime");
 		}
 
 		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
