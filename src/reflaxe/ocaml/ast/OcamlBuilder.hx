@@ -34,6 +34,9 @@ class OcamlBuilder {
 	// Set while compiling a function body to decide whether TVar locals become `ref` or immutable `let`.
 	var currentMutatedLocalIds:Null<Map<Int, Bool>> = null;
 
+	// Set while compiling a switch arm to resolve TEnumParameter -> bound pattern variables.
+	var currentEnumParamNames:Null<Map<String, String>> = null;
+
 	public function new(ctx:CompilationContext) {
 		this.ctx = ctx;
 	}
@@ -67,13 +70,27 @@ class OcamlBuilder {
 				// so that scope covers the remainder of the block.
 				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TCall(fn, args):
-				OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+				// Enum constructors with multiple args take a tuple in OCaml: `C (a, b)`.
+				switch (fn.expr) {
+					case TField(_, FEnum(_, _)) if (args.length > 1):
+						OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))]);
+					case _:
+						OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+				}
 			case TField(obj, fa):
 				buildField(obj, fa);
 			case TMeta(_, e1):
 				buildExpr(e1);
 			case TCast(e1, _):
 				buildExpr(e1);
+			case TEnumParameter(_, ef, index):
+				final key = ef.name + ":" + index;
+				currentEnumParamNames != null && currentEnumParamNames.exists(key)
+					? OcamlExpr.EIdent(currentEnumParamNames.get(key))
+					: OcamlExpr.EConst(OcamlConst.CUnit);
+			case TEnumIndex(_):
+				// TODO: implement enum index support (used by pattern matcher internals).
+				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TWhile(cond, body, normalWhile):
 				// do {body} while(cond) not supported yet; lower as while for now
 				if (!normalWhile) {
@@ -333,11 +350,60 @@ class OcamlBuilder {
 		cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>,
 		edef:Null<TypedExpr>
 	):OcamlExpr {
+		// Enum pattern matching: Haxe's pattern matcher often lowers enum switches to:
+		// switch (TEnumIndex(e)) { case 0: ...; case 1: ... }
+		// Reconstruct a direct OCaml match on the enum value.
+		final scrutineeUnwrapped = unwrap(scrutinee);
+		switch (scrutineeUnwrapped.expr) {
+			case TEnumIndex(enumValueExpr):
+				switch (enumValueExpr.t) {
+					case TEnum(eRef, _):
+						final enumType = eRef.get();
+						final scrut = buildExpr(enumValueExpr);
+						final arms:Array<OcamlMatchCase> = [];
+
+						for (c in cases) {
+							// Only support a single constructor index per case for now.
+							final patRes = (c.values.length == 1) ? buildEnumIndexCasePat(enumType, c.values[0]) : null;
+							final pat = patRes != null ? patRes.pat : OcamlPat.PAny;
+
+							final prev = currentEnumParamNames;
+							currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+							final expr = buildExpr(c.expr);
+							currentEnumParamNames = prev;
+
+							arms.push({ pat: pat, guard: null, expr: expr });
+						}
+
+						arms.push({
+							pat: OcamlPat.PAny,
+							guard: null,
+							expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
+						});
+
+						return OcamlExpr.EMatch(scrut, arms);
+					case _:
+				}
+			case _:
+		}
+
 		final arms:Array<OcamlMatchCase> = [];
 		for (c in cases) {
-			final pats = c.values.map(buildSwitchValuePat);
-			final pat = pats.length == 1 ? pats[0] : OcamlPat.POr(pats);
-			arms.push({ pat: pat, guard: null, expr: buildExpr(c.expr) });
+			// NOTE: For now, only support enum-parameter binding for a single pattern.
+			final patRes = c.values.length == 1 ? buildSwitchValuePatAndEnumParams(c.values[0]) : null;
+			final pat = if (patRes != null) {
+				patRes.pat;
+			} else {
+				final pats = c.values.map(buildSwitchValuePat);
+				pats.length == 1 ? pats[0] : OcamlPat.POr(pats);
+			}
+
+			final prev = currentEnumParamNames;
+			currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+			final expr = buildExpr(c.expr);
+			currentEnumParamNames = prev;
+
+			arms.push({ pat: pat, guard: null, expr: expr });
 		}
 		arms.push({
 			pat: OcamlPat.PAny,
@@ -347,17 +413,119 @@ class OcamlBuilder {
 		return OcamlExpr.EMatch(buildExpr(scrutinee), arms);
 	}
 
+	static function unwrap(e:TypedExpr):TypedExpr {
+		var current = e;
+		while (true) {
+			switch (current.expr) {
+				case TParenthesis(inner):
+					current = inner;
+				case TMeta(_, inner):
+					current = inner;
+				case TCast(inner, _):
+					current = inner;
+				case _:
+					return current;
+			}
+		}
+	}
+
+	function buildEnumIndexCasePat(enumType:EnumType, indexExpr:TypedExpr):Null<{pat:OcamlPat, enumParams:Map<String, String>}> {
+		final idx:Null<Int> = switch (indexExpr.expr) {
+			case TConst(TInt(v)): v;
+			case _: null;
+		}
+		if (idx == null) return null;
+
+		var field:Null<EnumField> = null;
+		for (name in enumType.names) {
+			final ef = enumType.constructs.get(name);
+			if (ef != null && ef.index == idx) {
+				field = ef;
+				break;
+			}
+		}
+		if (field == null) return null;
+
+		final modName = moduleIdToOcamlModuleName(enumType.module);
+		final isSameModule = ctx.currentModuleId != null && enumType.module == ctx.currentModuleId;
+		final ctorName = isSameModule ? field.name : (modName + "." + field.name);
+
+		final argCount = switch (field.type) {
+			case TFun(args, _): args.length;
+			case _: 0;
+		}
+
+		final enumParams:Map<String, String> = [];
+		final patArgs:Array<OcamlPat> = [];
+		for (i in 0...argCount) {
+			final n = "_p" + i;
+			patArgs.push(OcamlPat.PVar(n));
+			enumParams.set(field.name + ":" + i, n);
+		}
+
+		return { pat: OcamlPat.PConstructor(ctorName, patArgs), enumParams: enumParams };
+	}
+
 	function buildSwitchValuePat(v:TypedExpr):OcamlPat {
 		return switch (v.expr) {
 			case TConst(c):
 				OcamlPat.PConst(buildConst(c));
+			case TField(_, FEnum(eRef, ef)):
+				final e = eRef.get();
+				final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
+				final ctorName = isSameModule ? ef.name : (moduleIdToOcamlModuleName(e.module) + "." + ef.name);
+				OcamlPat.PConstructor(ctorName, []);
 			case _:
 				OcamlPat.PAny;
 		}
 	}
 
+	function buildSwitchValuePatAndEnumParams(v:TypedExpr):{pat:OcamlPat, enumParams:Null<Map<String, String>>} {
+		return switch (v.expr) {
+			case TCall(fn, args):
+				switch (fn.expr) {
+					case TField(_, FEnum(eRef, ef)):
+						final e = eRef.get();
+						final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
+						final ctorName = isSameModule ? ef.name : (moduleIdToOcamlModuleName(e.module) + "." + ef.name);
+
+						final enumParams:Map<String, String> = [];
+						final patArgs:Array<OcamlPat> = [];
+						for (i in 0...args.length) {
+							final a = args[i];
+							switch (a.expr) {
+								case TLocal(v):
+									final n = renameVar(v.name);
+									patArgs.push(OcamlPat.PVar(n));
+									enumParams.set(ef.name + ":" + i, n);
+								case TConst(c):
+									patArgs.push(OcamlPat.PConst(buildConst(c)));
+								case TIdent("_"):
+									patArgs.push(OcamlPat.PAny);
+								case _:
+									patArgs.push(OcamlPat.PAny);
+							}
+						}
+						{ pat: OcamlPat.PConstructor(ctorName, patArgs), enumParams: enumParams };
+					case _:
+						{ pat: buildSwitchValuePat(v), enumParams: null };
+				}
+			case _:
+				{ pat: buildSwitchValuePat(v), enumParams: null };
+		}
+	}
+
 	function buildField(obj:TypedExpr, fa:FieldAccess):OcamlExpr {
 		return switch (fa) {
+			case FEnum(eRef, ef):
+				final e = eRef.get();
+				final isSameModule = ctx.currentModuleId != null && e.module == ctx.currentModuleId;
+				if (isSameModule) {
+					OcamlExpr.EIdent(ef.name);
+				} else {
+					final modName = moduleIdToOcamlModuleName(e.module);
+					OcamlExpr.EField(OcamlExpr.EIdent(modName), ef.name);
+				}
 			case FStatic(clsRef, cfRef):
 				final cls = clsRef.get();
 				final modName = moduleIdToOcamlModuleName(cls.module);

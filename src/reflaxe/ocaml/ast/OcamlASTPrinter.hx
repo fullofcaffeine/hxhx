@@ -248,7 +248,13 @@ class OcamlASTPrinter {
 			case POr(items):
 				items.map(printPat).join(" | ");
 			case PConstructor(name, args):
-				if (args.length == 0) name else name + " " + args.map(function(a) return printPatCtx(a, true)).join(" ");
+				if (args.length == 0) {
+					name;
+				} else if (args.length == 1) {
+					name + " " + printPatCtx(args[0], true);
+				} else {
+					name + " (" + args.map(printPat).join(", ") + ")";
+				}
 			case PRecord(fields):
 				"{ " + fields.map(f -> f.name + " = " + printPat(f.pat)).join("; ") + " }";
 		}
