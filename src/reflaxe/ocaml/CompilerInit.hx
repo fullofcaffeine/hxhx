@@ -4,6 +4,8 @@ package reflaxe.ocaml;
 
 import reflaxe.ReflectCompiler;
 import reflaxe.preprocessors.ExpressionPreprocessor;
+import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
+import reflaxe.ocaml.preprocessor.InlineSwitchTempImpl;
 
 /**
  * Initialization and registration of the OCaml compiler.
@@ -31,7 +33,9 @@ class CompilerInit {
 		// Ensure std/_std injection is only applied when targeting OCaml.
 		CompilerBootstrap.InjectClassPaths();
 
-		var prepasses:Array<ExpressionPreprocessor> = [];
+		var prepasses:Array<ExpressionPreprocessor> = ExpressionPreprocessorHelper.defaults();
+		// Run early so later preprocessors operate on cleaner shapes.
+		prepasses.unshift(ExpressionPreprocessor.Custom(new InlineSwitchTempImpl()));
 
 		ReflectCompiler.AddCompiler(new OcamlCompiler(), {
 			fileOutputExtension: ".ml",

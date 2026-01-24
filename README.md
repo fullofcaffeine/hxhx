@@ -11,13 +11,14 @@ This repo is set up for **Lix** (via `lix.client` / haxeshim-style `haxe_librari
 First-time setup:
 
 ```bash
-lix download
+npm install
+npx lix download
 ```
 
 Generate `.ml` files into an output directory:
 
 ```bash
-haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
+npx haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
 ```
 
 `-D ocaml_output=<dir>` is required; it enables the compiler and selects the output folder.

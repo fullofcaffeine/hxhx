@@ -1,5 +1,8 @@
 package reflaxe.ocaml.ast;
 
+import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
+import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
+
 using StringTools;
 
 /**
@@ -47,6 +50,12 @@ class OcamlASTPrinter {
 	static inline final PREC_TOP = 0;
 	static inline final PREC_LET = 1;
 	static inline final PREC_SEQ = 2;
+	static inline final PREC_IF = 3;
+	static inline final PREC_OR = 10;
+	static inline final PREC_AND = 11;
+	static inline final PREC_CMP = 20;
+	static inline final PREC_ADD = 30;
+	static inline final PREC_MUL = 40;
 	static inline final PREC_ASSIGN = 5;
 	static inline final PREC_APP = 80;
 	static inline final PREC_FIELD = 90;
@@ -54,15 +63,27 @@ class OcamlASTPrinter {
 
 	function exprPrec(e:OcamlExpr):Int {
 		return switch (e) {
-			case EConst(_), EIdent(_), ETuple(_), ERecord(_):
+			case EConst(_), EIdent(_), ETuple(_), ERecord(_), EList(_):
 				PREC_ATOM;
 			case EField(_, _):
 				PREC_FIELD;
 			case EApp(_, _):
 				PREC_APP;
+			case EUnop(_, _):
+				PREC_MUL;
+			case EBinop(op, _, _):
+				switch (op) {
+					case Or: PREC_OR;
+					case And: PREC_AND;
+					case Eq, Neq, Lt, Lte, Gt, Gte: PREC_CMP;
+					case Add, Sub: PREC_ADD;
+					case Mul, Div, Mod: PREC_MUL;
+				}
 			case EAssign(_, _, _):
 				PREC_ASSIGN;
 			case ESeq(_):
+				PREC_SEQ;
+			case EWhile(_, _):
 				PREC_SEQ;
 			case ELet(_, _, _, _), EFun(_, _), EIf(_, _, _), EMatch(_, _):
 				PREC_LET;
@@ -85,6 +106,10 @@ class OcamlASTPrinter {
 				left + "." + field;
 			case EApp(fn, args):
 				printApp(fn, args, indentLevel);
+			case EBinop(op, left, right):
+				printBinop(op, left, right, indentLevel);
+			case EUnop(op, expr):
+				printUnop(op, expr, indentLevel);
 			case EAssign(op, lhs, rhs):
 				final opStr = switch (op) {
 					case RefSet: ":=";
@@ -95,6 +120,12 @@ class OcamlASTPrinter {
 				l + " " + opStr + " " + r;
 			case ESeq(exprs):
 				printSeq(exprs, indentLevel);
+			case EWhile(cond, body):
+				"while " + printExprCtx(cond, PREC_TOP, indentLevel)
+				+ " do " + printExprCtx(body, PREC_TOP, indentLevel)
+				+ " done";
+			case EList(items):
+				"[" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join("; ") + "]";
 			case ELet(name, value, body, isRec):
 				printLetIn(name, value, body, isRec, indentLevel);
 			case EFun(params, body):
@@ -113,7 +144,7 @@ class OcamlASTPrinter {
 
 	function printConst(c:OcamlConst):String {
 		return switch (c) {
-			case CInt(v): v;
+			case CInt(v): Std.string(v);
 			case CFloat(v): v;
 			case CString(v): "\"" + escapeString(v) + "\"";
 			case CBool(true): "true";
@@ -139,6 +170,37 @@ class OcamlASTPrinter {
 		final indent1 = indent(indentLevel + 1);
 		final parts = exprs.map(e -> indent1 + printExprCtx(e, PREC_TOP, indentLevel + 1));
 		return "(\n" + parts.join(";\n") + "\n" + indent0 + ")";
+	}
+
+	function printBinop(op:OcamlBinop, left:OcamlExpr, right:OcamlExpr, indentLevel:Int):String {
+		final opStr = switch (op) {
+			case Add: "+";
+			case Sub: "-";
+			case Mul: "*";
+			case Div: "/";
+			case Mod: "mod";
+			case Eq: "=";
+			case Neq: "<>";
+			case Lt: "<";
+			case Lte: "<=";
+			case Gt: ">";
+			case Gte: ">=";
+			case And: "&&";
+			case Or: "||";
+		}
+
+		final p = exprPrec(OcamlExpr.EBinop(op, left, right));
+		final l = printExprCtx(left, p, indentLevel);
+		final r = printExprCtx(right, p + 1, indentLevel);
+		return l + " " + opStr + " " + r;
+	}
+
+	function printUnop(op:OcamlUnop, expr:OcamlExpr, indentLevel:Int):String {
+		return switch (op) {
+			case Not: "not " + printExprCtx(expr, PREC_MUL, indentLevel);
+			case Neg: "-" + printExprCtx(expr, PREC_MUL, indentLevel);
+			case Deref: "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
+		}
 	}
 
 	function printRecord(fields:Array<OcamlRecordField>, indentLevel:Int):String {
@@ -183,6 +245,8 @@ class OcamlASTPrinter {
 			case PConst(c): printConst(c);
 			case PTuple(items):
 				"(" + items.map(printPat).join(", ") + ")";
+			case POr(items):
+				items.map(printPat).join(" | ");
 			case PConstructor(name, args):
 				if (args.length == 0) name else name + " " + args.map(function(a) return printPatCtx(a, true)).join(" ");
 			case PRecord(fields):
@@ -200,6 +264,7 @@ class OcamlASTPrinter {
 			case PConstructor(_, _): true;
 			case PRecord(_): true;
 			case PTuple(_): true;
+			case POr(_): true;
 			case _: false;
 		}
 	}

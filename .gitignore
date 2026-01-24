@@ -2,6 +2,9 @@
 out_ocaml*/
 out_ocaml_*/
 
+# Node
+node_modules/
+npm-debug.log*
+
 # OS/editor
 .DS_Store
-

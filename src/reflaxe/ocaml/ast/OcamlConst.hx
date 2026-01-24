@@ -1,10 +1,9 @@
 package reflaxe.ocaml.ast;
 
 enum OcamlConst {
-	CInt(value:String);
+	CInt(value:Int);
 	CFloat(value:String);
 	CString(value:String);
 	CBool(value:Bool);
 	CUnit;
 }
-

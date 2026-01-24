@@ -24,7 +24,7 @@ class OcamlASTPrinterTest {
 			"let x = 1 in x",
 			p.printExpr(OcamlExpr.ELet(
 				"x",
-				OcamlExpr.EConst(OcamlConst.CInt("1")),
+				OcamlExpr.EConst(OcamlConst.CInt(1)),
 				OcamlExpr.EIdent("x"),
 				false
 			)),
@@ -38,7 +38,7 @@ class OcamlASTPrinterTest {
 				OcamlExpr.EIdent("f"),
 				[OcamlExpr.ELet(
 					"x",
-					OcamlExpr.EConst(OcamlConst.CInt("1")),
+					OcamlExpr.EConst(OcamlConst.CInt(1)),
 					OcamlExpr.EIdent("x"),
 					false
 				)]
@@ -54,7 +54,7 @@ class OcamlASTPrinterTest {
 				[{
 					pat: OcamlPat.PAny,
 					guard: null,
-					expr: OcamlExpr.EConst(OcamlConst.CInt("1"))
+					expr: OcamlExpr.EConst(OcamlConst.CInt(1))
 				}]
 			)),
 			"match"
@@ -111,7 +111,7 @@ class OcamlASTPrinterTest {
 						params: [],
 						kind: OcamlTypeDeclKind.Record([{ name: "x", isMutable: true, typ: OcamlTypeExpr.TIdent("int") }])
 					}], false),
-					OcamlModuleItem.ILet([{ name: "x", expr: OcamlExpr.EConst(OcamlConst.CInt("1")) }], false)
+					OcamlModuleItem.ILet([{ name: "x", expr: OcamlExpr.EConst(OcamlConst.CInt(1)) }], false)
 				]) + "\n");
 				final exitCode = Sys.command(ocamlc, ["-c", path]);
 				if (exitCode != 0) throw "ocamlc compile-check failed with exit code " + exitCode;
