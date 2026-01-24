@@ -15,6 +15,7 @@
     "test:m5:class": "haxe test/m5_class_integration_test.hxml",
     "test:m5:guardrails": "haxe test/m5_guardrails_integration_test.hxml",
     "test:m6:runtime": "haxe test/m6_runtime_copier_integration_test.hxml",
-    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime"
+    "test:m6:exceptions": "haxe test/m6_runtime_exceptions_integration_test.hxml",
+    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions"
   }
 }

@@ -165,6 +165,44 @@ class OcamlBuilder {
 			case TObjectDecl(_):
 				// Placeholder until class/anon-struct strategy lands.
 				OcamlExpr.EConst(OcamlConst.CUnit);
+			case TThrow(expr):
+				final repr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expr)]);
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw"), [repr]);
+			case TTry(tryExpr, catches):
+				if (catches.length == 0) {
+					buildExpr(tryExpr);
+				} else {
+					// For now, only support `catch (e:Dynamic)` (M6).
+					if (catches.length != 1) {
+						#if macro
+						guardrailError(
+							"reflaxe.ocaml (M6): only `try {..} catch (e:Dynamic) {..}` is supported for now (multiple catches unsupported).",
+							e.pos
+						);
+						#end
+						OcamlExpr.EConst(OcamlConst.CUnit);
+					} else {
+						final c = catches[0];
+						final isDynamicCatch = switch (c.v.t) {
+							case TDynamic(_): true;
+							case _: false;
+						}
+						if (!isDynamicCatch) {
+							#if macro
+							guardrailError(
+								"reflaxe.ocaml (M6): only `catch (e:Dynamic)` is supported for now (typed catches unsupported).",
+								e.pos
+							);
+							#end
+							OcamlExpr.EConst(OcamlConst.CUnit);
+						} else {
+							final tryFn = OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildExpr(tryExpr));
+							final catchName = renameVar(c.v.name);
+							final handlerFn = OcamlExpr.EFun([OcamlPat.PVar(catchName)], buildExpr(c.expr));
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_try"), [tryFn, handlerFn]);
+						}
+					}
+				}
 			case TReturn(ret):
 				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
 			case _:
