@@ -37,6 +37,9 @@ class OcamlBuilder {
 	// Set while compiling a function body to decide whether TVar locals become `ref` or immutable `let`.
 	var currentMutatedLocalIds:Null<Map<Int, Bool>> = null;
 
+	// Used for pruning unused `let` bindings inside blocks (keeps dune warn-error happy).
+	var currentUsedLocalIds:Null<Map<Int, Bool>> = null;
+
 	// Set while compiling a switch arm to resolve TEnumParameter -> bound pattern variables.
 	var currentEnumParamNames:Null<Map<String, String>> = null;
 
@@ -670,8 +673,12 @@ class OcamlBuilder {
 		final mutatedIds = collectMutatedLocalIdsFromExprs(exprs);
 		final prev = currentMutatedLocalIds;
 		currentMutatedLocalIds = mutatedIds;
+		final usedIds = collectUsedLocalIdsFromExprs(exprs);
+		final prevUsed = currentUsedLocalIds;
+		currentUsedLocalIds = usedIds;
 		final result = buildBlockFromIndex(exprs, 0);
 		currentMutatedLocalIds = prev;
+		currentUsedLocalIds = prevUsed;
 		return result;
 	}
 
@@ -681,6 +688,20 @@ class OcamlBuilder {
 		final e = exprs[index];
 		return switch (e.expr) {
 			case TVar(v, init):
+				final isUsed = currentUsedLocalIds != null
+					&& currentUsedLocalIds.exists(v.id)
+					&& currentUsedLocalIds.get(v.id) == true;
+
+				if (!isUsed) {
+					final rest = buildBlockFromIndex(exprs, index + 1);
+					if (init == null) return rest;
+					final initUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(init)]);
+					return switch (rest) {
+						case ESeq(items): OcamlExpr.ESeq([initUnit].concat(items));
+						case _: OcamlExpr.ESeq([initUnit, rest]);
+					}
+				}
+
 				final initExpr = init != null ? buildExpr(init) : defaultValueForType(v.t);
 				final isMutable = currentMutatedLocalIds != null
 					&& currentMutatedLocalIds.exists(v.id)
@@ -812,6 +833,29 @@ class OcamlBuilder {
 		visit(e);
 	}
 
+	function collectUsedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
+		final used:Map<Int, Bool> = [];
+		for (e in exprs) {
+			final u = collectUsedLocalIds(e);
+			for (k in u.keys()) used.set(k, true);
+		}
+		return used;
+	}
+
+	function collectUsedLocalIds(e:TypedExpr):Map<Int, Bool> {
+		final used:Map<Int, Bool> = [];
+		function visit(e:TypedExpr):TypedExpr {
+			switch (e.expr) {
+				case TLocal(v):
+					used.set(v.id, true);
+				case _:
+			}
+			return TypedExprTools.map(e, visit);
+		}
+		visit(e);
+		return used;
+	}
+
 	function buildSwitch(
 		scrutinee:TypedExpr,
 		cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>,
@@ -828,6 +872,7 @@ class OcamlBuilder {
 						final enumType = eRef.get();
 						final scrut = buildExpr(enumValueExpr);
 						final arms:Array<OcamlMatchCase> = [];
+						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
 
 						for (c in cases) {
 							// Only support a single constructor index per case for now.
@@ -842,11 +887,13 @@ class OcamlBuilder {
 							arms.push({ pat: pat, guard: null, expr: expr });
 						}
 
-						arms.push({
-							pat: OcamlPat.PAny,
-							guard: null,
-							expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
-						});
+						if (!isExhaustive) {
+							arms.push({
+								pat: OcamlPat.PAny,
+								guard: null,
+								expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
+							});
+						}
 
 						return OcamlExpr.EMatch(scrut, arms);
 					case _:
@@ -878,6 +925,32 @@ class OcamlBuilder {
 			expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
 		});
 		return OcamlExpr.EMatch(buildExpr(scrutinee), arms);
+	}
+
+	function enumIndexSwitchIsExhaustive(enumType:EnumType, cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>):Bool {
+		final allIndices:Map<Int, Bool> = [];
+		for (name in enumType.names) {
+			final ef = enumType.constructs.get(name);
+			if (ef != null) allIndices.set(ef.index, true);
+		}
+		if (enumType.names.length == 0) return false;
+
+		final covered:Map<Int, Bool> = [];
+		for (c in cases) {
+			for (v in c.values) {
+				switch (v.expr) {
+					case TConst(TInt(i)):
+						covered.set(i, true);
+					case _:
+						return false;
+				}
+			}
+		}
+
+		for (idx in allIndices.keys()) {
+			if (!(covered.exists(idx) && covered.get(idx) == true)) return false;
+		}
+		return true;
 	}
 
 	function buildEnumIndexCasePat(enumType:EnumType, indexExpr:TypedExpr):Null<{pat:OcamlPat, enumParams:Map<String, String>}> {
