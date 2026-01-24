@@ -16,6 +16,8 @@ class CompilationContext {
 	/** Current module id (as seen by Reflaxe/Haxe), for debug and naming decisions. */
 	public var currentModuleId:Null<String> = null;
 
+	/** True when compiling a type that originates from Haxe's standard library sources. */
+	public var currentIsHaxeStd:Bool = false;
+
 	public function new() {}
 }
-

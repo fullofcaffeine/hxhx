@@ -2,6 +2,7 @@ package reflaxe.ocaml;
 
 #if (macro || reflaxe_runtime)
 
+import haxe.io.Path;
 import haxe.macro.Type;
 import haxe.macro.Type.TConstant;
 import haxe.macro.Type.TypedExpr;
@@ -43,6 +44,46 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
 	var mainModuleId:Null<String> = null;
 
+	#if macro
+	static var haxeStdRoots:Null<Array<String>> = null;
+
+	static function normalizePath(p:String):String {
+		if (p == null) return "";
+		var s = p.replace("\\", "/");
+		if (!s.endsWith("/")) s += "/";
+		return s;
+	}
+
+	static function detectHaxeStdRoots():Array<String> {
+		if (haxeStdRoots != null) return haxeStdRoots;
+
+		final roots:Array<String> = [];
+		for (cp in haxe.macro.Context.getClassPath()) {
+			if (cp == null || cp.length == 0) continue;
+
+			// Identify the real Haxe std root by probing for known files.
+			// Avoid confusing it with this repo's own `std/` folder.
+			final stdHx = Path.join([cp, "Std.hx"]);
+			final logHx = Path.join([cp, "haxe", "Log.hx"]);
+			if (sys.FileSystem.exists(stdHx) && sys.FileSystem.exists(logHx)) {
+				roots.push(normalizePath(cp));
+			}
+		}
+
+		haxeStdRoots = roots;
+		return roots;
+	}
+
+	static function isPosInHaxeStd(pos:haxe.macro.Expr.Position):Bool {
+		final info = haxe.macro.Context.getPosInfos(pos);
+		final file = normalizePath(info.file);
+		for (root in detectHaxeStdRoots()) {
+			if (StringTools.startsWith(file, root)) return true;
+		}
+		return false;
+	}
+	#end
+
 	public function new() {
 		super();
 		instance = this;
@@ -71,6 +112,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.currentModuleId = classType.module;
 		ctx.variableRenameMap.clear();
 		ctx.assignedVars.clear();
+		#if macro
+		ctx.currentIsHaxeStd = isPosInHaxeStd(classType.pos);
+		#end
 
 		final mainModule = getMainModule();
 		final isMain = switch (mainModule) {
@@ -84,6 +128,40 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 
 		final fullName = (classType.pack ?? []).concat([classType.name]).join(".");
+
+		// Guardrails (M5.6.4): fail fast for OO features we haven't implemented.
+		#if macro
+		if (!ctx.currentIsHaxeStd) {
+			final problems:Array<String> = [];
+
+			if (classType.isInterface) {
+				problems.push("interfaces");
+			}
+
+			if (classType.superClass != null) {
+				final sup = classType.superClass.t.get();
+				final supName = (sup.pack ?? []).concat([sup.name]).join(".");
+				problems.push("inheritance (extends " + supName + ")");
+			}
+
+			if (classType.interfaces != null && classType.interfaces.length > 0) {
+				final ifaceNames = classType.interfaces.map(function(i) {
+					final it = i.t.get();
+					return (it.pack ?? []).concat([it.name]).join(".");
+				});
+				problems.push("implements " + ifaceNames.join(", "));
+			}
+
+			if (problems.length > 0) {
+				haxe.macro.Context.error(
+					"reflaxe.ocaml (M5): unsupported OO feature(s) in '" + fullName + "': " + problems.join("; ")
+					+ ".\nSupported for now: flat classes (fields + methods) without extends/implements. (bd: haxe.ocaml-28t.6.4)",
+					classType.pos
+				);
+			}
+		}
+		#end
+
 		final items:Array<OcamlModuleItem> = [];
 		final builder = new OcamlBuilder(ctx);
 

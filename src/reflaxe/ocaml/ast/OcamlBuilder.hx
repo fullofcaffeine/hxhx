@@ -4,6 +4,7 @@ package reflaxe.ocaml.ast;
 
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr.Unop;
+import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.Type.TConstant;
@@ -41,6 +42,14 @@ class OcamlBuilder {
 		this.ctx = ctx;
 	}
 
+	#if macro
+	inline function guardrailError(msg:String, pos:Position):Void {
+		if (!ctx.currentIsHaxeStd) {
+			haxe.macro.Context.error(msg, pos);
+		}
+	}
+	#end
+
 	inline function isRefLocalId(id:Int):Bool {
 		return refLocals.exists(id) && refLocals.get(id) == true;
 	}
@@ -51,6 +60,14 @@ class OcamlBuilder {
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		return switch (e.expr) {
+			case TTypeExpr(_):
+				#if macro
+				guardrailError(
+					"reflaxe.ocaml (M5): type expressions (class values) are not supported yet (reflection). (bd: haxe.ocaml-28t.6.4)",
+					e.pos
+				);
+				#end
+				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TConst(TThis):
 				OcamlExpr.EIdent("self");
 			case TConst(TSuper):
@@ -120,7 +137,7 @@ class OcamlBuilder {
 						OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 				}
 			case TField(obj, fa):
-				buildField(obj, fa);
+				buildField(obj, fa, e.pos);
 			case TMeta(_, e1):
 				buildExpr(e1);
 			case TCast(e1, _):
@@ -611,7 +628,7 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildField(obj:TypedExpr, fa:FieldAccess):OcamlExpr {
+	function buildField(obj:TypedExpr, fa:FieldAccess, pos:Position):OcamlExpr {
 		return switch (fa) {
 			case FEnum(eRef, ef):
 				final e = eRef.get();
@@ -634,6 +651,15 @@ class OcamlBuilder {
 				}
 			case FStatic(clsRef, cfRef):
 				final cls = clsRef.get();
+				#if macro
+				if (!ctx.currentIsHaxeStd && cls.pack != null && cls.pack.length == 0 && (cls.name == "Type" || cls.name == "Reflect")) {
+					guardrailError(
+						"reflaxe.ocaml (M5): Haxe reflection is not supported yet (" + cls.name + "." + cfRef.get().name + "). "
+						+ "Avoid Type/Reflect for now, or add an OCaml extern and call native APIs. (bd: haxe.ocaml-28t.6.4)",
+						pos
+					);
+				}
+				#end
 				final modName = moduleIdToOcamlModuleName(cls.module);
 				OcamlExpr.EField(OcamlExpr.EIdent(modName), cfRef.get().name);
 			case FInstance(_, _, cfRef):
@@ -642,9 +668,25 @@ class OcamlBuilder {
 					case FVar(_, _):
 						OcamlExpr.EField(buildExpr(obj), cf.name);
 					case _:
-						// Methods are handled at the callsite; as a value, treat as module function.
+						#if macro
+						guardrailError(
+							"reflaxe.ocaml (M5): taking a method as a value (bound closure) is not supported yet ('" + cf.name + "'). "
+							+ "Call it directly (obj." + cf.name + "(...)) or wrap it in a lambda. (bd: haxe.ocaml-28t.6.4)",
+							pos
+						);
+						#end
+						// Methods are handled at the callsite; as a value, we currently can't represent them.
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
+			case FDynamic(name):
+				#if macro
+				guardrailError(
+					"reflaxe.ocaml (M5): dynamic field access is not supported yet ('" + name + "'). "
+					+ "Avoid Reflect/dynamic objects for now. (bd: haxe.ocaml-28t.6.4)",
+					pos
+				);
+				#end
+				OcamlExpr.EConst(OcamlConst.CUnit);
 			case _:
 				// For now, treat unknown field access as unit.
 				OcamlExpr.EConst(OcamlConst.CUnit);
