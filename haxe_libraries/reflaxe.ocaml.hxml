@@ -15,7 +15,6 @@
 -lib reflaxe
 
 # Library version define
--D reflaxe.ocaml=0.1.0
-
+-D reflaxe.ocaml=0.2.0
 # Initialize/register the compiler
 --macro reflaxe.ocaml.CompilerInit.Start()

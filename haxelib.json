@@ -10,9 +10,9 @@
     "macro"
   ],
   "description": "A Haxe compilation target for OCaml (via Reflaxe), enabling native OCaml output, OCaml interop, and a path toward Haxe-in-Haxe bootstrapping.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "classPath": "src",
-  "releasenote": "Initial scaffolding.",
+  "releasenote": "v0.2.0: See CHANGELOG.md",
   "contributors": [
     "fullofcaffeine"
   ],
@@ -23,6 +23,9 @@
   "reflaxe": {
     "name": "OCaml",
     "abbv": "ocaml",
-    "stdPaths": ["std", "std/ocaml"]
+    "stdPaths": [
+      "std",
+      "std/ocaml"
+    ]
   }
 }
