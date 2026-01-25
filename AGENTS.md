@@ -46,8 +46,19 @@ bd sync               # Sync with git
 
 Use hxdoc (`/** ... */`) proactively.
 
-- For any **vital** or **complex** class/function, write a verbose, didactic hxdoc explaining:
-  - **Why** it exists (intent, constraints, non-obvious semantics).
+This repo should be a **world-class, didactic example** of building a compiler backend with **Haxe + Reflaxe** that produces **idiomatic target-language code** (OCaml in this repo; the principles should also read well for targets like Rust).
+
+- For any **vital** or **complex** class/function, write a verbose hxdoc explaining:
+  - **Why** it exists (intent, constraints, alternatives considered).
   - **What** it does (inputs/outputs, invariants, edge cases, guarantees).
-  - **How** it works (high-level algorithm/approach and tradeoffs).
-- Prefer documenting public APIs; also document internal code that is subtle, easy to misuse, or correctness-critical.
+  - **How** it works (high-level algorithm, major steps, tradeoffs).
+  - **Target mapping** (how Haxe semantics are preserved and which target idioms we emit).
+  - **Examples** (short usage examples or “before/after” semantics, if helpful).
+  - **Gotchas** (performance traps, correctness hazards, warning-as-error constraints, etc).
+- Prefer documenting public APIs; also document internal code that is subtle, easy to misuse, or correctness-critical (codegen passes, printers, ordering/recursion logic, type mapping, runtime shims, etc.).
+- If you use an **intermediate/advanced Haxe construct** that isn’t obvious, add comprehensive hxdoc on the symbol that introduces/relies on it (and link to the relevant Haxe manual section when practical). Examples include:
+  - **Macros / compile-time** (`haxe.macro.*`, `@:build`, `@:autoBuild`, `macro` functions, `Context`, AST transforms).
+  - **Abstracts & conversions** (`abstract`, `@:from`, `@:to`, `@:op`, `@:forward`, `@:using`).
+  - **Type-system tricks** (`@:generic`, `@:multiType`, `typedef` structural types, `Dynamic`, `Null<T>`, variance/casts, `inline` behavior).
+  - **Safety escape hatches** (`untyped`, `@:privateAccess`, `Reflect`, `Type`, `cast`, `Obj.magic`-style patterns).
+  - **Conditional compilation** (`#if`, `-D`, feature flags) and how it affects output/backwards compatibility.
