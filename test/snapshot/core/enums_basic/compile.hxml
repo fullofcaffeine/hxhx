@@ -1,0 +1,9 @@
+-cp .
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D no-traces
+-D no_traces
+-D ocaml_no_build
+-D ocaml_output=out
+

@@ -16,6 +16,7 @@ This repo follows the same broad layering used in `haxe.elixir.codex`:
 
 - Full suite: `npm test`
 - Example apps only: `npm run test:examples`
+- Snapshots only: `npm run test:snapshot`
 
 ## Why examples?
 
@@ -25,11 +26,14 @@ Snapshot tests are great for *stability*, but examples are great for *truth*:
 - They act as living documentation for users.
 - They become the place we steadily grow “Haxe-in-Haxe enough” workloads.
 
-## Roadmap (next)
+## Snapshot tests
 
-- Add a snapshot harness (`test/snapshot/...`) similar to `haxe.elixir.codex`:
-  - keep intended `.ml` output in-repo
-  - compile to `out/` and diff
-  - provide update scripts for intentional changes
-- Grow examples into “compiler-ish” workloads on the path to Haxe-in-Haxe.
+Snapshot tests live under `test/snapshot/` and follow the same “out vs intended” pattern used in `haxe.elixir.codex`:
 
+- `out/`: last generated output (committed)
+- `intended/`: golden output (committed)
+
+Update golden outputs after an intentional change:
+
+- Run once to regenerate `out/`
+- Copy `out/` → `intended/`: `bash scripts/update-snapshots-intended.sh`
