@@ -41,3 +41,13 @@ bd sync               # Sync with git
 ## Local Reference Repos
 
 - `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`
+
+## Documentation (hxdoc)
+
+Use hxdoc (`/** ... */`) proactively.
+
+- For any **vital** or **complex** class/function, write a verbose, didactic hxdoc explaining:
+  - **Why** it exists (intent, constraints, non-obvious semantics).
+  - **What** it does (inputs/outputs, invariants, edge cases, guarantees).
+  - **How** it works (high-level algorithm/approach and tradeoffs).
+- Prefer documenting public APIs; also document internal code that is subtle, easy to misuse, or correctness-critical.
