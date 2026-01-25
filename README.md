@@ -39,6 +39,10 @@ Optional flags:
 - Portable (default): keep Haxe stdlib semantics and portability; the target provides `std/_std` overrides and runtime helpers so users can target OCaml without writing OCaml-specific code.
 - OCaml-native (opt-in): import `ocaml.*` for APIs that map more directly to OCaml idioms (e.g. `'a list`, `option`, `result`) while still using Haxe typing and tooling.
 
+## Docs
+
+- [Imperative → OCaml Lowering](docs/02-user-guide/IMPERATIVE_TO_OCAML_LOWERING.md) — how mutation/loops/blocks are lowered in portable vs OCaml-native surfaces.
+
 ## Escape hatch
 
 - `untyped __ocaml__("...")` injects raw OCaml snippets (intended for interop and early bring-up).
