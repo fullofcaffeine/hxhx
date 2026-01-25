@@ -74,7 +74,14 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y ocaml dune
+          # On Ubuntu (e.g. 24.04 "noble"), the dune package is named `ocaml-dune`.
+          # On Debian, it is often named `dune`. Install whichever exists.
+          if sudo apt-get install -y ocaml ocaml-dune; then
+            echo "Installed: ocaml + ocaml-dune"
+          else
+            sudo apt-get install -y ocaml dune
+            echo "Installed: ocaml + dune"
+          fi
           dune --version
           ocamlc -version
       - name: Setup Node.js
