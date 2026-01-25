@@ -245,6 +245,18 @@ class OcamlBuilder {
 					case TField(_, FStatic(clsRef, cfRef)):
 						final cls = clsRef.get();
 						final cf = cfRef.get();
+						if (cls.pack != null && cls.pack.length == 0 && cls.name == "Sys" && args.length == 1) {
+							final strArg = isStringType(args[0].t) ? buildExpr(args[0]) : buildStdString(args[0]);
+							switch (cf.name) {
+								case "println":
+									OcamlExpr.EApp(OcamlExpr.EIdent("print_endline"), [strArg]);
+								case "print":
+									OcamlExpr.EApp(OcamlExpr.EIdent("print_string"), [strArg]);
+								case _:
+									final builtArgs = args.map(buildExpr);
+									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+							}
+						} else
 						if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [buildExpr(args[0])]);
 						} else if (isStdBytesClass(cls)) {
