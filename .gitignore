@@ -2,6 +2,10 @@
 out_ocaml*/
 out_ocaml_*/
 
+# Examples build output
+examples/**/out/
+examples/**/out_tmp*/
+
 # Node
 node_modules/
 npm-debug.log*
