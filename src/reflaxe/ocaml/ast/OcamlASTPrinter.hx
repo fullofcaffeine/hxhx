@@ -65,7 +65,7 @@ class OcamlASTPrinter {
 
 	function exprPrec(e:OcamlExpr):Int {
 		return switch (e) {
-			case EConst(_), EIdent(_), ETuple(_), ERecord(_), EList(_):
+			case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_):
 				PREC_ATOM;
 			case EField(_, _):
 				PREC_FIELD;
@@ -101,6 +101,8 @@ class OcamlASTPrinter {
 				printConst(c);
 			case EIdent(name):
 				name;
+			case ERaw(code):
+				code;
 			case ETuple(items):
 				"(" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join(", ") + ")";
 			case ERecord(fields):

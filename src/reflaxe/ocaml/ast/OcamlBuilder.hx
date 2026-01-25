@@ -90,6 +90,16 @@ class OcamlBuilder {
 		}
 	}
 
+	static function isIntType(t:Type):Bool {
+		return switch (t) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				a.pack != null && a.pack.length == 0 && a.name == "Int";
+			case _:
+				false;
+		}
+	}
+
 	static function unwrap(e:TypedExpr):TypedExpr {
 		var current = e;
 		while (true) {
@@ -149,12 +159,48 @@ class OcamlBuilder {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 				} else {
 					final modName = moduleIdToOcamlModuleName(cls.module);
-					final fn = OcamlExpr.EField(OcamlExpr.EIdent(modName), "create");
+					final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+					final fn = (selfMod != null && selfMod == modName)
+						? OcamlExpr.EIdent("create")
+						: OcamlExpr.EField(OcamlExpr.EIdent(modName), "create");
 					final builtArgs = args.map(buildExpr);
 					OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 				}
 			case TCall(fn, args):
-				switch (fn.expr) {
+				{
+					// Escape hatch: raw OCaml injection.
+					final injected:Null<OcamlExpr> = switch (unwrap(fn).expr) {
+						case TIdent("__ocaml__"):
+							if (args.length != 1) {
+								#if macro
+								guardrailError(
+									"reflaxe.ocaml: __ocaml__ expects exactly one string argument.",
+									e.pos
+								);
+								#end
+								OcamlExpr.EConst(OcamlConst.CUnit);
+							} else {
+								final a = unwrap(args[0]);
+								switch (a.expr) {
+									case TConst(TString(s)):
+										OcamlExpr.ERaw(s);
+									case _:
+										#if macro
+										guardrailError(
+											"reflaxe.ocaml: __ocaml__ argument must be a constant string.",
+											e.pos
+										);
+										#end
+										OcamlExpr.EConst(OcamlConst.CUnit);
+								}
+							}
+						case _:
+							null;
+					};
+
+					if (injected != null) {
+						injected;
+					} else switch (fn.expr) {
 					case TField(_, FStatic(clsRef, cfRef)):
 						final cls = clsRef.get();
 						final cf = cfRef.get();
@@ -191,6 +237,17 @@ class OcamlBuilder {
 									);
 									#end
 									OcamlExpr.EConst(OcamlConst.CUnit);
+							}
+						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "int" && args.length == 1) {
+							final arg = unwrap(args[0]);
+							switch (arg.expr) {
+								case TBinop(OpDiv, a, b) if (isIntType(a.t) && isIntType(b.t)):
+									// Haxe `Std.int(a / b)` with Int operands: lower directly to OCaml int division.
+									OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(a), buildExpr(b));
+								case _ if (isIntType(arg.t)):
+									buildExpr(arg);
+								case _:
+									OcamlExpr.EApp(OcamlExpr.EIdent("int_of_float"), [buildExpr(arg)]);
 							}
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
 							buildStdString(args[0]);
@@ -453,7 +510,10 @@ class OcamlBuilder {
 									}
 								} else {
 									final modName = moduleIdToOcamlModuleName(cls.module);
-									final callFn = OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final callFn = (selfMod != null && selfMod == modName)
+										? OcamlExpr.EIdent(cf.name)
+										: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
 									final builtArgs = [buildExpr(objExpr)].concat(args.map(buildExpr));
 									// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
 									if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
@@ -480,6 +540,7 @@ class OcamlBuilder {
 					case _:
 						final builtArgs = args.map(buildExpr);
 						OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+					}
 				}
 			case TField(obj, fa):
 				buildField(obj, fa, e.pos);
@@ -493,8 +554,58 @@ class OcamlBuilder {
 					? OcamlExpr.EIdent(currentEnumParamNames.get(key))
 					: OcamlExpr.EConst(OcamlConst.CUnit);
 			case TEnumIndex(_):
-				// TODO: implement enum index support (used by pattern matcher internals).
-				OcamlExpr.EConst(OcamlConst.CUnit);
+				switch (e.expr) {
+					case TEnumIndex(enumValueExpr):
+						switch (enumValueExpr.t) {
+							case TEnum(eRef, _):
+								final enumType = eRef.get();
+								final scrut = buildExpr(enumValueExpr);
+								final modName = moduleIdToOcamlModuleName(enumType.module);
+								final isSameModule = ctx.currentModuleId != null && enumType.module == ctx.currentModuleId;
+
+								final ctors:Array<EnumField> = [];
+								for (name in enumType.names) {
+									final ef = enumType.constructs.get(name);
+									if (ef != null) ctors.push(ef);
+								}
+								ctors.sort((a, b) -> a.index - b.index);
+
+								final arms:Array<OcamlMatchCase> = [];
+								for (ef in ctors) {
+									final ctorName = if (isOcamlNativeEnumType(enumType, "Option") || isOcamlNativeEnumType(enumType, "Result")) {
+										ef.name;
+									} else if (isOcamlNativeEnumType(enumType, "List")) {
+										ef.name == "Nil" ? "[]" : (ef.name == "Cons" ? "::" : ef.name);
+									} else {
+										isSameModule ? ef.name : (modName + "." + ef.name);
+									}
+
+									final argCount = switch (ef.type) {
+										case TFun(args, _): args.length;
+										case _: 0;
+									}
+									final patArgs:Array<OcamlPat> = [];
+									for (_ in 0...argCount) patArgs.push(OcamlPat.PAny);
+
+									arms.push({
+										pat: OcamlPat.PConstructor(ctorName, patArgs),
+										guard: null,
+										expr: OcamlExpr.EConst(OcamlConst.CInt(ef.index))
+									});
+								}
+								// If the enum has constructors, the match is exhaustive: no default arm
+								// (avoid redundant-case warnings under -warn-error).
+								if (arms.length == 0) {
+									OcamlExpr.EConst(OcamlConst.CInt(-1));
+								} else {
+									OcamlExpr.EMatch(scrut, arms);
+								}
+							case _:
+								OcamlExpr.EConst(OcamlConst.CInt(-1));
+						}
+					case _:
+						OcamlExpr.EConst(OcamlConst.CInt(-1));
+				}
 			case TWhile(cond, body, normalWhile):
 				// do {body} while(cond) not supported yet; lower as while for now
 				if (!normalWhile) {
@@ -608,7 +719,11 @@ class OcamlBuilder {
 
 					if (hasToString) {
 						final modName = moduleIdToOcamlModuleName(c.module);
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent(modName), "toString"), [buildExpr(e), OcamlExpr.EConst(OcamlConst.CUnit)]);
+						final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+						final callFn = (selfMod != null && selfMod == modName)
+							? OcamlExpr.EIdent("toString")
+							: OcamlExpr.EField(OcamlExpr.EIdent(modName), "toString");
+						OcamlExpr.EApp(callFn, [buildExpr(e), OcamlExpr.EConst(OcamlConst.CUnit)]);
 					} else {
 						OcamlExpr.EConst(OcamlConst.CString("<object>"));
 					}
@@ -662,6 +777,11 @@ class OcamlBuilder {
 	}
 
 	function defaultValueForType(t:Type):OcamlExpr {
+		final anyNull:OcamlExpr = OcamlExpr.EApp(
+			OcamlExpr.EIdent("Obj.magic"),
+			[OcamlExpr.EConst(OcamlConst.CUnit)]
+		);
+
 		return switch (t) {
 			case TAbstract(aRef, _):
 				final a = aRef.get();
@@ -669,16 +789,19 @@ class OcamlBuilder {
 					case "Int": OcamlExpr.EConst(OcamlConst.CInt(0));
 					case "Float": OcamlExpr.EConst(OcamlConst.CFloat("0."));
 					case "Bool": OcamlExpr.EConst(OcamlConst.CBool(false));
-					default: OcamlExpr.EConst(OcamlConst.CUnit);
+					default: anyNull;
 				}
 			case TInst(cRef, _):
 				final c = cRef.get();
-				switch (c.name) {
-					case "String": OcamlExpr.EConst(OcamlConst.CString(""));
-					case _: OcamlExpr.EConst(OcamlConst.CUnit);
+				if (c.pack != null && c.pack.length == 0 && c.name == "String") {
+					OcamlExpr.EConst(OcamlConst.CString(""));
+				} else {
+					anyNull;
 				}
+			case TEnum(_, _):
+				anyNull;
 			case _:
-				OcamlExpr.EConst(OcamlConst.CUnit);
+				anyNull;
 		}
 	}
 
@@ -1202,7 +1325,10 @@ class OcamlBuilder {
 				}
 				#end
 				final modName = moduleIdToOcamlModuleName(cls.module);
-				OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+				final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+				return (selfMod != null && selfMod == modName)
+					? OcamlExpr.EIdent(cf.name)
+					: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
 			case FInstance(clsRef, _, cfRef):
 				final cls = clsRef.get();
 				final cf = cfRef.get();

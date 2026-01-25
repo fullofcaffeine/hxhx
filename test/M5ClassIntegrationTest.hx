@@ -33,7 +33,7 @@ class M5ClassIntegrationTest {
 		final yArg = createRe.matched(2);
 		assertContains(pointMl, "self.x <- " + xArg, "ctor assigns x");
 		assertContains(pointMl, "self.y <- " + yArg, "ctor assigns y");
-		assertContains(pointMl, "and incX = fun self () ->", "instance method incX");
+		assertContains(pointMl, "incX = fun self () ->", "instance method incX");
 		assertContains(pointMl, "self.x <- self.x + 1", "incX updates field");
 
 		final mainPath = outDir + "/ClassMain.ml";

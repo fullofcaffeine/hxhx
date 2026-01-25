@@ -35,6 +35,8 @@ enum OcamlUnop {
 enum OcamlExpr {
 	EConst(c:OcamlConst);
 	EIdent(name:String);
+	/** Raw OCaml snippet injected verbatim (escape hatch). */
+	ERaw(code:String);
 
 	/**
 	 * `let <rec?> <name> = <value> in <body>`
