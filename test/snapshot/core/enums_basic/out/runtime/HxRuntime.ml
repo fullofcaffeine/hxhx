@@ -2,6 +2,8 @@
    This will grow as std/_std overrides land. *)
 
 exception Hx_exception of Obj.t
+exception Hx_break
+exception Hx_continue
 
 let hx_throw (v : Obj.t) : 'a =
   raise (Hx_exception v)
@@ -9,4 +11,6 @@ let hx_throw (v : Obj.t) : 'a =
 let hx_try (f : unit -> 'a) (handler : Obj.t -> 'a) : 'a =
   try f () with
   | Hx_exception v -> handler v
+  | Hx_break -> raise Hx_break
+  | Hx_continue -> raise Hx_continue
   | exn -> handler (Obj.repr exn)

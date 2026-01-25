@@ -705,6 +705,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 			switch (e) {
 				case EConst(_):
 				case ERaw(_):
+				case ERaise(exn):
+					visit(exn);
 				case EIdent(n):
 					if (!isBound(n) && want.exists(n)) out.set(n, true);
 				case ELet(n, value, body, isRec):
@@ -739,6 +741,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 					visit(f);
 				case EMatch(scrutinee, cases):
 					visit(scrutinee);
+					for (c in cases) {
+						final names:Array<String> = [];
+						collectPatNames(c.pat, names);
+						for (n in names) boundAdd(n);
+						if (c.guard != null) visit(c.guard);
+						visit(c.expr);
+						for (n in names) boundRemove(n);
+					}
+				case ETry(body, cases):
+					visit(body);
 					for (c in cases) {
 						final names:Array<String> = [];
 						collectPatNames(c.pat, names);

@@ -34,6 +34,9 @@ class OcamlBuilder {
 
 	var tmpId:Int = 0;
 
+	// Tracks nesting of loops while building expressions (used for break/continue).
+	var loopDepth:Int = 0;
+
 	// Set while compiling a function body to decide whether TVar locals become `ref` or immutable `let`.
 	var currentMutatedLocalIds:Null<Map<Int, Bool>> = null;
 
@@ -116,6 +119,26 @@ class OcamlBuilder {
 		}
 	}
 
+	static function containsLoopControl(e:TypedExpr):Bool {
+		var found = false;
+
+		function visit(e:TypedExpr):Void {
+			if (found) return;
+			switch (e.expr) {
+				case TBreak, TContinue:
+					found = true;
+				case TWhile(_, _, _), TFunction(_):
+					// Skip nested loops/functions. Loop control only applies to the
+					// innermost loop at the lexical site in Haxe.
+				case _:
+					TypedExprTools.iter(e, visit);
+			}
+		}
+
+		visit(e);
+		return found;
+	}
+
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		return switch (e.expr) {
 			case TTypeExpr(_):
@@ -157,6 +180,24 @@ class OcamlBuilder {
 				final cls = clsRef.get();
 				if (isStdArrayClass(cls) && args.length == 0) {
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				} else if (isStdBytesClass(cls)) {
+					// Stdlib sometimes calls `new Bytes(len, data)` in `untyped` blocks (e.g. BytesBuffer).
+					// For OCaml we treat BytesData as an opaque runtime value (currently `bytes`), so the
+					// `len` argument is ignored and we just wrap the underlying data.
+					if (args.length == 2) {
+						OcamlExpr.EApp(
+							OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofData"),
+							[buildExpr(args[1]), OcamlExpr.EConst(OcamlConst.CUnit)]
+						);
+					} else {
+						#if macro
+						guardrailError(
+							"reflaxe.ocaml (M6): unsupported Bytes constructor arity (expected new Bytes(len, data)).",
+							e.pos
+						);
+						#end
+						OcamlExpr.EConst(OcamlConst.CUnit);
+					}
 				} else {
 					final modName = moduleIdToOcamlModuleName(cls.module);
 					final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
@@ -606,15 +647,70 @@ class OcamlBuilder {
 					case _:
 						OcamlExpr.EConst(OcamlConst.CInt(-1));
 				}
+			case TBreak:
+				if (loopDepth <= 0) {
+					#if macro
+					guardrailError(
+						"reflaxe.ocaml: `break` is only supported inside loops.",
+						e.pos
+					);
+					#end
+					OcamlExpr.EConst(OcamlConst.CUnit);
+				} else {
+					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"));
+				}
+			case TContinue:
+				if (loopDepth <= 0) {
+					#if macro
+					guardrailError(
+						"reflaxe.ocaml: `continue` is only supported inside loops.",
+						e.pos
+					);
+					#end
+					OcamlExpr.EConst(OcamlConst.CUnit);
+				} else {
+					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"));
+				}
 			case TWhile(cond, body, normalWhile):
+				final condExpr = buildExpr(cond);
+				final needsControl = containsLoopControl(body);
+				loopDepth += 1;
+				final builtBody = buildExpr(body);
+				loopDepth -= 1;
+
+				if (needsControl) {
+					final continueCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+						guard: null,
+						expr: OcamlExpr.EConst(OcamlConst.CUnit)
+					};
+					final breakCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+						guard: null,
+						expr: OcamlExpr.EConst(OcamlConst.CUnit)
+					};
+
+					final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
+					final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
+					final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
+
+					if (!normalWhile) {
+						// do {body} while(cond) not supported yet; lower as while for now.
+						final firstIter = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ETry(builtBody, [continueCase])]);
+						return OcamlExpr.ETry(OcamlExpr.ESeq([firstIter, whileExpr]), [breakCase]);
+					}
+
+					return loopExpr;
+				}
+
 				// do {body} while(cond) not supported yet; lower as while for now
 				if (!normalWhile) {
 					OcamlExpr.ESeq([
-						OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]),
-						OcamlExpr.EWhile(buildExpr(cond), buildExpr(body))
+						OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [builtBody]),
+						OcamlExpr.EWhile(condExpr, builtBody)
 					]);
 				} else {
-					OcamlExpr.EWhile(buildExpr(cond), buildExpr(body));
+					OcamlExpr.EWhile(condExpr, builtBody);
 				}
 			case TSwitch(scrutinee, cases, edef):
 				buildSwitch(scrutinee, cases, edef);

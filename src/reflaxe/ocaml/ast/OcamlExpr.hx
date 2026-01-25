@@ -38,6 +38,9 @@ enum OcamlExpr {
 	/** Raw OCaml snippet injected verbatim (escape hatch). */
 	ERaw(code:String);
 
+	/** `raise (<exn>)` */
+	ERaise(exn:OcamlExpr);
+
 	/**
 	 * `let <rec?> <name> = <value> in <body>`
 	 *
@@ -59,6 +62,8 @@ enum OcamlExpr {
 
 	EIf(cond:OcamlExpr, thenExpr:OcamlExpr, elseExpr:OcamlExpr);
 	EMatch(scrutinee:OcamlExpr, cases:Array<OcamlMatchCase>);
+	/** `try <body> with | <pat> -> <expr> ...` */
+	ETry(body:OcamlExpr, cases:Array<OcamlMatchCase>);
 
 	/** Sequencing: `e1; e2; ...` */
 	ESeq(exprs:Array<OcamlExpr>);

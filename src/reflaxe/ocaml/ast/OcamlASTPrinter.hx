@@ -89,7 +89,7 @@ class OcamlASTPrinter {
 				PREC_SEQ;
 			case EWhile(_, _):
 				PREC_SEQ;
-			case ELet(_, _, _, _), EFun(_, _), EIf(_, _, _), EMatch(_, _):
+			case ELet(_, _, _, _), EFun(_, _), EIf(_, _, _), EMatch(_, _), ETry(_, _), ERaise(_):
 				PREC_LET;
 		}
 	}
@@ -103,6 +103,8 @@ class OcamlASTPrinter {
 				name;
 			case ERaw(code):
 				code;
+			case ERaise(exn):
+				"raise (" + printExprCtx(exn, PREC_TOP, indentLevel) + ")";
 			case ETuple(items):
 				"(" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join(", ") + ")";
 			case ERecord(fields):
@@ -143,6 +145,8 @@ class OcamlASTPrinter {
 				+ " else " + printExprCtx(elseExpr, PREC_TOP, indentLevel);
 			case EMatch(scrutinee, cases):
 				printMatch(scrutinee, cases, indentLevel);
+			case ETry(body, cases):
+				printTry(body, cases, indentLevel);
 		}
 
 		return (p < ctxPrec) ? ("(" + s + ")") : s;
@@ -247,6 +251,16 @@ class OcamlASTPrinter {
 	function printMatch(scrutinee:OcamlExpr, cases:Array<OcamlMatchCase>, indentLevel:Int):String {
 		final caseIndent = indent(indentLevel + 1);
 		final head = "match " + printExprCtx(scrutinee, PREC_TOP, indentLevel) + " with";
+		final arms = cases.map(function(c) {
+			final guardStr = c.guard != null ? (" when " + printExprCtx(c.guard, PREC_TOP, indentLevel + 1)) : "";
+			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
+		});
+		return head + "\n" + arms.join("\n");
+	}
+
+	function printTry(body:OcamlExpr, cases:Array<OcamlMatchCase>, indentLevel:Int):String {
+		final caseIndent = indent(indentLevel + 1);
+		final head = "try " + printExprCtx(body, PREC_TOP, indentLevel) + " with";
 		final arms = cases.map(function(c) {
 			final guardStr = c.guard != null ? (" when " + printExprCtx(c.guard, PREC_TOP, indentLevel + 1)) : "";
 			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
