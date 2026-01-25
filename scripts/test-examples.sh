@@ -26,7 +26,7 @@ for dir in examples/*/; do
   fi
 
   tmp="$(mktemp)"
-  "$exe" > "$tmp"
+  HX_TEST_ENV=ok "$exe" > "$tmp"
   diff -u "${dir}expected.stdout" "$tmp"
   rm -f "$tmp"
 done

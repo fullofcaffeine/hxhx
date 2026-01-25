@@ -245,16 +245,116 @@ class OcamlBuilder {
 					case TField(_, FStatic(clsRef, cfRef)):
 						final cls = clsRef.get();
 						final cf = cfRef.get();
-						if (cls.pack != null && cls.pack.length == 0 && cls.name == "Sys" && args.length == 1) {
-							final strArg = isStringType(args[0].t) ? buildExpr(args[0]) : buildStdString(args[0]);
+						if (cls.pack != null && cls.pack.length == 0 && cls.name == "Sys") {
+							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 							switch (cf.name) {
-								case "println":
-									OcamlExpr.EApp(OcamlExpr.EIdent("print_endline"), [strArg]);
-								case "print":
-									OcamlExpr.EApp(OcamlExpr.EIdent("print_string"), [strArg]);
+								case "println" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EIdent("print_endline"), [buildStdString(args[0])]);
+								case "print" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EIdent("print_string"), [buildStdString(args[0])]);
+								case "args" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "args"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "getEnv" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getEnv"), [buildExpr(args[0])]);
+								case "putEnv" if (args.length == 2):
+									final v1 = unwrap(args[1]);
+									final opt = switch (v1.expr) {
+										case TConst(TNull): OcamlExpr.EIdent("None");
+										case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
+									};
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "putEnv"), [buildExpr(args[0]), opt]);
+								case "sleep" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "sleep"), [buildExpr(args[0])]);
+								case "getCwd" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getCwd"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "setCwd" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "setCwd"), [buildExpr(args[0])]);
+								case "systemName" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "systemName"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "command":
+									final opt = if (args.length == 1) {
+										OcamlExpr.EIdent("None");
+									} else if (args.length == 2) {
+										final a1 = unwrap(args[1]);
+										switch (a1.expr) {
+											case TConst(TNull): OcamlExpr.EIdent("None");
+											case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
+										}
+									} else {
+										#if macro
+										guardrailError("reflaxe.ocaml (M6): Sys.command expects 1 or 2 args.", e.pos);
+										#end
+										OcamlExpr.EIdent("None");
+									};
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "command"), [buildExpr(args[0]), opt]);
+								case "exit" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "exit"), [buildExpr(args[0])]);
+								case "time" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "time"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "cpuTime" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "cpuTime"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "programPath" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "programPath"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "executablePath" if (args.length == 0):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "programPath"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "getChar" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getChar"), [buildExpr(args[0])]);
 								case _:
-									final builtArgs = args.map(buildExpr);
-									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+									#if macro
+									guardrailError("reflaxe.ocaml (M6): Sys." + cf.name + " is not implemented yet.", e.pos);
+									#end
+									anyNull;
+							}
+						} else if (cls.pack != null && cls.pack.length == 1 && cls.pack[0] == "sys" && cls.name == "FileSystem") {
+							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+							switch (cf.name) {
+								case "exists" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "exists"), [buildExpr(args[0])]);
+								case "rename" if (args.length == 2):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "rename"), [buildExpr(args[0]), buildExpr(args[1])]);
+								case "fullPath" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "fullPath"), [buildExpr(args[0])]);
+								case "absolutePath" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "absolutePath"), [buildExpr(args[0])]);
+								case "isDirectory" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "isDirectory"), [buildExpr(args[0])]);
+								case "createDirectory" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "createDirectory"), [buildExpr(args[0])]);
+								case "deleteFile" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "deleteFile"), [buildExpr(args[0])]);
+								case "deleteDirectory" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "deleteDirectory"), [buildExpr(args[0])]);
+								case "readDirectory" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "readDirectory"), [buildExpr(args[0])]);
+								case "stat" if (args.length == 1):
+									#if macro
+									guardrailError("reflaxe.ocaml (M6): sys.FileSystem.stat is not implemented yet. (bd: haxe.ocaml-28t.7.13)", e.pos);
+									#end
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "stat"), [buildExpr(args[0])]);
+								case _:
+									#if macro
+									guardrailError("reflaxe.ocaml (M6): sys.FileSystem." + cf.name + " is not implemented yet.", e.pos);
+									#end
+									anyNull;
+							}
+						} else if (cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "sys" && cls.pack[1] == "io" && cls.name == "File") {
+							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+							switch (cf.name) {
+								case "getContent" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "getContent"), [buildExpr(args[0])]);
+								case "saveContent" if (args.length == 2):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "saveContent"), [buildExpr(args[0]), buildExpr(args[1])]);
+								case "getBytes" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "getBytes"), [buildExpr(args[0])]);
+								case "saveBytes" if (args.length == 2):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "saveBytes"), [buildExpr(args[0]), buildExpr(args[1])]);
+								case "copy" if (args.length == 2):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "copy"), [buildExpr(args[0]), buildExpr(args[1])]);
+								case _:
+									#if macro
+									guardrailError("reflaxe.ocaml (M6): sys.io.File." + cf.name + " is not implemented yet.", e.pos);
+									#end
+									anyNull;
 							}
 						} else
 						if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {

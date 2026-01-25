@@ -29,7 +29,7 @@ class M6RuntimeCopierIntegrationTest {
 		final dunePath = outDir + "/dune";
 		if (!sys.FileSystem.exists(dunePath)) throw "missing dune file: " + dunePath;
 		final dune = sys.io.File.getContent(dunePath);
-		assertContains(dune, "(libraries hx_runtime)", "dune links runtime lib");
+		assertContains(dune, "(libraries hx_runtime", "dune links runtime lib");
 
 		final rtDunePath = outDir + "/runtime/dune";
 		if (!sys.FileSystem.exists(rtDunePath)) throw "missing runtime dune: " + rtDunePath;
@@ -38,4 +38,3 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains(rtDune, "(name hx_runtime)", "runtime dune library name");
 	}
 }
-
