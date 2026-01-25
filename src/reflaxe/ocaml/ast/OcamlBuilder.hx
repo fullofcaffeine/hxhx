@@ -76,6 +76,10 @@ class OcamlBuilder {
 		return cls.pack != null && cls.pack.length == 0 && cls.name == "String";
 	}
 
+	static inline function isStdBytesClass(cls:ClassType):Bool {
+		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "io" && cls.name == "Bytes";
+	}
+
 	static function isStringType(t:Type):Bool {
 		return switch (t) {
 			case TInst(cRef, _):
@@ -156,6 +160,38 @@ class OcamlBuilder {
 						final cf = cfRef.get();
 						if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [buildExpr(args[0])]);
+						} else if (isStdBytesClass(cls)) {
+							switch (cf.name) {
+								case "alloc" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "alloc"), [buildExpr(args[0])]);
+								case "ofString":
+									final encodingExpr = args.length > 1 ? unwrap(args[1]) : null;
+									final okDefaultEncoding = encodingExpr == null || switch (encodingExpr.expr) {
+										case TConst(TNull): true;
+										case _: false;
+									};
+									if (args.length == 1 || (args.length == 2 && okDefaultEncoding)) {
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofString"), [buildExpr(args[0]), OcamlExpr.EConst(OcamlConst.CUnit)]);
+									} else {
+										#if macro
+										guardrailError(
+											"reflaxe.ocaml (M6): Bytes.ofString only supports default encoding for now (pass no encoding or null). (bd: haxe.ocaml-28t.7.5)",
+											e.pos
+										);
+										#end
+										OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+								case "ofData" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofData"), [buildExpr(args[0]), OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case _:
+									#if macro
+									guardrailError(
+										"reflaxe.ocaml (M6): unsupported Bytes static method '" + cf.name + "'. (bd: haxe.ocaml-28t.7.5)",
+										e.pos
+									);
+									#end
+									OcamlExpr.EConst(OcamlConst.CUnit);
+							}
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
 							buildStdString(args[0]);
 						} else {
@@ -338,6 +374,78 @@ class OcamlBuilder {
 											#if macro
 											guardrailError(
 												"reflaxe.ocaml (M6): unsupported String method '" + cf.name + "'. (bd: haxe.ocaml-28t.7.4)",
+												e.pos
+											);
+											#end
+											OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+								} else if (isStdBytesClass(cls)) {
+									final self = buildExpr(objExpr);
+									switch (cf.name) {
+										case "get" if (args.length == 1):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
+												[self, buildExpr(args[0])]
+											);
+										case "set" if (args.length == 2):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
+												[self, buildExpr(args[0]), buildExpr(args[1])]
+											);
+										case "blit" if (args.length == 4):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "blit"),
+												[self, buildExpr(args[0]), buildExpr(args[1]), buildExpr(args[2]), buildExpr(args[3])]
+											);
+										case "fill" if (args.length == 3):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "fill"),
+												[self, buildExpr(args[0]), buildExpr(args[1]), buildExpr(args[2])]
+											);
+										case "sub" if (args.length == 2):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "sub"),
+												[self, buildExpr(args[0]), buildExpr(args[1])]
+											);
+										case "compare" if (args.length == 1):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "compare"),
+												[self, buildExpr(args[0])]
+											);
+										case "getString":
+											final encodingExpr = args.length > 2 ? unwrap(args[2]) : null;
+											final okDefaultEncoding = encodingExpr == null || switch (encodingExpr.expr) {
+												case TConst(TNull): true;
+												case _: false;
+											};
+											if (args.length == 2 || (args.length == 3 && okDefaultEncoding)) {
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getString"),
+													[self, buildExpr(args[0]), buildExpr(args[1]), OcamlExpr.EConst(OcamlConst.CUnit)]
+												);
+											} else {
+												#if macro
+												guardrailError(
+													"reflaxe.ocaml (M6): Bytes.getString only supports default encoding for now (pass no encoding or null). (bd: haxe.ocaml-28t.7.5)",
+													e.pos
+												);
+												#end
+												OcamlExpr.EConst(OcamlConst.CUnit);
+											}
+										case "toString" if (args.length == 0):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "toString"),
+												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case "getData" if (args.length == 0):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getData"),
+												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+											);
+										case _:
+											#if macro
+											guardrailError(
+												"reflaxe.ocaml (M6): unsupported Bytes method '" + cf.name + "'. (bd: haxe.ocaml-28t.7.5)",
 												e.pos
 											);
 											#end
@@ -1104,6 +1212,8 @@ class OcamlBuilder {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
 						} else if (isStdStringClass(cls) && cf.name == "length") {
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
+						} else if (isStdBytesClass(cls) && cf.name == "length") {
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "length"), [buildExpr(obj)]);
 						} else {
 							OcamlExpr.EField(buildExpr(obj), cf.name);
 						}
