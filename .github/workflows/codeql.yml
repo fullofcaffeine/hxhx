@@ -14,9 +14,21 @@ permissions:
   security-events: write
 
 jobs:
+  skip:
+    name: Skip (private repo)
+    runs-on: ubuntu-latest
+    if: github.event.repository.private == true && vars.CODEQL_ENABLED != 'true'
+    timeout-minutes: 5
+    steps:
+      - name: Notice
+        run: |
+          echo "CodeQL is skipped for private repos without GHAS."
+          echo "To enable anyway, set repository variable CODEQL_ENABLED=true."
+
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    if: github.event.repository.private != true || vars.CODEQL_ENABLED == 'true'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -38,4 +50,3 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-
