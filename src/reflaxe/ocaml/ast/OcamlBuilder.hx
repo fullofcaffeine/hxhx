@@ -249,8 +249,13 @@ class OcamlBuilder {
 			case TConst(TSuper):
 				// Inheritance isn't supported yet; treat as `self` for now.
 				OcamlExpr.EIdent("self");
-			case TConst(c):
-				OcamlExpr.EConst(buildConst(c));
+				case TConst(TNull):
+					// `null` is used across many portable Haxe APIs (e.g. Sys.getEnv).
+					// Use a polymorphic "null-like" value so comparisons like `x != null`
+					// type-check even for concrete types like `string`.
+					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				case TConst(c):
+					OcamlExpr.EConst(buildConst(c));
 			case TLocal(v):
 				buildLocal(v);
 			case TIdent(s):
@@ -370,15 +375,17 @@ class OcamlBuilder {
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "args"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 								case "getEnv" if (args.length == 1):
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getEnv"), [buildExpr(args[0])]);
-								case "putEnv" if (args.length == 2):
-									final v1 = unwrap(args[1]);
-									final opt = switch (v1.expr) {
-										case TConst(TNull): OcamlExpr.EIdent("None");
-										case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
-									};
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "putEnv"), [buildExpr(args[0]), opt]);
-								case "sleep" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "sleep"), [buildExpr(args[0])]);
+									case "putEnv" if (args.length == 2):
+										final v1 = unwrap(args[1]);
+										final opt = switch (v1.expr) {
+											case TConst(TNull): OcamlExpr.EIdent("None");
+											case _: OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [buildExpr(args[1])]);
+										};
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "putEnv"), [buildExpr(args[0]), opt]);
+									case "environment" if (args.length == 0):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "environment"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+									case "sleep" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "sleep"), [buildExpr(args[0])]);
 								case "getCwd" if (args.length == 0):
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getCwd"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 								case "setCwd" if (args.length == 1):

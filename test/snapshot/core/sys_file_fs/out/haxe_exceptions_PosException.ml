@@ -8,7 +8,7 @@ type t = { mutable posInfos : Obj.t }
 let create = fun message previous pos -> let self = { posInfos = Obj.magic () } in (
   (
     ignore (self message previous);
-    if pos = () then self.posInfos <- () else self.posInfos <- pos
+    if pos = Obj.magic () then self.posInfos <- () else self.posInfos <- pos
   );
   self
 )
