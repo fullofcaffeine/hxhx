@@ -63,6 +63,14 @@ class M6ArrayIntegrationTest {
 		assertContains(content, "HxArray.insert", "insert");
 		assertContains(content, "HxArray.splice", "splice");
 		assertContains(content, "HxArray.slice", "slice");
+		assertContains(content, "HxArray.concat", "concat");
+		assertContains(content, "HxArray.copy", "copy");
+		assertContains(content, "HxArray.contains", "contains");
+		assertContains(content, "HxArray.indexOf", "indexOf");
+		assertContains(content, "HxArray.lastIndexOf", "lastIndexOf");
+		assertContains(content, "HxArray.reverse", "reverse");
+		assertContains(content, "HxArray.sort", "sort");
+		assertContains(content, "HxArray.join", "join");
 
 		// Best-effort: if dune+ocamlc are available, ensure dune build + run succeeds.
 		if (hasCommand("dune") && hasCommand("ocamlc")) {
@@ -82,4 +90,3 @@ class M6ArrayIntegrationTest {
 		}
 	}
 }
-

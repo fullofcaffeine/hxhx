@@ -4,28 +4,28 @@
 let __reflaxe_ocaml__ = ()
 
 let main = fun () -> let i = ref 0 in let sum = ref 0 in (
-  ignore (try while true do try (
+  ignore (try while true do try ignore ((
     ignore (i := !i + 1);
-    ignore (if !i = 2 then raise (HxRuntime.Hx_continue) else ());
-    ignore (if !i = 5 then raise (HxRuntime.Hx_break) else ());
+    ignore (if !i = 2 then ignore (raise (HxRuntime.Hx_continue)) else ());
+    ignore (if !i = 5 then ignore (raise (HxRuntime.Hx_break)) else ());
     sum := !sum + !i
-  ) with
+  )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  ignore (if !i <> 5 then HxRuntime.hx_throw (Obj.repr "bad i") else ());
-  ignore (if !sum <> 8 then HxRuntime.hx_throw (Obj.repr "bad sum") else ());
+  ignore (if !i <> 5 then ignore (HxRuntime.hx_throw (Obj.repr "bad i")) else ());
+  ignore (if !sum <> 8 then ignore (HxRuntime.hx_throw (Obj.repr "bad sum")) else ());
   let outer = ref 0 in let innerCount = ref 0 in (
-    ignore (while !outer < 3 do (
+    ignore (while !outer < 3 do ignore ((
       ignore (outer := !outer + 1);
-      let inner = ref 0 in try while true do try (
+      let inner = ref 0 in try while true do try ignore ((
         ignore (inner := !inner + 1);
         ignore (innerCount := !innerCount + 1);
-        if !inner = 2 then raise (HxRuntime.Hx_break) else ()
-      ) with
+        if !inner = 2 then ignore (raise (HxRuntime.Hx_break)) else ()
+      )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ()
-    ) done);
-    ignore (if !innerCount <> 6 then HxRuntime.hx_throw (Obj.repr "bad innerCount") else ());
+    )) done);
+    ignore (if !innerCount <> 6 then ignore (HxRuntime.hx_throw (Obj.repr "bad innerCount")) else ());
     print_endline "OK loop_control"
   )
 )

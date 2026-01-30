@@ -209,10 +209,27 @@ class OcamlASTPrinter {
 	}
 
 	function printUnop(op:OcamlUnop, expr:OcamlExpr, indentLevel:Int):String {
+		inline function needsParensAfterPrefix(e:OcamlExpr):Bool {
+			return switch (e) {
+				case EConst(_), EIdent(_), EField(_, _):
+					false;
+				case _:
+					true;
+			}
+		}
+
 		return switch (op) {
-			case Not: "not " + printExprCtx(expr, PREC_MUL, indentLevel);
-			case Neg: "-" + printExprCtx(expr, PREC_MUL, indentLevel);
-			case Deref: "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
+			// `not f x` parses as `(not f) x`, so we emit `not (f x)` instead.
+			case Not:
+				"not (" + printExprCtx(expr, PREC_TOP, indentLevel) + ")";
+			case Neg:
+				needsParensAfterPrefix(expr)
+					? "-(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
+					: "-" + printExprCtx(expr, PREC_MUL, indentLevel);
+			case Deref:
+				needsParensAfterPrefix(expr)
+					? "!(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
+					: "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
 		}
 	}
 

@@ -182,3 +182,168 @@ let iter (a : 'a t) (f : 'a -> unit) : unit =
     f (Obj.obj a.data.(i))
   done
 
+let copy (a : 'a t) : 'a t =
+  let out = create () in
+  if a.length = 0 then
+    out
+  else (
+    ensure_capacity out a.length;
+    Array.blit a.data 0 out.data 0 a.length;
+    out.length <- a.length;
+    out
+  )
+
+let concat (a : 'a t) (b : 'a t) : 'a t =
+  let out = create () in
+  let len_a = a.length in
+  let len_b = b.length in
+  let total = len_a + len_b in
+  if total = 0 then
+    out
+  else (
+    ensure_capacity out total;
+    if len_a > 0 then Array.blit a.data 0 out.data 0 len_a;
+    if len_b > 0 then Array.blit b.data 0 out.data len_a len_b;
+    out.length <- total;
+    out
+  )
+
+let reverse (a : 'a t) () : unit =
+  let i = ref 0 in
+  let j = ref (a.length - 1) in
+  while !i < !j do
+    let tmp = a.data.(!i) in
+    a.data.(!i) <- a.data.(!j);
+    a.data.(!j) <- tmp;
+    i := !i + 1;
+    j := !j - 1
+  done
+
+let normalize_index_of_from (len : int) (fromIndex : int) : int =
+  if fromIndex < 0 then
+    let start = len + fromIndex in
+    if start < 0 then 0 else start
+  else if fromIndex >= len then
+    len
+  else
+    fromIndex
+
+let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+  let len = a.length in
+  let start = normalize_index_of_from len fromIndex in
+  if start >= len then
+    -1
+  else (
+    let rec loop i =
+      if i >= len then
+        -1
+      else if Obj.obj a.data.(i) = x then
+        i
+      else
+        loop (i + 1)
+    in
+    loop start
+  )
+
+let normalize_last_index_of_from (len : int) (fromIndex : int) : int =
+  if fromIndex < 0 then
+    let start = len + fromIndex in
+    if start < 0 then -1 else start
+  else if fromIndex >= len then
+    len - 1
+  else
+    fromIndex
+
+let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+  let len = a.length in
+  if len = 0 then
+    -1
+  else (
+    let start = normalize_last_index_of_from len fromIndex in
+    if start < 0 then
+      -1
+    else (
+      let rec loop i =
+        if i < 0 then
+          -1
+        else if Obj.obj a.data.(i) = x then
+          i
+        else
+          loop (i - 1)
+      in
+      loop start
+    )
+  )
+
+let contains (a : 'a t) (x : 'a) : bool =
+  indexOf a x 0 >= 0
+
+let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
+  if a.length = 0 then
+    ""
+  else if a.length = 1 then
+    to_string (Obj.obj a.data.(0))
+  else (
+    let b = Buffer.create 64 in
+    Buffer.add_string b (to_string (Obj.obj a.data.(0)));
+    for i = 1 to a.length - 1 do
+      Buffer.add_string b sep;
+      Buffer.add_string b (to_string (Obj.obj a.data.(i)))
+    done;
+    Buffer.contents b
+  )
+
+let map (a : 'a t) (f : 'a -> 'b) : 'b t =
+  let out = create () in
+  if a.length = 0 then
+    out
+  else (
+    ensure_capacity out a.length;
+    for i = 0 to a.length - 1 do
+      let v = f (Obj.obj a.data.(i)) in
+      out.data.(i) <- Obj.repr v
+    done;
+    out.length <- a.length;
+    out
+  )
+
+let filter (a : 'a t) (f : 'a -> bool) : 'a t =
+  let out = create () in
+  if a.length = 0 then
+    out
+  else (
+    for i = 0 to a.length - 1 do
+      let v = Obj.obj a.data.(i) in
+      if f v then ignore (push out v) else ()
+    done;
+    out
+  )
+
+let resize (a : 'a t) (new_len : int) : unit =
+  if new_len < 0 then
+    ()
+  else if new_len = a.length then
+    ()
+  else if new_len < a.length then (
+    for i = new_len to a.length - 1 do
+      a.data.(i) <- hx_null
+    done;
+    a.length <- new_len
+  ) else (
+    ensure_capacity a new_len;
+    for i = a.length to new_len - 1 do
+      a.data.(i) <- hx_null
+    done;
+    a.length <- new_len
+  )
+
+let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
+  if a.length < 2 then
+    ()
+  else (
+    let slice = Array.sub a.data 0 a.length in
+    Array.sort
+      (fun x y -> cmp (Obj.obj x) (Obj.obj y))
+      slice;
+    Array.blit slice 0 a.data 0 a.length
+  )

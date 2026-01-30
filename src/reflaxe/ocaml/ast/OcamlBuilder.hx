@@ -103,6 +103,63 @@ class OcamlBuilder {
 		}
 	}
 
+	static function isFloatType(t:Type):Bool {
+		return switch (t) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				a.pack != null && a.pack.length == 0 && a.name == "Float";
+			case _:
+				false;
+		}
+	}
+
+	static function isBoolType(t:Type):Bool {
+		return switch (t) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				a.pack != null && a.pack.length == 0 && a.name == "Bool";
+			case _:
+				false;
+		}
+	}
+
+	static function unwrapNullType(t:Type):Type {
+		return switch (t) {
+			case TAbstract(aRef, [inner]):
+				final a = aRef.get();
+				if (a.pack != null && a.pack.length == 0 && a.name == "Null") inner else t;
+			case _:
+				t;
+		}
+	}
+
+	function buildArrayJoinStringifier(arrayExpr:TypedExpr, pos:Position):OcamlExpr {
+		var elemType:Null<Type> = null;
+		switch (arrayExpr.t) {
+			case TInst(_, params) if (params != null && params.length > 0):
+				elemType = unwrapNullType(params[0]);
+			case _:
+		}
+
+		if (elemType != null) {
+			if (isStringType(elemType)) {
+				final v = renameVar("x");
+				return OcamlExpr.EFun([OcamlPat.PVar(v)], OcamlExpr.EIdent(v));
+			}
+			if (isIntType(elemType)) return OcamlExpr.EIdent("string_of_int");
+			if (isBoolType(elemType)) return OcamlExpr.EIdent("string_of_bool");
+			if (isFloatType(elemType)) return OcamlExpr.EIdent("string_of_float");
+		}
+
+		#if macro
+		guardrailError(
+			"reflaxe.ocaml (M6): Array.join currently supports elements of type String/Int/Float/Bool (others not implemented yet).",
+			pos
+		);
+		#end
+		return OcamlExpr.EFun([OcamlPat.PAny], OcamlExpr.EConst(OcamlConst.CString("<object>")));
+	}
+
 	static function unwrap(e:TypedExpr):TypedExpr {
 		var current = e;
 		while (true) {
@@ -166,12 +223,22 @@ class OcamlBuilder {
 				buildBinop(op, e1, e2);
 			case TUnop(op, postFix, inner):
 				buildUnop(op, postFix, inner);
-			case TFunction(tfunc):
-				buildFunction(tfunc);
-			case TIf(cond, eif, eelse):
-				OcamlExpr.EIf(buildExpr(cond), buildExpr(eif), eelse != null ? buildExpr(eelse) : OcamlExpr.EConst(OcamlConst.CUnit));
-			case TBlock(el):
-				buildBlock(el);
+				case TFunction(tfunc):
+					buildFunction(tfunc);
+				case TIf(cond, eif, eelse):
+					if (eelse == null) {
+						// Haxe `if (cond) stmt;` is statement-typed (Void). Ensure both branches are `unit`
+						// so the OCaml `if` is well-typed, even if `stmt` returns a value (e.g. Array.push).
+						OcamlExpr.EIf(
+							buildExpr(cond),
+							OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(eif)]),
+							OcamlExpr.EConst(OcamlConst.CUnit)
+						);
+					} else {
+						OcamlExpr.EIf(buildExpr(cond), buildExpr(eif), buildExpr(eelse));
+					}
+				case TBlock(el):
+					buildBlock(el);
 			case TVar(v, init):
 				// Variable declarations should generally be handled by `buildBlock`
 				// so that scope covers the remainder of the block.
@@ -413,43 +480,125 @@ class OcamlBuilder {
 						switch (cf.kind) {
 							case FMethod(_):
 								final cls = clsRef.get();
-								if (isStdArrayClass(cls)) {
-									switch (cf.name) {
-										case "push":
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
-												[buildExpr(objExpr), buildExpr(args[0])]
-											);
+									if (isStdArrayClass(cls)) {
+										switch (cf.name) {
+											case "concat":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "concat"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "join":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"),
+													[buildExpr(objExpr), buildExpr(args[0]), buildArrayJoinStringifier(objExpr, e.pos)]
+												);
+											case "push":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
 										case "pop":
 											OcamlExpr.EApp(
 												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "pop"),
 												[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]
 											);
-										case "shift":
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "shift"),
-												[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]
-											);
-										case "unshift":
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "unshift"),
-												[buildExpr(objExpr), buildExpr(args[0])]
-											);
+											case "shift":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "shift"),
+													[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]
+												);
+											case "reverse":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "reverse"),
+													[buildExpr(objExpr), OcamlExpr.EConst(OcamlConst.CUnit)]
+												);
+											case "unshift":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "unshift"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
 										case "insert":
 											OcamlExpr.EApp(
 												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "insert"),
 												[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]
 											);
-										case "remove":
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "remove"),
-												[buildExpr(objExpr), buildExpr(args[0])]
-											);
-										case "splice":
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "splice"),
-												[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]
-											);
+											case "remove":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "remove"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "contains":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "contains"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "indexOf":
+												final fromExpr = if (args.length > 1) {
+													final unwrapped = unwrap(args[1]);
+													switch (unwrapped.expr) {
+														case TConst(TNull):
+															OcamlExpr.EConst(OcamlConst.CInt(0));
+														case _:
+															buildExpr(args[1]);
+													}
+												} else {
+													OcamlExpr.EConst(OcamlConst.CInt(0));
+												}
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "indexOf"),
+													[buildExpr(objExpr), buildExpr(args[0]), fromExpr]
+												);
+											case "lastIndexOf":
+												final defaultFrom = OcamlExpr.EBinop(
+													OcamlBinop.Sub,
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(objExpr)]),
+													OcamlExpr.EConst(OcamlConst.CInt(1))
+												);
+												final fromExpr = if (args.length > 1) {
+													final unwrapped = unwrap(args[1]);
+													switch (unwrapped.expr) {
+														case TConst(TNull):
+															defaultFrom;
+														case _:
+															buildExpr(args[1]);
+													}
+												} else {
+													defaultFrom;
+												}
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "lastIndexOf"),
+													[buildExpr(objExpr), buildExpr(args[0]), fromExpr]
+												);
+											case "copy":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "copy"),
+													[buildExpr(objExpr)]
+												);
+											case "map":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "map"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "filter":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "filter"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "resize":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "resize"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "sort":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "sort"),
+													[buildExpr(objExpr), buildExpr(args[0])]
+												);
+											case "splice":
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "splice"),
+													[buildExpr(objExpr), buildExpr(args[0]), buildExpr(args[1])]
+												);
 										case "slice":
 											final endExpr = if (args.length > 1) {
 												final unwrapped = unwrap(args[1]);
@@ -783,12 +932,12 @@ class OcamlBuilder {
 				} else {
 					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"));
 				}
-			case TWhile(cond, body, normalWhile):
-				final condExpr = buildExpr(cond);
-				final needsControl = containsLoopControl(body);
-				loopDepth += 1;
-				final builtBody = buildExpr(body);
-				loopDepth -= 1;
+				case TWhile(cond, body, normalWhile):
+					final condExpr = buildExpr(cond);
+					final needsControl = containsLoopControl(body);
+					loopDepth += 1;
+					final builtBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]);
+					loopDepth -= 1;
 
 				if (needsControl) {
 					final continueCase:OcamlMatchCase = {
@@ -802,28 +951,27 @@ class OcamlBuilder {
 						expr: OcamlExpr.EConst(OcamlConst.CUnit)
 					};
 
-					final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
-					final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
-					final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
+						final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
+						final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
+						final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
 
-					if (!normalWhile) {
-						// do {body} while(cond) not supported yet; lower as while for now.
-						final firstIter = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.ETry(builtBody, [continueCase])]);
-						return OcamlExpr.ETry(OcamlExpr.ESeq([firstIter, whileExpr]), [breakCase]);
+						if (!normalWhile) {
+							// do {body} while(cond) not supported yet; lower as while for now.
+							return OcamlExpr.ETry(OcamlExpr.ESeq([bodyWithContinue, whileExpr]), [breakCase]);
+						}
+
+						return loopExpr;
 					}
 
-					return loopExpr;
-				}
-
-				// do {body} while(cond) not supported yet; lower as while for now
-				if (!normalWhile) {
-					OcamlExpr.ESeq([
-						OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [builtBody]),
-						OcamlExpr.EWhile(condExpr, builtBody)
-					]);
-				} else {
-					OcamlExpr.EWhile(condExpr, builtBody);
-				}
+					// do {body} while(cond) not supported yet; lower as while for now
+					if (!normalWhile) {
+						OcamlExpr.ESeq([
+							builtBody,
+							OcamlExpr.EWhile(condExpr, builtBody)
+						]);
+					} else {
+						OcamlExpr.EWhile(condExpr, builtBody);
+					}
 			case TSwitch(scrutinee, cases, edef):
 				buildSwitch(scrutinee, cases, edef);
 			case TArray(arr, idx):
