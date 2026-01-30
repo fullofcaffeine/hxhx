@@ -83,6 +83,44 @@ class OcamlBuilder {
 		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "io" && cls.name == "Bytes";
 	}
 
+	static inline function isHaxeDsStringMapClass(cls:ClassType):Bool {
+		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "StringMap";
+	}
+
+	static inline function isHaxeDsIntMapClass(cls:ClassType):Bool {
+		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "IntMap";
+	}
+
+	static inline function isHaxeDsObjectMapClass(cls:ClassType):Bool {
+		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "ObjectMap";
+	}
+
+	static inline function isHaxeConstraintsIMapClass(cls:ClassType):Bool {
+		// `haxe.Constraints.IMap`
+		return cls.pack != null && cls.pack.length == 1 && cls.pack[0] == "haxe" && cls.module == "haxe.Constraints" && cls.name == "IMap";
+	}
+
+	static function mapKeyKindFromType(t:Type):Null<String> {
+		final k = unwrapNullType(t);
+		if (isStringType(k)) return "string";
+		if (isIntType(k)) return "int";
+		// Best-effort: everything else is treated as ObjectMap for now.
+		return "object";
+	}
+
+	function mapKeyKindFromIMapExpr(objExpr:TypedExpr):Null<String> {
+		return switch (objExpr.t) {
+			case TInst(_, params) if (params != null && params.length >= 2):
+				mapKeyKindFromType(params[0]);
+			case _:
+				null;
+		}
+	}
+
+	function ocamlIteratorOfArray(items:OcamlExpr):OcamlExpr {
+		return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "of_array"), [items]);
+	}
+
 	static function isStringType(t:Type):Bool {
 		return switch (t) {
 			case TInst(cRef, _):
@@ -243,14 +281,23 @@ class OcamlBuilder {
 				// Variable declarations should generally be handled by `buildBlock`
 				// so that scope covers the remainder of the block.
 				OcamlExpr.EConst(OcamlConst.CUnit);
-			case TNew(clsRef, _, args):
-				final cls = clsRef.get();
-				if (isStdArrayClass(cls) && args.length == 0) {
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-				} else if (isStdBytesClass(cls)) {
-					// Stdlib sometimes calls `new Bytes(len, data)` in `untyped` blocks (e.g. BytesBuffer).
-					// For OCaml we treat BytesData as an opaque runtime value (currently `bytes`), so the
-					// `len` argument is ignored and we just wrap the underlying data.
+				case TNew(clsRef, _, args):
+					final cls = clsRef.get();
+					if (isStdArrayClass(cls) && args.length == 0) {
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+					} else if (args.length == 0 && (isHaxeDsStringMapClass(cls) || isHaxeDsIntMapClass(cls) || isHaxeDsObjectMapClass(cls))) {
+						final ctor = if (isHaxeDsStringMapClass(cls)) {
+							"create_string";
+						} else if (isHaxeDsIntMapClass(cls)) {
+							"create_int";
+						} else {
+							"create_object";
+						}
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), ctor), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+					} else if (isStdBytesClass(cls)) {
+						// Stdlib sometimes calls `new Bytes(len, data)` in `untyped` blocks (e.g. BytesBuffer).
+						// For OCaml we treat BytesData as an opaque runtime value (currently `bytes`), so the
+						// `len` argument is ignored and we just wrap the underlying data.
 					if (args.length == 2) {
 						OcamlExpr.EApp(
 							OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofData"),
@@ -480,8 +527,8 @@ class OcamlBuilder {
 						switch (cf.kind) {
 							case FMethod(_):
 								final cls = clsRef.get();
-									if (isStdArrayClass(cls)) {
-										switch (cf.name) {
+								if (isStdArrayClass(cls)) {
+									switch (cf.name) {
 											case "concat":
 												OcamlExpr.EApp(
 													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "concat"),
@@ -809,6 +856,51 @@ class OcamlBuilder {
 											);
 											#end
 											OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+								} else if (isHaxeDsStringMapClass(cls) || isHaxeDsIntMapClass(cls) || isHaxeDsObjectMapClass(cls) || isHaxeConstraintsIMapClass(cls)) {
+									final kind = if (isHaxeDsStringMapClass(cls)) {
+										"string";
+									} else if (isHaxeDsIntMapClass(cls)) {
+										"int";
+									} else if (isHaxeDsObjectMapClass(cls)) {
+										"object";
+									} else {
+										mapKeyKindFromIMapExpr(objExpr);
+									}
+									if (kind == null) {
+										#if macro
+										guardrailError("reflaxe.ocaml (M6): could not determine Map key kind for IMap call.", e.pos);
+										#end
+										OcamlExpr.EConst(OcamlConst.CUnit);
+									} else {
+										final self = buildExpr(objExpr);
+										switch (cf.name) {
+											case "set" if (args.length == 2):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "set_" + kind), [self, buildExpr(args[0]), buildExpr(args[1])]);
+											case "get" if (args.length == 1):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "get_" + kind), [self, buildExpr(args[0])]);
+											case "exists" if (args.length == 1):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "exists_" + kind), [self, buildExpr(args[0])]);
+											case "remove" if (args.length == 1):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "remove_" + kind), [self, buildExpr(args[0])]);
+											case "clear" if (args.length == 0):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "clear_" + kind), [self]);
+											case "copy" if (args.length == 0):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "copy_" + kind), [self]);
+											case "toString" if (args.length == 0):
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "toString_" + kind), [self]);
+											case "keys" if (args.length == 0):
+												ocamlIteratorOfArray(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "keys_" + kind), [self]));
+											case "iterator" if (args.length == 0):
+												ocamlIteratorOfArray(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "values_" + kind), [self]));
+											case "keyValueIterator" if (args.length == 0):
+												ocamlIteratorOfArray(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxMap"), "pairs_" + kind), [self]));
+											case _:
+												#if macro
+												guardrailError("reflaxe.ocaml (M6): unsupported Map method '" + cf.name + "'.", e.pos);
+												#end
+												OcamlExpr.EConst(OcamlConst.CUnit);
+										}
 									}
 								} else {
 									final modName = moduleIdToOcamlModuleName(cls.module);
@@ -1719,6 +1811,21 @@ class OcamlBuilder {
 				);
 				#end
 				OcamlExpr.EConst(OcamlConst.CUnit);
+			case FAnon(cfRef):
+				// Minimal anonymous-structure support: KeyValueIterator elements are represented as OCaml tuples.
+				// `{ key:K, value:V }` lowers to `(key, value)`, so `.key` maps to `fst`, `.value` maps to `snd`.
+				//
+				// For iterator values (`Iterator<T>`), we represent them as OCaml records with fields
+				// `hasNext` and `next`, so field access becomes `it.hasNext` / `it.next`.
+				final cf = cfRef.get();
+				switch (cf.name) {
+					case "key":
+						OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [buildExpr(obj)]);
+					case "value":
+						OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [buildExpr(obj)]);
+					case _:
+						OcamlExpr.EField(buildExpr(obj), cf.name);
+				}
 			case _:
 				// For now, treat unknown field access as unit.
 				OcamlExpr.EConst(OcamlConst.CUnit);
