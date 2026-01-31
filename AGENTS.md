@@ -41,6 +41,15 @@ bd sync               # Sync with git
 ## Local Reference Repos
 
 - `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`
+- Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
+
+## Long-Term Acceptance Example: Haxe-in-Haxe (Production-Grade)
+
+We want a potentially **production-ready** Haxe-in-Haxe compiler example under `examples/` over time:
+
+- Target Haxe version: **4.3.7**
+- Must eventually support **macros** (and other core compiler features), not just parsing/typechecking.
+- Use the Haxe compiler source above as the primary local reference for how the real compiler is structured and how it targets OCaml.
 
 ## Documentation (hxdoc)
 
