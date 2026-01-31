@@ -1,0 +1,16 @@
+ni_eq_0=false
+0_eq_ni=false
+ni_eq_null=true
+std_string_null_int=null
+std_string_val_int=1
+float_eq_null=false
+null_eq_float=false
+std_string_null_float=null
+std_string_val_float=1.5
+bool_eq_null=false
+std_string_null_bool=null
+std_string_val_bool=true
+charCodeAt7=null
+charCodeAt0=102
+OK null_primitives
+

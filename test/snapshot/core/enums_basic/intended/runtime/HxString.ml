@@ -47,14 +47,13 @@ let charAt (s : string) (index : int) : string =
   else
     String.sub s index 1
 
-(* Haxe: String.charCodeAt returns Null<Int>. We currently return -1 on OOB,
-   which is sufficient for many parsing workloads. *)
-let charCodeAt (s : string) (index : int) : int =
+(* Haxe: String.charCodeAt returns Null<Int> and yields null on OOB. *)
+let charCodeAt (s : string) (index : int) : Obj.t =
   let len = String.length s in
   if index < 0 || index >= len then
-    -1
+    HxRuntime.hx_null
   else
-    Char.code s.[index]
+    Obj.repr (Char.code s.[index])
 
 let starts_with_at (s : string) (sub : string) (i : int) : bool =
   let slen = String.length s in

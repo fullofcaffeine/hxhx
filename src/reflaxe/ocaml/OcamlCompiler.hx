@@ -514,12 +514,29 @@ class OcamlCompiler extends DirectToStringCompiler {
 		);
 
 		return switch (t) {
-			case TAbstract(aRef, _):
+			case TAbstract(aRef, params):
 				final a = aRef.get();
 				switch (a.name) {
 					case "Int": OcamlExpr.EConst(OcamlConst.CInt(0));
 					case "Float": OcamlExpr.EConst(OcamlConst.CFloat("0."));
 					case "Bool": OcamlExpr.EConst(OcamlConst.CBool(false));
+					case "Null":
+						if (params != null && params.length == 1) {
+							switch (params[0]) {
+								case TAbstract(pRef, _):
+									final p = pRef.get();
+									switch (p.name) {
+										case "Int", "Float", "Bool":
+											OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+										case _:
+											anyNull;
+									}
+								case _:
+									anyNull;
+							}
+						} else {
+							anyNull;
+						}
 					default: anyNull;
 				}
 			case TInst(cRef, _):

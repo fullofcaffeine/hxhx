@@ -13,7 +13,7 @@ type 'a t = {
   mutable length : int;
 }
 
-let hx_null : Obj.t = Obj.repr ()
+let hx_null : Obj.t = HxRuntime.hx_null
 
 let create () : 'a t =
   { data = [||]; length = 0 }
