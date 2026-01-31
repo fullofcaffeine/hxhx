@@ -455,9 +455,6 @@ class OcamlBuilder {
 								case "readDirectory" if (args.length == 1):
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "readDirectory"), [buildExpr(args[0])]);
 								case "stat" if (args.length == 1):
-									#if macro
-									guardrailError("reflaxe.ocaml (M6): sys.FileSystem.stat is not implemented yet. (bd: haxe.ocaml-28t.7.13)", e.pos);
-									#end
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFileSystem"), "stat"), [buildExpr(args[0])]);
 								case _:
 									#if macro
@@ -1295,6 +1292,18 @@ class OcamlBuilder {
 			);
 		}
 
+		inline function coerceForComparison(left:TypedExpr, right:TypedExpr):{ l:OcamlExpr, r:OcamlExpr } {
+			// Haxe allows comparisons between `Int` and `Float` by promoting `Int` to `Float`.
+			// OCaml requires both operands to have the same type.
+			if (isFloatType(left.t) && isIntType(right.t)) {
+				return { l: buildExpr(left), r: OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(right)]) };
+			}
+			if (isIntType(left.t) && isFloatType(right.t)) {
+				return { l: OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(left)]), r: buildExpr(right) };
+			}
+			return { l: buildExpr(left), r: buildExpr(right) };
+		}
+
 		return switch (op) {
 			case OpAssign:
 				// Handle local ref assignment: x = v  ->  x := v
@@ -1376,10 +1385,18 @@ class OcamlBuilder {
 				} else {
 					OcamlExpr.EBinop(OcamlBinop.Neq, buildExpr(e1), buildExpr(e2));
 				}
-			case OpLt: OcamlExpr.EBinop(OcamlBinop.Lt, buildExpr(e1), buildExpr(e2));
-			case OpLte: OcamlExpr.EBinop(OcamlBinop.Lte, buildExpr(e1), buildExpr(e2));
-			case OpGt: OcamlExpr.EBinop(OcamlBinop.Gt, buildExpr(e1), buildExpr(e2));
-			case OpGte: OcamlExpr.EBinop(OcamlBinop.Gte, buildExpr(e1), buildExpr(e2));
+			case OpLt:
+				final c = coerceForComparison(e1, e2);
+				OcamlExpr.EBinop(OcamlBinop.Lt, c.l, c.r);
+			case OpLte:
+				final c = coerceForComparison(e1, e2);
+				OcamlExpr.EBinop(OcamlBinop.Lte, c.l, c.r);
+			case OpGt:
+				final c = coerceForComparison(e1, e2);
+				OcamlExpr.EBinop(OcamlBinop.Gt, c.l, c.r);
+			case OpGte:
+				final c = coerceForComparison(e1, e2);
+				OcamlExpr.EBinop(OcamlBinop.Gte, c.l, c.r);
 			case OpBoolAnd: OcamlExpr.EBinop(OcamlBinop.And, buildExpr(e1), buildExpr(e2));
 			case OpBoolOr: OcamlExpr.EBinop(OcamlBinop.Or, buildExpr(e1), buildExpr(e2));
 			case _:

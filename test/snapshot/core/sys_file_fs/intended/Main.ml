@@ -10,6 +10,11 @@ let main = fun () -> let args = HxSys.args () in (
   let p = "tmp.txt" in (
     ignore (HxFile.saveContent p "hello");
     ignore (print_endline (HxString.toStdString (HxFile.getContent p)));
-    print_endline (string_of_bool (HxFileSystem.exists p))
+    let st = HxFileSystem.stat p in (
+      ignore (print_endline (string_of_int (st.size)));
+      ignore (print_endline (string_of_bool (st.mtime == Obj.magic (HxRuntime.hx_null))));
+      ignore (print_endline (string_of_bool (Date.getTime (st.mtime) () > float_of_int 0)));
+      print_endline (string_of_bool (HxFileSystem.exists p))
+    )
   )
 )

@@ -26,7 +26,11 @@ class Main {
 		File.copy(path, copyPath);
 		Sys.println("copy:" + FileSystem.exists(copyPath));
 
+		final stat = FileSystem.stat(path);
+		Sys.println("stat.size:" + stat.size);
+		Sys.println("stat.mtime_null:" + (stat.mtime == null));
+		Sys.println("stat.mtime_positive:" + (stat.mtime.getTime() > 0));
+
 		Sys.println("entries:" + FileSystem.readDirectory(base).length);
 	}
 }
-

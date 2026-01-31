@@ -2,8 +2,23 @@
 
    This backs the portable `sys.FileSystem` API via compiler intrinsics.
 
-   NOTE: `stat` is intentionally not implemented yet because it requires a
-   stable representation of `sys.FileStat` (and `Date`). *)
+   NOTE: `stat` returns a record that mirrors Haxe's `sys.FileStat` typedef.
+   The `atime`/`mtime`/`ctime` fields are `Date.t` values implemented by the
+   OCaml runtime module `Date` (see std/runtime/Date.ml). *)
+
+type file_stat = {
+  gid : int;
+  uid : int;
+  atime : Date.t;
+  mtime : Date.t;
+  ctime : Date.t;
+  size : int;
+  dev : int;
+  ino : int;
+  nlink : int;
+  rdev : int;
+  mode : int;
+}
 
 let exists (path : string) : bool =
   Sys.file_exists path
@@ -11,8 +26,22 @@ let exists (path : string) : bool =
 let rename (path : string) (newPath : string) : unit =
   Sys.rename path newPath
 
-let stat (_path : string) : Obj.t =
-  HxRuntime.hx_throw (Obj.repr "sys.FileSystem.stat is not implemented yet")
+let stat (path : string) : file_stat =
+  let s = Unix.stat path in
+  let to_date (seconds : float) : Date.t = Date.fromTime (seconds *. 1000.0) in
+  {
+    gid = s.st_gid;
+    uid = s.st_uid;
+    atime = to_date s.st_atime;
+    mtime = to_date s.st_mtime;
+    ctime = to_date s.st_ctime;
+    size = s.st_size;
+    dev = s.st_dev;
+    ino = s.st_ino;
+    nlink = s.st_nlink;
+    rdev = s.st_rdev;
+    mode = s.st_perm;
+  }
 
 let fullPath (relPath : string) : string =
   Unix.realpath relPath

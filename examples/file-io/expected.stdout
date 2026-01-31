@@ -4,4 +4,7 @@ content:hello
 bytes:hello
 bytes_saved:true
 copy:true
+stat.size:5
+stat.mtime_null:false
+stat.mtime_positive:true
 entries:3

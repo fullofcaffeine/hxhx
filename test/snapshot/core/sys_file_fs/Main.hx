@@ -13,7 +13,11 @@ class Main {
 		File.saveContent(p, "hello");
 		Sys.println(File.getContent(p));
 
+		final st = FileSystem.stat(p);
+		Sys.println(st.size);
+		Sys.println(st.mtime == null);
+		Sys.println(st.mtime.getTime() > 0);
+
 		Sys.println(FileSystem.exists(p));
 	}
 }
-
