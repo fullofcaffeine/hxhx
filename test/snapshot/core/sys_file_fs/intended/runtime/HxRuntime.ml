@@ -4,6 +4,7 @@
 exception Hx_exception of Obj.t
 exception Hx_break
 exception Hx_continue
+exception Hx_return of Obj.t
 
 (* Sentinel used to represent Haxe `null` across otherwise non-nullable OCaml types.
    Must be a heap block (not an immediate like `()`) so it doesn't collide with
@@ -18,4 +19,5 @@ let hx_try (f : unit -> 'a) (handler : Obj.t -> 'a) : 'a =
   | Hx_exception v -> handler v
   | Hx_break -> raise Hx_break
   | Hx_continue -> raise Hx_continue
+  | Hx_return v -> raise (Hx_return v)
   | exn -> handler (Obj.repr exn)

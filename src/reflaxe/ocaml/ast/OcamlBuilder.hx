@@ -1173,7 +1173,9 @@ class OcamlBuilder {
 					}
 				}
 			case TReturn(ret):
-				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+				final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+				final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
+				OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
 			case _:
 				OcamlExpr.EConst(OcamlConst.CUnit);
 		}
@@ -1494,13 +1496,13 @@ class OcamlBuilder {
 		final usedIds = collectUsedLocalIdsFromExprs(exprs);
 		final prevUsed = currentUsedLocalIds;
 		currentUsedLocalIds = usedIds;
-		final result = buildBlockFromIndex(exprs, 0);
+		final result = buildBlockFromIndex(exprs, 0, false);
 		currentMutatedLocalIds = prev;
 		currentUsedLocalIds = prevUsed;
 		return result;
 	}
 
-	function buildBlockFromIndex(exprs:Array<TypedExpr>, index:Int):OcamlExpr {
+	function buildBlockFromIndex(exprs:Array<TypedExpr>, index:Int, allowDirectReturn:Bool):OcamlExpr {
 		if (index >= exprs.length) return OcamlExpr.EConst(OcamlConst.CUnit);
 
 		final e = exprs[index];
@@ -1511,7 +1513,7 @@ class OcamlBuilder {
 					&& currentUsedLocalIds.get(v.id) == true;
 
 				if (!isUsed) {
-					final rest = buildBlockFromIndex(exprs, index + 1);
+					final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
 					if (init == null) return rest;
 					final initUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(init)]);
 					return switch (rest) {
@@ -1531,16 +1533,22 @@ class OcamlBuilder {
 					refLocals.remove(v.id);
 					initExpr;
 				}
-				OcamlExpr.ELet(renameVar(v.name), rhs, buildBlockFromIndex(exprs, index + 1), false);
+				OcamlExpr.ELet(renameVar(v.name), rhs, buildBlockFromIndex(exprs, index + 1, allowDirectReturn), false);
 			case TReturn(ret):
-				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+				if (allowDirectReturn) {
+					ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+				} else {
+					final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+					final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
+					OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+				}
 			case _:
 				final current = buildExpr(e);
 				if (index == exprs.length - 1) {
 					current;
 				} else {
 					final currentUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [current]);
-					final rest = buildBlockFromIndex(exprs, index + 1);
+					final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
 					switch (rest) {
 						case ESeq(items):
 							OcamlExpr.ESeq([currentUnit].concat(items));
@@ -1549,6 +1557,47 @@ class OcamlBuilder {
 					}
 				}
 		}
+	}
+
+	function buildFunctionBodyBlock(exprs:Array<TypedExpr>):OcamlExpr {
+		final mutatedIds = collectMutatedLocalIdsFromExprs(exprs);
+		final prev = currentMutatedLocalIds;
+		currentMutatedLocalIds = mutatedIds;
+		final usedIds = collectUsedLocalIdsFromExprs(exprs);
+		final prevUsed = currentUsedLocalIds;
+		currentUsedLocalIds = usedIds;
+		final result = buildBlockFromIndex(exprs, 0, true);
+		currentMutatedLocalIds = prev;
+		currentUsedLocalIds = prevUsed;
+		return result;
+	}
+
+	static function containsNestedReturnInFunctionBody(bodyExpr:TypedExpr):Bool {
+		var found = false;
+
+		function visit(e:TypedExpr, isDirectTopLevelStmt:Bool):Void {
+			if (found) return;
+			switch (e.expr) {
+				case TReturn(_):
+					if (!isDirectTopLevelStmt) found = true;
+				case TFunction(_):
+					// Skip nested functions: `return` inside them is handled by their own boundary.
+				case TBlock(exprs):
+					// Any block encountered here is nested (function-body block is handled at the root).
+					for (x in exprs) visit(x, false);
+				case _:
+					TypedExprTools.iter(e, (x) -> visit(x, false));
+			}
+		}
+
+		switch (bodyExpr.expr) {
+			case TBlock(exprs):
+				for (x in exprs) visit(x, true);
+			case _:
+				visit(bodyExpr, true);
+		}
+
+		return found;
 	}
 
 	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr):OcamlExpr {
@@ -1566,7 +1615,26 @@ class OcamlBuilder {
 			}
 		}
 
-		var body = buildExpr(bodyExpr);
+		final needsReturnCatch = containsNestedReturnInFunctionBody(bodyExpr);
+
+		var body:OcamlExpr = switch (unwrap(bodyExpr).expr) {
+			case TReturn(ret):
+				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+			case TBlock(exprs):
+				buildFunctionBodyBlock(exprs);
+			case _:
+				buildExpr(bodyExpr);
+		}
+
+		if (needsReturnCatch) {
+			final returnVar = freshTmp("ret");
+			final returnCase:OcamlMatchCase = {
+				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
+				guard: null,
+				expr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVar)])
+			};
+			body = OcamlExpr.ETry(body, [returnCase]);
+		}
 
 		for (a in args) {
 			if (mutatedIds.exists(a.id) && mutatedIds.get(a.id) == true) {
@@ -1595,7 +1663,26 @@ class OcamlBuilder {
 			}
 		}
 
-		var body = buildExpr(tfunc.expr);
+		final needsReturnCatch = containsNestedReturnInFunctionBody(tfunc.expr);
+
+		var body:OcamlExpr = switch (unwrap(tfunc.expr).expr) {
+			case TReturn(ret):
+				ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+			case TBlock(exprs):
+				buildFunctionBodyBlock(exprs);
+			case _:
+				buildExpr(tfunc.expr);
+		}
+
+		if (needsReturnCatch) {
+			final returnVar = freshTmp("ret");
+			final returnCase:OcamlMatchCase = {
+				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
+				guard: null,
+				expr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVar)])
+			};
+			body = OcamlExpr.ETry(body, [returnCase]);
+		}
 
 		// Shadow mutated params as refs (`let x = ref x in ...`).
 		for (a in tfunc.args) {
