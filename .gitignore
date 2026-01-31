@@ -5,6 +5,8 @@ out_ocaml_*/
 # Local typed AST dumps (debugging)
 dump_tmp/dump/
 dump_tmp/NullCoal.hx
+dump_*/
+dump_out_*/
 
 # Examples build output
 examples/**/out/
@@ -14,6 +16,7 @@ examples/**/out_tmp*/
 test/portable/**/out/
 test/portable/**/stdout.txt
 test/portable/**/stderr.txt
+tmp_stat_portable.txt
 
 # Node
 node_modules/

@@ -7,8 +7,8 @@ class StringMain {
 		var low = "AbC".toLowerCase();
 		var c0 = s.charAt(0);
 		var cneg = s.charAt(-1);
-		var code0 = s.charCodeAt(0);
-		var codeOob = s.charCodeAt(999);
+			var code0:Null<Int> = s.charCodeAt(0);
+			var codeOob:Null<Int> = s.charCodeAt(999);
 
 		var idx = s.indexOf("cd");
 		var idxFrom = s.indexOf("cd", 3);
@@ -32,9 +32,9 @@ class StringMain {
 		var concat = "a" + "b" + i + b + fl;
 
 		// Use values so they aren't trivially optimized away.
-		if (len == 0 || up == "" || low == "" || c0 == "" || cneg != "" || code0 < 0 || codeOob != -1) {
-			throw "unexpected";
-		}
+			if (len == 0 || up == "" || low == "" || c0 == "" || cneg != "" || code0 < 0 || codeOob != null) {
+				throw "unexpected";
+			}
 		if (idx < 0 || idxFrom != -1 || last < 0 || lastFrom != 2) {
 			throw "unexpected";
 		}
