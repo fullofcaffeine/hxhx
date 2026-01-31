@@ -22,14 +22,14 @@ This repo has two “levels” of setup:
 macOS (Homebrew):
 
 ```bash
-brew install ocaml dune
+brew install ocaml dune ocaml-findlib
 ```
 
 Linux (example, Debian/Ubuntu):
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y ocaml dune
+sudo apt-get install -y ocaml dune ocaml-findlib
 ```
 
 ## Usage (current scaffold)
@@ -90,6 +90,13 @@ Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s 
 ```bash
 HAXE_UPSTREAM_DIR=/path/to/haxe \
   npm run test:upstream:unit-macro
+```
+
+Run upstream Gate 2 (runci Macro target; heavier and more tool-dependent):
+
+```bash
+HAXE_UPSTREAM_DIR=/path/to/haxe \
+  npm run test:upstream:runci-macro
 ```
 
 ## Two surfaces (design)
