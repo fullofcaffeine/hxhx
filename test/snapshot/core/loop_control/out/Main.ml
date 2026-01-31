@@ -5,7 +5,10 @@ let __reflaxe_ocaml__ = ()
 
 let main = fun () -> let i = ref 0 in let sum = ref 0 in (
   ignore (try while true do try ignore ((
-    ignore (i := !i + 1);
+    ignore (let __old_1 = !i in let __new_2 = __old_1 + 1 in (
+      ignore (i := __new_2);
+      __old_1
+    ));
     ignore (if !i = 2 then ignore (raise (HxRuntime.Hx_continue)) else ());
     ignore (if !i = 5 then ignore (raise (HxRuntime.Hx_break)) else ());
     sum := !sum + !i
@@ -16,10 +19,19 @@ let main = fun () -> let i = ref 0 in let sum = ref 0 in (
   ignore (if !sum <> 8 then ignore (HxRuntime.hx_throw (Obj.repr "bad sum")) else ());
   let outer = ref 0 in let innerCount = ref 0 in (
     ignore (while !outer < 3 do ignore ((
-      ignore (outer := !outer + 1);
+      ignore (let __old_3 = !outer in let __new_4 = __old_3 + 1 in (
+        ignore (outer := __new_4);
+        __old_3
+      ));
       let inner = ref 0 in try while true do try ignore ((
-        ignore (inner := !inner + 1);
-        ignore (innerCount := !innerCount + 1);
+        ignore (let __old_5 = !inner in let __new_6 = __old_5 + 1 in (
+          ignore (inner := __new_6);
+          __old_5
+        ));
+        ignore (let __old_7 = !innerCount in let __new_8 = __old_7 + 1 in (
+          ignore (innerCount := __new_8);
+          __old_7
+        ));
         if !inner = 2 then ignore (raise (HxRuntime.Hx_break)) else ()
       )) with
         | HxRuntime.Hx_continue -> () done with

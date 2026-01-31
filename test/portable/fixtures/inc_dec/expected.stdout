@@ -1,0 +1,12 @@
+local_post=0
+local_now=1
+local_pre=2
+field_post=0
+field_now=1
+field_pre=2
+array_post=0
+array_now=1
+array_pre=2
+loop_field=3
+OK inc_dec
+

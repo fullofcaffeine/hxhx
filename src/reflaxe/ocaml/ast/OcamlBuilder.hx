@@ -1470,18 +1470,100 @@ class OcamlBuilder {
 			case OpNeg:
 				OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
 			case OpIncrement, OpDecrement:
-				// ++x / x++ / --x / x--: support for ref locals only (M3).
-				switch (e.expr) {
-					case TLocal(v) if (isRefLocalId(v.id)):
-						final delta = op == OpIncrement ? 1 : -1;
-						final next = OcamlExpr.EBinop(
-							OcamlBinop.Add,
-							buildLocal(v),
-							OcamlExpr.EConst(OcamlConst.CInt(delta))
+				// ++x / x++ / --x / x--:
+				//
+				// Haxe semantics:
+				// - prefix: ++x returns the updated value
+				// - postfix: x++ returns the old value
+				//
+				// We support:
+				// - ref locals (`let x = ref ...`)
+				// - instance var fields (record fields on `t`)
+				// - array elements (`HxArray.get/set`)
+				//
+				// NOTE: This currently assumes `Int` arithmetic (`+`). Supporting `Float`
+				// properly requires float operators (`+.`) which we have not modeled yet.
+				if (!isIntType(e.t)) {
+					#if macro
+					guardrailError("reflaxe.ocaml (M6): ++/-- currently supports Int only.", e.pos);
+					#end
+					OcamlExpr.EConst(OcamlConst.CUnit);
+				} else {
+					final delta = op == OpIncrement ? 1 : -1;
+					final deltaExpr = OcamlExpr.EConst(OcamlConst.CInt(delta));
+
+					inline function incDec(getOld:OcamlExpr, setNew:OcamlExpr->OcamlExpr):OcamlExpr {
+						final oldName = freshTmp("old");
+						final newName = freshTmp("new");
+						final updated = OcamlExpr.EBinop(OcamlBinop.Add, OcamlExpr.EIdent(oldName), deltaExpr);
+						final setExpr = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [setNew(OcamlExpr.EIdent(newName))]);
+						final resultName = postFix ? oldName : newName;
+						return OcamlExpr.ELet(
+							oldName,
+							getOld,
+							OcamlExpr.ELet(
+								newName,
+								updated,
+								OcamlExpr.ESeq([setExpr, OcamlExpr.EIdent(resultName)]),
+								false
+							),
+							false
 						);
-						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), next);
-					case _:
-						OcamlExpr.EConst(OcamlConst.CUnit);
+					}
+
+					switch (e.expr) {
+						case TLocal(v) if (isRefLocalId(v.id)):
+							incDec(
+								buildLocal(v),
+								(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal)
+							);
+						case TField(obj, FInstance(_, _, cfRef)):
+							final cf = cfRef.get();
+							switch (cf.kind) {
+								case FVar(_, _):
+									final objName = freshTmp("obj");
+									OcamlExpr.ELet(
+										objName,
+										buildExpr(obj),
+										incDec(
+											OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
+											(newVal) -> OcamlExpr.EAssign(
+												OcamlAssignOp.FieldSet,
+												OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
+												newVal
+											)
+										),
+										false
+									);
+								case _:
+									OcamlExpr.EConst(OcamlConst.CUnit);
+							}
+						case TArray(arr, idx):
+							final arrName = freshTmp("arr");
+							final idxName = freshTmp("idx");
+							OcamlExpr.ELet(
+								arrName,
+								buildExpr(arr),
+								OcamlExpr.ELet(
+									idxName,
+									buildExpr(idx),
+									incDec(
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]
+										),
+										(newVal) -> OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal]
+										)
+									),
+									false
+								),
+								false
+							);
+						case _:
+							OcamlExpr.EConst(OcamlConst.CUnit);
+					}
 				}
 			case _:
 				OcamlExpr.EConst(OcamlConst.CUnit);

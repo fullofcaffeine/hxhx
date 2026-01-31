@@ -15,4 +15,7 @@ let create = fun array2 -> let self = { array = Obj.magic (); current = 0 } in (
 
 let hasNext = fun self () -> self.current < HxArray.length (self.array)
 
-let next = fun self () -> HxArray.get (self.array) ()
+let next = fun self () -> HxArray.get (self.array) (let __obj_1 = self in let __old_2 = __obj_1.current in let __new_3 = __old_2 + 1 in (
+  ignore (__obj_1.current <- __new_3);
+  __old_2
+))
