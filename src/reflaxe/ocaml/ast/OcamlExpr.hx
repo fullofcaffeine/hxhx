@@ -17,6 +17,8 @@ enum OcamlBinop {
 
 	Eq;
 	Neq;
+	PhysEq;  // ==
+	PhysNeq; // !=
 	Lt;
 	Lte;
 	Gt;
