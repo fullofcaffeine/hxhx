@@ -6,6 +6,32 @@ Haxe → OCaml target built on Reflaxe.
 
 This repo is currently in early scaffolding (see `prd.md` for the roadmap).
 
+## Environment setup
+
+This repo has two “levels” of setup:
+
+- **Emit-only** (generate `.ml` + dune scaffold): Node.js + Haxe (+ Lix).
+- **Build/run** (produce a native executable): add OCaml + dune toolchain.
+
+### Prerequisites
+
+- **Node.js + npm** (used for Lix + dev tooling).
+- **Haxe** (this repo targets Haxe **4.3.7** right now).
+- **OCaml + dune** (required if you want to compile the emitted OCaml to a binary).
+
+macOS (Homebrew):
+
+```bash
+brew install ocaml dune
+```
+
+Linux (example, Debian/Ubuntu):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ocaml dune
+```
+
 ## Usage (current scaffold)
 
 This repo is set up for **Lix** (via `lix.client` / haxeshim-style `haxe_libraries`).
@@ -27,12 +53,44 @@ npx haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
 
 By default, the target also emits a minimal `dune-project`, `dune`, and an executable entry module (`<exeName>.ml`) so the output directory is a runnable OCaml project.
 
+### Build the emitted OCaml (native)
+
+Option A (recommended): let the target invoke dune after emitting:
+
+```bash
+npx haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
+```
+
+Option B: build manually with dune:
+
+```bash
+cd out
+dune build ./*.exe
+```
+
 Optional flags:
 
 - `-D ocaml_no_dune` to disable dune scaffolding emission.
 - `-D ocaml_no_build` (or `-D ocaml_emit_only`) to skip post-emit build/run.
 - `-D ocaml_build=native` (or `byte`) to force `dune build` after emitting (requires `dune` + `ocamlc` on PATH; fails hard if missing).
 - `-D ocaml_run` to run the produced executable via `dune exec` after emitting (best-effort unless combined with `ocaml_build=...`).
+
+## hxhx (Haxe-in-Haxe) bring-up
+
+`hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is a **stage0 shim** that delegates to a system `haxe`, but it already provides a place to hang acceptance tests and bootstrapping gates.
+
+Build the `hxhx` example (requires `dune` + `ocamlc`):
+
+```bash
+bash scripts/hxhx/build-hxhx.sh
+```
+
+Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s path):
+
+```bash
+HAXE_UPSTREAM_DIR=/path/to/haxe \
+  npm run test:upstream:unit-macro
+```
 
 ## Two surfaces (design)
 
