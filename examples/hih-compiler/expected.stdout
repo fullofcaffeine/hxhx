@@ -1,0 +1,7 @@
+stage=2
+parse=ok
+typer=ok
+macros=stub
+emit=stub
+OK hih-compiler
+
