@@ -2,6 +2,10 @@
 out_ocaml*/
 out_ocaml_*/
 
+# Local typed AST dumps (debugging)
+dump_tmp/dump/
+dump_tmp/NullCoal.hx
+
 # Examples build output
 examples/**/out/
 examples/**/out_tmp*/

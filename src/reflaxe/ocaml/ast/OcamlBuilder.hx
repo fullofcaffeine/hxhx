@@ -334,7 +334,61 @@ class OcamlBuilder {
 							OcamlExpr.EConst(OcamlConst.CUnit)
 						);
 					} else {
-						OcamlExpr.EIf(buildExpr(cond), buildExpr(eif), buildExpr(eelse));
+						// Haxe can flow-type nullable primitives inside conditionals, but the typed AST
+						// may still keep branch expressions as `Null<T>` even when the overall `if`
+						// expression is typed as non-nullable `T` (notably from `??` lowering).
+						//
+						// Example (from upstream typed AST dumps):
+						//   var a:Null<Int> = null;
+						//   var b:Int = a ?? 2;
+						// becomes:
+						//   var tmp:Null<Int> = a;
+						//   var b:Int = if (tmp != null) tmp else 2;
+						// where the `then` is still typed as `Null<Int>`.
+						//
+						// OCaml requires both branches to have the same type, so we coerce between
+						// `Null<primitive>` and `primitive` as needed.
+						final expected = e.t;
+
+						function coerceBranch(branch:TypedExpr):OcamlExpr {
+							final toKind = nullablePrimitiveKind(expected);
+							final fromKind = nullablePrimitiveKind(branch.t);
+
+							// Null<prim> -> prim
+							if (toKind == null) {
+								if (isIntType(expected) && fromKind == "int") {
+									return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(branch)]);
+								}
+								if (isFloatType(expected) && fromKind == "float") {
+									return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_unwrap"), [buildExpr(branch)]);
+								}
+								if (isBoolType(expected) && fromKind == "bool") {
+									return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_unwrap"), [buildExpr(branch)]);
+								}
+							}
+
+							// prim -> Null<prim>
+							if (toKind != null && fromKind == null) {
+								switch (toKind) {
+									case "int" if (isIntType(branch.t)):
+										return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(branch)]);
+									case "float" if (isFloatType(branch.t)):
+										return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(branch)]);
+									case "float" if (isIntType(branch.t)):
+										return OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+											[OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(branch)])]
+										);
+									case "bool" if (isBoolType(branch.t)):
+										return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(branch)]);
+									case _:
+								}
+							}
+
+							return buildExpr(branch);
+						}
+
+						OcamlExpr.EIf(buildExpr(cond), coerceBranch(eif), coerceBranch(eelse));
 					}
 				case TBlock(el):
 					buildBlock(el);
