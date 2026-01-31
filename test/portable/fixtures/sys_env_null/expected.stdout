@@ -1,0 +1,4 @@
+getEnv(HX_TEST_ENV)=ok
+getEnv(HX_TEST_ENV_MISSING_REFLAXE_OCAML)=null
+environment(HX_TEST_ENV)=ok
+environment(HX_TEST_ENV_MISSING_REFLAXE_OCAML)=absent

@@ -14,7 +14,7 @@
      Haxe's `Null<T>` behavior where `get` returns null for missing keys.
 *)
 
-let hx_null : Obj.t = Obj.repr ()
+let hx_null : Obj.t = HxRuntime.hx_null
 
 type 'v string_map = (string, Obj.t) Hashtbl.t
 type 'v int_map = (int, Obj.t) Hashtbl.t
@@ -151,4 +151,3 @@ let toString_int (m : 'v int_map) : string =
 
 let toString_object (m : ('k, 'v) obj_map) : string =
   "<ObjectMap size=" ^ string_of_int (ObjTbl.length m) ^ ">"
-

@@ -30,9 +30,10 @@
     "test:m6:map": "haxe test/m6_map_integration_test.hxml",
     "test:m6:sys-env": "haxe test/m6_sys_env_integration_test.hxml",
     "test:m6:string": "haxe test/m6_string_integration_test.hxml",
+    "test:portable": "bash scripts/test-portable.sh",
     "test:snapshot": "bash scripts/test-snapshots.sh",
     "test:examples": "bash scripts/test-examples.sh",
-    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:string && npm run test:snapshot && npm run test:examples"
+    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:string && npm run test:portable && npm run test:snapshot && npm run test:examples"
   },
   "release": {
     "branches": [

@@ -6,6 +6,11 @@ out_ocaml_*/
 examples/**/out/
 examples/**/out_tmp*/
 
+# Portable fixtures build output
+test/portable/**/out/
+test/portable/**/stdout.txt
+test/portable/**/stderr.txt
+
 # Node
 node_modules/
 npm-debug.log*

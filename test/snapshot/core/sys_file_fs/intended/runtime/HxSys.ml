@@ -9,7 +9,7 @@
    Null strings
    - Haxe `String` is nullable (unless using strict null safety).
    - OCaml strings cannot be `null`, so we represent Haxe `null` as an unsafe
-     `Obj.magic ()` value when a function returns a nullable String.
+     `Obj.magic HxRuntime.hx_null` value when a function returns a nullable String.
 
    Env var removal
    - OCaml 4.13's Unix module does not provide `Unix.unsetenv`.
@@ -31,7 +31,7 @@ let args () : string HxArray.t =
   out
 
 let getEnv (s : string) : string =
-  let null_string : string = Obj.magic () in
+  let null_string : string = Obj.magic HxRuntime.hx_null in
   match Sys.getenv_opt s with
   | Some v when v = hx_unset_sentinel -> null_string
   | Some v -> v
