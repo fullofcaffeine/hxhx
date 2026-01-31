@@ -1,6 +1,6 @@
 # reflaxe.ocaml
 
-[![Version](https://img.shields.io/badge/version-0.7.1-blue)]
+[![Version](https://img.shields.io/badge/version-0.8.0-blue)]
 
 Haxe → OCaml target built on Reflaxe.
 
