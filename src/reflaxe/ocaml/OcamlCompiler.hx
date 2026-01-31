@@ -470,6 +470,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 					// Haxe Array<T> -> 't HxArray.t (runtime is permissive; type is best-effort).
 					final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
 					OcamlTypeExpr.TApp("HxArray.t", [elem]);
+				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "StringMap") {
+					final v = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+					OcamlTypeExpr.TApp("HxMap.string_map", [v]);
+				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "IntMap") {
+					final v = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+					OcamlTypeExpr.TApp("HxMap.int_map", [v]);
+				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "ObjectMap") {
+					final k = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+					final v = params.length > 1 ? ocamlTypeExprFromHaxeType(params[1]) : OcamlTypeExpr.TIdent("Obj.t");
+					OcamlTypeExpr.TApp("HxMap.obj_map", [k, v]);
 				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 					OcamlTypeExpr.TIdent("HxBytes.t");
 				} else if (c.isExtern) {

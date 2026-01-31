@@ -953,11 +953,50 @@ class OcamlBuilder {
 				buildExpr(e1);
 			case TCast(e1, _):
 				buildExpr(e1);
-			case TEnumParameter(_, ef, index):
+			case TEnumParameter(enumValueExpr, ef, index):
 				final key = ef.name + ":" + index;
-				currentEnumParamNames != null && currentEnumParamNames.exists(key)
-					? OcamlExpr.EIdent(currentEnumParamNames.get(key))
-					: OcamlExpr.EConst(OcamlConst.CUnit);
+				if (currentEnumParamNames != null && currentEnumParamNames.exists(key)) {
+					OcamlExpr.EIdent(currentEnumParamNames.get(key));
+				} else {
+					final enumType:Null<EnumType> = switch (enumValueExpr.t) {
+						case TEnum(eRef, _): eRef.get();
+						case _: null;
+					}
+					if (enumType == null) {
+						OcamlExpr.EConst(OcamlConst.CUnit);
+					} else {
+						final ctorName = if (isOcamlNativeEnumType(enumType, "Option") || isOcamlNativeEnumType(enumType, "Result")) {
+							ef.name;
+						} else if (isOcamlNativeEnumType(enumType, "List")) {
+							ef.name == "Nil" ? "[]" : (ef.name == "Cons" ? "::" : ef.name);
+						} else {
+							final isSameModule = ctx.currentModuleId != null && enumType.module == ctx.currentModuleId;
+							isSameModule ? ef.name : (moduleIdToOcamlModuleName(enumType.module) + "." + ef.name);
+						}
+
+						final argCount = switch (ef.type) {
+							case TFun(args, _): args.length;
+							case _: 0;
+						}
+						if (index < 0 || index >= argCount) {
+							OcamlExpr.EConst(OcamlConst.CUnit);
+						} else {
+							final wanted = freshTmp("enum_param");
+							final patArgs:Array<OcamlPat> = [];
+							for (i in 0...argCount) {
+								patArgs.push(i == index ? OcamlPat.PVar(wanted) : OcamlPat.PAny);
+							}
+							OcamlExpr.EMatch(buildExpr(enumValueExpr), [
+								{ pat: OcamlPat.PConstructor(ctorName, patArgs), guard: null, expr: OcamlExpr.EIdent(wanted) },
+								{
+									pat: OcamlPat.PAny,
+									guard: null,
+									expr: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Unexpected enum parameter"))])
+								}
+							]);
+						}
+					}
+				}
 			case TEnumIndex(_):
 				switch (e.expr) {
 					case TEnumIndex(enumValueExpr):
@@ -1226,10 +1265,28 @@ class OcamlBuilder {
 		final existing = ctx.variableRenameMap.get(name);
 		if (existing != null) return existing;
 
-		// reserved words are handled by Reflaxe reservedVarNames; keep deterministic suffix as backup.
-		final renamed = name;
+		// Reflaxe has some reserved-name handling, but we still need to ensure we never emit
+		// OCaml keywords as identifiers (e.g. `end`), otherwise dune builds will fail with
+		// syntax errors for perfectly valid Haxe code (and even for Haxe stdlib helpers like
+		// StringTools.endsWith(s, end)).
+		final renamed = isOcamlReservedValueName(name) ? ("hx_" + name) : name;
 		ctx.variableRenameMap.set(name, renamed);
 		return renamed;
+	}
+
+	static function isOcamlReservedValueName(name:String):Bool {
+		return switch (name) {
+			// Keywords (OCaml 4.x)
+			case "and", "as", "assert", "begin", "class", "constraint", "do", "done", "downto", "else", "end",
+				"exception", "external", "false", "for", "fun", "function", "functor", "if", "in", "include",
+				"inherit", "initializer", "lazy", "let", "match", "method", "module", "mutable", "new", "nonrec",
+				"object", "of", "open", "or", "private", "rec", "sig", "struct", "then", "to", "true", "try",
+				"type", "val", "virtual", "when", "while", "with":
+				true;
+			// Commonly-problematic identifiers
+			case _:
+				false;
+		}
 	}
 
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {
