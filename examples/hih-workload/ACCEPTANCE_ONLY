@@ -1,0 +1,3 @@
+# This example is intentionally heavier than the “quick examples”.
+# It is skipped by default in scripts/test-examples.sh unless explicitly enabled.
+

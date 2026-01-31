@@ -10,6 +10,20 @@ fi
 
 for dir in examples/*/; do
   [ -f "${dir}build.hxml" ] || continue
+  if [ -f "${dir}ACCEPTANCE_ONLY" ]; then
+    if [ "${ONLY_ACCEPTANCE_EXAMPLES:-0}" = "1" ]; then
+      :
+    elif [ "${RUN_ACCEPTANCE_EXAMPLES:-0}" = "1" ]; then
+      :
+    else
+      echo "Skipping acceptance example: ${dir}"
+      continue
+    fi
+  else
+    if [ "${ONLY_ACCEPTANCE_EXAMPLES:-0}" = "1" ]; then
+      continue
+    fi
+  fi
   echo "== Example: ${dir}"
 
   (

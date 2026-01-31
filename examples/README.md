@@ -11,7 +11,15 @@ Run them all from the repo root:
 npm run test:examples
 ```
 
+Some examples are intentionally heavier and are **skipped** by `test:examples`.
+Run those with:
+
+```bash
+npm run test:acceptance
+```
+
 ## Included examples
 
 - `mini-compiler`: small parser/evaluator smoke test (compiler-ish workload).
 - `loop-control`: exercises `break`/`continue` lowering (prevents infinite-loop regressions).
+- `hih-workload` (acceptance-only): multi-file “project” compile with parsing, typechecking, and incremental rebuilds (Haxe-in-Haxe path Stage 1).

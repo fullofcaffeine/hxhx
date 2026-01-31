@@ -1,0 +1,72 @@
+# Testing Strategy
+
+This repo’s tests are intentionally split into **fast compiler checks** and **behavioral checks** that require an OCaml toolchain.
+
+The goal is to:
+
+- keep `npm test` fast enough for tight iteration
+- still have realistic “this actually builds and runs under dune” coverage
+- provide at least one **compiler-shaped acceptance workload** (not just unit tests / golden output)
+
+## Quick start
+
+From the repo root:
+
+```bash
+npm test
+```
+
+If you have `ocamlc` + `dune` installed, this also runs:
+
+- portable conformance fixtures (`test/portable/**`)
+- example apps (`examples/**`, except acceptance-only examples)
+
+To run the heavier acceptance examples:
+
+```bash
+npm run test:acceptance
+```
+
+## Layers
+
+### 1) “Build the backend” checks (fast, no dune required)
+
+These checks run `haxe` compilations and/or compare emitted `.ml` text:
+
+- **Printer tests**: ensure OCaml AST printing stays stable/valid.
+- **Integration compile tests**: ensure the backend can compile representative Haxe code.
+- **Snapshot tests** (`test/snapshot/**`): golden `.ml` output comparisons (compile-to-OCaml only; no dune build).
+
+These catch regressions in:
+
+- TypedExpr lowering (`OcamlBuilder`)
+- printing/formatting (`OcamlASTPrinter`)
+- module scheduling/ordering (`OcamlCompiler`)
+
+### 2) “Runs under dune” checks (requires OCaml toolchain)
+
+If `dune` and `ocamlc` are available, we additionally run:
+
+- **Portable fixtures** (`test/portable/fixtures/**`): compile → dune build → run → diff stdout.
+- **Examples** (`examples/**`): compile → dune build → run → diff stdout.
+
+These catch regressions that pure snapshot tests can’t, like:
+
+- OCaml type errors caused by ordering/dependencies
+- missing runtime shims or incorrect OCaml stdlib usage
+- runtime-level behavioral differences (null semantics, string handling, sys APIs)
+
+### 3) Acceptance workloads (explicitly heavier)
+
+Some example apps are marked with an `ACCEPTANCE_ONLY` file and are skipped by default.
+
+Run them with:
+
+```bash
+npm run test:acceptance
+```
+
+Today, the primary acceptance workload is:
+
+- `examples/hih-workload` — a multi-file “project compiler” that exercises parsing, type checking, and incremental rebuilds (Stage 1 toward Haxe-in-Haxe enough).
+
