@@ -42,6 +42,7 @@ bd sync               # Sync with git
 
 - `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`
 - Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
+- `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
 
 ## Long-Term Acceptance Example: Haxe-in-Haxe (Production-Grade)
 
@@ -50,6 +51,20 @@ We want a potentially **production-ready** Haxe-in-Haxe compiler example under `
 - Target Haxe version: **4.3.7**
 - Must eventually support **macros** (and other core compiler features), not just parsing/typechecking.
 - Use the Haxe compiler source above as the primary local reference for how the real compiler is structured and how it targets OCaml.
+
+## “Spec First” (Behavioral References)
+
+When implementing language/runtime semantics, cross-check behavior against:
+
+- The Haxe compiler source + tests in `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
+- The patterns and docs in `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex` (testing strategy, acceptance workloads, etc.)
+- `haxe.elixir.reference` for additional target/stdlib mapping ideas
+
+Prefer adding tests that match the repo’s testing layers:
+
+- Snapshot test (golden `.ml` output) when the key risk is codegen shape/ordering
+- Portable fixture (compile → dune build → run → stdout diff) when behavior matters
+- Acceptance example only when it’s a compiler-shaped workload / integration boundary
 
 ## Documentation (hxdoc)
 
