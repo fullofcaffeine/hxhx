@@ -35,6 +35,7 @@
     "test:snapshot": "bash scripts/test-snapshots.sh",
     "test:examples": "bash scripts/test-examples.sh",
     "test:acceptance": "bash scripts/test-acceptance.sh",
+    "test:upstream:unit-macro": "bash scripts/hxhx/run-upstream-unit-macro.sh",
     "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:filestat && npm run test:m6:string && npm run test:portable && npm run test:snapshot && npm run test:examples"
   },
   "release": {

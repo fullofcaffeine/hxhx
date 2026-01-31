@@ -27,6 +27,29 @@ To run the heavier acceptance examples:
 npm run test:acceptance
 ```
 
+## Upstream Haxe acceptance gates (Haxe-in-Haxe path)
+
+These are **not** part of `npm test` because they depend on:
+
+- a local checkout of the upstream Haxe compiler repo
+- extra toolchains / deps (`haxelib`, network for pinned libs, etc.)
+
+Gate 1 (unit macro suite) uses the upstream file:
+
+- `tests/unit/compile-macro.hxml`
+
+Run it via the `hxhx` harness:
+
+```bash
+HAXE_UPSTREAM_DIR=/path/to/haxe \
+  npm run test:upstream:unit-macro
+```
+
+Notes:
+
+- Today `hxhx` is a Stage 0 shim which delegates to a Stage 0 `haxe` binary.
+- “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
+
 ## Layers
 
 ### 1) “Build the backend” checks (fast, no dune required)
@@ -69,4 +92,3 @@ npm run test:acceptance
 Today, the primary acceptance workload is:
 
 - `examples/hih-workload` — a multi-file “project compiler” that exercises parsing, type checking, and incremental rebuilds (Stage 1 toward Haxe-in-Haxe enough).
-
