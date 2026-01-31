@@ -32,3 +32,7 @@ This repo tracks bootstrapping in stages:
 The intent is to keep adding *realistic* compiler workloads without requiring the
 entire Haxe compiler to compile on day 1.
 
+Related docs:
+
+- ML2HX subset contract: `docs/02-user-guide/ML2HX_SUBSET_CONTRACT.md`
+- Imperative lowering: `docs/02-user-guide/IMPERATIVE_TO_OCAML_LOWERING.md`
