@@ -9,31 +9,6 @@
 let length (s : string) : int =
   String.length s
 
-let hx_null_string : string = Obj.magic HxRuntime.hx_null
-
-let isNull (s : string) : bool =
-  s == hx_null_string
-
-(* Used for Haxe's `Std.string` semantics and string concatenation.
-   - In Haxe, `Std.string(null)` yields "null"
-   - In Haxe, `"x" + null` yields "xnull" *)
-let toStdString (s : string) : string =
-  if isNull s then
-    "null"
-  else
-    s
-
-(* Safe string equality that handles nullable strings without segfaulting.
-   OCaml's `=` can compile down to specialized string equality if the type is known
-   to be `string`, which assumes both operands are real strings. *)
-let equals (a : string) (b : string) : bool =
-  if isNull a then
-    isNull b
-  else if isNull b then
-    false
-  else
-    String.equal a b
-
 let toUpperCase (s : string) () : string =
   String.uppercase_ascii s
 

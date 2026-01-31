@@ -77,7 +77,7 @@ class OcamlASTPrinter {
 				switch (op) {
 					case Or: PREC_OR;
 					case And: PREC_AND;
-					case Eq, Neq, PhysEq, PhysNeq, Lt, Lte, Gt, Gte: PREC_CMP;
+					case Eq, Neq, Lt, Lte, Gt, Gte: PREC_CMP;
 					case Cons: PREC_CONS;
 					case Concat: PREC_CONCAT;
 					case Add, Sub: PREC_ADD;
@@ -193,8 +193,6 @@ class OcamlASTPrinter {
 			case Cons: "::";
 			case Eq: "=";
 			case Neq: "<>";
-			case PhysEq: "==";
-			case PhysNeq: "!=";
 			case Lt: "<";
 			case Lte: "<=";
 			case Gt: ">";

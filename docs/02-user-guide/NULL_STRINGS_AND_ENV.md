@@ -15,7 +15,7 @@ When a runtime helper needs to return a nullable `String` (e.g. `Sys.getEnv`),
 it returns:
 
 - a real OCaml `string` when present, or
-- an unsafe “null-like” value using `Obj.magic HxRuntime.hx_null` when missing
+- an unsafe “null-like” value using `Obj.magic ()` when missing
 
 This mirrors how other targets behave: using a missing env var as a real string
 without a null-check is a program error.
@@ -41,3 +41,4 @@ This is implemented in `std/runtime/HxSys.ml`.
 - The sentinel value is intentionally obscure, but it is not impossible for user
   code to set an env var to it. If you do that, the variable will be treated as
   removed by the Haxe view.
+

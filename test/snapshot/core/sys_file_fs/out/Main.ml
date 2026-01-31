@@ -9,7 +9,7 @@ let main = fun () -> let args = HxSys.args () in (
   ignore (print_endline (string_of_float (HxSys.cpuTime ())));
   let p = "tmp.txt" in (
     ignore (HxFile.saveContent p "hello");
-    ignore (print_endline (HxString.toStdString (HxFile.getContent p)));
+    ignore (print_endline (HxFile.getContent p));
     print_endline (string_of_bool (HxFileSystem.exists p))
   )
 )

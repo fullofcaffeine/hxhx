@@ -123,9 +123,6 @@ class OcamlBuilder {
 
 	static function isStringType(t:Type):Bool {
 		return switch (t) {
-			case TAbstract(aRef, [inner]):
-				final a = aRef.get();
-				a.pack != null && a.pack.length == 0 && a.name == "Null" && isStringType(inner);
 			case TInst(cRef, _):
 				final c = cRef.get();
 				isStdStringClass(c);
@@ -254,13 +251,9 @@ class OcamlBuilder {
 				OcamlExpr.EIdent("self");
 				case TConst(TNull):
 					// `null` is used across many portable Haxe APIs (e.g. Sys.getEnv).
-					//
-					// Represent it as a unique heap-allocated sentinel (`HxRuntime.hx_null`)
-					// and cast it with `Obj.magic` so it unifies with any Haxe type.
-					OcamlExpr.EApp(
-						OcamlExpr.EIdent("Obj.magic"),
-						[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
-					);
+					// Use a polymorphic "null-like" value so comparisons like `x != null`
+					// type-check even for concrete types like `string`.
+					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 				case TConst(c):
 					OcamlExpr.EConst(buildConst(c));
 			case TLocal(v):
@@ -1151,15 +1144,8 @@ class OcamlBuilder {
 			case _:
 		}
 
-		inline function toStdString(expr:OcamlExpr):OcamlExpr {
-			return OcamlExpr.EApp(
-				OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString"),
-				[expr]
-			);
-		}
-
 		return switch (e.t) {
-			case TAbstract(aRef, params):
+			case TAbstract(aRef, _):
 				final a = aRef.get();
 				switch (a.name) {
 					case "Int":
@@ -1168,18 +1154,13 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_float"), [buildExpr(e)]);
 					case "Bool":
 						OcamlExpr.EApp(OcamlExpr.EIdent("string_of_bool"), [buildExpr(e)]);
-					case "Null":
-						// Haxe `Null<T>`: for now, support String-ish values (common for portable APIs).
-						(params != null && params.length == 1 && isStringType(params[0]))
-							? toStdString(buildExpr(e))
-							: OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
 					default:
 						OcamlExpr.EConst(OcamlConst.CString("<unsupported>"));
 				}
 			case TInst(cRef, _):
 				final c = cRef.get();
 				if (isStdStringClass(c)) {
-					toStdString(buildExpr(e));
+					buildExpr(e);
 				} else {
 					var hasToString = false;
 					try {
@@ -1280,21 +1261,6 @@ class OcamlBuilder {
 	}
 
 	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr):OcamlExpr {
-		inline function isNullExpr(e:TypedExpr):Bool {
-			final u = unwrap(e);
-			return switch (u.expr) {
-				case TConst(TNull): true;
-				case _: false;
-			}
-		}
-
-		inline function toStdString(expr:OcamlExpr):OcamlExpr {
-			return OcamlExpr.EApp(
-				OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "toStdString"),
-				[expr]
-			);
-		}
-
 		return switch (op) {
 			case OpAssign:
 				// Handle local ref assignment: x = v  ->  x := v
@@ -1323,7 +1289,8 @@ class OcamlBuilder {
 						final rhs = switch (inner) {
 							case OpAdd:
 								if (isStringType(v.t) || isStringType(e2.t)) {
-									OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
+									final r = isStringType(e2.t) ? buildExpr(e2) : buildStdString(e2);
+									OcamlExpr.EBinop(OcamlBinop.Concat, lhs, r);
 								} else {
 									OcamlExpr.EBinop(OcamlBinop.Add, lhs, buildExpr(e2));
 								}
@@ -1339,9 +1306,9 @@ class OcamlBuilder {
 				}
 			case OpAdd:
 				if (isStringType(e1.t) || isStringType(e2.t)) {
-					// Haxe string concat: always uses `Std.string` semantics on both sides
-					// (e.g. `"x" + null == "xnull"`).
-					OcamlExpr.EBinop(OcamlBinop.Concat, buildStdString(e1), buildStdString(e2));
+					final lhs = isStringType(e1.t) ? buildExpr(e1) : buildStdString(e1);
+					final rhs = isStringType(e2.t) ? buildExpr(e2) : buildStdString(e2);
+					OcamlExpr.EBinop(OcamlBinop.Concat, lhs, rhs);
 				} else {
 					OcamlExpr.EBinop(OcamlBinop.Add, buildExpr(e1), buildExpr(e2));
 				}
@@ -1349,33 +1316,8 @@ class OcamlBuilder {
 			case OpMult: OcamlExpr.EBinop(OcamlBinop.Mul, buildExpr(e1), buildExpr(e2));
 			case OpDiv: OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(e1), buildExpr(e2));
 			case OpMod: OcamlExpr.EBinop(OcamlBinop.Mod, buildExpr(e1), buildExpr(e2));
-			case OpEq:
-				// Null checks must use physical equality (==) so we don't accidentally invoke
-				// specialized structural equality (notably for strings).
-				if (isNullExpr(e1) || isNullExpr(e2)) {
-					OcamlExpr.EBinop(OcamlBinop.PhysEq, buildExpr(e1), buildExpr(e2));
-				} else if (isStringType(e1.t) || isStringType(e2.t)) {
-					OcamlExpr.EApp(
-						OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "equals"),
-						[buildExpr(e1), buildExpr(e2)]
-					);
-				} else {
-					OcamlExpr.EBinop(OcamlBinop.Eq, buildExpr(e1), buildExpr(e2));
-				}
-			case OpNotEq:
-				if (isNullExpr(e1) || isNullExpr(e2)) {
-					OcamlExpr.EBinop(OcamlBinop.PhysNeq, buildExpr(e1), buildExpr(e2));
-				} else if (isStringType(e1.t) || isStringType(e2.t)) {
-					OcamlExpr.EUnop(
-						OcamlUnop.Not,
-						OcamlExpr.EApp(
-							OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "equals"),
-							[buildExpr(e1), buildExpr(e2)]
-						)
-					);
-				} else {
-					OcamlExpr.EBinop(OcamlBinop.Neq, buildExpr(e1), buildExpr(e2));
-				}
+			case OpEq: OcamlExpr.EBinop(OcamlBinop.Eq, buildExpr(e1), buildExpr(e2));
+			case OpNotEq: OcamlExpr.EBinop(OcamlBinop.Neq, buildExpr(e1), buildExpr(e2));
 			case OpLt: OcamlExpr.EBinop(OcamlBinop.Lt, buildExpr(e1), buildExpr(e2));
 			case OpLte: OcamlExpr.EBinop(OcamlBinop.Lte, buildExpr(e1), buildExpr(e2));
 			case OpGt: OcamlExpr.EBinop(OcamlBinop.Gt, buildExpr(e1), buildExpr(e2));

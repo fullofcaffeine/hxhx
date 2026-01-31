@@ -1,8 +1,0 @@
--cp src
--main Main
---no-output
--lib reflaxe.ocaml
--D no-traces
--D no_traces
--D ocaml_output=out
-

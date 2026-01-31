@@ -8,9 +8,9 @@ type t = { mutable posInfos : Obj.t }
 let create = fun message previous pos -> let self = { posInfos = Obj.magic () } in (
   (
     ignore (self message previous);
-    if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- () else self.posInfos <- pos
+    if pos = Obj.magic () then self.posInfos <- () else self.posInfos <- pos
   );
   self
 )
 
-let toString = fun self () -> HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString "" ^ HxString.toStdString (Haxe_Exception.toString self ())) ^ HxString.toStdString " in ") ^ HxString.toStdString (self.posInfos.className)) ^ HxString.toStdString ".") ^ HxString.toStdString (self.posInfos.methodName)) ^ HxString.toStdString " at ") ^ HxString.toStdString (self.posInfos.fileName)) ^ HxString.toStdString ":") ^ string_of_int (self.posInfos.lineNumber)
+let toString = fun self () -> (((((((("" ^ Haxe_Exception.toString self ()) ^ " in ") ^ self.posInfos.className) ^ ".") ^ self.posInfos.methodName) ^ " at ") ^ self.posInfos.fileName) ^ ":") ^ string_of_int (self.posInfos.lineNumber)
