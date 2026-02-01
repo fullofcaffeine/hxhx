@@ -50,6 +50,7 @@ Notes:
 - Today `hxhx` is a Stage 0 shim which delegates to a Stage 0 `haxe` binary.
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
+  That document also clarifies what we mean by “compile Haxe” and how Stage0→Stage2 bootstrapping works.
 
 Gate 2 (runci Macro target) runs the upstream `tests/runci/targets/Macro.hx` suite:
 

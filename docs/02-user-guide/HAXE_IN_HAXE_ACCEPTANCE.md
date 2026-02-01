@@ -24,6 +24,21 @@ So the acceptance criteria must include **compile + run** for the official test 
 
 ## Definitions
 
+### What “compile Haxe” means (terminology)
+
+In this repo, the phrase “compile Haxe” can refer to three different things:
+
+1) **Compile `reflaxe.ocaml` (this repository)**:
+   This is a Haxe library/backend that runs *inside* a Haxe compiler process.
+   Practically, this means we need a working **stage0 `haxe` binary** to run tests and generate OCaml output, but we do **not** need to compile the upstream OCaml compiler source as part of normal development.
+
+2) **Compile the upstream Haxe compiler itself** (the official `haxe` binary):
+   Upstream Haxe is written in **OCaml**, so “compiling Haxe” can also mean “build the upstream OCaml compiler source with the OCaml toolchain”.
+   In this repo we treat upstream primarily as a **behavioral oracle** (tests + reference implementation), not as a build dependency.
+
+3) **Compile Haxe programs/projects**:
+   This is what users generally mean. Long-term, `hxhx` is intended to be a `haxe`-compatible compiler binary that can compile real Haxe projects (including macros and IDE/display workflows) and run the upstream test suites.
+
 ### “Haxe-in-Haxe enough” (Phase A goal)
 
 Means we can use our backend to run **compiler-shaped workloads** that resemble Haxe’s architecture:
@@ -150,6 +165,8 @@ Passes when:
   expectations (versioning, `haxelib`, packaging, etc.).
 - Performance is within an agreed tolerance (define and track via benchmarks).
 
+See `docs/02-user-guide/HXHX_DISTRIBUTION.md:1`.
+
 ## What “can replace the original compiler” means (strict version)
 
 For Haxe **4.3.7**, we can credibly claim replacement when:
@@ -160,6 +177,16 @@ For Haxe **4.3.7**, we can credibly claim replacement when:
 4) Macro-heavy real projects build successfully (use a curated set of external projects as an acceptance suite).
 
 In other words: passing upstream CI (or an equivalent subset) is the strongest objective signal we can use.
+
+## Bootstrapping model (Stage0 → Stage1 → Stage2)
+
+When we say `hxhx` is “bootstrapping”, we mean:
+
+- **Stage0**: we start from an existing `haxe` binary (the upstream OCaml compiler you install via releases or build yourself).
+- **Stage1**: use stage0 `haxe` to compile/build `hxhx` into a native OCaml binary.
+- **Stage2**: use the stage1 `hxhx` binary to build the next `hxhx` binary (itself), and check that it behaves equivalently.
+
+This bootstrapping is about `hxhx` becoming a self-hosting compiler; it does **not** mean `hxhx` compiles upstream’s OCaml compiler sources (Haxe does not compile OCaml).
 
 ## Recommended project QA strategy (mirrors upstream + our repo layers)
 

@@ -79,6 +79,8 @@ Optional flags:
 
 `hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is a **stage0 shim** that delegates to a system `haxe`, but it already provides a place to hang acceptance tests and bootstrapping gates.
 
+Terminology note: in this repo, “compile Haxe” might mean compiling this backend, building the upstream compiler binary, or compiling Haxe projects. See `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1` for precise definitions and the Stage0→Stage2 bootstrapping model.
+
 Build the `hxhx` example (requires `dune` + `ocamlc`):
 
 ```bash
