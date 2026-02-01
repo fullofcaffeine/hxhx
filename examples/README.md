@@ -21,6 +21,7 @@ npm run test:acceptance
 ## Included examples
 
 - `mini-compiler`: small parser/evaluator smoke test (compiler-ish workload).
+- `build-macro`: exercises `@:build` macro expansion (plugin/macro surface smoke test).
 - `loop-control`: exercises `break`/`continue` lowering (prevents infinite-loop regressions).
 - `hih-workload` (acceptance-only): multi-file “project” compile with parsing, typechecking, and incremental rebuilds (Haxe-in-Haxe path Stage 1).
 - `hih-compiler` (acceptance-only): Stage 2 skeleton for a production-grade Haxe-in-Haxe compiler (Haxe 4.3.7 + macros).

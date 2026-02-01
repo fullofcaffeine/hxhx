@@ -45,8 +45,57 @@ We will stage this intentionally:
 
 - Supporting every macro API edge case immediately is not required for “Phase A — Haxe-in-Haxe enough”.
 - Perfect parity for display server behavior is a later gate.
+- **Executing macros inside `hxhx` itself** is not a Gate 0 requirement. Until the Haxe-in-Haxe compiler grows a real
+  macro interpreter/runtime, macros are executed by the *stage0* Haxe compiler (upstream OCaml), and `reflaxe.ocaml`
+  must correctly compile the resulting typed output.
 
 However, Gate 1 (upstream `compile-macro.hxml`) is *macro heavy*, so we should expect macro work early.
+
+## API surface (what we consider “plugin system” APIs)
+
+The authoritative list lives in upstream:
+
+- `std/haxe/macro/Context.hx`
+- `std/haxe/macro/Compiler.hx`
+
+For our planning and acceptance gates, we group APIs by “hook points” vs “macro utilities”.
+
+### Hook points (the “plugin” part)
+
+These are the callbacks libraries use to extend compilation:
+
+- `Context.onGenerate`
+- `Context.onAfterGenerate`
+- `Context.onAfterTyping`
+- `Context.onAfterInitMacros`
+- `Context.onTypeNotFound`
+- `Context.onMacroContextReused`
+
+### Build macro essentials (what most `@:build` macros use)
+
+- `Context.getBuildFields`
+- `Context.getLocalClass` / `Context.getLocalType` / `Context.getLocalModule`
+- `Context.currentPos`
+- `Context.parse` / `Context.parseInlineString` (optional, but common)
+- `Context.defineType` / `Context.defineModule` (for “codegen at compile-time” style macros)
+- `Context.resolveType` / `Context.toComplexType` (type plumbing)
+
+### Configuration macro essentials (`--macro` in init phase)
+
+- `Compiler.define`, `Compiler.addClassPath`, `Compiler.include/exclude`
+- `Compiler.addGlobalMetadata`, `Compiler.keep`, `Compiler.nullSafety`
+- `Context.defined`, `Context.definedValue`, `Context.getDefines`
+
+## Repo-local acceptance workload (Gate 0)
+
+To keep us honest early, we have a tiny build-macro example that compiles to OCaml and runs under dune:
+
+- `examples/build-macro/`
+
+This does **not** prove `hxhx` can execute macros yet; it proves that:
+
+- `@:build` macros can generate fields for code that targets `reflaxe.ocaml`, and
+- our backend/runtime can compile and run the resulting program.
 
 ## Implementation staging (recommended)
 
@@ -69,4 +118,3 @@ Instead, prefer:
 
 - a small repo-local acceptance example that uses a build macro and asserts runtime behavior (fast regression signal),
 - plus the upstream gates (`compile-macro.hxml`, then `runci Macro`) as the long-term oracle.
-
