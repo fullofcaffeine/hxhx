@@ -146,7 +146,7 @@ class OcamlBuilder {
 	static function followNoAbstracts(t:Type):Type {
 		var current = t;
 		while (true) {
-			current = switch (current) {
+			final next = switch (current) {
 				case TLazy(f):
 					f();
 				case TMono(r):
@@ -158,6 +158,11 @@ class OcamlBuilder {
 				case _:
 					return current;
 			}
+
+			// Guard against unresolved/self-referential monomorphs and other cyclic shapes.
+			// If following doesn't make progress, stop.
+			if (next == current) return current;
+			current = next;
 		}
 	}
 
@@ -305,7 +310,7 @@ class OcamlBuilder {
 							OcamlExpr.EIdent("Obj.magic"),
 							[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
 						);
-				case TConst(c):
+			case TConst(c):
 					// For nullable primitives, represent non-null values as `Obj.repr <prim>`.
 					switch (nullablePrimitiveKind(e.t)) {
 						case "int":
@@ -338,7 +343,50 @@ class OcamlBuilder {
 							OcamlExpr.EConst(buildConst(c));
 					}
 			case TLocal(v):
-				buildLocal(v);
+				// Haxe's core-type `Null<T>` can “collapse” in typed expressions depending on
+				// target semantics and implicit conversions (e.g. `Null<Int>` used as `Int`).
+				//
+				// Locals may therefore be *stored* using the nullable representation (`Obj.t`)
+				// but *used* in a non-nullable primitive context, which must be coerced to the
+				// correct OCaml primitive type at the usage site.
+				final base = buildLocal(v);
+				final varKind = nullablePrimitiveKind(v.t);
+				final useKind = nullablePrimitiveKind(e.t);
+
+				if (varKind != null && useKind == null) {
+					return switch (varKind) {
+						case "int" if (isIntType(e.t)):
+							safeUnboxNullableInt(base);
+						case "int" if (isFloatType(e.t)):
+							OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [safeUnboxNullableInt(base)]);
+						case "float" if (isFloatType(e.t)):
+							safeUnboxNullableFloat(base);
+						case "bool" if (isBoolType(e.t)):
+							safeUnboxNullableBool(base);
+						case _:
+							base;
+					}
+				}
+
+				if (varKind == null && useKind != null) {
+					return switch (useKind) {
+						case "int" if (isIntType(v.t)):
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [base]);
+						case "float" if (isFloatType(v.t)):
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [base]);
+						case "float" if (isIntType(v.t)):
+							OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+								[OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [base])]
+							);
+						case "bool" if (isBoolType(v.t)):
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [base]);
+						case _:
+							base;
+					}
+				}
+
+				base;
 			case TIdent(s):
 				OcamlExpr.EIdent(s);
 			case TParenthesis(inner):
@@ -611,7 +659,9 @@ class OcamlBuilder {
 							}
 						} else
 						if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [buildExpr(args[0])]);
+							final a0 = args[0];
+							final coerced = nullablePrimitiveKind(a0.t) == "int" ? safeUnboxNullableInt(buildExpr(a0)) : buildExpr(a0);
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [coerced]);
 						} else if (isStdBytesClass(cls)) {
 							switch (cf.name) {
 								case "alloc" if (args.length == 1):
@@ -1053,20 +1103,43 @@ class OcamlBuilder {
 									}
 								} else {
 									final modName = moduleIdToOcamlModuleName(cls.module);
-									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-									final callFn = (selfMod != null && selfMod == modName)
-										? OcamlExpr.EIdent(cf.name)
-										: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
-									final builtArgs = [buildExpr(objExpr)].concat(args.map(buildExpr));
-									// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
-									if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-									OcamlExpr.EApp(callFn, builtArgs);
-								}
-							case _:
-								final builtArgs = args.map(buildExpr);
-								OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
-						}
-					case TField(_, FEnum(eRef, ef)):
+										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+										final callFn = (selfMod != null && selfMod == modName)
+											? OcamlExpr.EIdent(cf.name)
+											: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+										final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+											case TFun(fargs, _): fargs;
+											case _: null;
+										}
+										final coercedArgs:Array<OcamlExpr> = [];
+										if (expectedArgs != null) {
+											for (i in 0...args.length) {
+												coercedArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+											}
+										} else {
+											for (a in args) coercedArgs.push(buildExpr(a));
+										}
+										final builtArgs = [buildExpr(objExpr)].concat(coercedArgs);
+										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+										if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+										OcamlExpr.EApp(callFn, builtArgs);
+									}
+								case _:
+									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (fn.t) {
+										case TFun(fargs, _): fargs;
+										case _: null;
+									}
+									final builtArgs:Array<OcamlExpr> = [];
+									if (expectedArgs != null) {
+										for (i in 0...args.length) {
+											builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+										}
+									} else {
+										for (a in args) builtArgs.push(buildExpr(a));
+									}
+									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+							}
+						case TField(_, FEnum(eRef, ef)):
 						final en = eRef.get();
 
 						// ocaml.List.Cons(h, t) -> h :: t
@@ -1080,11 +1153,22 @@ class OcamlBuilder {
 						} else {
 							OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
 						}
-					case _:
-						final builtArgs = args.map(buildExpr);
-						OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+						case _:
+							final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (fn.t) {
+								case TFun(fargs, _): fargs;
+								case _: null;
+							}
+							final builtArgs:Array<OcamlExpr> = [];
+							if (expectedArgs != null) {
+								for (i in 0...args.length) {
+									builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+								}
+							} else {
+								for (a in args) builtArgs.push(buildExpr(a));
+							}
+							OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+						}
 					}
-				}
 			case TField(obj, fa):
 				buildField(obj, fa, e.pos);
 			case TMeta(_, e1):
@@ -1110,11 +1194,11 @@ class OcamlBuilder {
 					case { from: null, to: "bool" } if (isBoolType(e1.t)):
 						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]);
 					case { from: "int", to: null } if (isIntType(e.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(e1)]);
+						safeUnboxNullableInt(buildExpr(e1));
 					case { from: "float", to: null } if (isFloatType(e.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_unwrap"), [buildExpr(e1)]);
+						safeUnboxNullableFloat(buildExpr(e1));
 					case { from: "bool", to: null } if (isBoolType(e.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_unwrap"), [buildExpr(e1)]);
+						safeUnboxNullableBool(buildExpr(e1));
 					case _:
 						buildExpr(e1);
 				}
@@ -1735,12 +1819,58 @@ class OcamlBuilder {
 					// (e.g. `"x" + null == "xnull"`).
 					OcamlExpr.EBinop(OcamlBinop.Concat, buildStdString(e1), buildStdString(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Add, buildExpr(e1), buildExpr(e2));
+					final k1 = nullablePrimitiveKind(e1.t);
+					final k2 = nullablePrimitiveKind(e2.t);
+					if (k1 == "int" || k2 == "int") {
+						final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
+						final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
+						OcamlExpr.EBinop(OcamlBinop.Add, l, r);
+					} else {
+						OcamlExpr.EBinop(OcamlBinop.Add, buildExpr(e1), buildExpr(e2));
+					}
 				}
-			case OpSub: OcamlExpr.EBinop(OcamlBinop.Sub, buildExpr(e1), buildExpr(e2));
-			case OpMult: OcamlExpr.EBinop(OcamlBinop.Mul, buildExpr(e1), buildExpr(e2));
-			case OpDiv: OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(e1), buildExpr(e2));
-			case OpMod: OcamlExpr.EBinop(OcamlBinop.Mod, buildExpr(e1), buildExpr(e2));
+			case OpSub:
+				final k1 = nullablePrimitiveKind(e1.t);
+				final k2 = nullablePrimitiveKind(e2.t);
+				if (k1 == "int" || k2 == "int") {
+					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
+					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
+					OcamlExpr.EBinop(OcamlBinop.Sub, l, r);
+				} else {
+					OcamlExpr.EBinop(OcamlBinop.Sub, buildExpr(e1), buildExpr(e2));
+				}
+			case OpMult:
+				final k1 = nullablePrimitiveKind(e1.t);
+				final k2 = nullablePrimitiveKind(e2.t);
+				if (k1 == "int" || k2 == "int") {
+					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
+					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
+					OcamlExpr.EBinop(OcamlBinop.Mul, l, r);
+				} else {
+					OcamlExpr.EBinop(OcamlBinop.Mul, buildExpr(e1), buildExpr(e2));
+				}
+			case OpDiv:
+				// NOTE: Float division (`/.`) isn't emitted yet. For now we only support
+				// int division cases used in bootstrapping workloads.
+				final k1 = nullablePrimitiveKind(e1.t);
+				final k2 = nullablePrimitiveKind(e2.t);
+				if (k1 == "int" || k2 == "int") {
+					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
+					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
+					OcamlExpr.EBinop(OcamlBinop.Div, l, r);
+				} else {
+					OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(e1), buildExpr(e2));
+				}
+			case OpMod:
+				final k1 = nullablePrimitiveKind(e1.t);
+				final k2 = nullablePrimitiveKind(e2.t);
+				if (k1 == "int" || k2 == "int") {
+					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
+					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
+					OcamlExpr.EBinop(OcamlBinop.Mod, l, r);
+				} else {
+					OcamlExpr.EBinop(OcamlBinop.Mod, buildExpr(e1), buildExpr(e2));
+				}
 			case OpEq:
 				// Null checks must use physical equality (==) so we don't accidentally invoke
 				// specialized structural equality (notably for strings).
@@ -1814,12 +1944,52 @@ class OcamlBuilder {
 		}
 
 	function coerceNullableIntToInt(value:TypedExpr):OcamlExpr {
-		return nullablePrimitiveKind(value.t) == "int"
-			? OcamlExpr.EApp(
-				OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"),
-				[buildExpr(value)]
-			)
-			: buildExpr(value);
+		return nullablePrimitiveKind(value.t) == "int" ? safeUnboxNullableInt(buildExpr(value)) : buildExpr(value);
+	}
+
+	function safeUnboxNullableInt(expr:OcamlExpr):OcamlExpr {
+		final tmp = freshTmp("nullable_int");
+		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		return OcamlExpr.ELet(
+			tmp,
+			expr,
+			OcamlExpr.EIf(
+				OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
+				OcamlExpr.EConst(OcamlConst.CInt(0)),
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])
+			),
+			false
+		);
+	}
+
+	function safeUnboxNullableFloat(expr:OcamlExpr):OcamlExpr {
+		final tmp = freshTmp("nullable_float");
+		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		return OcamlExpr.ELet(
+			tmp,
+			expr,
+			OcamlExpr.EIf(
+				OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
+				OcamlExpr.EConst(OcamlConst.CFloat("0.")),
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])
+			),
+			false
+		);
+	}
+
+	function safeUnboxNullableBool(expr:OcamlExpr):OcamlExpr {
+		final tmp = freshTmp("nullable_bool");
+		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		return OcamlExpr.ELet(
+			tmp,
+			expr,
+			OcamlExpr.EIf(
+				OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
+				OcamlExpr.EConst(OcamlConst.CBool(false)),
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])
+			),
+			false
+		);
 	}
 
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
@@ -1830,11 +2000,11 @@ class OcamlBuilder {
 		if (lhsKind == null && rhsKind != null) {
 			return switch (rhsKind) {
 				case "int" if (isIntType(lhsType)):
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_int_unwrap"), [buildExpr(rhs)]);
+					safeUnboxNullableInt(buildExpr(rhs));
 				case "float" if (isFloatType(lhsType)):
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_float_unwrap"), [buildExpr(rhs)]);
+					safeUnboxNullableFloat(buildExpr(rhs));
 				case "bool" if (isBoolType(lhsType)):
-					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "nullable_bool_unwrap"), [buildExpr(rhs)]);
+					safeUnboxNullableBool(buildExpr(rhs));
 				case _:
 					buildExpr(rhs);
 			}
@@ -2008,7 +2178,13 @@ class OcamlBuilder {
 					}
 				}
 
-				final initExpr = init != null ? buildExpr(init) : defaultValueForType(v.t);
+				// Variable declarations are the primary place Haxe inserts implicit conversions
+				// (notably between `Null<primitive>` and `primitive`, and also Int->Float).
+				//
+				// If we ignore those coercions here, we can end up binding a value with a
+				// different OCaml representation than the variable's declared Haxe type,
+				// leading to downstream type errors (e.g. `String.charCodeAt` flows).
+				final initExpr = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
 				final isMutable = currentMutatedLocalIds != null
 					&& currentMutatedLocalIds.exists(v.id)
 					&& currentMutatedLocalIds.get(v.id) == true;
@@ -2197,7 +2373,12 @@ class OcamlBuilder {
 	}
 
 	static function collectMutatedLocalIdsInto(e:TypedExpr, mutated:Map<Int, Bool>):Void {
-		function visit(e:TypedExpr):TypedExpr {
+		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
+
+		function visit(e:TypedExpr):Void {
+			if (visited.exists(e)) return;
+			visited.set(e, true);
+
 			switch (e.expr) {
 				case TBinop(OpAssign, lhs, _):
 					switch (lhs.expr) {
@@ -2219,8 +2400,10 @@ class OcamlBuilder {
 					}
 				case _:
 			}
-			return TypedExprTools.map(e, visit);
+
+			TypedExprTools.iter(e, visit);
 		}
+
 		visit(e);
 	}
 
@@ -2235,14 +2418,21 @@ class OcamlBuilder {
 
 	function collectUsedLocalIds(e:TypedExpr):Map<Int, Bool> {
 		final used:Map<Int, Bool> = [];
-		function visit(e:TypedExpr):TypedExpr {
+		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
+
+		function visit(e:TypedExpr):Void {
+			if (visited.exists(e)) return;
+			visited.set(e, true);
+
 			switch (e.expr) {
 				case TLocal(v):
 					used.set(v.id, true);
 				case _:
 			}
-			return TypedExprTools.map(e, visit);
+
+			TypedExprTools.iter(e, visit);
 		}
+
 		visit(e);
 		return used;
 	}
@@ -2257,26 +2447,26 @@ class OcamlBuilder {
 		// Reconstruct a direct OCaml match on the enum value.
 		final scrutineeUnwrapped = unwrap(scrutinee);
 		switch (scrutineeUnwrapped.expr) {
-			case TEnumIndex(enumValueExpr):
-				switch (enumValueExpr.t) {
-					case TEnum(eRef, _):
-						final enumType = eRef.get();
-						final scrut = buildExpr(enumValueExpr);
-						final arms:Array<OcamlMatchCase> = [];
-						final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
-
-						for (c in cases) {
-							// Only support a single constructor index per case for now.
-							final patRes = (c.values.length == 1) ? buildEnumIndexCasePat(enumType, c.values[0]) : null;
-							final pat = patRes != null ? patRes.pat : OcamlPat.PAny;
-
-							final prev = currentEnumParamNames;
-							currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-							final expr = buildExpr(c.expr);
-							currentEnumParamNames = prev;
-
-							arms.push({ pat: pat, guard: null, expr: expr });
-						}
+				case TEnumIndex(enumValueExpr):
+					switch (enumValueExpr.t) {
+						case TEnum(eRef, _):
+							final enumType = eRef.get();
+							final scrut = buildExpr(enumValueExpr);
+							final arms:Array<OcamlMatchCase> = [];
+							final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
+	
+							for (c in cases) {
+								// Only support a single constructor index per case for now.
+								final patRes = (c.values.length == 1) ? buildEnumIndexCasePat(enumType, c.values[0]) : null;
+								final pat = patRes != null ? patRes.pat : OcamlPat.PAny;
+	
+								final prev = currentEnumParamNames;
+								currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+								final expr = buildExpr(c.expr);
+								currentEnumParamNames = prev;
+	
+								arms.push({ pat: pat, guard: null, expr: expr });
+							}
 
 						if (!isExhaustive) {
 							arms.push({
@@ -2315,6 +2505,33 @@ class OcamlBuilder {
 			guard: null,
 			expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
 		});
+
+		// Nullable primitive switches (notably `Null<Int>` lowered by the compiler in
+		// dynamic-target mode) frequently appear with integer constant patterns.
+		//
+		// We represent nullable primitives as `Obj.t`, so we must guard against `null`
+		// before unboxing for an OCaml `match`.
+		switch (nullablePrimitiveKind(scrutinee.t)) {
+			case "int":
+				final tmp = freshTmp("switch");
+				final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				final nullBranch = edef != null
+					? buildExpr(edef)
+					: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]);
+				final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]);
+				return OcamlExpr.ELet(
+					tmp,
+					buildExpr(scrutinee),
+					OcamlExpr.EIf(
+						OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
+						nullBranch,
+						OcamlExpr.EMatch(unboxed, arms)
+					),
+					false
+				);
+			case _:
+		}
+
 		return OcamlExpr.EMatch(buildExpr(scrutinee), arms);
 	}
 
