@@ -7,10 +7,7 @@
 	- This stage is a stub that records the intended boundary.
 **/
 class EmitterStage {
-	public function new() {}
-
-	public function emit(_:MacroExpandedModule):Void {
+	public static function emit(_:MacroExpandedModule):Void {
 		// Stub: eventually write output files / bytecode.
 	}
 }
-

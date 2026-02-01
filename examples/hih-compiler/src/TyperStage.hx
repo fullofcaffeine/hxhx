@@ -8,10 +8,7 @@
 	  module and return a typed module.
 **/
 class TyperStage {
-	public function new() {}
-
-	public function type(m:ParsedModule):TypedModule {
+	public static function typeModule(m:ParsedModule):TypedModule {
 		return new TypedModule(m);
 	}
 }
-

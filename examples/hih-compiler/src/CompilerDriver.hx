@@ -10,22 +10,30 @@
 	  the dedicated stage modules.
 **/
 class CompilerDriver {
-	public function new() {}
+	public static function run():Void {
+		final source = [
+			"package demo;",
+			"import demo.Util;",
+			"class A {",
+			"  static function main() {}",
+			"}",
+		].join("\n");
 
-	public function run():Void {
-		final source = "class A { static function main() {} }";
-
-		final ast = new ParserStage().parse(source);
+		final ast = ParserStage.parse(source);
+		final decl = ast.getDecl();
 		Sys.println("parse=ok");
+		Sys.println("package=" + (decl.packagePath.length == 0 ? "<none>" : decl.packagePath));
+		Sys.println("imports=" + decl.imports.length);
+		Sys.println("class=" + decl.mainClass.name);
+		Sys.println("hasStaticMain=" + (decl.mainClass.hasStaticMain ? "yes" : "no"));
 
-		final typed = new TyperStage().type(ast);
+		final typed = TyperStage.typeModule(ast);
 		Sys.println("typer=ok");
 
-		final expanded = new MacroStage().expand(typed);
-		Sys.println(expanded.macroMode ? "macros=stub" : "macros=stub");
+		final expanded = MacroStage.expand(typed);
+		Sys.println("macros=stub");
 
-		new EmitterStage().emit(expanded);
+		EmitterStage.emit(expanded);
 		Sys.println("emit=stub");
 	}
 }
-
