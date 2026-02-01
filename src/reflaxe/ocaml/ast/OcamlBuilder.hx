@@ -282,6 +282,17 @@ class OcamlBuilder {
 		return found;
 	}
 
+	function buildCondition(cond:TypedExpr):OcamlExpr {
+		// The Haxe typed AST can sometimes keep `Null<Bool>` in condition position
+		// (notably after switch lowering to `if tmp == null ... else if tmp ...`).
+		//
+		// Our nullable primitive representation is `Obj.t`, so we must unbox to a
+		// real OCaml `bool` before emitting `if/while`.
+		return nullablePrimitiveKind(cond.t) == "bool"
+			? safeUnboxNullableBool(buildExpr(cond))
+			: buildExpr(cond);
+	}
+
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		return switch (e.expr) {
 			case TTypeExpr(_):
@@ -402,7 +413,7 @@ class OcamlBuilder {
 						// Haxe `if (cond) stmt;` is statement-typed (Void). Ensure both branches are `unit`
 						// so the OCaml `if` is well-typed, even if `stmt` returns a value (e.g. Array.push).
 						OcamlExpr.EIf(
-							buildExpr(cond),
+							buildCondition(cond),
 							OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(eif)]),
 							OcamlExpr.EConst(OcamlConst.CUnit)
 						);
@@ -461,7 +472,7 @@ class OcamlBuilder {
 							return buildExpr(branch);
 						}
 
-						OcamlExpr.EIf(buildExpr(cond), coerceBranch(eif), coerceBranch(eelse));
+						OcamlExpr.EIf(buildCondition(cond), coerceBranch(eif), coerceBranch(eelse));
 					}
 				case TBlock(el):
 					buildBlock(el);
@@ -1311,8 +1322,8 @@ class OcamlBuilder {
 				} else {
 					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"));
 				}
-			case TContinue:
-				if (loopDepth <= 0) {
+				case TContinue:
+					if (loopDepth <= 0) {
 					#if macro
 					guardrailError(
 						"reflaxe.ocaml: `continue` is only supported inside loops.",
@@ -1324,7 +1335,7 @@ class OcamlBuilder {
 					OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"));
 				}
 				case TWhile(cond, body, normalWhile):
-					final condExpr = buildExpr(cond);
+					final condExpr = buildCondition(cond);
 					final needsControl = containsLoopControl(body);
 					loopDepth += 1;
 					final builtBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]);
@@ -2531,12 +2542,62 @@ class OcamlBuilder {
 		// We represent nullable primitives as `Obj.t`, so we must guard against `null`
 		// before unboxing for an OCaml `match`.
 		switch (nullablePrimitiveKind(scrutinee.t)) {
-			case "int":
+			case "int", "float", "bool":
+				inline function isNullCaseValue(v:TypedExpr):Bool {
+					return switch (unwrap(v).expr) {
+						case TConst(TNull): true;
+						case _: false;
+					}
+				}
+
 				final tmp = freshTmp("switch");
 				final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
-				final nullBranch = edef != null
+				final defaultBranch = edef != null
 					? buildExpr(edef)
 					: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]);
+
+				// Support `case null`: for nullable primitives the scrutinee is `Obj.t`, so
+				// the `null` case must be handled *before* unboxing to a primitive.
+				var firstNullCaseExpr:Null<OcamlExpr> = null;
+				for (c in cases) {
+					var hasNull = false;
+					for (v in c.values) {
+						if (isNullCaseValue(v)) {
+							hasNull = true;
+							break;
+						}
+					}
+					if (hasNull) {
+						firstNullCaseExpr = buildExpr(c.expr);
+						break;
+					}
+				}
+
+				final nullBranch = firstNullCaseExpr != null ? firstNullCaseExpr : defaultBranch;
+
+				// Rebuild match arms, excluding `null` literals (handled by the guard).
+				final nonNullArms:Array<OcamlMatchCase> = [];
+				for (c in cases) {
+					final valuesNonNull = c.values.filter(v -> !isNullCaseValue(v));
+					if (valuesNonNull.length == 0) continue;
+
+					final patRes = valuesNonNull.length == 1 ? buildSwitchValuePatAndEnumParams(valuesNonNull[0]) : null;
+					final pat = if (patRes != null) {
+						patRes.pat;
+					} else {
+						final pats = valuesNonNull.map(buildSwitchValuePat);
+						pats.length == 1 ? pats[0] : OcamlPat.POr(pats);
+					}
+
+					final prev = currentEnumParamNames;
+					currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+					final expr = buildExpr(c.expr);
+					currentEnumParamNames = prev;
+
+					nonNullArms.push({ pat: pat, guard: null, expr: expr });
+				}
+				nonNullArms.push({ pat: OcamlPat.PAny, guard: null, expr: defaultBranch });
+
 				final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]);
 				return OcamlExpr.ELet(
 					tmp,
@@ -2544,7 +2605,7 @@ class OcamlBuilder {
 					OcamlExpr.EIf(
 						OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
 						nullBranch,
-						OcamlExpr.EMatch(unboxed, arms)
+						OcamlExpr.EMatch(unboxed, nonNullArms)
 					),
 					false
 				);
