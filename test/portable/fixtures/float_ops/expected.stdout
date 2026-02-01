@@ -1,0 +1,7 @@
+div=0.5
+mix_add=3.5
+mul=3.
+mod=1.5
+addAssign=3.
+divAssign=1.5
+OK float_ops

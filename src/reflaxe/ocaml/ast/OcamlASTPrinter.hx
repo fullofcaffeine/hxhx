@@ -80,8 +80,8 @@ class OcamlASTPrinter {
 					case Eq, Neq, PhysEq, PhysNeq, Lt, Lte, Gt, Gte: PREC_CMP;
 					case Cons: PREC_CONS;
 					case Concat: PREC_CONCAT;
-					case Add, Sub: PREC_ADD;
-					case Mul, Div, Mod: PREC_MUL;
+					case Add, AddF, Sub, SubF: PREC_ADD;
+					case Mul, MulF, Div, DivF, Mod: PREC_MUL;
 				}
 			case EAssign(_, _, _):
 				PREC_ASSIGN;
@@ -185,10 +185,14 @@ class OcamlASTPrinter {
 	function printBinop(op:OcamlBinop, left:OcamlExpr, right:OcamlExpr, indentLevel:Int):String {
 		final opStr = switch (op) {
 			case Add: "+";
+			case AddF: "+.";
 			case Concat: "^";
 			case Sub: "-";
+			case SubF: "-.";
 			case Mul: "*";
+			case MulF: "*.";
 			case Div: "/";
+			case DivF: "/.";
 			case Mod: "mod";
 			case Cons: "::";
 			case Eq: "=";

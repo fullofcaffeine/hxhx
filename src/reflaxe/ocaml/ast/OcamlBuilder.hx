@@ -392,7 +392,7 @@ class OcamlBuilder {
 			case TParenthesis(inner):
 				buildExpr(inner);
 			case TBinop(op, e1, e2):
-				buildBinop(op, e1, e2);
+				buildBinop(op, e1, e2, e.t);
 			case TUnop(op, postFix, inner):
 				buildUnop(op, postFix, inner);
 				case TFunction(tfunc):
@@ -1604,7 +1604,7 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr):OcamlExpr {
+	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr, resultType:Type):OcamlExpr {
 		inline function isNullExpr(e:TypedExpr):Bool {
 			final u = unwrap(e);
 			return switch (u.expr) {
@@ -1622,6 +1622,25 @@ class OcamlBuilder {
 
 		inline function objObj(expr:OcamlExpr):OcamlExpr {
 			return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [expr]);
+		}
+
+		inline function toIntExpr(expr:TypedExpr):OcamlExpr {
+			return nullablePrimitiveKind(expr.t) == "int" ? safeUnboxNullableInt(buildExpr(expr)) : buildExpr(expr);
+		}
+
+		inline function toFloatExpr(expr:TypedExpr):OcamlExpr {
+			return switch (nullablePrimitiveKind(expr.t)) {
+				case "float":
+					safeUnboxNullableFloat(buildExpr(expr));
+				case "int":
+					OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [safeUnboxNullableInt(buildExpr(expr))]);
+				case _:
+					if (isIntType(expr.t)) {
+						OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(expr)]);
+					} else {
+						buildExpr(expr);
+					}
+			}
 		}
 
 		function buildNullablePrimitiveEq(lhsKind:Null<String>, lhs:TypedExpr, rhsKind:Null<String>, rhs:TypedExpr):Null<OcamlExpr> {
@@ -1796,17 +1815,32 @@ class OcamlBuilder {
 				switch (e1.expr) {
 					case TLocal(v) if (isRefLocalId(v.id)):
 						final lhs = buildLocal(v);
+						final floatMode = isFloatType(v.t) || nullablePrimitiveKind(v.t) == "float";
 						final rhs = switch (inner) {
 							case OpAdd:
 								if (isStringType(v.t) || isStringType(e2.t)) {
 									OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
+								} else if (floatMode) {
+									OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
 								} else {
-									OcamlExpr.EBinop(OcamlBinop.Add, lhs, buildExpr(e2));
+									OcamlExpr.EBinop(OcamlBinop.Add, lhs, toIntExpr(e2));
 								}
-							case OpSub: OcamlExpr.EBinop(OcamlBinop.Sub, lhs, buildExpr(e2));
-							case OpMult: OcamlExpr.EBinop(OcamlBinop.Mul, lhs, buildExpr(e2));
-							case OpDiv: OcamlExpr.EBinop(OcamlBinop.Div, lhs, buildExpr(e2));
-							case OpMod: OcamlExpr.EBinop(OcamlBinop.Mod, lhs, buildExpr(e2));
+							case OpSub:
+								floatMode
+									? OcamlExpr.EBinop(OcamlBinop.SubF, lhs, toFloatExpr(e2))
+									: OcamlExpr.EBinop(OcamlBinop.Sub, lhs, toIntExpr(e2));
+							case OpMult:
+								floatMode
+									? OcamlExpr.EBinop(OcamlBinop.MulF, lhs, toFloatExpr(e2))
+									: OcamlExpr.EBinop(OcamlBinop.Mul, lhs, toIntExpr(e2));
+							case OpDiv:
+								floatMode
+									? OcamlExpr.EBinop(OcamlBinop.DivF, lhs, toFloatExpr(e2))
+									: OcamlExpr.EBinop(OcamlBinop.Div, lhs, toIntExpr(e2));
+							case OpMod:
+								floatMode
+									? OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [lhs, toFloatExpr(e2)])
+									: OcamlExpr.EBinop(OcamlBinop.Mod, lhs, toIntExpr(e2));
 							case _: OcamlExpr.EConst(OcamlConst.CUnit);
 						}
 						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
@@ -1819,57 +1853,42 @@ class OcamlBuilder {
 					// (e.g. `"x" + null == "xnull"`).
 					OcamlExpr.EBinop(OcamlBinop.Concat, buildStdString(e1), buildStdString(e2));
 				} else {
-					final k1 = nullablePrimitiveKind(e1.t);
-					final k2 = nullablePrimitiveKind(e2.t);
-					if (k1 == "int" || k2 == "int") {
-						final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
-						final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
-						OcamlExpr.EBinop(OcamlBinop.Add, l, r);
+					final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
+					if (floatMode) {
+						OcamlExpr.EBinop(OcamlBinop.AddF, toFloatExpr(e1), toFloatExpr(e2));
 					} else {
-						OcamlExpr.EBinop(OcamlBinop.Add, buildExpr(e1), buildExpr(e2));
+						OcamlExpr.EBinop(OcamlBinop.Add, toIntExpr(e1), toIntExpr(e2));
 					}
 				}
 			case OpSub:
-				final k1 = nullablePrimitiveKind(e1.t);
-				final k2 = nullablePrimitiveKind(e2.t);
-				if (k1 == "int" || k2 == "int") {
-					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
-					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
-					OcamlExpr.EBinop(OcamlBinop.Sub, l, r);
+				final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
+				if (floatMode) {
+					OcamlExpr.EBinop(OcamlBinop.SubF, toFloatExpr(e1), toFloatExpr(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Sub, buildExpr(e1), buildExpr(e2));
+					OcamlExpr.EBinop(OcamlBinop.Sub, toIntExpr(e1), toIntExpr(e2));
 				}
 			case OpMult:
-				final k1 = nullablePrimitiveKind(e1.t);
-				final k2 = nullablePrimitiveKind(e2.t);
-				if (k1 == "int" || k2 == "int") {
-					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
-					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
-					OcamlExpr.EBinop(OcamlBinop.Mul, l, r);
+				final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
+				if (floatMode) {
+					OcamlExpr.EBinop(OcamlBinop.MulF, toFloatExpr(e1), toFloatExpr(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Mul, buildExpr(e1), buildExpr(e2));
+					OcamlExpr.EBinop(OcamlBinop.Mul, toIntExpr(e1), toIntExpr(e2));
 				}
 			case OpDiv:
-				// NOTE: Float division (`/.`) isn't emitted yet. For now we only support
-				// int division cases used in bootstrapping workloads.
-				final k1 = nullablePrimitiveKind(e1.t);
-				final k2 = nullablePrimitiveKind(e2.t);
-				if (k1 == "int" || k2 == "int") {
-					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
-					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
-					OcamlExpr.EBinop(OcamlBinop.Div, l, r);
+				// Haxe `/` always produces Float (Int/Int => Float). OCaml needs `/.` with
+				// float operands, so we promote ints as needed.
+				final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
+				if (floatMode) {
+					OcamlExpr.EBinop(OcamlBinop.DivF, toFloatExpr(e1), toFloatExpr(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Div, buildExpr(e1), buildExpr(e2));
+					OcamlExpr.EBinop(OcamlBinop.Div, toIntExpr(e1), toIntExpr(e2));
 				}
 			case OpMod:
-				final k1 = nullablePrimitiveKind(e1.t);
-				final k2 = nullablePrimitiveKind(e2.t);
-				if (k1 == "int" || k2 == "int") {
-					final l = k1 == "int" ? safeUnboxNullableInt(buildExpr(e1)) : buildExpr(e1);
-					final r = k2 == "int" ? safeUnboxNullableInt(buildExpr(e2)) : buildExpr(e2);
-					OcamlExpr.EBinop(OcamlBinop.Mod, l, r);
+				final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
+				if (floatMode) {
+					OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [toFloatExpr(e1), toFloatExpr(e2)]);
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Mod, buildExpr(e1), buildExpr(e2));
+					OcamlExpr.EBinop(OcamlBinop.Mod, toIntExpr(e1), toIntExpr(e2));
 				}
 			case OpEq:
 				// Null checks must use physical equality (==) so we don't accidentally invoke
