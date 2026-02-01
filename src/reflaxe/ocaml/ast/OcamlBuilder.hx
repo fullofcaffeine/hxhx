@@ -3,6 +3,7 @@ package reflaxe.ocaml.ast;
 #if (macro || reflaxe_runtime)
 
 import haxe.macro.Expr.Binop;
+import haxe.macro.Expr;
 import haxe.macro.Expr.Unop;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
@@ -2808,11 +2809,32 @@ class OcamlBuilder {
 					);
 				}
 				#end
-				final modName = moduleIdToOcamlModuleName(cls.module);
 				final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-				return (selfMod != null && selfMod == modName)
-					? OcamlExpr.EIdent(cf.name)
-					: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+
+				// Extern OCaml interop: allow `@:native("PMap") extern class PMap { ... }` to map
+				// to the actual OCaml module path, and allow `@:native("add")` (or a full
+				// `@:native("ExtLib.PMap.add")`) on the field to map to the native identifier.
+				//
+				// This is intentionally conservative for now: we only apply @:native mapping for extern classes.
+				// (bd: haxe.ocaml-28t.8.1)
+				if (cls.isExtern) {
+					final nativeClassPath = extractNativeString(cls.meta);
+					final nativeFieldPath = extractNativeString(cf.meta);
+
+					final resolved = resolveNativeStaticPath(
+						moduleIdToOcamlModuleName(cls.module),
+						cf.name,
+						nativeClassPath,
+						nativeFieldPath
+					);
+
+					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
+				} else {
+					final modName = moduleIdToOcamlModuleName(cls.module);
+					return (selfMod != null && selfMod == modName)
+						? OcamlExpr.EIdent(cf.name)
+						: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+				}
 			case FInstance(clsRef, _, cfRef):
 				final cls = clsRef.get();
 				final cf = cfRef.get();
@@ -2872,6 +2894,82 @@ class OcamlBuilder {
 		if (moduleId == null || moduleId.length == 0) return "Main";
 		final flat = moduleId.split(".").join("_");
 		return flat.substr(0, 1).toUpperCase() + flat.substr(1);
+	}
+
+	/**
+	 * Extracts the string argument from a `@:native("...")` metadata entry, if present.
+	 *
+	 * Why:
+	 * - Haxe uses `@:native` for target name mapping.
+	 * - For the OCaml backend, this is especially important for **extern interop**: Haxe names
+	 *   should map onto existing OCaml module paths / values.
+	 *
+	 * What:
+	 * - Returns the raw string given to `@:native`, or `null` if absent/invalid.
+	 *
+	 * How:
+	 * - Only supports constant-string params for now (non-string params are ignored).
+	 */
+	static function extractNativeString(meta:MetaAccess):Null<String> {
+		for (m in meta.get()) {
+			if (m.name != ":native") continue;
+			if (m.params == null || m.params.length == 0) continue;
+			return switch (m.params[0].expr) {
+				case EConst(CString(s)): s;
+				case _: null;
+			}
+		}
+		return null;
+	}
+
+	static function buildOcamlModulePathExpr(path:String):Null<OcamlExpr> {
+		if (path == null) return null;
+		final parts = path.split(".").filter(p -> p != null && p.length > 0);
+		if (parts.length == 0) return null;
+		var expr:OcamlExpr = OcamlExpr.EIdent(parts[0]);
+		for (i in 1...parts.length) {
+			expr = OcamlExpr.EField(expr, parts[i]);
+		}
+		return expr;
+	}
+
+	/**
+	 * Resolves an extern static callsite path from `@:native` metadata.
+	 *
+	 * Rules:
+	 * - `nativeFieldPath` may be:
+	 *   - `foo` (rename only) -> `<module>.<foo>`
+	 *   - `A.B.foo` (full path) -> `A.B.foo` (overrides module too)
+	 * - If `nativeFieldPath` doesn't specify a module, `nativeClassPath` (module) is used.
+	 * - If no native metadata exists, falls back to `<defaultModuleName>.<defaultFieldName>`.
+	 */
+	static function resolveNativeStaticPath(
+		defaultModuleName:String,
+		defaultFieldName:String,
+		nativeClassPath:Null<String>,
+		nativeFieldPath:Null<String>
+	):{ moduleExpr:OcamlExpr, fieldName:String } {
+		var modulePath:Null<String> = nativeClassPath;
+		var fieldName:String = defaultFieldName;
+
+		if (nativeFieldPath != null) {
+			final parts = nativeFieldPath.split(".").filter(p -> p != null && p.length > 0);
+			if (parts.length >= 2) {
+				fieldName = parts[parts.length - 1];
+				modulePath = parts.slice(0, parts.length - 1).join(".");
+			} else if (parts.length == 1) {
+				fieldName = parts[0];
+			}
+		}
+
+		final moduleExpr = if (modulePath != null) {
+			final expr = buildOcamlModulePathExpr(modulePath);
+			expr == null ? OcamlExpr.EIdent(defaultModuleName) : expr;
+		} else {
+			OcamlExpr.EIdent(defaultModuleName);
+		}
+
+		return { moduleExpr: moduleExpr, fieldName: fieldName };
 	}
 }
 
