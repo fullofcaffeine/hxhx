@@ -13,4 +13,4 @@ let create = fun message previous pos -> let self = { posInfos = Obj.magic () } 
   self
 )
 
-let toString = fun self () -> HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString (HxString.toStdString "" ^ HxString.toStdString (Haxe_Exception.toString self ())) ^ HxString.toStdString " in ") ^ HxString.toStdString (self.posInfos.className)) ^ HxString.toStdString ".") ^ HxString.toStdString (self.posInfos.methodName)) ^ HxString.toStdString " at ") ^ HxString.toStdString (self.posInfos.fileName)) ^ HxString.toStdString ":") ^ string_of_int (self.posInfos.lineNumber)
+let toString = fun self () -> (((((((("" ^ HxString.toStdString (Haxe_Exception.toString self ())) ^ " in ") ^ HxString.toStdString (self.posInfos.className)) ^ ".") ^ HxString.toStdString (self.posInfos.methodName)) ^ " at ") ^ HxString.toStdString (self.posInfos.fileName)) ^ ":") ^ string_of_int (self.posInfos.lineNumber)

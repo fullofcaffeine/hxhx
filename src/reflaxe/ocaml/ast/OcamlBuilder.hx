@@ -1446,6 +1446,14 @@ class OcamlBuilder {
 		switch (e.expr) {
 			case TConst(TNull):
 				return OcamlExpr.EConst(OcamlConst.CString("null"));
+			case TConst(TString(_)):
+				// String literals are never `null`; avoid redundant runtime wrapping.
+				return buildExpr(e);
+			case TBinop(OpAdd, _, _) if (isStringType(e.t)):
+				// String concatenation always produces a real OCaml string (never hx_null),
+				// because we convert nullable operands via `HxString.toStdString` before `^`.
+				// Avoid re-wrapping the result (this prevents `HxString.toStdString (...)` nesting).
+				return buildExpr(e);
 			case _:
 		}
 
@@ -1859,10 +1867,29 @@ class OcamlBuilder {
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
 			case OpAdd:
-				if (isStringType(e1.t) || isStringType(e2.t)) {
+				if (isStringType(e1.t) || isStringType(e2.t) || isStringType(resultType)) {
 					// Haxe string concat: always uses `Std.string` semantics on both sides
 					// (e.g. `"x" + null == "xnull"`).
-					OcamlExpr.EBinop(OcamlBinop.Concat, buildStdString(e1), buildStdString(e2));
+					function collectConcatParts(expr:TypedExpr, out:Array<TypedExpr>):Void {
+						final u = unwrap(expr);
+						switch (u.expr) {
+							case TBinop(OpAdd, a, b) if (isStringType(u.t) || isStringType(a.t) || isStringType(b.t)):
+								collectConcatParts(a, out);
+								collectConcatParts(b, out);
+							case _:
+								out.push(expr);
+						}
+					}
+
+					final parts:Array<TypedExpr> = [];
+					collectConcatParts(e1, parts);
+					collectConcatParts(e2, parts);
+
+					var acc:OcamlExpr = buildStdString(parts[0]);
+					for (i in 1...parts.length) {
+						acc = OcamlExpr.EBinop(OcamlBinop.Concat, acc, buildStdString(parts[i]));
+					}
+					acc;
 				} else {
 					final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
 					if (floatMode) {

@@ -38,6 +38,6 @@ let main = fun () -> let i = ref 0 in let sum = ref 0 in (
         | HxRuntime.Hx_break -> ()
     )) done);
     ignore (if !innerCount <> 6 then ignore (HxRuntime.hx_throw (Obj.repr "bad innerCount")) else ());
-    print_endline (HxString.toStdString "OK loop_control")
+    print_endline "OK loop_control"
   )
 )
