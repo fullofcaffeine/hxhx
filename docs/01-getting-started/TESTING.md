@@ -78,6 +78,21 @@ Run:
 npm run test:upstream:stage2
 ```
 
+### Gate 3 (runci matrix for selected targets)
+
+Gate 3 runs additional upstream `tests/runci` targets beyond `Macro`.
+
+Select targets via `HXHX_GATE3_TARGETS` (comma-separated) or pass them as args:
+
+```bash
+HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets
+```
+
+Notes:
+
+- This is **not** run in CI by default (very toolchain/network dependent).
+- By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
+
 ## Layers
 
 ### 1) “Build the backend” checks (fast, no dune required)

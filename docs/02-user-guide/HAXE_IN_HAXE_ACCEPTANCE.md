@@ -135,6 +135,10 @@ Passes when:
 - For each claimed target, the corresponding upstream `tests/runci/targets/*` suite passes.
 - On at least one supported OS baseline (Linux is the usual baseline; Windows/macOS parity is a later requirement).
 
+Run a selectable subset locally via:
+
+- `HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets`
+
 If we claim “full replacement”, this implies passing the same set of targets upstream CI runs (JS, Neko, HL, JVM/Java,
 Python, Lua, PHP, C#, C++/hxcpp, etc.), which may require external toolchains.
 
