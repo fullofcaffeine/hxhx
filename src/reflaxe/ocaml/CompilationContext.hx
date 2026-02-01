@@ -19,5 +19,16 @@ class CompilationContext {
 	/** True when compiling a type that originates from Haxe's standard library sources. */
 	public var currentIsHaxeStd:Bool = false;
 
+	/**
+	 * Tracks Haxe module dot-paths that were compiled in this compilation.
+	 *
+	 * Why:
+	 * - We emit OCaml files using Reflaxe's `FilePerModule` mode.
+	 * - For OCaml ergonomics, we additionally generate “package alias” modules that
+	 *   provide `Haxe.Io.Path`-style dot access while keeping a collision-free flat
+	 *   namespace for real module filenames (`Haxe_io_Path`).
+	 */
+	public final emittedHaxeModules:Map<String, Bool> = [];
+
 	public function new() {}
 }

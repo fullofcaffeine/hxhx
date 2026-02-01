@@ -27,6 +27,7 @@ import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
+import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.GenericCompiler;
 import reflaxe.output.DataAndFileInfo;
@@ -110,6 +111,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		varFields:Array<ClassVarData>,
 		funcFields:Array<ClassFuncData>
 	):Null<String> {
+		ctx.emittedHaxeModules.set(classType.module, true);
 		ctx.currentModuleId = classType.module;
 		ctx.variableRenameMap.clear();
 		ctx.assignedVars.clear();
@@ -316,6 +318,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 			RuntimeCopier.copy(output, "runtime");
 		}
 
+		// Package alias modules (M8): generate dot-path access helpers unless disabled.
+		final emitAliasesValue = haxe.macro.Context.definedValue("ocaml_emit_package_aliases");
+		final emitAliases = emitAliasesValue == null || emitAliasesValue != "0";
+		if (emitAliases) {
+			final modules:Array<String> = [];
+			for (m => _ in ctx.emittedHaxeModules) modules.push(m);
+			PackageAliasEmitter.emit(output, modules);
+		}
+
 		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
 		final shouldRun = haxe.macro.Context.defined("ocaml_run");
 		final noBuild = haxe.macro.Context.defined("ocaml_no_build");
@@ -348,6 +359,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	public function compileEnumImpl(enumType:EnumType, options:Array<EnumOptionData>):Null<String> {
+		ctx.emittedHaxeModules.set(enumType.module, true);
 		ctx.currentModuleId = enumType.module;
 		final fullName = (enumType.pack ?? []).concat([enumType.name]).join(".");
 

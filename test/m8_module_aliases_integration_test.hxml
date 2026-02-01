@@ -1,0 +1,4 @@
+-cp test
+
+-main M8ModuleAliasesIntegrationTest
+--interp

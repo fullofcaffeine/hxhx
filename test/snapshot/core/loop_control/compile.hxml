@@ -5,5 +5,5 @@
 -D no-traces
 -D no_traces
 -D ocaml_no_build
+-D ocaml_emit_package_aliases=0
 -D ocaml_output=out
-
