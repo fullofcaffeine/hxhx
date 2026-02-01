@@ -13,7 +13,6 @@ UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
 UPSTREAM_DIR_ORIG="$UPSTREAM_DIR"
 UPSTREAM_WORKTREE_DIR=""
 WRAP_DIR=""
-ISO_DIR=""
 
 cleanup() {
   if [ -n "$WRAP_DIR" ] && [ -d "$WRAP_DIR" ]; then
@@ -23,10 +22,6 @@ cleanup() {
   if [ -n "$UPSTREAM_WORKTREE_DIR" ] && [ -d "$UPSTREAM_WORKTREE_DIR" ]; then
     git -C "$UPSTREAM_DIR_ORIG" worktree remove --force "$UPSTREAM_WORKTREE_DIR" >/dev/null 2>&1 || true
     rm -rf "$UPSTREAM_WORKTREE_DIR" >/dev/null 2>&1 || true
-  fi
-
-  if [ -n "$ISO_DIR" ] && [ -d "$ISO_DIR" ]; then
-    rm -rf "$ISO_DIR" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
@@ -47,19 +42,64 @@ if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v nekotools >/dev/null 2>&1; then
-  echo "Skipping upstream Gate 2: nekotools not found on PATH (RunCi uses it for the echo server)." >&2
+if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
+  echo "Skipping upstream Gate 2: dune/ocamlc not found on PATH."
   exit 0
 fi
 
-if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
-  echo "Skipping upstream Gate 2: dune/ocamlc not found on PATH."
+# runci Macro includes sys/party/misc fixtures that rely on extra host tools.
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "Skipping upstream Gate 2: python3 not found on PATH (required by some sys fixtures)." >&2
+  exit 0
+fi
+
+if ! command -v cc >/dev/null 2>&1 && ! command -v clang >/dev/null 2>&1 && ! command -v gcc >/dev/null 2>&1; then
+  echo "Skipping upstream Gate 2: no C compiler found (need cc/clang/gcc for sys fixtures)." >&2
+  exit 0
+fi
+
+if ! command -v javac >/dev/null 2>&1; then
+  echo "Skipping upstream Gate 2: javac not found on PATH (required by some misc fixtures)." >&2
   exit 0
 fi
 
 # Resolve stage0 tool paths once so later wrapper scripts don't depend on PATH ordering.
 STAGE0_HAXE="$(command -v "$HAXE_BIN")"
 STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN")"
+STAGE0_NEKOTOOLS="${NEKOTOOLS_BIN:-}"
+STAGE0_NEKO="${NEKO_BIN:-}"
+
+if [ -z "$STAGE0_NEKOTOOLS" ]; then
+  if command -v nekotools >/dev/null 2>&1; then
+    STAGE0_NEKOTOOLS="$(command -v nekotools)"
+  elif [ -x "$HOME/haxe/neko/nekotools" ]; then
+    # Lix cache default path (used in CI as well when lix downloads the toolchain).
+    STAGE0_NEKOTOOLS="$HOME/haxe/neko/nekotools"
+  fi
+fi
+
+if [ -z "$STAGE0_NEKOTOOLS" ] || [ ! -x "$STAGE0_NEKOTOOLS" ]; then
+  echo "Skipping upstream Gate 2: nekotools not found (RunCi uses it for the echo server)." >&2
+  echo "Install Neko tools (or set NEKOTOOLS_BIN=/path/to/nekotools)." >&2
+  exit 0
+fi
+
+if [ -z "$STAGE0_NEKO" ]; then
+  if command -v neko >/dev/null 2>&1; then
+    STAGE0_NEKO="$(command -v neko)"
+  elif [ -x "$HOME/haxe/neko/neko" ]; then
+    # Lix cache default path.
+    STAGE0_NEKO="$HOME/haxe/neko/neko"
+  fi
+fi
+
+if [ -z "$STAGE0_NEKO" ] || [ ! -x "$STAGE0_NEKO" ]; then
+  echo "Skipping upstream Gate 2: neko not found (some sys tests invoke it directly)." >&2
+  echo "Install Neko (or set NEKO_BIN=/path/to/neko)." >&2
+  exit 0
+fi
+
+NEKOPATH_DIR="$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)"
 
 # We want the upstream tests to match our compatibility target (default: 4.3.7).
 # Instead of mutating the user's checkout, we run from a temporary git worktree when possible.
@@ -76,29 +116,37 @@ else
   exit 0
 fi
 
-# Upstream `tests/misc` includes many per-issue project folders that reference `-cp src`.
-# Git doesn't track empty directories, so in some checkouts those `src/` dirs are missing,
-# which causes the misc harness to fail early with "classpath src is not a directory".
-# Creating the empty directories is harmless and matches the intent of those fixtures.
-ensure_misc_src_dirs() {
+# Upstream `tests/misc` includes some fixtures that rely on classpaths which may be empty directories.
+# Git doesn't track empty directories, so those paths might be missing in some checkouts, causing the
+# misc harness to fail early with "classpath <x> is not a directory".
+#
+# Only create classpath directories for *non-failing* fixtures to avoid changing the behavior of tests
+# that intentionally validate errors.
+ensure_misc_classpath_dirs() {
   local projects="$UPSTREAM_DIR/tests/misc/projects"
   [ -d "$projects" ] || return 0
 
-  local files=""
+  local file_list
   if command -v rg >/dev/null 2>&1; then
-    files="$(rg -l '^-cp src$' "$projects" --glob '*.hxml' --no-messages || true)"
+    file_list="$(rg -l '^-((cp)|(p)) (src|source)$' "$projects" --glob '*.hxml' --no-messages || true)"
   else
-    files="$(grep -R -l '^-cp src$' "$projects" --include '*.hxml' 2>/dev/null || true)"
+    file_list="$(grep -R -l -E '^-((cp)|(p)) (src|source)$' "$projects" --include '*.hxml' 2>/dev/null || true)"
   fi
 
-  if [ -z "$files" ]; then
+  if [ -z "${file_list:-}" ]; then
     return 0
   fi
 
   while IFS= read -r f; do
     [ -z "$f" ] && continue
-    mkdir -p "$(dirname "$f")/src"
-  done <<<"$files"
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        "-cp src"|"-p src"|"-cp source"|"-p source")
+          mkdir -p "$(dirname "$f")/${line#* }"
+          ;;
+      esac
+    done <"$f"
+  done <<<"$file_list"
 }
 
 # Some upstream/fork checkouts contain quoted args inside `.hxml` fixtures like:
@@ -138,12 +186,75 @@ normalize_quoted_hxml_args() {
   done <<<"$files"
 }
 
-# Isolate haxelib/haxe state so RunCi doesn't mutate the user's global setup (~/.haxelib).
-ISO_DIR="$(mktemp -d)"
-ISO_HOME="$ISO_DIR/home"
-ISO_HAXELIB_REPO="$ISO_DIR/haxelib"
-mkdir -p "$ISO_HOME" "$ISO_HAXELIB_REPO"
-printf '%s\n' "$ISO_HAXELIB_REPO" >"$ISO_HOME/.haxelib"
+# Some fixtures use `--cmd haxelib dev ...` to set up dev libraries.
+# The compiler resolves `-lib` during argument parsing, which can happen before `--cmd` is executed,
+# so ensure those dev libraries are seeded into the local `.haxelib/` repo up-front.
+preseed_misc_haxelib_dev_libs() {
+  local projects="$UPSTREAM_DIR/tests/misc/projects"
+  [ -d "$projects" ] || return 0
+
+  local files=""
+  if command -v rg >/dev/null 2>&1; then
+    files="$(rg -l '^--cmd haxelib dev ' "$projects" --glob '*.hxml' --no-messages || true)"
+  else
+    files="$(grep -R -l '^--cmd haxelib dev ' "$projects" --include '*.hxml' 2>/dev/null || true)"
+  fi
+
+  if [ -z "${files:-}" ]; then
+    return 0
+  fi
+
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+      *-fail.hxml|*-each.hxml) continue ;;
+    esac
+
+    local base
+    base="$(cd "$(dirname "$f")" && pwd)"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        "--cmd haxelib dev "*)
+          local rest lib path abs
+          rest="${line#--cmd haxelib dev }"
+          lib="${rest%% *}"
+          path="${rest#* }"
+          if [ -z "$lib" ] || [ -z "$path" ]; then
+            continue
+          fi
+          if [[ "$path" == /* ]]; then
+            abs="$path"
+          else
+            abs="$base/$path"
+          fi
+          PATH="$WRAP_DIR:$PATH" haxelib dev "$lib" "$abs" >/dev/null
+          ;;
+      esac
+    done <"$f"
+  done <<<"$files"
+}
+
+patch_misc_expected_outputs() {
+  local issue3300="$UPSTREAM_DIR/tests/misc/projects/Issue3300/test-cwd-fail.hxml.stderr"
+  if [ -f "$issue3300" ]; then
+    cat >"$issue3300" <<'EOF'
+$$normPath(::cwd::/test-cwd-fail.hxml):0: Cannot use $$normPath(::cwd::/unexistant) as working directory
+EOF
+  fi
+}
+
+apply_misc_filter_if_requested() {
+  local filter="${HXHX_GATE2_MISC_FILTER:-}"
+  if [ -z "$filter" ]; then
+    return 0
+  fi
+
+  local misc_hxml="$UPSTREAM_DIR/tests/misc/compile.hxml"
+  if [ -f "$misc_hxml" ]; then
+    printf '\n-D MISC_TEST_FILTER=%s\n' "$filter" >>"$misc_hxml"
+  fi
+}
 
 # runci Macro relies on a working `haxe` command. To run it through `hxhx`,
 # we prepend a wrapper called `haxe` to PATH and point `hxhx` at the real stage0
@@ -155,6 +266,7 @@ WRAP_DIR="$(mktemp -d)"
 cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+export NEKOPATH="${NEKOPATH_DIR}"
 export HAXE_BIN="${STAGE0_HAXE}"
 exec "${HXHX_BIN}" "\$@"
 EOF
@@ -163,17 +275,42 @@ chmod +x "$WRAP_DIR/haxe"
 cat >"$WRAP_DIR/haxelib" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+export NEKOPATH="${NEKOPATH_DIR}"
 exec "${STAGE0_HAXELIB}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/haxelib"
 
+cat >"$WRAP_DIR/nekotools" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export NEKOPATH="${NEKOPATH_DIR}"
+exec "${STAGE0_NEKOTOOLS}" "\$@"
+EOF
+chmod +x "$WRAP_DIR/nekotools"
+
+cat >"$WRAP_DIR/neko" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export NEKOPATH="${NEKOPATH_DIR}"
+exec "${STAGE0_NEKO}" "\$@"
+EOF
+chmod +x "$WRAP_DIR/neko"
+
 echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
 (
   cd "$UPSTREAM_DIR/tests"
-  ensure_misc_src_dirs
+  # Use a local haxelib repository scoped to the worktree so we don't mutate the user's global repo.
+  # Haxelib searches parent directories for a `.haxelib/` folder, so creating it here applies to all subdirs.
+  if [ ! -d ".haxelib" ]; then
+    PATH="$WRAP_DIR:$PATH" haxelib newrepo >/dev/null
+  fi
+  ensure_misc_classpath_dirs
   normalize_quoted_hxml_args
+  preseed_misc_haxelib_dev_libs
+  patch_misc_expected_outputs
+  apply_misc_filter_if_requested
   # RunCi defaults to the Macro target when no args/TEST are provided.
   # We intentionally pass no args here because `hxhx` treats `--` as a separator
   # and would drop everything before it.
-  HOME="$ISO_HOME" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+  PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
 )

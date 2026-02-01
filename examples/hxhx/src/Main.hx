@@ -12,35 +12,36 @@
 
 	Long-term:
 	- The delegation path is removed and `hxhx` becomes the real compiler.
-**/
-class Main {
-	static function main() {
-		final args = Sys.args();
-		if (args.length == 0) {
-			Sys.println("OK hxhx");
-			return;
-		}
+	**/
+	class Main {
+		static function main() {
+			final args = Sys.args();
+			if (args.length == 0) {
+				Sys.println("OK hxhx");
+				return;
+			}
 
-		if (args.length == 1 && (args[0] == "--help" || args[0] == "-h")) {
-			Sys.println("hxhx (stage0 shim)");
-			Sys.println("");
-			Sys.println("Usage:");
-			Sys.println("  hxhx [haxe args...]");
-			Sys.println("");
-			Sys.println("Environment:");
-			Sys.println("  HAXE_BIN  Path to stage0 `haxe` (default: haxe)");
-			return;
-		}
+			// Compatibility note:
+			// `hxhx` is intended to be drop-in compatible with the `haxe` CLI. Some tools (and upstream tests)
+			// parse `haxe --version` as a SemVer string, so we must not intercept `--version` here.
+			if (args.length == 1 && args[0] == "--hxhx-help") {
+				Sys.println("hxhx (stage0 shim)");
+				Sys.println("");
+				Sys.println("Usage:");
+				Sys.println("  hxhx [haxe args...]");
+				Sys.println("");
+				Sys.println("Environment:");
+				Sys.println("  HAXE_BIN  Path to stage0 `haxe` (default: haxe)");
+				Sys.println("");
+				Sys.println("Notes:");
+				Sys.println("  - `--version` and `--help` are forwarded to stage0 `haxe` for compatibility.");
+				Sys.println("  - Use `--hxhx-help` for this shim help.");
+				return;
+			}
 
-		if (args.length == 1 && args[0] == "--version") {
-			// Keep this deliberately simple for now; we’ll add “compat vs impl” versions once `hxhx` is real.
-			Sys.println("hxhx (stage0 shim)");
-			return;
-		}
-
-		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
-		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
-		var forwarded = args;
+			// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
+			// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
+			var forwarded = args;
 		final sep = args.indexOf("--");
 		if (sep != -1) forwarded = args.slice(sep + 1);
 
@@ -53,4 +54,3 @@ class Main {
 		Sys.exit(code);
 	}
 }
-

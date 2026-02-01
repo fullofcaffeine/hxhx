@@ -99,7 +99,7 @@ HAXE_UPSTREAM_DIR=/path/to/haxe \
   npm run test:upstream:runci-macro
 ```
 
-Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `nekotools`, and `haxelib`), and it can download external deps (e.g. `tink_core`) during the run.
+Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `haxelib`, `neko`/`nekotools`, `python3`, `javac`, and a C compiler like `cc`/`clang`), and it can download external deps (e.g. `tink_core`) during the run.
 
 ## Two surfaces (design)
 
