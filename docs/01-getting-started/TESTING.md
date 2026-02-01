@@ -64,6 +64,20 @@ Notes:
 - Host toolchain requirements and macOS sys-stage caveats are documented in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
 - Debugging: set `HXHX_GATE2_MISC_FILTER=<pattern>` to run only a subset of `tests/misc` fixtures.
 
+### Stage 2 reproducibility rung (Stage1 builds Stage2)
+
+This is a local bootstrap sanity check:
+
+- Build stage1 `hxhx` (native OCaml binary).
+- Use that stage1 binary to build stage2.
+- Compare behavior and (best-effort) emitted `.ml` output hashes.
+
+Run:
+
+```bash
+npm run test:upstream:stage2
+```
+
 ## Layers
 
 ### 1) “Build the backend” checks (fast, no dune required)

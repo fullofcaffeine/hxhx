@@ -60,6 +60,18 @@ Passes when:
 
 This is our “always runnable” smoke coverage.
 
+### Stage 2 reproducibility rung (bootstrap sanity)
+
+This is not a replacement gate by itself, but it’s a key bootstrap checkpoint:
+
+- Build stage1 `hxhx` (native OCaml binary).
+- Use that stage1 binary to build stage2.
+- Check that stage2 behaves the same (and that stage1/stage2 codegen is stable enough for the current implementation).
+
+Run:
+
+- `npm run test:upstream:stage2`
+
 ### Gate 1 — Upstream “Macro” unit test suite (core semantics)
 
 This is the first **real upstream gate**.

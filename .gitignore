@@ -11,6 +11,7 @@ dump_out_*/
 # Examples build output
 examples/**/out/
 examples/**/out_tmp*/
+examples/**/out_stage*/
 
 # Portable fixtures build output
 test/portable/**/out/
