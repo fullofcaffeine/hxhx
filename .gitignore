@@ -22,6 +22,10 @@ tmp_stat_portable.txt
 node_modules/
 npm-debug.log*
 
+# Optional vendored upstream checkout (see scripts/vendor/fetch-haxe-upstream.sh)
+vendor/haxe
+vendor/haxe/
+
 # OS/editor
 .DS_Store
 

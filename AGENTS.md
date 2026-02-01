@@ -43,6 +43,7 @@ bd sync               # Sync with git
 - `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`
 - Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
 - `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
+- Optional vendored upstream checkout location (preferred for gate runners): `vendor/haxe` (create with `bash scripts/vendor/fetch-haxe-upstream.sh`)
 
 ## Long-Term Acceptance Example: Haxe-in-Haxe (Production-Grade)
 

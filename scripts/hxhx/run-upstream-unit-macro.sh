@@ -6,7 +6,7 @@ HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-DEFAULT_UPSTREAM="/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe"
+DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 
 if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then

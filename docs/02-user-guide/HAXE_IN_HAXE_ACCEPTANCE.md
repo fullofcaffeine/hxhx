@@ -7,7 +7,8 @@ This document answers two related questions:
 
 We treat the upstream Haxe repo as the **source of truth** for correctness and compatibility:
 
-- Haxe compiler source: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
+- Upstream checkout (default): `vendor/haxe` (fetch with `bash scripts/vendor/fetch-haxe-upstream.sh`)
+- Override upstream checkout: `HAXE_UPSTREAM_DIR=/path/to/haxe`
 - Upstream test harnesses: `tests/unit/*` and `tests/runci/*` (see `tests/RunCi.hx`)
 
 ## Key point: “compile the test files” is necessary but not sufficient

@@ -88,18 +88,19 @@ bash scripts/hxhx/build-hxhx.sh
 Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s path):
 
 ```bash
-HAXE_UPSTREAM_DIR=/path/to/haxe \
-  npm run test:upstream:unit-macro
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:unit-macro
 ```
 
 Run upstream Gate 2 (runci Macro target; heavier and more tool-dependent):
 
 ```bash
-HAXE_UPSTREAM_DIR=/path/to/haxe \
-  npm run test:upstream:runci-macro
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:runci-macro
 ```
 
 Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `haxelib`, `neko`/`nekotools`, `python3`, `javac`, and a C compiler like `cc`/`clang`), and it can download external deps (e.g. `tink_core`) during the run.
+You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 
 ## Two surfaces (design)
 

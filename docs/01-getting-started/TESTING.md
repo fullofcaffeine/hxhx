@@ -41,14 +41,28 @@ Gate 1 (unit macro suite) uses the upstream file:
 Run it via the `hxhx` harness:
 
 ```bash
-HAXE_UPSTREAM_DIR=/path/to/haxe \
-  npm run test:upstream:unit-macro
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:unit-macro
 ```
 
 Notes:
 
 - Today `hxhx` is a Stage 0 shim which delegates to a Stage 0 `haxe` binary.
+- By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
+
+Gate 2 (runci Macro target) runs the upstream `tests/runci/targets/Macro.hx` suite:
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:runci-macro
+```
+
+Notes:
+
+- This is **not** run in GitHub Actions CI by default (it is network-heavy and relies on external toolchains).
+- Host toolchain requirements and macOS sys-stage caveats are documented in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
+- Debugging: set `HXHX_GATE2_MISC_FILTER=<pattern>` to run only a subset of `tests/misc` fixtures.
 
 ## Layers
 

@@ -6,7 +6,7 @@ HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-DEFAULT_UPSTREAM="/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe"
+DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
 
@@ -70,6 +70,7 @@ fi
 # can vary per-worktree (notably inside `tests/party` where repos may have their own lix config).
 STAGE0_HAXE=""
 STAGE0_HAXELIB=""
+STAGE0_STD_PATH="${HAXE_STD_PATH:-}"
 
 if [ -x "$HOME/haxe/versions/$UPSTREAM_REF/haxe" ]; then
   STAGE0_HAXE="$HOME/haxe/versions/$UPSTREAM_REF/haxe"
@@ -81,6 +82,13 @@ if [ -x "$HOME/haxe/versions/$UPSTREAM_REF/haxelib" ]; then
   STAGE0_HAXELIB="$HOME/haxe/versions/$UPSTREAM_REF/haxelib"
 else
   STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN")"
+fi
+
+if [ -z "$STAGE0_STD_PATH" ]; then
+  STAGE0_HAXE_DIR="$(cd "$(dirname "$STAGE0_HAXE")" && pwd)"
+  if [ -d "$STAGE0_HAXE_DIR/std" ]; then
+    STAGE0_STD_PATH="$STAGE0_HAXE_DIR/std"
+  fi
 fi
 STAGE0_NEKOTOOLS="${NEKOTOOLS_BIN:-}"
 STAGE0_NEKO="${NEKO_BIN:-}"
@@ -342,6 +350,10 @@ cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 export HAXE_BIN="${STAGE0_HAXE}"
@@ -353,6 +365,10 @@ cat >"$WRAP_DIR/haxelib" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 exec "${STAGE0_HAXELIB}" "\$@"
@@ -363,6 +379,10 @@ cat >"$WRAP_DIR/nekotools" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 exec "${STAGE0_NEKOTOOLS}" "\$@"
@@ -373,6 +393,10 @@ cat >"$WRAP_DIR/neko" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 exec "${STAGE0_NEKO}" "\$@"
@@ -386,6 +410,9 @@ echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
   # Haxelib searches parent directories for a `.haxelib/` folder, so creating it here applies to all subdirs.
   if [ ! -d ".haxelib" ]; then
     PATH="$WRAP_DIR:$PATH" haxelib newrepo >/dev/null
+  fi
+  if [ -n "${STAGE0_STD_PATH:-}" ]; then
+    export HAXE_STD_PATH="${STAGE0_STD_PATH}"
   fi
   export UPSTREAM_DIR
   ensure_misc_classpath_dirs
