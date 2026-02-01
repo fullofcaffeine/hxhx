@@ -1,6 +1,7 @@
 package reflaxe.ocaml.ast;
 
 import reflaxe.ocaml.ast.OcamlAssignOp;
+import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
@@ -59,6 +60,9 @@ enum OcamlExpr {
 
 	/** Function application: `f a b` */
 	EApp(fn:OcamlExpr, args:Array<OcamlExpr>);
+
+	/** Function application with labelled/optional args (e.g. `f ~x:1 ?y:(Some 2)`). */
+	EAppArgs(fn:OcamlExpr, args:Array<OcamlApplyArg>);
 
 	/** Infix operator expression. */
 	EBinop(op:OcamlBinop, left:OcamlExpr, right:OcamlExpr);

@@ -35,6 +35,18 @@ compile_one() {
   fi
 
   diff -ru "$test_dir/intended" "$test_dir/out"
+
+  # Optional sanity check: ensure the generated OCaml parses.
+  # This does not typecheck or link the output (which would require external libs),
+  # but it catches many printer-level syntax regressions early.
+  if command -v ocamlc >/dev/null 2>&1; then
+    while IFS= read -r -d '' ml; do
+      ocamlc -stop-after parsing -c "$ml" >/dev/null 2>&1 || {
+        echo "OCaml parse failed: ${ml#"$ROOT/"}" >&2
+        exit 1
+      }
+    done < <(find "$test_dir/out" -type f -name '*.ml' -print0 | sort -z)
+  fi
 }
 
 while IFS= read -r -d '' hxml; do
@@ -45,4 +57,3 @@ while IFS= read -r -d '' hxml; do
 done < <(find "$SNAPSHOT_DIR" -name compile.hxml -print0 | sort -z)
 
 echo "✓ Snapshots OK"
-

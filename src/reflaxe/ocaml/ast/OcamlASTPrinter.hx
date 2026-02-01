@@ -69,7 +69,7 @@ class OcamlASTPrinter {
 				PREC_ATOM;
 			case EField(_, _):
 				PREC_FIELD;
-			case EApp(_, _):
+			case EApp(_, _), EAppArgs(_, _):
 				PREC_APP;
 			case EUnop(_, _):
 				PREC_MUL;
@@ -114,6 +114,8 @@ class OcamlASTPrinter {
 				left + "." + field;
 			case EApp(fn, args):
 				printApp(fn, args, indentLevel);
+			case EAppArgs(fn, args):
+				printAppArgs(fn, args, indentLevel);
 			case EBinop(op, left, right):
 				printBinop(op, left, right, indentLevel);
 			case EUnop(op, expr):
@@ -254,6 +256,36 @@ class OcamlASTPrinter {
 			final rendered = printExprCtx(a, PREC_ATOM, indentLevel);
 			return needsExprParensInApp(a) ? ("(" + rendered + ")") : rendered;
 		}).join(" ");
+		return f + " " + renderedArgs;
+	}
+
+	function printAppArgs(fn:OcamlExpr, args:Array<OcamlApplyArg>, indentLevel:Int):String {
+		final f = printExprCtx(fn, PREC_APP, indentLevel);
+		if (args.length == 0) return f;
+
+		inline function renderLabelArg(prefix:String, label:String, value:OcamlExpr):String {
+			final rendered = printExprCtx(value, PREC_TOP, indentLevel);
+			final needsParens = switch (value) {
+				case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_):
+					false;
+				case _:
+					true;
+			}
+			return needsParens
+				? (prefix + label + ":(" + rendered + ")")
+				: (prefix + label + ":" + rendered);
+		}
+
+		final renderedArgs = args.map(function(a) {
+			if (a.label == null) {
+				final rendered = printExprCtx(a.expr, PREC_ATOM, indentLevel);
+				return needsExprParensInApp(a.expr) ? ("(" + rendered + ")") : rendered;
+			}
+
+			final prefix = a.isOptional ? "?" : "~";
+			return renderLabelArg(prefix, a.label, a.expr);
+		}).join(" ");
+
 		return f + " " + renderedArgs;
 	}
 

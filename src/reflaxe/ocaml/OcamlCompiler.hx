@@ -766,6 +766,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case EApp(fn, args):
 					visit(fn);
 					for (a in args) visit(a);
+				case EAppArgs(fn, args):
+					visit(fn);
+					for (a in args) visit(a.expr);
 				case EBinop(_, l, r):
 					visit(l);
 					visit(r);

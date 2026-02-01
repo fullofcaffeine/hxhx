@@ -18,6 +18,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
+import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 
@@ -559,6 +560,47 @@ class OcamlBuilder {
 					case TField(_, FStatic(clsRef, cfRef)):
 						final cls = clsRef.get();
 						final cf = cfRef.get();
+
+						// Extern interop: labelled/optional args via @:ocamlLabel("...") on parameters.
+						// (bd: haxe.ocaml-28t.8.3)
+						if (cls.isExtern) {
+							final labelsByArgName = extractOcamlLabelByArgName(cf);
+							if (labelsByArgName != null && labelsByArgName.iterator().hasNext()) {
+								final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+									case TFun(fargs, _): fargs;
+									case _: null;
+								}
+
+								final applyArgs:Array<OcamlApplyArg> = [];
+								if (expectedArgs != null) {
+									for (i in 0...args.length) {
+										if (i >= expectedArgs.length) break;
+										final ea = expectedArgs[i];
+										final label = labelsByArgName.get(ea.name);
+										final coerced = coerceForAssignment(ea.t, args[i]);
+										if (label != null) {
+											if (ea.opt) {
+												applyArgs.push({
+													label: label,
+													isOptional: true,
+													expr: buildOptionalArgOptionExpr(coerced, ea.t)
+												});
+											} else {
+												applyArgs.push({ label: label, isOptional: false, expr: coerced });
+											}
+										} else {
+											applyArgs.push({ label: null, isOptional: false, expr: coerced });
+										}
+									}
+								} else {
+									for (a in args) applyArgs.push({ label: null, isOptional: false, expr: buildExpr(a) });
+								}
+
+								final builtFn = buildExpr(fn);
+								return OcamlExpr.EAppArgs(builtFn, applyArgs.length == 0 ? [{ label: null, isOptional: false, expr: OcamlExpr.EConst(OcamlConst.CUnit) }] : applyArgs);
+							}
+						}
+
 						if (cls.pack != null && cls.pack.length == 0 && cls.name == "Sys") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 							switch (cf.name) {
@@ -2970,6 +3012,68 @@ class OcamlBuilder {
 		}
 
 		return { moduleExpr: moduleExpr, fieldName: fieldName };
+	}
+
+	/**
+	 * Extract per-parameter `@:ocamlLabel("...")` metadata for a class field.
+	 *
+	 * Why:
+	 * - Haxe doesn't have labelled arguments, but OCaml does. For extern interop we need a way
+	 *   to map positional Haxe arguments to labelled OCaml callsites.
+	 *
+	 * How:
+	 * - Haxe stores argument metadata in a synthetic `:haxe.arguments` entry on the field's meta.
+	 *   We parse that AST and build a map from parameter name → label string.
+	 *
+	 * Returns:
+	 * - `null` if no relevant metadata exists.
+	 * - Otherwise, a map from argument name to OCaml label string.
+	 */
+	static function extractOcamlLabelByArgName(field:ClassField):Null<Map<String, String>> {
+		final meta = field.meta.get();
+		var out:Null<Map<String, String>> = null;
+
+		for (m in meta) {
+			if (m.name != ":haxe.arguments") continue;
+			if (m.params == null || m.params.length == 0) continue;
+
+			switch (m.params[0].expr) {
+				case EFunction(_, f):
+					for (a in f.args) {
+						if (a.meta == null) continue;
+						for (am in a.meta) {
+							if (am.name != ":ocamlLabel") continue;
+							if (am.params == null || am.params.length != 1) continue;
+							final label = switch (am.params[0].expr) {
+								case EConst(CString(s)): s;
+								case _: null;
+							}
+							if (label == null) continue;
+							if (out == null) out = [];
+							out.set(a.name, label);
+						}
+					}
+				case _:
+			}
+		}
+
+		return out;
+	}
+
+	function buildOptionalArgOptionExpr(coerced:OcamlExpr, expectedType:Type):OcamlExpr {
+		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		final tmp = freshTmp("optarg");
+
+		// For `Null<Int>/Null<Float>/Null<Bool>` we represent values as Obj.t already.
+		// For everything else, compare via `Obj.repr` so the null sentinel can be detected consistently.
+		final objVal = (nullablePrimitiveKind(expectedType) != null)
+			? coerced
+			: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [coerced]);
+
+		final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull);
+		final someVal = OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])]);
+
+		return OcamlExpr.ELet(tmp, objVal, OcamlExpr.EIf(isNull, OcamlExpr.EIdent("None"), someVal), false);
 	}
 }
 
