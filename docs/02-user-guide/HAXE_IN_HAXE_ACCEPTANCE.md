@@ -93,6 +93,26 @@ This target includes (non-exhaustive, based on upstream code):
 
 This is the point where we’re no longer “just a compiler”: we’re a compiler **toolchain**.
 
+#### Running Gate 2 locally (and sys-stage caveats)
+
+In this repo, Gate 2 is exercised via:
+
+- `npm run test:upstream:runci-macro` (wraps `scripts/hxhx/run-upstream-runci-macro.sh`)
+
+Host toolchain requirements (minimum):
+
+- OCaml build tools: `dune`, `ocamlc`
+- Neko tools: `neko`, `nekotools` (RunCi uses an echo server)
+- `python3` (some sys fixtures)
+- a C compiler (`cc`/`clang`/`gcc`) and `javac` (some misc/sys fixtures)
+
+macOS note:
+
+- Upstream `tests/sys` includes fixtures that intentionally create filenames that are invalid on macOS/APFS (e.g.
+  surrogate codepoints), which can fail with `OSError: [Errno 92] Illegal byte sequence`.
+- For now, our Gate2 runner **skips the sys stage on macOS** with an explicit message.
+- To force attempting sys on macOS anyway, set `HXHX_GATE2_FORCE_SYS=1` (expected to fail today).
+
 ### Gate 3 — Upstream full `tests/runci` matrix for claimed targets
 
 Replacement-ready claims must be explicit about which targets we support.
@@ -135,4 +155,3 @@ We keep three layers:
 Then we add an upstream-facing layer:
 
 4) **Upstream Haxe suite runner**: run `tests/unit` and `tests/runci` using the Haxe-in-Haxe compiler binary.
-
