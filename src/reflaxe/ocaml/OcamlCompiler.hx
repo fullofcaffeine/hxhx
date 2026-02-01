@@ -3,6 +3,9 @@ package reflaxe.ocaml;
 #if (macro || reflaxe_runtime)
 
 import haxe.io.Path;
+#if macro
+import haxe.macro.Context;
+#end
 import haxe.macro.Type;
 import haxe.macro.Type.TConstant;
 import haxe.macro.Type.TypedExpr;
@@ -33,6 +36,7 @@ import reflaxe.GenericCompiler;
 import reflaxe.output.DataAndFileInfo;
 
 using StringTools;
+using reflaxe.helpers.BaseTypeHelper;
 
 /**
  * Minimal OCaml compiler scaffold.
@@ -45,6 +49,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final ctx:CompilationContext = new CompilationContext();
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
 	var mainModuleId:Null<String> = null;
+	var checkedOutputCollisions:Bool = false;
 
 	#if macro
 	static var haxeStdRoots:Null<Array<String>> = null;
@@ -96,6 +101,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// definitions in each module, since OCaml requires constructors/types to
 		// be declared before use.
 		final all:CompiledCollection<String> = enums.concat(typedefs).concat(abstracts).concat(classes);
+
+		#if macro
+		if (!checkedOutputCollisions) {
+			checkedOutputCollisions = true;
+			assertNoModuleNameCollisions(all);
+		}
+		#end
+
 		var index = 0;
 		return {
 			hasNext: () -> index < all.length,
@@ -105,6 +118,120 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		};
 	}
+
+	#if macro
+	static function isValidOcamlModuleName(name:String):Bool {
+		if (name == null || name.length == 0) return false;
+		final first = name.charCodeAt(0);
+		final isUpper = first >= 65 && first <= 90;
+		if (!isUpper) return false;
+		for (i in 1...name.length) {
+			final c = name.charCodeAt(i);
+			final ok = (c >= 97 && c <= 122) // a-z
+				|| (c >= 65 && c <= 90) // A-Z
+				|| (c >= 48 && c <= 57) // 0-9
+				|| c == 95; // _
+			if (!ok) return false;
+		}
+		return true;
+	}
+
+	static function assertNoModuleNameCollisions(all:CompiledCollection<String>):Void {
+		// Reflaxe writes output per module using `BaseTypeHelper.moduleId()` as the filename key.
+		// That operation replaces '.' with '_' and keeps original case.
+		//
+		// We must detect collisions early because:
+		// - `a.b.C` and `a_b.C` both become `a_b_C` (silent merge into one .ml file).
+		// - `foo.Bar` and `Foo.Bar` become `foo_Bar` / `Foo_Bar`, which can collide on
+		//   case-insensitive filesystems and/or map to the same OCaml module name.
+		final fileKeyToModules:Map<String, Map<String, Bool>> = [];
+		final fileKeyToFileIds:Map<String, Map<String, Bool>> = [];
+
+		final ocamlNameToModules:Map<String, Map<String, Bool>> = [];
+		final ocamlNameToFileIds:Map<String, Map<String, Bool>> = [];
+
+		inline function addToSet(map:Map<String, Map<String, Bool>>, key:String, value:String):Void {
+			if (!map.exists(key)) map.set(key, []);
+			final s = map.get(key);
+			if (s != null) s.set(value, true);
+		}
+
+		for (c in all) {
+			final mod = c.baseType.module;
+			final fileId = c.baseType.moduleId(); // '.' -> '_' (Reflaxe output key)
+
+			final fileKey = fileId.toLowerCase();
+			addToSet(fileKeyToModules, fileKey, mod);
+			addToSet(fileKeyToFileIds, fileKey, fileId);
+
+			final ocamlName = DuneProjectEmitter.ocamlModuleNameFromHaxeModuleId(fileId);
+			addToSet(ocamlNameToModules, ocamlName, mod);
+			addToSet(ocamlNameToFileIds, ocamlName, fileId);
+
+			if (!isValidOcamlModuleName(ocamlName)) {
+				Context.error(
+					"reflaxe.ocaml (M8): invalid OCaml module name '" + ocamlName + "' derived from Haxe module '" + mod + "'.",
+					Context.currentPos()
+				);
+			}
+		}
+
+		for (k => mods in fileKeyToModules) {
+			if (mods == null) continue;
+			var count = 0;
+			final modList:Array<String> = [];
+			for (m => _ in mods) {
+				count += 1;
+				modList.push(m);
+			}
+			if (count <= 1) continue;
+
+			final fileIds = fileKeyToFileIds.get(k);
+			final fileIdList:Array<String> = [];
+			if (fileIds != null) for (f => _ in fileIds) fileIdList.push(f);
+			modList.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+			fileIdList.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+
+			Context.error(
+				"reflaxe.ocaml (M8): module filename collision after flattening.\n"
+				+ "The following Haxe modules would map to the same output file key '" + k + "':\n"
+				+ "  - " + modList.join("\n  - ") + "\n"
+				+ (fileIdList.length > 0 ? ("File ids involved: " + fileIdList.join(", ") + "\n") : "")
+				+ "Rename one of the packages/modules to avoid '.'/'_' collisions.\n"
+				+ "(bd: haxe.ocaml-28t.9.7)",
+				Context.currentPos()
+			);
+		}
+
+		for (ocamlName => mods in ocamlNameToModules) {
+			if (mods == null) continue;
+			var count = 0;
+			final modList:Array<String> = [];
+			for (m => _ in mods) {
+				count += 1;
+				modList.push(m);
+			}
+			if (count <= 1) continue;
+
+			final fileIds = ocamlNameToFileIds.get(ocamlName);
+			final fileIdList:Array<String> = [];
+			if (fileIds != null) for (f => _ in fileIds) fileIdList.push(f);
+			modList.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+			fileIdList.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+
+			// This can happen even if the raw `fileId` differs only by case. OCaml's module name is
+			// derived from the filename and starts uppercase, so two files can still define the same module.
+			Context.error(
+				"reflaxe.ocaml (M8): OCaml module name collision ('" + ocamlName + "').\n"
+				+ "The following Haxe modules would define the same OCaml module:\n"
+				+ "  - " + modList.join("\n  - ") + "\n"
+				+ (fileIdList.length > 0 ? ("File ids involved: " + fileIdList.join(", ") + "\n") : "")
+				+ "(bd: haxe.ocaml-28t.9.7)",
+				Context.currentPos()
+			);
+		}
+	}
+	#end
 
 	public function compileClassImpl(
 		classType:ClassType,
