@@ -168,6 +168,62 @@ class OcamlBuilder {
 		}
 	}
 
+	/**
+		Unwraps monomorphs/lazy types but intentionally does *not* follow typedefs.
+
+		Used for detecting special typedef-backed anonymous structures where we emit
+		idiomatic OCaml records (e.g. `sys.FileStat`).
+	**/
+	static function unwrapNoTypedef(t:Type):Type {
+		var current = t;
+		while (true) {
+			final next = switch (current) {
+				case TLazy(f):
+					f();
+				case TMono(r):
+					final inner = r.get();
+					inner == null ? current : inner;
+				case _:
+					return current;
+			}
+
+			if (next == current) return current;
+			current = next;
+		}
+	}
+
+	static function isSysFileStatTypedef(t:Type):Bool {
+		return switch (unwrapNoTypedef(t)) {
+			case TType(tRef, _):
+				final td = tRef.get();
+				(td.pack ?? []).length == 1 && td.pack[0] == "sys" && td.module == "sys.FileSystem" && td.name == "FileStat";
+			case _:
+				false;
+		}
+	}
+
+	static function isSysFileStatAnon(t:Type):Bool {
+		final ft = followNoAbstracts(t);
+		return switch (ft) {
+			case TAnonymous(aRef):
+				final a = aRef.get();
+				final want = [
+					"gid", "uid",
+					"atime", "mtime", "ctime",
+					"size",
+					"dev", "ino", "nlink", "rdev", "mode"
+				];
+				final have:Map<String, Bool> = [];
+				for (f in a.fields) have.set(f.name, true);
+				for (n in want) {
+					if (!have.exists(n)) return false;
+				}
+				true;
+			case _:
+				false;
+		}
+	}
+
 	static function isIntType(t:Type):Bool {
 		return switch (followNoAbstracts(t)) {
 			case TAbstract(aRef, _):
@@ -1643,9 +1699,30 @@ class OcamlBuilder {
 				}
 				seq.push(OcamlExpr.EIdent(tmp));
 				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
-			case TObjectDecl(_):
-				// Placeholder until class/anon-struct strategy lands.
-				OcamlExpr.EConst(OcamlConst.CUnit);
+			case TObjectDecl(fields):
+				// Anonymous structure literal: `{ foo: 1, bar: "x" }`.
+				//
+				// In OCaml we represent this as a runtime object (`HxAnon.t`) wrapped in `Obj.t`,
+				// so distinct anonymous-structure types can share a uniform representation.
+				final tmp = freshTmp("anon");
+				final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+				final seq:Array<OcamlExpr> = [];
+				for (f in fields) {
+					final rhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(f.expr)]);
+					seq.push(
+						OcamlExpr.EApp(
+							OcamlExpr.EIdent("ignore"),
+							[
+								OcamlExpr.EApp(
+									OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+									[OcamlExpr.EIdent(tmp), OcamlExpr.EConst(OcamlConst.CString(f.name)), rhs]
+								)
+							]
+						)
+					);
+				}
+				seq.push(OcamlExpr.EIdent(tmp));
+				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
 			case TThrow(expr):
 				final repr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expr)]);
 				final tags = throwTagsForType(expr.t);
@@ -2145,11 +2222,30 @@ class OcamlBuilder {
 							OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), coerceForAssignment(v.t, e2));
 						case TField(obj, FInstance(_, _, cfRef)):
 							final cf = cfRef.get();
-							switch (cf.kind) {
+				switch (cf.kind) {
 								case FVar(_, _):
 									OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(buildExpr(obj), cf.name), coerceForAssignment(e1.t, e2));
 								case _:
 									OcamlExpr.EConst(OcamlConst.CUnit);
+							}
+						case TField(obj, FAnon(cfRef)):
+							final cf = cfRef.get();
+							switch (cf.name) {
+								case "key", "value", "hasNext", "next":
+									OcamlExpr.EConst(OcamlConst.CUnit);
+								case _:
+									if (isSysFileStatAnon(obj.t)) {
+										OcamlExpr.EConst(OcamlConst.CUnit);
+									} else {
+									final rhs = OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+										[coerceForAssignment(e1.t, e2)]
+									);
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+										[buildExpr(obj), OcamlExpr.EConst(OcamlConst.CString(cf.name)), rhs]
+									);
+									}
 							}
 						case TArray(arr, idx):
 							OcamlExpr.EApp(
@@ -3229,8 +3325,25 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [buildExpr(obj)]);
 					case "value":
 						OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [buildExpr(obj)]);
-					case _:
+					case "hasNext", "next":
 						OcamlExpr.EField(buildExpr(obj), cf.name);
+					case _:
+						// Some typedef-backed anonymous structures are represented as real OCaml records
+						// for better performance/ergonomics (e.g. `sys.FileStat`).
+						// For those, anonymous-field access should lower to record field access.
+						if (isSysFileStatTypedef(obj.t) || isSysFileStatAnon(obj.t)) {
+							OcamlExpr.EField(buildExpr(obj), cf.name);
+						} else {
+							OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+								[
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
+										[buildExpr(obj), OcamlExpr.EConst(OcamlConst.CString(cf.name))]
+									)
+								]
+							);
+						}
 				}
 			case _:
 				// For now, treat unknown field access as unit.

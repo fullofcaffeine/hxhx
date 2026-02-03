@@ -8,9 +8,15 @@ type t = { mutable posInfos : Obj.t }
 let create = fun message previous pos -> let self = { posInfos = Obj.magic () } in (
   (
     ignore (self message previous);
-    if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- () else self.posInfos <- pos
+    if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- (let __anon_1 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_1 "fileName" (Obj.repr "(unknown)"));
+      ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 0));
+      ignore (HxAnon.set __anon_1 "className" (Obj.repr "(unknown)"));
+      ignore (HxAnon.set __anon_1 "methodName" (Obj.repr "(unknown)"));
+      __anon_1
+    )) else self.posInfos <- pos
   );
   self
 )
 
-let toString = fun self () -> (((((((("" ^ HxString.toStdString (Haxe_Exception.toString self ())) ^ " in ") ^ HxString.toStdString (self.posInfos.className)) ^ ".") ^ HxString.toStdString (self.posInfos.methodName)) ^ " at ") ^ HxString.toStdString (self.posInfos.fileName)) ^ ":") ^ string_of_int (self.posInfos.lineNumber)
+let toString = fun self () -> (((((((("" ^ HxString.toStdString (Haxe_Exception.toString self ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "className"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "methodName"))) ^ " at ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "fileName"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get (self.posInfos) "lineNumber"))
