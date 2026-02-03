@@ -11,8 +11,8 @@ package native;
 	  and link it via dune.
 
 	What:
-	- `tokenize` returns a newline-separated token stream (a temporary, pragmatic
-	  interchange format until we design a proper AST/token marshalling layer).
+	- `tokenize` returns a versioned, line-based protocol string containing
+	  tokens + positions (see `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md:1`).
 
 	How:
 	- The backing OCaml module lives in `std/runtime/HxHxNativeLexer.ml` and is
@@ -22,4 +22,3 @@ package native;
 extern class NativeLexer {
 	public static function tokenize(source:String):String;
 }
-

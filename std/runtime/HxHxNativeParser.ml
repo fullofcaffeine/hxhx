@@ -5,19 +5,42 @@
      while porting the rest of the compiler pipeline into Haxe.
 
    What it does (today):
-   - Consumes the token stream from `HxHxNativeLexer.tokenize`.
+   - Calls `HxHxNativeLexer.tokenize` to obtain tokens (with positions).
    - Parses a *very small* module subset (package/import/class + detect
      `static function main`), sufficient for `examples/hih-compiler`.
-   - Returns a line-based “record” string so Haxe can reconstruct its own
-     AST types without OCaml<->Haxe object marshalling.
+   - Emits a **versioned, line-based protocol** designed for gradual expansion:
+     - tokens + positions
+     - minimal module “AST summary”
+     - parse errors (without throwing)
+
+   Protocol (v=1):
+   - First line: `hxhx_frontend_v=1`
+   - Token line: `tok <kind> <index> <line> <col> <len>:<payload>`
+   - AST lines:
+     - `ast package <len>:<payload>`
+     - `ast imports <len>:<payload>`        (payload uses '|' separator for now)
+     - `ast class <len>:<payload>`
+     - `ast static_main 0|1`
+   - Terminal:
+     - `ok`
+     - OR `err <index> <line> <col> <len>:<message>`
+
+   Notes:
+   - Payload is escaped to keep each record on one physical line.
+   - This is a bootstrap seam: the format is intentionally simple and will
+     evolve alongside Stage 2.
 *)
 
+type pos = { index : int; line : int; col : int }
+
 type token =
-  | Kw of string
-  | Ident of string
-  | String of string
-  | Sym of char
-  | Eof
+  | Kw of string * pos
+  | Ident of string * pos
+  | String of string * pos
+  | Sym of char * pos
+  | Eof of pos
+
+exception Parse_error of pos * string
 
 let starts_with (s : string) (prefix : string) : bool =
   let sl = String.length s in
@@ -28,62 +51,151 @@ let split_non_empty_lines (s : string) : string list =
   let lines = String.split_on_char '\n' s in
   List.filter (fun l -> l <> "") lines
 
-let decode_tokens (s : string) : token array =
-  let lines = split_non_empty_lines s in
-  let toks =
-    List.map
-      (fun l ->
-        if l = "eof" then Eof
-        else if starts_with l "kw:" then Kw (String.sub l 3 (String.length l - 3))
-        else if starts_with l "ident:" then
-          Ident (String.sub l 6 (String.length l - 6))
-        else if starts_with l "string:" then
-          String (String.sub l 7 (String.length l - 7))
-        else if starts_with l "sym:" then
-          let rest = String.sub l 4 (String.length l - 4) in
-          if String.length rest = 0 then failwith "HxHxNativeParser: empty sym"
-          else Sym rest.[0]
-        else failwith ("HxHxNativeParser: unknown token line: " ^ l))
-      lines
-  in
-  Array.of_list toks
+let escape_payload (s : string) : string =
+  let b = Buffer.create (String.length s) in
+  String.iter
+    (fun c ->
+      match c with
+      | '\\' -> Buffer.add_string b "\\\\"
+      | '\n' -> Buffer.add_string b "\\n"
+      | '\r' -> Buffer.add_string b "\\r"
+      | '\t' -> Buffer.add_string b "\\t"
+      | c -> Buffer.add_char b c)
+    s;
+  Buffer.contents b
 
-let parse_module_decl (src : string) : string =
-  (* Ensure the lexer is callable and keep a stable integration seam. *)
-  let tok_text = HxHxNativeLexer.tokenize src in
-  let toks = decode_tokens tok_text in
+let unescape_payload (s : string) : string =
+  let b = Buffer.create (String.length s) in
   let i = ref 0 in
+  while !i < String.length s do
+    match s.[!i] with
+    | '\\' ->
+        if !i + 1 >= String.length s then (
+          Buffer.add_char b '\\';
+          i := !i + 1)
+        else (
+          match s.[!i + 1] with
+          | 'n' ->
+              Buffer.add_char b '\n';
+              i := !i + 2
+          | 'r' ->
+              Buffer.add_char b '\r';
+              i := !i + 2
+          | 't' ->
+              Buffer.add_char b '\t';
+              i := !i + 2
+          | '\\' ->
+              Buffer.add_char b '\\';
+              i := !i + 2
+          | c ->
+              Buffer.add_char b c;
+              i := !i + 2)
+    | c ->
+        Buffer.add_char b c;
+        i := !i + 1
+  done;
+  Buffer.contents b
 
+let parse_len_payload (s : string) : string =
+  (* s is "<len>:<payload...>" (payload may contain spaces). *)
+  match String.index_opt s ':' with
+  | None -> failwith "HxHxNativeParser: missing ':' in len payload"
+  | Some colon ->
+      let len_s = String.sub s 0 colon in
+      let payload = String.sub s (colon + 1) (String.length s - colon - 1) in
+      let expected = int_of_string len_s in
+      if String.length payload < expected then
+        failwith "HxHxNativeParser: payload shorter than expected length"
+      else unescape_payload (String.sub payload 0 expected)
+
+let parse_tok_line (l : string) : token =
+  (* tok <kind> <index> <line> <col> <len>:<payload> *)
+  let parts = String.split_on_char ' ' l in
+  match parts with
+  | "tok" :: kind :: idx_s :: line_s :: col_s :: rest ->
+      let at =
+        {
+          index = int_of_string idx_s;
+          line = int_of_string line_s;
+          col = int_of_string col_s;
+        }
+      in
+      let payload = String.concat " " rest in
+      let value = parse_len_payload payload in
+      (match kind with
+      | "kw" -> Kw (value, at)
+      | "ident" -> Ident (value, at)
+      | "string" -> String (value, at)
+      | "sym" ->
+          if String.length value = 0 then failwith "HxHxNativeParser: empty sym";
+          Sym (value.[0], at)
+      | "eof" -> Eof at
+      | _ -> failwith ("HxHxNativeParser: unknown tok kind: " ^ kind))
+  | _ -> failwith ("HxHxNativeParser: invalid tok line: " ^ l)
+
+let decode_lexer_stream (s : string) :
+    ((token array * string option), string) result =
+  let lines = split_non_empty_lines s in
+  match lines with
+  | [] -> Error "HxHxNativeParser: empty lexer stream"
+  | header :: _ when header <> "hxhx_frontend_v=1" ->
+      Error "HxHxNativeParser: unexpected lexer header"
+  | _header :: rest ->
+      let toks = ref [] in
+      let err = ref None in
+      List.iter
+        (fun l ->
+          if starts_with l "tok " then toks := !toks @ [ parse_tok_line l ]
+          else if starts_with l "err " then err := Some l
+          else ())
+        rest;
+      Ok (Array.of_list !toks, !err)
+
+let pos_of (t : token) : pos =
+  match t with
+  | Kw (_, p) -> p
+  | Ident (_, p) -> p
+  | String (_, p) -> p
+  | Sym (_, p) -> p
+  | Eof p -> p
+
+let token_eq_kw (t : token) (k : string) : bool =
+  match t with
+  | Kw (kk, _) when kk = k -> true
+  | _ -> false
+
+let token_eq_sym (t : token) (c : char) : bool =
+  match t with
+  | Sym (cc, _) when cc = c -> true
+  | _ -> false
+
+let parse_module_from_tokens (toks : token array) :
+    (string * string list * string * bool) =
+  let i = ref 0 in
   let cur () : token =
-    if !i < 0 || !i >= Array.length toks then Eof else toks.(!i)
+    if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else toks.(!i)
   in
   let bump () = i := !i + 1 in
-  let fail msg = failwith ("HxHxNativeParser: " ^ msg) in
 
-  let expect_sym (c : char) =
-    match cur () with
-    | Sym d when d = c ->
-        bump ();
-        ()
-    | _ -> fail ("expected symbol: " ^ String.make 1 c)
-  in
   let expect_kw (k : string) =
-    match cur () with
-    | Kw kk when kk = k ->
-        bump ();
-        ()
-    | _ -> fail ("expected keyword: " ^ k)
+    if token_eq_kw (cur ()) k then bump ()
+    else raise (Parse_error (pos_of (cur ()), "expected keyword: " ^ k))
+  in
+  let expect_sym (c : char) =
+    if token_eq_sym (cur ()) c then bump ()
+    else raise (Parse_error (pos_of (cur ()), "expected symbol: " ^ String.make 1 c))
   in
   let read_ident () : string =
     match cur () with
-    | Ident s ->
+    | Ident (s, _) ->
         bump ();
         s
-    | _ -> fail "expected identifier"
+    | _ -> raise (Parse_error (pos_of (cur ()), "expected identifier"))
   in
   let read_dotted_path () : string =
     let parts = ref [ read_ident () ] in
-    while cur () = Sym '.' do
+    while token_eq_sym (cur ()) '.' do
       bump ();
       parts := !parts @ [ read_ident () ]
     done;
@@ -93,14 +205,12 @@ let parse_module_decl (src : string) : string =
   let package_path = ref "" in
   let imports = ref [] in
 
-  (match cur () with
-  | Kw "package" ->
-      bump ();
-      package_path := read_dotted_path ();
-      expect_sym ';'
-  | _ -> ());
+  if token_eq_kw (cur ()) "package" then (
+    bump ();
+    package_path := read_dotted_path ();
+    expect_sym ';');
 
-  while cur () = Kw "import" do
+  while token_eq_kw (cur ()) "import" do
     bump ();
     let path = read_dotted_path () in
     imports := !imports @ [ path ];
@@ -113,45 +223,75 @@ let parse_module_decl (src : string) : string =
 
   let has_static_main = ref false in
   let depth = ref 1 in
-  let prev1 = ref None in
-  let prev2 = ref None in
+  let prev1 : token option ref = ref None in
+  let prev2 : token option ref = ref None in
 
-  let shift tok =
+  let shift (tok : token) =
     prev2 := !prev1;
     prev1 := Some tok
   in
 
   while !depth > 0 do
     match cur () with
-    | Eof -> fail "unexpected eof in class body"
-    | Sym '{' ->
-        depth := !depth + 1;
-        shift (Sym '{');
-        bump ()
-    | Sym '}' ->
-        depth := !depth - 1;
-        shift (Sym '}');
-        bump ()
+    | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
     | tok ->
         (* Detect `static function main` without parsing full member grammar yet. *)
         (match (!prev2, !prev1, tok) with
-        | Some (Kw "static"), Some (Kw "function"), Ident "main" ->
+        | Some (Kw ("static", _)), Some (Kw ("function", _)), Ident ("main", _) ->
             has_static_main := true
         | _ -> ());
+
         shift tok;
+        if token_eq_sym tok '{' then depth := !depth + 1
+        else if token_eq_sym tok '}' then depth := !depth - 1;
         bump ()
   done;
 
-  (match cur () with
-  | Eof -> ()
-  | _ -> ());
+  (!package_path, !imports, class_name, !has_static_main)
 
-  let imports_str = String.concat "|" !imports in
+let encode_ast_lines (package_path : string) (imports : string list)
+    (class_name : string) (has_static_main : bool) : string =
+  let pkg_enc = escape_payload package_path in
+  let imports_payload = String.concat "|" imports in
+  let imports_enc = escape_payload imports_payload in
+  let cls_enc = escape_payload class_name in
   String.concat "\n"
     [
-      "package:" ^ !package_path;
-      "imports:" ^ imports_str;
-      "class:" ^ class_name;
-      "staticMain:" ^ (if !has_static_main then "1" else "0");
+      Printf.sprintf "ast package %d:%s" (String.length pkg_enc) pkg_enc;
+      Printf.sprintf "ast imports %d:%s" (String.length imports_enc) imports_enc;
+      Printf.sprintf "ast class %d:%s" (String.length cls_enc) cls_enc;
+      "ast static_main " ^ if has_static_main then "1" else "0";
     ]
 
+let encode_err_line (p : pos) (msg : string) : string =
+  let enc = escape_payload msg in
+  Printf.sprintf "err %d %d %d %d:%s" p.index p.line p.col (String.length enc) enc
+
+let strip_terminal_ok (lex_stream : string) : string =
+  let lines = split_non_empty_lines lex_stream in
+  let kept =
+    List.filter
+      (fun l -> l <> "ok")
+      lines
+  in
+  String.concat "\n" kept
+
+let parse_module_decl (src : string) : string =
+  let lex_stream = HxHxNativeLexer.tokenize src in
+  match decode_lexer_stream lex_stream with
+  | Error msg ->
+      String.concat "\n"
+        [ "hxhx_frontend_v=1"; encode_err_line { index = 0; line = 0; col = 0 } msg ]
+  | Ok ((_toks, Some _err_line)) ->
+      (* Lexer already emitted a protocol error; pass it through. *)
+      strip_terminal_ok lex_stream
+  | Ok ((toks, None)) -> (
+      let base = strip_terminal_ok lex_stream in
+      try
+        let package_path, imports, class_name, has_static_main =
+          parse_module_from_tokens toks
+        in
+        String.concat "\n"
+          [ base; encode_ast_lines package_path imports class_name has_static_main; "ok" ]
+      with
+      | Parse_error (p, msg) -> String.concat "\n" [ base; encode_err_line p msg ])

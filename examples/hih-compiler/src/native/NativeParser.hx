@@ -10,8 +10,8 @@ package native;
 	  dune build/link → calls into native OCaml modules.
 
 	What:
-	- Parses the same tiny module subset as `HxParser` and returns a line-based
-	  record that we rehydrate into `HxModuleDecl`.
+	- Parses the same tiny module subset as `HxParser` and returns a versioned,
+	  line-based protocol string that we rehydrate into `HxModuleDecl`.
 
 	How:
 	- The backing OCaml module lives in `std/runtime/HxHxNativeParser.ml`.
@@ -23,4 +23,3 @@ extern class NativeParser {
 	@:native("parse_module_decl")
 	public static function parseModuleDecl(source:String):String;
 }
-

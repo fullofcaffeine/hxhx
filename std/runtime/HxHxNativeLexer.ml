@@ -9,8 +9,16 @@
    What it does (today):
    - Implements a tiny lexer for a very small Haxe subset used by
      `examples/hih-compiler`.
-   - Returns tokens as a newline-separated string, so Haxe code can consume it
-     without needing an OCaml<->Haxe data-marshalling layer yet.
+   - Returns tokens in a **versioned, line-based protocol** so Haxe code can
+     decode them without an OCaml<->Haxe data-marshalling layer yet.
+   - Each token includes a start position (index/line/column) to support
+     meaningful parse errors early in bootstrapping.
+
+   Protocol:
+   - First line: `hxhx_frontend_v=1`
+   - Token line: `tok <kind> <index> <line> <col> <len>:<payload>`
+   - Terminal: `ok` or `err <index> <line> <col> <len>:<message>`
+   - Payload uses a small escape layer to guarantee tokens fit on one line.
 *)
 
 let is_space (c : char) : bool =
@@ -24,9 +32,24 @@ let is_ident_start (c : char) : bool =
 let is_ident_cont (c : char) : bool =
   is_ident_start c || ('0' <= c && c <= '9')
 
+let escape_payload (s : string) : string =
+  let b = Buffer.create (String.length s) in
+  String.iter
+    (fun c ->
+      match c with
+      | '\\' -> Buffer.add_string b "\\\\"
+      | '\n' -> Buffer.add_string b "\\n"
+      | '\r' -> Buffer.add_string b "\\r"
+      | '\t' -> Buffer.add_string b "\\t"
+      | c -> Buffer.add_char b c)
+    s;
+  Buffer.contents b
+
 let tokenize (src : string) : string =
   let len = String.length src in
   let idx = ref 0 in
+  let line = ref 1 in
+  let col = ref 1 in
   let buf = Buffer.create (max 64 (len / 2)) in
 
   let eof () = !idx >= len in
@@ -39,13 +62,33 @@ let tokenize (src : string) : string =
     | None -> '\000'
     | Some c ->
         idx := !idx + 1;
+        if c = '\n' then (
+          line := !line + 1;
+          col := 1)
+        else if c <> '\r' then col := !col + 1;
         c
   in
 
-  let add (s : string) =
+  let add_line (s : string) =
     Buffer.add_string buf s;
     Buffer.add_char buf '\n'
   in
+  let add_tok (kind : string) (at_idx : int) (at_line : int) (at_col : int)
+      (payload : string) =
+    let enc = escape_payload payload in
+    add_line
+      (Printf.sprintf "tok %s %d %d %d %d:%s" kind at_idx at_line at_col
+         (String.length enc) enc)
+  in
+  let add_err (at_idx : int) (at_line : int) (at_col : int) (message : string)
+      =
+    let enc = escape_payload message in
+    add_line
+      (Printf.sprintf "err %d %d %d %d:%s" at_idx at_line at_col
+         (String.length enc) enc)
+  in
+
+  add_line "hxhx_frontend_v=1";
 
   let rec skip_ws_and_comments () =
     if eof () then ()
@@ -125,59 +168,69 @@ let tokenize (src : string) : string =
 
   let rec loop () =
     skip_ws_and_comments ();
-    if eof () then add "eof"
+    if eof () then (
+      add_tok "eof" !idx !line !col "";
+      Buffer.contents buf)
     else
+      let at_idx = !idx in
+      let at_line = !line in
+      let at_col = !col in
       match peek 0 with
       | Some '{' ->
           ignore (bump ());
-          add "sym:{";
+          add_tok "sym" at_idx at_line at_col "{";
           loop ()
       | Some '}' ->
           ignore (bump ());
-          add "sym:}";
+          add_tok "sym" at_idx at_line at_col "}";
           loop ()
       | Some '(' ->
           ignore (bump ());
-          add "sym:(";
+          add_tok "sym" at_idx at_line at_col "(";
           loop ()
       | Some ')' ->
           ignore (bump ());
-          add "sym:)";
+          add_tok "sym" at_idx at_line at_col ")";
           loop ()
       | Some ';' ->
           ignore (bump ());
-          add "sym:;";
+          add_tok "sym" at_idx at_line at_col ";";
           loop ()
       | Some ':' ->
           ignore (bump ());
-          add "sym::";
+          add_tok "sym" at_idx at_line at_col ":";
           loop ()
       | Some '.' ->
           ignore (bump ());
-          add "sym:.";
+          add_tok "sym" at_idx at_line at_col ".";
           loop ()
       | Some ',' ->
           ignore (bump ());
-          add "sym:,";
+          add_tok "sym" at_idx at_line at_col ",";
           loop ()
-      | Some '"' ->
-          let s = read_string () in
-          add ("string:" ^ s);
-          loop ()
-      | Some c when is_ident_start c -> (
+      | Some '"' -> (
+          try
+            let s = read_string () in
+            add_tok "string" at_idx at_line at_col s;
+            loop ()
+          with Failure msg ->
+            add_err at_idx at_line at_col msg;
+            Buffer.contents buf)
+      | Some c when is_ident_start c ->
           let text = read_ident () in
           (match text with
           | "package" | "import" | "class" | "static" | "function" ->
-              add ("kw:" ^ text)
-          | _ -> add ("ident:" ^ text));
-          loop ())
+              add_tok "kw" at_idx at_line at_col text
+          | _ -> add_tok "ident" at_idx at_line at_col text);
+          loop ()
       | Some c ->
-          let msg =
-            "HxHxNativeLexer: unexpected character: " ^ String.make 1 c
-          in
-          failwith msg
-      | None -> add "eof"
+          add_err at_idx at_line at_col
+            ("HxHxNativeLexer: unexpected character: " ^ String.make 1 c);
+          Buffer.contents buf
+      | None ->
+          add_tok "eof" !idx !line !col "";
+          Buffer.contents buf
   in
-  loop ();
+  ignore (loop ());
 
   Buffer.contents buf
