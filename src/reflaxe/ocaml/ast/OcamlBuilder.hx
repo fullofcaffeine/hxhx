@@ -1820,11 +1820,27 @@ class OcamlBuilder {
 				}
 				seq.push(OcamlExpr.EIdent(tmp));
 				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
-			case TThrow(expr):
-				final repr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expr)]);
-				final tags = throwTagsForType(expr.t);
-				final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"), [repr, tagExpr]);
+				case TThrow(expr):
+					final built = buildExpr(expr);
+					final payload = {
+						final kind = nullablePrimitiveKind(expr.t);
+						if (kind != null) {
+							// Nullable primitives already use the `Obj.t` representation.
+							built;
+						} else {
+							switch (unwrapNullType(expr.t)) {
+								case TDynamic(_), TAnonymous(_):
+									// Dynamic and anonymous-structure values already use the `Obj.t` representation.
+									// Avoid double boxing (`Obj.repr (Obj.t)`).
+									built;
+								case _:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+							}
+						}
+					};
+					final tags = throwTagsForType(expr.t);
+					final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "hx_throw_typed_rtti"), [payload, tagExpr]);
 			case TTry(tryExpr, catches):
 				if (catches.length == 0) {
 					buildExpr(tryExpr);

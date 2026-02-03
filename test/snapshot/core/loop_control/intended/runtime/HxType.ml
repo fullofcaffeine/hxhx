@@ -37,6 +37,7 @@ let type_value_name (marker : Obj.t) (v : Obj.t) : string =
 
 let classes : (string, Obj.t) Hashtbl.t = Hashtbl.create 251
 let enums : (string, Obj.t) Hashtbl.t = Hashtbl.create 251
+let class_tags : (string, string list) Hashtbl.t = Hashtbl.create 251
 
 let class_ (name : string) : Obj.t =
   match Hashtbl.find_opt classes name with
@@ -76,6 +77,42 @@ let resolveEnum (name : string) : Obj.t =
   | Some v -> v
   | None -> HxRuntime.hx_null
 
+(* Typed catches (M10): runtime tags for class instances.
+
+   Why:
+   - `throw` can be typed as a supertype (`Base`) or even `Dynamic`, while the
+     runtime value might be a subclass (`Child`). Typed catches (`catch (e:Child)`)
+     must match based on runtime type identity, not just the throw site's static type.
+
+   Strategy:
+   - Codegen stores a per-instance `__hx_type : Obj.t` marker (see `getClass` below).
+   - Generated `HxTypeRegistry.init()` registers the full tag set for each compiled
+     class name via `register_class_tags`.
+   - At throw time, codegen calls `hx_throw_typed_rtti`, which merges static tags
+     with runtime tags derived from the payload value.
+
+   Note:
+   - We intentionally avoid trying to infer tags from OCaml runtime shapes for
+     immediates (e.g. `int` vs `bool`), because that would be ambiguous and lead
+     to incorrect typed-catch matches. *)
+
+let register_class_tags (name : string) (tags : string list) : unit =
+  Hashtbl.replace class_tags name tags
+
+let merge_tags (a : string list) (b : string list) : string list =
+  let seen : (string, unit) Hashtbl.t =
+    Hashtbl.create (max 7 (List.length a + List.length b))
+  in
+  let add (acc : string list) (t : string) : string list =
+    if Hashtbl.mem seen t then acc
+    else (
+      Hashtbl.add seen t ();
+      t :: acc)
+  in
+  let acc = List.fold_left add [] a in
+  let acc = List.fold_left add acc b in
+  List.rev acc
+
 (* Runtime class identity for `Type.getClass`.
 
    Our compiled class instances use OCaml records, and we use `Obj.magic` for
@@ -98,3 +135,21 @@ let getClass (o : Obj.t) : Obj.t =
       if is_type_value class_marker c then c else HxRuntime.hx_null
     with _ ->
       HxRuntime.hx_null
+
+let tags_for_value (o : Obj.t) : string list =
+  let c = getClass o in
+  if HxRuntime.is_null c then
+    []
+  else
+    let name = getClassName c in
+    if HxRuntime.is_null (Obj.repr name) then
+      []
+    else
+      match Hashtbl.find_opt class_tags name with
+      | Some tags -> tags
+      | None -> []
+
+let hx_throw_typed_rtti (v : Obj.t) (static_tags : string list) : 'a =
+  let runtime_tags = tags_for_value v in
+  let tags = merge_tags static_tags runtime_tags in
+  raise (HxRuntime.Hx_exception (v, tags))

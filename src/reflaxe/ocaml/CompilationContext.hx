@@ -90,6 +90,21 @@ class CompilationContext {
 	public final nonStdTypeRegistryClasses:Map<String, Bool> = [];
 	public final nonStdTypeRegistryEnums:Map<String, Bool> = [];
 
+	/**
+	 * For each compiled class full name, the full set of runtime "type tags" that should
+	 * be considered a match for typed catches.
+	 *
+	 * Why:
+	 * - `throw` sites may only know a *static* type (e.g. `Base`) even when the runtime
+	 *   value is a subclass (`Child`), or the throw expression may be `Dynamic`.
+	 * - We keep typed catches fast by matching on tags (strings) rather than doing deep
+	 *   OCaml runtime shape inspection.
+	 *
+	 * This is consumed by `HxTypeRegistry.init()` which registers per-class tag sets for
+	 * runtime merging at throw time. (bd: haxe.ocaml-3ta)
+	 */
+	public final classTagsByFullName:Map<String, Array<String>> = [];
+
 	public function isPrimaryTypeInModule(moduleId:String, typeName:String):Bool {
 		final primary = primaryTypeNameByModule.get(moduleId);
 		return primary != null ? (primary == typeName) : OcamlNameTools.isPrimaryTypeInModule(moduleId, typeName);

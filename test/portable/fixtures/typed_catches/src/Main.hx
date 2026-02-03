@@ -44,6 +44,27 @@ class Main {
 			parts.push("base2");
 		}
 
+		// RTTI-based typed catches:
+		// - thrown as Base, but runtime is Child -> should match catch(Child).
+		// - thrown as Dynamic, but runtime is Child -> should match catch(Base).
+		try {
+			final b:Base = new Child();
+			throw b;
+		} catch (e:Child) {
+			parts.push("child3");
+		} catch (e:Base) {
+			parts.push("base3");
+		}
+
+		try {
+			final d:Dynamic = new Child();
+			throw d;
+		} catch (e:Base) {
+			parts.push("base4");
+		} catch (e:Dynamic) {
+			parts.push("dyn4");
+		}
+
 		Sys.println(parts.join(","));
 	}
 }
