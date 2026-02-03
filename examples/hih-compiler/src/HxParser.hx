@@ -146,6 +146,22 @@ class HxParser {
 			expect(TSemicolon, "';'");
 		}
 
+		// Bootstrap: scan forward until we find the first `class` declaration.
+		// This lets us tolerate (for now):
+		// - metadata like `@:build(...)`
+		// - multiple type declarations per module
+		// - top-level functions (ignored in this phase)
+		while (true) {
+			switch (cur.kind) {
+				case TKeyword(KClass):
+					break;
+				case TEof:
+					fail("No class declaration found");
+				default:
+					bump();
+			}
+		}
+
 		expect(TKeyword(KClass), "'class'");
 		final className = readIdent("class name");
 
@@ -228,6 +244,17 @@ class HxParser {
 								bump();
 						}
 					}
+			}
+		}
+
+		// Bootstrap: ignore any trailing declarations after the first class.
+		// Upstream code often contains multiple types per module (and metadata).
+		while (true) {
+			switch (cur.kind) {
+				case TEof:
+					break;
+				default:
+					bump();
 			}
 		}
 

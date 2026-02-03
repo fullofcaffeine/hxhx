@@ -18,5 +18,5 @@ enum HxTokenKind {
 	TColon;     // :
 	TDot;       // .
 	TComma;     // ,
+	TOther(code:Int); // any single character we don't model yet
 }
-

@@ -159,7 +159,11 @@ class HxLexer {
 			case 34:  readString(p);                        // "
 			case _ if (isIdentStart(c)): readIdent(p);
 			case _:
-				throw new HxParseError('Unexpected character: ' + String.fromCharCode(c), p);
+				// Bootstrap behavior: do not fail on unknown punctuation yet.
+				// We only need enough tokenization to skip bodies and find top-level
+				// declarations; full expression/type lexing comes later.
+				bump();
+				new HxToken(TOther(c), p);
 		}
 	}
 }

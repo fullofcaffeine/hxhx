@@ -176,38 +176,6 @@ let tokenize (src : string) : string =
       let at_line = !line in
       let at_col = !col in
       match peek 0 with
-      | Some '{' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col "{";
-          loop ()
-      | Some '}' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col "}";
-          loop ()
-      | Some '(' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col "(";
-          loop ()
-      | Some ')' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col ")";
-          loop ()
-      | Some ';' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col ";";
-          loop ()
-      | Some ':' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col ":";
-          loop ()
-      | Some '.' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col ".";
-          loop ()
-      | Some ',' ->
-          ignore (bump ());
-          add_tok "sym" at_idx at_line at_col ",";
-          loop ()
       | Some '"' -> (
           try
             let s = read_string () in
@@ -224,9 +192,12 @@ let tokenize (src : string) : string =
           | _ -> add_tok "ident" at_idx at_line at_col text);
           loop ()
       | Some c ->
-          add_err at_idx at_line at_col
-            ("HxHxNativeLexer: unexpected character: " ^ String.make 1 c);
-          Buffer.contents buf
+          (* Bootstrap behavior: emit any other character as a symbol token.
+             This keeps the lexer permissive while the parser only cares about
+             a very small subset of punctuation. *)
+          ignore (bump ());
+          add_tok "sym" at_idx at_line at_col (String.make 1 c);
+          loop ()
       | None ->
           add_tok "eof" !idx !line !col "";
           Buffer.contents buf

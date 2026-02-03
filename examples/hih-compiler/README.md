@@ -27,6 +27,9 @@ Native frontend hook:
 - This matches the upstream bootstrap strategy (#6843): keep lexer/parser native
   while porting the rest of the compiler pipeline into Haxe.
 - Wire format: `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md`
+- Upstream alignment: `CompilerDriver` embeds a tiny subset of fixtures shaped
+  after upstream `tests/misc` module-resolution files (and asserts native vs
+  pure-Haxe parser agreement for this subset).
 
 Related docs:
 

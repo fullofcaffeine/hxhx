@@ -217,6 +217,16 @@ let parse_module_from_tokens (toks : token array) :
     expect_sym ';'
   done;
 
+  (* Bootstrap: scan forward until we find the first `class` declaration.
+     Upstream fixtures often contain metadata, multiple types, or other
+     top-level declarations before the type we care about. *)
+  while not (token_eq_kw (cur ()) "class") do
+    match cur () with
+    | Eof p -> raise (Parse_error (p, "no class declaration found"))
+    | _ ->
+        bump ()
+  done;
+
   expect_kw "class";
   let class_name = read_ident () in
   expect_sym '{';
@@ -245,6 +255,15 @@ let parse_module_from_tokens (toks : token array) :
         if token_eq_sym tok '{' then depth := !depth + 1
         else if token_eq_sym tok '}' then depth := !depth - 1;
         bump ()
+  done;
+
+  (* Bootstrap: ignore any trailing declarations after the first class. *)
+  while
+    match cur () with
+    | Eof _ -> false
+    | _ -> true
+  do
+    bump ()
   done;
 
   (!package_path, !imports, class_name, !has_static_main)
