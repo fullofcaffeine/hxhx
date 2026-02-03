@@ -1746,35 +1746,38 @@ class OcamlBuilder {
 					final builtBody = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(body)]);
 					loopDepth -= 1;
 
-				if (needsControl) {
-					final continueCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
-						guard: null,
-						expr: OcamlExpr.EConst(OcamlConst.CUnit)
-					};
-					final breakCase:OcamlMatchCase = {
-						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
-						guard: null,
-						expr: OcamlExpr.EConst(OcamlConst.CUnit)
-					};
+					if (needsControl) {
+						final continueCase:OcamlMatchCase = {
+							pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+							guard: null,
+							expr: OcamlExpr.EConst(OcamlConst.CUnit)
+						};
+						final breakCase:OcamlMatchCase = {
+							pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+							guard: null,
+							expr: OcamlExpr.EConst(OcamlConst.CUnit)
+						};
 
-						final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
-						final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
-						final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
+							final bodyWithContinue = OcamlExpr.ETry(builtBody, [continueCase]);
+							final whileExpr = OcamlExpr.EWhile(condExpr, bodyWithContinue);
+							final loopExpr = OcamlExpr.ETry(whileExpr, [breakCase]);
 
-						if (!normalWhile) {
-							// do {body} while(cond) not supported yet; lower as while for now.
-							return OcamlExpr.ETry(OcamlExpr.ESeq([bodyWithContinue, whileExpr]), [breakCase]);
+							if (!normalWhile) {
+								// do { body } while (cond): execute body once, then behave like a while loop.
+								//
+								// Control-flow:
+								// - `continue` skips to the condition check (handled by `bodyWithContinue`).
+								// - `break` exits the loop without evaluating `cond` (handled by outer try).
+								return OcamlExpr.ETry(OcamlExpr.ESeq([bodyWithContinue, loopExpr]), [breakCase]);
+							}
+
+							return loopExpr;
 						}
 
-						return loopExpr;
-					}
-
-					// do {body} while(cond) not supported yet; lower as while for now
-					if (!normalWhile) {
-						OcamlExpr.ESeq([
-							builtBody,
-							OcamlExpr.EWhile(condExpr, builtBody)
+						if (!normalWhile) {
+							OcamlExpr.ESeq([
+								builtBody,
+								OcamlExpr.EWhile(condExpr, builtBody)
 						]);
 					} else {
 						OcamlExpr.EWhile(condExpr, builtBody);
