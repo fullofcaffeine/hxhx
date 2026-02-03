@@ -3452,35 +3452,41 @@ class OcamlBuilder {
 						? OcamlExpr.EIdent(scoped)
 						: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
 				}
-			case FInstance(clsRef, _, cfRef):
-				final cls = clsRef.get();
-				final cf = cfRef.get();
-				switch (cf.kind) {
-					case FVar(_, _):
-						if (isStdArrayClass(cls) && cf.name == "length") {
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
-						} else if (isStdStringClass(cls) && cf.name == "length") {
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
-						} else if (isStdBytesClass(cls) && cf.name == "length") {
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "length"), [buildExpr(obj)]);
-						} else {
-							OcamlExpr.EField(buildExpr(obj), cf.name);
+					case FInstance(clsRef, _, cfRef):
+						final cls = clsRef.get();
+						final cf = cfRef.get();
+						switch (cf.kind) {
+							case FVar(_, _):
+							if (isStdArrayClass(cls) && cf.name == "length") {
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
+							} else if (isStdStringClass(cls) && cf.name == "length") {
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
+							} else if (isStdBytesClass(cls) && cf.name == "length") {
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "length"), [buildExpr(obj)]);
+							} else {
+								OcamlExpr.EField(buildExpr(obj), cf.name);
+							}
+						case FMethod(_):
+							buildBoundMethodClosure(obj, cls, cf, pos);
+							case _:
+								// Methods/properties are handled at callsites; as values, we only support real methods for now.
+								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
-					case _:
+				case FClosure(c, cfRef):
+					final cf = cfRef.get();
+					final owner:Null<ClassType> = c != null ? c.c.get() : classTypeFromType(obj.t);
+					if (owner == null) {
 						#if macro
-						guardrailError(
-							"reflaxe.ocaml (M5): taking a method as a value (bound closure) is not supported yet ('" + cf.name + "'). "
-							+ "Call it directly (obj." + cf.name + "(...)) or wrap it in a lambda. (bd: haxe.ocaml-28t.6.4)",
-							pos
-						);
+						guardrailError("reflaxe.ocaml (M10): unsupported method-closure without owner class metadata ('" + cf.name + "').", pos);
 						#end
-						// Methods are handled at the callsite; as a value, we currently can't represent them.
 						OcamlExpr.EConst(OcamlConst.CUnit);
-				}
-			case FDynamic(name):
-				OcamlExpr.EApp(
-					OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
-					[
+					} else {
+						buildBoundMethodClosure(obj, owner, cf, pos);
+					}
+					case FDynamic(name):
+						OcamlExpr.EApp(
+							OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+						[
 						OcamlExpr.EApp(
 							OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
 							[
@@ -3523,15 +3529,110 @@ class OcamlBuilder {
 						}
 				}
 			case _:
-				// For now, treat unknown field access as unit.
-				OcamlExpr.EConst(OcamlConst.CUnit);
+					// For now, treat unknown field access as unit.
+					OcamlExpr.EConst(OcamlConst.CUnit);
+			}
 		}
-	}
 
-		static function moduleIdToOcamlModuleName(moduleId:String):String {
-			if (moduleId == null || moduleId.length == 0) return "Main";
-			final flat = moduleId.split(".").join("_");
-			return flat.substr(0, 1).toUpperCase() + flat.substr(1);
+		/**
+		 * Build a bound-closure value for an instance method access (`obj.method`).
+		 *
+		 * Why:
+		 * - In Haxe, taking an instance method as a value produces a closure which captures
+		 *   the receiver (`this`) and can be called later: `var f = obj.foo; f(1);`.
+		 * - In OCaml, our generated instance methods are top-level functions that take an
+		 *   explicit receiver parameter (and, for 0-arg methods, an extra `unit` arg).
+		 * - For interface/virtual dispatch (M10), the receiver may be a “dispatch record”
+		 *   that stores method fields; the call must go through that record field to
+		 *   preserve dynamic dispatch semantics.
+		 *
+		 * What this returns:
+		 * - An OCaml `fun ... -> ...` that evaluates the receiver once and forwards calls
+		 *   to the appropriate implementation (`Module.foo recv ...` or `recv.foo (Obj.magic recv) ...`).
+		 *
+		 * Notes:
+		 * - This does not currently implement bound-closures for stdlib “magic” methods
+		 *   (e.g. `Array.push` lowered to `HxArray.push`). If upstream suites rely on that,
+		 *   add explicit mappings. (bd: haxe.ocaml-d3c)
+		 */
+		function buildBoundMethodClosure(objExpr:TypedExpr, cls:ClassType, cf:ClassField, pos:Position):OcamlExpr {
+			final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+				case TFun(fargs, _): fargs;
+				case _: null;
+			}
+			final argCount = expectedArgs != null ? expectedArgs.length : 0;
+
+			final paramNames:Array<String> = [];
+			final params:Array<OcamlPat> = argCount == 0
+				? [OcamlPat.PConst(OcamlConst.CUnit)]
+				: {
+					final out:Array<OcamlPat> = [];
+					for (i in 0...argCount) {
+						final n = "a" + Std.string(i);
+						paramNames.push(n);
+						out.push(OcamlPat.PVar(n));
+					}
+					out;
+				};
+
+			final recvExpr = buildExpr(objExpr);
+			final tmpName = switch (recvExpr) {
+				case EIdent(_): null;
+				case _: freshTmp("obj");
+			}
+			final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
+
+			final argExprs:Array<OcamlExpr> = [];
+			for (n in paramNames) argExprs.push(OcamlExpr.EIdent(n));
+
+			final unwrappedObj = unwrap(objExpr);
+			final isSuperReceiver = switch (unwrappedObj.expr) {
+				case TConst(TSuper): true;
+				case _: false;
+			}
+
+			final recvFullName = classFullNameFromType(objExpr.t);
+			final isDispatchRecv = recvFullName != null && (ctx.dispatchTypes.exists(recvFullName) || ctx.interfaceTypes.exists(recvFullName));
+			final allowSuperCall = !ctx.currentIsHaxeStd && ctx.currentTypeFullName != null && ctx.dispatchTypes.exists(ctx.currentTypeFullName);
+
+			final call:OcamlExpr = if (isSuperReceiver && allowSuperCall) {
+				// `super.foo` as a value: bind to the base implementation (no virtual dispatch).
+				final modName = moduleIdToOcamlModuleName(cls.module);
+				final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+				final implName = ctx.scopedValueName(cls.module, cls.name, cf.name + "__impl");
+				final callFn = (selfMod != null && selfMod == modName)
+					? OcamlExpr.EIdent(implName)
+					: OcamlExpr.EField(OcamlExpr.EIdent(modName), implName);
+
+				final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent("self")])].concat(argExprs);
+				if (argCount == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+				OcamlExpr.EApp(callFn, callArgs);
+			} else if (isDispatchRecv) {
+				final methodField = OcamlExpr.EField(recvVar, cf.name);
+				final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(argExprs);
+				if (argCount == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+				OcamlExpr.EApp(methodField, callArgs);
+			} else {
+				final modName = moduleIdToOcamlModuleName(cls.module);
+				final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+				final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+				final callFn = (selfMod != null && selfMod == modName)
+					? OcamlExpr.EIdent(scoped)
+					: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+
+				final callArgs = [recvVar].concat(argExprs);
+				if (argCount == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+				OcamlExpr.EApp(callFn, callArgs);
+			}
+
+			final body = tmpName == null ? call : OcamlExpr.ELet(tmpName, recvExpr, call, false);
+			return OcamlExpr.EFun(params, body);
+		}
+
+			static function moduleIdToOcamlModuleName(moduleId:String):String {
+				if (moduleId == null || moduleId.length == 0) return "Main";
+				final flat = moduleId.split(".").join("_");
+				return flat.substr(0, 1).toUpperCase() + flat.substr(1);
 		}
 
 		static function classFullNameFromType(t:Type):Null<String> {
