@@ -3,11 +3,24 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { mutable posInfos : Obj.t }
+type t = { mutable posInfos : Obj.t; get_message : Obj.t -> unit -> string; get_stack : Obj.t -> unit -> Obj.t; get_previous : Obj.t -> unit -> Obj.t; get_native : Obj.t -> unit -> Obj.t; unwrap : Obj.t -> unit -> Obj.t; toString : Obj.t -> unit -> string; details : Obj.t -> unit -> string }
 
-let create = fun message previous pos -> let self = { posInfos = Obj.magic () } in (
+let __ctor = fun (self : t) message previous pos -> (
+  ignore (Haxe_Exception.__ctor (Obj.magic self) message previous);
+  if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- (let __anon_1 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_1 "fileName" (Obj.repr "(unknown)"));
+    ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 0));
+    ignore (HxAnon.set __anon_1 "className" (Obj.repr "(unknown)"));
+    ignore (HxAnon.set __anon_1 "methodName" (Obj.repr "(unknown)"));
+    __anon_1
+  )) else self.posInfos <- pos
+)
+
+let toString__impl = fun (self : t) () -> (((((((("" ^ HxString.toStdString (self.toString (Obj.magic self) ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "className"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "methodName"))) ^ " at ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "fileName"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get (self.posInfos) "lineNumber"))
+
+let create = fun message previous pos -> let self = ({ posInfos = Obj.magic (); get_message = fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) (); get_stack = fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) (); get_previous = fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) (); get_native = fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) (); unwrap = fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) (); toString = fun o () -> toString__impl (Obj.magic o) (); details = fun o () -> Haxe_Exception.details__impl (Obj.magic o) () } : t) in (
   (
-    ignore (self message previous);
+    ignore (Haxe_Exception.__ctor (Obj.magic self) message previous);
     if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- (let __anon_1 = HxAnon.create () in (
       ignore (HxAnon.set __anon_1 "fileName" (Obj.repr "(unknown)"));
       ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 0));
@@ -18,5 +31,3 @@ let create = fun message previous pos -> let self = { posInfos = Obj.magic () } 
   );
   self
 )
-
-let toString = fun self () -> (((((((("" ^ HxString.toStdString (Haxe_Exception.toString self ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "className"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "methodName"))) ^ " at ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "fileName"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get (self.posInfos) "lineNumber"))

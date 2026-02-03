@@ -118,8 +118,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 				var cur:Null<ClassType> = c;
 				var guard = 0;
 				while (cur != null && guard++ < 64) {
-					// Stop at upstream stdlib boundary for now.
-					if (isPosInHaxeStd(cur.pos)) break;
 					ctx.virtualTypes.set(fullNameOf(cur), true);
 					ctx.dispatchTypes.set(fullNameOf(cur), true);
 					cur = cur.superClass != null ? cur.superClass.t.get() : null;
@@ -135,8 +133,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 						final list = moduleToClasses.get(c.module);
 						if (list != null) list.push(c);
 
-						// Skip upstream stdlib for now; we only virtualize user/repo classes.
-						if (isPosInHaxeStd(c.pos)) continue;
 						if (c.isInterface) {
 							ctx.interfaceTypes.set(fullNameOf(c), true);
 						}
@@ -390,7 +386,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final createName = ctx.scopedValueName(classType.module, classType.name, "create");
 				final ctorName = ctx.scopedValueName(classType.module, classType.name, "__ctor");
 
-				final isDispatch = (!ctx.currentIsHaxeStd) && !classType.isInterface && ctx.dispatchTypes.exists(fullName);
+				final isDispatch = !classType.isInterface && ctx.dispatchTypes.exists(fullName);
 
 				// For dynamic dispatch we need a list of all visible instance methods (including inherited)
 				// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.

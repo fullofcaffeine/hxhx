@@ -744,7 +744,7 @@ class OcamlBuilder {
 								// otherwise keep the previous (limited) behavior for upstream stdlib output
 								// and other non-virtual cases.
 								final curFull = ctx.currentTypeFullName;
-								final allowSuperCtor = !ctx.currentIsHaxeStd && curFull != null && ctx.dispatchTypes.exists(curFull);
+								final allowSuperCtor = curFull != null && ctx.dispatchTypes.exists(curFull);
 								if (!allowSuperCtor) {
 									final builtArgs = args.map(buildExpr);
 									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
