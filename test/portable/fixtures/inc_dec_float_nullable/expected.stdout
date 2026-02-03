@@ -1,0 +1,19 @@
+float_post=1.5
+float_now=2.5
+float_pre=3.5
+field_post=0.5
+field_now=1.5
+field_pre=2.5
+nullint_post=0
+nullint_now=1
+nullint_pre=2
+nullfloat_post=1.
+nullfloat_now=2.
+nullfloat_pre=3.
+array_post=0.5
+array_now=1.5
+array_pre=2.5
+nullarray_post=0
+nullarray_now=1
+nullarray_pre=2
+OK inc_dec_float_nullable

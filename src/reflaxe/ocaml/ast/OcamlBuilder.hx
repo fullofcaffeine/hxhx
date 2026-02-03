@@ -610,7 +610,7 @@ class OcamlBuilder {
 			case TBinop(op, e1, e2):
 				buildBinop(op, e1, e2, e.t);
 			case TUnop(op, postFix, inner):
-				buildUnop(op, postFix, inner);
+				buildUnop(op, postFix, inner, e.t);
 				case TFunction(tfunc):
 					buildFunction(tfunc);
 				case TIf(cond, eif, eelse):
@@ -2711,13 +2711,13 @@ class OcamlBuilder {
 		return buildExpr(rhs);
 	}
 
-	function buildUnop(op:Unop, postFix:Bool, e:TypedExpr):OcamlExpr {
-		return switch (op) {
-			case OpNot:
-				OcamlExpr.EUnop(OcamlUnop.Not, buildExpr(e));
-			case OpNeg:
-				OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
-			case OpIncrement, OpDecrement:
+		function buildUnop(op:Unop, postFix:Bool, e:TypedExpr, resultType:Type):OcamlExpr {
+			return switch (op) {
+				case OpNot:
+					OcamlExpr.EUnop(OcamlUnop.Not, buildExpr(e));
+				case OpNeg:
+					OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
+				case OpIncrement, OpDecrement:
 				// ++x / x++ / --x / x--:
 				//
 				// Haxe semantics:
@@ -2728,31 +2728,98 @@ class OcamlBuilder {
 				// - ref locals (`let x = ref ...`)
 				// - instance var fields (record fields on `t`)
 				// - array elements (`HxArray.get/set`)
-				//
-				// NOTE: This currently assumes `Int` arithmetic (`+`). Supporting `Float`
-				// properly requires float operators (`+.`) which we have not modeled yet.
-				if (!isIntType(e.t)) {
+				final lvalueNullableKind = nullablePrimitiveKind(e.t);
+				final kind = if (isIntType(e.t)) {
+					"int";
+				} else if (isFloatType(e.t)) {
+					"float";
+				} else if (lvalueNullableKind != null) {
+					lvalueNullableKind;
+				} else {
+					null;
+				}
+
+				final resultNullableKind = nullablePrimitiveKind(resultType);
+				final resultIsNullable = resultNullableKind != null;
+
+				if (kind == null || kind == "bool") {
 					#if macro
-					guardrailError("reflaxe.ocaml (M6): ++/-- currently supports Int only.", e.pos);
+					guardrailError("reflaxe.ocaml (M10): ++/-- is only supported for Int/Float (and their nullable forms) for now.", e.pos);
 					#end
 					OcamlExpr.EConst(OcamlConst.CUnit);
 				} else {
-					final delta = op == OpIncrement ? 1 : -1;
-					final deltaExpr = OcamlExpr.EConst(OcamlConst.CInt(delta));
+					final lvalueIsNullable = lvalueNullableKind != null;
+					final deltaInt = op == OpIncrement ? 1 : -1;
+					final deltaFloatLiteral = op == OpIncrement ? "1." : "-1.";
+					final deltaPrimExpr = kind == "float"
+						? OcamlExpr.EConst(OcamlConst.CFloat(deltaFloatLiteral))
+						: OcamlExpr.EConst(OcamlConst.CInt(deltaInt));
 
-					inline function incDec(getOld:OcamlExpr, setNew:OcamlExpr->OcamlExpr):OcamlExpr {
-						final oldName = freshTmp("old");
-						final newName = freshTmp("new");
-						final updated = OcamlExpr.EBinop(OcamlBinop.Add, OcamlExpr.EIdent(oldName), deltaExpr);
-						final setExpr = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [setNew(OcamlExpr.EIdent(newName))]);
-						final resultName = postFix ? oldName : newName;
+					inline function incDec(getOldRep:OcamlExpr, setNewRep:OcamlExpr->OcamlExpr):OcamlExpr {
+						// Fast path: non-null primitive lvalue with non-null primitive result.
+						// Keep generated OCaml compact and stable for existing Int-only code.
+						if (!lvalueIsNullable && !resultIsNullable) {
+							final oldName = freshTmp("old");
+							final newName = freshTmp("new");
+							final binop = kind == "float" ? OcamlBinop.AddF : OcamlBinop.Add;
+							final updated = OcamlExpr.EBinop(binop, OcamlExpr.EIdent(oldName), deltaPrimExpr);
+							final setExpr = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [setNewRep(OcamlExpr.EIdent(newName))]);
+							final resultName = postFix ? oldName : newName;
+							return OcamlExpr.ELet(
+								oldName,
+								getOldRep,
+								OcamlExpr.ELet(
+									newName,
+									updated,
+									OcamlExpr.ESeq([setExpr, OcamlExpr.EIdent(resultName)]),
+									false
+								),
+								false
+							);
+						}
+
+						final oldRepName = freshTmp("old");
+						final oldPrimName = freshTmp("oldp");
+						final newPrimName = freshTmp("newp");
+						final newRepName = freshTmp("new");
+
+						final oldPrimExpr:OcamlExpr = if (lvalueIsNullable) {
+							kind == "float"
+								? safeUnboxNullableFloat(OcamlExpr.EIdent(oldRepName))
+								: safeUnboxNullableInt(OcamlExpr.EIdent(oldRepName));
+						} else {
+							OcamlExpr.EIdent(oldRepName);
+						}
+
+						final binop = kind == "float" ? OcamlBinop.AddF : OcamlBinop.Add;
+						final newPrimExpr = OcamlExpr.EBinop(binop, OcamlExpr.EIdent(oldPrimName), deltaPrimExpr);
+						final newRepExpr:OcamlExpr = lvalueIsNullable
+							? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(newPrimName)])
+							: OcamlExpr.EIdent(newPrimName);
+
+						final setExpr = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [setNewRep(OcamlExpr.EIdent(newRepName))]);
+
+						final resultExpr:OcamlExpr = resultIsNullable
+							? (postFix ? OcamlExpr.EIdent(oldRepName) : OcamlExpr.EIdent(newRepName))
+							: (postFix ? OcamlExpr.EIdent(oldPrimName) : OcamlExpr.EIdent(newPrimName));
+
 						return OcamlExpr.ELet(
-							oldName,
-							getOld,
+							oldRepName,
+							getOldRep,
 							OcamlExpr.ELet(
-								newName,
-								updated,
-								OcamlExpr.ESeq([setExpr, OcamlExpr.EIdent(resultName)]),
+								oldPrimName,
+								oldPrimExpr,
+								OcamlExpr.ELet(
+									newPrimName,
+									newPrimExpr,
+									OcamlExpr.ELet(
+										newRepName,
+										newRepExpr,
+										OcamlExpr.ESeq([setExpr, resultExpr]),
+										false
+									),
+									false
+								),
 								false
 							),
 							false
@@ -2786,11 +2853,11 @@ class OcamlBuilder {
 								case _:
 									OcamlExpr.EConst(OcamlConst.CUnit);
 							}
-						case TArray(arr, idx):
-							final arrName = freshTmp("arr");
-							final idxName = freshTmp("idx");
-							OcamlExpr.ELet(
-								arrName,
+							case TArray(arr, idx):
+								final arrName = freshTmp("arr");
+								final idxName = freshTmp("idx");
+								OcamlExpr.ELet(
+									arrName,
 								buildExpr(arr),
 								OcamlExpr.ELet(
 									idxName,
