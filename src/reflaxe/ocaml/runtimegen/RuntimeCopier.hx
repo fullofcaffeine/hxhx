@@ -7,6 +7,8 @@ import haxe.io.Path;
 import reflaxe.output.OutputManager;
 
 class RuntimeCopier {
+	static inline final HXHX_RUNTIME_PREFIX = "HxHx";
+
 	static function tryResolveStdDir():Null<String> {
 		#if macro
 		try {
@@ -30,8 +32,17 @@ class RuntimeCopier {
 		final runtimeDir = Path.join([stdDir, "runtime"]);
 		if (!sys.FileSystem.exists(runtimeDir) || !sys.FileSystem.isDirectory(runtimeDir)) return;
 
+		#if macro
+		final allowHxHxRuntime = haxe.macro.Context.defined("hih_native_parser")
+			|| haxe.macro.Context.defined("hxhx_native_frontend")
+			|| haxe.macro.Context.defined("hxhx");
+		#else
+		final allowHxHxRuntime = false;
+		#end
+
 		for (name in sys.FileSystem.readDirectory(runtimeDir)) {
 			if (!StringTools.endsWith(name, ".ml") && !StringTools.endsWith(name, ".mli")) continue;
+			if (!allowHxHxRuntime && StringTools.startsWith(name, HXHX_RUNTIME_PREFIX)) continue;
 			final src = Path.join([runtimeDir, name]);
 			if (!sys.FileSystem.exists(src) || sys.FileSystem.isDirectory(src)) continue;
 			final rel = destSubdir + "/" + name;
@@ -42,4 +53,3 @@ class RuntimeCopier {
 }
 
 #end
-

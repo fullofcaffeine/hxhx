@@ -8,6 +8,33 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
+check_findlib_packages() {
+  local dir="$1"
+  local req_file="${dir}OCAML_FINDLIB_PACKAGES"
+  [ -f "$req_file" ] || return 0
+
+  if ! command -v ocamlfind >/dev/null 2>&1; then
+    echo "Skipping example (missing ocamlfind): ${dir}"
+    return 1
+  fi
+
+  local missing=0
+  while IFS= read -r line; do
+    # Strip comments and trim.
+    line="${line%%#*}"
+    line="$(echo "$line" | xargs || true)"
+    [ -n "$line" ] || continue
+    for pkg in $line; do
+      if ! ocamlfind query "$pkg" >/dev/null 2>&1; then
+        echo "Skipping example (missing OCaml findlib package '$pkg'): ${dir}"
+        missing=1
+      fi
+    done
+  done < "$req_file"
+
+  [ "$missing" -eq 0 ]
+}
+
 for dir in examples/*/; do
   [ -f "${dir}build.hxml" ] || continue
   if [ -f "${dir}ACCEPTANCE_ONLY" ]; then
@@ -24,6 +51,11 @@ for dir in examples/*/; do
       continue
     fi
   fi
+
+  if ! check_findlib_packages "$dir"; then
+    continue
+  fi
+
   echo "== Example: ${dir}"
 
   (
