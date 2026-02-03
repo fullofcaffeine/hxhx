@@ -223,6 +223,130 @@ class OcamlBuilder {
 		}
 	}
 
+	static inline function fullNameOfClassType(cls:ClassType):String {
+		return (cls.pack ?? []).concat([cls.name]).join(".");
+	}
+
+	static inline function fullNameOfEnumType(e:EnumType):String {
+		return (e.pack ?? []).concat([e.name]).join(".");
+	}
+
+	/**
+		Returns the single "match tag" for a typed catch, or `null` if this is a
+		`catch (e:Dynamic)`-style match-all.
+
+		Important: this must be *precise* for the catch type.
+		Do not include parent tags here, otherwise `catch (e:Child)` could match
+		`throw (new Base())` via the shared base tag.
+	**/
+	static function catchTagForType(t:Type):Null<String> {
+		final ft = followNoAbstracts(t);
+
+		if (isIntType(ft)) return "Int";
+		if (isFloatType(ft)) return "Float";
+		if (isBoolType(ft)) return "Bool";
+		if (isStringType(ft)) return "String";
+
+		return switch (ft) {
+			case TDynamic(_):
+				null;
+			case TInst(cRef, _):
+				fullNameOfClassType(cRef.get());
+			case TEnum(eRef, _):
+				fullNameOfEnumType(eRef.get());
+			case TAbstract(aRef, [inner]):
+				final a = aRef.get();
+				if (a.pack != null && a.pack.length == 0 && a.name == "Null") {
+					// Best-effort: treat `Null<T>` catch as a catch on `T` for now.
+					catchTagForType(inner);
+				} else {
+					(a.pack ?? []).concat([a.name]).join(".");
+				}
+			case _:
+				// Structural types and function types are not supported yet.
+				null;
+		}
+	}
+
+	/**
+		Compute "throw tags" for a thrown value based on the *static* type of the
+		expression being thrown.
+
+		Tags are used to implement typed catches (`catch (e:T)`) without relying on
+		OCaml runtime representation checks (which cannot disambiguate e.g. `int`
+		and `bool` reliably).
+
+		This is intentionally best-effort: for now it does not attempt to model
+		precise runtime shapes for values whose static type is too generic.
+	**/
+	static function throwTagsForType(t:Type):Array<String> {
+		final tags:Array<String> = [];
+		final seen:Map<String, Bool> = [];
+
+		inline function add(tag:String):Void {
+			if (!seen.exists(tag)) {
+				seen.set(tag, true);
+				tags.push(tag);
+			}
+		}
+
+		// Always include Dynamic so a catch-all can match predictably.
+		add("Dynamic");
+
+		final ft = followNoAbstracts(t);
+		if (isIntType(ft)) {
+			add("Int");
+			return tags;
+		}
+		if (isFloatType(ft)) {
+			add("Float");
+			return tags;
+		}
+		if (isBoolType(ft)) {
+			add("Bool");
+			return tags;
+		}
+		if (isStringType(ft)) {
+			add("String");
+			return tags;
+		}
+
+		function addInterfaceTags(iface:ClassType, visited:Map<String, Bool>):Void {
+			final name = fullNameOfClassType(iface);
+			if (visited.exists(name)) return;
+			visited.set(name, true);
+			add(name);
+			for (i in iface.interfaces) addInterfaceTags(i.t.get(), visited);
+		}
+
+		function addClassTags(cls:ClassType, visited:Map<String, Bool>):Void {
+			final name = fullNameOfClassType(cls);
+			if (visited.exists(name)) return;
+			visited.set(name, true);
+			add(name);
+			for (i in cls.interfaces) addInterfaceTags(i.t.get(), visited);
+			if (cls.superClass != null) addClassTags(cls.superClass.t.get(), visited);
+		}
+
+		return switch (ft) {
+			case TAbstract(aRef, [inner]):
+				final a = aRef.get();
+				if (a.pack != null && a.pack.length == 0 && a.name == "Null") {
+					add("Null");
+					for (t in throwTagsForType(inner)) add(t);
+				}
+				tags;
+			case TInst(cRef, _):
+				addClassTags(cRef.get(), []);
+				tags;
+			case TEnum(eRef, _):
+				add(fullNameOfEnumType(eRef.get()));
+				tags;
+			case _:
+				tags;
+		}
+	}
+
 	function buildArrayJoinStringifier(arrayExpr:TypedExpr, pos:Position):OcamlExpr {
 		var elemType:Null<Type> = null;
 		switch (arrayExpr.t) {
@@ -1524,41 +1648,112 @@ class OcamlBuilder {
 				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TThrow(expr):
 				final repr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(expr)]);
-				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw"), [repr]);
+				final tags = throwTagsForType(expr.t);
+				final tagExpr = OcamlExpr.EList(tags.map(t -> OcamlExpr.EConst(OcamlConst.CString(t))));
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"), [repr, tagExpr]);
 			case TTry(tryExpr, catches):
 				if (catches.length == 0) {
 					buildExpr(tryExpr);
 				} else {
-					// For now, only support `catch (e:Dynamic)` (M6).
-					if (catches.length != 1) {
-						#if macro
-						guardrailError(
-							"reflaxe.ocaml (M6): only `try {..} catch (e:Dynamic) {..}` is supported for now (multiple catches unsupported).",
-							e.pos
-						);
-						#end
-						OcamlExpr.EConst(OcamlConst.CUnit);
-					} else {
-						final c = catches[0];
-						final isDynamicCatch = switch (c.v.t) {
+					final builtTry = buildExpr(tryExpr);
+
+					inline function isDynamicCatchType(t:Type):Bool {
+						return switch (followNoAbstracts(t)) {
 							case TDynamic(_): true;
 							case _: false;
 						}
-						if (!isDynamicCatch) {
-							#if macro
-							guardrailError(
-								"reflaxe.ocaml (M6): only `catch (e:Dynamic)` is supported for now (typed catches unsupported).",
-								e.pos
-							);
-							#end
-							OcamlExpr.EConst(OcamlConst.CUnit);
-						} else {
-							final tryFn = OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], buildExpr(tryExpr));
-							final catchName = renameVar(c.v.name);
-							final handlerFn = OcamlExpr.EFun([OcamlPat.PVar(catchName)], buildExpr(c.expr));
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_try"), [tryFn, handlerFn]);
-						}
 					}
+
+					function buildCatchChain(valueExpr:OcamlExpr, tagsExpr:OcamlExpr, fallback:OcamlExpr):OcamlExpr {
+						var current = fallback;
+						for (i in 0...catches.length) {
+							final c = catches[catches.length - 1 - i];
+							final catchVarName = renameVar(c.v.name);
+
+							final isDynamic = isDynamicCatchType(c.v.t);
+							final tag = catchTagForType(c.v.t);
+							if (!isDynamic && tag == null) {
+								#if macro
+								guardrailError(
+									"reflaxe.ocaml (M10): typed catch is not supported for this type yet; use `catch (e:Dynamic)` as a fallback for now.",
+									e.pos
+								);
+								#end
+							}
+
+							final cond:OcamlExpr = if (isDynamic) {
+								OcamlExpr.EConst(OcamlConst.CBool(true));
+							} else if (tag != null) {
+								OcamlExpr.EApp(
+									OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "tags_has"),
+									[tagsExpr, OcamlExpr.EConst(OcamlConst.CString(tag))]
+								);
+							} else {
+								OcamlExpr.EConst(OcamlConst.CBool(false));
+							}
+
+							var body = buildExpr(c.expr);
+							final boundValue = isDynamic
+								? valueExpr
+								: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [valueExpr]);
+							// Always bind the catch variable.
+							// Also force a use via `ignore` to avoid unused-binding warnings under `-warn-error`.
+							body = OcamlExpr.ELet(
+								catchVarName,
+								boundValue,
+								OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(catchVarName)]), body]),
+								false
+							);
+
+							current = OcamlExpr.EIf(cond, body, current);
+						}
+						return current;
+					}
+
+					final breakCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_break", []),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_break"))
+					};
+					final continueCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_continue", []),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_continue"))
+					};
+					final returnVar = freshTmp("ret");
+					final returnCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
+						guard: null,
+						expr: OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [OcamlExpr.EIdent(returnVar)]))
+					};
+
+					final hxValVar = freshTmp("exn_v");
+					final hxTagsVar = freshTmp("exn_tags");
+					final hxFallback = OcamlExpr.EApp(
+						OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_throw_typed"),
+						[OcamlExpr.EIdent(hxValVar), OcamlExpr.EIdent(hxTagsVar)]
+					);
+					final hxHandlerExpr = buildCatchChain(OcamlExpr.EIdent(hxValVar), OcamlExpr.EIdent(hxTagsVar), hxFallback);
+					final hxExceptionCase:OcamlMatchCase = {
+						pat: OcamlPat.PConstructor("HxRuntime.Hx_exception", [OcamlPat.PVar(hxValVar), OcamlPat.PVar(hxTagsVar)]),
+						guard: null,
+						expr: hxHandlerExpr
+					};
+
+					final ocamlExnVar = freshTmp("exn");
+					final ocamlFallback = OcamlExpr.ERaise(OcamlExpr.EIdent(ocamlExnVar));
+					final ocamlHandlerExpr = buildCatchChain(
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(ocamlExnVar)]),
+						OcamlExpr.EList([OcamlExpr.EConst(OcamlConst.CString("OcamlExn"))]),
+						ocamlFallback
+					);
+					final ocamlExnCase:OcamlMatchCase = {
+						pat: OcamlPat.PVar(ocamlExnVar),
+						guard: null,
+						expr: ocamlHandlerExpr
+					};
+
+					OcamlExpr.ETry(builtTry, [breakCase, continueCase, returnCase, hxExceptionCase, ocamlExnCase]);
 				}
 			case TReturn(ret):
 				final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
@@ -1674,6 +1869,14 @@ class OcamlBuilder {
 	function renameVar(name:String):String {
 		final existing = ctx.variableRenameMap.get(name);
 		if (existing != null) return existing;
+
+		// `_` is a valid Haxe identifier, but in OCaml it is a wildcard (not a real binding).
+		// If we emitted `_` as a value identifier, it would be unreferencable and could
+		// also trigger confusing “unbound value” errors when Haxe code legitimately uses it.
+		if (name == "_") {
+			ctx.variableRenameMap.set(name, "_hx");
+			return "_hx";
+		}
 
 		// Reflaxe has some reserved-name handling, but we still need to ensure we never emit
 		// OCaml keywords as identifiers (e.g. `end`), otherwise dune builds will fail with

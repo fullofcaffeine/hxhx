@@ -1,7 +1,21 @@
 (* Minimal runtime scaffolding for reflaxe.ocaml (WIP).
    This will grow as std/_std overrides land. *)
 
-exception Hx_exception of Obj.t
+(* Haxe `throw` is not restricted to OCaml exception types; it can throw any value.
+   We therefore wrap thrown payloads in a dedicated runtime exception that carries:
+   - the raw value as `Obj.t` (so we can transport anything), and
+   - a list of "type tags" used to implement typed catches (`catch (e:T)`).
+
+   Why tags?
+   - OCaml's runtime representation cannot reliably distinguish some Haxe primitives
+     by `Obj` inspection alone (e.g. `int` and `bool` are both immediates).
+   - We want typed catches to be predictable under `-warn-error` without requiring
+     full RTTI / reflection in early milestones.
+
+   The compiler backend is responsible for producing best-effort tags based on the
+   *static* type of the thrown expression (and for classes, including supertypes and
+   implemented interfaces). *)
+exception Hx_exception of Obj.t * string list
 exception Hx_break
 exception Hx_continue
 exception Hx_return of Obj.t
@@ -65,12 +79,18 @@ let nullable_bool_unwrap (v : Obj.t) : bool =
   else
     Obj.obj v
 
+let tags_has (tags : string list) (tag : string) : bool =
+  List.exists (fun t -> t = tag) tags
+
+let hx_throw_typed (v : Obj.t) (tags : string list) : 'a =
+  raise (Hx_exception (v, tags))
+
 let hx_throw (v : Obj.t) : 'a =
-  raise (Hx_exception v)
+  hx_throw_typed v [ "Dynamic" ]
 
 let hx_try (f : unit -> 'a) (handler : Obj.t -> 'a) : 'a =
   try f () with
-  | Hx_exception v -> handler v
+  | Hx_exception (v, _tags) -> handler v
   | Hx_break -> raise Hx_break
   | Hx_continue -> raise Hx_continue
   | Hx_return v -> raise (Hx_return v)

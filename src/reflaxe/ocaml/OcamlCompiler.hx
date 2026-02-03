@@ -661,7 +661,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				// the constructor body used in `create`, but takes `self` explicitly.
 				if (isDispatch) {
 					final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
-					lets.push({ name: ctorName, expr: OcamlExpr.EFun([selfPat].concat(createParams), ctorBody) });
+					final ctorBodyForCtor = !exprMentionsIdent(ctorBody, "self")
+						? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody])
+						: ctorBody;
+					lets.push({ name: ctorName, expr: OcamlExpr.EFun([selfPat].concat(createParams), ctorBodyForCtor) });
 				}
 
 			for (f in instanceMethods) {

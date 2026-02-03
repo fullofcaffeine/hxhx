@@ -26,14 +26,15 @@ class M6RuntimeExceptionsIntegrationTest {
 		final mainPath = outDir + "/TryMain.ml";
 		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;
 		final mainMl = sys.io.File.getContent(mainPath);
-		assertContains(mainMl, "HxRuntime.hx_try", "try->hx_try");
-		assertContains(mainMl, "HxRuntime.hx_throw", "throw->hx_throw");
+		assertContains(mainMl, "try ", "try lowers to OCaml try");
+		assertContains(mainMl, "HxRuntime.Hx_exception", "catch matches Hx_exception");
+		assertContains(mainMl, "HxRuntime.hx_throw_typed", "throw->hx_throw_typed");
 		assertContains(mainMl, "Obj.repr", "throw boxes value");
 
 		final rtPath = outDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(rtPath)) throw "missing runtime: " + rtPath;
 		final rtMl = sys.io.File.getContent(rtPath);
-		assertContains(rtMl, "let hx_try", "runtime defines hx_try");
+		assertContains(rtMl, "let hx_throw_typed", "runtime defines hx_throw_typed");
+		assertContains(rtMl, "let tags_has", "runtime defines tags_has");
 	}
 }
-
