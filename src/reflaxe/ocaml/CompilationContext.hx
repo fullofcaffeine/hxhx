@@ -78,6 +78,18 @@ class CompilationContext {
 	 */
 	public final emittedHaxeModules:Map<String, Bool> = [];
 
+	/**
+	 * Non-stdlib type names that should be pre-registered for `Type.resolveClass/resolveEnum`.
+	 *
+	 * Why:
+	 * - `Type.resolveClass(name)` accepts runtime strings, so a pure compile-time lowering
+	 *   isn't sufficient for portable code.
+	 * - We keep this registry intentionally conservative for now (non-stdlib only) to
+	 *   avoid bloating small outputs; expand when we start running upstream suites.
+	 */
+	public final nonStdTypeRegistryClasses:Map<String, Bool> = [];
+	public final nonStdTypeRegistryEnums:Map<String, Bool> = [];
+
 	public function isPrimaryTypeInModule(moduleId:String, typeName:String):Bool {
 		final primary = primaryTypeNameByModule.get(moduleId);
 		return primary != null ? (primary == typeName) : OcamlNameTools.isPrimaryTypeInModule(moduleId, typeName);

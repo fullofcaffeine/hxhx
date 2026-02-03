@@ -94,7 +94,12 @@ class DuneProjectEmitter {
 		// Entry module: dune expects `<name>.ml` to exist for `(name ...)`.
 		final mainModuleName = cfg.mainModuleId != null ? ocamlModuleNameFromHaxeModuleId(cfg.mainModuleId) : null;
 		final entryBody = if (mainModuleName != null) {
-			"let () = " + mainModuleName + ".main ()\n";
+			[
+				"let () =",
+				"  HxTypeRegistry.init ();",
+				"  " + mainModuleName + ".main ()",
+				""
+			].join("\n");
 		} else {
 			"let () = ()\n";
 		}

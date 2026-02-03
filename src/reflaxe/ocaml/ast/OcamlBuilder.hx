@@ -478,13 +478,35 @@ class OcamlBuilder {
 	public function buildExpr(e:TypedExpr):OcamlExpr {
 		return switch (e.expr) {
 			case TTypeExpr(_):
-				#if macro
-				guardrailError(
-					"reflaxe.ocaml (M5): type expressions (class values) are not supported yet (reflection). (bd: haxe.ocaml-28t.6.4)",
-					e.pos
-				);
-				#end
-				OcamlExpr.EConst(OcamlConst.CUnit);
+				switch (e.expr) {
+					case TTypeExpr(t):
+						switch (t) {
+							case TClassDecl(clsRef):
+								final cls = clsRef.get();
+								final name = (cls.pack ?? []).concat([cls.name]).join(".");
+								OcamlExpr.EApp(
+									OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
+									[OcamlExpr.EConst(OcamlConst.CString(name))]
+								);
+							case TEnumDecl(enumRef):
+								final en = enumRef.get();
+								final name = (en.pack ?? []).concat([en.name]).join(".");
+								OcamlExpr.EApp(
+									OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enum_"),
+									[OcamlExpr.EConst(OcamlConst.CString(name))]
+								);
+							case _:
+								#if macro
+								guardrailError(
+									"reflaxe.ocaml (M10): type expressions for this type kind are not supported yet. (bd: haxe.ocaml-eli)",
+									e.pos
+								);
+								#end
+								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+						}
+					case _:
+						OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				}
 			case TConst(TThis):
 				OcamlExpr.EIdent("self");
 				case TConst(TSuper):
@@ -879,6 +901,26 @@ class OcamlBuilder {
 								case _:
 									#if macro
 									guardrailError("reflaxe.ocaml (M6): Sys." + cf.name + " is not implemented yet.", e.pos);
+									#end
+									anyNull;
+							}
+						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
+							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+							switch (cf.name) {
+								case "getClassName" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClassName"), [buildExpr(args[0])]);
+								case "getEnumName" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getEnumName"), [buildExpr(args[0])]);
+								case "resolveClass" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "resolveClass"), [buildExpr(args[0])]);
+								case "resolveEnum" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "resolveEnum"), [buildExpr(args[0])]);
+								case _:
+									#if macro
+									guardrailError(
+										"reflaxe.ocaml (M10): Type." + cf.name + " is not implemented yet. (bd: haxe.ocaml-eli)",
+										e.pos
+									);
 									#end
 									anyNull;
 							}

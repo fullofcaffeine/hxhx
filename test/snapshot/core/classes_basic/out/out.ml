@@ -1,1 +1,3 @@
-let () = Main.main ()
+let () =
+  HxTypeRegistry.init ();
+  Main.main ()
