@@ -882,6 +882,46 @@ class OcamlBuilder {
 									#end
 									anyNull;
 							}
+						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Reflect") {
+							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+							switch (cf.name) {
+								case "field" if (args.length == 2):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+										[
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
+												[
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+													buildExpr(args[1])
+												]
+											)
+										]
+									);
+								case "setField" if (args.length == 3):
+									final rhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[2])]);
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+										[
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+											buildExpr(args[1]),
+											rhs
+										]
+									);
+								case "hasField" if (args.length == 2):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "has"),
+										[
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+											buildExpr(args[1])
+										]
+									);
+								case _:
+									#if macro
+									guardrailError("reflaxe.ocaml (M10): Reflect." + cf.name + " is not implemented yet. (bd: haxe.ocaml-k7o)", e.pos);
+									#end
+									anyNull;
+							}
 						} else if (cls.pack != null && cls.pack.length == 1 && cls.pack[0] == "sys" && cls.name == "FileSystem") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 							switch (cf.name) {
@@ -1843,6 +1883,17 @@ class OcamlBuilder {
 
 	function buildStdString(inner:TypedExpr):OcamlExpr {
 		final e = unwrap(inner);
+		// Best-effort `Std.string` for `Dynamic` / structural values carried as `Obj.t`.
+		// Avoid applying this to typedef-backed anonymous structures that we represent as real OCaml records.
+		switch (followNoAbstracts(e.t)) {
+			case TDynamic(_), TAnonymous(_) if (!isSysFileStatTypedef(e.t) && !isSysFileStatAnon(e.t)):
+				return OcamlExpr.EApp(
+					OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"),
+					[buildExpr(e)]
+				);
+			case _:
+		}
+
 		switch (e.expr) {
 			case TConst(TNull):
 				return OcamlExpr.EConst(OcamlConst.CString("null"));
@@ -2247,6 +2298,19 @@ class OcamlBuilder {
 									);
 									}
 							}
+						case TField(obj, FDynamic(name)):
+							final rhs = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+								[coerceForAssignment(e1.t, e2)]
+							);
+							OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+								[
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(obj)]),
+									OcamlExpr.EConst(OcamlConst.CString(name)),
+									rhs
+								]
+							);
 						case TArray(arr, idx):
 							OcamlExpr.EApp(
 								OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
@@ -3244,10 +3308,10 @@ class OcamlBuilder {
 					return OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode");
 				}
 				#if macro
-				if (!ctx.currentIsHaxeStd && cls.pack != null && cls.pack.length == 0 && (cls.name == "Type" || cls.name == "Reflect")) {
+				if (!ctx.currentIsHaxeStd && cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
 					guardrailError(
-						"reflaxe.ocaml (M5): Haxe reflection is not supported yet (" + cls.name + "." + cfRef.get().name + "). "
-						+ "Avoid Type/Reflect for now, or add an OCaml extern and call native APIs. (bd: haxe.ocaml-28t.6.4)",
+						"reflaxe.ocaml (M5): Haxe reflection is not supported yet (Type." + cfRef.get().name + "). "
+						+ "Avoid Type for now, or add an OCaml extern and call native APIs. (bd: haxe.ocaml-eli)",
 						pos
 					);
 				}
@@ -3305,14 +3369,18 @@ class OcamlBuilder {
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
 			case FDynamic(name):
-				#if macro
-				guardrailError(
-					"reflaxe.ocaml (M5): dynamic field access is not supported yet ('" + name + "'). "
-					+ "Avoid Reflect/dynamic objects for now. (bd: haxe.ocaml-28t.6.4)",
-					pos
+				OcamlExpr.EApp(
+					OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+					[
+						OcamlExpr.EApp(
+							OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
+							[
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(obj)]),
+								OcamlExpr.EConst(OcamlConst.CString(name))
+							]
+						)
+					]
 				);
-				#end
-				OcamlExpr.EConst(OcamlConst.CUnit);
 			case FAnon(cfRef):
 				// Minimal anonymous-structure support: KeyValueIterator elements are represented as OCaml tuples.
 				// `{ key:K, value:V }` lowers to `(key, value)`, so `.key` maps to `fst`, `.value` maps to `snd`.

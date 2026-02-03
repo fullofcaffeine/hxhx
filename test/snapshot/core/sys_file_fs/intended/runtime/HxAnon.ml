@@ -29,16 +29,48 @@
 
 type t = (string, Obj.t) Hashtbl.t
 
+(* Runtime type identity:
+   We must be able to accept an arbitrary `Obj.t` from Haxe `Dynamic` code and
+   safely decide if it is one of our anonymous-structure objects.
+
+   `Obj.obj` has no runtime checks and is unsafe on arbitrary values, so we use a
+   small "header block" with a unique marker in field 0:
+
+     block[0] = marker
+     block[1] = Obj.repr <hashtbl>
+
+   This lets `get/set/has` guard via `Obj.field` without casting first. *)
+
+let marker : Obj.t = Obj.repr (ref 0)
+
+let is_anon (o : Obj.t) : bool =
+  Obj.is_block o && Obj.size o = 2 && Obj.field o 0 == marker
+
 let create () : Obj.t =
-  Obj.repr (Hashtbl.create 8 : t)
+  let tbl = (Hashtbl.create 8 : t) in
+  let b = Obj.new_block 0 2 in
+  Obj.set_field b 0 marker;
+  Obj.set_field b 1 (Obj.repr tbl);
+  b
 
 let get (o : Obj.t) (field : string) : Obj.t =
-  let tbl : t = Obj.obj o in
-  match Hashtbl.find_opt tbl field with
-  | Some v -> v
-  | None -> HxRuntime.hx_null
+  if not (is_anon o) then
+    HxRuntime.hx_null
+  else
+    let tbl : t = Obj.obj (Obj.field o 1) in
+    match Hashtbl.find_opt tbl field with
+    | Some v -> v
+    | None -> HxRuntime.hx_null
 
 let set (o : Obj.t) (field : string) (value : Obj.t) : unit =
-  let tbl : t = Obj.obj o in
-  Hashtbl.replace tbl field value
+  if is_anon o then (
+    let tbl : t = Obj.obj (Obj.field o 1) in
+    Hashtbl.replace tbl field value
+  )
 
+let has (o : Obj.t) (field : string) : bool =
+  if not (is_anon o) then
+    false
+  else
+    let tbl : t = Obj.obj (Obj.field o 1) in
+    Hashtbl.mem tbl field

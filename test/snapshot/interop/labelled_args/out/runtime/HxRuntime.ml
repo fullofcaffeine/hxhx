@@ -79,6 +79,31 @@ let nullable_bool_unwrap (v : Obj.t) : bool =
   else
     Obj.obj v
 
+(* Best-effort `Std.string` for values stored as `Obj.t`.
+
+   This is primarily used when Haxe code concatenates `Dynamic` values into strings
+   (including values extracted from anonymous structures via `Reflect.field` or
+   `obj.field` on Dynamic).
+
+   Limitations:
+   - `bool` and `int` are both immediates in OCaml, so we treat all immediates as `int`.
+     Typed (non-Dynamic) booleans are still printed correctly via `string_of_bool` in codegen. *)
+let dynamic_toStdString (v : Obj.t) : string =
+  if is_null v then
+    "null"
+  else if Obj.is_int v then
+    string_of_int (Obj.obj v)
+  else
+    let tag = Obj.tag v in
+    if tag = Obj.string_tag then
+      let hx_null_string : string = Obj.magic hx_null in
+      let s : string = Obj.obj v in
+      if s == hx_null_string then "null" else s
+    else if tag = Obj.double_tag then
+      string_of_float (Obj.obj v)
+    else
+      "<object>"
+
 let tags_has (tags : string list) (tag : string) : bool =
   List.exists (fun t -> t = tag) tags
 
