@@ -524,6 +524,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 
 				final typeFields:Array<OcamlTypeRecordField> = [];
+
+				// Runtime class identity (M10): all class instances carry their most-derived class value
+				// in the first record slot so `Type.getClass` can work even through `Obj.magic` upcasts.
+				typeFields.push({
+					name: "__hx_type",
+					isMutable: false,
+					typ: OcamlTypeExpr.TIdent("Obj.t")
+				});
 				if (hasInstanceVars) {
 					for (v in instanceVars) {
 						typeFields.push({
@@ -571,9 +579,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final typeDecl:OcamlTypeDecl = {
 						name: instanceTypeName,
 						params: [],
-						kind: (hasInstanceVars || isDispatchInstance)
-							? OcamlTypeDeclKind.Record(typeFields)
-							: OcamlTypeDeclKind.Alias(OcamlTypeExpr.TIdent("unit"))
+						kind: OcamlTypeDeclKind.Record(typeFields)
 					};
 				items.push(OcamlModuleItem.IType([typeDecl], false));
 
@@ -595,6 +601,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 				final selfInit:OcamlExpr = if (hasInstanceVars || isDispatchInstance) {
 					final fields:Array<OcamlRecordField> = [];
+					fields.push({
+						name: "__hx_type",
+						value: OcamlExpr.EApp(
+							OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
+							[OcamlExpr.EConst(OcamlConst.CString(fullName))]
+						)
+					});
 					for (v in instanceVars) {
 						final init = v.findDefaultExpr();
 						final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
@@ -645,9 +658,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 						ctorBody = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody]);
 					}
 					final recordExpr = OcamlExpr.ERecord(fields);
-					isDispatchInstance ? OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName)) : recordExpr;
+					// Always annotate: `__hx_type` is a shared label across many records, and
+					// some classes may otherwise become ambiguous for OCaml's record inference.
+					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
 				} else {
-					OcamlExpr.EConst(OcamlConst.CUnit);
+					final recordExpr = OcamlExpr.ERecord([{
+						name: "__hx_type",
+						value: OcamlExpr.EApp(
+							OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
+							[OcamlExpr.EConst(OcamlConst.CString(fullName))]
+						)
+					}]);
+					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
 				}
 
 			final createBody = OcamlExpr.ELet(

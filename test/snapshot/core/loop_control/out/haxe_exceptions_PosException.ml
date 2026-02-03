@@ -3,7 +3,7 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { mutable posInfos : Obj.t; get_message : Obj.t -> unit -> string; get_stack : Obj.t -> unit -> Obj.t; get_previous : Obj.t -> unit -> Obj.t; get_native : Obj.t -> unit -> Obj.t; unwrap : Obj.t -> unit -> Obj.t; toString : Obj.t -> unit -> string; details : Obj.t -> unit -> string }
+type t = { __hx_type : Obj.t; mutable posInfos : Obj.t; get_message : Obj.t -> unit -> string; get_stack : Obj.t -> unit -> Obj.t; get_previous : Obj.t -> unit -> Obj.t; get_native : Obj.t -> unit -> Obj.t; unwrap : Obj.t -> unit -> Obj.t; toString : Obj.t -> unit -> string; details : Obj.t -> unit -> string }
 
 let __ctor = fun (self : t) message previous pos -> (
   ignore (Haxe_Exception.__ctor (Obj.magic self) message previous);
@@ -18,7 +18,7 @@ let __ctor = fun (self : t) message previous pos -> (
 
 let toString__impl = fun (self : t) () -> (((((((("" ^ HxString.toStdString (self.toString (Obj.magic self) ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "className"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "methodName"))) ^ " at ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "fileName"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get (self.posInfos) "lineNumber"))
 
-let create = fun message previous pos -> let self = ({ posInfos = Obj.magic (); get_message = fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) (); get_stack = fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) (); get_previous = fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) (); get_native = fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) (); unwrap = fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) (); toString = fun o () -> toString__impl (Obj.magic o) (); details = fun o () -> Haxe_Exception.details__impl (Obj.magic o) () } : t) in (
+let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_ "haxe.exceptions.PosException"; posInfos = Obj.magic (); get_message = fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) (); get_stack = fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) (); get_previous = fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) (); get_native = fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) (); unwrap = fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) (); toString = fun o () -> toString__impl (Obj.magic o) (); details = fun o () -> Haxe_Exception.details__impl (Obj.magic o) () } : t) in (
   (
     ignore (Haxe_Exception.__ctor (Obj.magic self) message previous);
     if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- (let __anon_1 = HxAnon.create () in (

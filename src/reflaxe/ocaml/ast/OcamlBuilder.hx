@@ -907,6 +907,21 @@ class OcamlBuilder {
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 							switch (cf.name) {
+								case "getClass" if (args.length == 1):
+									final a0 = args[0];
+									final a0Type = unwrapNullType(a0.t);
+									final a0Expr = buildExpr(a0);
+									final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null)
+										? a0Expr
+										: switch (a0Type) {
+											case TDynamic(_), TAnonymous(_), TMono(_), TLazy(_): a0Expr;
+											case _: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
+										}
+									;
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClass"),
+										[asObj]
+									);
 								case "getClassName" if (args.length == 1):
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClassName"), [buildExpr(args[0])]);
 								case "getEnumName" if (args.length == 1):
@@ -2585,6 +2600,39 @@ class OcamlBuilder {
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
 		final lhsKind = nullablePrimitiveKind(lhsType);
 		final rhsKind = nullablePrimitiveKind(rhs.t);
+
+		// Dynamic / anonymous slots: represent arbitrary values as `Obj.t`.
+		//
+		// This is required for patterns like:
+		//   `final d:Dynamic = new Child();`
+		//
+		// Without boxing (`Obj.repr`), OCaml infers `d` as `child_t`, which then fails when
+		// passed to runtime APIs expecting `Obj.t` (e.g. `Type.getClass(d)`).
+		//
+		// Important: anonymous structures already use the `HxAnon` runtime representation (`Obj.t`),
+		// so we must *not* double-box those.
+		final lhsUnwrapped = unwrapNullType(lhsType);
+		switch (lhsUnwrapped) {
+			case TDynamic(_), TAnonymous(_):
+				final rhsUnwrapped = unwrap(rhs);
+				final rhsIsNull = switch (rhsUnwrapped.expr) {
+					case TConst(TNull): true;
+					case _: false;
+				}
+				if (rhsIsNull) {
+					return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				}
+				if (rhsKind != null) {
+					return buildExpr(rhs);
+				}
+				switch (unwrapNullType(rhs.t)) {
+					case TDynamic(_), TAnonymous(_):
+						return buildExpr(rhs);
+					case _:
+						return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+				}
+			case _:
+		}
 
 		// Non-null primitive slot <- nullable primitive value.
 		if (lhsKind == null && rhsKind != null) {

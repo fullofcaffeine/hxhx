@@ -26,7 +26,7 @@ class M5ClassIntegrationTest {
 		final pointPath = outDir + "/Point.ml";
 		if (!sys.FileSystem.exists(pointPath)) throw "missing output: " + pointPath;
 		final pointMl = sys.io.File.getContent(pointPath);
-		assertContains(pointMl, "type t = { mutable x : int; mutable y : int }", "record type decl");
+		assertContains(pointMl, "type t = { __hx_type : Obj.t; mutable x : int; mutable y : int }", "record type decl");
 		final createRe = ~/let create = fun ([A-Za-z_][A-Za-z0-9_]*) ([A-Za-z_][A-Za-z0-9_]*) ->/;
 		if (!createRe.match(pointMl)) throw "create fn: expected to find 'let create = fun <x> <y> ->'";
 		final xArg = createRe.matched(1);

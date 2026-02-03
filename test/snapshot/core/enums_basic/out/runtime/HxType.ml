@@ -76,3 +76,25 @@ let resolveEnum (name : string) : Obj.t =
   | Some v -> v
   | None -> HxRuntime.hx_null
 
+(* Runtime class identity for `Type.getClass`.
+
+   Our compiled class instances use OCaml records, and we use `Obj.magic` for
+   inheritance/interface upcasts. This means the only reliable way to identify
+   the most-derived class at runtime is to store a class value directly on the
+   instance.
+
+   Invariants enforced by codegen:
+   - All class instance records have a first field named `__hx_type : Obj.t`.
+   - That field stores the interned class value created by `class_ "<pack.Type>"`.
+*)
+let getClass (o : Obj.t) : Obj.t =
+  if HxRuntime.is_null o then
+    HxRuntime.hx_null
+  else if Obj.is_int o then
+    HxRuntime.hx_null
+  else
+    try
+      let c = Obj.field o 0 in
+      if is_type_value class_marker c then c else HxRuntime.hx_null
+    with _ ->
+      HxRuntime.hx_null

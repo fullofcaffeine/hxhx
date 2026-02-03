@@ -3,9 +3,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { mutable x : int; mutable y : int }
+type t = { __hx_type : Obj.t; mutable x : int; mutable y : int }
 
-let create = fun x2 y2 -> let self = { x = 0; y = 0 } in (
+let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t) in (
   (
     ignore (self.x <- x2);
     self.y <- y2

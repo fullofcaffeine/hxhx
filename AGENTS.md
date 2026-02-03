@@ -45,6 +45,23 @@ bd sync               # Sync with git
 - `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
 - Optional vendored upstream checkout location (preferred for gate runners): `vendor/haxe` (create with `bash scripts/vendor/fetch-haxe-upstream.sh`)
 
+## Upstream Haxe Source (Required Reference)
+
+When implementing backend semantics (Haxe → OCaml) and when evolving `hxhx`, treat upstream Haxe as the source of truth:
+
+- Use upstream tests as behavioral oracles:
+  - `vendor/haxe/tests/unit`, `vendor/haxe/tests/runci`, `vendor/haxe/tests/display`
+- Use upstream compiler implementation patterns as architectural references:
+  - OCaml compiler sources under `vendor/haxe/src/`
+
+Vendoring policy:
+
+- We do **not** commit upstream Haxe into this repository.
+- Instead, we keep a pinned local checkout at `vendor/haxe` (ignored by git) via:
+  - `bash scripts/vendor/fetch-haxe-upstream.sh` (defaults to `HAXE_UPSTREAM_REF=4.3.7`)
+  - Override path with `HAXE_UPSTREAM_DIR=/path/to/haxe` when needed.
+- Local convenience: you may symlink `vendor/haxe` to an existing checkout (e.g. `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`) for faster iteration.
+
 ## Long-Term Acceptance Example: Haxe-in-Haxe (Production-Grade)
 
 We want a potentially **production-ready** Haxe-in-Haxe compiler example under `examples/` over time:
