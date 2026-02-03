@@ -41,6 +41,18 @@ class CompilationContext {
 	public final virtualTypes:Map<String, Bool> = [];
 	public var virtualTypesComputed:Bool = false;
 
+	/** Haxe full names of interfaces (non-stdlib only, for now). */
+	public final interfaceTypes:Map<String, Bool> = [];
+
+	/**
+	 * Haxe full names of types that must support dynamic dispatch (inheritance and/or interfaces).
+	 *
+	 * This is the set the builder consults to decide whether `obj.foo()` is lowered as:
+	 * - static module function call (`Foo.foo obj ...`) for monomorphic cases, or
+	 * - record-stored function field call (`obj.foo obj ...`) for polymorphic dispatch.
+	 */
+	public final dispatchTypes:Map<String, Bool> = [];
+
 	/**
 	 * For each Haxe module id, which contained type should be treated as the “primary type”
 	 * for OCaml identifier scoping purposes.

@@ -46,7 +46,7 @@ class M5GuardrailsIntegrationTest {
 
 		final out2 = baseOut + "/interfaces";
 		sys.FileSystem.createDirectory(out2);
-		assertFail(common.concat(["-main", "InterfaceMain", "-D", "ocaml_output=" + out2]), "interfaces", "interface guardrail");
+		assertOk(common.concat(["-main", "InterfaceMain", "-D", "ocaml_output=" + out2]), "interfaces supported");
 
 		final out3 = baseOut + "/reflection";
 		sys.FileSystem.createDirectory(out3);

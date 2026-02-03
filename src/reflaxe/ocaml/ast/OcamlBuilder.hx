@@ -564,7 +564,7 @@ class OcamlBuilder {
 								// otherwise keep the previous (limited) behavior for upstream stdlib output
 								// and other non-virtual cases.
 								final curFull = ctx.currentTypeFullName;
-								final allowSuperCtor = !ctx.currentIsHaxeStd && curFull != null && ctx.virtualTypes.exists(curFull);
+								final allowSuperCtor = !ctx.currentIsHaxeStd && curFull != null && ctx.dispatchTypes.exists(curFull);
 								if (!allowSuperCtor) {
 									final builtArgs = args.map(buildExpr);
 									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
@@ -1214,14 +1214,14 @@ class OcamlBuilder {
 										case _: false;
 									}
 
-									// Virtual dispatch subset (M10): if the receiver's static type participates in
-									// inheritance, call through the record-stored method function (`obj.foo obj ...`).
+									// Dynamic dispatch subset (M10): if the receiver's static type participates in
+									// inheritance/interfaces, call through the record-stored method function.
 									final recvFullName = classFullNameFromType(objExpr.t);
-									final isVirtualRecv = recvFullName != null && ctx.virtualTypes.exists(recvFullName);
+									final isDispatchRecv = recvFullName != null && (ctx.dispatchTypes.exists(recvFullName) || ctx.interfaceTypes.exists(recvFullName));
 
 									final allowSuperCall = !ctx.currentIsHaxeStd
 										&& ctx.currentTypeFullName != null
-										&& ctx.virtualTypes.exists(ctx.currentTypeFullName);
+										&& ctx.dispatchTypes.exists(ctx.currentTypeFullName);
 
 									if (isSuperReceiver && allowSuperCall) {
 										// `super.foo(...)`: call the base implementation directly (no virtual dispatch).
@@ -1236,7 +1236,7 @@ class OcamlBuilder {
 										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
 										if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 										OcamlExpr.EApp(callFn, builtArgs);
-									} else if (isVirtualRecv) {
+									} else if (isDispatchRecv) {
 										final recvExpr = buildExpr(objExpr);
 										final tmpName = switch (recvExpr) {
 											case EIdent(_): null;
@@ -1244,7 +1244,7 @@ class OcamlBuilder {
 										}
 										final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
 										final methodField = OcamlExpr.EField(recvVar, cf.name);
-										final callArgs = [recvVar].concat(coercedArgs);
+										final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(coercedArgs);
 										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
 										if (args.length == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 										final call = OcamlExpr.EApp(methodField, callArgs);
@@ -2219,14 +2219,20 @@ class OcamlBuilder {
 			return OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(rhs)]);
 		}
 
-		// Class upcasts (inheritance): Derived -> Base requires an explicit cast at the OCaml type level.
+		// Class upcasts (inheritance + interfaces): Derived -> Base or Impl -> IFace
+		// requires an explicit cast at the OCaml type level.
 		final lhsCls = classTypeFromType(lhsType);
 		final rhsCls = classTypeFromType(rhs.t);
 		if (lhsCls != null && rhsCls != null) {
 			final lhsName = (lhsCls.pack ?? []).concat([lhsCls.name]).join(".");
 			final rhsName = (rhsCls.pack ?? []).concat([rhsCls.name]).join(".");
-			if (lhsName != rhsName && isSubclassOf(rhsCls, lhsCls)) {
-			return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(rhs)]);
+			if (lhsName != rhsName) {
+				if (isSubclassOf(rhsCls, lhsCls)) {
+					return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(rhs)]);
+				}
+				if (lhsCls.isInterface && implementsInterface(rhsCls, lhsCls)) {
+					return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(rhs)]);
+				}
 			}
 		}
 
@@ -3054,21 +3060,54 @@ class OcamlBuilder {
 			}
 		}
 
-		static function isSubclassOf(child:ClassType, parent:ClassType):Bool {
-			inline function fullNameOf(c:ClassType):String return (c.pack ?? []).concat([c.name]).join(".");
-			final parentName = fullNameOf(parent);
+			static function isSubclassOf(child:ClassType, parent:ClassType):Bool {
+				inline function fullNameOf(c:ClassType):String return (c.pack ?? []).concat([c.name]).join(".");
+				final parentName = fullNameOf(parent);
 
-			var cur:Null<ClassType> = child;
-			var guard = 0;
-			while (cur != null && guard++ < 64) {
-				if (fullNameOf(cur) == parentName) return true;
-				cur = cur.superClass != null ? cur.superClass.t.get() : null;
+				var cur:Null<ClassType> = child;
+				var guard = 0;
+				while (cur != null && guard++ < 64) {
+					if (fullNameOf(cur) == parentName) return true;
+					cur = cur.superClass != null ? cur.superClass.t.get() : null;
+				}
+				return false;
 			}
-			return false;
-		}
 
-	/**
-	 * Extracts the string argument from a `@:native("...")` metadata entry, if present.
+			static function implementsInterface(child:ClassType, iface:ClassType):Bool {
+				inline function fullNameOf(c:ClassType):String return (c.pack ?? []).concat([c.name]).join(".");
+				final ifaceName = fullNameOf(iface);
+
+				final seen:Map<String, Bool> = [];
+				function ifaceMatchesOrExtends(i:ClassType):Bool {
+					final n = fullNameOf(i);
+					if (seen.exists(n)) return false;
+					seen.set(n, true);
+					if (n == ifaceName) return true;
+					if (i.interfaces != null) {
+						for (x in i.interfaces) {
+							final it = x.t.get();
+							if (ifaceMatchesOrExtends(it)) return true;
+						}
+					}
+					return false;
+				}
+
+				var cur:Null<ClassType> = child;
+				var guard = 0;
+				while (cur != null && guard++ < 64) {
+					if (cur.interfaces != null) {
+						for (x in cur.interfaces) {
+							final it = x.t.get();
+							if (ifaceMatchesOrExtends(it)) return true;
+						}
+					}
+					cur = cur.superClass != null ? cur.superClass.t.get() : null;
+				}
+				return false;
+			}
+
+		/**
+		 * Extracts the string argument from a `@:native("...")` metadata entry, if present.
 	 *
 	 * Why:
 	 * - Haxe uses `@:native` for target name mapping.
