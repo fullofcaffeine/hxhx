@@ -1,4 +1,16 @@
 class M5GuardrailsIntegrationTest {
+	static function assertOk(args:Array<String>, label:String):Void {
+		final p = new sys.io.Process("haxe", args);
+		final out = p.stdout.readAll().toString();
+		final err = p.stderr.readAll().toString();
+		final code = p.exitCode();
+		p.close();
+
+		if (code != 0) {
+			throw label + ": expected compile to succeed, got exit code " + code + "\n" + out + "\n" + err;
+		}
+	}
+
 	static function assertFail(args:Array<String>, mustContain:String, label:String):Void {
 		final p = new sys.io.Process("haxe", args);
 		final out = p.stdout.readAll().toString();
@@ -30,7 +42,7 @@ class M5GuardrailsIntegrationTest {
 
 		final out1 = baseOut + "/inheritance";
 		sys.FileSystem.createDirectory(out1);
-		assertFail(common.concat(["-main", "InheritanceMain", "-D", "ocaml_output=" + out1]), "unsupported OO feature", "inheritance guardrail");
+		assertOk(common.concat(["-main", "InheritanceMain", "-D", "ocaml_output=" + out1]), "inheritance supported");
 
 		final out2 = baseOut + "/interfaces";
 		sys.FileSystem.createDirectory(out2);
@@ -41,4 +53,3 @@ class M5GuardrailsIntegrationTest {
 		assertFail(common.concat(["-main", "ReflectionMain", "-D", "ocaml_output=" + out3]), "reflection", "reflection guardrail");
 	}
 }
-

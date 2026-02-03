@@ -6,6 +6,7 @@ import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRecordField;
+import reflaxe.ocaml.ast.OcamlTypeExpr;
 
 enum OcamlBinop {
 	Add;
@@ -94,4 +95,7 @@ enum OcamlExpr {
 	EAssign(op:OcamlAssignOp, lhs:OcamlExpr, rhs:OcamlExpr);
 
 	ETuple(items:Array<OcamlExpr>);
+
+	/** Type annotation: `(expr : typ)` */
+	EAnnot(expr:OcamlExpr, typ:OcamlTypeExpr);
 }

@@ -65,7 +65,7 @@ class OcamlASTPrinter {
 
 	function exprPrec(e:OcamlExpr):Int {
 		return switch (e) {
-			case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_):
+			case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
 				PREC_ATOM;
 			case EField(_, _):
 				PREC_FIELD;
@@ -107,6 +107,8 @@ class OcamlASTPrinter {
 				"raise (" + printExprCtx(exn, PREC_TOP, indentLevel) + ")";
 			case ETuple(items):
 				"(" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join(", ") + ")";
+			case EAnnot(expr, typ):
+				"(" + printExprCtx(expr, PREC_TOP, indentLevel) + " : " + printType(typ) + ")";
 			case ERecord(fields):
 				printRecord(fields, indentLevel);
 			case EField(expr, field):
@@ -351,6 +353,8 @@ class OcamlASTPrinter {
 				}
 			case PRecord(fields):
 				"{ " + fields.map(f -> f.name + " = " + printPat(f.pat)).join("; ") + " }";
+			case PAnnot(pat, typ):
+				"(" + printPat(pat) + " : " + printType(typ) + ")";
 		}
 	}
 
@@ -365,6 +369,7 @@ class OcamlASTPrinter {
 			case PRecord(_): true;
 			case PTuple(_): true;
 			case POr(_): true;
+			case PAnnot(_, _): true;
 			case _: false;
 		}
 	}

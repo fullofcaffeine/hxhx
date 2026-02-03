@@ -307,9 +307,10 @@ class OcamlBuilder {
 				OcamlExpr.EConst(OcamlConst.CUnit);
 			case TConst(TThis):
 				OcamlExpr.EIdent("self");
-			case TConst(TSuper):
-				// Inheritance isn't supported yet; treat as `self` for now.
-				OcamlExpr.EIdent("self");
+				case TConst(TSuper):
+					// `super` as a value is lowered as `self`. The callsite decides whether it needs
+					// base dispatch (e.g. `super.foo(...)`) or base ctor calls (`super(...)`).
+					OcamlExpr.EIdent("self");
 				case TConst(TNull):
 					// `null` is used across many portable Haxe APIs (e.g. Sys.getEnv).
 					//
@@ -516,9 +517,10 @@ class OcamlBuilder {
 				} else {
 					final modName = moduleIdToOcamlModuleName(cls.module);
 					final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+					final createName = ctx.scopedValueName(cls.module, cls.name, "create");
 					final fn = (selfMod != null && selfMod == modName)
-						? OcamlExpr.EIdent("create")
-						: OcamlExpr.EField(OcamlExpr.EIdent(modName), "create");
+						? OcamlExpr.EIdent(createName)
+						: OcamlExpr.EField(OcamlExpr.EIdent(modName), createName);
 					final builtArgs = args.map(buildExpr);
 					OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 				}
@@ -556,10 +558,47 @@ class OcamlBuilder {
 
 					if (injected != null) {
 						injected;
-					} else switch (fn.expr) {
-					case TField(_, FStatic(clsRef, cfRef)):
-						final cls = clsRef.get();
-						final cf = cfRef.get();
+						} else switch (unwrap(fn).expr) {
+							case TConst(TSuper):
+								// Only lower `super()` when we are using the “virtual class” model (M10),
+								// otherwise keep the previous (limited) behavior for upstream stdlib output
+								// and other non-virtual cases.
+								final curFull = ctx.currentTypeFullName;
+								final allowSuperCtor = !ctx.currentIsHaxeStd && curFull != null && ctx.virtualTypes.exists(curFull);
+								if (!allowSuperCtor) {
+									final builtArgs = args.map(buildExpr);
+									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+								} else {
+								#if macro
+								if (ctx.currentSuperModuleId == null || ctx.currentSuperTypeName == null) {
+									guardrailError("reflaxe.ocaml (M10): encountered super() call, but current super class is unknown.", e.pos);
+									OcamlExpr.EConst(OcamlConst.CUnit);
+								} else {
+								#end
+									final supModId = ctx.currentSuperModuleId;
+									final supTypeName = ctx.currentSuperTypeName;
+									final ctorName = ctx.scopedValueName(supModId, supTypeName, "__ctor");
+
+								final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+								final supModName = moduleIdToOcamlModuleName(supModId);
+								final callFn = (selfMod != null && selfMod == supModName)
+									? OcamlExpr.EIdent(ctorName)
+									: OcamlExpr.EField(OcamlExpr.EIdent(supModName), ctorName);
+
+								final builtArgs = args.map(buildExpr);
+								final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent("self")])].concat(builtArgs);
+								// Calling convention: `super()` supplies `unit` when there are no args.
+								if (args.length == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+									OcamlExpr.EApp(callFn, callArgs);
+								#if macro
+								}
+								#end
+								}
+							case _:
+								switch (fn.expr) {
+						case TField(_, FStatic(clsRef, cfRef)):
+							final cls = clsRef.get();
+							final cf = cfRef.get();
 
 						// Extern interop: labelled/optional args via @:ocamlLabel("...") on parameters.
 						// (bd: haxe.ocaml-28t.8.3)
@@ -1156,27 +1195,72 @@ class OcamlBuilder {
 										}
 									}
 								} else {
-									final modName = moduleIdToOcamlModuleName(cls.module);
+									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+										case TFun(fargs, _): fargs;
+										case _: null;
+									}
+									final coercedArgs:Array<OcamlExpr> = [];
+									if (expectedArgs != null) {
+										for (i in 0...args.length) {
+											coercedArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+										}
+									} else {
+										for (a in args) coercedArgs.push(buildExpr(a));
+									}
+
+									final unwrappedObj = unwrap(objExpr);
+									final isSuperReceiver = switch (unwrappedObj.expr) {
+										case TConst(TSuper): true;
+										case _: false;
+									}
+
+									// Virtual dispatch subset (M10): if the receiver's static type participates in
+									// inheritance, call through the record-stored method function (`obj.foo obj ...`).
+									final recvFullName = classFullNameFromType(objExpr.t);
+									final isVirtualRecv = recvFullName != null && ctx.virtualTypes.exists(recvFullName);
+
+									final allowSuperCall = !ctx.currentIsHaxeStd
+										&& ctx.currentTypeFullName != null
+										&& ctx.virtualTypes.exists(ctx.currentTypeFullName);
+
+									if (isSuperReceiver && allowSuperCall) {
+										// `super.foo(...)`: call the base implementation directly (no virtual dispatch).
+										final modName = moduleIdToOcamlModuleName(cls.module);
 										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+										final implName = ctx.scopedValueName(cls.module, cls.name, cf.name + "__impl");
 										final callFn = (selfMod != null && selfMod == modName)
-											? OcamlExpr.EIdent(cf.name)
-											: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
-										final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
-											case TFun(fargs, _): fargs;
-											case _: null;
+											? OcamlExpr.EIdent(implName)
+											: OcamlExpr.EField(OcamlExpr.EIdent(modName), implName);
+
+										final builtArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent("self")])].concat(coercedArgs);
+										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+										if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+										OcamlExpr.EApp(callFn, builtArgs);
+									} else if (isVirtualRecv) {
+										final recvExpr = buildExpr(objExpr);
+										final tmpName = switch (recvExpr) {
+											case EIdent(_): null;
+											case _: freshTmp("obj");
 										}
-										final coercedArgs:Array<OcamlExpr> = [];
-										if (expectedArgs != null) {
-											for (i in 0...args.length) {
-												coercedArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
-											}
-										} else {
-											for (a in args) coercedArgs.push(buildExpr(a));
-										}
+										final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
+										final methodField = OcamlExpr.EField(recvVar, cf.name);
+										final callArgs = [recvVar].concat(coercedArgs);
+										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+										if (args.length == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+										final call = OcamlExpr.EApp(methodField, callArgs);
+										tmpName == null ? call : OcamlExpr.ELet(tmpName, recvExpr, call, false);
+									} else {
+										final modName = moduleIdToOcamlModuleName(cls.module);
+										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+										final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+										final callFn = (selfMod != null && selfMod == modName)
+											? OcamlExpr.EIdent(scoped)
+											: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
 										final builtArgs = [buildExpr(objExpr)].concat(coercedArgs);
 										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
 										if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 										OcamlExpr.EApp(callFn, builtArgs);
+									}
 									}
 								case _:
 									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (fn.t) {
@@ -1221,8 +1305,9 @@ class OcamlBuilder {
 								for (a in args) builtArgs.push(buildExpr(a));
 							}
 							OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
-						}
 					}
+					}
+				}
 			case TField(obj, fa):
 				buildField(obj, fa, e.pos);
 			case TMeta(_, e1):
@@ -2134,6 +2219,17 @@ class OcamlBuilder {
 			return OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(rhs)]);
 		}
 
+		// Class upcasts (inheritance): Derived -> Base requires an explicit cast at the OCaml type level.
+		final lhsCls = classTypeFromType(lhsType);
+		final rhsCls = classTypeFromType(rhs.t);
+		if (lhsCls != null && rhsCls != null) {
+			final lhsName = (lhsCls.pack ?? []).concat([lhsCls.name]).join(".");
+			final rhsName = (rhsCls.pack ?? []).concat([rhsCls.name]).join(".");
+			if (lhsName != rhsName && isSubclassOf(rhsCls, lhsCls)) {
+			return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(rhs)]);
+			}
+		}
+
 		return buildExpr(rhs);
 	}
 
@@ -2873,9 +2969,10 @@ class OcamlBuilder {
 					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
 				} else {
 					final modName = moduleIdToOcamlModuleName(cls.module);
+					final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
 					return (selfMod != null && selfMod == modName)
-						? OcamlExpr.EIdent(cf.name)
-						: OcamlExpr.EField(OcamlExpr.EIdent(modName), cf.name);
+						? OcamlExpr.EIdent(scoped)
+						: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
 				}
 			case FInstance(clsRef, _, cfRef):
 				final cls = clsRef.get();
@@ -2932,11 +3029,43 @@ class OcamlBuilder {
 		}
 	}
 
-	static function moduleIdToOcamlModuleName(moduleId:String):String {
-		if (moduleId == null || moduleId.length == 0) return "Main";
-		final flat = moduleId.split(".").join("_");
-		return flat.substr(0, 1).toUpperCase() + flat.substr(1);
-	}
+		static function moduleIdToOcamlModuleName(moduleId:String):String {
+			if (moduleId == null || moduleId.length == 0) return "Main";
+			final flat = moduleId.split(".").join("_");
+			return flat.substr(0, 1).toUpperCase() + flat.substr(1);
+		}
+
+		static function classFullNameFromType(t:Type):Null<String> {
+			return switch (TypeTools.follow(t)) {
+				case TInst(cRef, _):
+					final c = cRef.get();
+					(c.pack ?? []).concat([c.name]).join(".");
+				case _:
+					null;
+			}
+		}
+
+		static function classTypeFromType(t:Type):Null<ClassType> {
+			return switch (TypeTools.follow(t)) {
+				case TInst(cRef, _):
+					cRef.get();
+				case _:
+					null;
+			}
+		}
+
+		static function isSubclassOf(child:ClassType, parent:ClassType):Bool {
+			inline function fullNameOf(c:ClassType):String return (c.pack ?? []).concat([c.name]).join(".");
+			final parentName = fullNameOf(parent);
+
+			var cur:Null<ClassType> = child;
+			var guard = 0;
+			while (cur != null && guard++ < 64) {
+				if (fullNameOf(cur) == parentName) return true;
+				cur = cur.superClass != null ? cur.superClass.t.get() : null;
+			}
+			return false;
+		}
 
 	/**
 	 * Extracts the string argument from a `@:native("...")` metadata entry, if present.

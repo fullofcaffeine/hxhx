@@ -34,6 +34,7 @@ import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.GenericCompiler;
 import reflaxe.output.DataAndFileInfo;
+import reflaxe.ocaml.OcamlNameTools;
 
 using StringTools;
 using reflaxe.helpers.BaseTypeHelper;
@@ -94,6 +95,69 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public function new() {
 		super();
 		instance = this;
+
+		#if macro
+		// Precompute inheritance participants after typing, before codegen starts.
+		//
+		// Why not compute lazily in `compileClassImpl`?
+		// - Base classes can be compiled before derived classes.
+		// - We need base classes to be marked “virtual” (method-field dispatch) before we emit them.
+		Context.onAfterTyping(function(types:Array<haxe.macro.Type.ModuleType>) {
+			if (ctx.virtualTypesComputed) return;
+			ctx.virtualTypesComputed = true;
+
+			// Primary-type mapping (naming): keep historical short names stable when a module
+			// only contains a single type, even if that type name differs from the file/module name.
+			final moduleToClasses:Map<String, Array<ClassType>> = [];
+
+			inline function fullNameOf(c:ClassType):String {
+				return (c.pack ?? []).concat([c.name]).join(".");
+			}
+
+			function markChain(c:ClassType):Void {
+				var cur:Null<ClassType> = c;
+				var guard = 0;
+				while (cur != null && guard++ < 64) {
+					// Stop at upstream stdlib boundary for now.
+					if (isPosInHaxeStd(cur.pos)) break;
+					ctx.virtualTypes.set(fullNameOf(cur), true);
+					cur = cur.superClass != null ? cur.superClass.t.get() : null;
+				}
+			}
+
+			for (t in types) {
+				switch (t) {
+					case TClassDecl(cRef):
+						final c = cRef.get();
+
+						if (!moduleToClasses.exists(c.module)) moduleToClasses.set(c.module, []);
+						final list = moduleToClasses.get(c.module);
+						if (list != null) list.push(c);
+
+						// Skip upstream stdlib for now; we only virtualize user/repo classes.
+						if (isPosInHaxeStd(c.pos)) continue;
+						if (c.superClass != null) {
+							markChain(c);
+						}
+					case _:
+				}
+			}
+
+			for (moduleId => list in moduleToClasses) {
+				if (list == null || list.length == 0) continue;
+				final base = OcamlNameTools.moduleBaseName(moduleId);
+				var primary:Null<String> = null;
+				for (c in list) {
+					if (c.name == base) {
+						primary = c.name;
+						break;
+					}
+				}
+				if (primary == null) primary = list[0].name;
+				if (primary != null) ctx.primaryTypeNameByModule.set(moduleId, primary);
+			}
+		});
+		#end
 	}
 
 	public override function generateOutputIterator():Iterator<DataAndFileInfo<reflaxe.output.StringOrBytes>> {
@@ -240,6 +304,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	):Null<String> {
 		ctx.emittedHaxeModules.set(classType.module, true);
 		ctx.currentModuleId = classType.module;
+		ctx.currentTypeName = classType.name;
 		ctx.variableRenameMap.clear();
 		ctx.assignedVars.clear();
 		#if macro
@@ -258,6 +323,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 		}
 
 		final fullName = (classType.pack ?? []).concat([classType.name]).join(".");
+		ctx.currentTypeFullName = fullName;
+		if (classType.superClass != null) {
+			final sup = classType.superClass.t.get();
+			ctx.currentSuperFullName = (sup.pack ?? []).concat([sup.name]).join(".");
+			ctx.currentSuperModuleId = sup.module;
+			ctx.currentSuperTypeName = sup.name;
+		} else {
+			ctx.currentSuperFullName = null;
+			ctx.currentSuperModuleId = null;
+			ctx.currentSuperTypeName = null;
+		}
 
 		// Guardrails (M5.6.4): fail fast for OO features we haven't implemented.
 		#if macro
@@ -266,12 +342,6 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			if (classType.isInterface) {
 				problems.push("interfaces");
-			}
-
-			if (classType.superClass != null) {
-				final sup = classType.superClass.t.get();
-				final supName = (sup.pack ?? []).concat([sup.name]).join(".");
-				problems.push("inheritance (extends " + supName + ")");
 			}
 
 			if (classType.interfaces != null && classType.interfaces.length > 0) {
@@ -283,13 +353,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 
 			if (problems.length > 0) {
-				haxe.macro.Context.error(
-					"reflaxe.ocaml (M5): unsupported OO feature(s) in '" + fullName + "': " + problems.join("; ")
-					+ ".\nSupported for now: flat classes (fields + methods) without extends/implements. (bd: haxe.ocaml-28t.6.4)",
-					classType.pos
-				);
+					haxe.macro.Context.error(
+						"reflaxe.ocaml (M5): unsupported OO feature(s) in '" + fullName + "': " + problems.join("; ")
+						+ ".\nSupported for now: single inheritance (`extends`) but no interfaces/implements. (bd: haxe.ocaml-dwt.1.2)",
+						classType.pos
+					);
+				}
 			}
-		}
 		#end
 
 		final items:Array<OcamlModuleItem> = [];
@@ -319,29 +389,200 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-		final hasInstanceSurface = hasInstanceVars || instanceMethods.length > 0 || ctorFunc != null;
-		if (hasInstanceSurface) {
-			final typeFields:Array<OcamlTypeRecordField> = hasInstanceVars
-				? instanceVars.map(v -> ({
-					name: v.field.name,
-					isMutable: true,
-					typ: ocamlTypeExprFromHaxeType(v.field.type)
-				}))
-				: [];
+			final hasInstanceSurface = hasInstanceVars || instanceMethods.length > 0 || ctorFunc != null;
+			if (hasInstanceSurface) {
+				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
+				final createName = ctx.scopedValueName(classType.module, classType.name, "create");
+				final ctorName = ctx.scopedValueName(classType.module, classType.name, "__ctor");
 
-			final typeDecl:OcamlTypeDecl = {
-				name: "t",
-				params: [],
-				kind: hasInstanceVars
-					? OcamlTypeDeclKind.Record(typeFields)
-					: OcamlTypeDeclKind.Alias(OcamlTypeExpr.TIdent("unit"))
-			};
-			items.push(OcamlModuleItem.IType([typeDecl], false));
+				final isVirtual = (!ctx.currentIsHaxeStd) && ctx.virtualTypes.exists(fullName);
 
-			// create: allocate record, run ctor body, return self
-			var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
-			var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
-			if (ctorFunc != null && ctorFunc.expr != null) {
+				// For virtual dispatch we need a list of all visible instance methods (including inherited)
+				// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
+				final virtualMethodOrder:Array<String> = [];
+				final virtualMethodDecl:Map<String, { owner:ClassType, field:ClassField }> = [];
+				if (isVirtual) {
+					function chainFromRoot(c:ClassType):Array<ClassType> {
+						final chain:Array<ClassType> = [];
+						var cur:Null<ClassType> = c;
+						var guard = 0;
+						while (cur != null && guard++ < 64) {
+							chain.push(cur);
+							cur = cur.superClass != null ? cur.superClass.t.get() : null;
+						}
+						chain.reverse();
+						return chain;
+					}
+
+					function declaredInstanceMethodFields(c:ClassType):Array<ClassField> {
+						final out:Array<ClassField> = [];
+						for (cf in c.fields.get()) {
+							if (cf == null) continue;
+							if (cf.name == "new") continue;
+							switch (cf.kind) {
+								case FMethod(_):
+									out.push(cf);
+								case _:
+							}
+						}
+						return out;
+					}
+
+					final chain = chainFromRoot(classType);
+					final seen:Map<String, Bool> = [];
+					for (c in chain) {
+						for (cf in declaredInstanceMethodFields(c)) {
+							if (seen.exists(cf.name)) continue;
+							seen.set(cf.name, true);
+							virtualMethodOrder.push(cf.name);
+						}
+					}
+					// Most-derived declaration wins (override).
+					for (c in chain) {
+						for (cf in declaredInstanceMethodFields(c)) {
+							virtualMethodDecl.set(cf.name, { owner: c, field: cf });
+						}
+					}
+				}
+
+				final isVirtualInstance = isVirtual && virtualMethodOrder.length > 0;
+				function exprMentionsIdent(e:OcamlExpr, target:String):Bool {
+					function any(exprs:Array<OcamlExpr>):Bool {
+						for (x in exprs) if (exprMentionsIdent(x, target)) return true;
+						return false;
+					}
+					return switch (e) {
+						case EIdent(n):
+							n == target;
+						case EConst(_):
+							false;
+						case ERaw(_):
+							false;
+						case ERaise(exn):
+							exprMentionsIdent(exn, target);
+						case ELet(_, value, body, _):
+							exprMentionsIdent(value, target) || exprMentionsIdent(body, target);
+						case EFun(_, body):
+							exprMentionsIdent(body, target);
+						case EApp(fn, args):
+							exprMentionsIdent(fn, target) || any(args);
+						case EAppArgs(fn, args):
+							exprMentionsIdent(fn, target) || any(args.map(a -> a.expr));
+						case EBinop(_, left, right):
+							exprMentionsIdent(left, target) || exprMentionsIdent(right, target);
+						case EUnop(_, expr):
+							exprMentionsIdent(expr, target);
+						case EIf(cond, thenExpr, elseExpr):
+							exprMentionsIdent(cond, target) || exprMentionsIdent(thenExpr, target) || exprMentionsIdent(elseExpr, target);
+						case EMatch(scrutinee, cases):
+							if (exprMentionsIdent(scrutinee, target)) {
+								true;
+							} else {
+								var found = false;
+								for (c in cases) {
+									if (exprMentionsIdent(c.expr, target)) {
+										found = true;
+										break;
+									}
+									if (c.guard != null && exprMentionsIdent(c.guard, target)) {
+										found = true;
+										break;
+									}
+								}
+								found;
+							}
+						case ETry(body, cases):
+							if (exprMentionsIdent(body, target)) {
+								true;
+							} else {
+								var found = false;
+								for (c in cases) {
+									if (exprMentionsIdent(c.expr, target)) {
+										found = true;
+										break;
+									}
+									if (c.guard != null && exprMentionsIdent(c.guard, target)) {
+										found = true;
+										break;
+									}
+								}
+								found;
+							}
+						case ESeq(exprs):
+							any(exprs);
+						case EWhile(cond, body):
+							exprMentionsIdent(cond, target) || exprMentionsIdent(body, target);
+						case EList(items):
+							any(items);
+						case ERecord(fields):
+							any(fields.map(f -> f.value));
+						case EField(expr, _):
+							exprMentionsIdent(expr, target);
+						case EAssign(_, lhs, rhs):
+							exprMentionsIdent(lhs, target) || exprMentionsIdent(rhs, target);
+						case ETuple(items):
+							any(items);
+						case EAnnot(expr, _):
+							exprMentionsIdent(expr, target);
+					}
+				}
+
+				final typeFields:Array<OcamlTypeRecordField> = [];
+				if (hasInstanceVars) {
+					for (v in instanceVars) {
+						typeFields.push({
+							name: v.field.name,
+							isMutable: true,
+							typ: ocamlTypeExprFromHaxeType(v.field.type)
+						});
+					}
+				}
+				if (isVirtualInstance) {
+					function buildVirtualMethodType(haxeMethodType:Type):OcamlTypeExpr {
+						final selfT = OcamlTypeExpr.TIdent(instanceTypeName);
+						return switch (haxeMethodType) {
+							case TFun(args, ret):
+								var outT = ocamlTypeExprFromHaxeType(ret);
+								if (args.length == 0) {
+									// Calling convention: `foo()` always supplies `unit` at the callsite in OCaml.
+									outT = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), outT);
+								} else {
+									for (i in 0...args.length) {
+										final a = args[args.length - 1 - i];
+										outT = OcamlTypeExpr.TArrow(ocamlTypeExprFromHaxeType(a.t), outT);
+									}
+								}
+								OcamlTypeExpr.TArrow(selfT, outT);
+							case _:
+								// Should not happen for methods; fall back to a permissive type.
+								OcamlTypeExpr.TIdent("Obj.t");
+						}
+					}
+
+					for (name in virtualMethodOrder) {
+						final info = virtualMethodDecl.get(name);
+						if (info == null) continue;
+						typeFields.push({
+							name: name,
+							isMutable: false,
+							typ: buildVirtualMethodType(info.field.type)
+						});
+					}
+				}
+
+				final typeDecl:OcamlTypeDecl = {
+					name: instanceTypeName,
+					params: [],
+					kind: (hasInstanceVars || isVirtualInstance)
+						? OcamlTypeDeclKind.Record(typeFields)
+						: OcamlTypeDeclKind.Alias(OcamlTypeExpr.TIdent("unit"))
+				};
+				items.push(OcamlModuleItem.IType([typeDecl], false));
+
+				// create: allocate record, run ctor body, return self
+				var createParams:Array<OcamlPat> = [OcamlPat.PConst(OcamlConst.CUnit)];
+				var ctorBody:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
+				if (ctorFunc != null && ctorFunc.expr != null) {
 				final argInfo = ctorFunc.args.map(a -> ({
 					id: a.tvar != null ? a.tvar.id : -1,
 					name: a.getName()
@@ -354,14 +595,39 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-			final selfInit:OcamlExpr = if (hasInstanceVars) {
+			final selfInit:OcamlExpr = if (hasInstanceVars || isVirtualInstance) {
 				final fields:Array<OcamlRecordField> = [];
 				for (v in instanceVars) {
 					final init = v.findDefaultExpr();
 					final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
 					fields.push({ name: v.field.name, value: value });
 				}
-				OcamlExpr.ERecord(fields);
+				if (isVirtualInstance) {
+					inline function fullNameOf(c:ClassType):String {
+						return (c.pack ?? []).concat([c.name]).join(".");
+					}
+					for (name in virtualMethodOrder) {
+						final info = virtualMethodDecl.get(name);
+						if (info == null) continue;
+						final owner = info.owner;
+						final ownerBinding = ctx.scopedValueName(owner.module, owner.name, name + "__impl");
+						final ownerExpr = owner.module == classType.module
+							? OcamlExpr.EIdent(ownerBinding)
+							: OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)), ownerBinding);
+						final value = (fullNameOf(owner) == fullName)
+							? ownerExpr
+							: OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [ownerExpr]);
+						fields.push({ name: name, value: value });
+					}
+				}
+
+				// Dune defaults can be warning-as-error; avoid `unused-var-strict` for `self`
+				// by forcing a use when the body doesn't reference it.
+				if (isVirtualInstance && !exprMentionsIdent(ctorBody, "self")) {
+					ctorBody = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody]);
+				}
+				final recordExpr = OcamlExpr.ERecord(fields);
+				isVirtualInstance ? OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName)) : recordExpr;
 			} else {
 				OcamlExpr.EConst(OcamlConst.CUnit);
 			}
@@ -372,7 +638,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 				OcamlExpr.ESeq([ctorBody, OcamlExpr.EIdent("self")]),
 				false
 			);
-			lets.push({ name: "create", expr: OcamlExpr.EFun(createParams, createBody) });
+			lets.push({ name: createName, expr: OcamlExpr.EFun(createParams, createBody) });
+
+			// Virtual constructor function (used by `super()` lowering). This intentionally mirrors
+			// the constructor body used in `create`, but takes `self` explicitly.
+			if (isVirtualInstance) {
+				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
+				lets.push({ name: ctorName, expr: OcamlExpr.EFun([selfPat].concat(createParams), ctorBody) });
+			}
 
 			for (f in instanceMethods) {
 				final compiled = {
@@ -382,12 +655,31 @@ class OcamlCompiler extends DirectToStringCompiler {
 					}));
 					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
 						case OcamlExpr.EFun(params, b):
-							OcamlExpr.EFun([OcamlPat.PVar("self")].concat(params), b);
+							final body = (isVirtualInstance && !exprMentionsIdent(b, "self"))
+								? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b])
+								: b;
+							OcamlExpr.EFun([OcamlPat.PVar("self")].concat(params), body);
 						case _:
 							OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
 					}
 				};
-				lets.push({ name: f.field.name, expr: compiled });
+				final methodName = isVirtualInstance
+					? ctx.scopedValueName(classType.module, classType.name, f.field.name + "__impl")
+					: ctx.scopedValueName(classType.module, classType.name, f.field.name);
+				final adjusted = if (isVirtualInstance) {
+					// Annotate `self` to avoid ambiguous record labels when multiple class records exist in a module.
+					switch (compiled) {
+						case OcamlExpr.EFun(params, body):
+							final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
+							final rest = params.length > 0 ? params.slice(1) : [];
+							OcamlExpr.EFun([selfPat].concat(rest), body);
+						case _:
+							compiled;
+					}
+				} else {
+					compiled;
+				}
+				lets.push({ name: methodName, expr: adjusted });
 			}
 		}
 
@@ -396,7 +688,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			if (f.expr == null) continue;
 			if (!f.isStatic) continue;
 
-			final name = f.field.name;
+			final name = ctx.scopedValueName(classType.module, classType.name, f.field.name);
 			final argInfo = f.args.map(a -> ({
 				id: a.tvar != null ? a.tvar.id : -1,
 				name: a.getName()
@@ -859,31 +1151,35 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		function isBound(n:String):Bool return bound.exists(n);
 
-		function collectPatNames(p:OcamlPat, acc:Array<String>):Void {
-			switch (p) {
-				case PAny:
-				case PVar(n):
-					acc.push(n);
-				case PTuple(items):
-					for (i in items) collectPatNames(i, acc);
-				case PRecord(fields):
-					for (f in fields) collectPatNames(f.pat, acc);
-				case PConstructor(_, args):
-					for (a in args) collectPatNames(a, acc);
-				case POr(items):
-					for (i in items) collectPatNames(i, acc);
-				case PConst(_):
+			function collectPatNames(p:OcamlPat, acc:Array<String>):Void {
+				switch (p) {
+					case PAny:
+					case PVar(n):
+						acc.push(n);
+					case PTuple(items):
+						for (i in items) collectPatNames(i, acc);
+					case PRecord(fields):
+						for (f in fields) collectPatNames(f.pat, acc);
+					case PConstructor(_, args):
+						for (a in args) collectPatNames(a, acc);
+					case POr(items):
+						for (i in items) collectPatNames(i, acc);
+					case PAnnot(pat, _):
+						collectPatNames(pat, acc);
+					case PConst(_):
+				}
 			}
-		}
 
-		function visit(e:OcamlExpr):Void {
-			switch (e) {
-				case EConst(_):
-				case ERaw(_):
-				case ERaise(exn):
-					visit(exn);
-				case EIdent(n):
-					if (!isBound(n) && want.exists(n)) out.set(n, true);
+			function visit(e:OcamlExpr):Void {
+				switch (e) {
+					case EConst(_):
+					case ERaw(_):
+					case EAnnot(expr, _):
+						visit(expr);
+					case ERaise(exn):
+						visit(exn);
+					case EIdent(n):
+						if (!isBound(n) && want.exists(n)) out.set(n, true);
 				case ELet(n, value, body, isRec):
 					if (isRec) {
 						boundAdd(n);
