@@ -70,6 +70,12 @@ echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing haxe.io.Path"
 echo "$out" | grep -vq "stage1=warn import_missing StringTools"
 
+echo "== Stage1 bring-up: infer std from env (HAXE_STD_PATH)"
+out="$(HAXE_STD_PATH="$tmpdir/fake_std" "$HXHX_BIN" --hxhx-stage1 --class-path "$tmpdir/src" --main Main --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+echo "$out" | grep -vq "stage1=warn import_missing haxe.io.Path"
+echo "$out" | grep -vq "stage1=warn import_missing StringTools"
+
 echo "== Stage1 bring-up: accepts .hxml"
 cat >"$tmpdir/build.hxml" <<HX
 # Minimal Stage1 build file

@@ -261,8 +261,25 @@ class Stage1Args {
 		}
 
 		if (classPaths.length == 0) classPaths.push(".");
+		if (stdRoot == null || stdRoot.length == 0) stdRoot = inferStdRoot();
 		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
 		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros, cwd);
+	}
+
+	static function inferStdRoot():String {
+		try {
+			final direct = Sys.getEnv("HAXE_STD_PATH");
+			if (direct != null && direct.length > 0 && sys.FileSystem.exists(direct) && sys.FileSystem.isDirectory(direct)) {
+				return direct;
+			}
+
+			final haxePath = Sys.getEnv("HAXEPATH");
+			if (haxePath != null && haxePath.length > 0) {
+				final candidate = haxe.io.Path.normalize(haxe.io.Path.join([haxePath, "std"]));
+				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) return candidate;
+			}
+		} catch (_:Dynamic) {}
+		return "";
 	}
 
 	static function expandHxmlArgs(args:Array<String>):Null<Array<String>> {
