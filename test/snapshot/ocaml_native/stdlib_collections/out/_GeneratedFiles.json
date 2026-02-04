@@ -1,0 +1,23 @@
+{
+	"filesGenerated": [
+		"ocaml_Seq.ml",
+		"ocaml_Hashtbl.ml",
+		"ocaml_Char.ml",
+		"ocaml_Bytes.ml",
+		"ocaml_Array.ml",
+		"haxe_iterators_ArrayKeyValueIterator.ml",
+		"haxe_iterators_ArrayIterator.ml",
+		"haxe_NativeStackTrace.ml",
+		"haxe_Exception.ml",
+		"haxe_CallStack.ml",
+		"Type.ml",
+		"StringBuf.ml",
+		"Main.ml",
+		"IntIterator.ml",
+		"EnumValue.ml",
+		"Any.ml"
+	],
+	"id": 1,
+	"wasCached": false,
+	"version": 1
+}
