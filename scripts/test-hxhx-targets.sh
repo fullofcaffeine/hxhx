@@ -54,6 +54,33 @@ echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main --no-output -D stage1_test=1 -lib reflaxe.ocaml --macro 'trace(\"ignored\")')"
 echo "$out" | grep -q "^stage1=ok$"
 
+echo "== Stage1 bring-up: accepts .hxml"
+cat >"$tmpdir/build.hxml" <<HX
+# Minimal Stage1 build file
+-cp $tmpdir/src
+-main Main
+--no-output
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 "$tmpdir/build.hxml")"
+echo "$out" | grep -q "^stage1=ok$"
+
+echo "== Stage1 bring-up: rejects --next"
+cat >"$tmpdir/build_next.hxml" <<HX
+-cp $tmpdir/src
+-main Main
+--no-output
+--next
+HX
+set +e
+out="$("$HXHX_BIN" --hxhx-stage1 "$tmpdir/build_next.hxml" 2>&1)"
+code=$?
+set -e
+if [ "$code" -eq 0 ]; then
+  echo "Expected failure, but stage1 succeeded." >&2
+  exit 1
+fi
+echo "$out" | grep -q "unsupported hxml directive: --next"
+
 echo "== Contradiction fails fast"
 set +e
 out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"

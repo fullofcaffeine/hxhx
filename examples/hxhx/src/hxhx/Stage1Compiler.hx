@@ -152,6 +152,9 @@ class Stage1Args {
 	}
 
 	public static function parse(args:Array<String>):Null<Stage1Args> {
+		final expanded = expandHxmlArgs(args);
+		if (expanded == null) return null;
+
 		final classPaths = new Array<String>();
 		var main = "";
 		var noOutput = false;
@@ -160,43 +163,43 @@ class Stage1Args {
 		final macros = new Array<String>();
 
 		var i = 0;
-		while (i < args.length) {
-			final a = args[i];
+		while (i < expanded.length) {
+			final a = expanded[i];
 			switch (a) {
 				case "-cp", "-p":
-					if (i + 1 >= args.length) {
+					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after " + a);
 						return null;
 					}
-					classPaths.push(args[i + 1]);
+					classPaths.push(expanded[i + 1]);
 					i += 2;
 				case "-main":
-					if (i + 1 >= args.length) {
+					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after -main");
 						return null;
 					}
-					main = args[i + 1];
+					main = expanded[i + 1];
 					i += 2;
 				case "-D":
-					if (i + 1 >= args.length) {
+					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after -D");
 						return null;
 					}
-					defines.push(args[i + 1]);
+					defines.push(expanded[i + 1]);
 					i += 2;
 				case "-lib":
-					if (i + 1 >= args.length) {
+					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after -lib");
 						return null;
 					}
-					libs.push(args[i + 1]);
+					libs.push(expanded[i + 1]);
 					i += 2;
 				case "--macro":
-					if (i + 1 >= args.length) {
+					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after --macro");
 						return null;
 					}
-					macros.push(args[i + 1]);
+					macros.push(expanded[i + 1]);
 					i += 2;
 				case "--no-output":
 					noOutput = true;
@@ -210,7 +213,6 @@ class Stage1Args {
 						Sys.println("hxhx(stage1): unsupported flag: " + a);
 						return null;
 					}
-					// HXML file arguments are not supported yet.
 					Sys.println("hxhx(stage1): unsupported argument: " + a);
 					return null;
 			}
@@ -218,6 +220,31 @@ class Stage1Args {
 
 		if (classPaths.length == 0) classPaths.push(".");
 		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros);
+	}
+
+	static function expandHxmlArgs(args:Array<String>):Null<Array<String>> {
+		var sawHxml = false;
+		final out = new Array<String>();
+
+		for (a in args) {
+			if (a == null || a.length == 0) continue;
+
+			if (!StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
+				sawHxml = true;
+				if (!sys.FileSystem.exists(a) || sys.FileSystem.isDirectory(a)) {
+					Sys.println("hxhx(stage1): hxml path is not a file: " + a);
+					return null;
+				}
+				final expanded = Hxml.parseFile(a);
+				if (expanded == null) return null;
+				for (t in expanded) out.push(t);
+				continue;
+			}
+
+			out.push(a);
+		}
+
+		return sawHxml ? out : args;
 	}
 }
 
