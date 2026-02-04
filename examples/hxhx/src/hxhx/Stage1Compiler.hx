@@ -33,6 +33,15 @@ class Stage1Compiler {
 		return 2;
 	}
 
+	static function formatParseError(e:Dynamic):String {
+		// Prefer structured parse errors when available.
+		if (Std.isOfType(e, HxParseError)) {
+			final pe:HxParseError = cast e;
+			return pe.toString();
+		}
+		return Std.string(e);
+	}
+
 	public static function run(args:Array<String>):Int {
 		final parsed = Stage1Args.parse(args);
 		if (parsed == null) return 2;
@@ -50,7 +59,11 @@ class Stage1Compiler {
 		final source = try sys.io.File.getContent(resolved.path) catch (_:Dynamic) null;
 		if (source == null) return error("failed to read: " + resolved.path);
 
-		final decl = ParserStage.parse(source).getDecl();
+		final decl = try {
+			ParserStage.parse(source).getDecl();
+		} catch (e:Dynamic) {
+			return error("parse failed: " + formatParseError(e));
+		}
 		if (decl.mainClass.name != resolved.className) {
 			return error('expected main class "' + resolved.className + '" but parsed "' + decl.mainClass.name + '" in ' + resolved.path);
 		}
@@ -59,6 +72,46 @@ class Stage1Compiler {
 		}
 		if (!decl.mainClass.hasStaticMain) {
 			return error('missing "static function main" in ' + parsed.main);
+		}
+
+		// Stage1 graph bring-up: parse a small, explicit import closure.
+		//
+		// This is best-effort and intentionally incomplete:
+		// - wildcard imports are ignored
+		// - aliases / import modifiers are not supported yet
+		for (imp in decl.imports) {
+			if (imp == null || imp.length == 0) continue;
+			if (StringTools.endsWith(imp, ".*")) {
+				Sys.println("stage1=warn import_wildcard " + imp);
+				continue;
+			}
+
+			final impResolved = Stage1Resolver.resolveModule(parsed.classPaths, imp);
+			if (impResolved == null) {
+				Sys.println("stage1=warn import_missing " + imp);
+				continue;
+			}
+
+			final impSrc = try sys.io.File.getContent(impResolved.path) catch (_:Dynamic) null;
+			if (impSrc == null) {
+				Sys.println("stage1=warn import_unreadable " + impResolved.path);
+				continue;
+			}
+
+			final impDecl = try {
+				ParserStage.parse(impSrc).getDecl();
+			} catch (e:Dynamic) {
+				return error('parse failed for import "' + imp + '": ' + formatParseError(e));
+			}
+
+			if (impDecl.mainClass.name != impResolved.className) {
+				Sys.println("stage1=warn import_class_mismatch " + imp);
+				continue;
+			}
+			if ((impDecl.packagePath ?? "") != impResolved.packagePath) {
+				Sys.println("stage1=warn import_package_mismatch " + imp);
+				continue;
+			}
 		}
 
 		Sys.println("stage1=ok");
@@ -201,6 +254,28 @@ class Stage1Resolver {
 
 		Sys.println("hxhx(stage1): could not find main module for -main " + main);
 		for (cp in classPaths) Sys.println("  searched: " + normalizeSep(cp));
+		return null;
+	}
+
+	public static function resolveModule(classPaths:Array<String>, modulePath:String):Null<{
+		path:String,
+		packagePath:String,
+		className:String,
+	}> {
+		// For now, treat module path and class path as equivalent: `a.b.C` -> `a/b/C.hx`.
+		final parts = modulePath.split(".");
+		if (parts.length == 0) return null;
+		final className = parts[parts.length - 1];
+		final pkgParts = parts.slice(0, parts.length - 1);
+		final pkg = pkgParts.join(".");
+
+		for (cp in classPaths) {
+			final pieces = [cp].concat(pkgParts).concat([className + ".hx"]);
+			final candidate = joinPath(pieces);
+			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
+				return { path: candidate, packagePath: pkg, className: className };
+			}
+		}
 		return null;
 	}
 }

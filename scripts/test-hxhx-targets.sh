@@ -25,10 +25,19 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 mkdir -p "$tmpdir/src"
 cat >"$tmpdir/src/Main.hx" <<'HX'
+import Util;
+
 class Main {
   static function main() {
+    Util.ping();
     Sys.println("ok");
   }
+}
+HX
+
+cat >"$tmpdir/src/Util.hx" <<'HX'
+class Util {
+  public static function ping() {}
 }
 HX
 
