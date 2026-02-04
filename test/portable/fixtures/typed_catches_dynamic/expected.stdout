@@ -1,0 +1,5 @@
+catch_enum=A
+catch_bool=true
+catch_int=123
+catch_float=1.5
+catch_string=hi

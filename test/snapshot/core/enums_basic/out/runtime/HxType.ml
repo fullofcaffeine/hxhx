@@ -143,17 +143,34 @@ let getClass (o : Obj.t) : Obj.t =
       HxRuntime.hx_null
 
 let tags_for_value (o : Obj.t) : string list =
-  let c = getClass o in
-  if HxRuntime.is_null c then
+  if HxRuntime.is_null o then
     []
+  else if HxRuntime.is_boxed_bool o then
+    [ "Bool" ]
+  else if Obj.is_int o then
+    (* Note: booleans carried as `Obj.t` must be boxed via `HxRuntime.box_bool`. *)
+    [ "Int" ]
   else
-    let name = getClassName c in
-    if HxRuntime.is_null (Obj.repr name) then
-      []
+    let tag = Obj.tag o in
+    if tag = Obj.string_tag then
+      [ "String" ]
+    else if tag = Obj.double_tag then
+      [ "Float" ]
     else
-      match Hashtbl.find_opt class_tags name with
-      | Some tags -> tags
-      | None -> []
+      match HxEnum.name_opt o with
+      | Some name -> [ name ]
+      | None ->
+          let c = getClass o in
+          if HxRuntime.is_null c then
+            []
+          else
+            let name = getClassName c in
+            if HxRuntime.is_null (Obj.repr name) then
+              []
+            else
+              match Hashtbl.find_opt class_tags name with
+              | Some tags -> tags
+              | None -> []
 
 (* `Std.isOfType` support (best-effort).
 
@@ -180,6 +197,14 @@ let isOfType (v : Obj.t) (t : Obj.t) : bool =
         getClassName (getClass v) = target
       else
         List.exists (fun x -> x = target) tags
+  else if is_type_value enum_marker t then
+    let target = getEnumName t in
+    if HxRuntime.is_null (Obj.repr target) then
+      false
+    else (
+      match HxEnum.name_opt v with
+      | Some name -> name = target
+      | None -> false)
   else
     false
 

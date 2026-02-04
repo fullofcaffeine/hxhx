@@ -28,6 +28,37 @@ let hx_null : Obj.t = Obj.repr (ref 0)
 let is_null (v : Obj.t) : bool =
   v == hx_null
 
+(* Boxing for booleans stored as `Obj.t`.
+
+   Why:
+   - OCaml represents `bool` and `int` as immediates. If we store `true` as
+     `Obj.repr true`, it is indistinguishable from the integer `1`.
+   - Typed catches (`catch (e:Bool)`) and `Std.isOfType` must never confuse a
+     boolean with an integer.
+
+   Strategy:
+   - Any time a Haxe boolean needs to be represented as `Obj.t`, codegen should
+     use `box_bool`.
+   - Runtime helpers treat boxed booleans as booleans and do not rely on the
+     immediate representation. *)
+
+let bool_box_marker : Obj.t = Obj.repr (ref 0)
+
+let is_boxed_bool (v : Obj.t) : bool =
+  (not (Obj.is_int v)) && Obj.size v = 2 && Obj.field v 0 == bool_box_marker
+
+let box_bool (b : bool) : Obj.t =
+  let o = Obj.new_block 0 2 in
+  Obj.set_field o 0 bool_box_marker;
+  Obj.set_field o 1 (Obj.repr b);
+  o
+
+let unbox_bool_or_obj (v : Obj.t) : bool =
+  if is_boxed_bool v then
+    Obj.obj (Obj.field v 1)
+  else
+    Obj.obj v
+
 (* Nullable primitives
 
    Haxe allows `Null<Int>`, `Null<Float>`, and `Null<Bool>` to represent either:
@@ -59,7 +90,7 @@ let nullable_bool_toStdString (v : Obj.t) : string =
   if is_null v then
     "null"
   else
-    string_of_bool (Obj.obj v)
+    string_of_bool (unbox_bool_or_obj v)
 
 let nullable_int_unwrap (v : Obj.t) : int =
   if is_null v then
@@ -77,7 +108,7 @@ let nullable_bool_unwrap (v : Obj.t) : bool =
   if is_null v then
     failwith "Null<Bool> unwrap"
   else
-    Obj.obj v
+    unbox_bool_or_obj v
 
 (* Best-effort `Std.string` for values stored as `Obj.t`.
 
@@ -91,6 +122,8 @@ let nullable_bool_unwrap (v : Obj.t) : bool =
 let dynamic_toStdString (v : Obj.t) : string =
   if is_null v then
     "null"
+  else if is_boxed_bool v then
+    string_of_bool (unbox_bool_or_obj v)
   else if Obj.is_int v then
     string_of_int (Obj.obj v)
   else

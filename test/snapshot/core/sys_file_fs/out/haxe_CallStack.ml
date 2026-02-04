@@ -60,9 +60,9 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
       tempResult := __assign_26;
       __assign_26
     )
-    | 2 -> let _g = Obj.obj (let __enum_param_28 = item1 in if __enum_param_28 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_28 with
+    | 2 -> let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (let __enum_param_28 = item1 in if __enum_param_28 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_28 with
       | FilePos (__enum_param_27, _, _, _) -> __enum_param_27
-      | _ -> failwith "Unexpected enum parameter") in let _g1 = let __enum_param_30 = item1 in if __enum_param_30 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_30 with
+      | _ -> failwith "Unexpected enum parameter")) in let _g1 = let __enum_param_30 = item1 in if __enum_param_30 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_30 with
       | FilePos (_, __enum_param_29, _, _) -> __enum_param_29
       | _ -> failwith "Unexpected enum parameter" in let _g2 = let __enum_param_32 = item1 in if __enum_param_32 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_32 with
       | FilePos (_, _, __enum_param_31, _) -> __enum_param_31
@@ -76,15 +76,15 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
       | Module _ -> 1
       | FilePos (_, _, _, _) -> 2
       | Method (_, _) -> 3
-      | LocalFunction _ -> 4) = 2 then let _g4 = Obj.obj (let __enum_param_38 = item2 in if __enum_param_38 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_38 with
+      | LocalFunction _ -> 4) = 2 then let _g4 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (let __enum_param_38 = item2 in if __enum_param_38 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_38 with
       | FilePos (__enum_param_37, _, _, _) -> __enum_param_37
-      | _ -> failwith "Unexpected enum parameter") in let _g5 = let __enum_param_40 = item2 in if __enum_param_40 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_40 with
+      | _ -> failwith "Unexpected enum parameter")) in let _g5 = let __enum_param_40 = item2 in if __enum_param_40 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_40 with
       | FilePos (_, __enum_param_39, _, _) -> __enum_param_39
       | _ -> failwith "Unexpected enum parameter" in let _g6 = let __enum_param_42 = item2 in if __enum_param_42 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42 with
       | FilePos (_, _, __enum_param_41, _) -> __enum_param_41
       | _ -> failwith "Unexpected enum parameter" in let _g7 = let __enum_param_44 = item2 in if __enum_param_44 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_44 with
       | FilePos (_, _, _, __enum_param_43) -> __enum_param_43
-      | _ -> failwith "Unexpected enum parameter" in let item3 = Obj.obj _g4 in let file2 = _g5 in let line2 = _g6 in let col2 = _g7 in let col1 = _g3 in let line1 = _g2 in let file1 = _g1 in let item4 = Obj.obj _g in let __assign_45 = HxString.equals file1 file2 && line1 = line2 && (let __nullable_46 = col1 in let __nullable_47 = col2 in if __nullable_46 == HxRuntime.hx_null then __nullable_46 == HxRuntime.hx_null && __nullable_47 == HxRuntime.hx_null else not (__nullable_47 == HxRuntime.hx_null) && Obj.obj __nullable_46 = Obj.obj __nullable_47) && equalItems (Obj.obj item4) (Obj.obj item3) in (
+      | _ -> failwith "Unexpected enum parameter" in let item3 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g4) in let file2 = _g5 in let line2 = _g6 in let col2 = _g7 in let col1 = _g3 in let line1 = _g2 in let file1 = _g1 in let item4 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let __assign_45 = HxString.equals file1 file2 && line1 = line2 && (let __nullable_46 = col1 in let __nullable_47 = col2 in if __nullable_46 == HxRuntime.hx_null then __nullable_46 == HxRuntime.hx_null && __nullable_47 == HxRuntime.hx_null else not (__nullable_47 == HxRuntime.hx_null) && Obj.obj __nullable_46 = Obj.obj __nullable_47) && equalItems (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" item4)) (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" item3)) in (
       tempResult := __assign_45;
       __assign_45
     ) else let __assign_48 = false in (
@@ -147,7 +147,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
       ignore (try while !_g < _g1 do try ignore (let j = let __old_5 = !_g in let __new_6 = __old_5 + 1 in (
         ignore (_g := __new_6);
         __old_5
-      ) in if equalItems (Obj.repr (HxArray.get this1 (!i))) (Obj.repr (HxArray.get stack j)) then ignore ((
+      ) in if equalItems (HxEnum.box "haxe.StackItem" (Obj.repr (HxArray.get this1 (!i)))) (HxEnum.box "haxe.StackItem" (Obj.repr (HxArray.get stack j))) then ignore ((
         ignore (if !startIndex < 0 then ignore (let __assign_7 = !i in (
           startIndex := __assign_7;
           __assign_7
@@ -186,9 +186,9 @@ let rec itemToString = fun b s -> match s with
     ignore (StringBuf.add b "module ");
     StringBuf.add b m
   )
-  | FilePos (_p0, _p1, _p2, _p3) -> let _g = Obj.obj _p0 in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj _g in let file = _g1 in let line = _g2 in let col = _g3 in (
+  | FilePos (_p0, _p1, _p2, _p3) -> let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _p0) in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let file = _g1 in let line = _g2 in let col = _g3 in (
     ignore (if s2 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (itemToString b (Obj.obj s2));
+      ignore (itemToString b (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" s2)));
       StringBuf.add b " ("
     )) else ());
     ignore (StringBuf.add b file);
