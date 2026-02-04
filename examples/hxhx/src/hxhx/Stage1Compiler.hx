@@ -186,7 +186,7 @@ class Stage1Args {
 		while (i < expanded.length) {
 			final a = expanded[i];
 			switch (a) {
-				case "-cp", "-p":
+				case "-cp", "-p", "--class-path":
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after " + a);
 						return null;
@@ -200,7 +200,7 @@ class Stage1Args {
 					}
 					cwd = expanded[i + 1];
 					i += 2;
-				case "-main":
+				case "-main", "--main":
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after -main");
 						return null;
@@ -217,6 +217,13 @@ class Stage1Args {
 				case "-lib":
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after -lib");
+						return null;
+					}
+					libs.push(expanded[i + 1]);
+					i += 2;
+				case "--library":
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --library");
 						return null;
 					}
 					libs.push(expanded[i + 1]);
