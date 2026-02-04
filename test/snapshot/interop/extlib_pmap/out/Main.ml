@@ -4,11 +4,7 @@
 
 let __reflaxe_ocaml__ = ()
 
-let main = fun () -> let m = ref (PMap.empty) in (
-  ignore (let __assign_1 = PMap.add (Obj.repr 1) (Obj.repr "one") (Obj.repr (!m)) in (
-    m := __assign_1;
-    __assign_1
-  ));
-  ignore (print_endline (HxString.toStdString (Obj.obj (PMap.find (Obj.repr 1) (Obj.repr (!m))))));
-  print_endline (HxString.toStdString (string_of_bool (PMap.mem (Obj.repr 2) (Obj.repr (!m)))))
+let main = fun () -> let m = PMap.empty in let m = PMap.add (Obj.repr 1) (Obj.repr "one") (Obj.repr m) in (
+  ignore (print_endline (HxString.toStdString (Obj.obj (PMap.find (Obj.repr 1) (Obj.repr m)))));
+  print_endline (HxString.toStdString (string_of_bool (PMap.mem (Obj.repr 2) (Obj.repr m))))
 )

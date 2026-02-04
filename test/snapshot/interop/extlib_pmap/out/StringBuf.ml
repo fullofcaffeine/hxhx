@@ -4,31 +4,31 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable b : string }
+type t = { __hx_type : Obj.t; mutable buf : Stdlib.Buffer.t }
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "StringBuf"; b = "" } : t) in (
-  ignore (let __assign_1 = "" in (
-    self.b <- __assign_1;
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "StringBuf"; buf = Obj.magic () } : t) in (
+  ignore (let __assign_1 = Stdlib.Buffer.create 16 in (
+    self.buf <- __assign_1;
     __assign_1
   ));
   self
 )
 
-let get_length = fun self () -> HxString.length (self.b)
+let get_length = fun self () -> let b = self.buf in let tempResult = Stdlib.Buffer.length b in tempResult
 
-let add = fun self x -> ignore (let __recv_2 = self in __recv_2.b <- HxString.toStdString (__recv_2.b) ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr x)))
+let add = fun self x -> ignore (let b = self.buf in let s = HxRuntime.dynamic_toStdString (Obj.repr x) in Stdlib.Buffer.add_string b s)
 
-let addChar = fun self c -> ignore (let __recv_3 = self in __recv_3.b <- HxString.toStdString (__recv_3.b) ^ HxString.toStdString (HxString.fromCharCode c))
+let addChar = fun self c -> ignore (let b = self.buf in let s = HxString.fromCharCode c in Stdlib.Buffer.add_string b s)
 
-let addSub = fun self s pos len -> ignore (let tempRight = ref "" in (
-  ignore (if len == HxRuntime.hx_null then let __assign_4 = HxString.substr s pos (-1) in (
-    tempRight := __assign_4;
-    __assign_4
-  ) else let __assign_5 = HxString.substr s pos (let __nullable_int_6 = len in if __nullable_int_6 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_6) in (
-    tempRight := __assign_5;
-    __assign_5
+let addSub = fun self s pos len -> ignore (let b = self.buf in let tempString = ref "" in (
+  ignore (if len == HxRuntime.hx_null then let __assign_2 = HxString.substr s pos (-1) in (
+    tempString := __assign_2;
+    __assign_2
+  ) else let __assign_3 = HxString.substr s pos (let __nullable_int_4 = len in if __nullable_int_4 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4) in (
+    tempString := __assign_3;
+    __assign_3
   ));
-  let __recv_7 = self in __recv_7.b <- HxString.toStdString (__recv_7.b) ^ HxString.toStdString (!tempRight)
+  Stdlib.Buffer.add_string b (!tempString)
 ))
 
-let toString = fun self () -> self.b
+let toString = fun self () -> let b = self.buf in let tempResult = Stdlib.Buffer.contents b in tempResult

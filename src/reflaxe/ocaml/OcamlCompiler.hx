@@ -1349,12 +1349,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 								return OcamlTypeExpr.TIdent("OcamlNativeIntSet.t");
 							case "Bytes":
 								return OcamlTypeExpr.TIdent("bytes");
-							case "Char":
-								return OcamlTypeExpr.TIdent("char");
-							case "Hashtbl":
-								final k = (params != null && params.length > 0)
-									? ocamlTypeExprFromHaxeType(params[0])
-									: OcamlTypeExpr.TIdent("Obj.t");
+								case "Char":
+									return OcamlTypeExpr.TIdent("char");
+								case "Buffer":
+									return OcamlTypeExpr.TIdent("Stdlib.Buffer.t");
+								case "Hashtbl":
+									final k = (params != null && params.length > 0)
+										? ocamlTypeExprFromHaxeType(params[0])
+										: OcamlTypeExpr.TIdent("Obj.t");
 								final v = (params != null && params.length > 1)
 									? ocamlTypeExprFromHaxeType(params[1])
 									: OcamlTypeExpr.TIdent("Obj.t");

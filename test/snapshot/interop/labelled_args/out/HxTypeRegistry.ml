@@ -7,6 +7,7 @@ let init () : unit =
   ignore (HxType.class_ "StringBuf");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
+  ignore (HxType.class_ "ocaml._Buffer.Buffer_Impl_");
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];
@@ -17,4 +18,5 @@ let init () : unit =
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe.iterators.ArrayIterator" [ "haxe.iterators.ArrayIterator" ];
   HxType.register_class_tags "haxe.iterators.ArrayKeyValueIterator" [ "haxe.iterators.ArrayKeyValueIterator" ];
+  HxType.register_class_tags "ocaml._Buffer.Buffer_Impl_" [ "ocaml._Buffer.Buffer_Impl_" ];
   ()

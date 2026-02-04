@@ -1,6 +1,7 @@
 {
 	"filesGenerated": [
 		"sys_io_FileSeek.ml",
+		"ocaml_Buffer.ml",
 		"haxe_iterators_StringKeyValueIterator.ml",
 		"haxe_iterators_StringIteratorUnicode.ml",
 		"haxe_iterators_StringIterator.ml",

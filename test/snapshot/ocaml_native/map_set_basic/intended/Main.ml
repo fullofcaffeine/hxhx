@@ -4,32 +4,14 @@
 
 let __reflaxe_ocaml__ = ()
 
-let main = fun () -> let sm = ref (OcamlNativeStringMap.empty) in (
-  ignore (let __assign_1 = OcamlNativeStringMap.add "a" 1 (!sm) in (
-    sm := __assign_1;
-    __assign_1
-  ));
-  ignore (OcamlNativeStringMap.find_opt "a" (!sm));
-  ignore (OcamlNativeStringMap.mem "a" (!sm));
-  let im = ref (OcamlNativeIntMap.empty) in (
-    ignore (let __assign_2 = OcamlNativeIntMap.add 1 "x" (!im) in (
-      im := __assign_2;
-      __assign_2
-    ));
-    ignore (OcamlNativeIntMap.find_opt 1 (!im));
-    let ss = ref (OcamlNativeStringSet.empty) in (
-      ignore (let __assign_3 = OcamlNativeStringSet.add "a" (!ss) in (
-        ss := __assign_3;
-        __assign_3
-      ));
-      ignore (OcamlNativeStringSet.mem "a" (!ss));
-      let iset = ref (OcamlNativeIntSet.empty) in (
-        ignore (let __assign_4 = OcamlNativeIntSet.add 1 (!iset) in (
-          iset := __assign_4;
-          __assign_4
-        ));
-        OcamlNativeIntSet.mem 1 (!iset)
-      )
+let main = fun () -> let sm = OcamlNativeStringMap.empty in let sm = OcamlNativeStringMap.add "a" 1 sm in (
+  ignore (OcamlNativeStringMap.find_opt "a" sm);
+  ignore (OcamlNativeStringMap.mem "a" sm);
+  let im = OcamlNativeIntMap.empty in let im = OcamlNativeIntMap.add 1 "x" im in (
+    ignore (OcamlNativeIntMap.find_opt 1 im);
+    let ss = OcamlNativeStringSet.empty in let ss = OcamlNativeStringSet.add "a" ss in (
+      ignore (OcamlNativeStringSet.mem "a" ss);
+      let iset = OcamlNativeIntSet.empty in let iset = OcamlNativeIntSet.add 1 iset in OcamlNativeIntSet.mem 1 iset
     )
   )
 )
