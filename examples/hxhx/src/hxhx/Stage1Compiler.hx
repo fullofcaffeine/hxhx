@@ -79,10 +79,22 @@ class Stage1Compiler {
 		// Stage1 graph bring-up: parse a small, explicit import closure.
 		//
 		// This is best-effort and intentionally incomplete:
-		// - wildcard imports are ignored
-		// - aliases / import modifiers are not supported yet
-		for (imp in decl.imports) {
+		// - wildcard imports are ignored (for now)
+		// - missing modules are warnings (for now)
+		//
+		// But it is transitive: if `Main` imports `A` and `A` imports `B`, we will attempt
+		// to parse `B` too.
+		final queue = new Array<String>();
+		for (imp in decl.imports) queue.push(imp);
+
+		final visited = new Map<String, Bool>();
+		var q = 0;
+		while (q < queue.length) {
+			final imp = queue[q++];
 			if (imp == null || imp.length == 0) continue;
+			if (visited.exists(imp)) continue;
+			visited.set(imp, true);
+
 			if (StringTools.endsWith(imp, ".*")) {
 				Sys.println("stage1=warn import_wildcard " + imp);
 				continue;
@@ -114,6 +126,8 @@ class Stage1Compiler {
 				Sys.println("stage1=warn import_package_mismatch " + imp);
 				continue;
 			}
+
+			for (imp2 in impDecl.imports) queue.push(imp2);
 		}
 
 		Sys.println("stage1=ok");

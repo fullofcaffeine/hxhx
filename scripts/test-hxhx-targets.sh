@@ -86,6 +86,41 @@ if [ "$code" -eq 0 ]; then
 fi
 echo "$out" | grep -q "unsupported hxml directive: --next"
 
+echo "== Stage1 bring-up: transitive import closure"
+cat >"$tmpdir/src/Main2.hx" <<'HX'
+package;
+
+import A2;
+
+class Main2 {
+  static function main() {}
+}
+HX
+
+cat >"$tmpdir/src/A2.hx" <<'HX'
+package;
+
+import B2;
+
+class A2 {}
+HX
+
+cat >"$tmpdir/src/B2.hx" <<'HX'
+package;
+
+class B2 {
+HX
+
+set +e
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main2 --no-output 2>&1)"
+code=$?
+set -e
+if [ "$code" -eq 0 ]; then
+  echo "Expected transitive import failure, but stage1 succeeded." >&2
+  exit 1
+fi
+echo "$out" | grep -q 'parse failed for import "B2"'
+
 echo "== Contradiction fails fast"
 set +e
 out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"
