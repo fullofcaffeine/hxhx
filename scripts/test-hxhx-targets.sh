@@ -121,6 +121,26 @@ if [ "$code" -eq 0 ]; then
 fi
 echo "$out" | grep -q 'parse failed for import "B2"'
 
+echo "== Stage1 bring-up: import-only module (no class)"
+cat >"$tmpdir/src/TypesOnly.hx" <<'HX'
+package;
+
+typedef Foo = { x:Int };
+HX
+
+cat >"$tmpdir/src/Main3.hx" <<'HX'
+package;
+
+import TypesOnly;
+
+class Main3 {
+  static function main() {}
+}
+HX
+
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main3 --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+
 echo "== Contradiction fails fast"
 set +e
 out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"

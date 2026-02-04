@@ -249,43 +249,59 @@ let parse_module_from_tokens (toks : token array) :
 
   (* Bootstrap: scan forward until we find the first `class` declaration.
      Upstream fixtures often contain metadata, multiple types, or other
-     top-level declarations before the type we care about. *)
-  while not (token_eq_kw (cur ()) "class") do
-    match cur () with
-    | Eof p -> raise (Parse_error (p, "no class declaration found"))
-    | _ ->
-        bump ()
-  done;
+     top-level declarations before the type we care about.
 
-  expect_kw "class";
-  let class_name = read_ident () in
-  expect_sym '{';
-
-  let has_static_main = ref false in
-  let depth = ref 1 in
-  let prev1 : token option ref = ref None in
-  let prev2 : token option ref = ref None in
-
-  let shift (tok : token) =
-    prev2 := !prev1;
-    prev1 := Some tok
+     Some modules contain no classes at all (typedef/enum/abstract-only). For those,
+     we should still succeed (so Stage1 can traverse an import closure). *)
+  let rec seek_class () : bool =
+    if token_eq_kw (cur ()) "class" then
+      true
+    else
+      match cur () with
+      | Eof _ -> false
+      | _ ->
+          bump ();
+          seek_class ()
   in
 
-  while !depth > 0 do
-    match cur () with
-    | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
-    | tok ->
-        (* Detect `static function main` without parsing full member grammar yet. *)
-        (match (!prev2, !prev1, tok) with
-        | Some (Kw ("static", _)), Some (Kw ("function", _)), Ident ("main", _) ->
-            has_static_main := true
-        | _ -> ());
+  let class_name = ref "" in
+  let has_static_main = ref false in
 
-        shift tok;
-        if token_eq_sym tok '{' then depth := !depth + 1
-        else if token_eq_sym tok '}' then depth := !depth - 1;
-        bump ()
-  done;
+  if seek_class () then (
+    expect_kw "class";
+    class_name := read_ident ();
+
+    (* Some declarations can omit a body; keep this permissive. *)
+    if token_eq_sym (cur ()) '{' then (
+      expect_sym '{';
+
+      let depth = ref 1 in
+      let prev1 : token option ref = ref None in
+      let prev2 : token option ref = ref None in
+
+      let shift (tok : token) =
+        prev2 := !prev1;
+        prev1 := Some tok
+      in
+
+      while !depth > 0 do
+        match cur () with
+        | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
+        | tok ->
+            (* Detect `static function main` without parsing full member grammar yet. *)
+            (match (!prev2, !prev1, tok) with
+            | Some (Kw ("static", _)), Some (Kw ("function", _)), Ident ("main", _) ->
+                has_static_main := true
+            | _ -> ());
+
+            shift tok;
+            if token_eq_sym tok '{' then depth := !depth + 1
+            else if token_eq_sym tok '}' then depth := !depth - 1;
+            bump ()
+      done))
+  else (
+    class_name := "";
+    has_static_main := false);
 
   (* Bootstrap: ignore any trailing declarations after the first class. *)
   while
@@ -296,7 +312,7 @@ let parse_module_from_tokens (toks : token array) :
     bump ()
   done;
 
-  (!package_path, !imports, class_name, !has_static_main)
+  (!package_path, !imports, !class_name, !has_static_main)
 
 let encode_ast_lines (package_path : string) (imports : string list)
     (class_name : string) (has_static_main : bool) : string =

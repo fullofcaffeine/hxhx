@@ -118,9 +118,12 @@ class Stage1Compiler {
 				return error('parse failed for import "' + imp + '": ' + formatParseError(e));
 			}
 
-			if (impDecl.mainClass.name != impResolved.className) {
+			// Some modules have no `class` keyword at all (typedef/enum/abstract-only),
+			// and others may declare multiple types. For Stage1, treat class-name mismatch
+			// as a best-effort warning only when we have a concrete parsed class name.
+			final parsedName = impDecl.mainClass.name;
+			if (parsedName != null && parsedName.length > 0 && parsedName != "Unknown" && parsedName != impResolved.className) {
 				Sys.println("stage1=warn import_class_mismatch " + imp);
-				continue;
 			}
 			if ((impDecl.packagePath ?? "") != impResolved.packagePath) {
 				Sys.println("stage1=warn import_package_mismatch " + imp);
