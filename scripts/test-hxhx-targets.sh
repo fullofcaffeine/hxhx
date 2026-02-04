@@ -25,6 +25,9 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 mkdir -p "$tmpdir/src"
 cat >"$tmpdir/src/Main.hx" <<'HX'
+package;
+
+import pkg.*;
 import Util;
 
 class Main {

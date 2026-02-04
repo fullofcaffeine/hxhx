@@ -202,17 +202,41 @@ let parse_module_from_tokens (toks : token array) :
     String.concat "." !parts
   in
 
+  let read_import_path () : string =
+    (* Like `read_dotted_path`, but also accepts a trailing `.*` wildcard:
+         import a.b.*;
+       The final `*` token is represented as the string segment "*" so the
+       Haxe-side decoder can treat it as `"a.b.*"`. *)
+    let parts = ref [ read_ident () ] in
+    let done_ = ref false in
+    while (not !done_) && token_eq_sym (cur ()) '.' do
+      bump ();
+      match cur () with
+      | Sym ('*', _) ->
+          bump ();
+          parts := !parts @ [ "*" ];
+          done_ := true
+      | _ -> parts := !parts @ [ read_ident () ]
+    done;
+    String.concat "." !parts
+  in
+
   let package_path = ref "" in
   let imports = ref [] in
 
   if token_eq_kw (cur ()) "package" then (
     bump ();
-    package_path := read_dotted_path ();
-    expect_sym ';');
+    (* Haxe allows an empty package declaration: `package;` *)
+    if token_eq_sym (cur ()) ';' then (
+      package_path := "";
+      bump ())
+    else (
+      package_path := read_dotted_path ();
+      expect_sym ';'));
 
   while token_eq_kw (cur ()) "import" do
     bump ();
-    let path = read_dotted_path () in
+    let path = read_import_path () in
     imports := !imports @ [ path ];
     expect_sym ';'
   done;
