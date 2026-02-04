@@ -234,9 +234,15 @@ let parse_module_from_tokens (toks : token array) :
       package_path := read_dotted_path ();
       expect_sym ';'));
 
-  while token_eq_kw (cur ()) "import" do
+  while token_eq_kw (cur ()) "import" || token_eq_kw (cur ()) "using" do
+    (* For Stage2 bring-up we treat `using` like `import` and just record the module path.
+       The typing stage can decide how to interpret it later. *)
     bump ();
     let path = read_import_path () in
+    (* Support `import Foo.Bar as Baz;` (ignore alias for now). *)
+    if token_eq_kw (cur ()) "as" then (
+      bump ();
+      ignore (read_ident ()));
     imports := !imports @ [ path ];
     expect_sym ';'
   done;

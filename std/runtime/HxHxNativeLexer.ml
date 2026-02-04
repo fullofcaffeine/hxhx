@@ -187,7 +187,7 @@ let tokenize (src : string) : string =
       | Some c when is_ident_start c ->
           let text = read_ident () in
           (match text with
-          | "package" | "import" | "class" | "static" | "function" ->
+          | "package" | "import" | "using" | "as" | "class" | "static" | "function" ->
               add_tok "kw" at_idx at_line at_col text
           | _ -> add_tok "ident" at_idx at_line at_col text);
           loop ()

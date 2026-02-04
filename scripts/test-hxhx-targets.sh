@@ -28,7 +28,9 @@ cat >"$tmpdir/src/Main.hx" <<'HX'
 package;
 
 import pkg.*;
+import haxe.io.Path as HxPath;
 import Util;
+using StringTools;
 
 class Main {
   static function main() {
