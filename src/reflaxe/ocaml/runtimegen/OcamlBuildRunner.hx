@@ -112,10 +112,36 @@ class OcamlBuildRunner {
 									Sys.setCwd(prev);
 									return cfg.mliStrict ? Err(msg) : Ok(msg + " (skipping)");
 							}
+						case "all":
+							final ensureRes = OcamlMliGenerator.tryEnsureAllCmiBuilt({
+								outDir: outDirAbs,
+								exeName: cfg.exeName,
+								mode: mode
+							});
+							switch (ensureRes) {
+								case Ok(_):
+									final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
+									switch (mliRes) {
+										case Ok(_):
+											final rebuildExit = Sys.command("dune", ["build", target]);
+											if (rebuildExit != 0) {
+												Sys.setCwd(prev);
+												return cfg.mliStrict
+													? Err("dune rebuild failed after generating .mli (exit code " + rebuildExit + ")")
+													: Ok("dune rebuild failed after generating .mli (exit code " + rebuildExit + ") (skipping)");
+											}
+										case Err(msg):
+											Sys.setCwd(prev);
+											return cfg.mliStrict ? Err(msg) : Ok(msg + " (skipping)");
+									}
+								case Err(msg):
+									Sys.setCwd(prev);
+									return cfg.mliStrict ? Err(msg) : Ok(msg + " (skipping)");
+							}
 						case other:
 							Sys.setCwd(prev);
 							return cfg.mliStrict
-								? Err("Unknown ocaml_mli mode: " + other + " (expected: infer)")
+								? Err("Unknown ocaml_mli mode: " + other + " (expected: infer|all)")
 								: Ok("Unknown ocaml_mli mode: " + other + " (skipping)");
 					}
 				}

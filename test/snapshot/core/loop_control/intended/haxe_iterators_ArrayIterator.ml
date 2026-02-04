@@ -4,7 +4,7 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable array : t_t HxArray.t; mutable current : int }
+type t = { __hx_type : Obj.t; mutable array : Obj.t HxArray.t; mutable current : int }
 
 let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (); current = 0 } : t) in (
   ignore ((

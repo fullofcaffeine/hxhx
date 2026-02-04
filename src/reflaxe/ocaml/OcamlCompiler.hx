@@ -1385,6 +1385,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 											: (inner.name == "CallStack" ? ocamlTypeExprFromHaxeType(innerRef.get().type) : OcamlTypeExpr.TIdent("Obj.t"));
 									case TInst(cRef, innerParams):
 										final c = cRef.get();
+										switch (c.kind) {
+											case KTypeParameter(_):
+												// Portable mode doesn't model polymorphic class parameters in OCaml.
+												// Treat them as an opaque runtime value type.
+												return OcamlTypeExpr.TIdent("Obj.t");
+											case _:
+										}
 										if (c.pack != null && c.pack.length == 0 && c.name == "String") {
 											OcamlTypeExpr.TIdent("string");
 										} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {
@@ -1423,6 +1430,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			case TInst(cRef, params):
 				final c = cRef.get();
+				switch (c.kind) {
+					case KTypeParameter(_):
+						// Portable mode doesn't model polymorphic class parameters in OCaml.
+						// Treat them as an opaque runtime value type.
+						return OcamlTypeExpr.TIdent("Obj.t");
+					case _:
+				}
 				if (c.pack != null && c.pack.length == 0 && c.name == "String") {
 					OcamlTypeExpr.TIdent("string");
 				} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {

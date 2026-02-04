@@ -172,6 +172,60 @@ class OcamlMliGenerator {
 		}
 	}
 
+	public static function tryEnsureAllCmiBuilt(cfg:{ outDir:String, exeName:String, mode:String }):BuildResult {
+		final outDir = cfg.outDir;
+		final exeName = cfg.exeName;
+		final mode = cfg.mode != null ? cfg.mode : "native";
+		final modeDir = (mode == "byte" || mode == "bytecode") ? "byte" : "native";
+
+		// Collect all non-runtime `.ml` modules. We intentionally skip `runtime/`
+		// because those interfaces are maintained manually in `std/runtime/`.
+		final mlFiles:Array<String> = [];
+		listMlFilesRecursive(outDir, "", mlFiles);
+		if (mlFiles.length == 0) return Ok(null);
+
+		// Dune stores compiled objects for executables under:
+		//   _build/default/.<exeName>.eobjs/<modeDir>/
+		final eobjsDir = Path.join([outDir, BUILD_DIR, "default", "." + exeName + ".eobjs", modeDir]);
+
+		// Generate one cmi target per module. Dune normalizes compilation-unit file
+		// names by lowercasing the first character (e.g. `Main` -> `main.cmi`).
+		final targets:Array<String> = [];
+		final seen:Map<String, Bool> = [];
+		for (rel in mlFiles) {
+			final base = Path.withoutExtension(Path.withoutDirectory(rel));
+			if (base == null || base.length == 0) continue;
+			final cmiBase = normalizeCompiledBaseName(base);
+			if (seen.exists(cmiBase)) continue;
+			seen.set(cmiBase, true);
+			final relTarget = Path.join([BUILD_DIR, "default", "." + exeName + ".eobjs", modeDir, cmiBase + ".cmi"]);
+			targets.push(relTarget);
+		}
+
+		if (targets.length == 0) return Ok(null);
+
+		// Build in batches to avoid exceeding command-line length on large outputs.
+		final batchSize = 200;
+		var i = 0;
+		while (i < targets.length) {
+			final batch = targets.slice(i, i + batchSize);
+			i += batchSize;
+			final exit = Sys.command("dune", ["build"].concat(batch));
+			if (exit != 0) {
+				return Err("Failed to build .cmi for ocaml_mli=all (dune exit " + exit + ").");
+			}
+		}
+
+		// Best-effort sanity: ensure build artifacts exist where expected.
+		if (!sys.FileSystem.exists(eobjsDir) || !sys.FileSystem.isDirectory(eobjsDir)) {
+			// Dune might still succeed but place artifacts elsewhere if the stanza differs.
+			// We don't fail here because `tryInferFromBuild` only needs `_build/default/`.
+			return Ok("ocaml_mli=all: dune built .cmi targets, but expected eobjs dir missing: " + eobjsDir);
+		}
+
+		return Ok(null);
+	}
+
 	/**
 		Attempts to infer `*.mli` files using build artifacts found in `_build/`.
 

@@ -76,7 +76,7 @@ Optional flags:
 - `-D ocaml_no_build` (or `-D ocaml_emit_only`) to skip post-emit build/run.
 - `-D ocaml_build=native` (or `byte`) to force `dune build` after emitting (requires `dune` + `ocamlc` on PATH; fails hard if missing).
 - `-D ocaml_run` to run the produced executable via `dune exec` after emitting (best-effort unless combined with `ocaml_build=...`).
-- `-D ocaml_mli` (or `-D ocaml_mli=infer`) to generate inferred `*.mli` via `ocamlc -i` and rebuild with dune (requires `ocamlfind`).
+- `-D ocaml_mli` (or `-D ocaml_mli=infer|all`) to generate inferred `*.mli` via `ocamlc -i` and rebuild with dune (requires `ocamlfind`).
 - `-D ocaml_no_line_directives` to disable `# 1 "File.ml"` prefixes (default is enabled to improve dune error locations).
 
 ## hxhx (Haxe-in-Haxe) bring-up

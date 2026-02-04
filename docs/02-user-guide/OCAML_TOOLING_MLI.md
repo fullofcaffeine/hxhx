@@ -42,6 +42,13 @@ or explicitly:
 -D ocaml_mli=infer
 ```
 
+To infer interfaces for **all emitted modules** (not just the modules dune compiled for the
+requested build target), use:
+
+```bash
+-D ocaml_mli=all
+```
+
 Notes:
 
 - This requires an OCaml toolchain on `PATH` (`dune`, `ocamlc`, and `ocamlfind`).
@@ -53,10 +60,13 @@ Notes:
 
 ## What gets an `.mli` today
 
-For robustness and speed, we infer `.mli` only for modules that dune actually compiled
-for the requested build target (i.e. modules that have a corresponding `*.cmi` in
+For robustness and speed, `ocaml_mli=infer` infers `.mli` only for modules that dune actually
+compiled for the requested build target (i.e. modules that have a corresponding `*.cmi` in
 `_build/`).
 
 This avoids needing a “compile every emitted module” pass (which would be much slower),
 and it also avoids failures when an emitted-but-unused module references other modules
 that dune never had to compile for the chosen target.
+
+`ocaml_mli=all` opts into that slower “compile everything” pass by asking dune to build
+`*.cmi` for every emitted non-runtime module before running `ocamlc -i`.
