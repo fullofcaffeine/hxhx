@@ -55,6 +55,24 @@ let charCodeAt (s : string) (index : int) : Obj.t =
   else
     Obj.repr (Char.code s.[index])
 
+(* `StringTools.fastCodeAt()` uses `untyped s.cca(index)` on a number of targets.
+   We represent `String` as a plain OCaml `string`, so there is no real `.cca`
+   method to dispatch to. Instead, the backend routes `untyped s.cca(i)` through
+   `HxAnon.get (Obj.repr s) "cca"` and we provide a closure from `HxAnon.get`.
+
+   Semantics:
+   - Returns `-1` when `index == s.length` (EOF sentinel), matching Haxe's docs.
+   - Returns `-1` on any out-of-bounds index. *)
+let cca (s : string) (index : int) : int =
+  if isNull s then
+    -1
+  else
+    let len = String.length s in
+    if index < 0 || index >= len then
+      -1
+    else
+      Char.code s.[index]
+
 let starts_with_at (s : string) (sub : string) (i : int) : bool =
   let slen = String.length s in
   let nlen = String.length sub in

@@ -54,13 +54,21 @@ let create () : Obj.t =
   b
 
 let get (o : Obj.t) (field : string) : Obj.t =
-  if not (is_anon o) then
-    HxRuntime.hx_null
-  else
+  if is_anon o then
     let tbl : t = Obj.obj (Obj.field o 1) in
     match Hashtbl.find_opt tbl field with
     | Some v -> v
     | None -> HxRuntime.hx_null
+  else if Obj.is_block o && Obj.tag o = Obj.string_tag && field = "cca" then
+    (* Support `StringTools.fastCodeAt()` / `unsafeCodeAt()` which call
+       `untyped s.cca(i)` on targets without a dedicated implementation.
+
+       Strings are not anonymous objects, but they do have a well-known
+       "fast code at" primitive. We surface it as a callable field. *)
+    let s : string = Obj.obj o in
+    Obj.repr (fun (i : int) -> HxString.cca s i)
+  else
+    HxRuntime.hx_null
 
 let set (o : Obj.t) (field : string) (value : Obj.t) : unit =
   if is_anon o then (
