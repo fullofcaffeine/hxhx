@@ -254,7 +254,7 @@ class Stage1Args {
 				}
 				final expanded = Hxml.parseFile(a);
 				if (expanded == null) return null;
-				for (t in expanded) out.push(t);
+				for (t in rewritePathsFromHxml(a, expanded)) out.push(t);
 				continue;
 			}
 
@@ -262,6 +262,29 @@ class Stage1Args {
 		}
 
 		return sawHxml ? out : args;
+	}
+
+	static function rewritePathsFromHxml(hxmlPath:String, tokens:Array<String>):Array<String> {
+		final dir0 = haxe.io.Path.directory(hxmlPath);
+		final dir = (dir0 == null || dir0.length == 0) ? "." : dir0;
+
+		final out = tokens.copy();
+		var i = 0;
+		while (i < out.length) {
+			switch (out[i]) {
+				case "-cp", "-p":
+					if (i + 1 < out.length) {
+						final cp = out[i + 1];
+						if (cp != null && cp.length > 0 && !haxe.io.Path.isAbsolute(cp)) {
+							out[i + 1] = haxe.io.Path.normalize(haxe.io.Path.join([dir, cp]));
+						}
+					}
+					i += 2;
+				case _:
+					i += 1;
+			}
+		}
+		return out;
 	}
 }
 

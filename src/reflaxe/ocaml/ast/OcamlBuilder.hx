@@ -4550,6 +4550,12 @@ class OcamlBuilder {
 			return wantUnit ? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [expr]) : expr;
 		}
 
+		final defaultExpr:OcamlExpr = edef != null
+			? buildExpr(edef)
+			: (wantUnit
+				? OcamlExpr.EConst(OcamlConst.CUnit)
+				: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
+
 		// Enum pattern matching: Haxe's pattern matcher often lowers enum switches to:
 		// switch (TEnumIndex(e)) { case 0: ...; case 1: ... }
 		// Reconstruct a direct OCaml match on the enum value.
@@ -4580,9 +4586,7 @@ class OcamlBuilder {
 							arms.push({
 								pat: OcamlPat.PAny,
 								guard: null,
-								expr: wrapCaseExpr(
-									edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
-								)
+								expr: wrapCaseExpr(defaultExpr)
 							});
 						}
 
@@ -4613,9 +4617,7 @@ class OcamlBuilder {
 		arms.push({
 			pat: OcamlPat.PAny,
 			guard: null,
-			expr: wrapCaseExpr(
-				edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
-			)
+			expr: wrapCaseExpr(defaultExpr)
 		});
 
 		// Nullable primitive switches (notably `Null<Int>` lowered by the compiler in
@@ -4634,9 +4636,7 @@ class OcamlBuilder {
 
 				final tmp = freshTmp("switch");
 				final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
-				final defaultBranch = edef != null
-					? wrapCaseExpr(buildExpr(edef))
-					: wrapCaseExpr(OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
+				final defaultBranch = wrapCaseExpr(defaultExpr);
 
 				// Support `case null`: for nullable primitives the scrutinee is `Obj.t`, so
 				// the `null` case must be handled *before* unboxing to a primitive.
