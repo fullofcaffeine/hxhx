@@ -46,9 +46,9 @@ abstract Bytes(Dynamic) {
 @:noCompletion
 @:native("Stdlib.Bytes")
 extern class BytesNative {
-	static function make(len:Int, fill:Dynamic):Dynamic;
-	static function length(b:Dynamic):Int;
-	static function of_string(s:String):Dynamic;
-	static function to_string(b:Dynamic):String;
-	static function sub(b:Dynamic, pos:Int, len:Int):Dynamic;
+	static function make(len:Int, fill:Char):Bytes;
+	static function length(b:Bytes):Int;
+	static function of_string(s:String):Bytes;
+	static function to_string(b:Bytes):String;
+	static function sub(b:Bytes, pos:Int, len:Int):Bytes;
 }

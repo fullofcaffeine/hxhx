@@ -63,13 +63,12 @@ abstract Array<T>(Dynamic) {
 @:noCompletion
 @:native("Stdlib.Array")
 extern class ArrayNative {
-	static function make(len:Int, init:Dynamic):Dynamic;
-	static function init(len:Int, f:Dynamic):Dynamic;
-	static function length(a:Dynamic):Int;
-	static function get(a:Dynamic, i:Int):Dynamic;
-	static function set(a:Dynamic, i:Int, v:Dynamic):Void;
-	static function map(f:Dynamic, a:Dynamic):Dynamic;
-	static function iter(f:Dynamic, a:Dynamic):Void;
-	static function fold_left(f:Dynamic, init:Dynamic, a:Dynamic):Dynamic;
+	static function make<T>(len:Int, init:T):Array<T>;
+	static function init<T>(len:Int, f:Int->T):Array<T>;
+	static function length<T>(a:Array<T>):Int;
+	static function get<T>(a:Array<T>, i:Int):T;
+	static function set<T>(a:Array<T>, i:Int, v:T):Void;
+	static function map<A, B>(f:A->B, a:Array<A>):Array<B>;
+	static function iter<A>(f:A->Void, a:Array<A>):Void;
+	static function fold_left<A, Acc>(f:Acc->A->Acc, init:Acc, a:Array<A>):Acc;
 }
-

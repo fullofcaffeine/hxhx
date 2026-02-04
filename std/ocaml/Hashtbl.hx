@@ -59,7 +59,7 @@ abstract Hashtbl<K, V>(Dynamic) {
 @:noCompletion
 @:native("Stdlib.Hashtbl")
 extern class HashtblNative {
-	static function create(size:Int):Dynamic;
+	static function create<K, V>(size:Int):Hashtbl<K, V>;
 
 	/**
 	 * Same OCaml function as `create`, but with the optional labelled `?random:` argument exposed.
@@ -74,13 +74,13 @@ extern class HashtblNative {
 	 * - `reflaxe.ocaml`'s extern `@:ocamlLabel` support takes care of emitting `?random:...`.
 	 */
 	@:native("create")
-	static function createWithRandom(@:ocamlLabel("random") ?random:Bool, size:Int):Dynamic;
+	static function createWithRandom<K, V>(@:ocamlLabel("random") ?random:Bool, size:Int):Hashtbl<K, V>;
 
-	static function length(t:Dynamic):Int;
-	static function add(t:Dynamic, k:Dynamic, v:Dynamic):Void;
-	static function replace(t:Dynamic, k:Dynamic, v:Dynamic):Void;
-	static function remove(t:Dynamic, k:Dynamic):Void;
-	static function mem(t:Dynamic, k:Dynamic):Bool;
-	static function find(t:Dynamic, k:Dynamic):Dynamic;
-	static function find_opt(t:Dynamic, k:Dynamic):Dynamic;
+	static function length<K, V>(t:Hashtbl<K, V>):Int;
+	static function add<K, V>(t:Hashtbl<K, V>, k:K, v:V):Void;
+	static function replace<K, V>(t:Hashtbl<K, V>, k:K, v:V):Void;
+	static function remove<K, V>(t:Hashtbl<K, V>, k:K):Void;
+	static function mem<K, V>(t:Hashtbl<K, V>, k:K):Bool;
+	static function find<K, V>(t:Hashtbl<K, V>, k:K):V;
+	static function find_opt<K, V>(t:Hashtbl<K, V>, k:K):Option<V>;
 }

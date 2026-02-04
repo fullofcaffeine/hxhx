@@ -5,12 +5,12 @@ let __reflaxe_ocaml__ = ()
 
 let _new = fun v -> v
 
-let make = fun len fill -> Stdlib.Bytes.make len (Obj.repr fill)
+let make = fun len fill -> Stdlib.Bytes.make len fill
 
-let length = fun b -> Stdlib.Bytes.length (Obj.repr b)
+let length = fun b -> Stdlib.Bytes.length b
 
 let ofString = fun s -> Stdlib.Bytes.of_string s
 
-let toString = fun b -> Stdlib.Bytes.to_string (Obj.repr b)
+let toString = fun b -> Stdlib.Bytes.to_string b
 
-let sub = fun b pos len -> Stdlib.Bytes.sub (Obj.repr b) pos len
+let sub = fun b pos len -> Stdlib.Bytes.sub b pos len

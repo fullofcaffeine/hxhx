@@ -5,18 +5,18 @@ let __reflaxe_ocaml__ = ()
 
 let _new = fun v -> v
 
-let make = fun len init -> Stdlib.Array.make len (Obj.repr init)
+let make = fun len init -> Stdlib.Array.make len init
 
-let init = fun len f -> Stdlib.Array.init len (Obj.repr f)
+let init = fun len f -> Stdlib.Array.init len f
 
-let length = fun a -> Stdlib.Array.length (Obj.repr a)
+let length = fun a -> Stdlib.Array.length a
 
-let get = fun a i -> Obj.obj (Stdlib.Array.get (Obj.repr a) i)
+let get = fun a i -> Stdlib.Array.get a i
 
-let set = fun a i v -> Stdlib.Array.set (Obj.repr a) i (Obj.repr v)
+let set = fun a i v -> Stdlib.Array.set a i v
 
-let map = fun f a -> Stdlib.Array.map (Obj.repr f) (Obj.repr a)
+let map = fun f a -> Stdlib.Array.map f a
 
-let iter = fun f a -> Stdlib.Array.iter (Obj.repr f) (Obj.repr a)
+let iter = fun f a -> Stdlib.Array.iter f a
 
-let fold_left = fun f init a -> Obj.obj (Stdlib.Array.fold_left (Obj.repr f) (Obj.repr init) (Obj.repr a))
+let fold_left = fun f init a -> Stdlib.Array.fold_left f init a

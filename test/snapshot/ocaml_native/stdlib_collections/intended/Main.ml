@@ -3,29 +3,29 @@
 
 let __reflaxe_ocaml__ = ()
 
-let main = fun () -> let a = Stdlib.Array.make 3 (Obj.repr 1) in (
-  ignore (Stdlib.Array.set (Obj.repr a) 0 (Obj.repr 42));
-  let b = Stdlib.Array.map (Obj.repr (fun x -> HxInt.add x 1)) (Obj.repr a) in (
-    ignore (Stdlib.Array.iter (Obj.repr (fun x -> ())) (Obj.repr b));
-    let random = HxRuntime.hx_null in let tempVar = ref (Obj.magic ()) in (
+let main = fun () -> let a = Stdlib.Array.make 3 1 in (
+  ignore (Stdlib.Array.set a 0 42);
+  let b = Stdlib.Array.map (fun x -> HxInt.add x 1) a in (
+    ignore (Stdlib.Array.iter (fun x -> ()) b);
+    let random = HxRuntime.hx_null in let tempHashtbl1 = ref (Obj.magic ()) in (
       ignore (if random == HxRuntime.hx_null then let __assign_1 = Stdlib.Hashtbl.create 16 in (
-        tempVar := __assign_1;
+        tempHashtbl1 := __assign_1;
         __assign_1
       ) else let __assign_2 = Stdlib.Hashtbl.create ?random:(let __optarg_3 = Obj.repr random in if __optarg_3 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_3)) 16 in (
-        tempVar := __assign_2;
+        tempHashtbl1 := __assign_2;
         __assign_2
       ));
-      let tempHashtbl = !tempVar in (
-        ignore (Stdlib.Hashtbl.add (Obj.repr tempHashtbl) (Obj.repr "k") (Obj.repr 123));
-        ignore (Stdlib.Hashtbl.replace (Obj.repr tempHashtbl) (Obj.repr "k") (Obj.repr 124));
-        ignore (Stdlib.Hashtbl.remove (Obj.repr tempHashtbl) (Obj.repr "missing"));
-        ignore (Obj.obj (Stdlib.Hashtbl.find_opt (Obj.repr tempHashtbl) (Obj.repr "missing")));
-        ignore (Stdlib.Hashtbl.find (Obj.repr tempHashtbl) (Obj.repr "k"));
+      let tempHashtbl = !tempHashtbl1 in (
+        ignore (Stdlib.Hashtbl.add tempHashtbl "k" 123);
+        ignore (Stdlib.Hashtbl.replace tempHashtbl "k" 124);
+        ignore (Stdlib.Hashtbl.remove tempHashtbl "missing");
+        ignore (Stdlib.Hashtbl.find_opt tempHashtbl "missing");
+        ignore (Stdlib.Hashtbl.find tempHashtbl "k");
         ignore (Stdlib.Hashtbl.create ?random:(let __optarg_4 = Obj.repr (HxRuntime.box_bool true) in if __optarg_4 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_4)) 16);
-        let bytes = Stdlib.Bytes.of_string "hi" in let fill = Stdlib.Char.chr 97 in let tempBytes = Stdlib.Bytes.make 3 (Obj.repr fill) in let len = Stdlib.Bytes.length (Obj.repr bytes) in (
-          ignore (Stdlib.Bytes.sub (Obj.repr tempBytes) 0 len);
-          ignore (Stdlib.Bytes.to_string (Obj.repr bytes));
-          let a2 = Stdlib.Seq.return (Obj.repr 1) in let b2 = Stdlib.Seq.return (Obj.repr 2) in let tempSeq = Stdlib.Seq.append (Obj.repr a2) (Obj.repr b2) in let xs = Stdlib.Seq.map (Obj.repr (fun x -> HxInt.add x 1)) (Obj.repr tempSeq) in Stdlib.Seq.iter (Obj.repr (fun x -> ())) (Obj.repr xs)
+        let bytes = Stdlib.Bytes.of_string "hi" in let fill = Stdlib.Char.chr 97 in let tempBytes = Stdlib.Bytes.make 3 fill in let len = Stdlib.Bytes.length bytes in (
+          ignore (Stdlib.Bytes.sub tempBytes 0 len);
+          ignore (Stdlib.Bytes.to_string bytes);
+          let a2 = Stdlib.Seq.return 1 in let b2 = Stdlib.Seq.return 2 in let tempSeq = Stdlib.Seq.append a2 b2 in let xs = Stdlib.Seq.map (fun x -> HxInt.add x 1) tempSeq in Stdlib.Seq.iter (fun x -> ()) xs
         )
       )
     )

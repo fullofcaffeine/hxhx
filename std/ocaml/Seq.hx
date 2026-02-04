@@ -58,16 +58,15 @@ abstract Seq<T>(Dynamic) {
 @:native("Stdlib.Seq")
 extern class SeqNative {
 	// `empty` is a value in OCaml, not a function.
-	static var empty:Dynamic;
+	static var empty:Seq<Dynamic>;
 
 	@:native("return")
-	static function return_(x:Dynamic):Dynamic;
+	static function return_<T>(x:T):Seq<T>;
 
-	static function cons(x:Dynamic, xs:Dynamic):Dynamic;
-	static function append(a:Dynamic, b:Dynamic):Dynamic;
-	static function map(f:Dynamic, xs:Dynamic):Dynamic;
-	static function filter(p:Dynamic, xs:Dynamic):Dynamic;
-	static function iter(f:Dynamic, xs:Dynamic):Void;
-	static function fold_left(f:Dynamic, init:Dynamic, xs:Dynamic):Dynamic;
+	static function cons<T>(x:T, xs:Seq<T>):Seq<T>;
+	static function append<T>(a:Seq<T>, b:Seq<T>):Seq<T>;
+	static function map<A, B>(f:A->B, xs:Seq<A>):Seq<B>;
+	static function filter<A>(p:A->Bool, xs:Seq<A>):Seq<A>;
+	static function iter<A>(f:A->Void, xs:Seq<A>):Void;
+	static function fold_left<A, Acc>(f:Acc->A->Acc, init:Acc, xs:Seq<A>):Acc;
 }
-

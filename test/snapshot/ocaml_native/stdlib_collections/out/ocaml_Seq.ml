@@ -7,16 +7,16 @@ let _new = fun v -> v
 
 let empty = fun () -> Stdlib.Seq.empty
 
-let return_ = fun x -> Stdlib.Seq.return (Obj.repr x)
+let return_ = fun x -> Stdlib.Seq.return x
 
-let cons = fun x xs -> Stdlib.Seq.cons (Obj.repr x) (Obj.repr xs)
+let cons = fun x xs -> Stdlib.Seq.cons x xs
 
-let append = fun a b -> Stdlib.Seq.append (Obj.repr a) (Obj.repr b)
+let append = fun a b -> Stdlib.Seq.append a b
 
-let map = fun f xs -> Stdlib.Seq.map (Obj.repr f) (Obj.repr xs)
+let map = fun f xs -> Stdlib.Seq.map f xs
 
-let filter = fun p xs -> Stdlib.Seq.filter (Obj.repr p) (Obj.repr xs)
+let filter = fun p xs -> Stdlib.Seq.filter p xs
 
-let iter = fun f xs -> Stdlib.Seq.iter (Obj.repr f) (Obj.repr xs)
+let iter = fun f xs -> Stdlib.Seq.iter f xs
 
-let foldLeft = fun f init xs -> Obj.obj (Stdlib.Seq.fold_left (Obj.repr f) (Obj.repr init) (Obj.repr xs))
+let foldLeft = fun f init xs -> Stdlib.Seq.fold_left f init xs

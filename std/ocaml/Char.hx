@@ -25,6 +25,5 @@ abstract Char(Dynamic) {
 @:noCompletion
 @:native("Stdlib.Char")
 extern class CharNative {
-	static function chr(i:Int):Dynamic;
+	static function chr(i:Int):Char;
 }
-
