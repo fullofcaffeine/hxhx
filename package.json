@@ -13,6 +13,8 @@
     "semantic-release": "^24.2.5"
   },
   "scripts": {
+    "bench:m14": "bash scripts/bench/m14.sh",
+    "bench": "npm run bench:m14",
     "download": "lix download",
     "haxe": "haxe",
     "ci:guards": "node scripts/ci/version-sync-check.js",

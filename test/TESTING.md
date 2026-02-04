@@ -17,6 +17,7 @@ This repo follows the same broad layering used in `haxe.elixir.codex`:
 - Full suite: `npm test`
 - Example apps only: `npm run test:examples`
 - Snapshots only: `npm run test:snapshot`
+- Benchmarks (M14 harness): `npm run bench` (writes JSON to `bench/results/`)
 
 ## Why examples?
 
