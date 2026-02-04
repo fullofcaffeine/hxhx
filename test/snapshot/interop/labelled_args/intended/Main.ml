@@ -4,7 +4,7 @@
 let __reflaxe_ocaml__ = ()
 
 let main = fun () -> (
-  ignore (Native.Mod.f ~x:1 ?y:(let __optarg_1 = Obj.repr 2 in if __optarg_1 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_1)));
-  ignore (Native.Mod.f ~x:1 ?y:(let __optarg_2 = HxRuntime.hx_null in if __optarg_2 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_2)));
-  Native.Mod.f ~x:1
+  ignore (Native.Mod.f ~x:1 2 ?z:(let __optarg_1 = Obj.repr (Obj.repr 3) in if __optarg_1 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_1)));
+  ignore (Native.Mod.f ~x:1 2 ?z:None);
+  Native.Mod.f ~x:1 2
 )

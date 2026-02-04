@@ -981,7 +981,7 @@ class OcamlBuilder {
 												applyArgs.push({
 													label: label,
 													isOptional: true,
-													expr: buildOptionalArgOptionExpr(coerced, ea.t)
+													expr: buildOptionalArgOptionExprForInterop(args[i], ea.t)
 												});
 											} else {
 												applyArgs.push({ label: label, isOptional: false, expr: coerced });
@@ -1788,16 +1788,41 @@ class OcamlBuilder {
 				// So we must explicitly box/unbox at cast boundaries.
 				switch ({ from: nullablePrimitiveKind(e1.t), to: nullablePrimitiveKind(e.t) }) {
 					case { from: null, to: "int" } if (isIntType(e1.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]);
+						{
+							final inner = buildExpr(e1);
+							// Avoid double-boxing: `Obj.repr (Obj.repr x)` is not a valid `Null<Int>` value.
+							switch (inner) {
+								case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]):
+									inner;
+								case _:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]);
+							}
+						}
 					case { from: null, to: "float" } if (isFloatType(e1.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]);
+						{
+							final inner = buildExpr(e1);
+							switch (inner) {
+								case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]):
+									inner;
+								case _:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]);
+							}
+						}
 					case { from: null, to: "float" } if (isIntType(e1.t)):
 						OcamlExpr.EApp(
 							OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
 							[OcamlExpr.EApp(OcamlExpr.EIdent("float_of_int"), [buildExpr(e1)])]
 						);
 					case { from: null, to: "bool" } if (isBoolType(e1.t)):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]);
+						{
+							final inner = buildExpr(e1);
+							switch (inner) {
+								case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [_]):
+									inner;
+								case _:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]);
+							}
+						}
 					case { from: "int", to: null } if (isIntType(e.t)):
 						safeUnboxNullableInt(buildExpr(e1));
 					case { from: "float", to: null } if (isFloatType(e.t)):
@@ -4825,19 +4850,150 @@ class OcamlBuilder {
 		return out;
 	}
 
-	function buildOptionalArgOptionExpr(coerced:OcamlExpr, expectedType:Type):OcamlExpr {
+	/**
+	 * Builds the value passed to an OCaml **optional labelled argument** (`?label:`) at a callsite.
+	 *
+	 * Why:
+	 * - OCaml optional labelled parameters have type `'a option`.
+	 * - For extern interop we want Haxe callsites to feel natural, so we allow passing:
+	 *   - an actual value (`Some v`)
+	 *   - `null` as "omit" (`None`)
+	 * - reflaxe.ocaml represents nullable primitives (`Null<Int>`, etc.) as `Obj.t` carrying the
+	 *   `HxRuntime.hx_null` sentinel. If we unbox too early, we lose that sentinel and can no
+	 *   longer distinguish "null means None" from "a real value".
+	 *
+	 * What:
+	 * - Returns an OCaml expression of type `'a option`:
+	 *   - literal `null` -> `None`
+	 *   - nullable primitive `Obj.t` -> `let tmp = <expr> in if tmp == hx_null then None else Some <unboxed>`
+	 *   - non-null value -> `Some (<coerced>)`
+	 *
+	 * How:
+	 * - Uses physical equality (`==`) against `HxRuntime.hx_null` to detect null-sentinel values.
+	 * - Avoids producing invalid double-boxing patterns like `Obj.repr (Obj.repr 2)` when Haxe
+	 *   inserts redundant casts around `Null<T>` flows.
+	 */
+	function buildOptionalArgOptionExprForInterop(arg:TypedExpr, expectedType:Type):OcamlExpr {
 		final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+
+		inline function stripDoubleObjRepr(e:OcamlExpr):OcamlExpr {
+			function peelAnnot(x:OcamlExpr):OcamlExpr {
+				var cur = x;
+				while (true) {
+					switch (cur) {
+						case OcamlExpr.EAnnot(inner, _):
+							cur = inner;
+						case _:
+							return cur;
+					}
+				}
+				return cur;
+			}
+
+			function peelObjReprApp(x:OcamlExpr):Null<OcamlExpr> {
+				final p = peelAnnot(x);
+				return switch (p) {
+					case OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [inner]): inner;
+					case _: null;
+				}
+			}
+
+			final inner1 = peelObjReprApp(e);
+			if (inner1 == null) return e;
+			final inner2 = peelObjReprApp(inner1);
+			return inner2 == null ? e : inner1;
+		}
+
+		// Fast-path literal null.
+		final unwrapped = unwrap(arg);
+		final isLiteralNull = switch (unwrapped.expr) {
+			case TConst(TNull): true;
+			case _: false;
+		}
+		if (isLiteralNull) return OcamlExpr.EIdent("None");
+
 		final tmp = freshTmp("optarg");
 
-		// For `Null<Int>/Null<Float>/Null<Bool>` we represent values as Obj.t already.
-		// For everything else, compare via `Obj.repr` so the null sentinel can be detected consistently.
-		final objVal = (nullablePrimitiveKind(expectedType) != null)
-			? coerced
-			: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [coerced]);
+		// Optional labelled args in OCaml are `'a option`. For Haxe interop we accept:
+		// - `null` (meaning "omit" / None)
+		// - a value
+		//
+		// For primitive optional args, Haxe will often type arguments as `Null<T>`, which in
+		// reflaxe.ocaml is represented as `Obj.t` with the `HxRuntime.hx_null` sentinel.
+		//
+		// If we eagerly coerce `Null<Int>` to `Int` here (unboxing), we lose the null sentinel
+		// and cannot correctly produce `None`. So we build the option wrapper directly.
+		if (isIntType(expectedType)) {
+			return switch (nullablePrimitiveKind(arg.t)) {
+				case "int":
+					final v0 = switch (unwrapped.expr) {
+						// Haxe can insert redundant casts around `Null<T>` flows, e.g. `cast (cast 2 : Null<Int>)`.
+						// Avoid double-boxing (`Obj.repr (Obj.repr 2)`) by stripping casts where the inner
+						// expression is already represented as `Obj.t`.
+						case TCast(inner, _):
+							nullablePrimitiveKind(inner.t) != null ? buildExpr(inner) : buildExpr(arg);
+						case _:
+							buildExpr(arg);
+					}
+					final v = stripDoubleObjRepr(v0);
+					final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull);
+					final someVal = OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])]);
+					OcamlExpr.ELet(tmp, v, OcamlExpr.EIf(isNull, OcamlExpr.EIdent("None"), someVal), false);
+				case _:
+					OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [coerceForAssignment(expectedType, arg)]);
+			}
+		}
 
+		if (isFloatType(expectedType)) {
+			return switch (nullablePrimitiveKind(arg.t)) {
+				case "float":
+					final v0 = switch (unwrapped.expr) {
+						case TCast(inner, _):
+							nullablePrimitiveKind(inner.t) != null ? buildExpr(inner) : buildExpr(arg);
+						case _:
+							buildExpr(arg);
+					}
+					final v = stripDoubleObjRepr(v0);
+					final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull);
+					final someVal = OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])]);
+					OcamlExpr.ELet(tmp, v, OcamlExpr.EIf(isNull, OcamlExpr.EIdent("None"), someVal), false);
+				case _:
+					OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [coerceForAssignment(expectedType, arg)]);
+			}
+		}
+
+		if (isBoolType(expectedType)) {
+			return switch (nullablePrimitiveKind(arg.t)) {
+				case "bool":
+					final v0 = switch (unwrapped.expr) {
+						case TCast(inner, _):
+							nullablePrimitiveKind(inner.t) != null ? buildExpr(inner) : buildExpr(arg);
+						case _:
+							buildExpr(arg);
+					}
+					final v = stripDoubleObjRepr(v0);
+					final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull);
+					final someVal = OcamlExpr.EApp(
+						OcamlExpr.EIdent("Some"),
+						[
+							OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"),
+								[OcamlExpr.EIdent(tmp)]
+							)
+						]
+					);
+					OcamlExpr.ELet(tmp, v, OcamlExpr.EIf(isNull, OcamlExpr.EIdent("None"), someVal), false);
+				case _:
+					OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [coerceForAssignment(expectedType, arg)]);
+			}
+		}
+
+		// Non-primitive optional arg: compare via `Obj.repr` so the null sentinel can be detected
+		// consistently even when null is represented as `Obj.magic hx_null : t`.
+		final coerced = coerceForAssignment(expectedType, arg);
+		final objVal = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [coerced]);
 		final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull);
 		final someVal = OcamlExpr.EApp(OcamlExpr.EIdent("Some"), [OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)])]);
-
 		return OcamlExpr.ELet(tmp, objVal, OcamlExpr.EIf(isNull, OcamlExpr.EIdent("None"), someVal), false);
 	}
 }
