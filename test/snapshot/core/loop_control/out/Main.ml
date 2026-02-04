@@ -5,13 +5,13 @@ let __reflaxe_ocaml__ = ()
 
 let main = fun () -> let i = ref 0 in let sum = ref 0 in (
   ignore (try while true do try ignore ((
-    ignore (let __old_1 = !i in let __new_2 = __old_1 + 1 in (
+    ignore (let __old_1 = !i in let __new_2 = HxInt.add __old_1 1 in (
       ignore (i := __new_2);
       __old_1
     ));
     ignore (if !i = 2 then ignore (raise (HxRuntime.Hx_continue)) else ());
     ignore (if !i = 5 then ignore (raise (HxRuntime.Hx_break)) else ());
-    sum := !sum + !i
+    sum := HxInt.add (!sum) (!i)
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
@@ -19,16 +19,16 @@ let main = fun () -> let i = ref 0 in let sum = ref 0 in (
   ignore (if !sum <> 8 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad sum") ["Dynamic"; "String"]) else ());
   let outer = ref 0 in let innerCount = ref 0 in (
     ignore (while !outer < 3 do ignore ((
-      ignore (let __old_3 = !outer in let __new_4 = __old_3 + 1 in (
+      ignore (let __old_3 = !outer in let __new_4 = HxInt.add __old_3 1 in (
         ignore (outer := __new_4);
         __old_3
       ));
       let inner = ref 0 in try while true do try ignore ((
-        ignore (let __old_5 = !inner in let __new_6 = __old_5 + 1 in (
+        ignore (let __old_5 = !inner in let __new_6 = HxInt.add __old_5 1 in (
           ignore (inner := __new_6);
           __old_5
         ));
-        ignore (let __old_7 = !innerCount in let __new_8 = __old_7 + 1 in (
+        ignore (let __old_7 = !innerCount in let __new_8 = HxInt.add __old_7 1 in (
           ignore (innerCount := __new_8);
           __old_7
         ));

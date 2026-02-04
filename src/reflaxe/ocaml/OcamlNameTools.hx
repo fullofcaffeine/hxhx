@@ -22,6 +22,39 @@ package reflaxe.ocaml;
  */
 class OcamlNameTools {
 	/**
+		True if `name` is an OCaml reserved keyword (value identifier).
+
+		Why this exists:
+		- Haxe allows members named like `match`, `end`, `type`, ...
+		- OCaml does not: emitting those verbatim as `let match = ...` is a syntax error.
+		- We keep the mapping stable by prefixing such names with `hx_` at emission time.
+	**/
+	public static function isOcamlReservedValueName(name:String):Bool {
+		return switch (name) {
+			// Keywords (OCaml 4.x/5.x)
+			case "and", "as", "assert", "asr", "begin",
+				"class", "constraint",
+				"do", "done", "downto",
+				"else", "end", "exception", "external",
+				"false", "for", "fun", "function", "functor",
+				"if", "in", "include", "inherit", "initializer",
+				"land", "lazy", "let", "lor", "lsl", "lsr", "lxor",
+				"match", "method", "mod", "module", "mutable",
+				"new", "nonrec",
+				"object", "of", "open", "or",
+				"private",
+				"rec",
+				"sig", "struct",
+				"then", "to", "true", "try", "type",
+				"val", "virtual",
+				"when", "while", "with":
+				true;
+			case _:
+				false;
+		}
+	}
+
+	/**
 	 * Returns the last segment of a Haxe module id.
 	 *
 	 * Example:
@@ -94,4 +127,3 @@ class OcamlNameTools {
 		return isPrimaryTypeInModule(moduleId, typeName) ? memberName : (typePrefix(typeName) + "_" + memberName);
 	}
 }
-

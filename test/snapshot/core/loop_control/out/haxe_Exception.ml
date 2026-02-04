@@ -40,7 +40,7 @@ let __ctor = fun (self : t) message2 previous2 native2 -> ignore ((
       self.__nativeStack <- __assign_7;
       __assign_7
     ));
-    ignore (let __obj_9 = self in let __old_10 = __obj_9.__skipStack in let __new_11 = __old_10 + 1 in (
+    ignore (let __obj_9 = self in let __old_10 = __obj_9.__skipStack in let __new_11 = HxInt.add __old_10 1 in (
       ignore (__obj_9.__skipStack <- __new_11);
       __old_10
     ));
@@ -112,12 +112,12 @@ let details__impl = fun (self : t) () -> let tempResult = ref "" in (
   !tempResult
 )
 
-let __shiftStack__impl = fun (self : t) () -> ignore (let __obj_31 = self in let __old_32 = __obj_31.__skipStack in let __new_33 = __old_32 + 1 in (
+let __shiftStack__impl = fun (self : t) () -> ignore (let __obj_31 = self in let __old_32 = __obj_31.__skipStack in let __new_33 = HxInt.add __old_32 1 in (
   ignore (__obj_31.__skipStack <- __new_33);
   __old_32
 ))
 
-let __unshiftStack__impl = fun (self : t) () -> ignore (let __obj_34 = self in let __old_35 = __obj_34.__skipStack in let __new_36 = __old_35 + -1 in (
+let __unshiftStack__impl = fun (self : t) () -> ignore (let __obj_34 = self in let __old_35 = __obj_34.__skipStack in let __new_36 = HxInt.add __old_35 (-1) in (
   ignore (__obj_34.__skipStack <- __new_36);
   __old_35
 ))
@@ -178,7 +178,7 @@ let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.
         self.__nativeStack <- __assign_7;
         __assign_7
       ));
-      ignore (let __obj_9 = self in let __old_10 = __obj_9.__skipStack in let __new_11 = __old_10 + 1 in (
+      ignore (let __obj_9 = self in let __old_10 = __obj_9.__skipStack in let __new_11 = HxInt.add __old_10 1 in (
         ignore (__obj_9.__skipStack <- __new_11);
         __old_10
       ));

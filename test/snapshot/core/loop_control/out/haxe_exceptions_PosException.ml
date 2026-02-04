@@ -20,7 +20,7 @@ let __ctor = fun (self : t) message previous pos -> ignore ((
     self.posInfos <- __assign_3;
     __assign_3
   )));
-  let __obj_4 = self in let __old_5 = __obj_4.__skipStack in let __new_6 = __old_5 + 1 in (
+  let __obj_4 = self in let __old_5 = __obj_4.__skipStack in let __new_6 = HxInt.add __old_5 1 in (
     ignore (__obj_4.__skipStack <- __new_6);
     __old_5
   )
@@ -44,7 +44,7 @@ let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_
       self.posInfos <- __assign_3;
       __assign_3
     )));
-    let __obj_4 = self in let __old_5 = __obj_4.__skipStack in let __new_6 = __old_5 + 1 in (
+    let __obj_4 = self in let __old_5 = __obj_4.__skipStack in let __new_6 = HxInt.add __old_5 1 in (
       ignore (__obj_4.__skipStack <- __new_6);
       __old_5
     )

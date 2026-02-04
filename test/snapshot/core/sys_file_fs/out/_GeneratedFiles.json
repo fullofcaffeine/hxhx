@@ -34,7 +34,6 @@
 		"Main.ml",
 		"IntIterator.ml",
 		"EnumValue.ml",
-		"EReg.ml",
 		"Any.ml"
 	],
 	"id": 1,

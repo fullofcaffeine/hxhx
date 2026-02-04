@@ -55,8 +55,8 @@ class M5ClassIntegrationTest {
 		], "ctor assigns y");
 		assertContains(pointMl, "incX = fun self () ->", "instance method incX");
 		assertMatchesEither(pointMl, [
-			new EReg("self\\.x <- self\\.x \\+ 1", ""),
-			new EReg("let __assign_[0-9]+ = self\\.x \\+ 1 in \\(\\s*self\\.x <- __assign_[0-9]+;", "")
+			new EReg("self\\.x <- HxInt\\.add \\(self\\.x\\) 1", ""),
+			new EReg("let __assign_[0-9]+ = HxInt\\.add \\(self\\.x\\) 1 in \\(\\s*self\\.x <- __assign_[0-9]+;", "")
 		], "incX updates field");
 
 		final mainPath = outDir + "/ClassMain.ml";

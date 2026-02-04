@@ -139,12 +139,12 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
 
 let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) in (
   ignore (try while true do try ignore ((
-    ignore (if not ((let __old_3 = !i in let __new_4 = __old_3 + 1 in (
+    ignore (if not ((let __old_3 = !i in let __new_4 = HxInt.add __old_3 1 in (
       ignore (i := __new_4);
       __new_4
     )) < HxArray.length this1) then ignore (raise (HxRuntime.Hx_break)) else ());
     let _g = ref 0 in let _g1 = HxArray.length stack in (
-      ignore (try while !_g < _g1 do try ignore (let j = let __old_5 = !_g in let __new_6 = __old_5 + 1 in (
+      ignore (try while !_g < _g1 do try ignore (let j = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
         ignore (_g := __new_6);
         __old_5
       ) in if equalItems (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get this1 (!i)))) (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get stack j))) then ignore ((
@@ -152,7 +152,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
           startIndex := __assign_7;
           __assign_7
         )) else ());
-        ignore (let __old_8 = !i in let __new_9 = __old_8 + 1 in (
+        ignore (let __old_8 = !i in let __new_9 = HxInt.add __old_8 1 in (
           ignore (i := __new_9);
           __new_9
         ));
@@ -219,7 +219,7 @@ let rec itemToString = fun b s -> match s with
 
 let toString = fun stack -> let b = StringBuf.create () in let _g = ref 0 in let _g1 = stack in (
   ignore (while !_g < HxArray.length _g1 do ignore (let s = HxArray.get _g1 (!_g) in (
-    ignore (let __old_1 = !_g in let __new_2 = __old_1 + 1 in (
+    ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
       ignore (_g := __new_2);
       __new_2
     ));

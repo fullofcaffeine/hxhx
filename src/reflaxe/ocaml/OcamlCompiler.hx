@@ -883,7 +883,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					}));
 							switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
 								case OcamlExpr.EFun(params, b):
-									final body = (isDispatch && !exprMentionsIdent(b, "self"))
+									// Dune/OCaml flags can be warning-as-error; avoid `unused-var-strict` for `self`
+									// by forcing a use when the method body doesn't reference it.
+									final body = (!exprMentionsIdent(b, "self"))
 										? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b])
 										: b;
 									final unitBody = funReturnsVoid(f.field.type)
@@ -1007,7 +1009,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		if (!noDune) {
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
 			final duneLibs = duneLibsValue == null
-				? ["unix"]
+				? ["unix", "str"]
 				: duneLibsValue
 					.split(",")
 					.map(s -> StringTools.trim(s))

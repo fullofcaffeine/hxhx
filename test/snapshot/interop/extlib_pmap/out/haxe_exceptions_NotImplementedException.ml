@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable message : string; mutable stack : Haxe_Cal
 let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_ "haxe.exceptions.NotImplementedException"; message = ""; stack = Obj.magic (); previous = Obj.magic (); native = Obj.magic (); __exceptionMessage = ""; __exceptionStack = Obj.magic (); __nativeStack = Obj.magic (); __skipStack = 0; __nativeException = Obj.magic (); __previousException = Obj.magic (); unwrap = (fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) ()); toString = (fun o () -> Haxe_exceptions_PosException.toString__impl (Obj.magic o) ()); details = (fun o () -> Haxe_Exception.details__impl (Obj.magic o) ()); __shiftStack = (fun o () -> Haxe_Exception.__shiftStack__impl (Obj.magic o) ()); __unshiftStack = (fun o () -> Haxe_Exception.__unshiftStack__impl (Obj.magic o) ()); get_message = (fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) ()); get_previous = (fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) ()); get_native = (fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) ()); get_stack = (fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) ()); posInfos = Obj.magic () } : t) in (
   ignore ((
     ignore (Haxe_exceptions_PosException.__ctor (Obj.magic self) message previous pos);
-    let __obj_1 = self in let __old_2 = __obj_1.__skipStack in let __new_3 = __old_2 + 1 in (
+    let __obj_1 = self in let __old_2 = __obj_1.__skipStack in let __new_3 = HxInt.add __old_2 1 in (
       ignore (__obj_1.__skipStack <- __new_3);
       __old_2
     )
@@ -18,7 +18,7 @@ let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_
 
 let __ctor = fun (self : t) message previous pos -> ignore ((
   ignore (Haxe_exceptions_PosException.__ctor (Obj.magic self) message previous pos);
-  let __obj_1 = self in let __old_2 = __obj_1.__skipStack in let __new_3 = __old_2 + 1 in (
+  let __obj_1 = self in let __old_2 = __obj_1.__skipStack in let __new_3 = HxInt.add __old_2 1 in (
     ignore (__obj_1.__skipStack <- __new_3);
     __old_2
   )

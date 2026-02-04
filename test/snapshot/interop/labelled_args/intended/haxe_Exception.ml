@@ -41,7 +41,7 @@ let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.
         self.__nativeStack <- __assign_7;
         __assign_7
       ));
-      ignore (let __obj_9 = self in let __old_10 = __obj_9.__skipStack in let __new_11 = __old_10 + 1 in (
+      ignore (let __obj_9 = self in let __old_10 = __obj_9.__skipStack in let __new_11 = HxInt.add __old_10 1 in (
         ignore (__obj_9.__skipStack <- __new_11);
         __old_10
       ));
@@ -56,12 +56,12 @@ let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.
 
 let unwrap = fun self () -> self.__nativeException
 
-let __shiftStack = fun self () -> ignore (let __obj_25 = self in let __old_26 = __obj_25.__skipStack in let __new_27 = __old_26 + 1 in (
+let __shiftStack = fun self () -> ignore (let __obj_25 = self in let __old_26 = __obj_25.__skipStack in let __new_27 = HxInt.add __old_26 1 in (
   ignore (__obj_25.__skipStack <- __new_27);
   __old_26
 ))
 
-let __unshiftStack = fun self () -> ignore (let __obj_28 = self in let __old_29 = __obj_28.__skipStack in let __new_30 = __old_29 + -1 in (
+let __unshiftStack = fun self () -> ignore (let __obj_28 = self in let __old_29 = __obj_28.__skipStack in let __new_30 = HxInt.add __old_29 (-1) in (
   ignore (__obj_28.__skipStack <- __new_30);
   __old_29
 ))

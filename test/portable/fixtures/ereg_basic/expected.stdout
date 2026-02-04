@@ -1,0 +1,10 @@
+m=true
+g0=12
+pos=2,len=2
+left=ab
+right=cd
+rep=a#b#c
+parts=a|b|c
+map=a[1]b[22]c
+esc=a\+b
+OK ereg_basic

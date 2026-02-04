@@ -21,7 +21,7 @@ let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterato
 
 let hasNext = fun self () -> self.current < HxArray.length (self.array)
 
-let next = fun self () -> HxArray.get (self.array) (let __obj_3 = self in let __old_4 = __obj_3.current in let __new_5 = __old_4 + 1 in (
+let next = fun self () -> HxArray.get (self.array) (let __obj_3 = self in let __old_4 = __obj_3.current in let __new_5 = HxInt.add __old_4 1 in (
   ignore (__obj_3.current <- __new_5);
   __old_4
 ))

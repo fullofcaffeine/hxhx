@@ -6,7 +6,6 @@ let init () : unit =
   ignore (HxType.class_ "StringBuf");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
-  HxType.register_class_tags "EReg" [ "EReg" ];
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];

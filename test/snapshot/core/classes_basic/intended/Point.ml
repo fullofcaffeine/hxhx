@@ -19,20 +19,20 @@ let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0
   self
 )
 
-let incX = fun self () -> ignore (let __assign_3 = self.x + 1 in (
+let incX = fun self () -> ignore (let __assign_3 = HxInt.add (self.x) 1 in (
   self.x <- __assign_3;
   __assign_3
 ))
 
 let add = fun self dx dy -> ignore ((
-  ignore (let __assign_4 = self.x + dx in (
+  ignore (let __assign_4 = HxInt.add (self.x) dx in (
     self.x <- __assign_4;
     __assign_4
   ));
-  let __assign_5 = self.y + dy in (
+  let __assign_5 = HxInt.add (self.y) dy in (
     self.y <- __assign_5;
     __assign_5
   )
 ))
 
-let sum = fun self () -> self.x + self.y
+let sum = fun self () -> HxInt.add (self.x) (self.y)

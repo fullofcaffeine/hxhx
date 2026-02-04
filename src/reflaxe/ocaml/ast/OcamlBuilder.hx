@@ -2879,7 +2879,7 @@ class OcamlBuilder {
 							case _:
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
-				case OpAssignOp(inner):
+			case OpAssignOp(inner):
 					// Handle compound assignment for ref locals:
 					// x += v  ->  x := (!x) + v
 					switch (e1.expr) {
@@ -2893,24 +2893,36 @@ class OcamlBuilder {
 								} else if (floatMode) {
 									OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
 								} else {
-									OcamlExpr.EBinop(OcamlBinop.Add, lhs, toIntExpr(e2));
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [lhs, toIntExpr(e2)]);
 								}
 							case OpSub:
 								floatMode
 									? OcamlExpr.EBinop(OcamlBinop.SubF, lhs, toFloatExpr(e2))
-									: OcamlExpr.EBinop(OcamlBinop.Sub, lhs, toIntExpr(e2));
+									: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "sub"), [lhs, toIntExpr(e2)]);
 							case OpMult:
 								floatMode
 									? OcamlExpr.EBinop(OcamlBinop.MulF, lhs, toFloatExpr(e2))
-									: OcamlExpr.EBinop(OcamlBinop.Mul, lhs, toIntExpr(e2));
+									: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "mul"), [lhs, toIntExpr(e2)]);
 							case OpDiv:
 								floatMode
 									? OcamlExpr.EBinop(OcamlBinop.DivF, lhs, toFloatExpr(e2))
-									: OcamlExpr.EBinop(OcamlBinop.Div, lhs, toIntExpr(e2));
+									: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "div"), [lhs, toIntExpr(e2)]);
 							case OpMod:
 								floatMode
 									? OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [lhs, toFloatExpr(e2)])
-									: OcamlExpr.EBinop(OcamlBinop.Mod, lhs, toIntExpr(e2));
+									: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "rem"), [lhs, toIntExpr(e2)]);
+							case OpAnd:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logand"), [lhs, toIntExpr(e2)]);
+							case OpOr:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logor"), [lhs, toIntExpr(e2)]);
+							case OpXor:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logxor"), [lhs, toIntExpr(e2)]);
+							case OpShl:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shl"), [lhs, toIntExpr(e2)]);
+							case OpShr:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shr"), [lhs, toIntExpr(e2)]);
+							case OpUShr:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [lhs, toIntExpr(e2)]);
 							case _: OcamlExpr.EConst(OcamlConst.CUnit);
 						}
 							OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
@@ -2933,24 +2945,36 @@ class OcamlBuilder {
 											} else if (floatMode) {
 												OcamlExpr.EBinop(OcamlBinop.AddF, lhsField, toFloatExpr(e2));
 											} else {
-												OcamlExpr.EBinop(OcamlBinop.Add, lhsField, toIntExpr(e2));
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [lhsField, toIntExpr(e2)]);
 											}
 										case OpSub:
 											floatMode
 												? OcamlExpr.EBinop(OcamlBinop.SubF, lhsField, toFloatExpr(e2))
-												: OcamlExpr.EBinop(OcamlBinop.Sub, lhsField, toIntExpr(e2));
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "sub"), [lhsField, toIntExpr(e2)]);
 										case OpMult:
 											floatMode
 												? OcamlExpr.EBinop(OcamlBinop.MulF, lhsField, toFloatExpr(e2))
-												: OcamlExpr.EBinop(OcamlBinop.Mul, lhsField, toIntExpr(e2));
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "mul"), [lhsField, toIntExpr(e2)]);
 										case OpDiv:
 											floatMode
 												? OcamlExpr.EBinop(OcamlBinop.DivF, lhsField, toFloatExpr(e2))
-												: OcamlExpr.EBinop(OcamlBinop.Div, lhsField, toIntExpr(e2));
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "div"), [lhsField, toIntExpr(e2)]);
 										case OpMod:
 											floatMode
 												? OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [lhsField, toFloatExpr(e2)])
-												: OcamlExpr.EBinop(OcamlBinop.Mod, lhsField, toIntExpr(e2));
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "rem"), [lhsField, toIntExpr(e2)]);
+										case OpAnd:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logand"), [lhsField, toIntExpr(e2)]);
+										case OpOr:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logor"), [lhsField, toIntExpr(e2)]);
+										case OpXor:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logxor"), [lhsField, toIntExpr(e2)]);
+										case OpShl:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shl"), [lhsField, toIntExpr(e2)]);
+										case OpShr:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shr"), [lhsField, toIntExpr(e2)]);
+										case OpUShr:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [lhsField, toIntExpr(e2)]);
 										case _:
 											OcamlExpr.EConst(OcamlConst.CUnit);
 									}
@@ -2978,24 +3002,36 @@ class OcamlBuilder {
 									} else if (floatMode) {
 										OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
 									} else {
-										OcamlExpr.EBinop(OcamlBinop.Add, lhs, toIntExpr(e2));
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [lhs, toIntExpr(e2)]);
 									}
 								case OpSub:
 									floatMode
 										? OcamlExpr.EBinop(OcamlBinop.SubF, lhs, toFloatExpr(e2))
-										: OcamlExpr.EBinop(OcamlBinop.Sub, lhs, toIntExpr(e2));
+										: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "sub"), [lhs, toIntExpr(e2)]);
 								case OpMult:
 									floatMode
 										? OcamlExpr.EBinop(OcamlBinop.MulF, lhs, toFloatExpr(e2))
-										: OcamlExpr.EBinop(OcamlBinop.Mul, lhs, toIntExpr(e2));
+										: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "mul"), [lhs, toIntExpr(e2)]);
 								case OpDiv:
 									floatMode
 										? OcamlExpr.EBinop(OcamlBinop.DivF, lhs, toFloatExpr(e2))
-										: OcamlExpr.EBinop(OcamlBinop.Div, lhs, toIntExpr(e2));
+										: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "div"), [lhs, toIntExpr(e2)]);
 								case OpMod:
 									floatMode
 										? OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [lhs, toFloatExpr(e2)])
-										: OcamlExpr.EBinop(OcamlBinop.Mod, lhs, toIntExpr(e2));
+										: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "rem"), [lhs, toIntExpr(e2)]);
+								case OpAnd:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logand"), [lhs, toIntExpr(e2)]);
+								case OpOr:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logor"), [lhs, toIntExpr(e2)]);
+								case OpXor:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logxor"), [lhs, toIntExpr(e2)]);
+								case OpShl:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shl"), [lhs, toIntExpr(e2)]);
+								case OpShr:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shr"), [lhs, toIntExpr(e2)]);
+								case OpUShr:
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [lhs, toIntExpr(e2)]);
 								case _:
 									OcamlExpr.EConst(OcamlConst.CUnit);
 							}
@@ -3036,7 +3072,7 @@ class OcamlBuilder {
 					if (floatMode) {
 						OcamlExpr.EBinop(OcamlBinop.AddF, toFloatExpr(e1), toFloatExpr(e2));
 					} else {
-						OcamlExpr.EBinop(OcamlBinop.Add, toIntExpr(e1), toIntExpr(e2));
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [toIntExpr(e1), toIntExpr(e2)]);
 					}
 				}
 			case OpSub:
@@ -3044,14 +3080,14 @@ class OcamlBuilder {
 				if (floatMode) {
 					OcamlExpr.EBinop(OcamlBinop.SubF, toFloatExpr(e1), toFloatExpr(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Sub, toIntExpr(e1), toIntExpr(e2));
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "sub"), [toIntExpr(e1), toIntExpr(e2)]);
 				}
 			case OpMult:
 				final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
 				if (floatMode) {
 					OcamlExpr.EBinop(OcamlBinop.MulF, toFloatExpr(e1), toFloatExpr(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Mul, toIntExpr(e1), toIntExpr(e2));
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "mul"), [toIntExpr(e1), toIntExpr(e2)]);
 				}
 			case OpDiv:
 				// Haxe `/` always produces Float (Int/Int => Float). OCaml needs `/.` with
@@ -3060,15 +3096,27 @@ class OcamlBuilder {
 				if (floatMode) {
 					OcamlExpr.EBinop(OcamlBinop.DivF, toFloatExpr(e1), toFloatExpr(e2));
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Div, toIntExpr(e1), toIntExpr(e2));
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "div"), [toIntExpr(e1), toIntExpr(e2)]);
 				}
 			case OpMod:
 				final floatMode = isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float";
 				if (floatMode) {
 					OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [toFloatExpr(e1), toFloatExpr(e2)]);
 				} else {
-					OcamlExpr.EBinop(OcamlBinop.Mod, toIntExpr(e1), toIntExpr(e2));
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "rem"), [toIntExpr(e1), toIntExpr(e2)]);
 				}
+			case OpAnd:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logand"), [toIntExpr(e1), toIntExpr(e2)]);
+			case OpOr:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logor"), [toIntExpr(e1), toIntExpr(e2)]);
+			case OpXor:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logxor"), [toIntExpr(e1), toIntExpr(e2)]);
+			case OpShl:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shl"), [toIntExpr(e1), toIntExpr(e2)]);
+			case OpShr:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shr"), [toIntExpr(e1), toIntExpr(e2)]);
+			case OpUShr:
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [toIntExpr(e1), toIntExpr(e2)]);
 			case OpEq:
 				// Null checks must use physical equality (==) so we don't accidentally invoke
 				// specialized structural equality (notably for strings).
@@ -3574,8 +3622,18 @@ class OcamlBuilder {
 			return switch (op) {
 				case OpNot:
 					OcamlExpr.EUnop(OcamlUnop.Not, buildExpr(e));
+				case OpNegBits:
+					final kind = nullablePrimitiveKind(e.t);
+					final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "lognot"), [v]);
 				case OpNeg:
-					OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
+					if (isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float") {
+						OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
+					} else {
+						final kind = nullablePrimitiveKind(e.t);
+						final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [v]);
+					}
 				case OpIncrement, OpDecrement:
 				// ++x / x++ / --x / x--:
 				//
@@ -3620,8 +3678,12 @@ class OcamlBuilder {
 						if (!lvalueIsNullable && !resultIsNullable) {
 							final oldName = freshTmp("old");
 							final newName = freshTmp("new");
-							final binop = kind == "float" ? OcamlBinop.AddF : OcamlBinop.Add;
-							final updated = OcamlExpr.EBinop(binop, OcamlExpr.EIdent(oldName), deltaPrimExpr);
+							final updated = kind == "float"
+								? OcamlExpr.EBinop(OcamlBinop.AddF, OcamlExpr.EIdent(oldName), deltaPrimExpr)
+								: OcamlExpr.EApp(
+									OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+									[OcamlExpr.EIdent(oldName), deltaPrimExpr]
+								);
 							final setExpr = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [setNewRep(OcamlExpr.EIdent(newName))]);
 							final resultName = postFix ? oldName : newName;
 							return OcamlExpr.ELet(
@@ -3650,8 +3712,12 @@ class OcamlBuilder {
 							OcamlExpr.EIdent(oldRepName);
 						}
 
-						final binop = kind == "float" ? OcamlBinop.AddF : OcamlBinop.Add;
-						final newPrimExpr = OcamlExpr.EBinop(binop, OcamlExpr.EIdent(oldPrimName), deltaPrimExpr);
+						final newPrimExpr = kind == "float"
+							? OcamlExpr.EBinop(OcamlBinop.AddF, OcamlExpr.EIdent(oldPrimName), deltaPrimExpr)
+							: OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+								[OcamlExpr.EIdent(oldPrimName), deltaPrimExpr]
+							);
 						final newRepExpr:OcamlExpr = lvalueIsNullable
 							? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(newPrimName)])
 							: OcamlExpr.EIdent(newPrimName);

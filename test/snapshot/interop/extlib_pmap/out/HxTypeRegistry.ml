@@ -7,7 +7,6 @@ let init () : unit =
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
   ignore (HxType.class_ "ocaml.extlib._PMap.PMap_Impl_");
-  HxType.register_class_tags "EReg" [ "EReg" ];
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];
