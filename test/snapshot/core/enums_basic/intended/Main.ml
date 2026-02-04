@@ -4,19 +4,19 @@
 let __reflaxe_ocaml__ = ()
 
 let main = fun () -> let e = ref (MyEnum.C (1, "x")) in match !e with
-  | MyEnum.A -> let __assign_1 = MyEnum.B 2 in (
+  | MyEnum.A -> ignore (let __assign_1 = MyEnum.B 2 in (
     e := __assign_1;
     __assign_1
-  )
-  | MyEnum.B _p0 -> let _g = _p0 in let i = _g in let __assign_2 = MyEnum.C (i, "y") in (
+  ))
+  | MyEnum.B _p0 -> ignore (let _g = _p0 in let i = _g in let __assign_2 = MyEnum.C (i, "y") in (
     e := __assign_2;
     __assign_2
-  )
-  | MyEnum.C (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+  ))
+  | MyEnum.C (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in (
     ignore _g;
     ignore _g1;
     let __assign_3 = MyEnum.A in (
       e := __assign_3;
       __assign_3
     )
-  )
+  ))

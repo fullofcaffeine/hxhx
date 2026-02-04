@@ -181,12 +181,12 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
 )
 
 let rec itemToString = fun b s -> match s with
-  | CFunction -> StringBuf.add b "a C function"
-  | Module _p0 -> let _g = _p0 in let m = _g in (
+  | CFunction -> ignore (StringBuf.add b "a C function")
+  | Module _p0 -> ignore (let _g = _p0 in let m = _g in (
     ignore (StringBuf.add b "module ");
     StringBuf.add b m
-  )
-  | FilePos (_p0, _p1, _p2, _p3) -> let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _p0) in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let file = _g1 in let line = _g2 in let col = _g3 in (
+  ))
+  | FilePos (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _p0) in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let file = _g1 in let line = _g2 in let col = _g3 in (
     ignore (if s2 != Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (itemToString b (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" s2)));
       StringBuf.add b " ("
@@ -199,8 +199,8 @@ let rec itemToString = fun b s -> match s with
       StringBuf.add b col
     )) else ());
     if s2 != Obj.magic (HxRuntime.hx_null) then ignore (StringBuf.add b ")") else ()
-  )
-  | Method (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let cname = _g in let meth = _g1 in let tempMaybeString = ref (Obj.magic ()) in (
+  ))
+  | Method (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in let cname = _g in let meth = _g1 in let tempMaybeString = ref (Obj.magic ()) in (
     ignore (if cname == Obj.magic (HxRuntime.hx_null) then let __assign_72 = "<unknown>" in (
       tempMaybeString := __assign_72;
       __assign_72
@@ -211,11 +211,11 @@ let rec itemToString = fun b s -> match s with
     ignore (StringBuf.add b (!tempMaybeString));
     ignore (StringBuf.add b ".");
     StringBuf.add b meth
-  )
-  | LocalFunction _p0 -> let _g = _p0 in let n = _g in (
+  ))
+  | LocalFunction _p0 -> ignore (let _g = _p0 in let n = _g in (
     ignore (StringBuf.add b "local function #");
     StringBuf.add b n
-  )
+  ))
 
 let toString = fun stack -> let b = StringBuf.create () in let _g = ref 0 in let _g1 = stack in (
   ignore (while !_g < HxArray.length _g1 do ignore (let s = HxArray.get _g1 (!_g) in (

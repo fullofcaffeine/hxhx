@@ -2066,7 +2066,7 @@ class OcamlBuilder {
 						OcamlExpr.EWhile(condExpr, builtBody);
 					}
 			case TSwitch(scrutinee, cases, edef):
-				buildSwitch(scrutinee, cases, edef);
+				buildSwitch(scrutinee, cases, edef, e.t);
 			case TArray(arr, idx):
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [buildExpr(arr), buildExpr(idx)]);
 			case TArrayDecl(items):
@@ -4040,8 +4040,15 @@ class OcamlBuilder {
 	function buildSwitch(
 		scrutinee:TypedExpr,
 		cases:Array<{values:Array<TypedExpr>, expr:TypedExpr}>,
-		edef:Null<TypedExpr>
+		edef:Null<TypedExpr>,
+		switchType:Type
 	):OcamlExpr {
+		final wantUnit = isVoidType(switchType);
+
+		inline function wrapCaseExpr(expr:OcamlExpr):OcamlExpr {
+			return wantUnit ? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [expr]) : expr;
+		}
+
 		// Enum pattern matching: Haxe's pattern matcher often lowers enum switches to:
 		// switch (TEnumIndex(e)) { case 0: ...; case 1: ... }
 		// Reconstruct a direct OCaml match on the enum value.
@@ -4062,7 +4069,7 @@ class OcamlBuilder {
 	
 								final prev = currentEnumParamNames;
 								currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-								final expr = buildExpr(c.expr);
+								final expr = wrapCaseExpr(buildExpr(c.expr));
 								currentEnumParamNames = prev;
 	
 								arms.push({ pat: pat, guard: null, expr: expr });
@@ -4072,7 +4079,9 @@ class OcamlBuilder {
 							arms.push({
 								pat: OcamlPat.PAny,
 								guard: null,
-								expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
+								expr: wrapCaseExpr(
+									edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
+								)
 							});
 						}
 
@@ -4095,7 +4104,7 @@ class OcamlBuilder {
 
 			final prev = currentEnumParamNames;
 			currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-			final expr = buildExpr(c.expr);
+			final expr = wrapCaseExpr(buildExpr(c.expr));
 			currentEnumParamNames = prev;
 
 			arms.push({ pat: pat, guard: null, expr: expr });
@@ -4103,7 +4112,9 @@ class OcamlBuilder {
 		arms.push({
 			pat: OcamlPat.PAny,
 			guard: null,
-			expr: edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
+			expr: wrapCaseExpr(
+				edef != null ? buildExpr(edef) : OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))])
+			)
 		});
 
 		// Nullable primitive switches (notably `Null<Int>` lowered by the compiler in
@@ -4123,8 +4134,8 @@ class OcamlBuilder {
 				final tmp = freshTmp("switch");
 				final hxNull = OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 				final defaultBranch = edef != null
-					? buildExpr(edef)
-					: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]);
+					? wrapCaseExpr(buildExpr(edef))
+					: wrapCaseExpr(OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Non-exhaustive switch"))]));
 
 				// Support `case null`: for nullable primitives the scrutinee is `Obj.t`, so
 				// the `null` case must be handled *before* unboxing to a primitive.
@@ -4138,7 +4149,7 @@ class OcamlBuilder {
 						}
 					}
 					if (hasNull) {
-						firstNullCaseExpr = buildExpr(c.expr);
+						firstNullCaseExpr = wrapCaseExpr(buildExpr(c.expr));
 						break;
 					}
 				}
@@ -4161,7 +4172,7 @@ class OcamlBuilder {
 
 					final prev = currentEnumParamNames;
 					currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-					final expr = buildExpr(c.expr);
+					final expr = wrapCaseExpr(buildExpr(c.expr));
 					currentEnumParamNames = prev;
 
 					nonNullArms.push({ pat: pat, guard: null, expr: expr });
