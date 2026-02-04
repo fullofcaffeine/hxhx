@@ -24,6 +24,15 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
 mkdir -p "$tmpdir/src"
+mkdir -p "$tmpdir/fake_std/haxe/io"
+cat >"$tmpdir/fake_std/haxe/io/Path.hx" <<'HX'
+package haxe.io;
+
+class Path {}
+HX
+cat >"$tmpdir/fake_std/StringTools.hx" <<'HX'
+class StringTools {}
+HX
 cat >"$tmpdir/src/Main.hx" <<'HX'
 package;
 
@@ -56,8 +65,10 @@ test -f "$ROOT/out/dune"
 rm -rf "$ROOT/out"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
-out="$("$HXHX_BIN" --hxhx-stage1 --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"
+out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"
 echo "$out" | grep -q "^stage1=ok$"
+echo "$out" | grep -vq "stage1=warn import_missing haxe.io.Path"
+echo "$out" | grep -vq "stage1=warn import_missing StringTools"
 
 echo "== Stage1 bring-up: accepts .hxml"
 cat >"$tmpdir/build.hxml" <<HX

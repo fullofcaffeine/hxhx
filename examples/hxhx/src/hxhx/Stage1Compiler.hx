@@ -181,6 +181,7 @@ class Stage1Args {
 		final libs = new Array<String>();
 		final macros = new Array<String>();
 		var cwd = ".";
+		var stdRoot = "";
 
 		var i = 0;
 		while (i < expanded.length) {
@@ -199,6 +200,13 @@ class Stage1Args {
 						return null;
 					}
 					cwd = expanded[i + 1];
+					i += 2;
+				case "--std":
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --std");
+						return null;
+					}
+					stdRoot = expanded[i + 1];
 					i += 2;
 				case "-main", "--main":
 					if (i + 1 >= expanded.length) {
@@ -253,6 +261,7 @@ class Stage1Args {
 		}
 
 		if (classPaths.length == 0) classPaths.push(".");
+		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
 		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros, cwd);
 	}
 
