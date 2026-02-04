@@ -1,5 +1,7 @@
 package hxhx;
 
+import haxe.io.Path;
+
 /**
 	Stage 1 compiler bring-up (`--hxhx-stage1`).
 
@@ -240,25 +242,6 @@ class Stage1Resolver {
 		return s == null ? "" : StringTools.replace(s, "\\", "/");
 	}
 
-	static function joinPath(parts:Array<String>):String {
-		var out = "";
-		for (p0 in parts) {
-			final p = normalizeSep(p0);
-			if (p.length == 0) continue;
-			if (out.length == 0) {
-				out = p;
-				continue;
-			}
-			if (!StringTools.endsWith(out, "/") && !StringTools.startsWith(p, "/")) out += "/";
-			else if (StringTools.endsWith(out, "/") && StringTools.startsWith(p, "/")) {
-				out += p.substr(1);
-				continue;
-			}
-			out += p;
-		}
-		return out;
-	}
-
 	public static function resolveMain(classPaths:Array<String>, main:String):Null<{
 		path:String,
 		packagePath:String,
@@ -275,8 +258,7 @@ class Stage1Resolver {
 		final pkg = pkgParts.join(".");
 
 		for (cp in classPaths) {
-			final pieces = [cp].concat(pkgParts).concat([className + ".hx"]);
-			final candidate = joinPath(pieces);
+			final candidate = Path.join([cp].concat(pkgParts).concat([className + ".hx"]));
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
 				return { path: candidate, packagePath: pkg, className: className };
 			}
@@ -300,8 +282,7 @@ class Stage1Resolver {
 		final pkg = pkgParts.join(".");
 
 		for (cp in classPaths) {
-			final pieces = [cp].concat(pkgParts).concat([className + ".hx"]);
-			final candidate = joinPath(pieces);
+			final candidate = Path.join([cp].concat(pkgParts).concat([className + ".hx"]));
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
 				return { path: candidate, packagePath: pkg, className: className };
 			}
