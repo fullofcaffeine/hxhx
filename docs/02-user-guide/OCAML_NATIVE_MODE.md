@@ -43,6 +43,8 @@ These surfaces are small-but-useful, typed wrappers over `Stdlib.*`:
 - `ocaml.Char` → OCaml `char` (`Stdlib.Char`)
 - `ocaml.Hashtbl<K,V>` → OCaml `('k,'v) Hashtbl.t` (`Stdlib.Hashtbl`)
 - `ocaml.Seq<T>` → OCaml `'a Seq.t` (`Stdlib.Seq`)
+- `ocaml.StringMap<V>` / `ocaml.IntMap<V>` → `Stdlib.Map.Make(...)` instantiations (emitted as `OcamlNative*Map`)
+- `ocaml.StringSet` / `ocaml.IntSet` → `Stdlib.Set.Make(...)` instantiations (emitted as `OcamlNative*Set`)
 
 See `std/ocaml/*.hx` for the authoritative API surface.
 
@@ -83,4 +85,3 @@ See `docs/02-user-guide/OCAML_INTEROP_LABELLED_ARGS.md:1` for a copy-pasteable e
   idiomatic interop, not forcing OCaml’s exact type representation into Haxe.
 - Optional labelled args currently emit `?label:(Some v)` / `?label:None`. This is valid OCaml,
   but may be more verbose than hand-written code (`~label:v`).
-

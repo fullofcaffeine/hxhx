@@ -108,6 +108,20 @@ class CompilationContext {
 	 */
 	public final classTagsByFullName:Map<String, Array<String>> = [];
 
+	/**
+	 * Whether the output needs OCaml-native functor instantiations (Map/Set modules).
+	 *
+	 * Why:
+	 * - OCaml's `Map`/`Set` are functorized (`Map.Make`, `Set.Make`).
+	 * - We provide a Haxe-typed OCaml-native surface (e.g. `ocaml.StringMap`) that maps to
+	 *   pre-instantiated modules like `OcamlNativeStringMap`.
+	 * - Those modules must exist as real `.ml` files so dune can compile/link the output.
+	 *
+	 * This flag is set opportunistically during codegen when we encounter `@:native("OcamlNative*")`
+	 * extern references, and is consumed by `OcamlCompiler.onOutputComplete()` to emit the `.ml` files.
+	 */
+	public var needsOcamlNativeMapSet:Bool = false;
+
 	public function isPrimaryTypeInModule(moduleId:String, typeName:String):Bool {
 		final primary = primaryTypeNameByModule.get(moduleId);
 		return primary != null ? (primary == typeName) : OcamlNameTools.isPrimaryTypeInModule(moduleId, typeName);

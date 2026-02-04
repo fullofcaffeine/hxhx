@@ -3,6 +3,8 @@ import ocaml.Bytes as OBytes;
 import ocaml.Char as OChar;
 import ocaml.Hashtbl as OHashtbl;
 import ocaml.Seq as OSeq;
+import ocaml.StringMap as OStringMap;
+import ocaml.StringSet as OStringSet;
 
 class Main {
 	static function main() {
@@ -23,6 +25,13 @@ class Main {
 		final seq = OSeq.append(OSeq.return_(1), OSeq.return_(2));
 		final sum = OSeq.foldLeft((acc, x) -> acc + x, 0, seq);
 		Sys.println("seqSum=" + sum);
+
+		var sm:OStringMap<Int> = OStringMap.empty();
+		sm = OStringMap.add("a", 1, sm);
+		Sys.println("stringMapMem=" + OStringMap.mem("a", sm));
+
+		var ss = OStringSet.empty();
+		ss = OStringSet.add("a", ss);
+		Sys.println("stringSetMem=" + OStringSet.mem("a", ss));
 	}
 }
-

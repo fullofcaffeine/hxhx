@@ -31,6 +31,7 @@ import reflaxe.ocaml.ast.OcamlTypeRecordField;
 import reflaxe.ocaml.ast.OcamlVariantConstructor;
 import reflaxe.ocaml.runtimegen.DuneProjectEmitter;
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner;
+import reflaxe.ocaml.runtimegen.OcamlNativeFunctorEmitter;
 import reflaxe.ocaml.runtimegen.PackageAliasEmitter;
 import reflaxe.ocaml.runtimegen.RuntimeCopier;
 import reflaxe.GenericCompiler;
@@ -1028,6 +1029,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 			RuntimeCopier.copy(output, "runtime");
 		}
 
+		// OCaml-native (M12): emit functor-instantiated modules when requested by interop surfaces.
+		if (ctx.needsOcamlNativeMapSet) {
+			OcamlNativeFunctorEmitter.emitMapSet(output);
+		}
+
 		// Package alias modules (M8): generate dot-path access helpers unless disabled.
 		final emitAliasesValue = haxe.macro.Context.definedValue("ocaml_emit_package_aliases");
 		final emitAliases = emitAliasesValue == null || emitAliasesValue != "0";
@@ -1211,6 +1217,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 									? ocamlTypeExprFromHaxeType(params[0])
 									: OcamlTypeExpr.TIdent("Obj.t");
 								return OcamlTypeExpr.TApp("array", [elem]);
+							case "StringMap":
+								final v = (params != null && params.length > 0)
+									? ocamlTypeExprFromHaxeType(params[0])
+									: OcamlTypeExpr.TIdent("Obj.t");
+								return OcamlTypeExpr.TApp("OcamlNativeStringMap.t", [v]);
+							case "IntMap":
+								final v = (params != null && params.length > 0)
+									? ocamlTypeExprFromHaxeType(params[0])
+									: OcamlTypeExpr.TIdent("Obj.t");
+								return OcamlTypeExpr.TApp("OcamlNativeIntMap.t", [v]);
+							case "StringSet":
+								return OcamlTypeExpr.TIdent("OcamlNativeStringSet.t");
+							case "IntSet":
+								return OcamlTypeExpr.TIdent("OcamlNativeIntSet.t");
 							case "Bytes":
 								return OcamlTypeExpr.TIdent("bytes");
 							case "Char":
@@ -1333,6 +1353,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			case TEnum(eRef, params):
 				final e = eRef.get();
+				final ePack = e.pack ?? [];
+
+				// OCaml-native surface: map `ocaml.List/Option/Result` types to Stdlib types.
+				// (We still special-case constructors/patterns separately in the builder.)
+				if (ePack.length == 1 && ePack[0] == "ocaml") {
+					switch (e.name) {
+						case "List":
+							final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+							return OcamlTypeExpr.TApp("list", [elem]);
+						case "Option":
+							final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+							return OcamlTypeExpr.TApp("option", [elem]);
+						case "Result":
+							final okT = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+							final errT = params.length > 1 ? ocamlTypeExprFromHaxeType(params[1]) : OcamlTypeExpr.TIdent("Obj.t");
+							return OcamlTypeExpr.TApp("result", [okT, errT]);
+						case _:
+					}
+				}
 				final modName = moduleIdToOcamlModuleName(e.module);
 				final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 				final typeName = ocamlTypeName(e.name);

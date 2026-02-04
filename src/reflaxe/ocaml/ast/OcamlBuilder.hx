@@ -4465,6 +4465,17 @@ class OcamlBuilder {
 					final nativeClassPath = extractNativeString(cls.meta);
 					final nativeFieldPath = extractNativeString(cf.meta);
 
+					// OCaml-native functor instantiations (M12): if user code references our
+					// defunctorized `Map`/`Set` modules (emitted as standalone `.ml` files),
+					// record that so `OcamlCompiler.onOutputComplete()` can emit them.
+					if (nativeClassPath != null) {
+						switch (nativeClassPath) {
+							case "OcamlNativeStringMap", "OcamlNativeIntMap", "OcamlNativeStringSet", "OcamlNativeIntSet":
+								ctx.needsOcamlNativeMapSet = true;
+							case _:
+						}
+					}
+
 					final resolved = resolveNativeStaticPath(
 						moduleIdToOcamlModuleName(cls.module),
 						cf.name,
