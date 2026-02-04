@@ -55,7 +55,7 @@ class Stage1Compiler {
 			return error("missing -main <TypeName>");
 		}
 
-		final resolved = Stage1Resolver.resolveMain(parsed.classPaths, parsed.main);
+		final resolved = Stage1Resolver.resolveMain(parsed.classPaths, parsed.main, parsed.cwd);
 		if (resolved == null) return 2;
 
 		final source = try sys.io.File.getContent(resolved.path) catch (_:Dynamic) null;
@@ -100,7 +100,7 @@ class Stage1Compiler {
 				continue;
 			}
 
-			final impResolved = Stage1Resolver.resolveModule(parsed.classPaths, imp);
+			final impResolved = Stage1Resolver.resolveModule(parsed.classPaths, imp, parsed.cwd);
 			if (impResolved == null) {
 				Sys.println("stage1=warn import_missing " + imp);
 				continue;
@@ -158,14 +158,16 @@ class Stage1Args {
 	public final defines:Array<String>;
 	public final libs:Array<String>;
 	public final macros:Array<String>;
+	public final cwd:String;
 
-	function new(classPaths:Array<String>, main:String, noOutput:Bool, defines:Array<String>, libs:Array<String>, macros:Array<String>) {
+	function new(classPaths:Array<String>, main:String, noOutput:Bool, defines:Array<String>, libs:Array<String>, macros:Array<String>, cwd:String) {
 		this.classPaths = classPaths;
 		this.main = main;
 		this.noOutput = noOutput;
 		this.defines = defines;
 		this.libs = libs;
 		this.macros = macros;
+		this.cwd = cwd;
 	}
 
 	public static function parse(args:Array<String>):Null<Stage1Args> {
@@ -178,6 +180,7 @@ class Stage1Args {
 		final defines = new Array<String>();
 		final libs = new Array<String>();
 		final macros = new Array<String>();
+		var cwd = ".";
 
 		var i = 0;
 		while (i < expanded.length) {
@@ -189,6 +192,13 @@ class Stage1Args {
 						return null;
 					}
 					classPaths.push(expanded[i + 1]);
+					i += 2;
+				case "-C", "--cwd":
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
+					cwd = expanded[i + 1];
 					i += 2;
 				case "-main":
 					if (i + 1 >= expanded.length) {
@@ -236,7 +246,7 @@ class Stage1Args {
 		}
 
 		if (classPaths.length == 0) classPaths.push(".");
-		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros);
+		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros, cwd);
 	}
 
 	static function expandHxmlArgs(args:Array<String>):Null<Array<String>> {
@@ -309,7 +319,12 @@ class Stage1Resolver {
 		return s == null ? "" : StringTools.replace(s, "\\", "/");
 	}
 
-	public static function resolveMain(classPaths:Array<String>, main:String):Null<{
+	static function resolveClassPath(cwd:String, cp:String):String {
+		final cp0 = normalizeSep(cp);
+		return haxe.io.Path.isAbsolute(cp0) ? cp0 : haxe.io.Path.normalize(haxe.io.Path.join([cwd, cp0]));
+	}
+
+	public static function resolveMain(classPaths:Array<String>, main:String, cwd:String):Null<{
 		path:String,
 		packagePath:String,
 		className:String,
@@ -325,18 +340,19 @@ class Stage1Resolver {
 		final pkg = pkgParts.join(".");
 
 		for (cp in classPaths) {
-			final candidate = Path.join([cp].concat(pkgParts).concat([className + ".hx"]));
+			final base = resolveClassPath(cwd, cp);
+			final candidate = Path.join([base].concat(pkgParts).concat([className + ".hx"]));
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
 				return { path: candidate, packagePath: pkg, className: className };
 			}
 		}
 
 		Sys.println("hxhx(stage1): could not find main module for -main " + main);
-		for (cp in classPaths) Sys.println("  searched: " + normalizeSep(cp));
+		for (cp in classPaths) Sys.println("  searched: " + resolveClassPath(cwd, cp));
 		return null;
 	}
 
-	public static function resolveModule(classPaths:Array<String>, modulePath:String):Null<{
+	public static function resolveModule(classPaths:Array<String>, modulePath:String, cwd:String):Null<{
 		path:String,
 		packagePath:String,
 		className:String,
@@ -349,7 +365,8 @@ class Stage1Resolver {
 		final pkg = pkgParts.join(".");
 
 		for (cp in classPaths) {
-			final candidate = Path.join([cp].concat(pkgParts).concat([className + ".hx"]));
+			final base = resolveClassPath(cwd, cp);
+			final candidate = Path.join([base].concat(pkgParts).concat([className + ".hx"]));
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
 				return { path: candidate, packagePath: pkg, className: className };
 			}

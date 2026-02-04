@@ -84,6 +84,16 @@ HX
 out="$("$HXHX_BIN" --hxhx-stage1 "$tmpdir/proj/build_rel.hxml")"
 echo "$out" | grep -q "^stage1=ok$"
 
+echo "== Stage1 bring-up: -C / --cwd"
+mkdir -p "$tmpdir/proj_cwd/src"
+cat >"$tmpdir/proj_cwd/src/Main.hx" <<'HX'
+class Main {
+  static function main() {}
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 -C "$tmpdir/proj_cwd" -cp src -main Main --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+
 echo "== Stage1 bring-up: rejects --next"
 cat >"$tmpdir/build_next.hxml" <<HX
 -cp $tmpdir/src
