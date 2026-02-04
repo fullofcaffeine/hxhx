@@ -3972,6 +3972,23 @@ class OcamlBuilder {
 				final isMutable = currentMutatedLocalIds != null
 					&& currentMutatedLocalIds.exists(v.id)
 					&& currentMutatedLocalIds.get(v.id) == true;
+
+				// If this local is immutable (let-bound) and its initial value is never read before
+				// the next write, binding it is a dead-store and can trigger OCaml's unused-var warning
+				// if it is immediately shadowed (a common pattern in the typed AST).
+				if (!isMutable) {
+					final shouldBind = isLocalReadBeforeNextWrite(exprs, index + 1, v.id);
+					if (!shouldBind) {
+						final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
+						if (init == null) return rest;
+						final initUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [initExpr]);
+						return switch (rest) {
+							case ESeq(items): OcamlExpr.ESeq([initUnit].concat(items));
+							case _: OcamlExpr.ESeq([initUnit, rest]);
+						}
+					}
+				}
+
 				final rhs = if (isMutable) {
 					refLocals.set(v.id, true);
 					OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
@@ -3993,10 +4010,24 @@ class OcamlBuilder {
 							// `collectRefLocalIdsFromExprs` (loops, nested-block mutations, closure capture, and
 							// non-statement assignment expressions keep using `ref`).
 							final rhsExpr = coerceForAssignment(v.t, rhs);
+							final shouldBind = isLocalReadBeforeNextWrite(exprs, index + 1, v.id);
 							if (index == exprs.length - 1) {
 								rhsExpr;
 							} else {
-								OcamlExpr.ELet(renameVar(v.name), rhsExpr, buildBlockFromIndex(exprs, index + 1, allowDirectReturn), false);
+								if (shouldBind) {
+									OcamlExpr.ELet(renameVar(v.name), rhsExpr, buildBlockFromIndex(exprs, index + 1, allowDirectReturn), false);
+								} else {
+									// Dead-store in this block: preserve RHS side effects but don't bind an unused `let`,
+									// since dune/warn-error treats unused vars as errors.
+									final currentUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [rhsExpr]);
+									final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
+									switch (rest) {
+										case ESeq(items):
+											OcamlExpr.ESeq([currentUnit].concat(items));
+										case _:
+											OcamlExpr.ESeq([currentUnit, rest]);
+									}
+								}
 							}
 						case _:
 							final current = buildExpr(e);
@@ -4414,6 +4445,97 @@ class OcamlBuilder {
 
 		visit(e);
 		return used;
+	}
+
+	/**
+		Returns true if the given local is *read* before it is *written* again in the suffix
+		of the current straight-line block.
+
+		Why:
+		- The M14.5.1 "let-shadowing" optimization replaces `x := rhs` with `let x = rhs in ...`.
+		- If `x` is never read before the next write, binding `let x = rhs` is a dead-store and
+		  triggers OCaml's "unused var" warning (which is an error under dune's warn-error).
+
+		How:
+		- Scan forward:
+		  - If we see a read of `id`, return true.
+		  - If we see a write to `id` first, return false (this assignment's value will never be observed).
+		  - If we reach the end, return false.
+	**/
+	static function isLocalReadBeforeNextWrite(exprs:Array<TypedExpr>, startIndex:Int, id:Int):Bool {
+		for (i in startIndex...exprs.length) {
+			final e = exprs[i];
+			if (exprReadsLocalId(e, id)) return true;
+			if (exprWritesLocalId(e, id)) return false;
+		}
+		return false;
+	}
+
+	static function exprWritesLocalId(e:TypedExpr, id:Int):Bool {
+		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
+
+		function visit(e:TypedExpr):Bool {
+			if (visited.exists(e)) return false;
+			visited.set(e, true);
+
+			switch (e.expr) {
+				case TBinop(OpAssign, lhs, _):
+					switch (lhs.expr) {
+						case TLocal(v) if (v.id == id):
+							return true;
+						case _:
+					}
+				case TBinop(OpAssignOp(_), lhs, _):
+					switch (lhs.expr) {
+						case TLocal(v) if (v.id == id):
+							return true;
+						case _:
+					}
+				case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
+					switch (inner.expr) {
+						case TLocal(v) if (v.id == id):
+							return true;
+						case _:
+					}
+				case _:
+			}
+
+			var found = false;
+			TypedExprTools.iter(e, (x) -> {
+				if (!found && visit(x)) found = true;
+			});
+			return found;
+		}
+
+		return visit(e);
+	}
+
+	static function exprReadsLocalId(e:TypedExpr, id:Int):Bool {
+		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
+
+		function visit(e:TypedExpr, writeOnly:Bool):Bool {
+			if (visited.exists(e)) return false;
+			visited.set(e, true);
+
+			switch (e.expr) {
+				case TLocal(v) if (!writeOnly && v.id == id):
+					return true;
+				case TBinop(OpAssign, lhs, rhs):
+					// LHS is write-only for simple assignment; RHS is read-context.
+					if (visit(lhs, true)) return true;
+					if (visit(rhs, false)) return true;
+					return false;
+				case _:
+			}
+
+			var found = false;
+			TypedExprTools.iter(e, (x) -> {
+				if (!found && visit(x, false)) found = true;
+			});
+			return found;
+		}
+
+		return visit(e, false);
 	}
 
 	function buildSwitch(
