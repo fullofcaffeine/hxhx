@@ -5,6 +5,19 @@ class M5ClassIntegrationTest {
 		}
 	}
 
+	static function assertMatches(haystack:String, re:EReg, label:String):Void {
+		if (!re.match(haystack)) {
+			throw label + ": expected regex to match";
+		}
+	}
+
+	static function assertMatchesEither(haystack:String, res:Array<EReg>, label:String):Void {
+		for (re in res) {
+			if (re.match(haystack)) return;
+		}
+		throw label + ": expected one of the regexes to match";
+	}
+
 	static function main() {
 		final outDir = "out_ocaml_m5_class_" + Std.string(Std.int(Date.now().getTime()));
 		sys.FileSystem.createDirectory(outDir);
@@ -31,10 +44,20 @@ class M5ClassIntegrationTest {
 		if (!createRe.match(pointMl)) throw "create fn: expected to find 'let create = fun <x> <y> ->'";
 		final xArg = createRe.matched(1);
 		final yArg = createRe.matched(2);
-		assertContains(pointMl, "self.x <- " + xArg, "ctor assigns x");
-		assertContains(pointMl, "self.y <- " + yArg, "ctor assigns y");
+		// Codegen may introduce a temp assignment to preserve Haxe assignment-expression semantics.
+		assertMatchesEither(pointMl, [
+			new EReg("self\\.x <- " + xArg, ""),
+			new EReg("let __assign_[0-9]+ = " + xArg + " in \\(\\s*self\\.x <- __assign_[0-9]+;", "")
+		], "ctor assigns x");
+		assertMatchesEither(pointMl, [
+			new EReg("self\\.y <- " + yArg, ""),
+			new EReg("let __assign_[0-9]+ = " + yArg + " in \\(\\s*self\\.y <- __assign_[0-9]+;", "")
+		], "ctor assigns y");
 		assertContains(pointMl, "incX = fun self () ->", "instance method incX");
-		assertContains(pointMl, "self.x <- self.x + 1", "incX updates field");
+		assertMatchesEither(pointMl, [
+			new EReg("self\\.x <- self\\.x \\+ 1", ""),
+			new EReg("let __assign_[0-9]+ = self\\.x \\+ 1 in \\(\\s*self\\.x <- __assign_[0-9]+;", "")
+		], "incX updates field");
 
 		final mainPath = outDir + "/ClassMain.ml";
 		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;

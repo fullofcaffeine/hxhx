@@ -9,6 +9,7 @@ import haxe.macro.Context;
 import haxe.macro.Type;
 import haxe.macro.Type.TConstant;
 import haxe.macro.Type.TypedExpr;
+import haxe.macro.TypeTools;
 
 import reflaxe.DirectToStringCompiler;
 import reflaxe.data.ClassFuncData;
@@ -167,7 +168,47 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Ensure type declarations (enums/typedefs/abstracts) appear before value
 		// definitions in each module, since OCaml requires constructors/types to
 		// be declared before use.
-		final all:CompiledCollection<String> = enums.concat(typedefs).concat(abstracts).concat(classes);
+		//
+		// Also ensure that for Haxe modules containing multiple types (e.g. `Main.hx` defines
+		// both `Main` and `MyExn`), we emit non-primary types first. Otherwise the primary
+		// type's compiled chunk can refer to helper values that appear later in the file,
+		// which OCaml does not allow (no forward references for values).
+		final sortedClasses:CompiledCollection<String> = {
+			final withIndex:Array<{ item:DataAndFileInfo<String>, idx:Int }> = [];
+			for (i in 0...classes.length) withIndex.push({ item: classes[i], idx: i });
+
+			final moduleOrder:Map<String, Int> = [];
+			var nextMod = 0;
+			for (entry in withIndex) {
+				final m = entry.item.baseType.module;
+				if (!moduleOrder.exists(m)) moduleOrder.set(m, nextMod++);
+			}
+
+			inline function isPrimary(entry:{ item:DataAndFileInfo<String>, idx:Int }):Bool {
+				final moduleId = entry.item.baseType.module;
+				final primary = ctx.primaryTypeNameByModule.get(moduleId);
+				if (primary != null) return entry.item.baseType.name == primary;
+				return OcamlNameTools.isPrimaryTypeInModule(moduleId, entry.item.baseType.name);
+			}
+
+			withIndex.sort((a, b) -> {
+				final modA = a.item.baseType.module;
+				final modB = b.item.baseType.module;
+				final ordA = moduleOrder.get(modA);
+				final ordB = moduleOrder.get(modB);
+				if (ordA != ordB) return ordA - ordB;
+
+				final priA = isPrimary(a) ? 1 : 0;
+				final priB = isPrimary(b) ? 1 : 0;
+				if (priA != priB) return priA - priB;
+
+				return a.idx - b.idx;
+			});
+
+			withIndex.map(e -> e.item);
+		};
+
+		final all:CompiledCollection<String> = enums.concat(typedefs).concat(abstracts).concat(sortedClasses);
 
 		#if macro
 		if (!checkedOutputCollisions) {
@@ -338,10 +379,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.currentSuperFullName = (sup.pack ?? []).concat([sup.name]).join(".");
 			ctx.currentSuperModuleId = sup.module;
 			ctx.currentSuperTypeName = sup.name;
+			ctx.currentSuperCtorArgs = null;
+			if (sup.constructor != null) {
+				final ctorField = sup.constructor.get();
+				switch (TypeTools.follow(ctorField.type)) {
+					case TFun(args, _):
+						ctx.currentSuperCtorArgs = args;
+					case _:
+				}
+			}
 		} else {
 			ctx.currentSuperFullName = null;
 			ctx.currentSuperModuleId = null;
 			ctx.currentSuperTypeName = null;
+			ctx.currentSuperCtorArgs = null;
 		}
 
 			// Guardrails (M5+): fail fast for features we haven't implemented.
@@ -360,7 +411,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			#end
 
 		final items:Array<OcamlModuleItem> = [];
-		final builder = new OcamlBuilder(ctx);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType);
 
 		// Header marker as a no-op binding to keep output non-empty and debuggable.
 		items.push(OcamlModuleItem.ILet([{
@@ -368,11 +419,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 			expr: OcamlExpr.EConst(OcamlConst.CUnit)
 		}], false));
 
-		final lets:Array<OcamlLetBinding> = [];
+			final lets:Array<OcamlLetBinding> = [];
 
-		// Instance surface (M5): record type + create + instance methods.
-		final instanceVars = varFields.filter(v -> !v.isStatic);
-		final hasInstanceVars = instanceVars.length > 0;
+			// Instance surface (M5): record type + create + instance methods.
+			final instanceVarsLocal = varFields.filter(v -> !v.isStatic);
+			final hasInstanceVarsLocal = instanceVarsLocal.length > 0;
+
+			// Default expressions are only available via `ClassVarData` for the class currently being compiled.
+			// For inherited vars (declared in super classes), we fall back to `defaultValueForType`.
+			final localVarInitByName:Map<String, TypedExpr> = [];
+			for (v in instanceVarsLocal) {
+				final init = v.findDefaultExpr();
+				if (init != null) localVarInitByName.set(v.field.name, init);
+			}
 
 		var ctorFunc:Null<ClassFuncData> = null;
 		final instanceMethods:Array<ClassFuncData> = [];
@@ -386,7 +445,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-			final hasInstanceSurface = hasInstanceVars || instanceMethods.length > 0 || ctorFunc != null;
+				final hasInstanceSurface = hasInstanceVarsLocal || instanceMethods.length > 0 || ctorFunc != null;
 			if (hasInstanceSurface) {
 				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
 				final createName = ctx.scopedValueName(classType.module, classType.name, "create");
@@ -394,15 +453,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 				final isDispatch = !classType.isInterface && ctx.dispatchTypes.exists(fullName);
 
-				// For dynamic dispatch we need a list of all visible instance methods (including inherited)
-				// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
-				final dispatchMethodOrder:Array<String> = [];
-				final dispatchMethodDecl:Map<String, { owner:ClassType, field:ClassField }> = [];
-				if (isDispatch) {
-					function chainFromRoot(c:ClassType):Array<ClassType> {
-						final chain:Array<ClassType> = [];
-						var cur:Null<ClassType> = c;
-						var guard = 0;
+					// For dynamic dispatch we need a list of all visible instance methods (including inherited)
+					// so `obj.foo()` can be lowered to `obj.foo obj ...` regardless of where `foo` was declared.
+					final dispatchMethodOrder:Array<String> = [];
+					final dispatchMethodDecl:Map<String, { owner:ClassType, field:ClassField }> = [];
+					var dispatchLayoutFields:Null<Array<{ name:String, kind:String, field:ClassField }>> = null;
+					if (isDispatch) {
+						function chainFromRoot(c:ClassType):Array<ClassType> {
+							final chain:Array<ClassType> = [];
+							var cur:Null<ClassType> = c;
+							var guard = 0;
 						while (cur != null && guard++ < 64) {
 							chain.push(cur);
 							cur = cur.superClass != null ? cur.superClass.t.get() : null;
@@ -434,13 +494,45 @@ class OcamlCompiler extends DirectToStringCompiler {
 							dispatchMethodOrder.push(cf.name);
 						}
 					}
-					// Most-derived declaration wins (override).
-					for (c in chain) {
-						for (cf in declaredInstanceMethodFields(c)) {
-							dispatchMethodDecl.set(cf.name, { owner: c, field: cf });
+						// Most-derived declaration wins (override).
+						for (c in chain) {
+							for (cf in declaredInstanceMethodFields(c)) {
+								dispatchMethodDecl.set(cf.name, { owner: c, field: cf });
+							}
 						}
+
+						// Record layout for dispatch instances: preserve a base-prefix layout across
+						// the inheritance chain by emitting fields in per-level segments:
+						//   (vars introduced at level0), (methods introduced at level0),
+						//   (vars introduced at level1), (methods introduced at level1), ...
+						//
+						// This ensures that accessing inherited method fields through a base static type
+						// works even when the runtime value is a subclass record.
+						final layout:Array<{ name:String, kind:String, field:ClassField }> = [];
+						final seenVars:Map<String, Bool> = [];
+						final seenMethods2:Map<String, Bool> = [];
+
+						for (c in chain) {
+							for (cf in c.fields.get()) {
+								if (cf == null) continue;
+								switch (cf.kind) {
+									case FVar(_, _):
+										if (seenVars.exists(cf.name)) continue;
+										seenVars.set(cf.name, true);
+										layout.push({ name: cf.name, kind: "var", field: cf });
+									case _:
+								}
+							}
+
+							for (cf in declaredInstanceMethodFields(c)) {
+								if (seenMethods2.exists(cf.name)) continue;
+								seenMethods2.set(cf.name, true);
+								layout.push({ name: cf.name, kind: "method", field: cf });
+							}
+						}
+
+						dispatchLayoutFields = layout;
 					}
-				}
 
 				final isDispatchInstance = isDispatch && dispatchMethodOrder.length > 0;
 				function exprMentionsIdent(e:OcamlExpr, target:String):Bool {
@@ -528,25 +620,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 				// Runtime class identity (M10): all class instances carry their most-derived class value
 				// in the first record slot so `Type.getClass` can work even through `Obj.magic` upcasts.
-				typeFields.push({
-					name: "__hx_type",
-					isMutable: false,
-					typ: OcamlTypeExpr.TIdent("Obj.t")
-				});
-				if (hasInstanceVars) {
-					for (v in instanceVars) {
-						typeFields.push({
-							name: v.field.name,
-							isMutable: true,
-							typ: ocamlTypeExprFromHaxeType(v.field.type)
-						});
-					}
-				}
-				if (isDispatchInstance) {
-					function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
-						// Dispatch methods take `Obj.t` as the receiver so that interface + base-class
-						// callsites can share a single representation without OCaml structural subtyping.
-						final selfT = OcamlTypeExpr.TIdent("Obj.t");
+					typeFields.push({
+						name: "__hx_type",
+						isMutable: false,
+						typ: OcamlTypeExpr.TIdent("Obj.t")
+					});
+					if (isDispatchInstance && dispatchLayoutFields != null) {
+						function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
+							// Dispatch methods take `Obj.t` as the receiver so that interface + base-class
+							// callsites can share a single representation without OCaml structural subtyping.
+							final selfT = OcamlTypeExpr.TIdent("Obj.t");
 						return switch (haxeMethodType) {
 							case TFun(args, ret):
 								var outT = ocamlTypeExprFromHaxeType(ret);
@@ -562,20 +645,72 @@ class OcamlCompiler extends DirectToStringCompiler {
 								OcamlTypeExpr.TArrow(selfT, outT);
 							case _:
 								// Should not happen for methods; fall back to a permissive type.
-								OcamlTypeExpr.TIdent("Obj.t");
+									OcamlTypeExpr.TIdent("Obj.t");
+							}
+						}
+						for (entry in dispatchLayoutFields) {
+							switch (entry.kind) {
+								case "var":
+									typeFields.push({
+										name: entry.name,
+										isMutable: true,
+										typ: ocamlTypeExprFromHaxeType(entry.field.type)
+									});
+								case "method":
+									final info = dispatchMethodDecl.get(entry.name);
+									if (info == null) continue;
+									typeFields.push({
+										name: entry.name,
+										isMutable: false,
+										typ: buildDispatchMethodType(info.field.type)
+									});
+								case _:
+							}
+						}
+					} else {
+						if (hasInstanceVarsLocal) {
+							for (v in instanceVarsLocal) {
+								typeFields.push({
+									name: v.field.name,
+									isMutable: true,
+									typ: ocamlTypeExprFromHaxeType(v.field.type)
+								});
+							}
+						}
+						if (isDispatchInstance) {
+							function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
+								// Dispatch methods take `Obj.t` as the receiver so that interface + base-class
+								// callsites can share a single representation without OCaml structural subtyping.
+								final selfT = OcamlTypeExpr.TIdent("Obj.t");
+								return switch (haxeMethodType) {
+									case TFun(args, ret):
+										var outT = ocamlTypeExprFromHaxeType(ret);
+										if (args.length == 0) {
+											// Calling convention: `foo()` always supplies `unit` at the callsite in OCaml.
+											outT = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), outT);
+										} else {
+											for (i in 0...args.length) {
+												final a = args[args.length - 1 - i];
+												outT = OcamlTypeExpr.TArrow(ocamlTypeExprFromHaxeType(a.t), outT);
+											}
+										}
+										OcamlTypeExpr.TArrow(selfT, outT);
+									case _:
+										OcamlTypeExpr.TIdent("Obj.t");
+								}
+							}
+
+							for (name in dispatchMethodOrder) {
+								final info = dispatchMethodDecl.get(name);
+								if (info == null) continue;
+								typeFields.push({
+									name: name,
+									isMutable: false,
+									typ: buildDispatchMethodType(info.field.type)
+								});
+							}
 						}
 					}
-
-					for (name in dispatchMethodOrder) {
-						final info = dispatchMethodDecl.get(name);
-						if (info == null) continue;
-						typeFields.push({
-							name: name,
-							isMutable: false,
-							typ: buildDispatchMethodType(info.field.type)
-						});
-					}
-				}
 
 					final typeDecl:OcamlTypeDecl = {
 						name: instanceTypeName,
@@ -600,25 +735,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-				final selfInit:OcamlExpr = if (hasInstanceVars || isDispatchInstance) {
-					final fields:Array<OcamlRecordField> = [];
-					fields.push({
-						name: "__hx_type",
-						value: OcamlExpr.EApp(
-							OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
-							[OcamlExpr.EConst(OcamlConst.CString(fullName))]
-						)
-					});
-					for (v in instanceVars) {
-						final init = v.findDefaultExpr();
-						final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
-						fields.push({ name: v.field.name, value: value });
-					}
-					if (isDispatchInstance) {
-						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
-							final ownerExpr = owner.module == classType.module
-								? OcamlExpr.EIdent(ownerBindingName)
-								: OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)), ownerBindingName);
+					final selfInit:OcamlExpr = if (hasInstanceVarsLocal || isDispatchInstance) {
+						final fields:Array<OcamlRecordField> = [];
+						fields.push({
+							name: "__hx_type",
+							value: OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
+								[OcamlExpr.EConst(OcamlConst.CString(fullName))]
+							)
+						});
+						if (isDispatchInstance && dispatchLayoutFields != null) {
+							function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
+								final ownerExpr = owner.module == classType.module
+									? OcamlExpr.EIdent(ownerBindingName)
+									: OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)), ownerBindingName);
 
 							final args:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (methodType) {
 								case TFun(fargs, _): fargs;
@@ -640,21 +770,72 @@ class OcamlCompiler extends DirectToStringCompiler {
 								}
 							}
 
-							return OcamlExpr.EFun(params, OcamlExpr.EApp(ownerExpr, callArgs));
-						}
+								return OcamlExpr.EFun(params, OcamlExpr.EApp(ownerExpr, callArgs));
+							}
 
-						for (name in dispatchMethodOrder) {
-							final info = dispatchMethodDecl.get(name);
-							if (info == null) continue;
-							final owner = info.owner;
-							final ownerBinding = ctx.scopedValueName(owner.module, owner.name, name + "__impl");
-							final value = wrapperFor(owner, info.field.type, ownerBinding);
-							fields.push({ name: name, value: value });
-						}
-					}
+							for (entry in dispatchLayoutFields) {
+								switch (entry.kind) {
+									case "var":
+										final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
+										final value = init != null ? builder.buildExpr(init) : defaultValueForType(entry.field.type);
+										fields.push({ name: entry.name, value: value });
+									case "method":
+										final info = dispatchMethodDecl.get(entry.name);
+										if (info == null) continue;
+										final owner = info.owner;
+										final ownerBinding = ctx.scopedValueName(owner.module, owner.name, entry.name + "__impl");
+										final value = wrapperFor(owner, info.field.type, ownerBinding);
+										fields.push({ name: entry.name, value: value });
+									case _:
+								}
+							}
+						} else {
+							for (v in instanceVarsLocal) {
+								final init = v.findDefaultExpr();
+								final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+								fields.push({ name: v.field.name, value: value });
+							}
+							if (isDispatchInstance) {
+								function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
+									final ownerExpr = owner.module == classType.module
+										? OcamlExpr.EIdent(ownerBindingName)
+										: OcamlExpr.EField(OcamlExpr.EIdent(moduleIdToOcamlModuleName(owner.module)), ownerBindingName);
 
-				// Dune defaults can be warning-as-error; avoid `unused-var-strict` for `self`
-				// by forcing a use when the body doesn't reference it.
+									final args:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (methodType) {
+										case TFun(fargs, _): fargs;
+										case _: null;
+									}
+
+									final params:Array<OcamlPat> = [OcamlPat.PVar("o")];
+									final callArgs:Array<OcamlExpr> = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent("o")])];
+
+									if (args == null || args.length == 0) {
+										params.push(OcamlPat.PConst(OcamlConst.CUnit));
+										callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+									} else {
+										for (i in 0...args.length) {
+											final n = "a" + Std.string(i);
+											params.push(OcamlPat.PVar(n));
+											callArgs.push(OcamlExpr.EIdent(n));
+										}
+									}
+
+									return OcamlExpr.EFun(params, OcamlExpr.EApp(ownerExpr, callArgs));
+								}
+
+								for (name in dispatchMethodOrder) {
+									final info = dispatchMethodDecl.get(name);
+									if (info == null) continue;
+									final owner = info.owner;
+									final ownerBinding = ctx.scopedValueName(owner.module, owner.name, name + "__impl");
+									final value = wrapperFor(owner, info.field.type, ownerBinding);
+									fields.push({ name: name, value: value });
+								}
+							}
+						}
+					 
+						// Dune defaults can be warning-as-error; avoid `unused-var-strict` for `self`
+						// by forcing a use when the body doesn't reference it.
 					if (isDispatch && !exprMentionsIdent(ctorBody, "self")) {
 						ctorBody = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody]);
 					}
@@ -673,23 +854,26 @@ class OcamlCompiler extends DirectToStringCompiler {
 					OcamlExpr.EAnnot(recordExpr, OcamlTypeExpr.TIdent(instanceTypeName));
 				}
 
-			final createBody = OcamlExpr.ELet(
-				"self",
-				selfInit,
-				OcamlExpr.ESeq([ctorBody, OcamlExpr.EIdent("self")]),
-				false
-			);
-			lets.push({ name: createName, expr: OcamlExpr.EFun(createParams, createBody) });
+				final createBody = OcamlExpr.ELet(
+					"self",
+					selfInit,
+					OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBody]), OcamlExpr.EIdent("self")]),
+					false
+				);
+				lets.push({ name: createName, expr: OcamlExpr.EFun(createParams, createBody) });
 
 				// Dispatch constructor function (used by `super()` lowering). This intentionally mirrors
 				// the constructor body used in `create`, but takes `self` explicitly.
-				if (isDispatch) {
-					final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
-					final ctorBodyForCtor = !exprMentionsIdent(ctorBody, "self")
-						? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody])
-						: ctorBody;
-					lets.push({ name: ctorName, expr: OcamlExpr.EFun([selfPat].concat(createParams), ctorBodyForCtor) });
-				}
+					if (isDispatch) {
+						final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
+						final ctorBodyForCtor = !exprMentionsIdent(ctorBody, "self")
+							? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody])
+							: ctorBody;
+						lets.push({
+							name: ctorName,
+							expr: OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]))
+						});
+					}
 
 			for (f in instanceMethods) {
 				final compiled = {
@@ -697,16 +881,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 						id: a.tvar != null ? a.tvar.id : -1,
 						name: a.getName()
 					}));
-						switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
-							case OcamlExpr.EFun(params, b):
-								final body = (isDispatch && !exprMentionsIdent(b, "self"))
-									? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b])
-									: b;
-								OcamlExpr.EFun([OcamlPat.PVar("self")].concat(params), body);
-							case _:
-								OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
-						}
-					};
+							switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
+								case OcamlExpr.EFun(params, b):
+									final body = (isDispatch && !exprMentionsIdent(b, "self"))
+										? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b])
+										: b;
+									final unitBody = funReturnsVoid(f.field.type)
+										? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [body])
+										: body;
+									OcamlExpr.EFun([OcamlPat.PVar("self")].concat(params), unitBody);
+								case _:
+									OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
+							}
+						};
 					final methodName = isDispatch
 						? ctx.scopedValueName(classType.module, classType.name, f.field.name + "__impl")
 						: ctx.scopedValueName(classType.module, classType.name, f.field.name);
@@ -908,7 +1095,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 			for (a in opt.args) {
 				var argType = ocamlTypeExprFromHaxeType(a.type);
 				if (a.opt) {
-					argType = OcamlTypeExpr.TApp("option", [argType]);
+					// Haxe optional enum-constructor arguments (`?x:T`) behave like `Null<T>`.
+					//
+					// For most OCaml representations we can keep the underlying type and rely on
+					// the `HxRuntime.hx_null` sentinel (cast via `Obj.magic`) at callsites.
+					//
+					// However, for primitives (Int/Float/Bool) we cannot safely represent a null
+					// sentinel *as a primitive*, so we use the nullable-primitive representation:
+					// `Obj.t` with `HxRuntime.hx_null` for null and `Obj.repr <prim>` for non-null.
+					argType = switch (TypeTools.follow(a.type)) {
+						case TAbstract(aRef, _):
+							final abs = aRef.get();
+							(abs.name == "Int" || abs.name == "Float" || abs.name == "Bool")
+								? OcamlTypeExpr.TIdent("Obj.t")
+								: argType;
+						case _:
+							argType;
+					}
 				}
 				args.push(argType);
 			}
@@ -929,7 +1132,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	public function compileExpressionImpl(expr:TypedExpr, topLevel:Bool):Null<String> {
-		final builder = new OcamlBuilder(ctx);
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType);
 		final e = builder.buildExpr(expr);
 		return printer.printExpr(e);
 	}
@@ -992,13 +1195,68 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	function ocamlTypeExprFromHaxeType(t:Type):OcamlTypeExpr {
 		return switch (t) {
-			case TAbstract(aRef, _):
-				final a = aRef.get();
-				switch (a.name) {
-					case "Int": OcamlTypeExpr.TIdent("int");
-					case "Float": OcamlTypeExpr.TIdent("float");
-					case "Bool": OcamlTypeExpr.TIdent("bool");
-					case "Void": OcamlTypeExpr.TIdent("unit");
+				case TAbstract(aRef, params):
+					final a = aRef.get();
+					switch (a.name) {
+						case "Int": OcamlTypeExpr.TIdent("int");
+						case "Float": OcamlTypeExpr.TIdent("float");
+						case "Bool": OcamlTypeExpr.TIdent("bool");
+						case "Void": OcamlTypeExpr.TIdent("unit");
+						case "CallStack":
+							// `haxe.CallStack` is an abstract over `Array<haxe.StackItem>`.
+							// For OCaml output, represent it as its underlying array type so functions like
+							// `haxe.CallStack.toString` can accept it without `Obj.magic` gymnastics.
+							ocamlTypeExprFromHaxeType(a.type);
+						case "Null":
+							// `Null<T>` uses the backend's nullable representation for `T`.
+							//
+							// - `Null<Int/Float/Bool>` => `Obj.t` (uses `HxRuntime.hx_null` sentinel).
+							// - `Null<String>` => `string` (uses `Obj.magic HxRuntime.hx_null` sentinel).
+						// - `Null<Enum>` => `Obj.t` (enums are variants; we avoid `Obj.magic` sentinels).
+						// - `Null<Class>` => the underlying record type (uses `Obj.magic` sentinel).
+							if (params != null && params.length == 1) {
+								switch (TypeTools.follow(params[0])) {
+									case TAbstract(innerRef, _):
+										final inner = innerRef.get();
+										(inner.name == "Int" || inner.name == "Float" || inner.name == "Bool")
+											? OcamlTypeExpr.TIdent("Obj.t")
+											: (inner.name == "CallStack" ? ocamlTypeExprFromHaxeType(innerRef.get().type) : OcamlTypeExpr.TIdent("Obj.t"));
+									case TInst(cRef, innerParams):
+										final c = cRef.get();
+										if (c.pack != null && c.pack.length == 0 && c.name == "String") {
+											OcamlTypeExpr.TIdent("string");
+										} else if (c.pack != null && c.pack.length == 0 && c.name == "Array") {
+											final elem = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
+											OcamlTypeExpr.TApp("HxArray.t", [elem]);
+										} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "StringMap") {
+											final v = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
+											OcamlTypeExpr.TApp("HxMap.string_map", [v]);
+										} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "IntMap") {
+											final v = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
+											OcamlTypeExpr.TApp("HxMap.int_map", [v]);
+										} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "ds" && c.name == "ObjectMap") {
+											final k = innerParams.length > 0 ? ocamlTypeExprFromHaxeType(innerParams[0]) : OcamlTypeExpr.TIdent("Obj.t");
+											final v = innerParams.length > 1 ? ocamlTypeExprFromHaxeType(innerParams[1]) : OcamlTypeExpr.TIdent("Obj.t");
+											OcamlTypeExpr.TApp("HxMap.obj_map", [k, v]);
+										} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
+											OcamlTypeExpr.TIdent("HxBytes.t");
+										} else if (c.isExtern) {
+											OcamlTypeExpr.TIdent("Obj.t");
+										} else {
+											final modName = moduleIdToOcamlModuleName(c.module);
+											final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+											final scoped = ctx.scopedInstanceTypeName(c.module, c.name);
+											final full = (selfMod != null && selfMod == modName) ? scoped : (modName + "." + scoped);
+											OcamlTypeExpr.TIdent(full);
+										}
+									case TEnum(_, _):
+										OcamlTypeExpr.TIdent("Obj.t");
+									case _:
+										OcamlTypeExpr.TIdent("Obj.t");
+								}
+						} else {
+							OcamlTypeExpr.TIdent("Obj.t");
+						}
 					default: OcamlTypeExpr.TIdent("Obj.t");
 				}
 			case TInst(cRef, params):
@@ -1027,7 +1285,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 					// User class instances are represented by the module's `t` type.
 					final modName = moduleIdToOcamlModuleName(c.module);
 					final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-					final full = (selfMod != null && selfMod == modName) ? "t" : (modName + ".t");
+					final scoped = ctx.scopedInstanceTypeName(c.module, c.name);
+					final full = (selfMod != null && selfMod == modName) ? scoped : (modName + "." + scoped);
 					OcamlTypeExpr.TIdent(full);
 				}
 			case TEnum(eRef, params):
@@ -1048,6 +1307,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	static inline function fullNameOfClassType(cls:ClassType):String {
 		return (cls.pack ?? []).concat([cls.name]).join(".");
+	}
+
+	static function isVoidType(t:Type):Bool {
+		return switch (TypeTools.follow(t)) {
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				(a.pack ?? []).length == 0 && a.name == "Void";
+			case _:
+				false;
+		}
+	}
+
+	static function funReturnsVoid(t:Type):Bool {
+		return switch (t) {
+			case TFun(_, ret): isVoidType(ret);
+			case _: false;
+		}
 	}
 
 	static function classTagsForClassType(cls:ClassType):Array<String> {

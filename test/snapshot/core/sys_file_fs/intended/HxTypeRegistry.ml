@@ -3,6 +3,9 @@
 
 let init () : unit =
   ignore (HxType.class_ "Main");
+  ignore (HxType.class_ "StringBuf");
+  ignore (HxType.class_ "haxe.Exception");
+  ignore (HxType.class_ "haxe.NativeStackTrace");
   HxType.register_class_tags "EReg" [ "EReg" ];
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
@@ -10,8 +13,10 @@ let init () : unit =
   HxType.register_class_tags "StringTools" [ "StringTools" ];
   HxType.register_class_tags "_Any.Any_Impl_" [ "_Any.Any_Impl_" ];
   HxType.register_class_tags "_EnumValue.EnumValue_Impl_" [ "_EnumValue.EnumValue_Impl_" ];
+  HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
   HxType.register_class_tags "haxe.IMap" [ "haxe.IMap" ];
   HxType.register_class_tags "haxe.Int64Helper" [ "haxe.Int64Helper" ];
+  HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
   HxType.register_class_tags "haxe.SysTools" [ "haxe.SysTools" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.Constructible_Impl_" [ "haxe._Constraints.Constructible_Impl_" ];

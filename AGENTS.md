@@ -43,6 +43,12 @@ bd sync               # Sync with git
 - `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`
 - Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
 - `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
+
+When implementing semantics or compiler architecture:
+
+- Prefer cross-checking against the upstream **OCaml** Haxe compiler code in `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe` (behavior, data structures, ordering/printing, runtime expectations).
+- Prefer cross-checking our prior compiler target patterns in `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex` (testing layers, acceptance workloads, CI gates).
+- If we need the upstream source inside this repo for repeatable tests, prefer a pinned fetch/submodule under `vendor/` rather than copying it (size + licensing + history).
 - Optional vendored upstream checkout location (preferred for gate runners): `vendor/haxe` (create with `bash scripts/vendor/fetch-haxe-upstream.sh`)
 
 ## Upstream Haxe Source (Required Reference)

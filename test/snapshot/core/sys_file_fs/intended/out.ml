@@ -1,3 +1,3 @@
 let () =
   HxTypeRegistry.init ();
-  Main.main ()
+  ignore (Main.main ())

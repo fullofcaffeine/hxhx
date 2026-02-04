@@ -246,7 +246,14 @@ class OcamlASTPrinter {
 	function printRecord(fields:Array<OcamlRecordField>, indentLevel:Int):String {
 		if (fields.length == 0) return "{}";
 		final parts = fields.map(function(f) {
-			return f.name + " = " + printExprCtx(f.value, PREC_TOP, indentLevel);
+			// OCaml precedence gotcha: `fun ... -> ...; other_field = ...` can be parsed as a
+			// sequence inside the function body instead of a record field separator.
+			// Parenthesize function values to keep record syntax unambiguous.
+			final rendered = printExprCtx(f.value, PREC_TOP, indentLevel);
+			return f.name + " = " + (switch (f.value) {
+				case EFun(_, _): "(" + rendered + ")";
+				case _: rendered;
+			});
 		});
 		return "{ " + parts.join("; ") + " }";
 	}

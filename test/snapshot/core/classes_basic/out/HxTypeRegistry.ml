@@ -4,12 +4,17 @@
 let init () : unit =
   ignore (HxType.class_ "Main");
   ignore (HxType.class_ "Point");
+  ignore (HxType.class_ "StringBuf");
+  ignore (HxType.class_ "haxe.Exception");
+  ignore (HxType.class_ "haxe.NativeStackTrace");
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
   HxType.register_class_tags "Point" [ "Point" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];
   HxType.register_class_tags "_Any.Any_Impl_" [ "_Any.Any_Impl_" ];
   HxType.register_class_tags "_EnumValue.EnumValue_Impl_" [ "_EnumValue.EnumValue_Impl_" ];
+  HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
+  HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe.iterators.ArrayIterator" [ "haxe.iterators.ArrayIterator" ];
   HxType.register_class_tags "haxe.iterators.ArrayKeyValueIterator" [ "haxe.iterators.ArrayKeyValueIterator" ];

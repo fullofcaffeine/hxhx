@@ -3,31 +3,51 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable posInfos : Obj.t; get_message : Obj.t -> unit -> string; get_stack : Obj.t -> unit -> Obj.t; get_previous : Obj.t -> unit -> Obj.t; get_native : Obj.t -> unit -> Obj.t; unwrap : Obj.t -> unit -> Obj.t; toString : Obj.t -> unit -> string; details : Obj.t -> unit -> string }
+type t = { __hx_type : Obj.t; mutable message : string; mutable stack : Haxe_CallStack.stackitem HxArray.t; mutable previous : Haxe_Exception.t; mutable native : Obj.t; mutable __exceptionMessage : string; mutable __exceptionStack : Haxe_CallStack.stackitem HxArray.t; mutable __nativeStack : Obj.t; mutable __skipStack : int; mutable __nativeException : Obj.t; mutable __previousException : Haxe_Exception.t; unwrap : Obj.t -> unit -> Obj.t; toString : Obj.t -> unit -> string; details : Obj.t -> unit -> string; __shiftStack : Obj.t -> unit -> unit; __unshiftStack : Obj.t -> unit -> unit; get_message : Obj.t -> unit -> string; get_previous : Obj.t -> unit -> Haxe_Exception.t; get_native : Obj.t -> unit -> Obj.t; get_stack : Obj.t -> unit -> Haxe_CallStack.stackitem HxArray.t; mutable posInfos : Obj.t }
 
-let __ctor = fun (self : t) message previous pos -> (
-  ignore (Haxe_Exception.__ctor (Obj.magic self) message previous);
-  if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- (let __anon_1 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_1 "fileName" (Obj.repr "(unknown)"));
-    ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 0));
-    ignore (HxAnon.set __anon_1 "className" (Obj.repr "(unknown)"));
-    ignore (HxAnon.set __anon_1 "methodName" (Obj.repr "(unknown)"));
-    __anon_1
-  )) else self.posInfos <- pos
-)
+let __ctor = fun (self : t) message previous pos -> ignore ((
+  ignore (Haxe_Exception.__ctor (Obj.magic self) message previous (Obj.magic (HxRuntime.hx_null)));
+  ignore (if pos == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_1 = let __anon_2 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "(unknown)"));
+    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 0));
+    ignore (HxAnon.set __anon_2 "className" (Obj.repr "(unknown)"));
+    ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "(unknown)"));
+    __anon_2
+  ) in (
+    self.posInfos <- __assign_1;
+    __assign_1
+  )) else ignore (let __assign_3 = pos in (
+    self.posInfos <- __assign_3;
+    __assign_3
+  )));
+  let __obj_4 = self in let __old_5 = __obj_4.__skipStack in let __new_6 = __old_5 + 1 in (
+    ignore (__obj_4.__skipStack <- __new_6);
+    __old_5
+  )
+))
 
 let toString__impl = fun (self : t) () -> (((((((("" ^ HxString.toStdString (self.toString (Obj.magic self) ())) ^ " in ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "className"))) ^ ".") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "methodName"))) ^ " at ") ^ HxString.toStdString (Obj.obj (HxAnon.get (self.posInfos) "fileName"))) ^ ":") ^ string_of_int (Obj.obj (HxAnon.get (self.posInfos) "lineNumber"))
 
-let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_ "haxe.exceptions.PosException"; posInfos = Obj.magic (); get_message = fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) (); get_stack = fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) (); get_previous = fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) (); get_native = fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) (); unwrap = fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) (); toString = fun o () -> toString__impl (Obj.magic o) (); details = fun o () -> Haxe_Exception.details__impl (Obj.magic o) () } : t) in (
-  (
-    ignore (Haxe_Exception.__ctor (Obj.magic self) message previous);
-    if pos == Obj.magic (HxRuntime.hx_null) then self.posInfos <- (let __anon_1 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_1 "fileName" (Obj.repr "(unknown)"));
-      ignore (HxAnon.set __anon_1 "lineNumber" (Obj.repr 0));
-      ignore (HxAnon.set __anon_1 "className" (Obj.repr "(unknown)"));
-      ignore (HxAnon.set __anon_1 "methodName" (Obj.repr "(unknown)"));
-      __anon_1
-    )) else self.posInfos <- pos
-  );
+let create = fun message previous pos -> let self = ({ __hx_type = HxType.class_ "haxe.exceptions.PosException"; message = ""; stack = Obj.magic (); previous = Obj.magic (); native = Obj.magic (); __exceptionMessage = ""; __exceptionStack = Obj.magic (); __nativeStack = Obj.magic (); __skipStack = 0; __nativeException = Obj.magic (); __previousException = Obj.magic (); unwrap = (fun o () -> Haxe_Exception.unwrap__impl (Obj.magic o) ()); toString = (fun o () -> toString__impl (Obj.magic o) ()); details = (fun o () -> Haxe_Exception.details__impl (Obj.magic o) ()); __shiftStack = (fun o () -> Haxe_Exception.__shiftStack__impl (Obj.magic o) ()); __unshiftStack = (fun o () -> Haxe_Exception.__unshiftStack__impl (Obj.magic o) ()); get_message = (fun o () -> Haxe_Exception.get_message__impl (Obj.magic o) ()); get_previous = (fun o () -> Haxe_Exception.get_previous__impl (Obj.magic o) ()); get_native = (fun o () -> Haxe_Exception.get_native__impl (Obj.magic o) ()); get_stack = (fun o () -> Haxe_Exception.get_stack__impl (Obj.magic o) ()); posInfos = Obj.magic () } : t) in (
+  ignore ((
+    ignore (Haxe_Exception.__ctor (Obj.magic self) message previous (Obj.magic (HxRuntime.hx_null)));
+    ignore (if pos == Obj.magic (HxRuntime.hx_null) then ignore (let __assign_1 = let __anon_2 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "(unknown)"));
+      ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 0));
+      ignore (HxAnon.set __anon_2 "className" (Obj.repr "(unknown)"));
+      ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "(unknown)"));
+      __anon_2
+    ) in (
+      self.posInfos <- __assign_1;
+      __assign_1
+    )) else ignore (let __assign_3 = pos in (
+      self.posInfos <- __assign_3;
+      __assign_3
+    )));
+    let __obj_4 = self in let __old_5 = __obj_4.__skipStack in let __new_6 = __old_5 + 1 in (
+      ignore (__obj_4.__skipStack <- __new_6);
+      __old_5
+    )
+  ));
   self
 )

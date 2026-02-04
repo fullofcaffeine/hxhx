@@ -35,7 +35,8 @@ In portable mode, `throw e` lowers to:
 
 - box the value: `Obj.repr <e>`
 - compute *best-effort* tags from the **static type** of `e`
-- raise `HxRuntime.Hx_exception` via `HxRuntime.hx_throw_typed`
+- merge in *runtime* class tags for class instances (RTTI-assisted)
+- raise `HxRuntime.Hx_exception` via `HxType.hx_throw_typed_rtti`
 
 ### Tags
 
@@ -63,6 +64,11 @@ The list always includes `Dynamic`, so a catch-all is predictable.
   are internal control-flow exceptions used by other lowering passes).
 - `Hx_exception (value, tags)` is handled by running the Haxe catch chain:
   - `catch (e:Dynamic)` matches unconditionally.
+  - `catch (e:haxe.Exception)` matches unconditionally and binds `e` as:
+    - the thrown value itself, if it already extends `haxe.Exception`, or
+    - a `haxe.ValueException` wrapper, otherwise.
+  - `catch (e:haxe.ValueException)` matches thrown values which do **not** extend
+    `haxe.Exception`, plus explicitly thrown `ValueException` instances.
   - `catch (e:T)` matches by checking `HxRuntime.tags_has tags <tag-for-T>`.
   - first match wins; if nothing matches, the exception is re-thrown.
 - Any other OCaml exception (`exn`) can be caught by `catch (e:Dynamic)`.
@@ -70,24 +76,20 @@ The list always includes `Dynamic`, so a catch-all is predictable.
 
 ## Current Limitations (Important)
 
-### Static-type tagging (no full RTTI yet)
+### Runtime tags are currently class-only
 
-Tags are computed from the **static type** of the thrown expression.
+For class instances, the backend merges in runtime tag sets derived from each
+instance’s `__hx_type` marker (see `Type.getClass`) and a generated registry.
 
-That means this will *not* behave like full runtime type tests in all cases:
+This fixes the common case where the throw site is typed as a base class or
+`Dynamic`, but the runtime value is a subclass.
 
-```haxe
-var e:Base = new Child();
-try {
-  throw e; // static type is Base
-} catch (c:Child) {
-  // Not guaranteed to run at this milestone.
-}
-```
+Remaining gaps:
 
-Because the tags are derived from `Base`, the backend does not currently “peek”
-into the runtime shape to discover `Child`. Supporting this would require a
-proper runtime type identity strategy (RTTI), which is intentionally deferred.
+- **Enum values:** runtime tagging for enum instances is not implemented yet.
+- **Dynamic primitive ambiguity:** in OCaml, `int` and `bool` are both immediates,
+  so runtime inference is not reliable; typed catches rely on tags emitted at the
+  throw site (follow-up work may add safer runtime strategies where possible).
 
 ### Typed catches for “non-Haxe” exceptions
 
@@ -95,4 +97,3 @@ OCaml exceptions raised by OCaml stdlib code are not tagged as Haxe types.
 
 - `catch (e:Dynamic)` can catch them.
 - Typed catches (`catch (e:T)`) are not expected to match them.
-

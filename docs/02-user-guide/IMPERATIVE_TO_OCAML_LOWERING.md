@@ -108,7 +108,15 @@ Lowered forms:
 
 For **field assignment** on instances:
 
-- `self.x = v` → `self.x <- v`
+- Haxe assignment is an *expression* that evaluates to the assigned value.
+  To preserve this in OCaml (where `<-`/`:=` evaluate to `unit`), we commonly emit a temp:
+
+  - `self.x = v` → `let tmp = v in (self.x <- tmp; tmp)`
+  - `a[i] = v` → `let tmp = v in HxArray.set a i tmp` (since `HxArray.set` returns `tmp`)
+
+- In statement position (most common), the backend wraps these in `ignore` so they can appear in OCaml sequences:
+  - `ignore (let tmp = v in (self.x <- tmp; tmp))`
+  - `ignore (let tmp = v in HxArray.set a i tmp)`
 
 ### Blocks and sequencing
 
@@ -278,4 +286,3 @@ OCaml-native code (when you want OCaml idioms):
 1. Reduce it to a tiny repro.
 2. Add a snapshot case under `test/snapshot/` (golden output) and/or an `examples/` acceptance app if it’s behavioral.
 3. Document the expectation and the intended idiom in hxdoc next to the code that performs the lowering.
-

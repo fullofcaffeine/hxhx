@@ -129,6 +129,12 @@ let getClass (o : Obj.t) : Obj.t =
     HxRuntime.hx_null
   else if Obj.is_int o then
     HxRuntime.hx_null
+  else if Obj.tag o <> 0 then
+    (* Avoid treating arbitrary OCaml blocks (strings, floats, closures, etc.) as
+       our "class instance record" representation. *)
+    HxRuntime.hx_null
+  else if Obj.size o < 1 then
+    HxRuntime.hx_null
   else
     try
       let c = Obj.field o 0 in
@@ -148,6 +154,34 @@ let tags_for_value (o : Obj.t) : string list =
       match Hashtbl.find_opt class_tags name with
       | Some tags -> tags
       | None -> []
+
+(* `Std.isOfType` support (best-effort).
+
+   Why:
+   - Haxe stdlib frequently uses `Std.isOfType(v, SomeClass)` as a dynamic type test.
+   - We already maintain class tag sets for typed catches; reuse those tags to implement
+     inheritance-aware checks.
+
+   Notes:
+   - This currently focuses on class checks (the most common usage, and what's needed
+     for `haxe.Exception.caught/thrown`).
+   - When tag info is missing, we fall back to exact-class equality.
+*)
+let isOfType (v : Obj.t) (t : Obj.t) : bool =
+  if HxRuntime.is_null v || HxRuntime.is_null t then
+    false
+  else if is_type_value class_marker t then
+    let target = getClassName t in
+    if HxRuntime.is_null (Obj.repr target) then
+      false
+    else
+      let tags = tags_for_value v in
+      if List.length tags = 0 then
+        getClassName (getClass v) = target
+      else
+        List.exists (fun x -> x = target) tags
+  else
+    false
 
 let hx_throw_typed_rtti (v : Obj.t) (static_tags : string list) : 'a =
   let runtime_tags = tags_for_value v in

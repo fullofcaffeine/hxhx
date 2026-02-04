@@ -1,0 +1,7 @@
+catch_int=123
+catch_value=123
+catch_value_message=123
+catch_exception_message=123
+catch_exception_string=x
+caught_exception_for_myexn=true
+rethrown_myexn=true

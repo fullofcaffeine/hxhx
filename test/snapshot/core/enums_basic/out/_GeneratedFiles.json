@@ -2,6 +2,8 @@
 	"filesGenerated": [
 		"haxe_iterators_ArrayKeyValueIterator.ml",
 		"haxe_iterators_ArrayIterator.ml",
+		"haxe_NativeStackTrace.ml",
+		"haxe_Exception.ml",
 		"haxe_CallStack.ml",
 		"Type.ml",
 		"StringBuf.ml",

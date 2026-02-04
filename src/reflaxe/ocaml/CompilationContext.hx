@@ -1,5 +1,6 @@
 package reflaxe.ocaml;
 
+import haxe.macro.Type;
 import reflaxe.ocaml.OcamlNameTools;
 
 /**
@@ -30,6 +31,8 @@ class CompilationContext {
 	public var currentSuperModuleId:Null<String> = null;
 	/** Current super class type name. */
 	public var currentSuperTypeName:Null<String> = null;
+	/** Current super class constructor signature (excluding implicit `self`). */
+	public var currentSuperCtorArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = null;
 
 	/**
 	 * Set of Haxe full names that participate in inheritance (either extend something, or are extended).
