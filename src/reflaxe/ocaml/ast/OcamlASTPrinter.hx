@@ -22,6 +22,11 @@ class OcamlASTPrinter {
 		return s;
 	}
 
+	static function escapeLineDirectiveFile(file:String):String {
+		if (file == null) return "";
+		return file.replace("\\", "\\\\").replace("\"", "\\\"");
+	}
+
 	public function printModule(items:Array<OcamlModuleItem>):String {
 		final parts:Array<String> = [];
 		for (item in items) {
@@ -65,6 +70,8 @@ class OcamlASTPrinter {
 
 	function exprPrec(e:OcamlExpr):Int {
 		return switch (e) {
+			case EPos(_, inner):
+				exprPrec(inner);
 			case EConst(_), EIdent(_), ERaw(_), ETuple(_), ERecord(_), EList(_), EAnnot(_, _):
 				PREC_ATOM;
 			case EField(_, _):
@@ -103,6 +110,19 @@ class OcamlASTPrinter {
 				name;
 			case ERaw(code):
 				code;
+			case EPos(pos, inner):
+				// OCaml line directives (`# <line> "<file>"`) must start at column 0.
+				// Many printer contexts prefix subexpressions with indentation, so we force
+				// a newline before the directive to ensure it starts at column 0.
+				//
+				// After the directive we re-apply the current indentation level so the
+				// generated OCaml remains readable (best-effort; debug mode).
+				//
+				// Note: this may introduce extra newlines and can shift formatting, so it is
+				// only expected to appear when `-D ocaml_sourcemap` is enabled.
+				final innerPrinted = printExprCtx(inner, ctxPrec, indentLevel);
+				"\n# " + Std.string(pos.line) + " \"" + escapeLineDirectiveFile(pos.file) + "\"\n"
+					+ indent(indentLevel) + innerPrinted;
 			case ERaise(exn):
 				"raise (" + printExprCtx(exn, PREC_TOP, indentLevel) + ")";
 			case ETuple(items):
@@ -219,13 +239,22 @@ class OcamlASTPrinter {
 	}
 
 	function printUnop(op:OcamlUnop, expr:OcamlExpr, indentLevel:Int):String {
-		inline function needsParensAfterPrefix(e:OcamlExpr):Bool {
-			return switch (e) {
-				case EConst(_), EIdent(_), EField(_, _):
-					false;
-				case _:
-					true;
+		function needsParensAfterPrefix(e:OcamlExpr):Bool {
+			var cur = e;
+			while (true) {
+				switch (cur) {
+					case EPos(_, inner):
+						cur = inner;
+					case _:
+						return switch (cur) {
+							case EConst(_), EIdent(_), EField(_, _):
+								false;
+							case _:
+								true;
+						}
+				}
 			}
+			return true;
 		}
 
 		return switch (op) {
@@ -251,6 +280,11 @@ class OcamlASTPrinter {
 			// Parenthesize function values to keep record syntax unambiguous.
 			final rendered = printExprCtx(f.value, PREC_TOP, indentLevel);
 			return f.name + " = " + (switch (f.value) {
+				case EPos(_, inner):
+					switch (inner) {
+						case EFun(_, _): "(" + rendered + ")";
+						case _: rendered;
+					}
 				case EFun(_, _): "(" + rendered + ")";
 				case _: rendered;
 			});
@@ -275,6 +309,13 @@ class OcamlASTPrinter {
 		inline function renderLabelArg(prefix:String, label:String, value:OcamlExpr):String {
 			final rendered = printExprCtx(value, PREC_TOP, indentLevel);
 			final needsParens = switch (value) {
+				case EPos(_, inner):
+					switch (inner) {
+						case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_):
+							false;
+						case _:
+							true;
+					}
 				case EConst(_), EIdent(_), EField(_, _), ETuple(_), ERecord(_), EList(_):
 					false;
 				case _:
@@ -300,6 +341,8 @@ class OcamlASTPrinter {
 
 	function needsExprParensInApp(e:OcamlExpr):Bool {
 		return switch (e) {
+			case EPos(_, inner):
+				needsExprParensInApp(inner);
 			case EConst(CInt(v)): v < 0;
 			case EConst(CFloat(v)): v.startsWith("-");
 			case _: false;

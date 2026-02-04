@@ -34,6 +34,9 @@ typedef BuildRunConfig = {
 }
 
 class OcamlBuildRunner {
+	static inline final MAX_ERROR_OUTPUT_CHARS = 16000;
+	static inline final MAX_ERROR_OUTPUT_LINES = 250;
+
 	static function hasCommand(cmd:String):Bool {
 		try {
 			final p = new sys.io.Process(cmd, ["--version"]);
@@ -66,6 +69,41 @@ class OcamlBuildRunner {
 		return Path.join(["_build", "default", exeName + "." + ext]);
 	}
 
+	static function shellQuote(s:String):String {
+		if (s == null) return "''";
+		// POSIX shell single-quote escaping: ' -> '\'' .
+		return "'" + s.split("'").join("'\\''") + "'";
+	}
+
+	static function truncateOutput(out:String):String {
+		if (out == null) return "";
+		var s = out;
+		final lines = s.split("\n");
+		if (lines.length > MAX_ERROR_OUTPUT_LINES) {
+			s = lines.slice(lines.length - MAX_ERROR_OUTPUT_LINES).join("\n");
+		}
+		if (s.length > MAX_ERROR_OUTPUT_CHARS) {
+			s = s.substr(s.length - MAX_ERROR_OUTPUT_CHARS);
+		}
+		return s;
+	}
+
+	static function runCapture(cmd:String, args:Array<String>):{ code:Int, output:String } {
+		final isWindows = Sys.systemName() == "Windows";
+		if (isWindows) {
+			// Best-effort on Windows: avoid complex quoting; fall back to no capture.
+			final code = Sys.command(cmd, args);
+			return { code: code, output: "" };
+		}
+
+		final full = ([cmd].concat(args)).map(shellQuote).join(" ");
+		final p = new sys.io.Process("sh", ["-lc", full + " 2>&1"]);
+		final output = p.stdout.readAll().toString();
+		final code = p.exitCode();
+		p.close();
+		return { code: code, output: output };
+	}
+
 	public static function tryBuildAndMaybeRun(cfg:BuildRunConfig):BuildResult {
 		final mode = cfg.mode == null ? "native" : cfg.mode;
 		final outDir = cfg.outDir;
@@ -87,12 +125,13 @@ class OcamlBuildRunner {
 		final notes:Array<String> = [];
 		try {
 			final target = duneTarget(cfg.exeName, mode);
-			final buildExit = Sys.command("dune", ["build", target]);
-			if (buildExit != 0) {
+			final buildRes = runCapture("dune", ["build", target]);
+			if (buildRes.code != 0) {
+				final out = truncateOutput(buildRes.output);
 				Sys.setCwd(prev);
 				return cfg.strict
-					? Err("dune build failed with exit code " + buildExit)
-					: Ok("dune build failed with exit code " + buildExit + " (skipping)");
+					? Err("dune build failed (exit " + buildRes.code + ")\n\n" + out)
+					: Ok("dune build failed (exit " + buildRes.code + ") (skipping)\n\n" + out);
 			} else {
 				if (cfg.mli != null) {
 					switch (cfg.mli) {
@@ -101,12 +140,13 @@ class OcamlBuildRunner {
 							switch (mliRes) {
 								case Ok(_):
 									// Rebuild so dune validates the newly-written interfaces.
-									final rebuildExit = Sys.command("dune", ["build", target]);
-									if (rebuildExit != 0) {
+									final rebuildRes = runCapture("dune", ["build", target]);
+									if (rebuildRes.code != 0) {
+										final out = truncateOutput(rebuildRes.output);
 										Sys.setCwd(prev);
 										return cfg.mliStrict
-											? Err("dune rebuild failed after generating .mli (exit code " + rebuildExit + ")")
-											: Ok("dune rebuild failed after generating .mli (exit code " + rebuildExit + ") (skipping)");
+											? Err("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ")\n\n" + out)
+											: Ok("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ") (skipping)\n\n" + out);
 									}
 								case Err(msg):
 									Sys.setCwd(prev);
@@ -123,12 +163,13 @@ class OcamlBuildRunner {
 									final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
 									switch (mliRes) {
 										case Ok(_):
-											final rebuildExit = Sys.command("dune", ["build", target]);
-											if (rebuildExit != 0) {
+											final rebuildRes = runCapture("dune", ["build", target]);
+											if (rebuildRes.code != 0) {
+												final out = truncateOutput(rebuildRes.output);
 												Sys.setCwd(prev);
 												return cfg.mliStrict
-													? Err("dune rebuild failed after generating .mli (exit code " + rebuildExit + ")")
-													: Ok("dune rebuild failed after generating .mli (exit code " + rebuildExit + ") (skipping)");
+													? Err("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ")\n\n" + out)
+													: Ok("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ") (skipping)\n\n" + out);
 											}
 										case Err(msg):
 											Sys.setCwd(prev);
@@ -147,12 +188,13 @@ class OcamlBuildRunner {
 				}
 
 				if (cfg.run) {
-					final runExit = Sys.command("dune", ["exec", target]);
-					if (runExit != 0) {
+					final runRes = runCapture("dune", ["exec", target]);
+					if (runRes.code != 0) {
+						final out = truncateOutput(runRes.output);
 						Sys.setCwd(prev);
 						return cfg.strict
-							? Err("dune exec failed with exit code " + runExit)
-							: Ok("dune exec failed with exit code " + runExit + " (skipping)");
+							? Err("dune exec failed (exit " + runRes.code + ")\n\n" + out)
+							: Ok("dune exec failed (exit " + runRes.code + ") (skipping)\n\n" + out);
 					} else {
 						notes.push("Built OCaml output via dune: " + target);
 					}

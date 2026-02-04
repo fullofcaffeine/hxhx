@@ -451,10 +451,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 					);
 				}
 			}
-			#end
+		#end
 
 		final items:Array<OcamlModuleItem> = [];
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType);
+		#if macro
+		final sourceMapValue = haxe.macro.Context.definedValue("ocaml_sourcemap");
+		final emitSourceMap = haxe.macro.Context.defined("ocaml_sourcemap")
+			&& (sourceMapValue == null || sourceMapValue.length == 0 || sourceMapValue == "1" || sourceMapValue == "directives");
+		#else
+		final emitSourceMap = false;
+		#end
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, emitSourceMap);
 
 		// Header marker as a no-op binding to keep output non-empty and debuggable.
 		items.push(OcamlModuleItem.ILet([{
@@ -584,6 +591,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 						return false;
 					}
 					return switch (e) {
+						case EPos(_, inner):
+							exprMentionsIdent(inner, target);
 						case EIdent(n):
 							n == target;
 						case EConst(_):
@@ -1240,7 +1249,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	public function compileExpressionImpl(expr:TypedExpr, topLevel:Bool):Null<String> {
-		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType);
+		#if macro
+		final sourceMapValue = haxe.macro.Context.definedValue("ocaml_sourcemap");
+		final emitSourceMap = haxe.macro.Context.defined("ocaml_sourcemap")
+			&& (sourceMapValue == null || sourceMapValue.length == 0 || sourceMapValue == "1" || sourceMapValue == "directives");
+		#else
+		final emitSourceMap = false;
+		#end
+		final builder = new OcamlBuilder(ctx, ocamlTypeExprFromHaxeType, emitSourceMap);
 		final e = builder.buildExpr(expr);
 		return printer.printExpr(e);
 	}
@@ -1785,6 +1801,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			function visit(e:OcamlExpr):Void {
 				switch (e) {
+					case EPos(_, inner):
+						visit(inner);
 					case EConst(_):
 					case ERaw(_):
 					case EAnnot(expr, _):

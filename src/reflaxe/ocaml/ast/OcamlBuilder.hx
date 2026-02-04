@@ -6,6 +6,9 @@ import haxe.macro.Expr.Binop;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Unop;
 import haxe.macro.Expr.Position;
+#if macro
+import haxe.macro.Context;
+#end
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.Type.TConstant;
@@ -22,6 +25,7 @@ import reflaxe.ocaml.ast.OcamlApplyArg;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.ast.OcamlDebugPos;
 
 /**
  * Milestone 2: minimal TypedExpr -> OcamlExpr lowering for expressions and function bodies.
@@ -33,6 +37,85 @@ import reflaxe.ocaml.ast.OcamlTypeExpr;
 class OcamlBuilder {
 	public final ctx:CompilationContext;
 	public final typeExprFromHaxeType:Type->OcamlTypeExpr;
+	public final emitSourceMap:Bool;
+
+	#if macro
+	static var sourceContentByFile:Map<String, String> = [];
+	static var lineStartsByFile:Map<String, Array<Int>> = [];
+	static var normalizedFileByFile:Map<String, String> = [];
+
+	static function normalizeHaxeFilePath(file:String):String {
+		if (file == null) return "";
+		var s = StringTools.replace(file, "\\", "/");
+		final cwd = StringTools.replace(Sys.getCwd(), "\\", "/");
+		if (StringTools.startsWith(s, cwd)) {
+			s = s.substr(cwd.length);
+			if (StringTools.startsWith(s, "/")) s = s.substr(1);
+		}
+		return s;
+	}
+
+	static function ensureLineStarts(file:String):Array<Int> {
+		final cached = lineStartsByFile.get(file);
+		if (cached != null) return cached;
+
+		final content = try {
+			final c = sourceContentByFile.get(file);
+			if (c != null) c else {
+				final loaded = sys.io.File.getContent(file);
+				sourceContentByFile.set(file, loaded);
+				loaded;
+			}
+		} catch (_:Dynamic) {
+			"";
+		}
+
+		final starts:Array<Int> = [0];
+		for (i in 0...content.length) {
+			if (content.charCodeAt(i) == "\n".code) starts.push(i + 1);
+		}
+		lineStartsByFile.set(file, starts);
+		return starts;
+	}
+
+	static function debugPosFromHaxePos(pos:Position):Null<OcamlDebugPos> {
+		final info = Context.getPosInfos(pos);
+		if (info == null || info.file == null || info.file.length == 0) return null;
+
+		final file = info.file;
+		final starts = ensureLineStarts(file);
+		final min = info.min;
+		if (min == null || min < 0) return null;
+
+		// Binary search: last lineStart <= min
+		var lo = 0;
+		var hi = starts.length - 1;
+		while (lo < hi) {
+			final mid = Std.int((lo + hi + 1) / 2);
+			if (starts[mid] <= min) lo = mid else hi = mid - 1;
+		}
+		final lineIdx = lo; // 0-based
+		final line = lineIdx + 1;
+		final col = (min - starts[lineIdx]) + 1;
+
+		var norm = normalizedFileByFile.get(file);
+		if (norm == null) {
+			norm = normalizeHaxeFilePath(file);
+			normalizedFileByFile.set(file, norm);
+		}
+
+		return { file: norm, line: line, col: col };
+	}
+
+	static inline function shouldWrapPos(e:TypedExpr):Bool {
+		return switch (e.expr) {
+			case TConst(_), TLocal(_), TTypeExpr(_):
+				false;
+			case _:
+				true;
+		}
+	}
+	#end
 
 	// Track locals introduced by TVar that we currently represent as `ref`.
 	final refLocals:Map<Int, Bool> = [];
@@ -51,9 +134,10 @@ class OcamlBuilder {
 	// Set while compiling a switch arm to resolve TEnumParameter -> bound pattern variables.
 	var currentEnumParamNames:Null<Map<String, String>> = null;
 
-	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr) {
+	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
 		this.typeExprFromHaxeType = typeExprFromHaxeType;
+		this.emitSourceMap = emitSourceMap;
 	}
 
 	inline function freshTmp(prefix:String):String {
@@ -599,7 +683,7 @@ class OcamlBuilder {
 	}
 
 	public function buildExpr(e:TypedExpr):OcamlExpr {
-		return switch (e.expr) {
+		final built:OcamlExpr = switch (e.expr) {
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):
@@ -2382,9 +2466,17 @@ class OcamlBuilder {
 				final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
 				final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
 				OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
-			case _:
-				OcamlExpr.EConst(OcamlConst.CUnit);
+				case _:
+					OcamlExpr.EConst(OcamlConst.CUnit);
+			};
+
+		#if macro
+		if (emitSourceMap && shouldWrapPos(e)) {
+			final dp = debugPosFromHaxePos(e.pos);
+			return dp != null ? OcamlExpr.EPos(dp, built) : built;
 		}
+		#end
+		return built;
 	}
 
 	function buildStdString(inner:TypedExpr):OcamlExpr {

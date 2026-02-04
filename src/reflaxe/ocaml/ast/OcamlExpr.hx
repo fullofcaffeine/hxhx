@@ -7,6 +7,7 @@ import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRecordField;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
+import reflaxe.ocaml.ast.OcamlDebugPos;
 
 enum OcamlBinop {
 	Add;
@@ -45,6 +46,17 @@ enum OcamlExpr {
 	EIdent(name:String);
 	/** Raw OCaml snippet injected verbatim (escape hatch). */
 	ERaw(code:String);
+
+	/**
+		Source position wrapper (best-effort).
+
+		When present, the printer may emit OCaml `# <line> "<file>"` directives so that
+		OCaml compiler errors can be correlated back to Haxe source locations.
+
+		This node is intended to be semantically transparent: it should not affect
+		codegen decisions other than optional debug mapping output.
+	**/
+	EPos(pos:OcamlDebugPos, expr:OcamlExpr);
 
 	/** `raise (<exn>)` */
 	ERaise(exn:OcamlExpr);

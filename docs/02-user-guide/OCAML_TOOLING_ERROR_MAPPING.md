@@ -33,6 +33,5 @@ If you need “raw dune locations” for debugging, disable directives with:
 ## Scope / limitations
 
 - This improves **OCaml → emitted `.ml`** traceability.
-- It does **not** attempt to map OCaml locations back to Haxe source positions yet
-  (that would require a real source map layer).
-
+- For **OCaml → Haxe** mapping, see `OCAML_TOOLING_SOURCE_MAPS.md` and
+  `-D ocaml_sourcemap=directives` (best-effort).

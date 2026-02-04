@@ -38,6 +38,7 @@
     "test:m13:mli-all": "haxe test/m13_mli_all_integration_test.hxml",
     "test:m13:dune-lib": "haxe test/m13_dune_layout_lib_integration_test.hxml",
     "test:m13:dune-exes": "haxe test/m13_dune_multi_exe_integration_test.hxml",
+    "test:m13:sourcemap": "haxe test/m13_sourcemap_integration_test.hxml",
     "test:portable": "bash scripts/test-portable.sh",
     "test:snapshot": "bash scripts/test-snapshots.sh",
     "test:examples": "bash scripts/test-examples.sh",
@@ -49,7 +50,7 @@
     "test:upstream:runci-targets": "bash scripts/hxhx/run-upstream-runci-targets.sh",
     "hxhx:dist": "bash scripts/hxhx/build-dist.sh",
     "hxhx:bench": "bash scripts/hxhx/bench.sh",
-    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:filestat && npm run test:m6:string && npm run test:m8:aliases && npm run test:m8:collisions && npm run test:m8:dune && npm run test:m13:mli && npm run test:m13:mli-all && npm run test:m13:dune-lib && npm run test:m13:dune-exes && npm run test:portable && npm run test:snapshot && npm run test:examples && npm run test:hxhx-targets"
+    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:filestat && npm run test:m6:string && npm run test:m8:aliases && npm run test:m8:collisions && npm run test:m8:dune && npm run test:m13:mli && npm run test:m13:mli-all && npm run test:m13:dune-lib && npm run test:m13:dune-exes && npm run test:m13:sourcemap && npm run test:portable && npm run test:snapshot && npm run test:examples && npm run test:hxhx-targets"
   },
   "release": {
     "branches": [
