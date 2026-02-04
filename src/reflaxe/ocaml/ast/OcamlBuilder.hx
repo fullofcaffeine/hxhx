@@ -359,6 +359,20 @@ class OcamlBuilder {
 		}
 	}
 
+	inline function isDynamicLike(t:Type):Bool {
+		final ft = followNoAbstracts(unwrapNullType(t));
+		return switch (ft) {
+			case TDynamic(_):
+				true;
+			case TAbstract(_, _) if (isStdAnyAbstract(t)):
+				true;
+			case TAnonymous(_) if (shouldAnonUseHxAnon(t)):
+				true;
+			case _:
+				false;
+		}
+	}
+
 	static function fullNameOfTypeEnum(t:Type):Null<String> {
 		return switch (followNoAbstracts(unwrapNullType(t))) {
 			case TEnum(eRef, _):
@@ -2582,7 +2596,7 @@ class OcamlBuilder {
 		}
 	}
 
-	function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr, resultType:Type):OcamlExpr {
+		function buildBinop(op:Binop, e1:TypedExpr, e2:TypedExpr, resultType:Type):OcamlExpr {
 		inline function isNullExpr(e:TypedExpr):Bool {
 			final u = unwrap(e);
 			return switch (u.expr) {
@@ -3061,10 +3075,48 @@ class OcamlBuilder {
 				if (isNullExpr(e1) || isNullExpr(e2)) {
 					OcamlExpr.EBinop(OcamlBinop.PhysEq, buildExpr(e1), buildExpr(e2));
 				} else {
+					inline function toDynamicObj(e:TypedExpr):OcamlExpr {
+						if (isDynamicLike(e.t) || nullablePrimitiveKind(e.t) != null) return buildExpr(e);
+						final enumName = fullNameOfTypeEnum(e.t);
+						final nullableEnumName = isNullableEnumType(e.t);
+
+						// Map `Null<String>` sentinel to the canonical `hx_null` when crossing into `Obj.t`
+						// comparisons by relying on `HxRuntime.dynamic_equals` to treat the sentinel as null.
+						if (isBoolType(e.t)) {
+							return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(e)]);
+						}
+
+						var obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e)]);
+						if (enumName != null) {
+							obj = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+								[OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]
+							);
+						} else if (nullableEnumName != null) {
+							obj = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+								[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), obj]
+							);
+						}
+						return obj;
+					}
+
+					if (isDynamicLike(e1.t) || isDynamicLike(e2.t)) {
+						return OcamlExpr.EApp(
+							OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_equals"),
+							[toDynamicObj(e1), toDynamicObj(e2)]
+						);
+					}
+
 					inline function shouldUsePhysicalEq(t:Type):Bool {
 						if (isStringType(t) || nullablePrimitiveKind(t) != null) return false;
 						return switch (followNoAbstracts(unwrapNullType(t))) {
 							case TInst(_, _): true; // class instances use reference equality in Haxe
+							case TAnonymous(_):
+								// Anonymous structures compare by identity in Haxe.
+								// Use physical equality, but avoid double-boxing `HxAnon` values (handled above).
+								!shouldAnonUseHxAnon(t);
+							case TFun(_, _): true; // functions compare by identity in Haxe
 							case _: false;
 						}
 					}
@@ -3093,10 +3145,46 @@ class OcamlBuilder {
 				if (isNullExpr(e1) || isNullExpr(e2)) {
 					OcamlExpr.EBinop(OcamlBinop.PhysNeq, buildExpr(e1), buildExpr(e2));
 				} else {
+					inline function toDynamicObj(e:TypedExpr):OcamlExpr {
+						if (isDynamicLike(e.t) || nullablePrimitiveKind(e.t) != null) return buildExpr(e);
+						final enumName = fullNameOfTypeEnum(e.t);
+						final nullableEnumName = isNullableEnumType(e.t);
+
+						if (isBoolType(e.t)) {
+							return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(e)]);
+						}
+
+						var obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e)]);
+						if (enumName != null) {
+							obj = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+								[OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]
+							);
+						} else if (nullableEnumName != null) {
+							obj = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+								[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), obj]
+							);
+						}
+						return obj;
+					}
+
+					if (isDynamicLike(e1.t) || isDynamicLike(e2.t)) {
+						return OcamlExpr.EUnop(
+							OcamlUnop.Not,
+							OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_equals"),
+								[toDynamicObj(e1), toDynamicObj(e2)]
+							)
+						);
+					}
+
 					inline function shouldUsePhysicalEq(t:Type):Bool {
 						if (isStringType(t) || nullablePrimitiveKind(t) != null) return false;
 						return switch (followNoAbstracts(unwrapNullType(t))) {
 							case TInst(_, _): true;
+							case TAnonymous(_): !shouldAnonUseHxAnon(t);
+							case TFun(_, _): true;
 							case _: false;
 						}
 					}
@@ -3244,7 +3332,7 @@ class OcamlBuilder {
 				if (rhsEnumName != null) {
 					final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 					return OcamlExpr.EApp(
-						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box"),
+						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
 						[OcamlExpr.EConst(OcamlConst.CString(rhsEnumName)), asObj]
 					);
 				}
@@ -3285,7 +3373,7 @@ class OcamlBuilder {
 				if (rhsEnumName != null) {
 					final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 					return OcamlExpr.EApp(
-						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box"),
+						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
 						[OcamlExpr.EConst(OcamlConst.CString(rhsEnumName)), asObj]
 					);
 				}
@@ -3325,7 +3413,7 @@ class OcamlBuilder {
 				if (rhsEnumName != null) {
 					final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 					return OcamlExpr.EApp(
-						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box"),
+						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
 						[OcamlExpr.EConst(OcamlConst.CString(rhsEnumName)), asObj]
 					);
 				}
@@ -3423,7 +3511,7 @@ class OcamlBuilder {
 					}
 					final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 					return OcamlExpr.EApp(
-						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box"),
+						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
 						[OcamlExpr.EConst(OcamlConst.CString(rhsEnumName)), asObj]
 					);
 				}

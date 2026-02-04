@@ -1,0 +1,10 @@
+dyn_int_float=true
+dyn_int_bool=false
+dyn_string=true
+dyn_null_string_is_null=true
+dyn_enum_const=true
+dyn_enum_args=false
+typed_anon=false
+typed_anon_same=true
+typed_fn=false
+typed_fn_same=true

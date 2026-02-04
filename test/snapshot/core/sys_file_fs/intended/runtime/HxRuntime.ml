@@ -59,6 +59,62 @@ let unbox_bool_or_obj (v : Obj.t) : bool =
   else
     Obj.obj v
 
+(* Dynamic equality (`==`) for values carried as `Obj.t`.
+
+   Why:
+   - When values flow through `Dynamic` / `Std.Any` / `HxAnon` we represent them as `Obj.t`.
+   - OCaml polymorphic equality (`=`) is structural and would make unrelated “objects”
+     compare equal by shape. This breaks Haxe identity semantics (e.g. two distinct
+     enum values with args, two distinct anonymous objects, etc.).
+   - However, Haxe still expects *numeric* value equality across Int/Float, and string
+     value equality.
+
+   Semantics (best-effort, aligns with static targets like Neko/HL):
+   - `null` compares equal only to `null` (including `Null<String>` sentinel).
+   - Int/Float compare by numeric value (int coerces to float when needed).
+   - Bool compares by value (requires boxing via `box_bool` when carried as `Obj.t`).
+   - String compares by content (and treats the `Null<String>` sentinel as null).
+   - Everything else compares by identity (physical equality). *)
+
+let is_null_string_obj (v : Obj.t) : bool =
+  if Obj.is_int v then
+    false
+  else if Obj.tag v = Obj.string_tag then
+    let hx_null_string : string = Obj.magic hx_null in
+    let s : string = Obj.obj v in
+    s == hx_null_string
+  else
+    false
+
+let dynamic_equals (a : Obj.t) (b : Obj.t) : bool =
+  let a_is_null = is_null a || is_null_string_obj a in
+  let b_is_null = is_null b || is_null_string_obj b in
+  if a_is_null || b_is_null then
+    a_is_null && b_is_null
+  else if is_boxed_bool a || is_boxed_bool b then
+    (is_boxed_bool a && is_boxed_bool b) && unbox_bool_or_obj a = unbox_bool_or_obj b
+  else if Obj.is_int a then
+    if Obj.is_int b then
+      (Obj.obj a : int) = (Obj.obj b : int)
+    else if Obj.tag b = Obj.double_tag then
+      float_of_int (Obj.obj a : int) = (Obj.obj b : float)
+    else
+      false
+  else if Obj.tag a = Obj.double_tag then
+    if Obj.is_int b then
+      (Obj.obj a : float) = float_of_int (Obj.obj b : int)
+    else if Obj.tag b = Obj.double_tag then
+      (Obj.obj a : float) = (Obj.obj b : float)
+    else
+      false
+  else if Obj.tag a = Obj.string_tag then
+    if Obj.tag b = Obj.string_tag then
+      (Obj.obj a : string) = (Obj.obj b : string)
+    else
+      false
+  else
+    a == b
+
 (* Nullable primitives
 
    Haxe allows `Null<Int>`, `Null<Float>`, and `Null<Bool>` to represent either:

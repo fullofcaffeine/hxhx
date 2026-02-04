@@ -16,6 +16,20 @@
 
 let enum_box_marker : Obj.t = Obj.repr (ref 0)
 
+(* Intern table for boxed *constant* constructors.
+
+   Why:
+   - Constant enum constructors in OCaml compile to immediates (ints).
+   - When those values are carried as `Obj.t`, we box them for typed catches.
+   - If we allocate a fresh box every time, we accidentally break Haxe identity
+     semantics for constants in `Dynamic` contexts (`var d1:Dynamic = E.A; var d2:Dynamic = E.A; d1 == d2` should be true).
+
+   Strategy:
+   - Intern boxed values when the payload is an immediate. For non-immediates
+     (constructors with args), do *not* intern: each value should remain distinct
+     by identity (and Haxe disallows direct `==` comparisons on typed enums-with-args anyway). *)
+let intern_const : ((string * int), Obj.t) Hashtbl.t = Hashtbl.create 251
+
 let is_box (v : Obj.t) : bool =
   (not (Obj.is_int v)) && Obj.size v = 3 && Obj.field v 0 == enum_box_marker
 
@@ -31,6 +45,14 @@ let box_if_needed (name : string) (v : Obj.t) : Obj.t =
     v
   else if is_box v then
     v
+  else if Obj.is_int v then
+    let i : int = Obj.obj v in
+    (match Hashtbl.find_opt intern_const (name, i) with
+    | Some b -> b
+    | None ->
+        let b = box name v in
+        Hashtbl.add intern_const (name, i) b;
+        b)
   else
     box name v
 

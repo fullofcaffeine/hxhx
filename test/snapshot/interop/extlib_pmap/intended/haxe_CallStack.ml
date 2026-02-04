@@ -147,7 +147,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
       ignore (try while !_g < _g1 do try ignore (let j = let __old_5 = !_g in let __new_6 = __old_5 + 1 in (
         ignore (_g := __new_6);
         __old_5
-      ) in if equalItems (HxEnum.box "haxe.StackItem" (Obj.repr (HxArray.get this1 (!i)))) (HxEnum.box "haxe.StackItem" (Obj.repr (HxArray.get stack j))) then ignore ((
+      ) in if equalItems (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get this1 (!i)))) (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get stack j))) then ignore ((
         ignore (if !startIndex < 0 then ignore (let __assign_7 = !i in (
           startIndex := __assign_7;
           __assign_7
