@@ -15,6 +15,12 @@ typedef DuneProjectConfig = {
 
 class DuneProjectEmitter {
 	static inline final RUNTIME_LIB_NAME = "hx_runtime";
+	static inline final LINE_DIRECTIVE_DISABLE_DEFINE = "ocaml_no_line_directives";
+
+	static function escapeLineDirectivePath(path:String):String {
+		if (path == null) return "";
+		return StringTools.replace(StringTools.replace(path, "\\", "\\\\"), "\"", "\\\"");
+	}
 
 	public static function ocamlModuleNameFromHaxeModuleId(id:String):String {
 		if (id == null || id.length == 0) return "Main";
@@ -106,7 +112,14 @@ class DuneProjectEmitter {
 		} else {
 			"let () = ()\n";
 		}
-		output.saveFile(exeName + ".ml", entryBody);
+		#if macro
+		final useLineDirectives = !haxe.macro.Context.defined(LINE_DIRECTIVE_DISABLE_DEFINE);
+		#else
+		final useLineDirectives = false;
+		#end
+		final entryFile = exeName + ".ml";
+		final content = (useLineDirectives ? ("# 1 \"" + escapeLineDirectivePath(entryFile) + "\"\n") : "") + entryBody;
+		output.saveFile(entryFile, content);
 	}
 }
 
