@@ -66,6 +66,33 @@ cp "$ROOT/README.md" "$dist_dir/README.md"
 cp "$ROOT/LICENSE" "$dist_dir/LICENSE"
 cp "$ROOT/CHANGELOG.md" "$dist_dir/CHANGELOG.md"
 
+echo "== Bundling backend sources (best-effort)"
+lib_dir="$dist_dir/lib"
+mkdir -p "$lib_dir"
+
+# Bundle reflaxe.ocaml (this repo) sources so `hxhx --target ocaml` can work without haxelib.
+mkdir -p "$lib_dir/reflaxe.ocaml"
+cp -R "$ROOT/src" "$lib_dir/reflaxe.ocaml/src"
+cp -R "$ROOT/std" "$lib_dir/reflaxe.ocaml/std"
+cp "$ROOT/haxelib.json" "$lib_dir/reflaxe.ocaml/haxelib.json"
+
+# Bundle reflaxe dependency sources (required for CompilerInit/ReflectCompiler macros).
+if command -v haxelib >/dev/null 2>&1; then
+  reflaxe_src="$(haxelib path reflaxe 2>/dev/null | head -n 1 || true)"
+  if [ -n "$reflaxe_src" ] && [ -d "$reflaxe_src" ]; then
+    reflaxe_root="$(cd "$(dirname "$reflaxe_src")/.." && pwd)"
+    mkdir -p "$lib_dir/reflaxe"
+    cp -R "$reflaxe_root/src" "$lib_dir/reflaxe/src"
+    cp "$reflaxe_root/haxelib.json" "$lib_dir/reflaxe/haxelib.json" 2>/dev/null || true
+    cp "$reflaxe_root/extraParams.hxml" "$lib_dir/reflaxe/extraParams.hxml" 2>/dev/null || true
+    cp "$reflaxe_root/LICENSE" "$lib_dir/reflaxe/LICENSE" 2>/dev/null || true
+  else
+    echo "Note: could not resolve reflaxe via haxelib path; dist will require -lib reflaxe to be available."
+  fi
+else
+  echo "Note: haxelib not found; dist will require -lib reflaxe to be available."
+fi
+
 built_at_utc="$(date -u "+%Y-%m-%dT%H:%M:%SZ")"
 if [ -n "$SOURCE_DATE_EPOCH" ]; then
   # macOS `date` doesn't support -d, so use python if present.

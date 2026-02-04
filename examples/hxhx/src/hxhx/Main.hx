@@ -18,12 +18,24 @@ package hxhx;
 	  (e.g. parsing via the native frontend seam).
 **/
 class Main {
+	static function fatal<T>(msg:String):T {
+		Sys.println(msg);
+		Sys.exit(1);
+		return cast null;
+	}
+
 	static function main() {
 		final args = Sys.args();
 		if (args.length == 0) {
 			Sys.println("OK hxhx");
 			return;
 		}
+
+		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
+		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
+		var forwarded = args;
+		final sep = args.indexOf("--");
+		if (sep != -1) forwarded = args.slice(sep + 1);
 
 		// Stage 1: internal bring-up flags.
 		//
@@ -56,6 +68,37 @@ class Main {
 			return;
 		}
 
+		// Stage0 shim ergonomics: bundled/builtin backend selection.
+		//
+		// This is shim-only and should never be forwarded to stage0 `haxe`.
+		// See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1`.
+		{
+			// Only parse shim flags in the pre-`--` section (so `hxhx -- --target ...` forwards).
+			final shimArgs = sep == -1 ? args : args.slice(0, sep);
+			final idx = shimArgs.indexOf("--target");
+			final idx2 = shimArgs.indexOf("--hxhx-target");
+			final i = idx != -1 ? idx : idx2;
+			if (i != -1) {
+				if (i + 1 >= shimArgs.length) {
+					fatal("Usage: hxhx --target <id> [haxe args...]");
+				}
+
+				final targetId = shimArgs[i + 1];
+				// Remove the shim flag from the forwarded args (only if it was part of the forwarded set).
+				if (sep == -1) {
+					forwarded = forwarded.copy();
+					forwarded.splice(i, 2);
+				}
+				try forwarded = TargetPresets.apply(targetId, forwarded)
+				catch (e:Dynamic) forwarded = fatal("hxhx: " + Std.string(e));
+			}
+
+			if (shimArgs.length == 1 && shimArgs[0] == "--hxhx-list-targets") {
+				for (t in TargetPresets.listTargets()) Sys.println(t);
+				return;
+			}
+		}
+
 		// Compatibility note:
 		// `hxhx` is intended to be drop-in compatible with the `haxe` CLI. Some tools (and upstream tests)
 		// parse `haxe --version` as a SemVer string, so we must not intercept `--version` here.
@@ -64,8 +107,10 @@ class Main {
 			Sys.println("");
 			Sys.println("Usage:");
 			Sys.println("  hxhx [haxe args...]");
+			Sys.println("  hxhx --target <id> [haxe args...]");
 			Sys.println("  hxhx --hxhx-parse <File.hx>");
 			Sys.println("  hxhx --hxhx-selftest");
+			Sys.println("  hxhx --hxhx-list-targets");
 			Sys.println("");
 			Sys.println("Environment:");
 			Sys.println("  HAXE_BIN  Path to stage0 `haxe` (default: haxe)");
@@ -75,12 +120,6 @@ class Main {
 			Sys.println("  - Use `--hxhx-help` for this shim help.");
 			return;
 		}
-
-		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
-		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
-		var forwarded = args;
-		final sep = args.indexOf("--");
-		if (sep != -1) forwarded = args.slice(sep + 1);
 
 		final haxeBin = {
 			final v = Sys.getEnv("HAXE_BIN");

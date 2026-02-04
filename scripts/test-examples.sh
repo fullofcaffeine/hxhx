@@ -35,6 +35,27 @@ check_findlib_packages() {
   [ "$missing" -eq 0 ]
 }
 
+build_hxhx_if_needed() {
+  # If any example declares it needs hxhx, build it once and export HXHX_EXE.
+  if ! find examples -maxdepth 2 -type f -name "USE_HXHX" -print -quit | grep -q .; then
+    return 0
+  fi
+
+  if [ -n "${HXHX_EXE:-}" ] && [ -f "${HXHX_EXE:-}" ]; then
+    return 0
+  fi
+
+  echo "== Building hxhx (for USE_HXHX examples)"
+  HXHX_EXE="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+  if [ -z "$HXHX_EXE" ] || [ ! -f "$HXHX_EXE" ]; then
+    echo "Missing built executable from build-hxhx.sh (expected a path to an .exe)." >&2
+    exit 1
+  fi
+  export HXHX_EXE
+}
+
+build_hxhx_if_needed
+
 for dir in examples/*/; do
   [ -f "${dir}build.hxml" ] || continue
   if [ -f "${dir}ACCEPTANCE_ONLY" ]; then
@@ -62,7 +83,11 @@ for dir in examples/*/; do
     cd "$dir"
     rm -rf out
     mkdir -p out
-    "$HAXE_BIN" build.hxml -D ocaml_build=native
+    if [ -f "USE_HXHX" ]; then
+      HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml build.hxml -D ocaml_build=native
+    else
+      "$HAXE_BIN" build.hxml -D ocaml_build=native
+    fi
   )
 
   exe="${dir}out/_build/default/out.exe"
