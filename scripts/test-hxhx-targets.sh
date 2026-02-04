@@ -41,6 +41,10 @@ HX
 test -f "$ROOT/out/dune"
 rm -rf "$ROOT/out"
 
+echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+
 echo "== Contradiction fails fast"
 set +e
 out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"
@@ -53,4 +57,3 @@ fi
 echo "$out" | grep -q "Contradiction"
 
 echo "OK: hxhx target presets"
-

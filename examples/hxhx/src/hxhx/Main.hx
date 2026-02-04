@@ -31,6 +31,15 @@ class Main {
 			return;
 		}
 
+		// Stage 1 (bring-up): minimal "non-shim" compilation path.
+		//
+		// This is explicitly NOT part of the `haxe` CLI surface and will never be forwarded.
+		// We grow it incrementally until `hxhx` no longer delegates to stage0 for normal builds.
+		if (args.length >= 1 && args[0] == "--hxhx-stage1") {
+			final code = Stage1Compiler.run(args.slice(1));
+			Sys.exit(code);
+		}
+
 		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
 		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
 		var forwarded = args;
