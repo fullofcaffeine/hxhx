@@ -44,6 +44,13 @@ bd sync               # Sync with git
 - Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
 - `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
 
+## Upstream OCaml Reference (vendored checkout)
+
+When implementing backend semantics or Haxe-in-Haxe bootstrap behavior, cross-check against upstream Haxe’s **existing OCaml implementation**:
+
+- Prefer working against a local `vendor/haxe` checkout (ignored by git) created via `bash scripts/vendor/fetch-haxe-upstream.sh`.
+- In local dev, it’s also fine to point `vendor/haxe` at your reference checkout (e.g. symlink to `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`) for fast iteration — but keep it untracked.
+
 When implementing semantics or compiler architecture:
 
 - Prefer cross-checking against the upstream **OCaml** Haxe compiler code in `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe` (behavior, data structures, ordering/printing, runtime expectations).
