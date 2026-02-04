@@ -1061,11 +1061,38 @@ class OcamlCompiler extends DirectToStringCompiler {
 					.map(s -> StringTools.trim(s))
 					.filter(s -> s.length > 0);
 
+			final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
+
+			final exesValue = haxe.macro.Context.definedValue("ocaml_dune_exes");
+			final executables = if (exesValue == null || StringTools.trim(exesValue).length == 0) {
+				null;
+			} else {
+				final out:Array<{ name:String, mainModuleId:Null<String> }> = [];
+				for (entry in exesValue.split(",")) {
+					final e = StringTools.trim(entry);
+					if (e.length == 0) continue;
+					final colon = e.indexOf(":");
+					if (colon < 0) {
+						// Name only; use the compilation main module if available.
+						out.push({ name: e, mainModuleId: mainModuleId });
+					} else {
+						final exe = StringTools.trim(e.substr(0, colon));
+						final mod = StringTools.trim(e.substr(colon + 1));
+						if (exe.length == 0) continue;
+						final modId = mod.length == 0 ? mainModuleId : StringTools.replace(mod, ".", "_");
+						out.push({ name: exe, mainModuleId: modId });
+					}
+				}
+				out.length > 0 ? out : null;
+			}
+
 			DuneProjectEmitter.emit(output, {
 				projectName: DuneProjectEmitter.defaultProjectName(outDir),
 				exeName: DuneProjectEmitter.defaultExeName(outDir),
 				mainModuleId: mainModuleId,
-				duneLibraries: duneLibs
+				duneLibraries: duneLibs,
+				duneLayout: duneLayoutValue,
+				executables: executables
 			});
 		}
 

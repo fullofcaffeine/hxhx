@@ -71,6 +71,8 @@ dune build ./*.exe
 Optional flags:
 
 - `-D ocaml_no_dune` to disable dune scaffolding emission.
+- `-D ocaml_dune_layout=exe|lib` to choose between an executable scaffold (default) or a library-only dune project.
+- `-D ocaml_dune_exes=name:MainModuleId[,name2:MainModuleId...]` to emit a multi-executable dune stanza (`(executables ...)`) with one entry module per name.
 - `-D ocaml_no_build` (or `-D ocaml_emit_only`) to skip post-emit build/run.
 - `-D ocaml_build=native` (or `byte`) to force `dune build` after emitting (requires `dune` + `ocamlc` on PATH; fails hard if missing).
 - `-D ocaml_run` to run the produced executable via `dune exec` after emitting (best-effort unless combined with `ocaml_build=...`).
