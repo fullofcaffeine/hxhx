@@ -64,7 +64,7 @@ This PRD follows those patterns, but adapts them to OCaml’s semantics and buil
 2. Product goals
 G1 — A real OCaml target (not “pretty printing”)
 
-Generate compilable .ml files (and optionally .mli).
+Generate compilable .ml files (and optionally .mli, inferred via `ocamlc -i`).
 
 Support Haxe programs beyond toy examples: modules, functions, enums, classes, arrays, exceptions, IO.
 

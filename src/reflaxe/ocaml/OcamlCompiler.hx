@@ -1048,10 +1048,36 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final noBuild = haxe.macro.Context.defined("ocaml_no_build");
 		final emitOnly = haxe.macro.Context.defined("ocaml_emit_only");
 
-		final shouldBuild = !noBuild && !emitOnly;
-		final strictBuild = buildMode != null;
+		final mliValue = haxe.macro.Context.definedValue("ocaml_mli");
+		final wantsMli = haxe.macro.Context.defined("ocaml_mli") || mliValue != null;
+		final mliMode = if (!wantsMli) {
+			null;
+		} else if (mliValue == null || mliValue.length == 0 || mliValue == "1") {
+			"infer";
+		} else {
+			mliValue;
+		}
+		final mliBestEffort = haxe.macro.Context.defined("ocaml_mli_best_effort");
+		final mliStrict = wantsMli && !mliBestEffort;
 
-		if (!shouldBuild && !shouldRun && buildMode == null) return;
+		if (wantsMli && (noBuild || emitOnly)) {
+			haxe.macro.Context.warning(
+				"ocaml_mli implies a dune build/typecheck step; ignoring ocaml_no_build/ocaml_emit_only.",
+				haxe.macro.Context.currentPos()
+			);
+		}
+		if (wantsMli && noDune) {
+			haxe.macro.Context.error(
+				"ocaml_mli requires dune scaffolding (or a dune project in the output dir). Disable ocaml_no_dune.",
+				haxe.macro.Context.currentPos()
+			);
+		}
+
+		final shouldBuild = wantsMli || (!noBuild && !emitOnly);
+		final strictBuild = buildMode != null;
+		final strictAny = strictBuild || (wantsMli && mliStrict);
+
+		if (!shouldBuild && !shouldRun && buildMode == null && !wantsMli) return;
 
 		final exeName = DuneProjectEmitter.defaultExeName(outDir);
 		final mode = buildMode != null ? buildMode : "native";
@@ -1061,7 +1087,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 			exeName: exeName,
 			mode: mode,
 			run: shouldRun,
-			strict: strictBuild
+			strict: strictAny,
+			mli: mliMode,
+			mliStrict: mliStrict
 		});
 
 		switch (result) {

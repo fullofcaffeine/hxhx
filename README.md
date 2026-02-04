@@ -74,6 +74,7 @@ Optional flags:
 - `-D ocaml_no_build` (or `-D ocaml_emit_only`) to skip post-emit build/run.
 - `-D ocaml_build=native` (or `byte`) to force `dune build` after emitting (requires `dune` + `ocamlc` on PATH; fails hard if missing).
 - `-D ocaml_run` to run the produced executable via `dune exec` after emitting (best-effort unless combined with `ocaml_build=...`).
+- `-D ocaml_mli` (or `-D ocaml_mli=infer`) to generate inferred `*.mli` via `ocamlc -i` and rebuild with dune (requires `ocamlfind`).
 
 ## hxhx (Haxe-in-Haxe) bring-up
 
@@ -115,6 +116,7 @@ You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - [HXHX Builtin Backends](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md) — design for bundling/linking targets and the proposed `--target` registry.
 - [OCaml Interop: Labelled Args](docs/02-user-guide/OCAML_INTEROP_LABELLED_ARGS.md) — how to express `~label:` / `?label:` extern callsites from Haxe.
 - [OCaml-native Mode](docs/02-user-guide/OCAML_NATIVE_MODE.md) — when/why to use `ocaml.*` and how the surface maps to `Stdlib`.
+- [Optional `.mli` Generation](docs/02-user-guide/OCAML_TOOLING_MLI.md) — `.mli` inference via `ocamlc -i` for better OCaml tooling UX.
 
 ## Escape hatch
 
