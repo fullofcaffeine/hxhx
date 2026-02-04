@@ -136,17 +136,26 @@ class Stage1Args {
 	public final classPaths:Array<String>;
 	public final main:String;
 	public final noOutput:Bool;
+	public final defines:Array<String>;
+	public final libs:Array<String>;
+	public final macros:Array<String>;
 
-	function new(classPaths:Array<String>, main:String, noOutput:Bool) {
+	function new(classPaths:Array<String>, main:String, noOutput:Bool, defines:Array<String>, libs:Array<String>, macros:Array<String>) {
 		this.classPaths = classPaths;
 		this.main = main;
 		this.noOutput = noOutput;
+		this.defines = defines;
+		this.libs = libs;
+		this.macros = macros;
 	}
 
 	public static function parse(args:Array<String>):Null<Stage1Args> {
 		final classPaths = new Array<String>();
 		var main = "";
 		var noOutput = false;
+		final defines = new Array<String>();
+		final libs = new Array<String>();
+		final macros = new Array<String>();
 
 		var i = 0;
 		while (i < args.length) {
@@ -165,6 +174,27 @@ class Stage1Args {
 						return null;
 					}
 					main = args[i + 1];
+					i += 2;
+				case "-D":
+					if (i + 1 >= args.length) {
+						Sys.println("hxhx(stage1): missing value after -D");
+						return null;
+					}
+					defines.push(args[i + 1]);
+					i += 2;
+				case "-lib":
+					if (i + 1 >= args.length) {
+						Sys.println("hxhx(stage1): missing value after -lib");
+						return null;
+					}
+					libs.push(args[i + 1]);
+					i += 2;
+				case "--macro":
+					if (i + 1 >= args.length) {
+						Sys.println("hxhx(stage1): missing value after --macro");
+						return null;
+					}
+					macros.push(args[i + 1]);
 					i += 2;
 				case "--no-output":
 					noOutput = true;
@@ -185,7 +215,7 @@ class Stage1Args {
 		}
 
 		if (classPaths.length == 0) classPaths.push(".");
-		return new Stage1Args(classPaths, main, noOutput);
+		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros);
 	}
 }
 

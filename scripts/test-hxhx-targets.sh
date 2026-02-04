@@ -51,7 +51,7 @@ test -f "$ROOT/out/dune"
 rm -rf "$ROOT/out"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
-out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main --no-output)"
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main --no-output -D stage1_test=1 -lib reflaxe.ocaml --macro 'trace(\"ignored\")')"
 echo "$out" | grep -q "^stage1=ok$"
 
 echo "== Contradiction fails fast"
