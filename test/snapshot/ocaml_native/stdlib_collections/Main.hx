@@ -33,5 +33,8 @@ class Main {
 		OSeq.iter(x -> {
 			final _ = x;
 		}, OSeq.map(x -> x + 1, s));
+
+		// Ensure OCaml-native abstract types can appear in emitted type annotations.
+		new Box(a, h);
 	}
 }

@@ -1199,6 +1199,46 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return switch (t) {
 				case TAbstract(aRef, params):
 					final a = aRef.get();
+					final aPack = a.pack ?? [];
+
+					// OCaml-native surface: treat `ocaml.*` abstracts as concrete OCaml types so they can
+					// appear in generated type annotations (records, signatures, future .mli output)
+					// without degrading to `Obj.t`.
+					if (aPack.length == 1 && aPack[0] == "ocaml") {
+						switch (a.name) {
+							case "Array":
+								final elem = (params != null && params.length > 0)
+									? ocamlTypeExprFromHaxeType(params[0])
+									: OcamlTypeExpr.TIdent("Obj.t");
+								return OcamlTypeExpr.TApp("array", [elem]);
+							case "Bytes":
+								return OcamlTypeExpr.TIdent("bytes");
+							case "Char":
+								return OcamlTypeExpr.TIdent("char");
+							case "Hashtbl":
+								final k = (params != null && params.length > 0)
+									? ocamlTypeExprFromHaxeType(params[0])
+									: OcamlTypeExpr.TIdent("Obj.t");
+								final v = (params != null && params.length > 1)
+									? ocamlTypeExprFromHaxeType(params[1])
+									: OcamlTypeExpr.TIdent("Obj.t");
+								return OcamlTypeExpr.TApp("Stdlib.Hashtbl.t", [k, v]);
+							case "Seq":
+								final elem = (params != null && params.length > 0)
+									? ocamlTypeExprFromHaxeType(params[0])
+									: OcamlTypeExpr.TIdent("Obj.t");
+								return OcamlTypeExpr.TApp("Stdlib.Seq.t", [elem]);
+							case _:
+						}
+					} else if (aPack.length == 2 && aPack[0] == "ocaml" && aPack[1] == "extlib" && a.name == "PMap") {
+						final k = (params != null && params.length > 0)
+							? ocamlTypeExprFromHaxeType(params[0])
+							: OcamlTypeExpr.TIdent("Obj.t");
+						final v = (params != null && params.length > 1)
+							? ocamlTypeExprFromHaxeType(params[1])
+							: OcamlTypeExpr.TIdent("Obj.t");
+						return OcamlTypeExpr.TApp("PMap.t", [k, v]);
+					}
 					switch (a.name) {
 						case "Int": OcamlTypeExpr.TIdent("int");
 						case "Float": OcamlTypeExpr.TIdent("float");

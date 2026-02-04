@@ -2,6 +2,7 @@
 (* Type registry used by `Type.resolveClass/resolveEnum` and typed catches. *)
 
 let init () : unit =
+  ignore (HxType.class_ "Box");
   ignore (HxType.class_ "Main");
   ignore (HxType.class_ "StringBuf");
   ignore (HxType.class_ "haxe.Exception");
@@ -12,6 +13,7 @@ let init () : unit =
   ignore (HxType.class_ "ocaml._Hashtbl.Hashtbl_Impl_");
   ignore (HxType.class_ "ocaml._Seq.Seq_Impl_");
   ignore (HxType.enum_ "ocaml.Option");
+  HxType.register_class_tags "Box" [ "Box" ];
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
   HxType.register_class_tags "StringBuf" [ "StringBuf" ];
