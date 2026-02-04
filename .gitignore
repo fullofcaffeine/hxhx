@@ -7,6 +7,7 @@ dump_tmp/dump/
 dump_tmp/NullCoal.hx
 dump_*/
 dump_out_*/
+repomix-output-*
 
 # Examples build output
 examples/**/out/

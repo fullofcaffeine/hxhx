@@ -1,0 +1,174 @@
+# HXHX Builtin Backends (Bundled `--library` vs `--target` Registry)
+
+This document untangles a concept that comes up quickly once `hxhx` exists as a native binary:
+
+- We want `hxhx` to behave like `haxe` (forward-compatible CLI, same mental model).
+- We also want a distribution that is *pleasant* to use: common backends can be **bundled** and enabled with a single flag.
+- We want a path to **statically linking** some backends into the compiler for performance and tighter integration.
+
+This doc defines a concrete “builtin backend registry” interface and how it interacts with `--library`.
+
+## Terms
+
+- **Stage0 `haxe`**: the upstream OCaml compiler binary installed on the host.
+- **Stage0 `hxhx`**: a native OCaml binary built by `reflaxe.ocaml` that still delegates compilation to stage0 `haxe`.
+- **Macro backend**: a target implemented as Haxe macro code (e.g. Reflaxe targets like `reflaxe.ocaml`, `reflaxe.elixir`).
+- **Bundled backend**: backend source shipped *next to* `hxhx` so users don’t need to install it separately.
+- **Builtin backend**: backend code compiled/linked *into* the `hxhx` executable.
+
+Important: “bundled” and “builtin” are orthogonal. A backend can be:
+
+- bundled only (source shipped, still loaded from classpath),
+- builtin only (linked in, no source shipped),
+- or both (ship source for debugging + link in for fast-path).
+
+## Why do we need a registry at all?
+
+In upstream Haxe, “which target am I compiling to?” is normally selected by *target flags* (`-js`, `-cpp`, `--interp`, etc.)
+plus optional macro libraries.
+
+Reflaxe targets are different: they are typically enabled via:
+
+- `--library <target-lib>` (aka `-lib`)
+- plus a define-based configuration (e.g. `-D reflaxe-target=ocaml` and `-D ocaml_output=...`)
+
+That’s flexible, but it’s verbose and easy to get wrong.
+
+For `hxhx` distribution goals (Gate 4), we want to be able to say:
+
+- “This `hxhx` build ships with backends X/Y/Z.”
+- “Enable backend `elixir` with one flag.”
+- “Those backends are version-pinned to the `hxhx` release.”
+
+That implies a small, explicit registry owned by the `hxhx` distribution.
+
+## CLI surface (proposed)
+
+`hxhx` supports two ways to enable backends:
+
+1) **Bundled / explicit macro backends** (the “upstream Haxe” way)
+
+Users pass everything explicitly, and `hxhx` forwards it:
+
+```bash
+hxhx ... --library reflaxe.elixir -D reflaxe-target=elixir -D elixir_output=out ...
+```
+
+2) **Builtin backend selection** (distribution convenience)
+
+Users pick a target by name:
+
+```bash
+hxhx ... --target elixir ...
+```
+
+And `hxhx` injects the equivalent `--library`/`-D` flags (or routes to a builtin backend entrypoint).
+
+### Why `--target` and not a new `-D`?
+
+- We want a *single* stable UX for “pick the bundled backend”.
+- Defines are appropriate for feature switches, but a registry selection is closer to “which compiler backend”.
+
+Compatibility note:
+
+- Upstream `haxe` does not have a generic `--target <name>` flag, so `hxhx` can safely treat this as a shim-only option
+  and strip it before delegating to stage0 `haxe`.
+
+If we discover a conflict, we can rename to `--hxhx-target` without changing the underlying registry design.
+
+## Registry interface (minimum viable)
+
+The registry is a mapping from a short target name to an activation strategy.
+
+Each entry must define:
+
+- `id`: the CLI name (e.g. `ocaml`, `elixir`)
+- `kind`: `bundled` | `builtin` | `both`
+- `inject(haxeArgs)`: how to translate `--target <id>` into concrete flags
+- `validate(haxeArgs)`: best-effort checks for missing required config
+
+Pseudo-Haxe (sketch):
+
+```haxe
+typedef BackendActivation = {
+  final id:String;
+  final kind:String; // "bundled" | "builtin" | "both"
+  final describe:String;
+  function inject(args:Array<String>):Array<String>;
+  function validate(args:Array<String>):Null<String>; // error message, or null if ok
+}
+```
+
+### Injection rules (important for predictable UX)
+
+When `--target <id>` is used, injection follows these rules:
+
+- **Additive by default**: inject missing flags, do not rewrite user-provided ones.
+- **User flags win**: if the user explicitly passes `--library X` or `-D something=...`, do not override it.
+- **Fail fast on contradiction**: if `--target elixir` is used but the user explicitly sets `-D reflaxe-target=ocaml`,
+  print an error explaining the conflict.
+
+This keeps `--target` as “a preset”, not a separate parallel configuration system.
+
+## How bundling works (without static linking)
+
+Bundling is the simplest starting point and works even while `hxhx` is still a stage0 shim:
+
+- `dist/hxhx/.../lib/<backend>/` contains the backend source (and possibly its `haxelib.json`).
+- `hxhx` computes its install root (relative to `argv[0]`) and adds `-cp <dist>/lib/...` to the forwarded `haxe` args.
+- `--target elixir` injection then adds `--library reflaxe.elixir` (or `-cp` directly) plus required defines.
+
+This gives a “batteries included” UX *without* needing `hxhx` to execute macros itself.
+
+## How builtin linking works (later, when `hxhx` executes macros)
+
+Once `hxhx` is no longer delegating (it types and runs macros itself), we can optionally make some backends “builtin”:
+
+- compile the backend Haxe code to OCaml as part of the `hxhx` build
+- link it into the `hxhx` executable
+- register it in the backend registry as `kind=builtin` or `kind=both`
+
+At that point, `--target elixir` does **not** need to add `--library reflaxe.elixir` at all — it can call the backend
+entrypoint directly.
+
+This is an optimization / integration lever:
+
+- faster startup (no classpath scanning / macro compilation)
+- more control over versioning (backend pinned to compiler build)
+- possibility of deeper integration (shared caches, structured config)
+
+## How this relates to the macro “plugin system”
+
+This registry is *not* the macro plugin system itself.
+
+- The macro plugin system is defined by `haxe.macro.Context` hook points and macro execution behavior.
+- The backend registry is a distribution-level switchboard for “which backend do you want to use”.
+
+When `hxhx` becomes replacement-ready, both are needed:
+
+- macro execution + hook points (so macro libraries work),
+- registry/bundling (so the compiler distribution is ergonomic and reproducible).
+
+See:
+
+- `docs/02-user-guide/COMPILER_PLUGIN_SYSTEM.md:1`
+- `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`
+
+## Example: `reflaxe.elixir` as a bundled vs builtin backend
+
+Bundled (early, stage0 shim compatible):
+
+- `hxhx` ships `reflaxe.elixir` sources.
+- `hxhx --target elixir` expands to:
+  - add `-cp <dist>/lib/reflaxe.elixir/src` (or equivalent)
+  - add `--library reflaxe.elixir`
+  - add the defines that the backend expects
+
+Builtin (later, after macro execution is native):
+
+- `reflaxe.elixir` is compiled/linked into `hxhx`.
+- `hxhx --target elixir` selects the builtin backend implementation with no classpath injection.
+
+## Beads tracking
+
+The implementation work described here should be tracked as a dedicated epic and tasks (see beads).
