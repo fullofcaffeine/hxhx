@@ -71,6 +71,24 @@ class BuiltinMacros {
 	}
 
 	/**
+		Emit a simple Haxe module in the compiler-generated hx dir (bring-up rung).
+
+		Why
+		- This approximates “macros generate code that affects typing” without implementing
+		  typed AST transforms yet.
+
+		What
+		- Emits `Gen.hx` containing `class Gen {}`.
+		- Sets `HXHX_HXGEN=1` so the compiler can expose a deterministic effect.
+	**/
+	public static function genHxModule():String {
+		final src = "class Gen {}";
+		Compiler.emitHxModule("Gen", src);
+		Compiler.define("HXHX_HXGEN", "1");
+		return "genHx=ok";
+	}
+
+	/**
 		Read a compiler define seeded from the compilation CLI (`-D`).
 
 		Why

@@ -30,11 +30,15 @@ class MacroState {
 	static final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final ocamlModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final classPaths:Array<String> = [];
+	static var generatedHxDir:String = "";
+	static final generatedHxModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 
 	public static function reset():Void {
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);
+		generatedHxDir = "";
+		generatedHxModules.clear();
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -166,5 +170,61 @@ class MacroState {
 
 	public static function listClassPaths():Array<String> {
 		return classPaths.copy();
+	}
+
+	/**
+		Set the directory where `emitHxModule` writes `.hx` files for this compilation.
+
+		Why
+		- The macro host should not need to know our output layout.
+		- Stage3 (compiler entrypoint) decides where generated code should live.
+	**/
+	public static function setGeneratedHxDir(dir:String):Void {
+		generatedHxDir = dir == null ? "" : StringTools.trim(dir);
+	}
+
+	public static function getGeneratedHxDir():String {
+		return generatedHxDir;
+	}
+
+	/**
+		Emit a Haxe module into the generated hx directory.
+
+		Why
+		- This is a bring-up rung for “macro generates code that affects compilation”, without
+		  implementing typed AST transforms yet.
+
+		What
+		- Writes `<generatedHxDir>/<Name>.hx` with the provided source.
+		- Records the module so tests can assert what was emitted.
+	**/
+	public static function emitHxModule(name:String, source:String):Void {
+		if (name == null) return;
+		final n = StringTools.trim(name);
+		if (n.length == 0) return;
+		if (generatedHxDir == null || generatedHxDir.length == 0) {
+			throw "MacroState.emitHxModule: missing generated hx dir (call setGeneratedHxDir before running macros)";
+		}
+
+		// Conservative file-safe module name: [A-Za-z_][A-Za-z0-9_]*
+		inline function isAlpha(c:Int):Bool return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
+		inline function isDigit(c:Int):Bool return c >= "0".code && c <= "9".code;
+		inline function isUnderscore(c:Int):Bool return c == "_".code;
+		final first = n.charCodeAt(0);
+		if (!(isAlpha(first) || isUnderscore(first))) return;
+		for (i in 1...n.length) {
+			final c = n.charCodeAt(i);
+			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c))) return;
+		}
+
+		if (!sys.FileSystem.exists(generatedHxDir)) sys.FileSystem.createDirectory(generatedHxDir);
+		final path = haxe.io.Path.join([generatedHxDir, n + ".hx"]);
+		sys.io.File.saveContent(path, source == null ? "" : source);
+		generatedHxModules.set(n, source == null ? "" : source);
+	}
+
+	public static function hasGeneratedHxModules():Bool {
+		for (_ in generatedHxModules.keys()) return true;
+		return false;
 	}
 }

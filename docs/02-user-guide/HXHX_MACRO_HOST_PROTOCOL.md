@@ -149,6 +149,19 @@ effect: it changes which modules can be resolved.
 - request: `req <id> compiler.addClassPath cp=<...>`
 - response: `res <id> ok v=2:ok`
 
+### `compiler.emitHxModule` (bring-up rung)
+
+Stage 4 macro-time codegen rung: a macro can request the compiler to emit a Haxe module into a compiler-managed
+generated directory that is included in the classpath for the current compilation.
+
+This is a bring-up mechanism, not the long-term `Context.defineType/defineModule` API. It exists to prove a macro can
+generate *new source code* that affects module resolution and typing.
+
+- request: `req <id> compiler.emitHxModule n=<...> s=<...>`
+  - `n`: module name (simple identifier, e.g. `Gen`)
+  - `s`: `.hx` source text
+- response: `res <id> ok v=2:ok`
+
 ### `context.defined`
 
 Models the shape of `haxe.macro.Context.defined(name)`.

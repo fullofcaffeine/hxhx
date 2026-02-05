@@ -154,6 +154,8 @@ class Main {
 				BuiltinMacros.genModule();
 			case "hxhxmacrohost.BuiltinMacros.addCpFromEnv()", "BuiltinMacros.addCpFromEnv()":
 				BuiltinMacros.addCpFromEnv();
+			case "hxhxmacrohost.BuiltinMacros.genHxModule()", "BuiltinMacros.genHxModule()":
+				BuiltinMacros.genHxModule();
 			case "hxhxmacrohost.BuiltinMacros.readFlag()", "BuiltinMacros.readFlag()":
 				BuiltinMacros.readFlag();
 			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":

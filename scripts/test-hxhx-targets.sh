@@ -293,6 +293,37 @@ out="$(HXHX_ADD_CP="$tmpcp/extra" HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$H
 echo "$out" | grep -q "^macro_run\\[0\\]=addCp=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 
+echo "== Stage3 bring-up: macro emits Haxe module that resolves an import"
+tmpgen="$tmpdir/hxgen_test"
+mkdir -p "$tmpgen/src"
+cat >"$tmpgen/src/Main.hx" <<'HX'
+package;
+
+import Gen;
+
+class Main {
+  static function main() {
+    return 0;
+  }
+}
+HX
+
+set +e
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpgen/src" -main Main --hxhx-out "$tmpgen/out_no_macro" 2>&1)"
+code=$?
+set -e
+if [ "$code" -eq 0 ]; then
+  echo "Expected missing import to fail, but stage3 succeeded." >&2
+  exit 1
+fi
+echo "$out" | grep -q "import_missing Gen"
+
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpgen/src" -main Main --macro 'BuiltinMacros.genHxModule()' --hxhx-out "$tmpgen/out_with_macro")"
+echo "$out" | grep -q "^macro_run\\[0\\]=genHx=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_HXGEN\\]=1$"
+echo "$out" | grep -q "^stage3=ok$"
+test -f "$tmpgen/out_with_macro/_gen_hx/Gen.hx"
+
 echo "== Stage4 bring-up: macro host RPC handshake + stub Context/Compiler calls"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-selftest)"
 echo "$out" | grep -q "^macro_host=ok$"

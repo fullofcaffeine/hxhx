@@ -65,4 +65,24 @@ class Compiler {
 		final tail = Protocol.encodeLen("cp", path);
 		HostToCompilerRpc.call("compiler.addClassPath", tail);
 	}
+
+	/**
+		Emit a Haxe module (bootstrap rung).
+
+		Why
+		- Real macros eventually generate fields/types in the compiler’s typed AST.
+		- Before we implement that, we can still prove the “macro generates code that affects resolution”
+		  loop by emitting a `.hx` module into a compiler-managed generated directory that is part of the
+		  classpath for the current compilation.
+
+		What
+		- Sends reverse RPC `compiler.emitHxModule` with:
+		  - `n`: module name (simple identifier; bring-up rung)
+		  - `s`: `.hx` source text
+	**/
+	public static function emitHxModule(name:String, source:String):Void {
+		if (name == null || name.length == 0) return;
+		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("s", source == null ? "" : source);
+		HostToCompilerRpc.call("compiler.emitHxModule", tail);
+	}
 }

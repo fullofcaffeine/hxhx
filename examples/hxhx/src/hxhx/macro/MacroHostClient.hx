@@ -237,6 +237,15 @@ private class MacroClient {
 						}
 						MacroState.addClassPath(cp);
 						replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+					case "compiler.emitHxModule":
+						final name = MacroProtocol.kvGet(tail, "n");
+						final source = MacroProtocol.kvGet(tail, "s");
+						if (name == null || name.length == 0) {
+							replyErr(id, method + ": missing module name");
+							return;
+						}
+						MacroState.emitHxModule(name, source);
+						replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 					case "context.defined":
 						final name = MacroProtocol.kvGet(tail, "n");
 						replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));

@@ -72,13 +72,16 @@ class Stage3Compiler {
 
 		final hostCwd = try Sys.getCwd() catch (_:Dynamic) ".";
 		final cwd = absFromCwd(hostCwd, parsed.cwd);
-		if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
-			return error("cwd is not a directory: " + cwd);
-		}
+			if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
+				return error("cwd is not a directory: " + cwd);
+			}
 
-		if (parsed.macros.length > 0) {
-			hxhx.macro.MacroState.reset();
-			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
+			final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
+
+			if (parsed.macros.length > 0) {
+				hxhx.macro.MacroState.reset();
+				hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
+				hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
 			// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
 			//
@@ -102,13 +105,16 @@ class Stage3Compiler {
 		final classPaths = {
 			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
-			base.concat(extra);
-		}
-		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
+			final out = base.concat(extra);
+			if (hxhx.macro.MacroState.hasGeneratedHxModules()) {
+				out.push(hxhx.macro.MacroState.getGeneratedHxDir());
+			}
+				out;
+			}
 
-		final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {
-			return error("resolve failed: " + Std.string(e));
-		}
+			final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {
+				return error("resolve failed: " + Std.string(e));
+			}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
 
 		final root:ResolvedModule = resolved[0];
