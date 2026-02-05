@@ -84,6 +84,7 @@ class Stage3Compiler {
 	public static function run(args:Array<String>):Int {
 		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 		var outDir = "";
+		var typeOnly = false;
 		final rest = new Array<String>();
 		var i = 0;
 		while (i < args.length) {
@@ -93,6 +94,10 @@ class Stage3Compiler {
 					if (i + 1 >= args.length) return error("missing value after --hxhx-out");
 					outDir = args[i + 1];
 					i += 2;
+				case "--hxhx-type-only":
+					// Diagnostic bring-up mode: resolve + type the module graph, but don't emit/build.
+					typeOnly = true;
+					i += 1;
 				case _:
 					rest.push(a);
 					i += 1;
@@ -170,6 +175,63 @@ class Stage3Compiler {
 				return error("resolve failed: " + formatException(e));
 			}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
+		Sys.println("resolved_modules=" + resolved.length);
+
+		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
+		//
+		// Why
+		// - Upstream-ish workloads can look like they "pass" if we only type the root module.
+		// - Gate1 bring-up needs failures to move from "frontend seam" to "missing typer features".
+		//
+		// What
+		// - Runs `TyperStage.typeModule` for every resolved module.
+		// - Does not emit OCaml or build an executable.
+		// - Still executes macro hooks (when present) so macro-side failures surface deterministically.
+		if (typeOnly) {
+			var typedCount = 0;
+			for (m in resolved) {
+				try {
+					TyperStage.typeModule(ResolvedModule.getParsed(m));
+					typedCount += 1;
+				} catch (e:Dynamic) {
+					closeMacroSession();
+					return error(
+						"type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e)
+					);
+				}
+			}
+
+			if (macroSession != null) {
+				final hooks = hxhx.macro.MacroState.listAfterTypingHookIds();
+				for (i in 0...hooks.length) {
+					try {
+						macroSession.runHook("afterTyping", hooks[i]);
+					} catch (e:Dynamic) {
+						closeMacroSession();
+						return error("afterTyping hook failed: " + Std.string(e));
+					}
+					Sys.println("hook_afterTyping[" + i + "]=ok");
+				}
+			}
+
+			if (macroSession != null) {
+				final hooks = hxhx.macro.MacroState.listOnGenerateHookIds();
+				for (i in 0...hooks.length) {
+					try {
+						macroSession.runHook("onGenerate", hooks[i]);
+					} catch (e:Dynamic) {
+						closeMacroSession();
+						return error("onGenerate hook failed: " + Std.string(e));
+					}
+					Sys.println("hook_onGenerate[" + i + "]=ok");
+				}
+			}
+
+			closeMacroSession();
+			Sys.println("typed_modules=" + typedCount);
+			Sys.println("stage3=type_only_ok");
+			return 0;
+		}
 
 		final root:ResolvedModule = resolved[0];
 		final ast = ResolvedModule.getParsed(root);
