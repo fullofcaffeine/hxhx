@@ -1,0 +1,5 @@
+true=t
+false=f
+null=n
+other=other
+OK nested_enum_switch

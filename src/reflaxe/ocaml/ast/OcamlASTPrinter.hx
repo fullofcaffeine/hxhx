@@ -355,12 +355,57 @@ class OcamlASTPrinter {
 			+ " in " + printExprCtx(body, PREC_TOP, indentLevel);
 	}
 
+	function needsGroupingInMatchArmExpr(e:OcamlExpr):Bool {
+		// OCaml parsing gotcha:
+		// `| pat -> <expr ending in match/try> | nextPat -> ...` can cause the `| nextPat`
+		// to be parsed as an additional case of the *inner* match/try expression.
+		//
+		// We only need to parenthesize when the RHS *ends with* an unparenthesized `match`/`try`
+		// in tail position (so an immediately following `|` token would be legal as another case).
+		//
+		// This is intentionally more precise than “contains match/try anywhere” so that snapshot
+		// output stays stable (nested matches in subexpressions are already parenthesized by
+		// precedence rules in their respective printer contexts).
+		function endsWithBranchyTail(expr:OcamlExpr):Bool {
+			var cur = expr;
+			while (true) {
+				switch (cur) {
+					case EPos(_, inner):
+						cur = inner;
+					case EMatch(_, _), ETry(_, _):
+						return true;
+					case ELet(_, _, body, _):
+						cur = body;
+					case EFun(_, body):
+						cur = body;
+					case EIf(_, _, elseExpr):
+						cur = elseExpr;
+					case ESeq(exprs):
+						if (exprs.length == 1) {
+							cur = exprs[0];
+						} else {
+							// Multi-expr sequences are always printed as `(<e1>; <e2>; ...)`,
+							// so they already delimit any inner `match`/`try`.
+							return false;
+						}
+					case _:
+						return false;
+				}
+			}
+			return false;
+		}
+
+		return endsWithBranchyTail(e);
+	}
+
 	function printMatch(scrutinee:OcamlExpr, cases:Array<OcamlMatchCase>, indentLevel:Int):String {
 		final caseIndent = indent(indentLevel + 1);
 		final head = "match " + printExprCtx(scrutinee, PREC_TOP, indentLevel) + " with";
 		final arms = cases.map(function(c) {
 			final guardStr = c.guard != null ? (" when " + printExprCtx(c.guard, PREC_TOP, indentLevel + 1)) : "";
-			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
+			final rhs = printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
+			final renderedRhs = needsGroupingInMatchArmExpr(c.expr) ? ("(" + rhs + ")") : rhs;
+			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + renderedRhs;
 		});
 		return head + "\n" + arms.join("\n");
 	}
@@ -370,7 +415,9 @@ class OcamlASTPrinter {
 		final head = "try " + printExprCtx(body, PREC_TOP, indentLevel) + " with";
 		final arms = cases.map(function(c) {
 			final guardStr = c.guard != null ? (" when " + printExprCtx(c.guard, PREC_TOP, indentLevel + 1)) : "";
-			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
+			final rhs = printExprCtx(c.expr, PREC_TOP, indentLevel + 1);
+			final renderedRhs = needsGroupingInMatchArmExpr(c.expr) ? ("(" + rhs + ")") : rhs;
+			return caseIndent + "| " + printPat(c.pat) + guardStr + " -> " + renderedRhs;
 		});
 		return head + "\n" + arms.join("\n");
 	}
