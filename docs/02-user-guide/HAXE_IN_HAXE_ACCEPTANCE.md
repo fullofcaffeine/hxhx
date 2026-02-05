@@ -83,6 +83,10 @@ This is not a replacement gate by itself, but it’s a key bootstrap checkpoint:
 - Use that stage1 binary to build stage2.
 - Check that stage2 behaves the same (and that stage1/stage2 codegen is stable enough for the current implementation).
 
+Stage 3 (typing bring-up) design notes live in:
+
+- `docs/02-user-guide/HXHX_STAGE3_TYPING.md:1`
+
 Run:
 
 - `npm run test:upstream:stage2`
