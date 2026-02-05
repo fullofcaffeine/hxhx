@@ -150,6 +150,8 @@ class Main {
 		return switch (e) {
 			case "hxhxmacrohost.BuiltinMacros.smoke()", "BuiltinMacros.smoke()":
 				BuiltinMacros.smoke();
+			case "hxhxmacrohost.BuiltinMacros.readFlag()", "BuiltinMacros.readFlag()":
+				BuiltinMacros.readFlag();
 			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":
 				BuiltinMacros.fail();
 			case _:

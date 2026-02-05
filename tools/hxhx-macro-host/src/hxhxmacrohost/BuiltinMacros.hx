@@ -31,6 +31,23 @@ class BuiltinMacros {
 		return "smoke:type=" + t + ";define=" + (Context.defined("HXHX_SMOKE") ? "yes" : "no");
 	}
 
+	/**
+		Read a compiler define seeded from the compilation CLI (`-D`).
+
+		Why
+		- Real-world macros rely on defines for feature flags and target/platform detection.
+		- In Stage 4 bring-up we need to prove that:
+		  - the compiler can seed a define set
+		  - the macro host can query them via `Context.definedValue`
+		  - the value roundtrips over the duplex protocol
+
+		What
+		- Returns `flag=<value>` for `HXHX_FLAG`.
+	**/
+	public static function readFlag():String {
+		return "flag=" + Context.definedValue("HXHX_FLAG");
+	}
+
 	public static function fail():String {
 		return MacroError.raise("intentional macro host failure (for position payload tests)");
 	}

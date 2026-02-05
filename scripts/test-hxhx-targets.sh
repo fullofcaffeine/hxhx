@@ -241,8 +241,9 @@ test -f "$exe"
 
 echo "== Stage3 bring-up: runs --macro via macro host (allowlist)"
 stage3_out2="$tmpdir/out_stage3_macro"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --macro 'BuiltinMacros.smoke()' --hxhx-out "$stage3_out2")"
-echo "$out" | grep -q "^macro_run\\[0\\]=smoke:type=builtin:String;define=yes$"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'BuiltinMacros.readFlag()' --macro 'BuiltinMacros.smoke()' --hxhx-out "$stage3_out2")"
+echo "$out" | grep -q "^macro_run\\[0\\]=flag=ok$"
+echo "$out" | grep -q "^macro_run\\[1\\]=smoke:type=builtin:String;define=yes$"
 echo "$out" | grep -q "^macro_define\\[HXHX_SMOKE\\]=1$"
 echo "$out" | grep -q "^stage3=ok$"
 

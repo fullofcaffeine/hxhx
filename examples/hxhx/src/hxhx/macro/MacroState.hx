@@ -38,6 +38,38 @@ class MacroState {
 		defines.set(name, value == null ? "" : value);
 	}
 
+	/**
+		Seed defines from `-D` arguments.
+
+		Why
+		- Real compilations have an initial define set (CLI `-D`, target defaults, etc.).
+		- Macros expect `Context.defined*` to reflect those defines.
+
+		What
+		- Accepts a list of raw `-D` strings in either form:
+		  - `NAME`
+		  - `NAME=VALUE`
+		- Stores them as:
+		  - `NAME → "1"` for the bare form
+		  - `NAME → VALUE` for the `=` form
+	**/
+	public static function seedFromCliDefines(defines:Array<String>):Void {
+		if (defines == null || defines.length == 0) return;
+		for (raw in defines) {
+			if (raw == null) continue;
+			final s = StringTools.trim(raw);
+			if (s.length == 0) continue;
+			final eq = s.indexOf("=");
+			if (eq == -1) {
+				setDefine(s, "1");
+			} else if (eq == 0) {
+				// Ignore invalid `=VALUE` forms.
+			} else {
+				setDefine(s.substr(0, eq), s.substr(eq + 1));
+			}
+		}
+	}
+
 	public static function defined(name:String):Bool {
 		if (name == null || name.length == 0) return false;
 		return defines.exists(name);

@@ -71,6 +71,7 @@ class Stage3Compiler {
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
 		if (parsed.macros.length > 0) {
 			hxhx.macro.MacroState.reset();
+			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
 
 			// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
 			//
