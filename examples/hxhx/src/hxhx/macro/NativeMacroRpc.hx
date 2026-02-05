@@ -17,9 +17,19 @@ package hxhx.macro;
 
 	How
 	- Implemented in `std/runtime/HxHxMacroRpc.ml`.
+
+	Portability note
+	- This bridge is OCaml-target-specific: it links a small OCaml module that uses `Unix` to spawn
+	  the macro host and talk over stdin/stdout pipes.
+	- This is a deliberate bootstrap seam while the OCaml-target portable stdlib/process APIs mature.
+	- Long-term we want the compiler core to stay ~99% Haxe; once a stable process API exists, the
+	  Haxe-side macro client can be implemented purely in Haxe.
+	- For non-OCaml builds of `hxhx` (e.g. if we compile `hxhx` to Rust/C++ in the future), this
+	  OCaml bridge cannot be used; those builds must provide an equivalent transport implementation.
 **/
 @:native("HxHxMacroRpc")
 extern class NativeMacroRpc {
 	public static function selftest(hostExe:String):String;
 	public static function run(hostExe:String, expr:String):String;
+	public static function get_type(hostExe:String, name:String):String;
 }

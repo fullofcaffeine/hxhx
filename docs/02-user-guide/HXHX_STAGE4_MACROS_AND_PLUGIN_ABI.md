@@ -26,6 +26,58 @@ This forces an explicit boundary between:
 - the **macro runtime** (execution + `Context` / `Compiler` APIs)
 - the **plugin loader** (how we load user macro code and connect it to the compiler)
 
+## Runtime seams and portability policy (99% Haxe goal)
+
+We want the **vast majority** of the compiler to be written in Haxe, for two reasons:
+
+1) **Maintainability**: the compiler should be easy to change without needing deep OCaml knowledge.
+2) **Portability**: in the long run, we want the option to compile `hxhx` to other native targets
+   (e.g. a hypothetical Haxe→Rust or Haxe→C++ backend), not only to OCaml.
+
+This implies an important distinction:
+
+- **Compiler core** logic should be **target-agnostic Haxe**.
+- Some **runtime services** (process spawning, pipes, filesystem quirks, high-performance primitives)
+  may be implemented as **target-runtime modules** (small “native shims”) when needed.
+
+### What “Haxe-in-Haxe” does (and does not) require
+
+“Haxe-in-Haxe” does **not** mean “zero OCaml (or zero native code) exists anywhere”.
+Every native target keeps a runtime layer in the target language (e.g. hxcpp has C++ runtime pieces).
+
+What it *does* require is:
+
+- the compiler’s **architecture and behavior** lives in Haxe, and
+- any native shims are:
+  - small,
+  - justified (correctness/perf/tooling),
+  - replaceable behind an interface,
+  - and ideally retireable once the target’s stdlib surface is mature.
+
+### Concrete example: Stage 4 macro host transport
+
+Model A (RPC macro host) requires:
+
+- spawn a helper process
+- write requests / read responses over pipes
+- flush output deterministically
+
+Today, the OCaml target uses a bootstrap seam:
+
+- Haxe “client” API (`MacroHostClient`) is Haxe code.
+- Low-level process IO is in `std/runtime/HxHxMacroRpc.ml` (OCaml), exposed to Haxe via an extern.
+
+This is intentionally a **temporary dependency** for correctness and CI stability while the
+portable OCaml-target stdlib/process APIs are still evolving.
+
+Portability rule:
+
+- This seam must be treated as a **transport implementation detail**, not a compiler-core dependency.
+- A non-OCaml build of `hxhx` (e.g. Rust/C++) must provide an equivalent transport implementation
+  (pure Haxe if the target supports it, otherwise a small native shim for that target).
+
+We periodically reassess whether an OCaml-only shim can be retired in favor of a pure-Haxe transport.
+
 ## Terms
 
 - **Stage0 `haxe`**: upstream OCaml compiler binary.

@@ -62,6 +62,16 @@ class Main {
 			}
 		}
 
+		if (args.length == 2 && args[0] == "--hxhx-macro-get-type") {
+			try {
+				Sys.println("macro_getType=" + MacroHostClient.getType(args[1]));
+				Sys.println("OK hxhx macro getType");
+				return;
+			} catch (e:Dynamic) {
+				fatal("hxhx: macro getType failed: " + Std.string(e));
+			}
+		}
+
 		// Stage 1 (bring-up): minimal "non-shim" compilation path.
 		//
 		// This is explicitly NOT part of the `haxe` CLI surface and will never be forwarded.

@@ -196,6 +196,22 @@ When we say `hxhx` is “bootstrapping”, we mean:
 
 This bootstrapping is about `hxhx` becoming a self-hosting compiler; it does **not** mean `hxhx` compiles upstream’s OCaml compiler sources (Haxe does not compile OCaml).
 
+### Note on “native code” and multi-target bootstrapping
+
+Haxe historically compiles to **target source code** (or bytecode/IR) and relies on an external toolchain to produce a runnable artifact.
+This does not make `hxhx` bootstrapping fundamentally different — it just means:
+
+- `hxhx` must be available as a runnable compiler executable (Stage1/Stage2 binaries).
+- The *way* that executable is produced depends on which backend we compile `hxhx` with:
+  - OCaml backend → native OCaml executable via `dune`/`ocamlopt`.
+  - A hypothetical Rust/C++ backend → native executable via `cargo`/`clang`/etc.
+
+In all cases, the portability goal is the same:
+
+- keep compiler core logic in Haxe,
+- keep any “host runtime” shims small, justified, and replaceable,
+- and avoid OCaml-only assumptions in compiler core so other native targets remain feasible.
+
 ## Recommended project QA strategy (mirrors upstream + our repo layers)
 
 We keep three layers:

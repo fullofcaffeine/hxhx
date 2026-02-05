@@ -263,4 +263,9 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "
 echo "$out" | grep -q "^macro_run=ran:Macro.init()$"
 echo "$out" | grep -q "^OK hxhx macro run$"
 
+echo "== Stage4 bring-up: context.getType stub"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-get-type String)"
+echo "$out" | grep -q "^macro_getType=builtin:String$"
+echo "$out" | grep -q "^OK hxhx macro getType$"
+
 echo "OK: hxhx target presets"

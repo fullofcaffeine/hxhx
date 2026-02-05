@@ -233,3 +233,43 @@ let run (host_exe : string) (expr : string) : string =
   | e ->
       cleanup ();
       raise e
+
+let get_type (host_exe : string) (name : string) : string =
+  let env = Unix.environment () in
+  let ic, oc, ec = Unix.open_process_full host_exe env in
+  let cleanup () =
+    ignore (Unix.close_process_full (ic, oc, ec))
+  in
+  try
+    (* Handshake *)
+    let banner_line =
+      match read_line_opt ic with
+      | None -> failwith "macro host: eof during banner"
+      | Some s -> s
+    in
+    if banner_line <> banner then
+      failwith ("macro host: unsupported banner: " ^ banner_line);
+    write_line oc ("hello proto=" ^ string_of_int proto_version);
+    let ok_line =
+      match read_line_opt ic with
+      | None -> failwith "macro host: eof during handshake"
+      | Some s -> s
+    in
+    if ok_line <> "ok" then failwith ("macro host: handshake failed: " ^ ok_line);
+
+    let tail = encode_len "n" name in
+    let result =
+      match call ic oc 1 "context.getType" tail with
+      | Error e -> failwith ("macro host: context.getType failed: " ^ e)
+      | Ok v -> v
+    in
+    write_line oc "quit";
+    cleanup ();
+    result
+  with
+  | Failure msg ->
+      cleanup ();
+      msg
+  | e ->
+      cleanup ();
+      raise e

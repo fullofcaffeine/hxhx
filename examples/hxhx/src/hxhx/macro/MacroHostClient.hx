@@ -44,6 +44,14 @@ class MacroHostClient {
 		return NativeMacroRpc.run(exe, expr);
 	}
 
+	public static function getType(name:String):String {
+		final exe = resolveMacroHostExe();
+		if (exe == null || exe.length == 0) {
+			throw "missing macro host exe (set HXHX_MACRO_HOST_EXE)";
+		}
+		return NativeMacroRpc.get_type(exe, name);
+	}
+
 	static function resolveMacroHostExe():String {
 		final env = Sys.getEnv("HXHX_MACRO_HOST_EXE");
 		if (env != null && env.length > 0) return env;

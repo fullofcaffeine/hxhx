@@ -36,6 +36,14 @@ Transport:
 - server writes to `stdout`
 - messages are **single-line** records terminated by `\n`
 
+Implementation note (portability):
+
+- On the OCaml target, the client-side “spawn + pipes + flush” is currently implemented in
+  `std/runtime/HxHxMacroRpc.ml` and exposed to Haxe via an extern (`NativeMacroRpc`).
+- This is a bootstrap seam for correctness and CI stability while the portable process APIs mature.
+- For non-OCaml builds of `hxhx` (e.g. Rust/C++ targets), an equivalent transport implementation must exist:
+  either pure Haxe (preferred) or a small target-specific shim.
+
 Framing:
 
 - the first few fields are space-separated
@@ -126,6 +134,18 @@ use for `--macro` and build macros.
 
 - request: `req <id> macro.run e=<len>:<expr>`
 - response: `res <id> ok v=<len>:<result>`
+
+### `context.getType` (bring-up rung)
+
+Models the *shape* of `haxe.macro.Context.getType(name)` for a tiny allowlist.
+
+This does not return a real typed representation yet. It returns a deterministic string descriptor:
+
+- `builtin:<name>` for `Int`, `Float`, `Bool`, `String`, `Void`
+- `unknown:<name>` for anything else
+
+- request: `req <id> context.getType n=<len>:<name>`
+- response: `res <id> ok v=<len>:<desc>`
 
 ## How to run locally
 
