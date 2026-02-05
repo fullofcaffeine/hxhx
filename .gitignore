@@ -14,6 +14,9 @@ examples/**/out/
 examples/**/out_tmp*/
 examples/**/out_stage*/
 
+# Tools build output
+tools/**/out/
+
 # Dist artifacts
 dist/
 

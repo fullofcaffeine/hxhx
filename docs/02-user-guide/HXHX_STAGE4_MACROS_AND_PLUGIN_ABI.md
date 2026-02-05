@@ -151,6 +151,10 @@ And the request set must include:
 
 The intent is not to freeze a public API immediately, but to make the boundary **explicit** and **testable**.
 
+Protocol details for the Stage 4 (Model A) bring-up live in:
+
+- `docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md:1`
+
 ## Acceptance mapping
 
 Stage 4 is considered “meaningfully implemented” when:
@@ -174,4 +178,3 @@ For user ergonomics:
 
 In other words: we should not require a separate “two-step” flag for typical usage; the compiler/tooling should do the
 right thing by default, while still allowing advanced users to keep intermediate `.ml` output.
-

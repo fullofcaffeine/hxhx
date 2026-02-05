@@ -15,6 +15,13 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   exit 1
 fi
 
+echo "== Building hxhx macro host (RPC skeleton)"
+HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
+  echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
+  exit 1
+fi
+
 echo "== Listing targets"
 targets="$("$HXHX_BIN" --hxhx-list-targets)"
 echo "$targets" | grep -qx "ocaml"
@@ -234,5 +241,13 @@ if [ "$code" -eq 0 ]; then
   exit 1
 fi
 echo "$out" | grep -q "Contradiction"
+
+echo "== Stage4 bring-up: macro host RPC handshake + stub Context/Compiler calls"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-selftest)"
+echo "$out" | grep -q "^macro_host=ok$"
+echo "$out" | grep -q "^macro_ping=pong$"
+echo "$out" | grep -q "^macro_define=ok$"
+echo "$out" | grep -q "^macro_defined=yes$"
+echo "$out" | grep -q "^macro_definedValue=bar$"
 
 echo "OK: hxhx target presets"

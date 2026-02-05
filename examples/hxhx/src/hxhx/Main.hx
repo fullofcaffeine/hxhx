@@ -1,5 +1,7 @@
 package hxhx;
 
+import hxhx.macro.MacroHostClient;
+
 /**
 	`hxhx` (Haxe-in-Haxe compiler) driver.
 
@@ -29,6 +31,20 @@ class Main {
 		if (args.length == 0) {
 			Sys.println("OK hxhx");
 			return;
+		}
+
+		// Stage 4 (bring-up): macro host RPC selftest.
+		//
+		// This is *not* a user-facing Haxe CLI flag. It exists so CI can validate
+		// the ABI boundary early (spawn → handshake → stubbed Context/Compiler call).
+		if (args.length == 1 && args[0] == "--hxhx-macro-selftest") {
+			try {
+				Sys.println(MacroHostClient.selftest());
+				Sys.println("OK hxhx macro rpc");
+				return;
+			} catch (e:Dynamic) {
+				fatal("hxhx: macro selftest failed: " + Std.string(e));
+			}
 		}
 
 		// Stage 1 (bring-up): minimal "non-shim" compilation path.
