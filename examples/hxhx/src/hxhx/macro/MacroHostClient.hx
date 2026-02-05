@@ -62,6 +62,40 @@ class MacroHostClient {
 		return out;
 	}
 
+	/**
+		Run multiple macro expressions in a single macro-host session.
+
+		Why
+		- Even the earliest Stage 4 rungs need to exercise “real CLI macro” behavior (`--macro`),
+		  which may include multiple macro expressions.
+		- Spawning a macro host per expression is slow and makes ordering/state harder to reason about.
+		- A single session also better matches the long-term “macro server” behavior upstream uses.
+
+		What
+		- Spawns one macro host process
+		- Executes `macro.run` for each expression in order
+		- Returns the list of `v=` payload strings (same as `run(expr)`)
+
+		Gotchas
+		- This is still a bring-up API: expressions are currently allowlisted on the server side.
+		- The macro host is currently expected to be a fresh process per compilation; later stages
+		  may add reuse/caching.
+	**/
+	public static function runAll(exprs:Array<String>):Array<String> {
+		final client = connect();
+		final out = new Array<String>();
+		try {
+			for (expr in exprs) {
+				out.push(client.call("macro.run", MacroProtocol.encodeLen("e", expr)));
+			}
+		} catch (e:Dynamic) {
+			client.close();
+			throw e;
+		}
+		client.close();
+		return out;
+	}
+
 	public static function getType(name:String):String {
 		final client = connect();
 		var out = "";

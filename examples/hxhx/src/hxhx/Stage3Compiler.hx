@@ -2,6 +2,7 @@ package hxhx;
 
 import haxe.io.Path;
 import hxhx.Stage1Compiler.Stage1Args;
+import hxhx.macro.MacroHostClient;
 
 /**
 	Stage 3 compiler bring-up (`--hxhx-stage3`).
@@ -28,7 +29,7 @@ import hxhx.Stage1Compiler.Stage1Args;
 	  - `EmitterStage.emitToDir` (minimal OCaml emission + `ocamlopt` build)
 
 	Non-goals
-	- Macro execution (`--macro`, `@:build`, etc.) is Stage 4.
+	- Full macro integration (`@:build`, typed AST transforms, etc.) is Stage 4.
 	- Full Haxe typing is beyond this bring-up rung.
 
 	Gotchas
@@ -68,7 +69,18 @@ class Stage3Compiler {
 		if (parsed == null) return 2;
 
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
-		if (parsed.macros.length > 0) return error("macros are not supported in stage3 bring-up");
+		if (parsed.macros.length > 0) {
+			// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
+			//
+			// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
+			// “execute macro expressions and surface deterministic results/errors”.
+			final results = try MacroHostClient.runAll(parsed.macros) catch (e:Dynamic) {
+				return error("macro failed: " + Std.string(e));
+			}
+			for (i in 0...results.length) {
+				Sys.println("macro_run[" + i + "]=" + results[i]);
+			}
+		}
 
 		final hostCwd = try Sys.getCwd() catch (_:Dynamic) ".";
 		final cwd = absFromCwd(hostCwd, parsed.cwd);
