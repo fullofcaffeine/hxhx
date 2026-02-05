@@ -39,6 +39,8 @@ enum HxKeyword {
 	KFor;
 	KBreak;
 	KContinue;
+	KUntyped;
+	KCast;
 	KVar;
 	KFinal;
 	KNew;

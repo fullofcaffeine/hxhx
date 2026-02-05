@@ -132,6 +132,8 @@ class HxLexer {
 			case "for": new HxToken(TKeyword(KFor), startPos);
 			case "break": new HxToken(TKeyword(KBreak), startPos);
 			case "continue": new HxToken(TKeyword(KContinue), startPos);
+			case "untyped": new HxToken(TKeyword(KUntyped), startPos);
+			case "cast": new HxToken(TKeyword(KCast), startPos);
 			case "var": new HxToken(TKeyword(KVar), startPos);
 			case "final": new HxToken(TKeyword(KFinal), startPos);
 			case "new": new HxToken(TKeyword(KNew), startPos);
