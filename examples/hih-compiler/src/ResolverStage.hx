@@ -7,7 +7,7 @@ import haxe.io.Path;
 	- A real compiler never sees a single file: it sees a module graph rooted at `-main`.
 	- For Haxe-in-Haxe bootstrapping, we need a deterministic, minimal resolver early so
 	  typing work has a stable input boundary.
-	- This mirrors the same “module closure” idea we validate in `examples/hxhx` Stage 1,
+	- This mirrors the same “module closure” idea we validate in `packages/hxhx` Stage 1,
 	  but lives *inside* the compiler pipeline we’re incrementally porting to Haxe.
 
 	What:

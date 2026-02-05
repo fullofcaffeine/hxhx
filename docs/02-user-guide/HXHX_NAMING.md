@@ -47,7 +47,11 @@ When implemented, `hxhx --version` should report both.
 
 ## Repo layout notes
 
-Today, the repo uses `examples/hih-compiler` as the Stage 2 “compiler skeleton” example.
-Once the project stabilizes, we can rename/move that example to `examples/hxhx` and treat it as the canonical `hxhx`
-implementation.
+`hxhx` lives under `packages/hxhx` (it is a real in-repo package/tool, not “just an example”).
 
+We still keep acceptance workloads under `examples/`:
+
+- `examples/hih-workload`: Stage 1 “compiler-shaped workload”
+- `examples/hih-compiler`: Stage 2/3 “compiler skeleton”
+
+This split keeps `examples/` focused on *consumers* and keeps `packages/` focused on *reusable buildable units*.

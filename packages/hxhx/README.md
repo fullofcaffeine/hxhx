@@ -17,23 +17,23 @@ Long-term, `hxhx` becomes the real Haxe-in-Haxe compiler, and the delegation pat
 From repo root (requires `dune` + `ocamlc`):
 
 ```bash
-haxe -C examples/hxhx build.hxml -D ocaml_build=native
+haxe -C packages/hxhx build.hxml -D ocaml_build=native
 ```
 
 Binary will be at:
 
-`examples/hxhx/out/_build/default/out.exe`
+`packages/hxhx/out/_build/default/out.exe`
 
 ## Run
 
 No args (example harness mode):
 
 ```bash
-examples/hxhx/out/_build/default/out.exe
+packages/hxhx/out/_build/default/out.exe
 ```
 
 Delegate to Stage 0 `haxe`:
 
 ```bash
-HAXE_BIN=haxe examples/hxhx/out/_build/default/out.exe -- compile.hxml
+HAXE_BIN=haxe packages/hxhx/out/_build/default/out.exe -- compile.hxml
 ```

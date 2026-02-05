@@ -14,7 +14,7 @@ package hxhxmacrohost;
 	What
 	- This file defines the minimal, *human-readable* protocol used by:
 	  - `tools/hxhx-macro-host` (server)
-	  - `examples/hxhx` (client; `hxhx.macro.MacroHostClient`)
+	  - `packages/hxhx` (client; `hxhx.macro.MacroHostClient`)
 	- The protocol is intentionally simple and stable:
 	  - single-line records
 	  - request IDs for correlation

@@ -30,9 +30,9 @@ if [ -z "$STAGE1_BIN" ] || [ ! -f "$STAGE1_BIN" ]; then
 fi
 
 echo "-- Building stage2 (using stage1 $STAGE1_BIN)"
-STAGE2_OUT_DIR="$ROOT/examples/hxhx/out_stage2"
+STAGE2_OUT_DIR="$ROOT/packages/hxhx/out_stage2"
 (
-  cd "$ROOT/examples/hxhx"
+  cd "$ROOT/packages/hxhx"
   rm -rf out_stage2 || true
   mkdir -p out_stage2
   # `build.hxml` already emits to `out/`; override so we keep stage1 and stage2 separate.
