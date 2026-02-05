@@ -18,4 +18,8 @@ class A {
 
   // Acceptance fixture: infer `Bool` literal return.
   static function flag() return true;
+
+  // Acceptance fixture for Stage 3 return expression parsing + emission:
+  // - return a simple field/call chain captured from the native frontend protocol
+  static function callPing():Void return Util.ping();
 }

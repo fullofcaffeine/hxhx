@@ -406,32 +406,53 @@ let parse_module_from_tokens (toks : token array) :
              - `return "..." ;` expression bodies
              - `;` (no body)
         *)
-        let is_digit (c : char) = '0' <= c && c <= '9' in
-        let rec consume_number (acc : Buffer.t) : unit =
+        let capture_first_atom () : (string option * string option) =
+          (* Peek-only: capture a "simple" atom that we still surface in the protocol
+             as `retstr` / `retid` for cheap early typing. *)
           match cur () with
-          | Sym (c, _) when is_digit c || c = '.' || c = '-' ->
-              Buffer.add_char acc c;
-              bump ();
-              consume_number acc
-          | _ -> ()
+          | String (s, _) -> (Some s, None)
+          | Ident (s, _) -> (None, Some s)
+          | Kw ("new", _) -> (None, Some "new")
+          | _ -> (None, None)
         in
-        let capture_one () : (string option * string option * string option) =
-          match cur () with
-          | String (s, _) ->
-              bump ();
-              (Some s, None, Some ("\"" ^ s ^ "\""))
-          | Ident (s, _) ->
-              bump ();
-              (None, Some s, Some s)
-          | Kw (("true" | "false" | "null") as s, _) ->
-              bump ();
-              (None, None, Some s)
-          | Sym (c, _) when is_digit c || c = '-' ->
-              let b = Buffer.create 8 in
-              consume_number b;
-              let s = Buffer.contents b in
-              if s = "" then (None, None, None) else (None, None, Some s)
-          | _ -> (None, None, None)
+        let capture_return_expr_text () : string option =
+          (* Capture the full return expression text until ';' or '}' at the current brace depth.
+
+             Why
+             - Stage 3 bring-up wants to parse slightly more than literals/idents without
+               implementing a full statement/expression AST in OCaml yet.
+             - The Haxe-side decoder can parse a small chain grammar (`a.b(c)`) from this.
+
+             What
+             - Consumes tokens that belong to the expression.
+             - Consumes a trailing ';' (when present).
+             - Does NOT consume a terminating '}' (so the class-body parser sees it). *)
+          let parts = Buffer.create 64 in
+          let paren = ref 0 in
+          let done_ = ref false in
+          while not !done_ do
+            match cur () with
+            | Eof _ ->
+                done_ := true
+            | Sym (';', _) when !paren = 0 ->
+                bump ();
+                done_ := true
+            | Sym ('}', _) when !paren = 0 ->
+                done_ := true
+            | Sym ('(', _) ->
+                paren := !paren + 1;
+                Buffer.add_string parts "(";
+                bump ()
+            | Sym (')', _) ->
+                if !paren > 0 then paren := !paren - 1;
+                Buffer.add_string parts ")";
+                bump ()
+            | tok ->
+                Buffer.add_string parts (tok_to_text tok);
+                bump ()
+          done;
+          let s = Buffer.contents parts |> String.trim in
+          if s = "" then None else Some s
         in
         match cur () with
         | Sym (';', _) ->
@@ -454,7 +475,8 @@ let parse_module_from_tokens (toks : token array) :
                   bump ()
               | Kw ("return", _) -> (
                   bump ();
-                  let str_opt, ident_opt, expr_opt = capture_one () in
+                  let str_opt, ident_opt = capture_first_atom () in
+                  let expr_opt = capture_return_expr_text () in
                   (match (str_opt, !found_str) with
                   | Some s, None -> found_str := Some s
                   | _ -> ());
@@ -469,21 +491,8 @@ let parse_module_from_tokens (toks : token array) :
             (!found_str, !found_ident, !found_expr)
         | Kw ("return", _) -> (
             bump ();
-            let found_str, found_ident, found_expr = capture_one () in
-            (* Consume until ';' or block start. *)
-            while
-              match cur () with
-              | Eof _ -> false
-              | Sym (';', _) ->
-                  bump ();
-                  false
-              | Sym ('{', _) -> false
-              | _ ->
-                  bump ();
-                  true
-            do
-              ()
-            done;
+            let found_str, found_ident = capture_first_atom () in
+            let found_expr = capture_return_expr_text () in
             (found_str, found_ident, found_expr))
         | _ ->
             (* Unknown body shape; consume until ';' or '{' to avoid infinite loops. *)

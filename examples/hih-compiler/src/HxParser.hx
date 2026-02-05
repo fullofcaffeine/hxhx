@@ -30,6 +30,29 @@ class HxParser {
 		cur = lex.next();
 	}
 
+	/**
+		Parse a single expression from standalone source text.
+
+		Why
+		- The native OCaml frontend seam currently reports return expressions as raw text.
+		- Stage 3 wants to recover a small, structured expression tree (`a.b(c)`) from that
+		  text without implementing a full OCaml-side expression AST.
+
+		What
+		- Parses a tiny expression grammar:
+		  - primary literals/idents
+		  - field access chains (`a.b.c`)
+		  - call suffixes (`f()`, `obj.m(x, y)`)
+
+		How
+		- Reuses the same lexer + `parseExpr` routine as module parsing, but stops at EOF.
+	**/
+	public static function parseExprText(source:String):HxExpr {
+		final p = new HxParser(source);
+		final e = p.parseExpr(() -> p.cur.kind.match(TEof));
+		return e;
+	}
+
 	inline function bump():Void {
 		cur = lex.next();
 	}

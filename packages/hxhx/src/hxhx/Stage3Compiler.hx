@@ -243,10 +243,13 @@ class Stage3Compiler {
 			return 0;
 		}
 
-		final root:ResolvedModule = resolved[0];
-		final ast = ResolvedModule.getParsed(root);
-
-		final typed = TyperStage.typeModule(ast);
+		// Stage3 "real compiler" rung: type the full resolved graph (best-effort),
+		// then emit/build an executable from the typed program.
+		final typedModules = new Array<TypedModule>();
+		for (m in resolved) {
+			final pm = ResolvedModule.getParsed(m);
+			typedModules.push(TyperStage.typeModule(pm));
+		}
 
 		if (macroSession != null) {
 			final hooks = hxhx.macro.MacroState.listAfterTypingHookIds();
@@ -279,7 +282,7 @@ class Stage3Compiler {
 		for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
 			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
 		}
-		final expanded = MacroStage.expand(typed, generated);
+		final expanded = MacroStage.expandProgram(typedModules, generated);
 
 		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 		for (name in hxhx.macro.MacroState.listDefineNames()) {

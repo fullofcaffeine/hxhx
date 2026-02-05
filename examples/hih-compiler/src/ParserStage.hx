@@ -164,12 +164,14 @@ class ParserStage {
 		final retId = parts[6];
 		final retExpr = parts[8];
 		final body = new Array<HxStmt>();
-		if (retStr.length > 0) {
+		// Prefer the richer `retexpr` field when present (it can represent `Util.ping()`),
+		// but keep legacy fields for older protocol emitters.
+		if (retExpr.length > 0) {
+			body.push(SReturn(parseReturnExprText(retExpr)));
+		} else if (retStr.length > 0) {
 			body.push(SReturn(EString(retStr)));
 		} else if (retId.length > 0) {
 			body.push(SReturn(EIdent(retId)));
-		} else if (retExpr.length > 0) {
-			body.push(SReturn(parseReturnExprText(retExpr)));
 		}
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, body, retStr);
@@ -218,8 +220,13 @@ class ParserStage {
 			if (!Math.isNaN(f)) return EFloat(f);
 		}
 
-		// Fallback: treat as an identifier.
-		return EIdent(s);
+		// Fallback: try to parse a small field/call chain (e.g. `Util.ping()`).
+		return try {
+			HxParser.parseExprText(s);
+		} catch (_:Dynamic) {
+			// Last resort: treat as an identifier.
+			EIdent(s);
+		}
 	}
 
 	static function throwFromErrLine(line:String):Void {
