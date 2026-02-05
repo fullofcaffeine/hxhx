@@ -1,8 +1,6 @@
 {
 	"filesGenerated": [
 		"sys_io_Stdio.ml",
-		"sys_io_Process.ml",
-		"sys_io_FileSeek.ml",
 		"ocaml_Buffer.ml",
 		"haxe_iterators_ArrayKeyValueIterator.ml",
 		"haxe_iterators_ArrayIterator.ml",

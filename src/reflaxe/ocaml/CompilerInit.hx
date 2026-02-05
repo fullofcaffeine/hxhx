@@ -40,7 +40,18 @@ class CompilerInit {
 			if (isOcamlTarget) {
 				// Force-link OCaml-only std overrides that are reached via backend intrinsics
 				// rather than direct Haxe references (so DCE/module reachability would drop them).
-				haxe.macro.Compiler.include("sys.io");
+				//
+				// Important: `Compiler.include("sys.io")` pulls in the whole package and bloats
+				// small outputs/snapshots. We only need `sys.io.Stdio` for backend-intrinsic
+				// lowering of `Sys.stdin/stdout/stderr`, so we load that module explicitly.
+				try {
+					haxe.macro.Context.getType("sys.io.Stdio");
+				} catch (_:Dynamic) {
+					haxe.macro.Context.error(
+						"reflaxe.ocaml: failed to load sys.io.Stdio (required for Sys stdio lowering).",
+						haxe.macro.Context.currentPos()
+					);
+				}
 			}
 			#end
 

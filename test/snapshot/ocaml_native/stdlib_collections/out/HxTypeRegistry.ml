@@ -17,10 +17,7 @@ let init () : unit =
   ignore (HxType.class_ "ocaml._Char.Char_Impl_");
   ignore (HxType.class_ "ocaml._Hashtbl.Hashtbl_Impl_");
   ignore (HxType.class_ "ocaml._Seq.Seq_Impl_");
-  ignore (HxType.class_ "sys.io.Process");
   ignore (HxType.class_ "sys.io.Stdio");
-  ignore (HxType.class_ "sys.io._Process.OcamlProcessInput");
-  ignore (HxType.class_ "sys.io._Process.OcamlProcessOutput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   ignore (HxType.enum_ "ocaml.Option");
@@ -47,10 +44,7 @@ let init () : unit =
   HxType.register_class_tags "ocaml._Char.Char_Impl_" [ "ocaml._Char.Char_Impl_" ];
   HxType.register_class_tags "ocaml._Hashtbl.Hashtbl_Impl_" [ "ocaml._Hashtbl.Hashtbl_Impl_" ];
   HxType.register_class_tags "ocaml._Seq.Seq_Impl_" [ "ocaml._Seq.Seq_Impl_" ];
-  HxType.register_class_tags "sys.io.Process" [ "sys.io.Process" ];
   HxType.register_class_tags "sys.io.Stdio" [ "sys.io.Stdio" ];
-  HxType.register_class_tags "sys.io._Process.OcamlProcessInput" [ "haxe.io.Input"; "sys.io._Process.OcamlProcessInput" ];
-  HxType.register_class_tags "sys.io._Process.OcamlProcessOutput" [ "haxe.io.Output"; "sys.io._Process.OcamlProcessOutput" ];
   HxType.register_class_tags "sys.io._Stdio.OcamlStdioInput" [ "haxe.io.Input"; "sys.io._Stdio.OcamlStdioInput" ];
   HxType.register_class_tags "sys.io._Stdio.OcamlStdioOutput" [ "haxe.io.Output"; "sys.io._Stdio.OcamlStdioOutput" ];
   ()

@@ -1953,23 +1953,49 @@ class OcamlBuilder {
 											OcamlExpr.EApp(callFn, builtArgs);
 										}
 										}
-								case _:
-									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (fn.t) {
-										case TFun(fargs, _): fargs;
-										case _: null;
-									}
-									final builtArgs:Array<OcamlExpr> = [];
-									if (expectedArgs != null) {
-										for (i in 0...args.length) {
-											builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+									case _:
+										final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(fn.t)) {
+											case TFun(fargs, _): fargs;
+											case _: null;
 										}
-									} else {
-										for (a in args) builtArgs.push(buildExpr(a));
-									}
-									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
-							}
-						case TField(_, FEnum(eRef, ef)):
-						final en = eRef.get();
+										inline function hxNullForType(t:Type):OcamlExpr {
+											return nullablePrimitiveKind(t) != null
+												? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+												: OcamlExpr.EApp(
+													OcamlExpr.EIdent("Obj.magic"),
+													[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+												);
+										}
+										final builtArgs:Array<OcamlExpr> = [];
+										if (expectedArgs != null) {
+											for (i in 0...args.length) {
+												builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+											}
+											if (args.length < expectedArgs.length) {
+												for (i in args.length...expectedArgs.length) {
+													final ea = expectedArgs[i];
+													if (!ea.opt) {
+														#if macro
+														guardrailError(
+															"reflaxe.ocaml: call is missing required argument '" + ea.name + "'.",
+															e.pos
+														);
+														#end
+														builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+													} else {
+														builtArgs.push(hxNullForType(ea.t));
+													}
+												}
+											}
+										} else {
+											for (a in args) builtArgs.push(buildExpr(a));
+										}
+										final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
+										if (expectsNoArgs) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+										OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+								}
+							case TField(_, FEnum(eRef, ef)):
+							final en = eRef.get();
 
 						// ocaml.List.Cons(h, t) -> h :: t
 						if (isOcamlNativeEnumType(en, "List") && ef.name == "Cons" && args.length == 2) {
@@ -1979,27 +2005,53 @@ class OcamlBuilder {
 						} else if (args.length > 1) {
 							// Enum constructors with multiple args take a tuple in OCaml: `C (a, b)`.
 							OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))]);
-						} else {
-							OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
-						}
-						case _:
-							final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (fn.t) {
-								case TFun(fargs, _): fargs;
-								case _: null;
-							}
-							final builtArgs:Array<OcamlExpr> = [];
-							if (expectedArgs != null) {
-								for (i in 0...args.length) {
-									builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
-								}
 							} else {
-								for (a in args) builtArgs.push(buildExpr(a));
+								OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
 							}
-							OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+							case _:
+								final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(fn.t)) {
+									case TFun(fargs, _): fargs;
+									case _: null;
+								}
+								inline function hxNullForType(t:Type):OcamlExpr {
+									return nullablePrimitiveKind(t) != null
+										? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+										: OcamlExpr.EApp(
+											OcamlExpr.EIdent("Obj.magic"),
+											[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+										);
+								}
+								final builtArgs:Array<OcamlExpr> = [];
+								if (expectedArgs != null) {
+									for (i in 0...args.length) {
+										builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+									}
+									if (args.length < expectedArgs.length) {
+										for (i in args.length...expectedArgs.length) {
+											final ea = expectedArgs[i];
+											if (!ea.opt) {
+												#if macro
+												guardrailError(
+													"reflaxe.ocaml: call is missing required argument '" + ea.name + "'.",
+													e.pos
+												);
+												#end
+												builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+											} else {
+												builtArgs.push(hxNullForType(ea.t));
+											}
+										}
+									}
+								} else {
+									for (a in args) builtArgs.push(buildExpr(a));
+								}
+								final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
+								if (expectsNoArgs) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+								OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+						}
+						}
 					}
-					}
-				}
-			case TField(obj, fa):
+				case TField(obj, fa):
 				buildField(obj, fa, e.pos);
 			case TMeta(_, e1):
 				buildExpr(e1);

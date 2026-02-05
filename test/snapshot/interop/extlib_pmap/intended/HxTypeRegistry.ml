@@ -12,10 +12,7 @@ let init () : unit =
   ignore (HxType.class_ "haxe.io.Output");
   ignore (HxType.class_ "ocaml._Buffer.Buffer_Impl_");
   ignore (HxType.class_ "ocaml.extlib._PMap.PMap_Impl_");
-  ignore (HxType.class_ "sys.io.Process");
   ignore (HxType.class_ "sys.io.Stdio");
-  ignore (HxType.class_ "sys.io._Process.OcamlProcessInput");
-  ignore (HxType.class_ "sys.io._Process.OcamlProcessOutput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
@@ -46,10 +43,7 @@ let init () : unit =
   HxType.register_class_tags "haxe.iterators.MapKeyValueIterator" [ "haxe.iterators.MapKeyValueIterator" ];
   HxType.register_class_tags "ocaml._Buffer.Buffer_Impl_" [ "ocaml._Buffer.Buffer_Impl_" ];
   HxType.register_class_tags "ocaml.extlib._PMap.PMap_Impl_" [ "ocaml.extlib._PMap.PMap_Impl_" ];
-  HxType.register_class_tags "sys.io.Process" [ "sys.io.Process" ];
   HxType.register_class_tags "sys.io.Stdio" [ "sys.io.Stdio" ];
-  HxType.register_class_tags "sys.io._Process.OcamlProcessInput" [ "haxe.io.Input"; "sys.io._Process.OcamlProcessInput" ];
-  HxType.register_class_tags "sys.io._Process.OcamlProcessOutput" [ "haxe.io.Output"; "sys.io._Process.OcamlProcessOutput" ];
   HxType.register_class_tags "sys.io._Stdio.OcamlStdioInput" [ "haxe.io.Input"; "sys.io._Stdio.OcamlStdioInput" ];
   HxType.register_class_tags "sys.io._Stdio.OcamlStdioOutput" [ "haxe.io.Output"; "sys.io._Stdio.OcamlStdioOutput" ];
   ()
