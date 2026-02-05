@@ -258,4 +258,9 @@ echo "$out" | grep -q "^macro_define=ok$"
 echo "$out" | grep -q "^macro_defined=yes$"
 echo "$out" | grep -q "^macro_definedValue=bar$"
 
+echo "== Stage4 bring-up: macro.run builtin entrypoint"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "Macro.init()")"
+echo "$out" | grep -q "^macro_run=ran:Macro.init()$"
+echo "$out" | grep -q "^OK hxhx macro run$"
+
 echo "OK: hxhx target presets"

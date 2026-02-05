@@ -21,5 +21,5 @@ package hxhx.macro;
 @:native("HxHxMacroRpc")
 extern class NativeMacroRpc {
 	public static function selftest(hostExe:String):String;
+	public static function run(hostExe:String, expr:String):String;
 }
-

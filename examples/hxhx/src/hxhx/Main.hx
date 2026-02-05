@@ -47,6 +47,21 @@ class Main {
 			}
 		}
 
+		// Stage 4 (bring-up): invoke a builtin macro entrypoint via RPC.
+		//
+		// This is still *not* user-facing macro execution. It exists so we can
+		// validate the end-to-end request path before we attempt to compile and
+		// execute real macro modules.
+		if (args.length == 2 && args[0] == "--hxhx-macro-run") {
+			try {
+				Sys.println("macro_run=" + MacroHostClient.run(args[1]));
+				Sys.println("OK hxhx macro run");
+				return;
+			} catch (e:Dynamic) {
+				fatal("hxhx: macro run failed: " + Std.string(e));
+			}
+		}
+
 		// Stage 1 (bring-up): minimal "non-shim" compilation path.
 		//
 		// This is explicitly NOT part of the `haxe` CLI surface and will never be forwarded.

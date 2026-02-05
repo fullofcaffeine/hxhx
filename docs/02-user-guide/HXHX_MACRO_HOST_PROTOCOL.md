@@ -117,6 +117,16 @@ Models the shape of `haxe.macro.Context.definedValue(name)`.
 - request: `req <id> context.definedValue n=<...>`
 - response: `res <id> ok v=<len>:<value>`
 
+### `macro.run` (bring-up rung)
+
+Invokes a **builtin** macro entrypoint by opaque expression text.
+
+This is not user-macro execution yet. It exists to validate the end-to-end request path we will later
+use for `--macro` and build macros.
+
+- request: `req <id> macro.run e=<len>:<expr>`
+- response: `res <id> ok v=<len>:<result>`
+
 ## How to run locally
 
 Build and run the selftest (requires `haxe`, `ocamlc`, `dune`):
@@ -130,4 +140,4 @@ The macro RPC section specifically runs:
 - `bash scripts/hxhx/build-hxhx-macro-host.sh`
 - `bash scripts/hxhx/build-hxhx.sh`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-selftest`
-
+- `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-run "Macro.init()"`

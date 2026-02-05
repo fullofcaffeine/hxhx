@@ -105,6 +105,21 @@ class Main {
 				final parsed = parseKV(tail);
 				final name = parsed.exists("n") ? parsed.get("n") : "";
 				replyOk(id, Protocol.encodeLen("v", defines.exists(name) ? defines.get(name) : ""));
+			case "macro.run":
+				// Stage 4 bring-up rung: invoke a builtin macro “entrypoint”.
+				//
+				// This does NOT execute user-provided macro modules yet. It exists to prove the
+				// request path used by later `--macro` support:
+				// - hxhx (compiler core) decides to run a macro
+				// - macro host receives the macro expression as an opaque string
+				// - macro host responds deterministically
+				final parsed = parseKV(tail);
+				final expr = parsed.exists("e") ? parsed.get("e") : "";
+				if (expr.length == 0) {
+					replyErr(id, "missing expr");
+					return;
+				}
+				replyOk(id, Protocol.encodeLen("v", "ran:" + expr));
 			case _:
 				replyErr(id, "unknown method: " + method);
 		}
