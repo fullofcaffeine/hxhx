@@ -248,6 +248,7 @@ echo "$out" | grep -q "^macro_run\\[2\\]=genModule=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_SMOKE\\]=1$"
 echo "$out" | grep -q "^stage3=ok$"
 test -f "$stage3_out2/HxHxGen.ml"
+grep -q 'builtin:String' "$stage3_out2/HxHxGen.ml"
 
 echo "== Contradiction fails fast"
 set +e

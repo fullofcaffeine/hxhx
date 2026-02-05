@@ -44,7 +44,8 @@ class BuiltinMacros {
 		- Defines `HXHX_GEN=1` so the compiler can observe that generation occurred.
 	**/
 	public static function genModule():String {
-		final src = "let generated : string = \"ok\"";
+		final t = Context.getType("String");
+		final src = "let generated : string = \"" + t + "\"";
 		Compiler.emitOcamlModule("HxHxGen", src);
 		Compiler.define("HXHX_GEN", "1");
 		return "genModule=ok";
