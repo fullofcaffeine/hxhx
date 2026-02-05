@@ -16,6 +16,32 @@ This protocol is a **bootstrap seam**, not a long-term public API yet:
 - It must be **versioned** so we can evolve it compatibly.
 - It must be **dependency-free** (no JSON libs on the OCaml side; no custom parsers on the Haxe side).
 
+## Bootstrap knobs (non-protocol)
+
+The records below define the wire format. Separately, the native frontend has a couple of **bootstrap-mode**
+configuration knobs that do *not* change the protocol version, but do change behavior.
+
+### `HXHX_NATIVE_FRONTEND_HEADER_ONLY`
+
+When set to `1`/`true`/`yes`, `HxHxNativeParser.parse_module_decl` enables a **best-effort header-only fallback**:
+
+- If the full token-based parser fails (or throws), the native side attempts to still return:
+  - `ast package ...` (best-effort)
+  - `ast imports ...` (best-effort)
+  - `ast class ...` (best-effort; may remain `Unknown`)
+- It returns `ok` with an empty method list (no `ast method` records) rather than `err`.
+
+Why this exists:
+
+- During Stage 2/Stage 3 bring-up we often only need to traverse the module graph deterministically.
+- Upstream-scale class bodies contain syntax we may not support yet (and we don’t want the whole run to stop
+  *at the frontend seam*).
+
+Important:
+
+- **Stage 1 remains strict by default**. If you don’t set this env var, parse failures must surface as `err`
+  so tests can catch regressions early.
+
 ## Versioning
 
 Every output starts with a header line:
@@ -94,6 +120,12 @@ or:
 ```
 err <index> <line> <col> <len>:<message>
 ```
+
+Notes:
+
+- In strict mode (default), parser failures should generally end the stream with `err ...`.
+- In header-only mode (`HXHX_NATIVE_FRONTEND_HEADER_ONLY=1`), failures may still end with `ok` and only include
+  the AST header records (see above).
 
 ## Escaping
 

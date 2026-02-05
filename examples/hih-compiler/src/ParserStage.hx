@@ -53,7 +53,7 @@ class ParserStage {
 	static function decodeNativeProtocol(encoded:String):HxModuleDecl {
 		final lines = encoded.split("\n").filter(l -> l.length > 0);
 		if (lines.length == 0 || lines[0] != "hxhx_frontend_v=1") {
-			throw new HxParseError("Native frontend: missing/invalid protocol header", new HxPos(0, 0, 0));
+			throw "Native frontend: missing/invalid protocol header";
 		}
 
 		var packagePath = "";
@@ -104,7 +104,7 @@ class ParserStage {
 		}
 
 		if (!sawOk) {
-			throw new HxParseError("Native frontend: missing terminal 'ok'", new HxPos(0, 0, 0));
+			throw "Native frontend: missing terminal 'ok'";
 		}
 
 		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions));
@@ -224,7 +224,10 @@ class ParserStage {
 		final col = parts.length > 3 ? parseDecInt(parts[3]) : -1;
 		final tail = parts.length > 4 ? parts[4] : "";
 		final msg = decodeLenPayload(tail);
-		throw new HxParseError(msg, new HxPos(idx < 0 ? 0 : idx, ln < 0 ? 0 : ln, col < 0 ? 0 : col));
+		final idx0 = idx < 0 ? 0 : idx;
+		final ln0 = ln < 0 ? 0 : ln;
+		final col0 = col < 0 ? 0 : col;
+		throw "Native frontend: " + msg + " (" + idx0 + ":" + ln0 + ":" + col0 + ")";
 	}
 
 	static function decodeLenPayload(s:String):String {

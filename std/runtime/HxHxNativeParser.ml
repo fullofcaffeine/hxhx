@@ -562,6 +562,116 @@ let parse_module_from_tokens (toks : token array) :
 
   (!package_path, !imports, !class_name, !has_static_main, !methods)
 
+(* Best-effort header-only parser for upstream-scale modules.
+
+   Why
+   - The initial token-based parser above can fail on complex syntax inside class bodies.
+   - For Stage2/Stage3 bring-up we still want to traverse import closures deterministically, so we
+     fall back to parsing only: package + imports/using + first class name.
+
+   What
+   - Parses:
+     - optional `package ...;`
+     - repeated `import ...;` and `using ...;` (supports `as` aliases and `.*` wildcards)
+     - first `class Name` (if any)
+   - Ignores everything else.
+*)
+let parse_module_header_only (toks : token array) : (string * string list * string) =
+  let i = ref 0 in
+  let cur () : token =
+    if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else toks.(!i)
+  in
+  let bump () = i := !i + 1 in
+
+  let rec skip_until_semicolon () =
+    match cur () with
+    | Eof _ -> ()
+    | _ when token_eq_sym (cur ()) ';' ->
+        bump ()
+    | _ ->
+        bump ();
+        skip_until_semicolon ()
+  in
+
+  let read_ident_opt () : string option =
+    match cur () with
+    | Ident (s, _) ->
+        bump ();
+        Some s
+    | _ -> None
+  in
+
+  let read_dotted_path () : string =
+    match read_ident_opt () with
+    | None -> ""
+    | Some first ->
+        let parts = ref [ first ] in
+        while token_eq_sym (cur ()) '.' do
+          bump ();
+          match read_ident_opt () with
+          | Some s -> parts := !parts @ [ s ]
+          | None -> ()
+        done;
+        String.concat "." !parts
+  in
+
+  let read_import_path () : string =
+    match read_ident_opt () with
+    | None -> ""
+    | Some first ->
+        let parts = ref [ first ] in
+        let done_ = ref false in
+        while (not !done_) && token_eq_sym (cur ()) '.' do
+          bump ();
+          match cur () with
+          | Sym ('*', _) ->
+              bump ();
+              parts := !parts @ [ "*" ];
+              done_ := true
+          | _ -> (
+              match read_ident_opt () with
+              | Some s -> parts := !parts @ [ s ]
+              | None -> done_ := true)
+        done;
+        String.concat "." !parts
+  in
+
+  let package_path = ref "" in
+  let imports = ref [] in
+  let class_name = ref "Unknown" in
+
+  if token_eq_kw (cur ()) "package" then (
+    bump ();
+    if token_eq_sym (cur ()) ';' then bump ()
+    else (
+      package_path := read_dotted_path ();
+      skip_until_semicolon ()));
+
+  while token_eq_kw (cur ()) "import" || token_eq_kw (cur ()) "using" do
+    bump ();
+    let path = read_import_path () in
+    if token_eq_kw (cur ()) "as" then (
+      bump ();
+      ignore (read_ident_opt ()));
+    if path <> "" then imports := !imports @ [ path ];
+    skip_until_semicolon ()
+  done;
+
+  let rec seek_class () =
+    match cur () with
+    | Eof _ -> ()
+    | _ when token_eq_kw (cur ()) "class" -> (
+        bump ();
+        match read_ident_opt () with Some s -> class_name := s | None -> ())
+    | _ ->
+        bump ();
+        seek_class ()
+  in
+  seek_class ();
+
+  (!package_path, !imports, !class_name)
+
 let encode_ast_lines (package_path : string) (imports : string list)
     (class_name : string) (has_static_main : bool) (methods : method_decl list) :
     string =
@@ -630,25 +740,72 @@ let strip_terminal_ok (lex_stream : string) : string =
   String.concat "\n" kept
 
 let parse_module_decl (src : string) : string =
-  let lex_stream = HxHxNativeLexer.tokenize src in
-  match decode_lexer_stream lex_stream with
-  | Error msg ->
-      String.concat "\n"
-        [ "hxhx_frontend_v=1"; encode_err_line { index = 0; line = 0; col = 0 } msg ]
-  | Ok ((_toks, Some _err_line)) ->
-      (* Lexer already emitted a protocol error; pass it through. *)
-      strip_terminal_ok lex_stream
-  | Ok ((toks, None)) -> (
-      let base = strip_terminal_ok lex_stream in
+  try
+    let header_only_enabled () : bool =
       try
-        let package_path, imports, class_name, has_static_main, methods =
-          parse_module_from_tokens toks
-        in
+        match String.lowercase_ascii (Sys.getenv "HXHX_NATIVE_FRONTEND_HEADER_ONLY") with
+        | "1" | "true" | "yes" -> true
+        | _ -> false
+      with Not_found -> false
+    in
+
+    let lex_stream = HxHxNativeLexer.tokenize src in
+    match decode_lexer_stream lex_stream with
+    | Error msg ->
         String.concat "\n"
           [
-            base;
-            encode_ast_lines package_path imports class_name has_static_main methods;
-            "ok";
+            "hxhx_frontend_v=1";
+            encode_err_line { index = 0; line = 0; col = 0 } msg;
           ]
-      with
-      | Parse_error (p, msg) -> String.concat "\n" [ base; encode_err_line p msg ])
+    | Ok ((_toks, Some _err_line)) ->
+        (* Lexer already emitted a protocol error; pass it through. *)
+        strip_terminal_ok lex_stream
+    | Ok ((toks, None)) -> (
+        let base = strip_terminal_ok lex_stream in
+        try
+          let package_path, imports, class_name, has_static_main, methods =
+            parse_module_from_tokens toks
+          in
+          String.concat "\n"
+            [
+              base;
+              encode_ast_lines package_path imports class_name has_static_main methods;
+              "ok";
+            ]
+        with
+        | Parse_error (p, msg) ->
+            if header_only_enabled () then
+              (* Header-only fallback: for bootstrapping, we prefer keeping the resolver moving
+                 (package/import/class) over failing on body-level syntax we don't support yet. *)
+              let package_path, imports, class_name = parse_module_header_only toks in
+              String.concat "\n"
+                [
+                  base;
+                  encode_ast_lines package_path imports class_name false [];
+                  "ok";
+                ]
+            else
+              String.concat "\n" [ base; encode_err_line p msg ]
+        | _exn ->
+            if header_only_enabled () then
+              let package_path, imports, class_name = parse_module_header_only toks in
+              String.concat "\n"
+                [
+                  base;
+                  encode_ast_lines package_path imports class_name false [];
+                  "ok";
+                ]
+            else
+              (* Surface the failure as a parse error to keep Stage1 deterministic. *)
+              String.concat "\n"
+                [
+                  base;
+                  encode_err_line { index = 0; line = 0; col = 0 }
+                    "HxHxNativeParser: failed to parse module";
+                ])
+  with exn ->
+    String.concat "\n"
+      [
+        "hxhx_frontend_v=1";
+        encode_err_line { index = 0; line = 0; col = 0 } (Printexc.to_string exn);
+      ]

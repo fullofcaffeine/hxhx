@@ -92,5 +92,7 @@ fi
 echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3)"
 (
   cd "$UPSTREAM_DIR/tests/unit"
-  HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 compile-macro.hxml
+  # Allow the native frontend seam to fall back to header-only parsing when it encounters
+  # complex class bodies (bootstrapping). Stage1 bring-up remains strict by default.
+  HXHX_NATIVE_FRONTEND_HEADER_ONLY=1 HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 compile-macro.hxml
 )
