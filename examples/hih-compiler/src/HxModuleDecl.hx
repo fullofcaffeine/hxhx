@@ -22,4 +22,30 @@ class HxModuleDecl {
 		this.imports = imports;
 		this.mainClass = mainClass;
 	}
+
+	/**
+		Non-inline getter for `packagePath`.
+
+		Why:
+		- The generated OCaml is built under dune’s `-opaque` in Dev mode, which
+		  can hide record labels across compilation units.
+		- Using non-inline getters avoids cross-module record-field access.
+	**/
+	public static function getPackagePath(m:HxModuleDecl):String {
+		return m.packagePath;
+	}
+
+	/**
+		Non-inline getter for `imports` (see `getPackagePath` rationale).
+	**/
+	public static function getImports(m:HxModuleDecl):Array<String> {
+		return m.imports;
+	}
+
+	/**
+		Non-inline getter for `mainClass` (see `getPackagePath` rationale).
+	**/
+	public static function getMainClass(m:HxModuleDecl):HxClassDecl {
+		return m.mainClass;
+	}
 }

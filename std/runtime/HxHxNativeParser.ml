@@ -21,6 +21,7 @@
      - `ast imports <len>:<payload>`        (payload uses '|' separator for now)
      - `ast class <len>:<payload>`
      - `ast static_main 0|1`
+     - `ast method <len>:<payload>`         (payload is `name|vis|static|args|ret|retstr`)
    - Terminal:
      - `ok`
      - OR `err <index> <line> <col> <len>:<message>`
@@ -41,6 +42,17 @@ type token =
   | Eof of pos
 
 exception Parse_error of pos * string
+
+type visibility = Public | Private
+
+type method_decl = {
+  name : string;
+  visibility : visibility;
+  is_static : bool;
+  args : string list;
+  return_type_hint : string option;
+  return_string : string option;
+}
 
 let starts_with (s : string) (prefix : string) : bool =
   let sl = String.length s in
@@ -170,7 +182,7 @@ let token_eq_sym (t : token) (c : char) : bool =
   | _ -> false
 
 let parse_module_from_tokens (toks : token array) :
-    (string * string list * string * bool) =
+    (string * string list * string * bool * method_decl list) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
@@ -266,6 +278,7 @@ let parse_module_from_tokens (toks : token array) :
 
   let class_name = ref "" in
   let has_static_main = ref false in
+  let methods : method_decl list ref = ref [] in
 
   if seek_class () then (
     expect_kw "class";
@@ -276,28 +289,201 @@ let parse_module_from_tokens (toks : token array) :
       expect_sym '{';
 
       let depth = ref 1 in
-      let prev1 : token option ref = ref None in
-      let prev2 : token option ref = ref None in
+      let cur_visibility : visibility ref = ref Public in
+      let cur_static : bool ref = ref false in
 
-      let shift (tok : token) =
-        prev2 := !prev1;
-        prev1 := Some tok
+      let reset_mods () =
+        cur_visibility := Public;
+        cur_static := false
+      in
+
+      let tok_to_text (t : token) : string =
+        match t with
+        | Kw (s, _) -> s
+        | Ident (s, _) -> s
+        | String (s, _) -> "\"" ^ s ^ "\""
+        | Sym (c, _) -> String.make 1 c
+        | Eof _ -> ""
+      in
+
+      let parse_param_list () : string list =
+        (* Called when current token is '(' already consumed by caller. *)
+        let args = ref [] in
+        let paren = ref 1 in
+        let want_name = ref true in
+        while !paren > 0 do
+          match cur () with
+          | Eof p -> raise (Parse_error (p, "unexpected eof in parameter list"))
+          | Sym ('(', _) ->
+              paren := !paren + 1;
+              bump ()
+          | Sym (')', _) ->
+              paren := !paren - 1;
+              bump ()
+          | Sym (',', _) when !paren = 1 ->
+              want_name := true;
+              bump ()
+          | Ident (_, _) when !paren = 1 && !want_name ->
+              (* Likely a type identifier; ignore. *)
+              bump ()
+          | Ident (name, _) when !paren = 1 && !want_name = true ->
+              args := !args @ [ name ];
+              want_name := false;
+              bump ()
+          | _ -> bump ()
+        done;
+        !args
+      in
+
+      let parse_return_type_hint () : string option =
+        if token_eq_sym (cur ()) ':' then (
+          bump ();
+          let parts = ref [] in
+          while
+            match cur () with
+            | Eof _ -> false
+            | Sym ('{', _) -> false
+            | Sym (';', _) -> false
+            | Kw ("return", _) -> false
+            | _ -> true
+          do
+            parts := !parts @ [ tok_to_text (cur ()) ];
+            bump ()
+          done;
+          let txt = String.concat "" !parts |> String.trim in
+          if txt = "" then None else Some txt)
+        else None
+      in
+
+      let parse_body_and_return_string () : string option =
+        (* Supports:
+             - `{ ... }` bodies (scan for `return "..."`)
+             - `return "..." ;` expression bodies
+             - `;` (no body)
+        *)
+        match cur () with
+        | Sym (';', _) ->
+            bump ();
+            None
+        | Sym ('{', _) ->
+            bump ();
+            depth := !depth + 1;
+            let found = ref None in
+            while !depth > 1 do
+              match cur () with
+              | Eof p -> raise (Parse_error (p, "unexpected eof in function body"))
+              | Sym ('{', _) ->
+                  depth := !depth + 1;
+                  bump ()
+              | Sym ('}', _) ->
+                  depth := !depth - 1;
+                  bump ()
+              | Kw ("return", _) -> (
+                  bump ();
+                  match (cur (), !found) with
+                  | String (s, _), None ->
+                      found := Some s;
+                      bump ()
+                  | _ -> ())
+              | _ -> bump ()
+            done;
+            !found
+        | Kw ("return", _) -> (
+            bump ();
+            let found =
+              match cur () with
+              | String (s, _) ->
+                  bump ();
+                  Some s
+              | _ -> None
+            in
+            (* Consume until ';' or block start. *)
+            while
+              match cur () with
+              | Eof _ -> false
+              | Sym (';', _) ->
+                  bump ();
+                  false
+              | Sym ('{', _) -> false
+              | _ ->
+                  bump ();
+                  true
+            do
+              ()
+            done;
+            found)
+        | _ ->
+            (* Unknown body shape; consume until ';' or '{' to avoid infinite loops. *)
+            while
+              match cur () with
+              | Eof _ -> false
+              | Sym (';', _) ->
+                  bump ();
+                  false
+              | Sym ('{', _) -> false
+              | _ ->
+                  bump ();
+                  true
+            do
+              ()
+            done;
+            None
       in
 
       while !depth > 0 do
         match cur () with
         | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
         | tok ->
-            (* Detect `static function main` without parsing full member grammar yet. *)
-            (match (!prev2, !prev1, tok) with
-            | Some (Kw ("static", _)), Some (Kw ("function", _)), Ident ("main", _) ->
-                has_static_main := true
-            | _ -> ());
+            if !depth = 1 then (
+              match tok with
+              | Kw ("public", _) ->
+                  cur_visibility := Public;
+                  bump ()
+              | Kw ("private", _) ->
+                  cur_visibility := Private;
+                  bump ()
+              | Kw ("static", _) ->
+                  cur_static := true;
+                  bump ()
+              | Kw ("function", _) -> (
+                  bump ();
+                  let name = read_ident () in
+                  if !cur_static && name = "main" then has_static_main := true;
 
-            shift tok;
-            if token_eq_sym tok '{' then depth := !depth + 1
-            else if token_eq_sym tok '}' then depth := !depth - 1;
-            bump ()
+                  let args =
+                    if token_eq_sym (cur ()) '(' then (
+                      bump ();
+                      parse_param_list ())
+                    else []
+                  in
+                  let return_type_hint = parse_return_type_hint () in
+                  let return_string = parse_body_and_return_string () in
+                  methods :=
+                    !methods
+                    @ [
+                        {
+                          name;
+                          visibility = !cur_visibility;
+                          is_static = !cur_static;
+                          args;
+                          return_type_hint;
+                          return_string;
+                        };
+                      ];
+                  reset_mods ())
+              | Sym ('{', _) ->
+                  depth := !depth + 1;
+                  bump ();
+                  reset_mods ()
+              | Sym ('}', _) ->
+                  depth := !depth - 1;
+                  bump ();
+                  reset_mods ()
+              | _ -> bump ())
+            else (
+              if token_eq_sym tok '{' then depth := !depth + 1
+              else if token_eq_sym tok '}' then depth := !depth - 1;
+              bump ())
       done))
   else (
     class_name := "";
@@ -312,21 +498,50 @@ let parse_module_from_tokens (toks : token array) :
     bump ()
   done;
 
-  (!package_path, !imports, !class_name, !has_static_main)
+  (!package_path, !imports, !class_name, !has_static_main, !methods)
 
 let encode_ast_lines (package_path : string) (imports : string list)
-    (class_name : string) (has_static_main : bool) : string =
+    (class_name : string) (has_static_main : bool) (methods : method_decl list) :
+    string =
   let pkg_enc = escape_payload package_path in
   let imports_payload = String.concat "|" imports in
   let imports_enc = escape_payload imports_payload in
   let cls_enc = escape_payload class_name in
-  String.concat "\n"
+  let base =
     [
       Printf.sprintf "ast package %d:%s" (String.length pkg_enc) pkg_enc;
       Printf.sprintf "ast imports %d:%s" (String.length imports_enc) imports_enc;
       Printf.sprintf "ast class %d:%s" (String.length cls_enc) cls_enc;
       "ast static_main " ^ if has_static_main then "1" else "0";
     ]
+  in
+  let method_lines =
+    List.map
+      (fun (m : method_decl) ->
+        let vis =
+          match m.visibility with Public -> "public" | Private -> "private"
+        in
+        let static_s = if m.is_static then "1" else "0" in
+        let args_payload = String.concat "," m.args in
+        let ret_payload = match m.return_type_hint with None -> "" | Some s -> s in
+        let retstr_payload = match m.return_string with None -> "" | Some s -> s in
+        (* Bootstrap note: payload is a '|' separated list and is not itself escaped for '|'. *)
+        let payload =
+          String.concat "|"
+            [
+              m.name;
+              vis;
+              static_s;
+              args_payload;
+              ret_payload;
+              retstr_payload;
+            ]
+        in
+        let enc = escape_payload payload in
+        Printf.sprintf "ast method %d:%s" (String.length enc) enc)
+      methods
+  in
+  String.concat "\n" (base @ method_lines)
 
 let encode_err_line (p : pos) (msg : string) : string =
   let enc = escape_payload msg in
@@ -353,10 +568,14 @@ let parse_module_decl (src : string) : string =
   | Ok ((toks, None)) -> (
       let base = strip_terminal_ok lex_stream in
       try
-        let package_path, imports, class_name, has_static_main =
+        let package_path, imports, class_name, has_static_main, methods =
           parse_module_from_tokens toks
         in
         String.concat "\n"
-          [ base; encode_ast_lines package_path imports class_name has_static_main; "ok" ]
+          [
+            base;
+            encode_ast_lines package_path imports class_name has_static_main methods;
+            "ok";
+          ]
       with
       | Parse_error (p, msg) -> String.concat "\n" [ base; encode_err_line p msg ])

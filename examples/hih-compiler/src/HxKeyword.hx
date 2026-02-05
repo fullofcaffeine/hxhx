@@ -8,8 +8,18 @@
 enum HxKeyword {
 	KPackage;
 	KImport;
+	KUsing;
+	KAs;
 	KClass;
+	KPublic;
+	KPrivate;
 	KStatic;
 	KFunction;
+	KReturn;
+	KVar;
+	KFinal;
+	KNew;
+	KTrue;
+	KFalse;
+	KNull;
 }
-

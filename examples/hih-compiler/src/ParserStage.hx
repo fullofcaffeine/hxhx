@@ -60,6 +60,7 @@ class ParserStage {
 		final imports = new Array<String>();
 		var className = "Unknown";
 		var hasStaticMain = false;
+		final functions = new Array<HxFunctionDecl>();
 		var sawOk = false;
 
 		for (i in 1...lines.length) {
@@ -94,6 +95,8 @@ class ParserStage {
 						}
 					case "class":
 						className = payload;
+					case "method":
+						functions.push(decodeMethodPayload(payload));
 					case _:
 				}
 				continue;
@@ -104,7 +107,35 @@ class ParserStage {
 			throw new HxParseError("Native frontend: missing terminal 'ok'", new HxPos(0, 0, 0));
 		}
 
-		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain));
+		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions));
+	}
+
+	static function decodeMethodPayload(payload:String):HxFunctionDecl {
+		// Bootstrap note: payload is `name|vis|static|args|ret|retstr` (unescaped for '|').
+		final parts = payload.split("|");
+		while (parts.length < 6) parts.push("");
+
+		final name = parts[0];
+		final vis = parts[1] == "private" ? HxVisibility.Private : HxVisibility.Public;
+		final isStatic = parts[2] == "1";
+
+		final args = new Array<HxFunctionArg>();
+		final argsPayload = parts[3];
+		if (argsPayload.length > 0) {
+			for (a in argsPayload.split(",")) {
+				if (a.length == 0) continue;
+				args.push(new HxFunctionArg(a, "", HxDefaultValue.NoDefault));
+			}
+		}
+
+		final returnTypeHint = parts[4];
+		final retStr = parts[5];
+		final body = new Array<HxStmt>();
+		if (retStr.length > 0) {
+			body.push(SReturn(EString(retStr)));
+		}
+
+		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, body, retStr);
 	}
 
 	static function throwFromErrLine(line:String):Void {

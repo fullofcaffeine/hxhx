@@ -56,12 +56,20 @@ ast package <len>:<payload>
 ast imports <len>:<payload>
 ast class <len>:<payload>
 ast static_main 0|1
+ast method <len>:<payload>
 ```
 
 Notes:
 
 - `ast imports` uses a `|` separator for now (bootstrap convenience).
 - Longer-term we’ll likely replace this with a structured list record.
+- `ast method` is a bootstrap record that encodes a function signature summary as a `|` separated payload:
+  `name|vis|static|args|ret|retstr`
+  - `vis` is `public` or `private`
+  - `static` is `0` or `1`
+  - `args` is a comma-separated list of argument names
+  - `ret` is the (raw) return type hint text, or empty
+  - `retstr` is the first detected string literal returned by the function (if any), or empty
 
 ### Terminal records
 
@@ -87,4 +95,3 @@ Payload strings use a minimal escape layer to guarantee each record stays on a s
 - `\t` → tab
 
 `<len>` is the length of the **escaped** payload (so decoding can be “slice then unescape”).
-

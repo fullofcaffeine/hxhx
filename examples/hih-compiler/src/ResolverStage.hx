@@ -49,7 +49,7 @@ class ResolverStage {
 			out.push(new ResolvedModule(modulePath, filePath, parsed));
 
 			final decl = parsed.getDecl();
-			for (rawImport in decl.imports) {
+			for (rawImport in HxModuleDecl.getImports(decl)) {
 				final imp = normalizeImport(rawImport);
 				if (imp == null) continue;
 				if (StringTools.endsWith(imp, ".*")) {
@@ -106,4 +106,3 @@ class ResolverStage {
 		return null;
 	}
 }
-

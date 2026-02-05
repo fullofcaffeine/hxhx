@@ -26,14 +26,31 @@ class CompilerDriver {
 		final root:ResolvedModule = resolved[0];
 		final ast = ResolvedModule.getParsed(root);
 		final decl = ast.getDecl();
+		final pkg = HxModuleDecl.getPackagePath(decl);
+		final imports = HxModuleDecl.getImports(decl);
+		final mainClass = HxModuleDecl.getMainClass(decl);
 		Sys.println("parse=ok");
 		Sys.println("modules=" + resolved.length);
 		Sys.println("main=" + mainModule);
 		Sys.println("mainFile=" + ResolvedModule.getFilePath(root));
-		Sys.println("package=" + (decl.packagePath.length == 0 ? "<none>" : decl.packagePath));
-		Sys.println("imports=" + decl.imports.length);
-		Sys.println("class=" + decl.mainClass.name);
-		Sys.println("hasStaticMain=" + (decl.mainClass.hasStaticMain ? "yes" : "no"));
+		Sys.println("package=" + (pkg.length == 0 ? "<none>" : pkg));
+		Sys.println("imports=" + imports.length);
+		Sys.println("class=" + HxClassDecl.getName(mainClass));
+		Sys.println("hasStaticMain=" + (HxClassDecl.getHasStaticMain(mainClass) ? "yes" : "no"));
+		final fns = HxClassDecl.getFunctions(mainClass);
+		Sys.println("functions=" + fns.length);
+		for (fn in fns) {
+			final vis = switch (HxFunctionDecl.getVisibility(fn)) {
+				case Public: "public";
+				case Private: "private";
+			}
+			final retHint = HxFunctionDecl.getReturnTypeHint(fn);
+			final ret = retHint.length == 0 ? "<none>" : retHint;
+			final retStrLit = HxFunctionDecl.getReturnStringLiteral(fn);
+			final retStr = retStrLit.length == 0 ? "<none>" : retStrLit;
+			final args = HxFunctionDecl.getArgs(fn);
+			Sys.println("fn=" + HxFunctionDecl.getName(fn) + " static=" + (HxFunctionDecl.getIsStatic(fn) ? "yes" : "no") + " vis=" + vis + " args=" + args.length + " ret=" + ret + " retStr=" + retStr);
+		}
 		try {
 			ResolverStage.parseProject(classPaths, "demo.B");
 			Sys.println("missing_import=fail");
@@ -78,26 +95,45 @@ class CompilerDriver {
 			final label = case_.getLabel();
 			final src = case_.getSource();
 			final parsed = ParserStage.parse(src).getDecl();
-			if (parsed.packagePath != case_.getExpectPackagePath()) {
+			final parsedPkg = HxModuleDecl.getPackagePath(parsed);
+			final parsedMain = HxModuleDecl.getMainClass(parsed);
+			if (parsedPkg != case_.getExpectPackagePath()) {
 				throw new HxParseError('Fixture ' + label + ': package mismatch', new HxPos(0, 0, 0));
 			}
-			if (parsed.mainClass.name != case_.getExpectMainClassName()) {
+			if (HxClassDecl.getName(parsedMain) != case_.getExpectMainClassName()) {
 				throw new HxParseError('Fixture ' + label + ': class mismatch', new HxPos(0, 0, 0));
 			}
-			if (parsed.mainClass.hasStaticMain != case_.getExpectHasStaticMain()) {
+			if (HxClassDecl.getHasStaticMain(parsedMain) != case_.getExpectHasStaticMain()) {
 				throw new HxParseError('Fixture ' + label + ': static main mismatch', new HxPos(0, 0, 0));
+			}
+			if (label.indexOf("ModWithStatic") >= 0) {
+				final found = HxClassDecl.getFunctions(parsedMain).filter(f -> HxFunctionDecl.getName(f) == "TheStatic");
+				if (found.length != 1) throw new HxParseError('Fixture ' + label + ': expected 1 TheStatic function', new HxPos(0, 0, 0));
+				final retStr = HxFunctionDecl.getReturnStringLiteral(found[0]);
+				if (retStr != "pack.ModWithStatic.TheStatic function") {
+					throw new HxParseError('Fixture ' + label + ': TheStatic return differs', new HxPos(0, 0, 0));
+				}
 			}
 
 			#if hih_native_parser
 			// Compare against the pure-Haxe frontend for this subset.
 			final haxeDecl = new HxParser(src).parseModule();
-			if (haxeDecl.packagePath != parsed.packagePath) throw new HxParseError('Fixture ' + label + ': package differs (native vs haxe)', new HxPos(0, 0, 0));
-			if (haxeDecl.imports.length != parsed.imports.length) throw new HxParseError('Fixture ' + label + ': import count differs (native vs haxe)', new HxPos(0, 0, 0));
-			for (i in 0...haxeDecl.imports.length) {
-				if (haxeDecl.imports[i] != parsed.imports[i]) throw new HxParseError('Fixture ' + label + ': import differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (HxModuleDecl.getPackagePath(haxeDecl) != parsedPkg) throw new HxParseError('Fixture ' + label + ': package differs (native vs haxe)', new HxPos(0, 0, 0));
+			final haxeImports = HxModuleDecl.getImports(haxeDecl);
+			final parsedImports = HxModuleDecl.getImports(parsed);
+			if (haxeImports.length != parsedImports.length) throw new HxParseError('Fixture ' + label + ': import count differs (native vs haxe)', new HxPos(0, 0, 0));
+			for (i in 0...haxeImports.length) {
+				if (haxeImports[i] != parsedImports[i]) throw new HxParseError('Fixture ' + label + ': import differs (native vs haxe)', new HxPos(0, 0, 0));
 			}
-			if (haxeDecl.mainClass.name != parsed.mainClass.name) throw new HxParseError('Fixture ' + label + ': class differs (native vs haxe)', new HxPos(0, 0, 0));
-			if (haxeDecl.mainClass.hasStaticMain != parsed.mainClass.hasStaticMain) throw new HxParseError('Fixture ' + label + ': static main differs (native vs haxe)', new HxPos(0, 0, 0));
+			final haxeMain = HxModuleDecl.getMainClass(haxeDecl);
+			if (HxClassDecl.getName(haxeMain) != HxClassDecl.getName(parsedMain)) throw new HxParseError('Fixture ' + label + ': class differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (HxClassDecl.getHasStaticMain(haxeMain) != HxClassDecl.getHasStaticMain(parsedMain)) throw new HxParseError('Fixture ' + label + ': static main differs (native vs haxe)', new HxPos(0, 0, 0));
+			final haxeFns = HxClassDecl.getFunctions(haxeMain);
+			final parsedFns = HxClassDecl.getFunctions(parsedMain);
+			if (haxeFns.length != parsedFns.length) throw new HxParseError('Fixture ' + label + ': function count differs (native vs haxe)', new HxPos(0, 0, 0));
+			for (i in 0...haxeFns.length) {
+				if (HxFunctionDecl.getName(haxeFns[i]) != HxFunctionDecl.getName(parsedFns[i])) throw new HxParseError('Fixture ' + label + ': function name differs (native vs haxe)', new HxPos(0, 0, 0));
+			}
 			#end
 		}
 

@@ -67,6 +67,10 @@ class HxLexer {
 		return isIdentStart(c) || (c >= 48 && c <= 57); // plus 0-9
 	}
 
+	static inline function isDigit(c:Int):Bool {
+		return c >= 48 && c <= 57;
+	}
+
 	function skipWhitespaceAndComments():Void {
 		while (!eof()) {
 			final c = peek(0);
@@ -107,11 +111,41 @@ class HxLexer {
 		return switch (text) {
 			case "package": new HxToken(TKeyword(KPackage), startPos);
 			case "import": new HxToken(TKeyword(KImport), startPos);
+			case "using": new HxToken(TKeyword(KUsing), startPos);
+			case "as": new HxToken(TKeyword(KAs), startPos);
 			case "class": new HxToken(TKeyword(KClass), startPos);
+			case "public": new HxToken(TKeyword(KPublic), startPos);
+			case "private": new HxToken(TKeyword(KPrivate), startPos);
 			case "static": new HxToken(TKeyword(KStatic), startPos);
 			case "function": new HxToken(TKeyword(KFunction), startPos);
+			case "return": new HxToken(TKeyword(KReturn), startPos);
+			case "var": new HxToken(TKeyword(KVar), startPos);
+			case "final": new HxToken(TKeyword(KFinal), startPos);
+			case "new": new HxToken(TKeyword(KNew), startPos);
+			case "true": new HxToken(TKeyword(KTrue), startPos);
+			case "false": new HxToken(TKeyword(KFalse), startPos);
+			case "null": new HxToken(TKeyword(KNull), startPos);
 			case _: new HxToken(TIdent(text), startPos);
 		}
+	}
+
+	function readNumber(startPos:HxPos):HxToken {
+		final start = index;
+		while (!eof() && isDigit(peek(0))) bump();
+		var isFloat = false;
+		if (!eof() && peek(0) == ".".code && isDigit(peek(1))) {
+			isFloat = true;
+			bump(); // '.'
+			while (!eof() && isDigit(peek(0))) bump();
+		}
+
+		final text = src.substring(start, index);
+		if (isFloat) {
+			final value = Std.parseFloat(text);
+			return new HxToken(TFloat(value), startPos);
+		}
+		final value = Std.parseInt(text);
+		return new HxToken(TInt(value == null ? 0 : value), startPos);
 	}
 
 	function readString(startPos:HxPos):HxToken {
@@ -157,6 +191,7 @@ class HxLexer {
 			case 46:  bump(); new HxToken(TDot, p);         // .
 			case 44:  bump(); new HxToken(TComma, p);       // ,
 			case 34:  readString(p);                        // "
+			case _ if (isDigit(c)): readNumber(p);
 			case _ if (isIdentStart(c)): readIdent(p);
 			case _:
 				// Bootstrap behavior: do not fail on unknown punctuation yet.

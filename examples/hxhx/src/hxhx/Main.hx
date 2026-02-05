@@ -63,11 +63,14 @@ class Main {
 			}
 			final src = sys.io.File.getContent(path);
 			final decl = ParserStage.parse(src).getDecl();
+			final pkg = HxModuleDecl.getPackagePath(decl);
+			final imports = HxModuleDecl.getImports(decl);
+			final cls = HxModuleDecl.getMainClass(decl);
 			Sys.println("parse=ok");
-			Sys.println("package=" + (decl.packagePath.length == 0 ? "<none>" : decl.packagePath));
-			Sys.println("imports=" + decl.imports.length);
-			Sys.println("class=" + decl.mainClass.name);
-			Sys.println("hasStaticMain=" + (decl.mainClass.hasStaticMain ? "yes" : "no"));
+			Sys.println("package=" + (pkg.length == 0 ? "<none>" : pkg));
+			Sys.println("imports=" + imports.length);
+			Sys.println("class=" + HxClassDecl.getName(cls));
+			Sys.println("hasStaticMain=" + (HxClassDecl.getHasStaticMain(cls) ? "yes" : "no"));
 			return;
 		}
 

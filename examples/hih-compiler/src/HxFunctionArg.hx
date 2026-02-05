@@ -1,0 +1,27 @@
+/**
+	Function argument AST node for the `hih-compiler` subset.
+
+	Why:
+	- Stage 3 typing needs a stable shape for parameters so we can populate the
+	  local environment and check calls.
+
+	What:
+	- Name.
+	- Optional type hint text (not yet parsed into a full type tree).
+	- Optional default value expression (very small subset for now).
+
+	How:
+	- We intentionally store type hints as raw text initially to avoid blocking
+	  on a full type grammar. The typer can interpret the subset it supports.
+**/
+class HxFunctionArg {
+	public final name:String;
+	public final typeHint:String;
+	public final defaultValue:HxDefaultValue;
+
+	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue) {
+		this.name = name;
+		this.typeHint = typeHint;
+		this.defaultValue = defaultValue;
+	}
+}

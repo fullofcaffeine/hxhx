@@ -9,6 +9,8 @@ enum HxTokenKind {
 	TEof;
 	TIdent(name:String);
 	TString(value:String);
+	TInt(value:Int);
+	TFloat(value:Float);
 	TKeyword(k:HxKeyword);
 	TLBrace;    // {
 	TRBrace;    // }
