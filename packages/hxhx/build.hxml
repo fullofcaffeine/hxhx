@@ -1,5 +1,5 @@
 -cp src
--cp ../../examples/hih-compiler/src
+-cp ../hih-compiler/src
 -main hxhx.Main
 --no-output
 -lib reflaxe.ocaml
