@@ -35,6 +35,29 @@ class Stage1Compiler {
 		return 2;
 	}
 
+	static function haxelibBin():String {
+		final v = Sys.getEnv("HAXELIB_BIN");
+		return (v == null || v.length == 0) ? "haxelib" : v;
+	}
+
+	static function resolveHaxelibPaths(lib:String):Array<String> {
+		final paths = new Array<String>();
+		final p = new sys.io.Process(haxelibBin(), ["path", lib]);
+		try {
+			while (true) {
+				final raw = p.stdout.readLine();
+				final line = StringTools.trim(raw);
+				if (line.length == 0) continue;
+				if (StringTools.startsWith(line, "-")) continue;
+				paths.push(line);
+			}
+		} catch (_:haxe.io.Eof) {}
+
+		final code = p.exitCode();
+		if (code != 0) throw "haxelib path " + lib + " failed with exit code " + code;
+		return paths;
+	}
+
 	static function formatParseError(e:Dynamic):String {
 		// Prefer structured parse errors when available.
 		if (Std.isOfType(e, HxParseError)) {
@@ -45,7 +68,19 @@ class Stage1Compiler {
 	}
 
 	public static function run(args:Array<String>):Int {
-		final parsed = Stage1Args.parse(args);
+		// Internal bring-up flag: allow upstream-ish hxmls to be parsed without failing on non-essential flags.
+		// This must never be forwarded to stage0 `haxe` because it's not a real CLI surface.
+		var permissive = false;
+		final filtered = new Array<String>();
+		for (a in args) {
+			if (a == "--hxhx-permissive") {
+				permissive = true;
+				continue;
+			}
+			filtered.push(a);
+		}
+
+		final parsed = Stage1Args.parse(filtered, permissive);
 		if (parsed == null) return 2;
 
 		if (!parsed.noOutput) {
@@ -55,7 +90,18 @@ class Stage1Compiler {
 			return error("missing -main <TypeName>");
 		}
 
-		final resolved = Stage1Resolver.resolveMain(parsed.classPaths, parsed.main, parsed.cwd);
+		final classPaths = parsed.classPaths.copy();
+		if (permissive && parsed.libs.length > 0) {
+			for (lib in parsed.libs) {
+				try {
+					for (p in resolveHaxelibPaths(lib)) classPaths.push(p);
+				} catch (e:Dynamic) {
+					return error("failed to resolve -lib " + lib + ": " + Std.string(e));
+				}
+			}
+		}
+
+		final resolved = Stage1Resolver.resolveMain(classPaths, parsed.main, parsed.cwd);
 		if (resolved == null) return 2;
 
 		final source = try sys.io.File.getContent(resolved.path) catch (_:Dynamic) null;
@@ -108,7 +154,7 @@ class Stage1Compiler {
 				continue;
 			}
 
-			final impResolved = Stage1Resolver.resolveModule(parsed.classPaths, imp, parsed.cwd);
+			final impResolved = Stage1Resolver.resolveModule(classPaths, imp, parsed.cwd);
 			if (impResolved == null) {
 				return error("import_missing " + imp);
 			}
