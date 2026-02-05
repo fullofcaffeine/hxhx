@@ -46,8 +46,13 @@ import haxe.io.Output;
 		var closed:Bool = false;
 		var cachedExitCode:Null<Int> = null;
 
-		public function new(cmd:String, args:Array<String>) {
-			handle = NativeHxProcess.spawn(cmd, args);
+		public function new(cmd:String, ?args:Array<String>, ?detached:Bool) {
+			final argv = args == null ? [] : args;
+			// NOTE: We accept `detached` for upstream signature parity, but currently ignore it.
+			// Implementing true detachment is target-specific (process groups) and not required
+			// for our current macro-host transport needs.
+			if (detached != null) {}
+			handle = NativeHxProcess.spawn(cmd, argv);
 			stdout = new OcamlProcessInput(handle, 1);
 			stderr = new OcamlProcessInput(handle, 2);
 			stdin = new OcamlProcessOutput(handle);

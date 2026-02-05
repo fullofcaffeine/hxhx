@@ -943,16 +943,73 @@ class OcamlBuilder {
 						#end
 						OcamlExpr.EConst(OcamlConst.CUnit);
 					}
-				} else {
-					final modName = moduleIdToOcamlModuleName(cls.module);
-					final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
-					final createName = ctx.scopedValueName(cls.module, cls.name, "create");
-					final fn = (selfMod != null && selfMod == modName)
-						? OcamlExpr.EIdent(createName)
-						: OcamlExpr.EField(OcamlExpr.EIdent(modName), createName);
-					final builtArgs = args.map(buildExpr);
-					OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
-				}
+					} else {
+						final modName = moduleIdToOcamlModuleName(cls.module);
+						final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+						final createName = ctx.scopedValueName(cls.module, cls.name, "create");
+						final fn = (selfMod != null && selfMod == modName)
+							? OcamlExpr.EIdent(createName)
+							: OcamlExpr.EField(OcamlExpr.EIdent(modName), createName);
+
+						// Constructor callsites must fully apply all optional parameters.
+						//
+						// Why:
+						// - reflaxe.ocaml represents Haxe optional parameters (`?x:T`) like `Null<T>`:
+						//   missing args are supplied as `HxRuntime.hx_null` (cast via `Obj.magic` when needed).
+						// - If we omit trailing optional ctor args in the emitted `Foo.create a0 a1`,
+						//   OCaml treats it as *partial application* and we end up with a function value
+						//   where an instance record is expected (breaking at compile time).
+						//
+						// This especially matters for `sys.io.Process` parity (optional args + detached)
+						// used by HXHX Stage 4 macro transport (bd: haxe.ocaml-xgv.3.3).
+						final expectedCtorArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = if (cls.constructor == null) {
+							null;
+						} else {
+							final ctorField = cls.constructor.get();
+							switch (TypeTools.follow(ctorField.type)) {
+								case TFun(fargs, _): fargs;
+								case _: null;
+							}
+						}
+
+						final builtArgs:Array<OcamlExpr> = [];
+						if (expectedCtorArgs != null) {
+							inline function hxNullForType(t:Type):OcamlExpr {
+								return nullablePrimitiveKind(t) != null
+									? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+									: OcamlExpr.EApp(
+										OcamlExpr.EIdent("Obj.magic"),
+										[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+									);
+							}
+
+							for (i in 0...args.length) {
+								if (i >= expectedCtorArgs.length) break;
+								final ea = expectedCtorArgs[i];
+								builtArgs.push(coerceForAssignment(ea.t, args[i]));
+							}
+							if (args.length < expectedCtorArgs.length) {
+								for (i in args.length...expectedCtorArgs.length) {
+									final ea = expectedCtorArgs[i];
+									if (ea.opt) {
+										builtArgs.push(hxNullForType(ea.t));
+									} else {
+										#if macro
+										guardrailError(
+											"reflaxe.ocaml: new " + cls.name + " is missing required constructor argument '" + ea.name + "'.",
+											e.pos
+										);
+										#end
+										builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+									}
+								}
+							}
+						} else {
+							for (a in args) builtArgs.push(buildExpr(a));
+						}
+
+						OcamlExpr.EApp(fn, builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+					}
 			case TCall(fn, args):
 				{
 					// Escape hatch: raw OCaml injection.
