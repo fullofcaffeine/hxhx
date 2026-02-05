@@ -64,7 +64,7 @@ Notes:
 - `ast imports` uses a `|` separator for now (bootstrap convenience).
 - Longer-term we’ll likely replace this with a structured list record.
 - `ast method` is a bootstrap record that encodes a function signature summary as a `|` separated payload:
-  `name|vis|static|args|ret|retstr|retid|argtypes`
+  `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`
   - `vis` is `public` or `private`
   - `static` is `0` or `1`
   - `args` is a comma-separated list of argument names
@@ -72,12 +72,14 @@ Notes:
   - `retstr` is the first detected string literal returned by the function (if any), or empty
   - `retid` is the first detected `return <ident>` (if any), or empty
   - `argtypes` is a comma-separated list of `name:type` pairs for arguments that have an explicit type hint
+  - `retexpr` is a best-effort textual capture of the first returned literal/identifier expression (if any)
 
 Notes:
 
-- `retid`/`argtypes` are optional fields added in a backward-compatible way: Stage 2 decoders that only understand
-  `name|vis|static|args|ret|retstr` will ignore the extra segments.
+- `retid`/`argtypes`/`retexpr` are optional fields added in a backward-compatible way: Stage 2 decoders that only
+  understand `name|vis|static|args|ret|retstr` will ignore the extra segments.
 - Because `ast method` uses `|` as its own field separator, `retid` and `argtypes` must not contain `|` characters.
+  The same constraint applies to `retexpr`.
 
 ### Terminal records
 

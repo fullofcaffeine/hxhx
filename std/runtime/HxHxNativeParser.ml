@@ -21,7 +21,7 @@
      - `ast imports <len>:<payload>`        (payload uses '|' separator for now)
      - `ast class <len>:<payload>`
      - `ast static_main 0|1`
-     - `ast method <len>:<payload>`         (payload is `name|vis|static|args|ret|retstr|retid|argtypes`)
+     - `ast method <len>:<payload>`         (payload is `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`)
    - Terminal:
      - `ok`
      - OR `err <index> <line> <col> <len>:<message>`
@@ -53,6 +53,7 @@ type method_decl = {
   return_type_hint : string option;
   return_string : string option;
   return_ident : string option;
+  return_expr : string option;
 }
 
 let starts_with (s : string) (prefix : string) : bool =
@@ -383,21 +384,50 @@ let parse_module_from_tokens (toks : token array) :
         else None
       in
 
-      let parse_body_and_return_expr () : (string option * string option) =
+      let parse_body_and_return_expr () :
+          (string option * string option * string option) =
         (* Supports:
              - `{ ... }` bodies (scan for `return "..."`)
              - `return "..." ;` expression bodies
              - `;` (no body)
         *)
+        let is_digit (c : char) = '0' <= c && c <= '9' in
+        let rec consume_number (acc : Buffer.t) : unit =
+          match cur () with
+          | Sym (c, _) when is_digit c || c = '.' || c = '-' ->
+              Buffer.add_char acc c;
+              bump ();
+              consume_number acc
+          | _ -> ()
+        in
+        let capture_one () : (string option * string option * string option) =
+          match cur () with
+          | String (s, _) ->
+              bump ();
+              (Some s, None, Some ("\"" ^ s ^ "\""))
+          | Ident (s, _) ->
+              bump ();
+              (None, Some s, Some s)
+          | Kw (("true" | "false" | "null") as s, _) ->
+              bump ();
+              (None, None, Some s)
+          | Sym (c, _) when is_digit c || c = '-' ->
+              let b = Buffer.create 8 in
+              consume_number b;
+              let s = Buffer.contents b in
+              if s = "" then (None, None, None) else (None, None, Some s)
+          | _ -> (None, None, None)
+        in
         match cur () with
         | Sym (';', _) ->
             bump ();
-            (None, None)
+            (None, None, None)
         | Sym ('{', _) ->
             bump ();
             depth := !depth + 1;
             let found_str = ref None in
             let found_ident = ref None in
+            let found_expr = ref None in
             while !depth > 1 do
               match cur () with
               | Eof p -> raise (Parse_error (p, "unexpected eof in function body"))
@@ -409,33 +439,22 @@ let parse_module_from_tokens (toks : token array) :
                   bump ()
               | Kw ("return", _) -> (
                   bump ();
-                  match cur () with
-                  | String (s, _) when !found_str = None ->
-                      found_str := Some s;
-                      bump ()
-                  | Ident (s, _) when !found_ident = None ->
-                      found_ident := Some s;
-                      bump ()
-                  | _ -> ())
+                  let str_opt, ident_opt, expr_opt = capture_one () in
+                  (match (str_opt, !found_str) with
+                  | Some s, None -> found_str := Some s
+                  | _ -> ());
+                  (match (ident_opt, !found_ident) with
+                  | Some s, None -> found_ident := Some s
+                  | _ -> ());
+                  (match (expr_opt, !found_expr) with
+                  | Some s, None -> found_expr := Some s
+                  | _ -> ()))
               | _ -> bump ()
             done;
-            (!found_str, !found_ident)
+            (!found_str, !found_ident, !found_expr)
         | Kw ("return", _) -> (
             bump ();
-            let found_str =
-              match cur () with
-              | String (s, _) ->
-                  bump ();
-                  Some s
-              | _ -> None
-            in
-            let found_ident =
-              match cur () with
-              | Ident (s, _) ->
-                  bump ();
-                  Some s
-              | _ -> None
-            in
+            let found_str, found_ident, found_expr = capture_one () in
             (* Consume until ';' or block start. *)
             while
               match cur () with
@@ -450,7 +469,7 @@ let parse_module_from_tokens (toks : token array) :
             do
               ()
             done;
-            (found_str, found_ident))
+            (found_str, found_ident, found_expr))
         | _ ->
             (* Unknown body shape; consume until ';' or '{' to avoid infinite loops. *)
             while
@@ -466,7 +485,7 @@ let parse_module_from_tokens (toks : token array) :
             do
               ()
             done;
-            (None, None)
+            (None, None, None)
       in
 
       while !depth > 0 do
@@ -496,7 +515,9 @@ let parse_module_from_tokens (toks : token array) :
                     else []
                   in
                   let return_type_hint = parse_return_type_hint () in
-                  let return_string, return_ident = parse_body_and_return_expr () in
+                  let return_string, return_ident, return_expr =
+                    parse_body_and_return_expr ()
+                  in
                   methods :=
                     !methods
                     @ [
@@ -508,6 +529,7 @@ let parse_module_from_tokens (toks : token array) :
                           return_type_hint;
                           return_string;
                           return_ident;
+                          return_expr;
                         };
                       ];
                   reset_mods ())
@@ -572,6 +594,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
         let ret_payload = match m.return_type_hint with None -> "" | Some s -> s in
         let retstr_payload = match m.return_string with None -> "" | Some s -> s in
         let retid_payload = match m.return_ident with None -> "" | Some s -> s in
+        let retexpr_payload = match m.return_expr with None -> "" | Some s -> s in
         (* Bootstrap note: payload is a '|' separated list and is not itself escaped for '|'. *)
         let payload =
           String.concat "|"
@@ -584,6 +607,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
               retstr_payload;
               retid_payload;
               argtypes_payload;
+              retexpr_payload;
             ]
         in
         let enc = escape_payload payload in

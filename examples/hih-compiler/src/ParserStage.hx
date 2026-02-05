@@ -117,14 +117,14 @@ class ParserStage {
 		//   name|vis|static|args|ret|retstr
 		//
 		// v=1 (backward-compatible extensions; optional fields):
-		//   name|vis|static|args|ret|retstr|retid|argtypes
+		//   name|vis|static|args|ret|retstr|retid|argtypes|retexpr
 		//
 		// Where:
 		// - args: comma-separated argument names
 		// - retid: first detected `return <ident>` (if any)
 		// - argtypes: comma-separated `name:type` pairs (no '|' characters)
 		final parts = payload.split("|");
-		while (parts.length < 8) parts.push("");
+		while (parts.length < 9) parts.push("");
 
 		final name = parts[0];
 		final vis = parts[1] == "private" ? HxVisibility.Private : HxVisibility.Public;
@@ -156,14 +156,64 @@ class ParserStage {
 		final returnTypeHint = parts[4];
 		final retStr = parts[5];
 		final retId = parts[6];
+		final retExpr = parts[8];
 		final body = new Array<HxStmt>();
 		if (retStr.length > 0) {
 			body.push(SReturn(EString(retStr)));
 		} else if (retId.length > 0) {
 			body.push(SReturn(EIdent(retId)));
+		} else if (retExpr.length > 0) {
+			body.push(SReturn(parseReturnExprText(retExpr)));
 		}
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, body, retStr);
+	}
+
+	static function parseReturnExprText(raw:String):HxExpr {
+		final s = StringTools.trim(raw);
+		if (s.length == 0) return EUnsupported("<empty-return-expr>");
+
+		if (s == "null") return ENull;
+		if (s == "true") return EBool(true);
+		if (s == "false") return EBool(false);
+
+		if (s.length >= 2 && StringTools.startsWith(s, "\"") && StringTools.endsWith(s, "\"")) {
+			return EString(s.substr(1, s.length - 2));
+		}
+
+		// Integers: [-]?[0-9]+ (manual parse to avoid Null<Int> pitfalls in bootstrap output).
+		{
+			var i = 0;
+			var sign = 1;
+			if (s.length > 0 && s.charCodeAt(0) == "-".code) {
+				sign = -1;
+				i = 1;
+			}
+
+			var value = 0;
+			var saw = false;
+			while (i < s.length) {
+				final c = s.charCodeAt(i);
+				if (c < "0".code || c > "9".code) {
+					saw = false;
+					break;
+				}
+				saw = true;
+				value = value * 10 + (c - "0".code);
+				i++;
+			}
+
+			if (saw && i == s.length) return EInt(sign * value);
+		}
+
+		// Floats: best-effort via parseFloat if it contains '.'.
+		if (s.indexOf(".") != -1) {
+			final f = Std.parseFloat(s);
+			if (!Math.isNaN(f)) return EFloat(f);
+		}
+
+		// Fallback: treat as an identifier.
+		return EIdent(s);
 	}
 
 	static function throwFromErrLine(line:String):Void {

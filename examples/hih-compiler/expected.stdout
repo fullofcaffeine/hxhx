@@ -7,16 +7,20 @@ package=demo
 imports=1
 class=A
 hasStaticMain=yes
-functions=3
+functions=5
 fn=main static=yes vis=public args=0 ret=<none> retStr=<none>
 fn=greet static=yes vis=public args=0 ret=<none> retStr=hello
 fn=echo static=yes vis=public args=1 ret=<none> retStr=<none>
+fn=fortyTwo static=yes vis=public args=0 ret=<none> retStr=<none>
+fn=flag static=yes vis=public args=0 ret=<none> retStr=<none>
 missing_import=ok
 typer=ok
-typed_functions=3
+typed_functions=5
 typed_fn=main args=0 locals=0 ret=Void retExpr=Void
 typed_fn=greet args=0 locals=0 ret=String retExpr=String
 typed_fn=echo args=1 locals=0 ret=String retExpr=String
+typed_fn=fortyTwo args=0 locals=0 ret=Int retExpr=Int
+typed_fn=flag args=0 locals=0 ret=Bool retExpr=Bool
 macros=stub
 emit=stub
 OK hih-compiler
