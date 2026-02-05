@@ -34,6 +34,16 @@ Stick to the portable surface when:
 
 These are special-cased by the backend, so constructors and pattern matches are emitted as real OCaml ADTs.
 
+### Refs (explicit mutability)
+
+- `ocaml.Ref<T>` → OCaml `'a ref` (`ref` / `!` / `(:=)`)
+
+This is an opt-in “native surface” for explicit ref usage:
+
+- `ocaml.Ref.make(v)` → `ref v`
+- `ocaml.Ref.get(r)` → `!r`
+- `ocaml.Ref.set(r, v)` → `r := v`
+
 ### Stdlib modules (extern + opaque values)
 
 These surfaces are small-but-useful, typed wrappers over `Stdlib.*`:

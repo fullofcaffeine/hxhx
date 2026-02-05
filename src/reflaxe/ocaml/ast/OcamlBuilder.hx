@@ -1152,6 +1152,22 @@ class OcamlBuilder {
 							}
 						}
 
+						// OCaml-native surface: `ocaml.Ref<T>` calls lower to `ref` / `!` / `:=`.
+						//
+						// This is an opt-in API surface for emitting idiomatic OCaml refs, separate from
+						// the backend's internal ref-based lowering for portable Haxe mutability semantics.
+						if (cls.pack != null && cls.pack.length == 1 && cls.pack[0] == "ocaml" && cls.name == "Ref") {
+							switch (cf.name) {
+								case "make" if (args.length == 1):
+									return OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [buildExpr(args[0])]);
+								case "get" if (args.length == 1):
+									return OcamlExpr.EUnop(OcamlUnop.Deref, buildExpr(args[0]));
+								case "set" if (args.length == 2):
+									return OcamlExpr.EAssign(OcamlAssignOp.RefSet, buildExpr(args[0]), buildExpr(args[1]));
+								case _:
+							}
+						}
+
 						if (cls.pack != null && cls.pack.length == 0 && cls.name == "Sys") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 							switch (cf.name) {

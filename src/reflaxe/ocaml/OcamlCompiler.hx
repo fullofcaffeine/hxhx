@@ -1473,6 +1473,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 					OcamlTypeExpr.TApp("HxMap.obj_map", [k, v]);
 				} else if (c.pack != null && c.pack.length == 2 && c.pack[0] == "haxe" && c.pack[1] == "io" && c.name == "Bytes") {
 					OcamlTypeExpr.TIdent("HxBytes.t");
+				} else if (c.pack != null && c.pack.length == 1 && c.pack[0] == "ocaml" && c.name == "Ref") {
+					final elem = params.length > 0 ? ocamlTypeExprFromHaxeType(params[0]) : OcamlTypeExpr.TIdent("Obj.t");
+					OcamlTypeExpr.TApp("ref", [elem]);
 				} else if (c.isExtern) {
 					OcamlTypeExpr.TIdent("Obj.t");
 				} else {

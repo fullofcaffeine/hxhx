@@ -32,6 +32,7 @@ class M4OcamlNativeIntegrationTest {
 		if (sys.FileSystem.exists(outDir + "/ocaml_List.ml")) throw "unexpected ocaml_List.ml emission";
 		if (sys.FileSystem.exists(outDir + "/ocaml_Option.ml")) throw "unexpected ocaml_Option.ml emission";
 		if (sys.FileSystem.exists(outDir + "/ocaml_Result.ml")) throw "unexpected ocaml_Result.ml emission";
+		if (sys.FileSystem.exists(outDir + "/ocaml_Ref.ml")) throw "unexpected ocaml_Ref.ml emission";
 
 		final mainPath = outDir + "/OcamlNativeMain.ml";
 		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;
@@ -54,6 +55,11 @@ class M4OcamlNativeIntegrationTest {
 		assertContains(ml, "| Ok", "result ok pattern");
 		assertContains(ml, "| Error", "result error pattern");
 		assertNotContains(ml, "Ocaml_Result.", "no module-qualified result constructors");
+
+		// Refs: `Ref.make/get/set` -> `ref` / `!` / `:=`
+		assertContains(ml, "let rr = ref 1", "ref creation");
+		assertContains(ml, "!rr", "ref deref");
+		assertContains(ml, "rr := ", "ref assignment");
+		assertNotContains(ml, "Ocaml_Ref.", "no module-qualified ref calls");
 	}
 }
-

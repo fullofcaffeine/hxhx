@@ -76,6 +76,7 @@ This is “what we validate continuously” rather than a complete list of the H
 | API | Status | Notes |
 |---|---:|---|
 | `ocaml.List<T>` / `Option<T>` / `Result<T,E>` | ✅ | Emitted as real OCaml ADTs |
+| `ocaml.Ref<T>` | ✅ | Emitted as real OCaml refs (`ref` / `!` / `:=`) |
 | `ocaml.Array<T>` | ✅ | Typed wrapper over `Stdlib.Array` |
 | `ocaml.Bytes` | ✅ | Typed wrapper over `Stdlib.Bytes` |
 | `ocaml.Char` | ✅ | Typed wrapper over `Stdlib.Char` |
@@ -100,4 +101,3 @@ This is “what we validate continuously” rather than a complete list of the H
 - `hxhx` is currently a bring-up harness and stage0 shim; see:
   - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`
   - `docs/02-user-guide/HXHX_DISTRIBUTION.md:1`
-

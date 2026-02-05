@@ -18,6 +18,9 @@ class OcamlNativeMain {
 			case ocaml.Result.Ok(v):
 			case ocaml.Result.Error(e):
 		}
+
+		var rr = ocaml.Ref.make(1);
+		var v = ocaml.Ref.get(rr);
+		ocaml.Ref.set(rr, v + 1);
 	}
 }
-

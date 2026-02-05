@@ -265,8 +265,11 @@ Similarly, `Ok v` / `Error e` are emitted directly.
 ### What does *not* change (yet)
 
 - Imperative Haxe code (mutation, loops) is still lowered the same way (refs + `while` + `try` wrappers).
-- `ocaml.Ref<T>` exists as a placeholder, but we don’t expose a complete typed ref API yet.
-  For now, Haxe mutation is still represented via the portable “mutated locals → ref” strategy.
+- `ocaml.Ref<T>` is available as an **OCaml-native** opt-in surface:
+  - `ocaml.Ref.make(v)` → `ref v`
+  - `ocaml.Ref.get(r)` → `!r`
+  - `ocaml.Ref.set(r, v)` → `r := v`
+  This is separate from the portable “mutated locals → ref” lowering, which remains the default for ordinary Haxe code.
 
 ## Practical guidance: writing OCaml-friendly Haxe
 
