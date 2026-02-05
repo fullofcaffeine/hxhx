@@ -119,7 +119,8 @@ class EmitterStage {
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name): isUpperStart(name) ? name : ocamlValueIdent(name);
 			case ENull:
-				throw "stage3 emitter: null literal emission is not implemented yet";
+				// Stage 3 bring-up: null semantics are not modeled yet. Keep compilation moving.
+				"(Obj.magic 0)";
 			case EField(obj, field):
 				exprToOcaml(obj) + "." + ocamlValueIdent(field);
 			case ECall(callee, args):
@@ -129,8 +130,11 @@ class EmitterStage {
 				} else {
 					c + " " + args.map(a -> "(" + exprToOcaml(a) + ")").join(" ");
 				}
-			case EUnsupported(raw):
-				throw "stage3 emitter: unsupported expression: " + raw;
+			case EUnsupported(_):
+				// Stage 3 bring-up: avoid aborting emission when partial parsing produces
+				// unsupported nodes inside a larger expression tree. The goal here is to
+				// progress to the next missing semantic, not to be correct yet.
+				"(Obj.magic 0)";
 		}
 	}
 
@@ -141,13 +145,28 @@ class EmitterStage {
 		// - it typechecks against any return annotation, which helps us progress through
 		//   upstream-shaped code without having to implement full typing/emission yet.
 		// - it is *not* semantically correct; it is only for bring-up.
-		return switch (expr) {
-			case EUnsupported(_), ENull:
-				"(Obj.magic 0)";
-			case _:
-				exprToOcaml(expr);
+		function hasBringupPoison(e:HxExpr):Bool {
+			return switch (e) {
+				case EUnsupported(_), ENull:
+					true;
+				case EField(obj, _):
+					hasBringupPoison(obj);
+				case ECall(callee, args):
+					if (hasBringupPoison(callee)) return true;
+					for (a in args) if (hasBringupPoison(a)) return true;
+					false;
+				case _:
+					false;
+			}
 		}
-	}
+
+			// If the expression tree contains unsupported/null nodes anywhere, don't attempt partial OCaml
+			// emission: it tends to produce unbound identifiers (we are not modeling locals/blocks yet).
+			// Collapse to the bootstrap escape hatch instead.
+			if (hasBringupPoison(expr)) return "(Obj.magic 0)";
+
+			return exprToOcaml(expr);
+		}
 
 	/**
 		Emit a minimal OCaml program for the typed module and build it as a native executable.
