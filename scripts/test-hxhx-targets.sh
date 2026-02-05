@@ -16,7 +16,7 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 echo "== Building hxhx macro host (RPC skeleton)"
-HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
 if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
   echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
   exit 1
@@ -256,6 +256,15 @@ echo "$out" | grep -q "^macro_define2\\[HXHX_ON_GENERATE\\]=1$"
 test -f "$stage3_out2/HxHxGen.ml"
 grep -q 'builtin:String' "$stage3_out2/HxHxGen.ml"
 test -f "$stage3_out2/HxHxHook.ml"
+
+echo "== Stage3 bring-up: runs a non-builtin macro module compiled into the macro host"
+stage3_out3="$tmpdir/out_stage3_external"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'hxhxmacros.ExternalMacros.external()' --hxhx-out "$stage3_out3")"
+echo "$out" | grep -q "^macro_run\\[0\\]=external=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_EXTERNAL\\]=1$"
+echo "$out" | grep -q "^stage3=ok$"
+test -f "$stage3_out3/HxHxExternal.ml"
+grep -q 'external_flag' "$stage3_out3/HxHxExternal.ml"
 
 echo "== Contradiction fails fast"
 set +e

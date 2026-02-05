@@ -223,10 +223,16 @@ Bring-up define enumeration primitive (corresponds to `haxe.macro.Context.getDef
 
 ### `macro.run` (bring-up rung)
 
-Invokes a **builtin** macro entrypoint by opaque expression text.
+Invokes a macro entrypoint by opaque expression text.
 
-This is not user-macro execution yet. It exists to validate the end-to-end request path we will later
+This is not full user-macro execution yet. It exists to validate the end-to-end request path we will later
 use for `--macro` and build macros.
+
+In the current bring-up rung:
+
+- `hxhxmacrohost.BuiltinMacros.*` is dispatched directly (builtins).
+- A small allowlist may include non-builtin macro modules compiled into the macro host binary for tests
+  (e.g. `hxhxmacros.ExternalMacros.external()` when built with an extra `-cp`).
 
 - request: `req <id> macro.run e=<len>:<expr>`
 - response: `res <id> ok v=<len>:<result>`

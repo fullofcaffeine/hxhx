@@ -177,6 +177,9 @@ class Main {
 				BuiltinMacros.dumpDefines();
 			case "hxhxmacrohost.BuiltinMacros.registerHooks()", "BuiltinMacros.registerHooks()":
 				BuiltinMacros.registerHooks();
+			// Non-builtin macro module rung (compiled in via an extra `-cp` for tests).
+			case "hxhxmacros.ExternalMacros.external()":
+				hxhxmacros.ExternalMacros.external();
 			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":
 				BuiltinMacros.fail();
 			case _:

@@ -25,7 +25,16 @@ fi
   cd "$TOOL_DIR"
   rm -rf out
   mkdir -p out
-  "$HAXE_BIN" build.hxml -D ocaml_build=native
+  extra=()
+  if [ -n "${HXHX_MACRO_HOST_EXTRA_CP:-}" ]; then
+    IFS=':' read -r -a cps <<<"${HXHX_MACRO_HOST_EXTRA_CP}"
+    for cp in "${cps[@]}"; do
+      if [ -n "$cp" ]; then
+        extra+=("-cp" "$cp")
+      fi
+    done
+  fi
+  "$HAXE_BIN" build.hxml -D ocaml_build=native "${extra[@]}"
 )
 
 BIN="$TOOL_DIR/out/_build/default/out.exe"
@@ -35,4 +44,3 @@ if [ ! -f "$BIN" ]; then
 fi
 
 echo "$BIN"
-
