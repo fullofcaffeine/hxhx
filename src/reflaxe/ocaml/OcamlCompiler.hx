@@ -982,6 +982,24 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 			lets.push({ name: name, expr: compiled });
 		}
+
+		// Static vars (M6+)
+		//
+		// Haxe class-level `static var x = <expr>` becomes a module-level `let x = <expr>`.
+		//
+		// Note:
+		// - This currently models *declaration + initialization* only.
+		// - Reassignment semantics (`MyClass.x = v`) require an explicit representation decision
+		//   (`ref` vs `mutable record field` vs other), and are handled separately.
+		for (v in varFields) {
+			if (!v.isStatic) continue;
+			final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
+			// Static var initializers are stored on the field itself (not in the constructor pre-assignments
+			// that `ClassVarData.findDefaultExpr()` uses for instance vars).
+			final init = v.field.expr();
+			final compiled = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+			lets.push({ name: name, expr: compiled });
+		}
 		if (lets.length > 0) {
 			for (g in orderLetBindingsForOcaml(lets)) {
 				items.push(OcamlModuleItem.ILet(g.bindings, g.isRec));

@@ -1,5 +1,8 @@
 package hxhxmacrohost;
 
+import hxhxmacrohost.api.Compiler;
+import hxhxmacrohost.api.Context;
+
 /**
 	`hxhx-macro-host` (Stage 4) — a minimal out-of-process macro host.
 
@@ -27,8 +30,6 @@ package hxhxmacrohost;
 **/
 class Main {
 	static function main() {
-		final defines:Map<String, String> = [];
-
 		// Handshake banner: printed first so the client can verify protocol version.
 		Sys.println(Protocol.SERVER_BANNER);
 		flushStdout();
@@ -54,7 +55,7 @@ class Main {
 				if (trimmed == "quit") return;
 
 				if (StringTools.startsWith(trimmed, "req ")) {
-					handleReq(trimmed, defines);
+					handleReq(trimmed);
 					continue;
 				}
 
@@ -72,7 +73,7 @@ class Main {
 		}
 	}
 
-	static function handleReq(line:String, defines:Map<String, String>):Void {
+	static function handleReq(line:String):Void {
 		final parts = Protocol.splitN(line, 3); // ["req", id, method, tail]
 		final id = parts.length > 1 ? parseDecInt(parts[1]) : -1;
 		final method = parts.length > 2 ? parts[2] : "";
@@ -95,51 +96,52 @@ class Main {
 					replyErr(id, "missing name");
 					return;
 				}
-				defines.set(name, value);
+				Compiler.define(name, value);
 				replyOk(id, Protocol.encodeLen("v", "ok"));
 			case "context.defined":
 				final parsed = parseKV(tail);
 				final name = parsed.exists("n") ? parsed.get("n") : "";
-				replyOk(id, Protocol.encodeLen("v", defines.exists(name) ? "1" : "0"));
+				replyOk(id, Protocol.encodeLen("v", Context.defined(name) ? "1" : "0"));
 			case "context.definedValue":
 				final parsed = parseKV(tail);
 				final name = parsed.exists("n") ? parsed.get("n") : "";
-				replyOk(id, Protocol.encodeLen("v", defines.exists(name) ? defines.get(name) : ""));
+				replyOk(id, Protocol.encodeLen("v", Context.definedValue(name)));
 			case "macro.run":
 				// Stage 4 bring-up rung: invoke a builtin macro “entrypoint”.
 				//
-				// This does NOT execute user-provided macro modules yet. It exists to prove the
-				// request path used by later `--macro` support:
-				// - hxhx (compiler core) decides to run a macro
-				// - macro host receives the macro expression as an opaque string
-				// - macro host responds deterministically
+				// This does NOT execute arbitrary user-provided macro modules yet. Instead we:
+				// - parse a very small allowlist of builtin macro expressions
+				// - dispatch to a real Haxe function compiled into this macro host binary
+				// - return a deterministic summary string
 				final parsed = parseKV(tail);
 				final expr = parsed.exists("e") ? parsed.get("e") : "";
 				if (expr.length == 0) {
 					replyErr(id, "missing expr");
 					return;
 				}
-				replyOk(id, Protocol.encodeLen("v", "ran:" + expr));
+				replyOk(id, Protocol.encodeLen("v", runMacroExpr(expr)));
 			case "context.getType":
 				// Stage 4 bring-up rung: a minimal `Context.getType`-shaped call.
-				//
-				// Upstream returns a typed representation. For early bootstrapping we return a
-				// deterministic string descriptor for a small allowlist of types.
+				// Upstream returns a typed representation; for bring-up we return a deterministic descriptor.
 				final parsed = parseKV(tail);
 				final name = parsed.exists("n") ? parsed.get("n") : "";
 				if (name.length == 0) {
 					replyErr(id, "missing name");
 					return;
 				}
-				final desc = switch (name) {
-					case "Int", "Float", "Bool", "String", "Void":
-						"builtin:" + name;
-					case _:
-						"unknown:" + name;
-				}
-				replyOk(id, Protocol.encodeLen("v", desc));
+				replyOk(id, Protocol.encodeLen("v", Context.getType(name)));
 			case _:
 				replyErr(id, "unknown method: " + method);
+		}
+	}
+
+	static function runMacroExpr(expr:String):String {
+		final e = expr == null ? "" : StringTools.trim(expr);
+		return switch (e) {
+			case "hxhxmacrohost.BuiltinMacros.smoke()", "BuiltinMacros.smoke()":
+				BuiltinMacros.smoke();
+			case _:
+				"ran:" + e;
 		}
 	}
 
@@ -179,7 +181,9 @@ class Main {
 	}
 
 	static function replyErr(id:Int, msg:String):Void {
-		Sys.println("res " + id + " err " + Protocol.encodeLen("m", msg));
+		// Include a reserved `p` field (“position”) so later stages can attach structured position data
+		// without changing the client parser (it simply looks up `m` today).
+		Sys.println("res " + id + " err " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("p", ""));
 		flushStdout();
 	}
 
