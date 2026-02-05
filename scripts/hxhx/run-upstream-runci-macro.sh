@@ -10,6 +10,16 @@ DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
 
+# The upstream `tests/party` stage is network-heavy (clones + `haxelib install`) and tends
+# to be the flakiest part of the suite across local environments.
+#
+# For Gate2 we default to skipping it unless explicitly enabled.
+#
+# Override:
+# - set `HXHX_GATE2_SKIP_PARTY=0` to enable party tests
+: "${HXHX_GATE2_SKIP_PARTY:=1}"
+export HXHX_GATE2_SKIP_PARTY
+
 UPSTREAM_DIR_ORIG="$UPSTREAM_DIR"
 UPSTREAM_WORKTREE_DIR=""
 WRAP_DIR=""

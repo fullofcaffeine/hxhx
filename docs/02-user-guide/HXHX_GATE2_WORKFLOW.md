@@ -83,7 +83,8 @@ Notes:
 - The upstream suite expects additional host tools depending on the stages it exercises.
 - See `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1` for OS caveats (e.g. sys-stage behavior on macOS).
 - Useful env flags for the runner (`scripts/hxhx/run-upstream-runci-macro.sh`):
+  - `HXHX_GATE2_SKIP_PARTY=0`: enable `tests/party` (network-heavy; skipped by default for stability).
   - `HXHX_GATE2_MISC_FILTER=<pattern>`: run only a subset of `tests/misc` fixtures.
-  - `HXHX_GATE2_SKIP_PARTY=1`: skip `tests/party` (network-heavy) entirely.
+  - `HXHX_GATE2_SKIP_PARTY=1`: skip `tests/party` entirely (default).
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`:
     if those libs are installed globally, seed a local `.haxelib` via `haxelib dev` to avoid installs.
