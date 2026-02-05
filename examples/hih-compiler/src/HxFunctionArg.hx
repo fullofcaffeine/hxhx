@@ -24,4 +24,13 @@ class HxFunctionArg {
 		this.typeHint = typeHint;
 		this.defaultValue = defaultValue;
 	}
+
+	/**
+		Non-inline getters for cross-module use.
+
+		See `HxModuleDecl.getPackagePath` for the `-opaque` rationale.
+	**/
+	public static function getName(a:HxFunctionArg):String return a.name;
+	public static function getTypeHint(a:HxFunctionArg):String return a.typeHint;
+	public static function getDefaultValue(a:HxFunctionArg):HxDefaultValue return a.defaultValue;
 }

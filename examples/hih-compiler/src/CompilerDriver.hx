@@ -139,6 +139,11 @@ class CompilerDriver {
 
 		final typed = TyperStage.typeModule(ast);
 		Sys.println("typer=ok");
+		final typedFns = typed.getEnv().getMainClass().getFunctions();
+		Sys.println("typed_functions=" + typedFns.length);
+		for (tf in typedFns) {
+			Sys.println("typed_fn=" + tf.getName() + " args=" + tf.getParams().length + " ret=" + tf.getReturnType().toString());
+		}
 
 		final expanded = MacroStage.expand(typed);
 		Sys.println("macros=stub");

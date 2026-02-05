@@ -11,6 +11,8 @@ functions=1
 fn=main static=yes vis=public args=0 ret=<none> retStr=<none>
 missing_import=ok
 typer=ok
+typed_functions=1
+typed_fn=main args=0 ret=Unknown
 macros=stub
 emit=stub
 OK hih-compiler
