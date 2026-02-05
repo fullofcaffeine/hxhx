@@ -142,10 +142,10 @@ class BuiltinMacros {
 		  - one `onGenerate` hook that emits `HxHxHook.ml` and sets `HXHX_ON_GENERATE=1`
 	**/
 	public static function registerHooks():String {
-		Context.onAfterTyping(() -> {
+		Context.onAfterTyping(_ -> {
 			Compiler.define("HXHX_AFTER_TYPING", "1");
 		});
-		Context.onGenerate(() -> {
+		Context.onGenerate(_ -> {
 			Compiler.emitOcamlModule("HxHxHook", "let hook_generated : int = 1");
 			Compiler.define("HXHX_ON_GENERATE", "1");
 		});

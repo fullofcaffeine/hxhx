@@ -50,7 +50,7 @@ class Context {
 		- Macro host assigns a stable integer ID to the closure and sends a reverse RPC
 		  `compiler.registerHook k=afterTyping i=<id>`.
 	**/
-	public static function onAfterTyping(cb:Void->Void):Void {
+	public static function onAfterTyping(cb:Array<Dynamic>->Void):Void {
 		if (cb == null) return;
 		final id = MacroRuntime.registerAfterTyping(cb);
 		final tail = Protocol.encodeLen("k", "afterTyping") + " " + Protocol.encodeLen("i", Std.string(id));
@@ -62,8 +62,10 @@ class Context {
 
 		See `onAfterTyping` for bring-up rationale and mechanics.
 	**/
-	public static function onGenerate(cb:Void->Void):Void {
+	public static function onGenerate(cb:Array<Dynamic>->Void, persistent:Bool = true):Void {
 		if (cb == null) return;
+		// `persistent` is currently ignored in the bring-up rung (no compilation server).
+		final _ = persistent;
 		final id = MacroRuntime.registerOnGenerate(cb);
 		final tail = Protocol.encodeLen("k", "onGenerate") + " " + Protocol.encodeLen("i", Std.string(id));
 		HostToCompilerRpc.call("compiler.registerHook", tail);
@@ -81,8 +83,8 @@ class Context {
 		- Modifying the returned map has no effect on the compiler.
 
 		How
-		- Implemented as a reverse RPC (`context.getDefines`) that returns a JSON-encoded list of
-		  `[key, value]` pairs in the `v=` payload.
+		- Implemented as a reverse RPC (`context.getDefines`) that returns a length-prefixed payload
+		  containing `c=<count>` plus `kN`/`vN` pairs.
 	**/
 	public static function getDefines():Map<String, String> {
 		final out:Map<String, String> = [];

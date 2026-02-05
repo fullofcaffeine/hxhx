@@ -21,6 +21,19 @@ if [ ! -d "$TOOL_DIR" ]; then
   exit 1
 fi
 
+normalize_cp() {
+  local cp="$1"
+  if [ -z "$cp" ]; then
+    return 0
+  fi
+  # Treat relative classpaths as repo-root relative, because this script `cd`s
+  # into `tools/hxhx-macro-host` before invoking the Haxe compiler.
+  if [[ "$cp" != /* ]]; then
+    cp="$ROOT/$cp"
+  fi
+  echo "$cp"
+}
+
 (
   cd "$TOOL_DIR"
   rm -rf out
@@ -68,7 +81,11 @@ fi
 
         # Emit case. We reference the method directly so Haxe resolves it statically.
         # We intentionally only dispatch exact strings for auditability.
-        echo "      case \"${entry}\": ${cls}.${meth}();"
+        #
+        # We discard the entrypoint return value and return `"ok"` so we can support both:
+        # - `Void` macro entrypoints like `Macro.init()`
+        # - `String` macro entrypoints used for deterministic bring-up reports
+        echo "      case \"${entry}\": { ${cls}.${meth}(); \"ok\"; }"
       done
 
       echo "      case _: null;"
@@ -83,6 +100,7 @@ fi
   if [ -n "${HXHX_MACRO_HOST_EXTRA_CP:-}" ]; then
     IFS=':' read -r -a cps <<<"${HXHX_MACRO_HOST_EXTRA_CP}"
     for cp in "${cps[@]}"; do
+      cp="$(normalize_cp "$cp")"
       if [ -n "$cp" ]; then
         extra+=("-cp" "$cp")
       fi

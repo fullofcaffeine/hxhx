@@ -47,21 +47,21 @@ class MacroRuntime {
 		- The macro host stores the closure in-process and returns an integer ID.
 		- It then notifies the compiler of that ID via reverse RPC so the compiler can invoke it later.
 	**/
-	static final afterTypingHooks:Array<Void->Void> = [];
+	static final afterTypingHooks:Array<Array<Dynamic>->Void> = [];
 
 	/**
 		Hook callbacks registered via `Context.onGenerate`.
 
 		See `afterTypingHooks` for the bring-up rationale.
 	**/
-	static final onGenerateHooks:Array<Void->Void> = [];
+	static final onGenerateHooks:Array<Array<Dynamic>->Void> = [];
 
-	public static function registerAfterTyping(cb:Void->Void):Int {
+	public static function registerAfterTyping(cb:Array<Dynamic>->Void):Int {
 		afterTypingHooks.push(cb);
 		return afterTypingHooks.length - 1;
 	}
 
-	public static function registerOnGenerate(cb:Void->Void):Int {
+	public static function registerOnGenerate(cb:Array<Dynamic>->Void):Int {
 		onGenerateHooks.push(cb);
 		return onGenerateHooks.length - 1;
 	}
@@ -72,10 +72,10 @@ class MacroRuntime {
 		switch (kind) {
 			case "afterTyping":
 				if (id >= afterTypingHooks.length) throw "MacroRuntime.runHook: unknown afterTyping hook id: " + id;
-				afterTypingHooks[id]();
+				afterTypingHooks[id]([]);
 			case "onGenerate":
 				if (id >= onGenerateHooks.length) throw "MacroRuntime.runHook: unknown onGenerate hook id: " + id;
-				onGenerateHooks[id]();
+				onGenerateHooks[id]([]);
 			case _:
 				throw "MacroRuntime.runHook: unknown kind: " + kind;
 		}
