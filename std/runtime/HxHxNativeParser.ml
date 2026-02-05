@@ -673,17 +673,19 @@ let parse_module_header_only (toks : token array) : (string * string list * stri
   (!package_path, !imports, !class_name)
 
 let encode_ast_lines (package_path : string) (imports : string list)
-    (class_name : string) (has_static_main : bool) (methods : method_decl list) :
-    string =
+    (class_name : string) (header_only : bool) (has_static_main : bool)
+    (methods : method_decl list) : string =
   let pkg_enc = escape_payload package_path in
   let imports_payload = String.concat "|" imports in
   let imports_enc = escape_payload imports_payload in
   let cls_enc = escape_payload class_name in
+  let header_only_s = if header_only then "1" else "0" in
   let base =
     [
       Printf.sprintf "ast package %d:%s" (String.length pkg_enc) pkg_enc;
       Printf.sprintf "ast imports %d:%s" (String.length imports_enc) imports_enc;
       Printf.sprintf "ast class %d:%s" (String.length cls_enc) cls_enc;
+      Printf.sprintf "ast header_only 1:%s" header_only_s;
       "ast static_main " ^ if has_static_main then "1" else "0";
     ]
   in
@@ -769,7 +771,7 @@ let parse_module_decl (src : string) : string =
           String.concat "\n"
             [
               base;
-              encode_ast_lines package_path imports class_name has_static_main methods;
+              encode_ast_lines package_path imports class_name false has_static_main methods;
               "ok";
             ]
         with
@@ -781,7 +783,7 @@ let parse_module_decl (src : string) : string =
               String.concat "\n"
                 [
                   base;
-                  encode_ast_lines package_path imports class_name false [];
+                  encode_ast_lines package_path imports class_name true false [];
                   "ok";
                 ]
             else
@@ -792,7 +794,7 @@ let parse_module_decl (src : string) : string =
               String.concat "\n"
                 [
                   base;
-                  encode_ast_lines package_path imports class_name false [];
+                  encode_ast_lines package_path imports class_name true false [];
                   "ok";
                 ]
             else

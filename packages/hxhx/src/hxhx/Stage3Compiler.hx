@@ -189,9 +189,12 @@ class Stage3Compiler {
 		// - Still executes macro hooks (when present) so macro-side failures surface deterministically.
 		if (typeOnly) {
 			var typedCount = 0;
+			var headerOnlyCount = 0;
 			for (m in resolved) {
 				try {
-					TyperStage.typeModule(ResolvedModule.getParsed(m));
+					final pm = ResolvedModule.getParsed(m);
+					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) headerOnlyCount += 1;
+					TyperStage.typeModule(pm);
 					typedCount += 1;
 				} catch (e:Dynamic) {
 					closeMacroSession();
@@ -229,6 +232,7 @@ class Stage3Compiler {
 
 			closeMacroSession();
 			Sys.println("typed_modules=" + typedCount);
+			Sys.println("header_only_modules=" + headerOnlyCount);
 			Sys.println("stage3=type_only_ok");
 			return 0;
 		}

@@ -528,6 +528,6 @@ class HxParser {
 		}
 
 		expect(TEof, "end of input");
-		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions));
+		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), false);
 	}
 }

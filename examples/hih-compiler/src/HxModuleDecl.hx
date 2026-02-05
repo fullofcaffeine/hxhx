@@ -16,11 +16,13 @@ class HxModuleDecl {
 	public final packagePath:String;
 	public final imports:Array<String>;
 	public final mainClass:HxClassDecl;
+	public final headerOnly:Bool;
 
-	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl) {
+	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl, headerOnly:Bool) {
 		this.packagePath = packagePath;
 		this.imports = imports;
 		this.mainClass = mainClass;
+		this.headerOnly = headerOnly;
 	}
 
 	/**
@@ -47,5 +49,18 @@ class HxModuleDecl {
 	**/
 	public static function getMainClass(m:HxModuleDecl):HxClassDecl {
 		return m.mainClass;
+	}
+
+	/**
+		Whether this module was produced via native frontend header-only fallback.
+
+		Why
+		- During bootstrap, the native OCaml frontend may fall back to parsing only
+		  package/import/class headers (when class bodies contain unsupported syntax).
+		- Tracking this explicitly lets Gate1 diagnostics avoid “silent success” and
+		  quantify progress as we implement more of the real parser.
+	**/
+	public static function getHeaderOnly(m:HxModuleDecl):Bool {
+		return m.headerOnly;
 	}
 }

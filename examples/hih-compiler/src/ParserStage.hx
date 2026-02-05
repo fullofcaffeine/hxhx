@@ -50,18 +50,19 @@ class ParserStage {
 		- See `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md:1` for the exact
 		  wire format and versioning rules.
 	**/
-	static function decodeNativeProtocol(encoded:String):HxModuleDecl {
-		final lines = encoded.split("\n").filter(l -> l.length > 0);
-		if (lines.length == 0 || lines[0] != "hxhx_frontend_v=1") {
-			throw "Native frontend: missing/invalid protocol header";
-		}
+		static function decodeNativeProtocol(encoded:String):HxModuleDecl {
+			final lines = encoded.split("\n").filter(l -> l.length > 0);
+			if (lines.length == 0 || lines[0] != "hxhx_frontend_v=1") {
+				throw "Native frontend: missing/invalid protocol header";
+			}
 
-		var packagePath = "";
-		final imports = new Array<String>();
-		var className = "Unknown";
-		var hasStaticMain = false;
-		final functions = new Array<HxFunctionDecl>();
-		var sawOk = false;
+			var packagePath = "";
+			final imports = new Array<String>();
+			var className = "Unknown";
+			var headerOnly = false;
+			var hasStaticMain = false;
+			final functions = new Array<HxFunctionDecl>();
+			var sawOk = false;
 
 		for (i in 1...lines.length) {
 			final line = lines[i];
@@ -85,30 +86,32 @@ class ParserStage {
 				final firstSpace = rest.indexOf(" ");
 				if (firstSpace <= 0) continue;
 				final key = rest.substr(0, firstSpace);
-				final payload = decodeLenPayload(rest.substr(firstSpace + 1));
-				switch (key) {
-					case "package":
-						packagePath = payload;
-					case "imports":
-						if (payload.length > 0) {
-							for (p in payload.split("|")) if (p.length > 0) imports.push(p);
-						}
-					case "class":
-						className = payload;
-					case "method":
-						functions.push(decodeMethodPayload(payload));
-					case _:
-				}
-				continue;
+					final payload = decodeLenPayload(rest.substr(firstSpace + 1));
+					switch (key) {
+						case "package":
+							packagePath = payload;
+						case "imports":
+							if (payload.length > 0) {
+								for (p in payload.split("|")) if (p.length > 0) imports.push(p);
+							}
+						case "class":
+							className = payload;
+						case "header_only":
+							headerOnly = payload == "1";
+						case "method":
+							functions.push(decodeMethodPayload(payload));
+						case _:
+					}
+					continue;
 			}
 		}
 
 		if (!sawOk) {
-			throw "Native frontend: missing terminal 'ok'";
-		}
+				throw "Native frontend: missing terminal 'ok'";
+			}
 
-		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions));
-	}
+			return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), headerOnly);
+		}
 
 	static function decodeMethodPayload(payload:String):HxFunctionDecl {
 		// Bootstrap note: payload is a `|` separated list (unescaped for '|').

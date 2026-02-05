@@ -244,6 +244,7 @@ type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^typed_modules="
+echo "$out" | grep -q "^header_only_modules=0$"
 echo "$out" | grep -q "^stage3=type_only_ok$"
 test ! -f "$type_only_out/out.exe"
 
