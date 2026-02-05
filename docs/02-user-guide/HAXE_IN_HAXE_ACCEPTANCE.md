@@ -109,6 +109,16 @@ The “real” Gate 1 for replacement readiness is the **non-delegating** path. 
 
 - `npm run test:upstream:unit-macro-native` (bring-up; expected to fail until `hxhx` stops delegating)
 
+Bootstrap reality check:
+
+- Today, `test:upstream:unit-macro-native` is intentionally **not** a full Gate 1 run yet.
+- It routes `compile-macro.hxml` through the Stage 3 bring-up pipeline in a **type-only** mode
+  (`--hxhx-stage3 --hxhx-type-only`) so we can:
+  - validate strict parsing + module graph resolution on upstream-scale inputs, and
+  - execute the minimal macro slice (`--macro Macro.init()` hooks).
+- A successful `stage3=type_only_ok` does **not** mean Gate 1 is passed; it only proves we reached the
+  “frontend + resolver + macro hook plumbing” rung.
+
 Why this gate matters:
 
 - `compile-macro.hxml` uses `--interp` and includes macro initialization (`--macro Macro.init()`).
