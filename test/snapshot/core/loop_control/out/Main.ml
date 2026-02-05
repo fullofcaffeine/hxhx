@@ -10,8 +10,8 @@ let main = fun () -> let i = ref 0 in let sum = ref 0 in (
       ignore (i := __new_2);
       __old_1
     ));
-    ignore (if !i = 2 then ignore (raise (HxRuntime.Hx_continue)) else ());
-    ignore (if !i = 5 then ignore (raise (HxRuntime.Hx_break)) else ());
+    ignore (if !i = 2 then raise (HxRuntime.Hx_continue) else ());
+    ignore (if !i = 5 then raise (HxRuntime.Hx_break) else ());
     sum := HxInt.add (!sum) (!i)
   )) with
     | HxRuntime.Hx_continue -> () done with
@@ -33,7 +33,7 @@ let main = fun () -> let i = ref 0 in let sum = ref 0 in (
           ignore (innerCount := __new_8);
           __old_7
         ));
-        if !inner = 2 then ignore (raise (HxRuntime.Hx_break)) else ()
+        if !inner = 2 then raise (HxRuntime.Hx_break) else ()
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ()

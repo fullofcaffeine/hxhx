@@ -11,21 +11,35 @@
 **/
 class CompilerDriver {
 	public static function run():Void {
-		final source = [
-			"package demo;",
-			"import demo.Util;",
-			"class A {",
-			"  static function main() {}",
-			"}",
-		].join("\n");
+		final classPaths = ["examples/hih-compiler/fixtures/src"];
+		final mainModule = "demo.A";
+		final resolved = ResolverStage.parseProject(classPaths, mainModule);
 
-		final ast = ParserStage.parse(source);
+		// Bootstrap quirk (OCaml): record field labels are only known once the defining module
+		// has been referenced during typechecking. Because this compiler skeleton still erases
+		// many generic types, the OCaml compiler may not "see" `ResolvedModule` as a dependency
+		// at this point unless we reference it explicitly.
+		//
+		// We do that with a zero-cost reference via the `__ocaml__` escape hatch (no allocation).
+		untyped __ocaml__("(ResolvedModule.create)");
+
+		final root:ResolvedModule = resolved[0];
+		final ast = ResolvedModule.getParsed(root);
 		final decl = ast.getDecl();
 		Sys.println("parse=ok");
+		Sys.println("modules=" + resolved.length);
+		Sys.println("main=" + mainModule);
+		Sys.println("mainFile=" + ResolvedModule.getFilePath(root));
 		Sys.println("package=" + (decl.packagePath.length == 0 ? "<none>" : decl.packagePath));
 		Sys.println("imports=" + decl.imports.length);
 		Sys.println("class=" + decl.mainClass.name);
 		Sys.println("hasStaticMain=" + (decl.mainClass.hasStaticMain ? "yes" : "no"));
+		try {
+			ResolverStage.parseProject(classPaths, "demo.B");
+			Sys.println("missing_import=fail");
+		} catch (_:Dynamic) {
+			Sys.println("missing_import=ok");
+		}
 
 		// Stage2 bootstrap: keep the native frontend and the Haxe frontend aligned.
 		// We use upstream `tests/misc` fixtures as the behavioral oracle and keep a

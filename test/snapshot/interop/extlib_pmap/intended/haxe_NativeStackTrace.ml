@@ -19,14 +19,14 @@ let exceptionStack = fun () -> let __anon_2 = HxAnon.create () in (
 )
 
 let parseFileLine = fun line -> try let fileNeedle = "file \"" in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
-  ignore (if fileStart0 < 0 then ignore (raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))) else ());
+  ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let fileStart = HxInt.add fileStart0 (HxString.length fileNeedle) in let fileEnd = HxString.indexOf line "\"" fileStart in (
-    ignore (if fileEnd < 0 then ignore (raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))) else ());
+    ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let file = HxString.substr line fileStart (HxInt.sub fileEnd fileStart) in let lineNeedle = "line " in let lineStart0 = HxString.indexOf line lineNeedle fileEnd in (
-      ignore (if lineStart0 < 0 then ignore (raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))) else ());
+      ignore (if lineStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let i = HxInt.add lineStart0 (HxString.length lineNeedle) in let j = ref i in (
         ignore (try while !j < HxString.length line do try ignore (let c = HxString.charCodeAt line (!j) in (
-          ignore (if (let __nullable_3 = c in let __nullable_4 = 48 in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 < __nullable_4) || (let __nullable_5 = c in let __nullable_6 = 57 in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 > __nullable_6) then ignore (raise (HxRuntime.Hx_break)) else ());
+          ignore (if (let __nullable_3 = c in let __nullable_4 = 48 in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 < __nullable_4) || (let __nullable_5 = c in let __nullable_6 = 57 in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 > __nullable_6) then raise (HxRuntime.Hx_break) else ());
           let __old_7 = !j in let __new_8 = HxInt.add __old_7 1 in (
             ignore (j := __new_8);
             __old_7
@@ -34,7 +34,7 @@ let parseFileLine = fun line -> try let fileNeedle = "file \"" in let fileStart0
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        ignore (if !j = i then ignore (raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))) else ());
+        ignore (if !j = i then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
         let ln = ref 0 in let _g = ref i in let _g1 = !j in (
           ignore (while !_g < _g1 do ignore (let k = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
             ignore (_g := __new_10);

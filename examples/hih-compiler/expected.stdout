@@ -1,9 +1,13 @@
 stage=2
 parse=ok
+modules=2
+main=demo.A
+mainFile=examples/hih-compiler/fixtures/src/demo/A.hx
 package=demo
 imports=1
 class=A
 hasStaticMain=yes
+missing_import=ok
 typer=ok
 macros=stub
 emit=stub

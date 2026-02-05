@@ -677,13 +677,25 @@ class OcamlBuilder {
 		//
 		// Our nullable primitive representation is `Obj.t`, so we must unbox to a
 		// real OCaml `bool` before emitting `if/while`.
-		return nullablePrimitiveKind(cond.t) == "bool"
-			? safeUnboxNullableBool(buildExpr(cond))
-			: buildExpr(cond);
-	}
+			return nullablePrimitiveKind(cond.t) == "bool"
+				? safeUnboxNullableBool(buildExpr(cond))
+				: buildExpr(cond);
+		}
 
-	public function buildExpr(e:TypedExpr):OcamlExpr {
-		final built:OcamlExpr = switch (e.expr) {
+		inline function exprAsStatement(expr:OcamlExpr):OcamlExpr {
+			return switch (expr) {
+				// Never wrap `raise` in `ignore`: `raise` already typechecks in unit-context,
+				// and wrapping forces `unit`, which breaks our `Hx_return`-based early-return
+				// encoding when the return value is later used (e.g. std StringTools.trim).
+				case ERaise(_):
+					expr;
+				case _:
+					OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [expr]);
+			}
+		}
+
+		public function buildExpr(e:TypedExpr):OcamlExpr {
+			final built:OcamlExpr = switch (e.expr) {
 			case TTypeExpr(_):
 				switch (e.expr) {
 					case TTypeExpr(t):
@@ -820,24 +832,24 @@ class OcamlBuilder {
 				buildUnop(op, postFix, inner, e.t);
 				case TFunction(tfunc):
 					buildFunction(tfunc);
-					case TIf(cond, eif, eelse):
-						if (eelse == null) {
-							// Haxe `if (cond) stmt;` is statement-typed (Void). Ensure both branches are `unit`
-							// so the OCaml `if` is well-typed, even if `stmt` returns a value (e.g. Array.push).
-							OcamlExpr.EIf(
-								buildCondition(cond),
-								OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(eif)]),
-								OcamlExpr.EConst(OcamlConst.CUnit)
-							);
-						} else {
-							final expected = e.t;
-							if (isVoidType(expected)) {
-								return OcamlExpr.EIf(
+						case TIf(cond, eif, eelse):
+							if (eelse == null) {
+								// Haxe `if (cond) stmt;` is statement-typed (Void). Ensure both branches are `unit`
+								// so the OCaml `if` is well-typed, even if `stmt` returns a value (e.g. Array.push).
+								OcamlExpr.EIf(
 									buildCondition(cond),
-									OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(eif)]),
-									OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(eelse)])
+									exprAsStatement(buildExpr(eif)),
+									OcamlExpr.EConst(OcamlConst.CUnit)
 								);
-							}
+							} else {
+								final expected = e.t;
+								if (isVoidType(expected)) {
+									return OcamlExpr.EIf(
+										buildCondition(cond),
+										exprAsStatement(buildExpr(eif)),
+										exprAsStatement(buildExpr(eelse))
+									);
+								}
 
 							// Haxe can flow-type nullable primitives inside conditionals, but the typed AST
 							// may still keep branch expressions as `Null<T>` even when the overall `if`
@@ -4546,9 +4558,9 @@ class OcamlBuilder {
 	):OcamlExpr {
 		final wantUnit = isVoidType(switchType);
 
-		inline function wrapCaseExpr(expr:OcamlExpr):OcamlExpr {
-			return wantUnit ? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [expr]) : expr;
-		}
+			inline function wrapCaseExpr(expr:OcamlExpr):OcamlExpr {
+				return wantUnit ? exprAsStatement(expr) : expr;
+			}
 
 		final defaultExpr:OcamlExpr = edef != null
 			? buildExpr(edef)

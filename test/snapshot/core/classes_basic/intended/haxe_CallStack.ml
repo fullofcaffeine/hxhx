@@ -143,7 +143,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
     ignore (if not ((let __old_3 = !i in let __new_4 = HxInt.add __old_3 1 in (
       ignore (i := __new_4);
       __new_4
-    )) < HxArray.length this1) then ignore (raise (HxRuntime.Hx_break)) else ());
+    )) < HxArray.length this1) then raise (HxRuntime.Hx_break) else ());
     let _g = ref 0 in let _g1 = HxArray.length stack in (
       ignore (try while !_g < _g1 do try ignore (let j = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
         ignore (_g := __new_6);
@@ -157,14 +157,14 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
           ignore (i := __new_9);
           __new_9
         ));
-        if !i >= HxArray.length this1 then ignore (raise (HxRuntime.Hx_break)) else ()
+        if !i >= HxArray.length this1 then raise (HxRuntime.Hx_break) else ()
       )) else ignore (let __assign_10 = -1 in (
         startIndex := __assign_10;
         __assign_10
       ))) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      if !startIndex >= 0 then ignore (raise (HxRuntime.Hx_break)) else ()
+      if !startIndex >= 0 then raise (HxRuntime.Hx_break) else ()
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
