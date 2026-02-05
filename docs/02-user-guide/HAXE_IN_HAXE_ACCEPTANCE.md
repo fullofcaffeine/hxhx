@@ -131,6 +131,10 @@ In this repo, Gate 2 is exercised via:
 
 - `npm run test:upstream:runci-macro` (wraps `scripts/hxhx/run-upstream-runci-macro.sh`)
 
+CI workflow notes (scheduled + manual upstream job) live in:
+
+- `docs/02-user-guide/HXHX_GATE2_WORKFLOW.md:1`
+
 Host toolchain requirements (minimum):
 
 - OCaml build tools: `dune`, `ocamlc`

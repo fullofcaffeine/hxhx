@@ -101,6 +101,10 @@ This does **not** prove `hxhx` can execute macros yet; it proves that:
 
 Use the acceptance gates as the “plugin system” rollout sequence:
 
+Design details for Stage 4 (native macro execution + ABI boundary) live in:
+
+- `docs/02-user-guide/HXHX_STAGE4_MACROS_AND_PLUGIN_ABI.md:1`
+
 1) **Gate 0 (repo-local acceptance examples)**:
    - `examples/hih-compiler` grows macro stubs into real macro execution for a small subset.
 
