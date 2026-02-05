@@ -1,6 +1,7 @@
 package hxhx;
 
 import haxe.io.Path;
+import haxe.io.Eof;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
@@ -43,6 +44,38 @@ class Stage3Compiler {
 		return 2;
 	}
 
+	static function formatException(e:Dynamic):String {
+		if (Std.isOfType(e, String)) return cast e;
+		return Std.string(e);
+	}
+
+	static function haxelibBin():String {
+		final v = Sys.getEnv("HAXELIB_BIN");
+		return (v == null || v.length == 0) ? "haxelib" : v;
+	}
+
+	static function resolveHaxelibPaths(lib:String):Array<String> {
+		final paths = new Array<String>();
+		final p = new sys.io.Process(haxelibBin(), ["path", lib]);
+
+		try {
+			while (true) {
+				final raw = p.stdout.readLine();
+				final line = StringTools.trim(raw);
+				if (line.length == 0) continue;
+				// `haxelib path` prints `-D name=ver` lines; only paths matter here.
+				if (StringTools.startsWith(line, "-")) continue;
+				paths.push(line);
+			}
+		} catch (_:Eof) {}
+
+		final code = p.exitCode();
+		if (code != 0) {
+			return throw "haxelib path " + lib + " failed with exit code " + code;
+		}
+		return paths;
+	}
+
 	static function absFromCwd(cwd:String, path:String):String {
 		if (path == null || path.length == 0) return cwd;
 		return Path.isAbsolute(path) ? Path.normalize(path) : Path.normalize(Path.join([cwd, path]));
@@ -66,7 +99,11 @@ class Stage3Compiler {
 			}
 		}
 
-		final parsed = Stage1Args.parse(rest);
+		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
+		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
+		// non-essential flags. We therefore use Stage1Args in a small permissive mode that ignores
+		// a curated set of known upstream flags (e.g. `--interp`, `--debug`, `--dce`, `--resource`).
+		final parsed = Stage1Args.parse(rest, true);
 		if (parsed == null) return 2;
 
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
@@ -116,17 +153,21 @@ class Stage3Compiler {
 
 		final classPaths = {
 			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
+			final libs = new Array<String>();
+			for (lib in parsed.libs) {
+				for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
+			}
 			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
-			final out = base.concat(extra);
+			final out = base.concat(libs).concat(extra);
 			if (hxhx.macro.MacroState.hasGeneratedHxModules()) {
 				out.push(hxhx.macro.MacroState.getGeneratedHxDir());
 			}
 				out;
 			}
 
-			final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {
+		final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {
 				closeMacroSession();
-				return error("resolve failed: " + Std.string(e));
+				return error("resolve failed: " + formatException(e));
 			}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
 

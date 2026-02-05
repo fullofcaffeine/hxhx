@@ -1,5 +1,7 @@
 package hxhx;
 
+import haxe.io.Path;
+
 /**
 	Very small `.hxml` parser for `hxhx` Stage1.
 
@@ -28,23 +30,74 @@ package hxhx;
 **/
 class Hxml {
 	public static function parseFile(path:String):Null<Array<String>> {
-		final content = try sys.io.File.getContent(path) catch (_:Dynamic) null;
-		if (content == null) {
-			Sys.println("hxhx(stage1): failed to read hxml: " + path);
+		final seen = new Map<String, Bool>();
+		return parseFileRec(Path.normalize(path), seen, 0);
+	}
+
+	static function parseFileRec(path:String, seen:Map<String, Bool>, depth:Int):Null<Array<String>> {
+		if (depth > 25) {
+			Sys.println("hxhx(stage1): hxml include depth exceeded: " + path);
 			return null;
 		}
-		final out = new Array<String>();
+
+		final norm = Path.normalize(path);
+		if (seen.exists(norm)) {
+			Sys.println("hxhx(stage1): hxml include cycle: " + norm);
+			return null;
+		}
+		seen.set(norm, true);
+
+		final content = try sys.io.File.getContent(norm) catch (_:Dynamic) null;
+		if (content == null) {
+			Sys.println("hxhx(stage1): failed to read hxml: " + norm);
+			return null;
+		}
+
+		final fileDir0 = Path.directory(norm);
+		final fileDir = (fileDir0 == null || fileDir0.length == 0) ? "." : fileDir0;
+
+		final tokens = new Array<String>();
 		final lines = content.split("\n");
 		for (ln in lines) {
-			final tokens = tokenizeLine(ln);
-			if (tokens == null) return null;
-			for (t in tokens) {
-				if (t == "--next" || t == "--each") {
-					Sys.println("hxhx(stage1): unsupported hxml directive: " + t);
-					return null;
-				}
-				out.push(t);
+			final lineTokens = tokenizeLine(ln);
+			if (lineTokens == null) return null;
+			for (t in lineTokens) tokens.push(t);
+		}
+
+		// Rewrite relative `-cp` / `-p` entries relative to this file.
+		var i = 0;
+		while (i < tokens.length) {
+			switch (tokens[i]) {
+				case "-cp", "-p":
+					if (i + 1 < tokens.length) {
+						final cp = tokens[i + 1];
+						if (cp != null && cp.length > 0 && !Path.isAbsolute(cp)) {
+							tokens[i + 1] = Path.normalize(Path.join([fileDir, cp]));
+						}
+					}
+					i += 2;
+				case _:
+					i += 1;
 			}
+		}
+
+		// Expand positional `.hxml` includes (upstream uses this heavily, e.g. `compile-macro.hxml` includes `compile-each.hxml`).
+		final out = new Array<String>();
+		for (t in tokens) {
+			if (t == "--next" || t == "--each") {
+				Sys.println("hxhx(stage1): unsupported hxml directive: " + t);
+				return null;
+			}
+
+			if (!StringTools.startsWith(t, "-") && StringTools.endsWith(t, ".hxml")) {
+				final included = Path.isAbsolute(t) ? Path.normalize(t) : Path.normalize(Path.join([fileDir, t]));
+				final expanded = parseFileRec(included, seen, depth + 1);
+				if (expanded == null) return null;
+				for (x in expanded) out.push(x);
+				continue;
+			}
+
+			out.push(t);
 		}
 		return out;
 	}
@@ -88,7 +141,10 @@ class Hxml {
 				continue;
 			}
 
-			if (quote == 0 && (c == "\"".code || c == "'".code)) {
+			// Treat quotes as quoting delimiters only when they begin a token.
+			// Upstream `.hxml` files can contain literal quote characters inside tokens
+			// (e.g. in `--resource` names), and we must not interpret those as opening quotes.
+			if (quote == 0 && cur.length == 0 && (c == "\"".code || c == "'".code)) {
 				quote = c;
 				i++;
 				continue;
@@ -136,4 +192,3 @@ class Hxml {
 		return tokens;
 	}
 }
-

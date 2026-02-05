@@ -99,6 +99,16 @@ Passes when the Haxe-in-Haxe compiler can run the upstream unit tests in interpr
 
 - `haxe/tests/unit/compile-macro.hxml` (upstream) succeeds and the resulting unit runner reports success.
 
+#### Important note (current state)
+
+Today, `npm run test:upstream:unit-macro` runs the suite through the **stage0 shim** behavior of `hxhx`
+(delegating to the system `haxe` binary). That runner is still useful: it validates our upstream harness wiring,
+distribution presets, and CI toolchain expectations.
+
+The “real” Gate 1 for replacement readiness is the **non-delegating** path. We track that as a separate runner:
+
+- `npm run test:upstream:unit-macro-native` (bring-up; expected to fail until `hxhx` stops delegating)
+
 Why this gate matters:
 
 - `compile-macro.hxml` uses `--interp` and includes macro initialization (`--macro Macro.init()`).
@@ -130,6 +140,10 @@ This is the point where we’re no longer “just a compiler”: we’re a compi
 In this repo, Gate 2 is exercised via:
 
 - `npm run test:upstream:runci-macro` (wraps `scripts/hxhx/run-upstream-runci-macro.sh`)
+
+As with Gate 1, the current Gate 2 runner exercises the **stage0 shim** path by default (delegating to the system
+`haxe`). A “native/non-delegating Gate 2” runner will be introduced once `hxhx` can type and execute macros without
+delegation.
 
 CI workflow notes (scheduled + manual upstream job) live in:
 

@@ -45,7 +45,9 @@ class ResolverStage {
 				throw "import_unreadable " + filePath;
 			}
 
-			final parsed = ParserStage.parse(source);
+			final parsed = try ParserStage.parse(source) catch (e:Dynamic) {
+				throw "parse_failed " + filePath + ": " + Std.string(e);
+			}
 			out.push(new ResolvedModule(modulePath, filePath, parsed));
 
 			final decl = parsed.getDecl();

@@ -168,7 +168,7 @@ class Stage1Args {
 		this.cwd = cwd;
 	}
 
-	public static function parse(args:Array<String>):Null<Stage1Args> {
+	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
 		final expanded = expandHxmlArgs(args);
 		if (expanded == null) return null;
 
@@ -185,6 +185,24 @@ class Stage1Args {
 		while (i < expanded.length) {
 			final a = expanded[i];
 			switch (a) {
+				// Upstream unit suites often use `--interp` as an execution convenience. For Stage 3 bring-up,
+				// we treat it as a no-op because Stage 3 always emits and runs a native OCaml executable.
+				case "--interp" if (permissive):
+					i += 1;
+				case "--debug" if (permissive):
+					i += 1;
+				case "--dce" if (permissive):
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --dce");
+						return null;
+					}
+					i += 2;
+				case "--resource" if (permissive):
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --resource");
+						return null;
+					}
+					i += 2;
 				case "-cp", "-p", "--class-path":
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after " + a);
@@ -250,8 +268,18 @@ class Stage1Args {
 					return null;
 				case _:
 					if (StringTools.startsWith(a, "-")) {
+						if (permissive) {
+							Sys.println("hxhx(stage1): ignoring unsupported flag in permissive mode: " + a);
+							i += 1;
+							continue;
+						}
 						Sys.println("hxhx(stage1): unsupported flag: " + a);
 						return null;
+					}
+					if (permissive) {
+						Sys.println("hxhx(stage1): ignoring unsupported arg in permissive mode: " + a);
+						i += 1;
+						continue;
 					}
 					Sys.println("hxhx(stage1): unsupported argument: " + a);
 					return null;
@@ -295,7 +323,7 @@ class Stage1Args {
 				}
 				final expanded = Hxml.parseFile(a);
 				if (expanded == null) return null;
-				for (t in rewritePathsFromHxml(a, expanded)) out.push(t);
+				for (t in expanded) out.push(t);
 				continue;
 			}
 
@@ -303,29 +331,6 @@ class Stage1Args {
 		}
 
 		return sawHxml ? out : args;
-	}
-
-	static function rewritePathsFromHxml(hxmlPath:String, tokens:Array<String>):Array<String> {
-		final dir0 = haxe.io.Path.directory(hxmlPath);
-		final dir = (dir0 == null || dir0.length == 0) ? "." : dir0;
-
-		final out = tokens.copy();
-		var i = 0;
-		while (i < out.length) {
-			switch (out[i]) {
-				case "-cp", "-p":
-					if (i + 1 < out.length) {
-						final cp = out[i + 1];
-						if (cp != null && cp.length > 0 && !haxe.io.Path.isAbsolute(cp)) {
-							out[i + 1] = haxe.io.Path.normalize(haxe.io.Path.join([dir, cp]));
-						}
-					}
-					i += 2;
-				case _:
-					i += 1;
-			}
-		}
-		return out;
 	}
 }
 
