@@ -192,6 +192,41 @@ class EmitterStage {
 		final outAbs = haxe.io.Path.normalize(outDir);
 		if (!sys.FileSystem.exists(outAbs)) sys.FileSystem.createDirectory(outAbs);
 
+		function ocamldepSort(mlFiles:Array<String>):Array<String> {
+			if (mlFiles == null || mlFiles.length <= 1) return mlFiles;
+
+			final ocamldep = {
+				final v = Sys.getEnv("OCAMLDEP");
+				(v == null || v.length == 0) ? "ocamldep" : v;
+			}
+
+			final p = new sys.io.Process(ocamldep, ["-sort"].concat(mlFiles));
+			final chunks = new Array<String>();
+			try {
+				while (true) {
+					chunks.push(p.stdout.readLine());
+				}
+			} catch (_:haxe.io.Eof) {}
+
+			final code = p.exitCode();
+			p.close();
+			if (code != 0) throw "stage3 emitter: ocamldep -sort failed with exit code " + code;
+
+			final sorted = new Array<String>();
+			for (c in chunks) {
+				for (t in c.split(" ")) {
+					final s = StringTools.trim(t);
+					if (s.length == 0) continue;
+					if (!StringTools.endsWith(s, ".ml")) continue;
+					sorted.push(s);
+				}
+			}
+
+			// Best-effort: if ocamldep output looks empty or incomplete, fall back to caller order.
+			if (sorted.length == 0) return mlFiles;
+			return sorted;
+		}
+
 		// Stage 4 bring-up: emit macro-generated OCaml modules (if any).
 		//
 		// This is a minimal “generate code” effect: macros can request extra target compilation units
@@ -204,6 +239,30 @@ class EmitterStage {
 			final path = haxe.io.Path.join([outAbs, name + ".ml"]);
 			sys.io.File.saveContent(path, gm.source == null ? "" : gm.source);
 			generatedPaths.push(name + ".ml");
+		}
+
+		// Stage 3 bring-up: minimal OCaml-side shims for implicit Haxe std classes.
+		//
+		// Why
+		// - Stage3 resolves *import closure*, not "all referenced modules" like a real typer.
+		// - Upstream-ish code can refer to core std classes like `Std` without an explicit import.
+		// - Without a shim, emitted OCaml can fail immediately with `Unbound module Std`.
+		//
+		// What
+		// - These shims are intentionally tiny and non-semantic: they exist only to keep the
+		//   bring-up compiler compiling further so we can discover the next missing feature.
+		// - They are only emitted when the corresponding `<Name>.ml` is not already present.
+		{
+			final shimName = "Std";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+				sys.io.File.saveContent(
+					shimPath,
+					"(* hxhx(stage3) bootstrap shim: Std *)\n"
+					+ "let isOfType _ _ = false\n"
+				);
+				generatedPaths.push(shimName + ".ml");
+			}
 		}
 
 		final typedModules = p.getTypedModules();
@@ -283,12 +342,25 @@ class EmitterStage {
 		if (prevCwd == null) throw "stage3 emitter: cannot read current working directory";
 		Sys.setCwd(outAbs);
 
-		// Compile generated modules first, then typed module units (in dependency order).
+		// Compile in a dependency-respecting unit order.
+		//
+		// Why
+		// - OCaml requires module providers to be compiled before their users.
+		// - Our resolved module order is "Haxe-ish" and does not guarantee OCaml compilation order.
+		//
+		// How
+		// - Use `ocamldep -sort` to topologically sort the emitted `.ml` units.
+		// - Keep the root unit last so `let () = main ()` (when present) runs after linking deps.
+		final orderedMl = ocamldepSort(generatedPaths.concat(emittedModulePaths));
+		final orderedNoRoot = new Array<String>();
+		final rootName = rootPath;
+		for (f in orderedMl) if (rootName == null || f != rootName) orderedNoRoot.push(f);
+		if (rootName != null) orderedNoRoot.push(rootName);
+
 		final args = new Array<String>();
 		args.push("-o");
 		args.push("out.exe");
-		for (p in generatedPaths) args.push(p);
-		for (p in emittedModulePaths) args.push(p);
+		for (p in orderedNoRoot) args.push(p);
 		final code = try Sys.command(ocamlopt, args) catch (e:Dynamic) {
 			Sys.setCwd(prevCwd);
 			throw e;
