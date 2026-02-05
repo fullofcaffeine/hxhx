@@ -138,7 +138,7 @@ class EmitterStage {
 		}
 	}
 
-	static function returnExprToOcaml(expr:HxExpr):String {
+	static function returnExprToOcaml(expr:HxExpr, allowedValueIdents:Map<String, Bool>):String {
 		// Stage 3 bring-up: if we couldn't parse/type an expression, keep compilation moving.
 		//
 		// `Obj.magic` is a deliberate bootstrap escape hatch:
@@ -149,6 +149,16 @@ class EmitterStage {
 			return switch (e) {
 				case EUnsupported(_), ENull:
 					true;
+				case EIdent(name):
+					// Stage 3 only models params and module names. Any other value identifier is
+					// likely a local/field/helper we can't represent correctly yet.
+					if (isUpperStart(name)) {
+						false;
+					} else if (allowedValueIdents != null && allowedValueIdents.exists(name)) {
+						false;
+					} else {
+						true;
+					}
 				case EField(obj, _):
 					hasBringupPoison(obj);
 				case ECall(callee, args):
@@ -163,10 +173,10 @@ class EmitterStage {
 			// If the expression tree contains unsupported/null nodes anywhere, don't attempt partial OCaml
 			// emission: it tends to produce unbound identifiers (we are not modeling locals/blocks yet).
 			// Collapse to the bootstrap escape hatch instead.
-			if (hasBringupPoison(expr)) return "(Obj.magic 0)";
+		if (hasBringupPoison(expr)) return "(Obj.magic 0)";
 
-			return exprToOcaml(expr);
-		}
+		return exprToOcaml(expr);
+	}
 
 	/**
 		Emit a minimal OCaml program for the typed module and build it as a native executable.
@@ -298,7 +308,9 @@ class EmitterStage {
 
 				final parsedFn = parsedByName.get(nameRaw);
 				final retTy = ocamlTypeFromTy(tf.getReturnType());
-				final body = parsedFn == null ? "()" : returnExprToOcaml(parsedFn.getFirstReturnExpr());
+				final allowed = new Map<String, Bool>();
+				for (a in args) allowed.set(a.getName(), true);
+				final body = parsedFn == null ? "()" : returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed);
 
 				// Keep return type annotation to make early typing behavior visible.
 				final kw = i == 0 ? "let rec" : "and";
