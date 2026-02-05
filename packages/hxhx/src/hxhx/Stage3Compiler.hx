@@ -290,6 +290,8 @@ class Stage3Compiler {
 			var typedCount = 0;
 			var headerOnlyCount = 0;
 			var parsedMethodsTotal = 0;
+			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
+			var rootTyped:Null<TypedModule> = null;
 			for (m in resolved) {
 				try {
 					final pm = ResolvedModule.getParsed(m);
@@ -298,12 +300,35 @@ class Stage3Compiler {
 						headerOnlyCount += 1;
 					}
 					parsedMethodsTotal += HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
-					TyperStage.typeModule(pm);
+					final typed = TyperStage.typeModule(pm);
+					if (ResolvedModule.getFilePath(m) == rootFilePath) rootTyped = typed;
 					typedCount += 1;
 				} catch (e:Dynamic) {
 					closeMacroSession();
 					return error(
 						"type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e)
+					);
+				}
+			}
+
+			// Deterministic typer summary for the root module (bring-up diagnostics).
+			if (rootTyped != null) {
+				final fns = rootTyped.getEnv().getMainClass().getFunctions();
+				for (i in 0...fns.length) {
+					final tf = fns[i];
+					final locals = tf.getLocals();
+					final localsParts = new Array<String>();
+					for (l in locals) localsParts.push(l.getName() + ":" + l.getType().toString());
+					final params = tf.getParams();
+					final paramParts = new Array<String>();
+					for (p in params) paramParts.push(p.getName() + ":" + p.getType().toString());
+					Sys.println(
+						"typed_fn[" + i + "]="
+						+ tf.getName()
+						+ " args=" + paramParts.join(",")
+						+ " locals=" + localsParts.join(",")
+						+ " ret=" + tf.getReturnType().toString()
+						+ " inferred=" + tf.getReturnExprType().toString()
 					);
 				}
 			}

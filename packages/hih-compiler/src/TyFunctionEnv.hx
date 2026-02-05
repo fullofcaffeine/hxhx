@@ -36,6 +36,33 @@ class TyFunctionEnv {
 	public function getReturnExprType():TyType return returnExprType;
 
 	/**
+		Declare a new local symbol.
+
+		Why
+		- Stage 3 introduces `var` statements into the parser, which means the
+		  typer must build a local scope before it can type identifier usage
+		  inside the function body.
+
+		How
+		- We keep declaration order deterministic: locals are appended in source
+		  order and lookups prefer parameters over locals.
+	**/
+	public function declareLocal(name:String, ty:TyType):TySymbol {
+		final sym = new TySymbol(name, ty);
+		locals.push(sym);
+		return sym;
+	}
+
+	/**
+		Resolve a symbol (parameter or local) by name.
+	**/
+	public function resolveSymbol(name:String):Null<TySymbol> {
+		for (p in params) if (p.getName() == name) return p;
+		for (l in locals) if (l.getName() == name) return l;
+		return null;
+	}
+
+	/**
 		Resolve a symbol in this function's local scope.
 
 		Why:
@@ -50,8 +77,7 @@ class TyFunctionEnv {
 		  bootstrap fixture set, and determinism matters more than asymptotics.
 	**/
 	public function resolveLocal(name:String):TyType {
-		for (p in params) if (p.getName() == name) return p.getType();
-		for (l in locals) if (l.getName() == name) return l.getType();
-		return TyType.unknown();
+		final sym = resolveSymbol(name);
+		return sym == null ? TyType.unknown() : sym.getType();
 	}
 }

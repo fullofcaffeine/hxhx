@@ -94,7 +94,7 @@ class CompilerDriver {
 		for (case_ in upstreamShaped) {
 			final label = case_.getLabel();
 			final src = case_.getSource();
-			final parsed = ParserStage.parse(src).getDecl();
+			final parsed = ParserStage.parse(src, label).getDecl();
 			final parsedPkg = HxModuleDecl.getPackagePath(parsed);
 			final parsedMain = HxModuleDecl.getMainClass(parsed);
 			if (parsedPkg != case_.getExpectPackagePath()) {

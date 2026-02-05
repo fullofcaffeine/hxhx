@@ -31,7 +31,7 @@ enum HxStmt {
 		How
 		- This is a bootstrap representation; later rungs add positions and more statement forms.
 	**/
-	SBlock(stmts:Array<HxStmt>);
+	SBlock(stmts:Array<HxStmt>, pos:HxPos);
 
 	/**
 		Variable declaration: `var name[:Type] [= expr];`
@@ -45,7 +45,7 @@ enum HxStmt {
 		- Stores the optional type hint as raw text.
 		- Stores the optional initializer expression.
 	**/
-	SVar(name:String, typeHint:String, init:Null<HxExpr>);
+	SVar(name:String, typeHint:String, init:Null<HxExpr>, pos:HxPos);
 
 	/**
 		If/else statement: `if (cond) thenStmt [else elseStmt]`.
@@ -55,9 +55,9 @@ enum HxStmt {
 		- Even before typing control flow correctly, parsing it avoids token drift and
 		  makes later typing work local and structured.
 	**/
-	SIf(cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>);
+	SIf(cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>, pos:HxPos);
 
-	SReturnVoid;
-	SReturn(expr:HxExpr);
-	SExpr(expr:HxExpr);
+	SReturnVoid(pos:HxPos);
+	SReturn(expr:HxExpr, pos:HxPos);
+	SExpr(expr:HxExpr, pos:HxPos);
 }

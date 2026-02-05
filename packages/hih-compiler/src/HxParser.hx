@@ -453,14 +453,14 @@ class HxParser {
 		return parseBinaryExpr(1, stop);
 	}
 
-	function parseReturnStmt():HxStmt {
+	function parseReturnStmt(pos:HxPos):HxStmt {
 		// `return;` or `return <expr>;`
 		if (cur.kind.match(TSemicolon)) {
 			bump();
-			return SReturnVoid;
+			return SReturnVoid(pos);
 		}
 		if (cur.kind.match(TRBrace)) {
-			return SReturnVoid;
+			return SReturnVoid(pos);
 		}
 
 		if (capturedReturnStringLiteral.length == 0) {
@@ -473,7 +473,7 @@ class HxParser {
 
 		final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
 		syncToStmtEnd();
-		return SReturn(expr);
+		return SReturn(expr, pos);
 	}
 
 	function syncToStmtEnd():Void {
@@ -498,7 +498,7 @@ class HxParser {
 		if (cur.kind.match(TSemicolon)) bump();
 	}
 
-	function parseVarStmt():HxStmt {
+	function parseVarStmt(pos:HxPos):HxStmt {
 		// `var name[:Type] [= expr];`
 		final name = readIdent("variable name");
 		var typeHint = "";
@@ -512,12 +512,13 @@ class HxParser {
 			init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
 		}
 		syncToStmtEnd();
-		return SVar(name, typeHint, init);
+		return SVar(name, typeHint, init, pos);
 	}
 
 	function parseStmt(stop:()->Bool):HxStmt {
-		if (stop()) return SExpr(EUnsupported("<eof-stmt>"));
+		if (stop()) return SExpr(EUnsupported("<eof-stmt>"), HxPos.unknown());
 
+		final pos = cur.pos;
 		return switch (cur.kind) {
 			case TLBrace:
 				bump();
@@ -526,13 +527,13 @@ class HxParser {
 					ss.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 				}
 				expect(TRBrace, "'}'");
-				SBlock(ss);
+				SBlock(ss, pos);
 			case TKeyword(KReturn):
 				bump();
-				parseReturnStmt();
+				parseReturnStmt(pos);
 			case TKeyword(KVar):
 				bump();
-				parseVarStmt();
+				parseVarStmt(pos);
 			case TKeyword(KIf):
 				bump();
 				expect(TLParen, "'('");
@@ -540,11 +541,11 @@ class HxParser {
 				expect(TRParen, "')'");
 				final thenBranch = parseStmt(stop);
 				final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
-				SIf(cond, thenBranch, elseBranch);
+				SIf(cond, thenBranch, elseBranch, pos);
 			case _:
 				final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
 				syncToStmtEnd();
-				SExpr(expr);
+				SExpr(expr, pos);
 		}
 	}
 
@@ -611,11 +612,11 @@ class HxParser {
 			case _:
 				// Expression-bodied function: `function f() return expr;`
 				if (acceptKeyword(KReturn)) {
-					body.push(parseReturnStmt());
+					body.push(parseReturnStmt(HxPos.unknown()));
 				} else {
 					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 					if (cur.kind.match(TSemicolon)) bump();
-					body.push(SExpr(expr));
+					body.push(SExpr(expr, HxPos.unknown()));
 				}
 		}
 

@@ -29,6 +29,18 @@ class TyType {
 		return new TyType("Unknown");
 	}
 
+	public function isUnknown():Bool {
+		return display == "Unknown";
+	}
+
+	public function isVoid():Bool {
+		return display == "Void";
+	}
+
+	public function isNumeric():Bool {
+		return display == "Int" || display == "Float";
+	}
+
 	public static function fromHintText(hint:String):TyType {
 		if (hint == null) return unknown();
 		final s = StringTools.trim(hint);
@@ -39,8 +51,48 @@ class TyType {
 		}
 	}
 
+	/**
+		Best-effort unification for the Stage 3 bootstrap typer.
+
+		Why
+		- Gate 1 needs failures to be “missing typer feature X”, not “we crashed”.
+		- We therefore implement a small, deterministic unifier that can:
+		  - refine `Unknown` to a concrete type
+		  - unify numeric ops (`Int` + `Float` → `Float`)
+		  - treat `Null` as compatible with most types (bootstrap simplification)
+
+		What
+		- Returns the unified type when compatible.
+		- Returns `null` when incompatible (callers decide whether to error or
+		  keep `Unknown`).
+
+		How
+		- This is not upstream Haxe typing. It is an incremental rung intended to
+		  carry us until a real monomorph engine exists.
+	**/
+	public static function unify(a:TyType, b:TyType):Null<TyType> {
+		if (a == null || b == null) return null;
+
+		if (a.isUnknown()) return b;
+		if (b.isUnknown()) return a;
+
+		if (a.display == b.display) return a;
+
+		// Bootstrap rule: treat `null` as compatible with most things.
+		if (a.display == "Null") return b;
+		if (b.display == "Null") return a;
+
+		// Numeric widening: Int + Float (or comparisons) unify to Float.
+		if (a.isNumeric() && b.isNumeric()) return new TyType("Float");
+
+		// Dynamic accepts anything (bootstrap).
+		if (a.display == "Dynamic") return a;
+		if (b.display == "Dynamic") return b;
+
+		return null;
+	}
+
 	public function toString():String {
 		return display;
 	}
 }
-

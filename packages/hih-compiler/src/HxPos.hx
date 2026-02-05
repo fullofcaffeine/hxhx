@@ -28,4 +28,17 @@ class HxPos {
 	public function toString():String {
 		return 'line ${line}, col ${column}';
 	}
+
+	/**
+		Sentinel “unknown” position.
+
+		Why
+		- Some bootstrap seams (notably the native frontend protocol) currently
+		  return partial ASTs without statement-level positions.
+		- We still want to construct a well-typed AST and report diagnostics in a
+		  uniform shape, even when the location is not available.
+	**/
+	public static function unknown():HxPos {
+		return new HxPos(0, 0, 0);
+	}
 }

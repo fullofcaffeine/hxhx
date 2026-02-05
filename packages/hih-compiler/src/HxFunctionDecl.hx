@@ -47,14 +47,14 @@ class HxFunctionDecl {
 		function find(stmts:Array<HxStmt>):Null<HxExpr> {
 			for (s in stmts) {
 				switch (s) {
-					case SReturn(e):
+					case SReturn(e, _):
 						return e;
-					case SReturnVoid:
+					case SReturnVoid(_):
 						return EUnsupported("<return-void>");
-					case SBlock(ss):
+					case SBlock(ss, _):
 						final r = find(ss);
 						if (r != null) return r;
-					case SIf(_cond, thenBranch, elseBranch):
+					case SIf(_cond, thenBranch, elseBranch, _):
 						// Pre-order: then, then else. This is a bootstrap heuristic for “first return”.
 						final r1 = find([thenBranch]);
 						if (r1 != null) return r1;

@@ -18,13 +18,14 @@
 class ParserStage {
 	public function new() {}
 
-	public static function parse(source:String):ParsedModule {
+	public static function parse(source:String, ?filePath:String):ParsedModule {
 		final decl = #if hih_native_parser
 			parseViaNativeHooks(source);
 		#else
 			new HxParser(source).parseModule();
 		#end
-		return new ParsedModule(source, decl);
+		final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
+		return new ParsedModule(source, decl, path);
 	}
 
 	#if hih_native_parser
@@ -164,14 +165,15 @@ class ParserStage {
 		final retId = parts[6];
 		final retExpr = parts[8];
 		final body = new Array<HxStmt>();
+		final pos = HxPos.unknown();
 		// Prefer the richer `retexpr` field when present (it can represent `Util.ping()`),
 		// but keep legacy fields for older protocol emitters.
 		if (retExpr.length > 0) {
-			body.push(SReturn(parseReturnExprText(retExpr)));
+			body.push(SReturn(parseReturnExprText(retExpr), pos));
 		} else if (retStr.length > 0) {
-			body.push(SReturn(EString(retStr)));
+			body.push(SReturn(EString(retStr), pos));
 		} else if (retId.length > 0) {
-			body.push(SReturn(EIdent(retId)));
+			body.push(SReturn(EIdent(retId), pos));
 		}
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, body, retStr);
