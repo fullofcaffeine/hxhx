@@ -190,6 +190,7 @@ class Stage3Compiler {
 		if (typeOnly) {
 			var typedCount = 0;
 			var headerOnlyCount = 0;
+			var parsedMethodsTotal = 0;
 			for (m in resolved) {
 				try {
 					final pm = ResolvedModule.getParsed(m);
@@ -197,6 +198,7 @@ class Stage3Compiler {
 						Sys.println("header_only_file[" + headerOnlyCount + "]=" + ResolvedModule.getFilePath(m));
 						headerOnlyCount += 1;
 					}
+					parsedMethodsTotal += HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
 					TyperStage.typeModule(pm);
 					typedCount += 1;
 				} catch (e:Dynamic) {
@@ -236,6 +238,7 @@ class Stage3Compiler {
 			closeMacroSession();
 			Sys.println("typed_modules=" + typedCount);
 			Sys.println("header_only_modules=" + headerOnlyCount);
+			Sys.println("parsed_methods_total=" + parsedMethodsTotal);
 			Sys.println("stage3=type_only_ok");
 			return 0;
 		}
