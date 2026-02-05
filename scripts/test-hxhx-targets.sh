@@ -231,6 +231,14 @@ out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main4 --no-output)"
 echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing pack.Mod.SubType"
 
+echo "== Stage3 bring-up: type+emit+build minimal OCaml subset"
+stage3_out="$tmpdir/out_stage3"
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$stage3_out")"
+echo "$out" | grep -q "^stage3=ok$"
+exe="$(echo "$out" | sed -n 's/^exe=//p' | tail -n 1)"
+test -n "$exe"
+test -f "$exe"
+
 echo "== Contradiction fails fast"
 set +e
 out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"

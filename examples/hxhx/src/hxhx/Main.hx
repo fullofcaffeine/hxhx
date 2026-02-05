@@ -56,6 +56,15 @@ class Main {
 			Sys.exit(code);
 		}
 
+		// Stage 3 (bring-up): minimal typed compilation path (no macros).
+		//
+		// This is explicitly NOT part of the `haxe` CLI surface and will never be forwarded.
+		// It exists so we can validate “type → emit → build” without relying on stage0.
+		if (args.length >= 1 && args[0] == "--hxhx-stage3") {
+			final code = Stage3Compiler.run(args.slice(1));
+			Sys.exit(code);
+		}
+
 		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
 		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
 		var forwarded = args;
