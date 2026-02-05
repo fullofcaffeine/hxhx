@@ -87,6 +87,32 @@ class EmitterStage {
 
 	static function exprToOcaml(e:HxExpr):String {
 		return switch (e) {
+			// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
+			//
+			// Why
+			// - Upstream Haxe unit code frequently calls `Math.isNaN`/`Math.isFinite`.
+			// - Stage 3 emits "plain OCaml" (no Haxe runtime), so `Math.*` would otherwise
+			//   fail to compile with `Unbound module Math`.
+			//
+			// What
+			// - This is intentionally narrow and **not** a full stdlib mapping layer.
+			// - These rewrites exist only to keep bring-up moving; Stage1/Stage4 must
+			//   eventually implement real semantics in the proper backend/runtime.
+			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
+				"(classify_float (" + exprToOcaml(arg) + ") = FP_nan)";
+			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
+				"(match classify_float (" + exprToOcaml(arg) + ") with | FP_nan | FP_infinite -> false | _ -> true)";
+			case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
+				"(classify_float (" + exprToOcaml(arg) + ") = FP_infinite)";
+			case EField(EIdent("Math"), "NaN"):
+				"nan";
+			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+				"infinity";
+			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
+				"neg_infinity";
+			case EField(EIdent("Math"), "PI"):
+				"(4.0 *. atan 1.0)";
+
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
 			case EFloat(v): Std.string(v);

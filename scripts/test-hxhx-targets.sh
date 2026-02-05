@@ -274,7 +274,7 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/examples/hih-compil
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^typed_modules="
 echo "$out" | grep -q "^header_only_modules=0$"
-echo "$out" | grep -q "^parsed_methods_total=7$"
+echo "$out" | grep -q "^parsed_methods_total=8$"
 echo "$out" | grep -q "^stage3=type_only_ok$"
 test ! -f "$type_only_out/out.exe"
 
