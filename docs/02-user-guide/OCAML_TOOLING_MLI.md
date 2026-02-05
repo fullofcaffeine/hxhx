@@ -28,6 +28,17 @@ In the future, we *may* add an additional mode that emits a **curated** `.mli` f
 deliberately-stable public API surface (e.g. portable vs `ocaml.*` “native” surfaces),
 but that is explicitly **not** required for bootstrapping `hxhx`.
 
+## Does this choice affect `hxhx` portability?
+
+No — this is an **OCaml-target tooling feature**, not a `hxhx` architectural dependency.
+
+- `ocamlc -i` is only used when **you are already targeting OCaml** and you ask the backend to emit `.mli` files.
+- A non-OCaml build of `hxhx` (e.g. a hypothetical Haxe→Rust compiler build) would not emit OCaml modules at all,
+  so `.mli` inference is irrelevant in that scenario.
+
+If/when we add additional “curated interface” modes, that work is about **OCaml user ergonomics** (stable interfaces
+and nicer editor/diagnostics), not about making the compiler core more or less portable.
+
 ## How to enable
 
 Pass:
