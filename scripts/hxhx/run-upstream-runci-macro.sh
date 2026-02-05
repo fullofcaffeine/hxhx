@@ -20,6 +20,21 @@ UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
 : "${HXHX_GATE2_SKIP_PARTY:=1}"
 export HXHX_GATE2_SKIP_PARTY
 
+# Upstream `tests/misc` includes Issue11737, which runs a networked `haxelib install hxjava`
+# in `_setup.hxml`. That makes Gate2 flaky/offline-hostile in CI.
+#
+# For bring-up we default to skipping it unless explicitly enabled.
+#
+# Override:
+# - set `HXHX_GATE2_SKIP_HXJAVA=0` to include Issue11737 (requires hxjava toolchain).
+: "${HXHX_GATE2_SKIP_HXJAVA:=1}"
+export HXHX_GATE2_SKIP_HXJAVA
+
+# If the user didn't provide their own misc filter, apply a default that excludes Issue11737.
+if [ "${HXHX_GATE2_SKIP_HXJAVA}" = "1" ] && [ -z "${HXHX_GATE2_MISC_FILTER:-}" ]; then
+  export HXHX_GATE2_MISC_FILTER='^(?!.*Issue11737).*$'
+fi
+
 UPSTREAM_DIR_ORIG="$UPSTREAM_DIR"
 UPSTREAM_WORKTREE_DIR=""
 WRAP_DIR=""
