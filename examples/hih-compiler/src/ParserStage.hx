@@ -111,28 +111,56 @@ class ParserStage {
 	}
 
 	static function decodeMethodPayload(payload:String):HxFunctionDecl {
-		// Bootstrap note: payload is `name|vis|static|args|ret|retstr` (unescaped for '|').
+		// Bootstrap note: payload is a `|` separated list (unescaped for '|').
+		//
+		// v=1:
+		//   name|vis|static|args|ret|retstr
+		//
+		// v=1 (backward-compatible extensions; optional fields):
+		//   name|vis|static|args|ret|retstr|retid|argtypes
+		//
+		// Where:
+		// - args: comma-separated argument names
+		// - retid: first detected `return <ident>` (if any)
+		// - argtypes: comma-separated `name:type` pairs (no '|' characters)
 		final parts = payload.split("|");
-		while (parts.length < 6) parts.push("");
+		while (parts.length < 8) parts.push("");
 
 		final name = parts[0];
 		final vis = parts[1] == "private" ? HxVisibility.Private : HxVisibility.Public;
 		final isStatic = parts[2] == "1";
+
+		final argTypes:Map<String, String> = [];
+		final argTypesPayload = parts[7];
+		if (argTypesPayload.length > 0) {
+			for (entry in argTypesPayload.split(",")) {
+				if (entry.length == 0) continue;
+				final idx = entry.indexOf(":");
+				if (idx <= 0) continue;
+				final argName = entry.substr(0, idx);
+				final ty = entry.substr(idx + 1);
+				argTypes.set(argName, ty);
+			}
+		}
 
 		final args = new Array<HxFunctionArg>();
 		final argsPayload = parts[3];
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
 				if (a.length == 0) continue;
-				args.push(new HxFunctionArg(a, "", HxDefaultValue.NoDefault));
+				final ty = argTypes.exists(a) ? argTypes.get(a) : "";
+				args.push(new HxFunctionArg(a, ty, HxDefaultValue.NoDefault));
 			}
 		}
 
 		final returnTypeHint = parts[4];
 		final retStr = parts[5];
+		final retId = parts[6];
 		final body = new Array<HxStmt>();
 		if (retStr.length > 0) {
 			body.push(SReturn(EString(retStr)));
+		} else if (retId.length > 0) {
+			body.push(SReturn(EIdent(retId)));
 		}
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, body, retStr);

@@ -16,7 +16,7 @@ typer=ok
 typed_functions=3
 typed_fn=main args=0 locals=0 ret=Void retExpr=Void
 typed_fn=greet args=0 locals=0 ret=String retExpr=String
-typed_fn=echo args=1 locals=0 ret=Void retExpr=Void
+typed_fn=echo args=1 locals=0 ret=String retExpr=String
 macros=stub
 emit=stub
 OK hih-compiler
