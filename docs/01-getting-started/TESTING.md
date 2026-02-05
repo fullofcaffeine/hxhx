@@ -93,6 +93,10 @@ Notes:
 
 - This is **not** run in CI by default (very toolchain/network dependent).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
+- For the `Macro` target, the runner applies the same stability knobs as Gate 2:
+  - `HXHX_GATE2_SKIP_PARTY=1` (default) skips `tests/party` (network-heavy).
+  - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`
+    seed the local `.haxelib` repo from globally installed libs to avoid network installs when possible.
 
 ## Layers
 

@@ -165,6 +165,13 @@ Run a selectable subset locally via:
 If we claim “full replacement”, this implies passing the same set of targets upstream CI runs (JS, Neko, HL, JVM/Java,
 Python, Lua, PHP, C#, C++/hxcpp, etc.), which may require external toolchains.
 
+Notes:
+
+- For `Macro`, our Gate 3 runner applies the same stability knobs as Gate 2:
+  - `HXHX_GATE2_SKIP_PARTY=1` (default) skips the upstream `tests/party` stage (network-heavy/flaky).
+  - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`
+    seed the local `.haxelib` repo from globally installed libs to avoid network installs when possible.
+
 ### Gate 4 — Build + distribution parity
 
 Passes when:

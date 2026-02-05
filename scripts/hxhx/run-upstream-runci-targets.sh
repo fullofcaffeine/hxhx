@@ -10,6 +10,16 @@ DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
 
+# The upstream `tests/party` stage is network-heavy (clones + `haxelib install`) and tends
+# to be the flakiest part of the suite across local environments. We default to skipping it.
+#
+# This env var is consumed by a small patch applied to upstream `tests/runci/targets/Macro.hx`.
+#
+# Override:
+# - set `HXHX_GATE2_SKIP_PARTY=0` to enable party tests
+: "${HXHX_GATE2_SKIP_PARTY:=1}"
+export HXHX_GATE2_SKIP_PARTY
+
 TARGETS_RAW="${HXHX_GATE3_TARGETS:-}"
 if [ "$#" -gt 0 ]; then
   TARGETS_RAW="$*"
@@ -97,11 +107,14 @@ else
   STAGE0_HAXE="$(command -v "$HAXE_BIN")"
 fi
 
-if [ -x "$HOME/haxe/versions/$UPSTREAM_REF/haxelib" ]; then
-  STAGE0_HAXELIB="$HOME/haxe/versions/$UPSTREAM_REF/haxelib"
-else
-  STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN")"
-fi
+#
+# Prefer the user's `haxelib` from PATH (often a Lix shim) over the raw Neko-based
+# `~/haxe/versions/<ver>/haxelib` binary.
+#
+# Why:
+# - The raw binary relies on dynamic loader setup on macOS and can be brittle.
+# - For gate runners, we care more about robustness than shaving a few ms of wrapper overhead.
+STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN")"
 
 if [ -z "$STAGE0_STD_PATH" ]; then
   STAGE0_HAXE_DIR="$(cd "$(dirname "$STAGE0_HAXE")" && pwd)"
@@ -193,6 +206,157 @@ insert = (
 )
 
 src = src.replace(needle, insert)
+with open(path, "w", encoding="utf-8") as f:
+    f.write(src)
+PY
+}
+
+patch_runci_skip_utest_install_if_present() {
+  local run_ci="$UPSTREAM_DIR/tests/RunCi.hx"
+  [ -f "$run_ci" ] || return 0
+
+  # Upstream RunCi installs utest via network. If utest is already available in the local
+  # `.haxelib/` repo, skip the install.
+  python3 - <<'PY'
+import os
+
+path = os.environ["UPSTREAM_DIR"] + "/tests/RunCi.hx"
+needle = 'haxelibInstallGit("haxe-utest", "utest", "a94f8812e8786f2b5fec52ce9f26927591d26327", "--always");'
+
+with open(path, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+out = []
+changed = False
+for line in lines:
+    if needle in line:
+        indent = line.split("haxelibInstallGit", 1)[0]
+        out.append(indent + "try {\n")
+        out.append(indent + "\trunCommand(\"haxelib\", [\"path\", \"utest\"]);\n")
+        out.append(indent + "} catch (e:Dynamic) {\n")
+        out.append(indent + "\t" + needle + "\n")
+        out.append(indent + "}\n")
+        changed = True
+    else:
+        out.append(line)
+
+if changed:
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(out)
+PY
+}
+
+seed_local_haxelib_dev_from_global() {
+  local lib="$1"
+  local enabled="${2:-1}"
+  if [ "$enabled" != "1" ]; then
+    return 0
+  fi
+
+  local root=""
+  root="$("${STAGE0_HAXELIB}" --global libpath "$lib" 2>/dev/null || true)"
+  if [ -z "$root" ] || [ ! -d "$root" ]; then
+    return 0
+  fi
+
+  # This uses the local `.haxelib/` repo (created in the worktree) because haxelib searches upwards.
+  PATH="$WRAP_DIR:$PATH" haxelib dev "$lib" "$root" >/dev/null 2>&1 || true
+}
+
+patch_runci_macro_skip_haxeserver_install_if_present() {
+  local macro_target="$UPSTREAM_DIR/tests/runci/targets/Macro.hx"
+  [ -f "$macro_target" ] || return 0
+
+  python3 - <<'PY'
+import os
+
+path = os.environ["UPSTREAM_DIR"] + "/tests/runci/targets/Macro.hx"
+needle = 'haxelibInstallGit("Simn", "haxeserver");'
+
+with open(path, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+out = []
+changed = False
+for line in lines:
+    if needle in line:
+        indent = line.split("haxelibInstallGit", 1)[0]
+        out.append(indent + "try {\n")
+        out.append(indent + "\trunCommand(\"haxelib\", [\"path\", \"haxeserver\"]);\n")
+        out.append(indent + "} catch (e:Dynamic) {\n")
+        out.append(indent + "\t" + needle + "\n")
+        out.append(indent + "}\n")
+        changed = True
+    else:
+        out.append(line)
+
+if changed:
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(out)
+PY
+}
+
+patch_runci_macro_optional_skip_party() {
+  local macro_target="$UPSTREAM_DIR/tests/runci/targets/Macro.hx"
+  [ -f "$macro_target" ] || return 0
+
+  python3 - <<'PY'
+import os
+
+path = os.environ["UPSTREAM_DIR"] + "/tests/runci/targets/Macro.hx"
+needle = "deleteDirectoryRecursively(partyDir);"
+
+with open(path, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+out = []
+changed = False
+already = False
+for line in lines:
+    if "HXHX_GATE2_SKIP_PARTY" in line:
+        already = True
+    if needle in line and not already:
+        indent = line.split(needle, 1)[0]
+        out.append(indent + "if (Sys.getEnv(\"HXHX_GATE2_SKIP_PARTY\") == \"1\") {\n")
+        out.append(indent + "\tinfoMsg(\"Skipping party stage (HXHX Gate runner; set HXHX_GATE2_SKIP_PARTY=0 to enable)\");\n")
+        out.append(indent + "\treturn;\n")
+        out.append(indent + "}\n")
+        out.append(line)
+        changed = True
+    else:
+        out.append(line)
+
+if changed:
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(out)
+PY
+}
+
+patch_sourcemaps_skip_sourcemap_install_if_present() {
+  local test_hx="$UPSTREAM_DIR/tests/sourcemaps/src/Test.hx"
+  [ -f "$test_hx" ] || return 0
+
+  # Upstream sourcemaps tests unconditionally do `haxelib install sourcemap`. If the lib is
+  # already available in the local `.haxelib/` repo, skip the install.
+  python3 - <<'PY'
+import os
+
+path = os.environ["UPSTREAM_DIR"] + "/tests/sourcemaps/src/Test.hx"
+needle = "Sys.command('haxelib', ['install', 'sourcemap']);"
+
+with open(path, "r", encoding="utf-8") as f:
+    src = f.read()
+
+if needle not in src:
+    raise SystemExit(0)
+
+replacement = (
+    "if (Sys.command('haxelib', ['path', 'sourcemap']) != 0) {\n"
+    "\t\t\tSys.command('haxelib', ['install', 'sourcemap']);\n"
+    "\t\t}"
+)
+
+src = src.replace(needle, replacement)
 with open(path, "w", encoding="utf-8") as f:
     f.write(src)
 PY
@@ -330,6 +494,18 @@ done
 
 echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (via hxhx stage0 shim)"
 
+want_macro_patches=0
+for t in "${targets[@]}"; do
+  if [ "$(echo "$t" | tr '[:upper:]' '[:lower:]')" = "macro" ]; then
+    want_macro_patches=1
+    break
+  fi
+done
+
+if [ "$want_macro_patches" = "1" ]; then
+  need_cmd python3 "patch upstream runci to reduce network dependency for Macro target"
+fi
+
 (
   cd "$UPSTREAM_DIR/tests"
   if [ ! -d ".haxelib" ]; then
@@ -337,6 +513,19 @@ echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (via hxhx stage0 s
   fi
   export UPSTREAM_DIR
   patch_runci_skip_sys_on_macos
+
+  if [ "$want_macro_patches" = "1" ]; then
+    # Gate runner stability patches (reduce network dependency where possible).
+    patch_runci_skip_utest_install_if_present
+    patch_runci_macro_skip_haxeserver_install_if_present
+    patch_runci_macro_optional_skip_party
+    patch_sourcemaps_skip_sourcemap_install_if_present
+
+    # Seed local `.haxelib` from globally installed libs when present.
+    seed_local_haxelib_dev_from_global utest "${HXHX_GATE2_SEED_UTEST_FROM_GLOBAL:-1}"
+    seed_local_haxelib_dev_from_global haxeserver "${HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL:-1}"
+    seed_local_haxelib_dev_from_global sourcemap "${HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL:-1}"
+  fi
 )
 
 failures=0
