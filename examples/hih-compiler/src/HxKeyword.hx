@@ -16,6 +16,29 @@ enum HxKeyword {
 	KStatic;
 	KFunction;
 	KReturn;
+	// Control-flow keywords (Stage 3 bring-up).
+	//
+	// Why
+	// - Stage 3 only understands a tiny expression subset. If we tokenize `if`/`switch`/`try`
+	//   as identifiers, the parser can accidentally interpret them as normal calls
+	//   (e.g. `return if (cond) a else b;` → `if_(cond)`), producing invalid OCaml.
+	//
+	// What
+	// - We recognize these as keywords so the parser can safely treat them as unsupported
+	//   and the emitter can fall back to bring-up escape hatches (`Obj.magic`).
+	KIf;
+	KElse;
+	KSwitch;
+	KCase;
+	KDefault;
+	KTry;
+	KCatch;
+	KThrow;
+	KWhile;
+	KDo;
+	KFor;
+	KBreak;
+	KContinue;
 	KVar;
 	KFinal;
 	KNew;
