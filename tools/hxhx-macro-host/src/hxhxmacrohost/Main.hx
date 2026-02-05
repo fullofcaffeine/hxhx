@@ -60,8 +60,7 @@ class Main {
 				}
 
 			// Unknown line; respond with an error if it looks structured.
-			Sys.println("res 0 err " + Protocol.encodeLen("m", "unknown message"));
-			flushStdout();
+			replyErr(0, "unknown message", "message");
 		}
 	}
 
@@ -80,8 +79,7 @@ class Main {
 		final tail = parts.length > 3 ? parts[3] : "";
 
 		if (id < 0) {
-			Sys.println("res 0 err " + Protocol.encodeLen("m", "missing id"));
-			flushStdout();
+			replyErr(0, "missing id", "parse");
 			return;
 		}
 
@@ -93,7 +91,7 @@ class Main {
 				final name = parsed.exists("n") ? parsed.get("n") : "";
 				final value = parsed.exists("v") ? parsed.get("v") : "";
 				if (name.length == 0) {
-					replyErr(id, "missing name");
+					replyErr(id, "missing name", method);
 					return;
 				}
 				Compiler.define(name, value);
@@ -116,7 +114,7 @@ class Main {
 				final parsed = parseKV(tail);
 				final expr = parsed.exists("e") ? parsed.get("e") : "";
 				if (expr.length == 0) {
-					replyErr(id, "missing expr");
+					replyErr(id, "missing expr", method);
 					return;
 				}
 				replyOk(id, Protocol.encodeLen("v", runMacroExpr(expr)));
@@ -126,12 +124,12 @@ class Main {
 				final parsed = parseKV(tail);
 				final name = parsed.exists("n") ? parsed.get("n") : "";
 				if (name.length == 0) {
-					replyErr(id, "missing name");
+					replyErr(id, "missing name", method);
 					return;
 				}
 				replyOk(id, Protocol.encodeLen("v", Context.getType(name)));
 			case _:
-				replyErr(id, "unknown method: " + method);
+				replyErr(id, "unknown method: " + method, method);
 		}
 	}
 
@@ -180,10 +178,12 @@ class Main {
 		flushStdout();
 	}
 
-	static function replyErr(id:Int, msg:String):Void {
-		// Include a reserved `p` field (“position”) so later stages can attach structured position data
-		// without changing the client parser (it simply looks up `m` today).
-		Sys.println("res " + id + " err " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("p", ""));
+	static function replyErr(id:Int, msg:String, pos:String):Void {
+		// Include a `p` (“position”) field so the client can surface where the error originated.
+		//
+		// Today this is a small structured tag (e.g. the RPC method name), not a macro-user source position.
+		// Later stages will attach typed/macro AST positions over the protocol.
+		Sys.println("res " + id + " err " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("p", pos == null ? "" : pos));
 		flushStdout();
 	}
 

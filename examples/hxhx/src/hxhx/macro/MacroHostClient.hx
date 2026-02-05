@@ -147,7 +147,9 @@ private class MacroClient {
 		return if (status == "ok") {
 			MacroProtocol.kvGet(respTail, "v");
 		} else {
-			throw "macro host: " + MacroProtocol.kvGet(respTail, "m");
+			final msg = MacroProtocol.kvGet(respTail, "m");
+			final pos = MacroProtocol.kvGet(respTail, "p");
+			throw (pos != null && pos.length > 0) ? ("macro host: " + msg + " (" + pos + ")") : ("macro host: " + msg);
 		}
 	}
 
