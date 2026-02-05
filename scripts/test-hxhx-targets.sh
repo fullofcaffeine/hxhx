@@ -83,7 +83,7 @@ cat >"$tmpdir/build.hxml" <<HX
 -main Main
 --no-output
 HX
-out="$("$HXHX_BIN" --hxhx-stage1 "$tmpdir/build.hxml")"
+out="$(HAXE_STD_PATH="$tmpdir/fake_std" "$HXHX_BIN" --hxhx-stage1 "$tmpdir/build.hxml")"
 echo "$out" | grep -q "^stage1=ok$"
 
 echo "== Stage1 bring-up: .hxml relative -cp"
@@ -162,6 +162,26 @@ if [ "$code" -eq 0 ]; then
   exit 1
 fi
 echo "$out" | grep -q 'parse failed for import "B2"'
+
+echo "== Stage1 bring-up: import_missing is fatal"
+cat >"$tmpdir/src/MainMissing.hx" <<'HX'
+package;
+
+import DoesNotExist;
+
+class MainMissing {
+  static function main() {}
+}
+HX
+set +e
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main MainMissing --no-output 2>&1)"
+code=$?
+set -e
+if [ "$code" -eq 0 ]; then
+  echo "Expected missing import to fail, but stage1 succeeded." >&2
+  exit 1
+fi
+echo "$out" | grep -q "hxhx(stage1): import_missing DoesNotExist"
 
 echo "== Stage1 bring-up: import-only module (no class)"
 cat >"$tmpdir/src/TypesOnly.hx" <<'HX'

@@ -102,14 +102,12 @@ class Stage1Compiler {
 
 			final impResolved = Stage1Resolver.resolveModule(parsed.classPaths, imp, parsed.cwd);
 			if (impResolved == null) {
-				Sys.println("stage1=warn import_missing " + imp);
-				continue;
+				return error("import_missing " + imp);
 			}
 
 			final impSrc = try sys.io.File.getContent(impResolved.path) catch (_:Dynamic) null;
 			if (impSrc == null) {
-				Sys.println("stage1=warn import_unreadable " + impResolved.path);
-				continue;
+				return error("import_unreadable " + impResolved.path);
 			}
 
 			final impDecl = try {
