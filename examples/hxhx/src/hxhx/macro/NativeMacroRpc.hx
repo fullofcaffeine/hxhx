@@ -1,10 +1,10 @@
 package hxhx.macro;
 
 /**
-	OCaml runtime bridge for the Stage 4 macro host RPC selftest.
+	OCaml runtime bridge for the Stage 4 macro host RPC selftest (legacy).
 
 	Why
-	- This keeps the first-rung macro-host bring-up small and robust:
+	- This originally kept the first-rung macro-host bring-up small and robust:
 	  - OCaml handles spawning + pipes (Unix)
 	  - Haxe sees a single `selftest(hostExe)` call returning a stable summary
 
@@ -17,6 +17,8 @@ package hxhx.macro;
 
 	How
 	- Implemented in `std/runtime/HxHxMacroRpc.ml`.
+	- Newer code should prefer the pure-Haxe client in `MacroHostClient`, which uses `sys.io.Process`
+	  (overridden for the OCaml target via `std/_std/sys/io/Process.hx` + `std/runtime/HxProcess.ml`).
 
 	Portability note
 	- This bridge is OCaml-target-specific: it links a small OCaml module that uses `Unix` to spawn

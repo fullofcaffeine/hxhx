@@ -3,3 +3,152 @@
 (* Haxe type: haxe.io.Output *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t; mutable bigEndian : bool }
+
+let set_bigEndian = fun self b -> (
+  ignore (let __assign_1 = b in (
+    self.bigEndian <- __assign_1;
+    __assign_1
+  ));
+  b
+)
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Output"; bigEndian = false } : t) in (
+  ignore (set_bigEndian self false);
+  self
+)
+
+let writeByte = fun self c -> ignore ((
+  ignore self;
+  (
+    ignore (if c = -1 then ignore () else ());
+    HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (let __anon_2 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "haxe/io/Output.hx"));
+      ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 44));
+      ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.io.Output"));
+      ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "writeByte"));
+      __anon_2
+    )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"]
+  )
+))
+
+let writeBytes = fun self s pos len -> let pos = ref pos in (
+  ignore (if !pos < 0 || len < 0 || HxInt.add (!pos) len > HxBytes.length s then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
+  let k = ref len in (
+    ignore (while !k > 0 do ignore ((
+      ignore (writeByte self (HxBytes.get s (!pos)));
+      ignore (let __old_3 = !pos in let __new_4 = HxInt.add __old_3 1 in (
+        ignore (pos := __new_4);
+        __old_3
+      ));
+      let __old_5 = !k in let __new_6 = HxInt.add __old_5 (-1) in (
+        ignore (k := __new_6);
+        __old_5
+      )
+    )) done);
+    len
+  )
+)
+
+let flush = fun self () -> ignore ((
+  ignore self;
+  ()
+))
+
+let close = fun self () -> ignore ((
+  ignore self;
+  ()
+))
+
+let write = fun self s -> ignore (let l = ref (HxBytes.length s) in let p = ref 0 in while !l > 0 do ignore (let k = writeBytes self s (!p) (!l) in (
+  ignore (if k = 0 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Blocked))) ["Dynamic"; "haxe.io.Error"]) else ());
+  ignore (p := HxInt.add (!p) k);
+  l := HxInt.sub (!l) k
+)) done)
+
+let writeFullBytes = fun self s pos len -> ignore (let len = ref len in let pos = ref pos in while !len > 0 do ignore (let k = writeBytes self s (!pos) (!len) in (
+  ignore (pos := HxInt.add (!pos) k);
+  len := HxInt.sub (!len) k
+)) done)
+
+let prepare = fun self _nbytes -> ignore ((
+  ignore self;
+  ()
+))
+
+let writeInput = fun self i bufsize -> ignore ((
+  ignore self;
+  (
+    ignore (if i == Obj.magic (HxRuntime.hx_null) then ignore () else ());
+    ignore (if bufsize != HxRuntime.hx_null then ignore () else ());
+    HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (let __anon_7 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_7 "fileName" (Obj.repr "haxe/io/Output.hx"));
+      ignore (HxAnon.set __anon_7 "lineNumber" (Obj.repr 107));
+      ignore (HxAnon.set __anon_7 "className" (Obj.repr "haxe.io.Output"));
+      ignore (HxAnon.set __anon_7 "methodName" (Obj.repr "writeInput"));
+      __anon_7
+    )))) ["Dynamic"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException"; "haxe.Exception"]
+  )
+))
+
+let writeString = fun self s encoding -> ignore ((
+  ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
+  let b = HxBytes.ofString s () in writeFullBytes self b 0 (HxBytes.length b)
+))
+
+let writeInt8 = fun self x -> ignore ((
+  ignore (if x < -128 || x >= 128 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Overflow))) ["Dynamic"; "haxe.io.Error"]) else ());
+  writeByte self (HxInt.logand x 255)
+))
+
+let writeUInt8 = fun self x -> ignore ((
+  ignore (if x < 0 || x >= 256 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Overflow))) ["Dynamic"; "haxe.io.Error"]) else ());
+  writeByte self x
+))
+
+let writeUInt16 = fun self x -> ignore ((
+  ignore (if x < 0 || x >= 65536 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Overflow))) ["Dynamic"; "haxe.io.Error"]) else ());
+  if self.bigEndian then ignore ((
+    ignore (writeByte self (HxInt.shr x 8));
+    writeByte self (HxInt.logand x 255)
+  )) else ignore ((
+    ignore (writeByte self (HxInt.logand x 255));
+    writeByte self (HxInt.shr x 8)
+  ))
+))
+
+let writeInt16 = fun self x -> ignore ((
+  ignore (if x < -32768 || x >= 32768 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Overflow))) ["Dynamic"; "haxe.io.Error"]) else ());
+  writeUInt16 self (HxInt.logand x 65535)
+))
+
+let writeUInt24 = fun self x -> ignore ((
+  ignore (if x < 0 || x >= 16777216 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Overflow))) ["Dynamic"; "haxe.io.Error"]) else ());
+  if self.bigEndian then ignore ((
+    ignore (writeByte self (HxInt.shr x 16));
+    ignore (writeByte self (HxInt.logand (HxInt.shr x 8) 255));
+    writeByte self (HxInt.logand x 255)
+  )) else ignore ((
+    ignore (writeByte self (HxInt.logand x 255));
+    ignore (writeByte self (HxInt.logand (HxInt.shr x 8) 255));
+    writeByte self (HxInt.shr x 16)
+  ))
+))
+
+let writeInt24 = fun self x -> ignore ((
+  ignore (if x < -8388608 || x >= 8388608 then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.Overflow))) ["Dynamic"; "haxe.io.Error"]) else ());
+  writeUInt24 self (HxInt.logand x 16777215)
+))
+
+let writeInt32 = fun self x -> ignore (if self.bigEndian then ignore ((
+  ignore (writeByte self (HxInt.ushr x 24));
+  ignore (writeByte self (HxInt.logand (HxInt.shr x 16) 255));
+  ignore (writeByte self (HxInt.logand (HxInt.shr x 8) 255));
+  writeByte self (HxInt.logand x 255)
+)) else ignore ((
+  ignore (writeByte self (HxInt.logand x 255));
+  ignore (writeByte self (HxInt.logand (HxInt.shr x 8) 255));
+  ignore (writeByte self (HxInt.logand (HxInt.shr x 16) 255));
+  writeByte self (HxInt.ushr x 24)
+)))

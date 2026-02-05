@@ -3,3 +3,38 @@
 (* Haxe type: haxe.io.BytesBuffer *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t; mutable b : int HxArray.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.BytesBuffer"; b = Obj.magic () } : t) in (
+  ignore (let __assign_1 = let __arr_2 = HxArray.create () in __arr_2 in (
+    self.b <- __assign_1;
+    __assign_1
+  ));
+  self
+)
+
+let get_length = fun self () -> HxArray.length (self.b)
+
+let addByte = fun self byte -> ignore (HxArray.push (self.b) byte)
+
+let add = fun self src -> ignore (let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+  ignore (_g := __new_4);
+  __old_3
+) in HxArray.push (self.b) (HxBytes.get src i)) done)
+
+let addString = fun self v encoding -> ignore ((
+  ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
+  let src = HxBytes.ofString v () in let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
+    ignore (_g := __new_6);
+    __old_5
+  ) in HxArray.push (self.b) (HxBytes.get src i)) done
+))
+
+let getBytes = fun self () -> let out = HxBytes.alloc (HxArray.length (self.b)) in let _g = ref 0 in let _g1 = HxArray.length (self.b) in (
+  ignore (while !_g < _g1 do ignore (let i = let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
+    ignore (_g := __new_8);
+    __old_7
+  ) in HxBytes.set out i (HxArray.get (self.b) i)) done);
+  out
+)

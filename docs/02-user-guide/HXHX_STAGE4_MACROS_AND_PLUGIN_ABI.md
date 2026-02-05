@@ -65,7 +65,9 @@ Model A (RPC macro host) requires:
 Today, the OCaml target uses a bootstrap seam:
 
 - Haxe “client” API (`MacroHostClient`) is Haxe code.
-- Low-level process IO is in `std/runtime/HxHxMacroRpc.ml` (OCaml), exposed to Haxe via an extern.
+- The transport uses `sys.io.Process` to spawn and communicate with the macro host.
+- On OCaml, `sys.io.Process` is provided by the override in `std/_std/sys/io/Process.hx`, backed by
+  the runtime shim `std/runtime/HxProcess.ml`.
 
 This is intentionally a **temporary dependency** for correctness and CI stability while the
 portable OCaml-target stdlib/process APIs are still evolving.
