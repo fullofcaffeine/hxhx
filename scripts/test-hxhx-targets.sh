@@ -258,6 +258,10 @@ echo "$out" | grep -q "^macro_define=ok$"
 echo "$out" | grep -q "^macro_defined=yes$"
 echo "$out" | grep -q "^macro_definedValue=bar$"
 
+echo "== Stage4 bring-up: duplex define roundtrip via macro.run"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run 'BuiltinMacros.smoke()')"
+echo "$out" | grep -q "^macro_run=smoke:type=builtin:String;define=yes$"
+
 echo "== Stage4 bring-up: macro.run builtin entrypoint"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "hxhxmacrohost.BuiltinMacros.smoke()")"
 echo "$out" | grep -q "^macro_run=smoke:type=builtin:String;define=yes$"

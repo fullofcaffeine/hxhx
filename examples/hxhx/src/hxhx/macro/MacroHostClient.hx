@@ -108,6 +108,7 @@ class MacroHostClient {
 private class MacroClient {
 	final proc:sys.io.Process;
 	var nextId:Int = 1;
+	final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 
 	function new(proc:sys.io.Process) {
 		this.proc = proc;
@@ -138,19 +139,80 @@ private class MacroClient {
 		proc.stdin.writeString(msg, null);
 		proc.stdin.flush();
 
-		final line = proc.stdout.readLine();
-		final parts = MacroProtocol.splitN(line, 3);
-		final rid = Std.parseInt(parts[1]);
-		if (rid == null || rid != id) throw "macro host: response id mismatch: " + line;
-		final status = parts[2];
-		final respTail = parts[3];
-		return if (status == "ok") {
-			MacroProtocol.kvGet(respTail, "v");
-		} else {
+		while (true) {
+			final line = proc.stdout.readLine();
+			final trimmed = StringTools.trim(line);
+			if (trimmed.length == 0) continue;
+
+			// Duplex bring-up: while we are waiting for a response, the macro host may send its own request
+			// back to the compiler (this process).
+			if (StringTools.startsWith(trimmed, "req ")) {
+				handleInboundReq(trimmed);
+				continue;
+			}
+
+			final parts = MacroProtocol.splitN(trimmed, 3);
+			final rid = Std.parseInt(parts[1]);
+			if (rid == null || rid != id) throw "macro host: response id mismatch: " + trimmed;
+			final status = parts[2];
+			final respTail = parts[3];
+			if (status == "ok") return MacroProtocol.kvGet(respTail, "v");
+
 			final msg = MacroProtocol.kvGet(respTail, "m");
 			final pos = MacroProtocol.kvGet(respTail, "p");
 			throw (pos != null && pos.length > 0) ? ("macro host: " + msg + " (" + pos + ")") : ("macro host: " + msg);
 		}
+
+		return "";
+	}
+
+	function handleInboundReq(line:String):Void {
+		final parts = MacroProtocol.splitN(line, 3); // ["req", id, method, tail]
+		final id = Std.parseInt(parts[1]);
+		final method = parts[2];
+		final tail = parts[3];
+		if (id == null) {
+			replyErr(0, "missing id");
+			return;
+		}
+
+		try {
+			switch (method) {
+				case "compiler.define":
+					final name = MacroProtocol.kvGet(tail, "n");
+					final value = MacroProtocol.kvGet(tail, "v");
+					if (name == null || name.length == 0) {
+						replyErr(id, method + ": missing name");
+						return;
+					}
+					defines.set(name, value == null ? "" : value);
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "context.defined":
+					final name = MacroProtocol.kvGet(tail, "n");
+					replyOk(id, MacroProtocol.encodeLen("v", (name != null && defines.exists(name)) ? "1" : "0"));
+				case "context.definedValue":
+					final name = MacroProtocol.kvGet(tail, "n");
+					final v = (name != null && defines.exists(name)) ? defines.get(name) : null;
+					replyOk(id, MacroProtocol.encodeLen("v", v == null ? "" : v));
+				case _:
+					replyErr(id, "unknown method: " + method);
+			}
+		} catch (e:Dynamic) {
+			replyErr(id, method + ": exception: " + Std.string(e));
+		}
+	}
+
+	inline function replyOk(id:Int, tail:String):Void {
+		proc.stdin.writeString("res " + id + " ok " + tail + "\n", null);
+		proc.stdin.flush();
+	}
+
+	inline function replyErr(id:Int, msg:String):Void {
+		proc.stdin.writeString(
+			"res " + id + " err " + MacroProtocol.encodeLen("m", msg) + " " + MacroProtocol.encodeLen("p", "") + "\n",
+			null
+		);
+		proc.stdin.flush();
 	}
 
 	public function close():Void {

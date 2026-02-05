@@ -85,6 +85,21 @@ Responses:
 
 `<id>` is an integer chosen by the client so it can correlate responses.
 
+### Duplex note (Stage 4 bring-up)
+
+Stage 4 requires **duplex** communication:
+
+- the compiler sends a `req` to the macro host (e.g. `macro.run`)
+- while the compiler is waiting for the corresponding `res`, the macro host may send its own `req`
+  back to the compiler (e.g. `compiler.define`, `context.defined`, `context.definedValue`)
+- the compiler must handle these inbound requests and reply with `res` lines, then continue waiting
+  for its original `res`
+
+In the current bring-up rungs:
+
+- compiler-initiated requests use positive IDs
+- macro-host-initiated reverse requests use **negative IDs** to avoid collisions
+
 ### Payload fragments
 
 Payload fragments are key/value parts with length-prefixed text:
@@ -161,4 +176,4 @@ The macro RPC section specifically runs:
 - `bash scripts/hxhx/build-hxhx-macro-host.sh`
 - `bash scripts/hxhx/build-hxhx.sh`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-selftest`
-- `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-run "Macro.init()"`
+- `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-run "BuiltinMacros.smoke()"`
