@@ -231,6 +231,15 @@ out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main4 --no-output)"
 echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing pack.Mod.SubType"
 
+echo "== Stage1 bring-up: toplevel main module (no class)"
+cat >"$tmpdir/src/ToplevelMain.hx" <<'HX'
+package;
+
+function main() {}
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main ToplevelMain --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+
 echo "== Stage3 bring-up: type+emit+build minimal OCaml subset"
 stage3_out="$tmpdir/out_stage3"
 out="$("$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$stage3_out")"

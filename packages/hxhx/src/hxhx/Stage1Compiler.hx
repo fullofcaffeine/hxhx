@@ -66,14 +66,22 @@ class Stage1Compiler {
 		} catch (e:Dynamic) {
 			return error("parse failed: " + formatParseError(e));
 		}
-		if (decl.mainClass.name != resolved.className) {
-			return error('expected main class "' + resolved.className + '" but parsed "' + decl.mainClass.name + '" in ' + resolved.path);
-		}
 		if ((decl.packagePath ?? "") != resolved.packagePath) {
 			return error('package mismatch for "' + parsed.main + '": expected "' + resolved.packagePath + '" but parsed "' + (decl.packagePath ?? "") + '"');
 		}
-		if (!decl.mainClass.hasStaticMain) {
-			return error('missing "static function main" in ' + parsed.main);
+
+		// Upstream supports module-level entrypoints (no class) like:
+		//   function main() {}
+		//
+		// Gate1's `tests/unit/compile-macro.hxml` uses this style (unit.TestMain).
+		final hasToplevelMain = HxModuleDecl.getHasToplevelMain(decl);
+		if (!hasToplevelMain) {
+			if (decl.mainClass.name != resolved.className) {
+				return error('expected main class "' + resolved.className + '" but parsed "' + decl.mainClass.name + '" in ' + resolved.path);
+			}
+			if (!decl.mainClass.hasStaticMain) {
+				return error('missing entrypoint main for ' + parsed.main + ' (expected static function main or toplevel function main)');
+			}
 		}
 
 		// Stage1 graph bring-up: parse a small, explicit import closure.

@@ -120,11 +120,13 @@ class Main {
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final imports = HxModuleDecl.getImports(decl);
 			final cls = HxModuleDecl.getMainClass(decl);
+			final toplevelMain = HxModuleDecl.getHasToplevelMain(decl);
 			Sys.println("parse=ok");
 			Sys.println("package=" + (pkg.length == 0 ? "<none>" : pkg));
 			Sys.println("imports=" + imports.length);
 			Sys.println("class=" + HxClassDecl.getName(cls));
 			Sys.println("hasStaticMain=" + (HxClassDecl.getHasStaticMain(cls) ? "yes" : "no"));
+			Sys.println("hasToplevelMain=" + (toplevelMain ? "yes" : "no"));
 			return;
 		}
 

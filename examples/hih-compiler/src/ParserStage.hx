@@ -60,6 +60,7 @@ class ParserStage {
 			final imports = new Array<String>();
 			var className = "Unknown";
 			var headerOnly = false;
+			var hasToplevelMain = false;
 			var hasStaticMain = false;
 			final functions = new Array<HxFunctionDecl>();
 			var sawOk = false;
@@ -98,6 +99,8 @@ class ParserStage {
 							className = payload;
 						case "header_only":
 							headerOnly = payload == "1";
+						case "toplevel_main":
+							hasToplevelMain = payload == "1";
 						case "method":
 							functions.push(decodeMethodPayload(payload));
 						case _:
@@ -110,7 +113,7 @@ class ParserStage {
 				throw "Native frontend: missing terminal 'ok'";
 			}
 
-			return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), headerOnly);
+			return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), headerOnly, hasToplevelMain);
 		}
 
 	static function decodeMethodPayload(payload:String):HxFunctionDecl {

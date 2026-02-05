@@ -184,13 +184,18 @@ let token_eq_sym (t : token) (c : char) : bool =
   | _ -> false
 
 let parse_module_from_tokens (toks : token array) :
-    (string * string list * string * bool * method_decl list) =
+    (string * string list * bool * string * bool * method_decl list) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
     else toks.(!i)
   in
   let bump () = i := !i + 1 in
+  let peek (n : int) : token =
+    let j = !i + n in
+    if j < 0 || j >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else toks.(j)
+  in
 
   let expect_kw (k : string) =
     if token_eq_kw (cur ()) k then bump ()
@@ -241,6 +246,7 @@ let parse_module_from_tokens (toks : token array) :
 
   let package_path = ref "" in
   let imports = ref [] in
+  let has_toplevel_main = ref false in
 
   if token_eq_kw (cur ()) "package" then (
     bump ();
@@ -272,6 +278,11 @@ let parse_module_from_tokens (toks : token array) :
      Some modules contain no classes at all (typedef/enum/abstract-only). For those,
      we should still succeed (so Stage1 can traverse an import closure). *)
   let rec seek_class () : bool =
+    (* Detect module-level `function main(...)` before we enter a class body. *)
+    (match cur () with
+    | Kw ("function", _) -> (
+        match peek 1 with Ident ("main", _) -> has_toplevel_main := true | _ -> ())
+    | _ -> ());
     if token_eq_kw (cur ()) "class" then
       true
     else
@@ -564,7 +575,7 @@ let parse_module_from_tokens (toks : token array) :
     bump ()
   done;
 
-  (!package_path, !imports, !class_name, !has_static_main, !methods)
+  (!package_path, !imports, !has_toplevel_main, !class_name, !has_static_main, !methods)
 
 (* Best-effort header-only parser for upstream-scale modules.
 
@@ -580,13 +591,18 @@ let parse_module_from_tokens (toks : token array) :
      - first `class Name` (if any)
    - Ignores everything else.
 *)
-let parse_module_header_only (toks : token array) : (string * string list * string) =
+let parse_module_header_only (toks : token array) : (string * string list * bool * string) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
     else toks.(!i)
   in
   let bump () = i := !i + 1 in
+  let peek (n : int) : token =
+    let j = !i + n in
+    if j < 0 || j >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else toks.(j)
+  in
 
   let rec skip_until_semicolon () =
     match cur () with
@@ -643,6 +659,7 @@ let parse_module_header_only (toks : token array) : (string * string list * stri
 
   let package_path = ref "" in
   let imports = ref [] in
+  let has_toplevel_main = ref false in
   let class_name = ref "Unknown" in
 
   if token_eq_kw (cur ()) "package" then (
@@ -662,6 +679,20 @@ let parse_module_header_only (toks : token array) : (string * string list * stri
     skip_until_semicolon ()
   done;
 
+  let rec seek_toplevel_main () =
+    match cur () with
+    | Eof _ -> ()
+    | _ when token_eq_kw (cur ()) "class" -> ()
+    | Kw ("function", _) -> (
+        (match peek 1 with Ident ("main", _) -> has_toplevel_main := true | _ -> ());
+        bump ();
+        seek_toplevel_main ())
+    | _ ->
+        bump ();
+        seek_toplevel_main ()
+  in
+  seek_toplevel_main ();
+
   let rec seek_class () =
     match cur () with
     | Eof _ -> ()
@@ -674,22 +705,24 @@ let parse_module_header_only (toks : token array) : (string * string list * stri
   in
   seek_class ();
 
-  (!package_path, !imports, !class_name)
+  (!package_path, !imports, !has_toplevel_main, !class_name)
 
 let encode_ast_lines (package_path : string) (imports : string list)
-    (class_name : string) (header_only : bool) (has_static_main : bool)
-    (methods : method_decl list) : string =
+    (class_name : string) (header_only : bool) (has_toplevel_main : bool)
+    (has_static_main : bool) (methods : method_decl list) : string =
   let pkg_enc = escape_payload package_path in
   let imports_payload = String.concat "|" imports in
   let imports_enc = escape_payload imports_payload in
   let cls_enc = escape_payload class_name in
   let header_only_s = if header_only then "1" else "0" in
+  let toplevel_s = if has_toplevel_main then "1" else "0" in
   let base =
     [
       Printf.sprintf "ast package %d:%s" (String.length pkg_enc) pkg_enc;
       Printf.sprintf "ast imports %d:%s" (String.length imports_enc) imports_enc;
       Printf.sprintf "ast class %d:%s" (String.length cls_enc) cls_enc;
       Printf.sprintf "ast header_only 1:%s" header_only_s;
+      Printf.sprintf "ast toplevel_main 1:%s" toplevel_s;
       "ast static_main " ^ if has_static_main then "1" else "0";
     ]
   in
@@ -769,13 +802,14 @@ let parse_module_decl (src : string) : string =
     | Ok ((toks, None)) -> (
         let base = strip_terminal_ok lex_stream in
         try
-          let package_path, imports, class_name, has_static_main, methods =
+          let package_path, imports, has_toplevel_main, class_name, has_static_main, methods =
             parse_module_from_tokens toks
           in
           String.concat "\n"
             [
               base;
-              encode_ast_lines package_path imports class_name false has_static_main methods;
+              encode_ast_lines package_path imports class_name false has_toplevel_main
+                has_static_main methods;
               "ok";
             ]
         with
@@ -783,22 +817,28 @@ let parse_module_decl (src : string) : string =
             if header_only_enabled () then
               (* Header-only fallback: for bootstrapping, we prefer keeping the resolver moving
                  (package/import/class) over failing on body-level syntax we don't support yet. *)
-              let package_path, imports, class_name = parse_module_header_only toks in
+              let package_path, imports, has_toplevel_main, class_name =
+                parse_module_header_only toks
+              in
               String.concat "\n"
                 [
                   base;
-                  encode_ast_lines package_path imports class_name true false [];
+                  encode_ast_lines package_path imports class_name true has_toplevel_main
+                    false [];
                   "ok";
                 ]
             else
               String.concat "\n" [ base; encode_err_line p msg ]
         | _exn ->
             if header_only_enabled () then
-              let package_path, imports, class_name = parse_module_header_only toks in
+              let package_path, imports, has_toplevel_main, class_name =
+                parse_module_header_only toks
+              in
               String.concat "\n"
                 [
                   base;
-                  encode_ast_lines package_path imports class_name true false [];
+                  encode_ast_lines package_path imports class_name true has_toplevel_main
+                    false [];
                   "ok";
                 ]
             else

@@ -82,6 +82,7 @@ ast package <len>:<payload>
 ast imports <len>:<payload>
 ast class <len>:<payload>
 ast header_only <len>:<payload>
+ast toplevel_main <len>:<payload>
 ast static_main 0|1
 ast method <len>:<payload>
 ```
@@ -93,6 +94,9 @@ Notes:
 - `ast header_only` is an optional bootstrap hint:
   - payload is `0` or `1`
   - `1` means the native side fell back to header-only parsing (i.e. method bodies were not parsed)
+- `ast toplevel_main` is a bootstrap hint:
+  - payload is `0` or `1`
+  - `1` means the module contains a toplevel `function main(...)` (no class required)
 - `ast method` is a bootstrap record that encodes a function signature summary as a `|` separated payload:
   `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`
   - `vis` is `public` or `private`

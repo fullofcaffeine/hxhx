@@ -17,12 +17,14 @@ class HxModuleDecl {
 	public final imports:Array<String>;
 	public final mainClass:HxClassDecl;
 	public final headerOnly:Bool;
+	public final hasToplevelMain:Bool;
 
-	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl, headerOnly:Bool) {
+	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl, headerOnly:Bool, hasToplevelMain:Bool) {
 		this.packagePath = packagePath;
 		this.imports = imports;
 		this.mainClass = mainClass;
 		this.headerOnly = headerOnly;
+		this.hasToplevelMain = hasToplevelMain;
 	}
 
 	/**
@@ -62,5 +64,16 @@ class HxModuleDecl {
 	**/
 	public static function getHeaderOnly(m:HxModuleDecl):Bool {
 		return m.headerOnly;
+	}
+
+	/**
+		Whether the module provides a toplevel `function main(...)` entrypoint.
+
+		Why
+		- Upstream Haxe supports module-level entrypoints (used by its unit tests).
+		- Supporting this early prevents bootstrap churn when we start running upstream suites.
+	**/
+	public static function getHasToplevelMain(m:HxModuleDecl):Bool {
+		return m.hasToplevelMain;
 	}
 }

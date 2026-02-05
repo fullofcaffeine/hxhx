@@ -464,6 +464,7 @@ class HxParser {
 	public function parseModule():HxModuleDecl {
 		var packagePath = "";
 		final imports = new Array<String>();
+		var hasToplevelMain = false;
 
 		if (acceptKeyword(KPackage)) {
 			// Haxe allows an empty package declaration: `package;`
@@ -490,29 +491,45 @@ class HxParser {
 		// This lets us tolerate (for now):
 		// - metadata like `@:build(...)`
 		// - multiple type declarations per module
-		// - top-level functions (ignored in this phase)
+		// - top-level functions (only `main` is recognized as an entrypoint hint)
+		var sawClass = false;
 		while (true) {
 			switch (cur.kind) {
 				case TKeyword(KClass):
+					sawClass = true;
 					break;
+				case TKeyword(KFunction):
+					// Detect module-level `function main(...)` entrypoint.
+					bump();
+					switch (cur.kind) {
+						case TIdent("main"):
+							hasToplevelMain = true;
+						case _:
+					}
 				case TEof:
-					fail("No class declaration found");
+					break;
 				default:
 					bump();
 			}
+			if (cur.kind.match(TEof) || cur.kind.match(TKeyword(KClass))) break;
 		}
 
-		expect(TKeyword(KClass), "'class'");
-		final className = readIdent("class name");
-
-		expect(TLBrace, "'{'");
-
-		final functions = parseClassFunctions();
+		var className = "Unknown";
+		final functions = new Array<HxFunctionDecl>();
 		var hasStaticMain = false;
-		for (fn in functions) {
-			if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main") {
-				hasStaticMain = true;
-				break;
+
+		if (sawClass) {
+			expect(TKeyword(KClass), "'class'");
+			className = readIdent("class name");
+
+			expect(TLBrace, "'{'");
+
+			for (fn in parseClassFunctions()) functions.push(fn);
+			for (fn in functions) {
+				if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main") {
+					hasStaticMain = true;
+					break;
+				}
 			}
 		}
 
@@ -528,6 +545,6 @@ class HxParser {
 		}
 
 		expect(TEof, "end of input");
-		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), false);
+		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), false, hasToplevelMain);
 	}
 }
