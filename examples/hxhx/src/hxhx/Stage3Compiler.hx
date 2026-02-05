@@ -3,6 +3,7 @@ package hxhx;
 import haxe.io.Path;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
+import hxhx.macro.MacroHostClient.MacroHostSession;
 
 /**
 	Stage 3 compiler bring-up (`--hxhx-stage3`).
@@ -70,6 +71,14 @@ class Stage3Compiler {
 
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
 
+		var macroSession:Null<MacroHostSession> = null;
+		inline function closeMacroSession():Void {
+			if (macroSession != null) {
+				macroSession.close();
+				macroSession = null;
+			}
+		}
+
 		final hostCwd = try Sys.getCwd() catch (_:Dynamic) ".";
 		final cwd = absFromCwd(hostCwd, parsed.cwd);
 			if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
@@ -83,16 +92,19 @@ class Stage3Compiler {
 				hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
 				hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
-			// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
-			//
-			// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
-			// “execute macro expressions and surface deterministic results/errors”.
-			final results = try MacroHostClient.runAll(parsed.macros) catch (e:Dynamic) {
-				return error("macro failed: " + Std.string(e));
-			}
-			for (i in 0...results.length) {
-				Sys.println("macro_run[" + i + "]=" + results[i]);
-			}
+				// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
+				//
+				// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
+				// “execute macro expressions and surface deterministic results/errors”.
+				try {
+					macroSession = MacroHostClient.openSession();
+					for (i in 0...parsed.macros.length) {
+						Sys.println("macro_run[" + i + "]=" + macroSession.run(parsed.macros[i]));
+					}
+				} catch (e:Dynamic) {
+					closeMacroSession();
+					return error("macro failed: " + Std.string(e));
+				}
 
 			// Bring-up diagnostics: dump HXHX_* defines set by macros so tests can assert macro effects.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
@@ -113,6 +125,7 @@ class Stage3Compiler {
 			}
 
 			final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {
+				closeMacroSession();
 				return error("resolve failed: " + Std.string(e));
 			}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
@@ -121,19 +134,57 @@ class Stage3Compiler {
 		final ast = ResolvedModule.getParsed(root);
 
 		final typed = TyperStage.typeModule(ast);
+
+		if (macroSession != null) {
+			final hooks = hxhx.macro.MacroState.listAfterTypingHookIds();
+			for (i in 0...hooks.length) {
+				try {
+					macroSession.runHook("afterTyping", hooks[i]);
+				} catch (e:Dynamic) {
+					closeMacroSession();
+					return error("afterTyping hook failed: " + Std.string(e));
+				}
+				Sys.println("hook_afterTyping[" + i + "]=ok");
+			}
+		}
+
+		if (macroSession != null) {
+			final hooks = hxhx.macro.MacroState.listOnGenerateHookIds();
+			for (i in 0...hooks.length) {
+				try {
+					macroSession.runHook("onGenerate", hooks[i]);
+				} catch (e:Dynamic) {
+					closeMacroSession();
+					return error("onGenerate hook failed: " + Std.string(e));
+				}
+				Sys.println("hook_onGenerate[" + i + "]=ok");
+			}
+		}
+
+		// Collect generated modules after hooks.
 		final generated = new Array<MacroExpandedModule.GeneratedOcamlModule>();
 		for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
 			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
 		}
 		final expanded = MacroStage.expand(typed, generated);
 
+		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
+		for (name in hxhx.macro.MacroState.listDefineNames()) {
+			if (StringTools.startsWith(name, "HXHX_")) {
+				Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+			}
+		}
+
 		final exe = try EmitterStage.emitToDir(expanded, outAbs) catch (e:Dynamic) {
+			closeMacroSession();
 			return error("emit failed: " + Std.string(e));
 		}
 
 		Sys.println("stage3=ok");
 		Sys.println("outDir=" + outAbs);
 		Sys.println("exe=" + exe);
+
+		closeMacroSession();
 
 		final code = Sys.command(exe, []);
 		if (code != 0) return error("built executable failed with exit code " + code);

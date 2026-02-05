@@ -63,6 +63,17 @@ class MacroHostClient {
 	}
 
 	/**
+		Open a macro host session for a full compilation.
+
+		Why
+		- Hook registration (`Context.onAfterTyping`, `Context.onGenerate`) stores closures inside
+		  the macro host process, so the session must remain alive until those hooks are invoked.
+	**/
+	public static function openSession():MacroHostSession {
+		return new MacroHostSession(connect());
+	}
+
+	/**
 		Run multiple macro expressions in a single macro-host session.
 
 		Why
@@ -82,18 +93,16 @@ class MacroHostClient {
 		  may add reuse/caching.
 	**/
 	public static function runAll(exprs:Array<String>):Array<String> {
-		final client = connect();
-		final out = new Array<String>();
+		final session = openSession();
 		try {
-			for (expr in exprs) {
-				out.push(client.call("macro.run", MacroProtocol.encodeLen("e", expr)));
-			}
+			final out = new Array<String>();
+			for (expr in exprs) out.push(session.run(expr));
+			session.close();
+			return out;
 		} catch (e:Dynamic) {
-			client.close();
+			session.close();
 			throw e;
 		}
-		client.close();
-		return out;
 	}
 
 	public static function getType(name:String):String {
@@ -229,6 +238,20 @@ private class MacroClient {
 					final payload = MacroProtocol.encodeLen("d", MacroState.defined(name) ? "1" : "0") + " "
 						+ MacroProtocol.encodeLen("v", MacroState.definedValue(name));
 					replyOk(id, MacroProtocol.encodeLen("v", payload));
+				case "compiler.registerHook":
+					final kind = MacroProtocol.kvGet(tail, "k");
+					final idStr = MacroProtocol.kvGet(tail, "i");
+					final hid = Std.parseInt(idStr);
+					if (kind == null || kind.length == 0) {
+						replyErr(id, method + ": missing kind");
+						return;
+					}
+					if (hid == null) {
+						replyErr(id, method + ": invalid hook id");
+						return;
+					}
+					MacroState.registerHook(kind, hid);
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case "compiler.emitOcamlModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					final source = MacroProtocol.kvGet(tail, "s");
@@ -298,5 +321,36 @@ private class MacroClient {
 			proc.stdin.flush();
 		} catch (_:Dynamic) {}
 		proc.close();
+	}
+}
+
+/**
+	Public wrapper around a single macro host process.
+
+	Why
+	- Stage3 needs to keep the macro host alive across phases so registered hook closures can run.
+
+	What
+	- `run(expr)`: calls `macro.run` and returns the `v=` payload.
+	- `runHook(kind,id)`: calls `macro.runHook` to execute a previously-registered hook closure.
+**/
+class MacroHostSession {
+	final client:MacroClient;
+
+	public function new(client:MacroClient) {
+		this.client = client;
+	}
+
+	public function run(expr:String):String {
+		return client.call("macro.run", MacroProtocol.encodeLen("e", expr));
+	}
+
+	public function runHook(kind:String, id:Int):Void {
+		final tail = MacroProtocol.encodeLen("k", kind == null ? "" : kind) + " " + MacroProtocol.encodeLen("i", Std.string(id));
+		client.call("macro.runHook", tail);
+	}
+
+	public function close():Void {
+		client.close();
 	}
 }

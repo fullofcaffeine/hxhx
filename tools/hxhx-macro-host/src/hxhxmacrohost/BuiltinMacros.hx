@@ -128,6 +128,30 @@ class BuiltinMacros {
 		return "defines:flag_map=" + Std.string(flagMap) + ";flag_get=" + Std.string(flagGet) + ";enum_map=" + Std.string(enumMap) + ";enum_get=" + Std.string(enumGet);
 	}
 
+	/**
+		Register Stage4 hook callbacks (bring-up rung).
+
+		Why
+		- Upstream macro initialization frequently registers callbacks for later phases.
+		- This builtin is a deterministic probe that our hook plumbing works end-to-end:
+		  macro host stores closures → compiler records hook IDs → Stage3 invokes hooks.
+
+		What
+		- Registers:
+		  - one `onAfterTyping` hook that sets `HXHX_AFTER_TYPING=1`
+		  - one `onGenerate` hook that emits `HxHxHook.ml` and sets `HXHX_ON_GENERATE=1`
+	**/
+	public static function registerHooks():String {
+		Context.onAfterTyping(() -> {
+			Compiler.define("HXHX_AFTER_TYPING", "1");
+		});
+		Context.onGenerate(() -> {
+			Compiler.emitOcamlModule("HxHxHook", "let hook_generated : int = 1");
+			Compiler.define("HXHX_ON_GENERATE", "1");
+		});
+		return "hooks=ok";
+	}
+
 	public static function fail():String {
 		return MacroError.raise("intentional macro host failure (for position payload tests)");
 	}

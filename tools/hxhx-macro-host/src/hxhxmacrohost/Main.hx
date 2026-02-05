@@ -119,6 +119,21 @@ class Main {
 						return;
 					}
 					replyOk(id, Protocol.encodeLen("v", runMacroExpr(expr)));
+				case "macro.runHook":
+					final parsed = parseKV(tail);
+					final kind = parsed.exists("k") ? parsed.get("k") : "";
+					final idStr = parsed.exists("i") ? parsed.get("i") : "";
+					final hid = Std.parseInt(idStr);
+					if (kind.length == 0) {
+						replyErr(id, method + ": missing kind");
+						return;
+					}
+					if (hid == null) {
+						replyErr(id, method + ": invalid hook id");
+						return;
+					}
+					MacroRuntime.runHook(kind, hid);
+					replyOk(id, Protocol.encodeLen("v", "ok"));
 				case "context.getType":
 					// Stage 4 bring-up rung: a minimal `Context.getType`-shaped call.
 					// Upstream returns a typed representation; for bring-up we return a deterministic descriptor.
@@ -160,6 +175,8 @@ class Main {
 				BuiltinMacros.readFlag();
 			case "hxhxmacrohost.BuiltinMacros.dumpDefines()", "BuiltinMacros.dumpDefines()":
 				BuiltinMacros.dumpDefines();
+			case "hxhxmacrohost.BuiltinMacros.registerHooks()", "BuiltinMacros.registerHooks()":
+				BuiltinMacros.registerHooks();
 			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":
 				BuiltinMacros.fail();
 			case _:

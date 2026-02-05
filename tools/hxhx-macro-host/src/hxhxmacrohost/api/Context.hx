@@ -35,6 +35,41 @@ class Context {
 	}
 
 	/**
+		Register an "after typing" hook.
+
+		Why
+		- Upstream macros can register callbacks that run after typing completes.
+		- Gate1/Gate2 macro initialization commonly uses `Context.onAfterTyping(...)`.
+
+		What
+		- Stores `cb` inside the macro host process and returns immediately.
+		- Notifies the compiler of the hook ID so the compiler can invoke it later during the
+		  Stage3 pipeline.
+
+		How
+		- Macro host assigns a stable integer ID to the closure and sends a reverse RPC
+		  `compiler.registerHook k=afterTyping i=<id>`.
+	**/
+	public static function onAfterTyping(cb:Void->Void):Void {
+		if (cb == null) return;
+		final id = MacroRuntime.registerAfterTyping(cb);
+		final tail = Protocol.encodeLen("k", "afterTyping") + " " + Protocol.encodeLen("i", Std.string(id));
+		HostToCompilerRpc.call("compiler.registerHook", tail);
+	}
+
+	/**
+		Register an "on generate" hook.
+
+		See `onAfterTyping` for bring-up rationale and mechanics.
+	**/
+	public static function onGenerate(cb:Void->Void):Void {
+		if (cb == null) return;
+		final id = MacroRuntime.registerOnGenerate(cb);
+		final tail = Protocol.encodeLen("k", "onGenerate") + " " + Protocol.encodeLen("i", Std.string(id));
+		HostToCompilerRpc.call("compiler.registerHook", tail);
+	}
+
+	/**
 		Return a snapshot of all compiler defines.
 
 		Why

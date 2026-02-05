@@ -141,6 +141,18 @@ Bring-up read-define primitive (roughly corresponds to `haxe.macro.Compiler.getD
 
 The macro host treats `defined=false` as “no define” and returns `null`.
 
+### `compiler.registerHook` (bring-up rung)
+
+Compiler-side registration hook called by the macro host when macro code registers a callback.
+
+This models the *shape* of upstream hook registration (`Context.onAfterTyping`, `Context.onGenerate`) without
+shipping closures over the ABI.
+
+- request: `req <id> compiler.registerHook k=<...> i=<...>`
+  - `k`: hook kind (`afterTyping` or `onGenerate`)
+  - `i`: hook ID (integer assigned by the macro host)
+- response: `res <id> ok v=2:ok`
+
 ### `compiler.emitOcamlModule` (bring-up rung)
 
 Stage 4 “generate code” rung: a macro can request the compiler to emit an additional OCaml compilation unit.
@@ -190,6 +202,13 @@ Models the shape of `haxe.macro.Context.definedValue(name)`.
 - request: `req <id> context.definedValue n=<...>`
 - response: `res <id> ok v=<len>:<value>`
 
+### `context.onAfterTyping` / `context.onGenerate` (bring-up rung)
+
+Hook registration APIs used from within macro code.
+
+In Model A, hook callbacks are stored inside the macro host process. Registration therefore triggers a reverse RPC
+`compiler.registerHook` so the compiler can remember which hooks to run later.
+
 ### `context.getDefines` (bring-up rung)
 
 Bring-up define enumeration primitive (corresponds to `haxe.macro.Context.getDefines()`).
@@ -211,6 +230,15 @@ use for `--macro` and build macros.
 
 - request: `req <id> macro.run e=<len>:<expr>`
 - response: `res <id> ok v=<len>:<result>`
+
+### `macro.runHook` (bring-up rung)
+
+Invoke a previously registered hook callback inside the macro host.
+
+- request: `req <id> macro.runHook k=<...> i=<...>`
+  - `k`: hook kind (`afterTyping` or `onGenerate`)
+  - `i`: hook ID (integer assigned by the macro host)
+- response: `res <id> ok v=2:ok`
 
 ### `context.getType` (bring-up rung)
 

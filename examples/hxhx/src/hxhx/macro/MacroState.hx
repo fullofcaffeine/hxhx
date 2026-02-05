@@ -32,6 +32,8 @@ class MacroState {
 	static final classPaths:Array<String> = [];
 	static var generatedHxDir:String = "";
 	static final generatedHxModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+	static final afterTypingHookIds:Array<Int> = [];
+	static final onGenerateHookIds:Array<Int> = [];
 
 	public static function reset():Void {
 		defines.clear();
@@ -39,6 +41,8 @@ class MacroState {
 		classPaths.resize(0);
 		generatedHxDir = "";
 		generatedHxModules.clear();
+		afterTypingHookIds.resize(0);
+		onGenerateHookIds.resize(0);
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -121,6 +125,39 @@ class MacroState {
 			out.push([k, definedValue(k)]);
 		}
 		return out;
+	}
+
+	/**
+		Hook registration (Stage 4 bring-up).
+
+		Why
+		- When macros register callbacks in the macro host, the compiler must remember those
+		  hook IDs so it can invoke them at the right time during the compilation pipeline.
+
+		What
+		- Stores hook IDs in registration order.
+		- Two hook kinds exist in the current bring-up rung:
+		  - `afterTyping`
+		  - `onGenerate`
+	**/
+	public static function registerHook(kind:String, id:Int):Void {
+		if (kind == null) return;
+		switch (kind) {
+			case "afterTyping":
+				afterTypingHookIds.push(id);
+			case "onGenerate":
+				onGenerateHookIds.push(id);
+			case _:
+				// Ignore unknown hook kinds during bring-up.
+		}
+	}
+
+	public static function listAfterTypingHookIds():Array<Int> {
+		return afterTypingHookIds.copy();
+	}
+
+	public static function listOnGenerateHookIds():Array<Int> {
+		return onGenerateHookIds.copy();
 	}
 
 	/**
