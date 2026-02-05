@@ -66,17 +66,31 @@ class TyperStage {
 	}
 
 	static function inferFirstReturnExprType(fn:HxFunctionDecl, scope:TyFunctionEnv):TyType {
-		for (s in HxFunctionDecl.getBody(fn)) {
-			switch (s) {
-				case SReturnVoid:
-					return TyType.fromHintText("Void");
-				case SReturn(e):
-					return inferExprType(e, scope);
-				case _:
+		function find(stmts:Array<HxStmt>):Null<TyType> {
+			for (s in stmts) {
+				switch (s) {
+					case SReturnVoid:
+						return TyType.fromHintText("Void");
+					case SReturn(e):
+						return inferExprType(e, scope);
+					case SBlock(ss):
+						final r = find(ss);
+						if (r != null) return r;
+					case SIf(_cond, thenBranch, elseBranch):
+						final r1 = find([thenBranch]);
+						if (r1 != null) return r1;
+						if (elseBranch != null) {
+							final r2 = find([elseBranch]);
+							if (r2 != null) return r2;
+						}
+					case _:
+				}
 			}
+			return null;
 		}
-		// If we never see an explicit return, treat it as `Void` (Haxe default).
-		return TyType.fromHintText("Void");
+
+		final r = find(HxFunctionDecl.getBody(fn));
+		return r == null ? TyType.fromHintText("Void") : r;
 	}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv):TyType {
@@ -103,6 +117,13 @@ class TyperStage {
 				// requires function resolution (future stage).
 				inferExprType(callee, scope);
 				for (a in args) inferExprType(a, scope);
+				TyType.unknown();
+			case EUnop(_op, e):
+				inferExprType(e, scope);
+				TyType.unknown();
+			case EBinop(_op, a, b):
+				inferExprType(a, scope);
+				inferExprType(b, scope);
 				TyType.unknown();
 			case EUnsupported(_):
 				TyType.unknown();

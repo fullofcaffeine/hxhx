@@ -23,6 +23,7 @@
 class HxParser {
 	final lex:HxLexer;
 	var cur:HxToken;
+	var peeked:Null<HxToken> = null;
 	var capturedReturnStringLiteral:String = "";
 
 	public function new(source:String) {
@@ -54,7 +55,21 @@ class HxParser {
 	}
 
 	inline function bump():Void {
-		cur = lex.next();
+		if (peeked != null) {
+			cur = peeked;
+			peeked = null;
+		} else {
+			cur = lex.next();
+		}
+	}
+
+	inline function peek():HxToken {
+		if (peeked == null) peeked = lex.next();
+		return peeked;
+	}
+
+	inline function peekKind():HxTokenKind {
+		return peek().kind;
 	}
 
 	function fail<T>(message:String):T {
@@ -260,6 +275,12 @@ class HxParser {
 				} else if (k == KFalse) {
 					bump();
 					EBool(false);
+				} else if (k == KCast || k == KUntyped) {
+					// Stage 3: these are not supported as expressions yet. Treat them as unsupported so
+					// emitters/typers can apply explicit escape hatches.
+					final raw = Std.string(k);
+					bump();
+					EUnsupported(raw);
 				} else {
 					// Best-effort: capture the keyword as a string.
 					final raw = Std.string(k);
@@ -290,9 +311,27 @@ class HxParser {
 		}
 	}
 
-	function parseExpr(stop:()->Bool):HxExpr {
-		// Very small expression subset:
-		//   primary (("." ident) | ("(" args ")"))*
+	static function binopPrec(op:String):Int {
+		return switch (op) {
+			case "=": 1;
+			case "||": 2;
+			case "|": 2;
+			case "&&": 3;
+			case "&": 3;
+			case "==" | "!=": 4;
+			case "<" | "<=" | ">" | ">=": 5;
+			case "+" | "-": 6;
+			case "*" | "/" | "%": 7;
+			case _:
+				0;
+		}
+	}
+
+	static function isRightAssoc(op:String):Bool {
+		return op == "=";
+	}
+
+	function parsePostfixExpr(stop:()->Bool):HxExpr {
 		var e = parsePrimaryExpr();
 		while (!stop()) {
 			switch (cur.kind) {
@@ -326,6 +365,94 @@ class HxParser {
 		return e;
 	}
 
+	function parseUnaryExpr(stop:()->Bool):HxExpr {
+		return switch (cur.kind) {
+			case TOther(c) if (c == "!".code || c == "-".code || c == "+".code):
+				final op = String.fromCharCode(c);
+				bump();
+				EUnop(op, parseUnaryExpr(stop));
+			case _:
+				parsePostfixExpr(stop);
+		}
+	}
+
+	function peekBinop(stop:()->Bool):Null<{op:String, len:Int}> {
+		if (stop()) return null;
+		inline function nextIsOther(code:Int):Bool {
+			return switch (peekKind()) {
+				case TOther(c) if (c == code):
+					true;
+				case _:
+					false;
+			}
+		}
+		return switch (cur.kind) {
+			case TOther(c):
+				switch (c) {
+					case "=".code:
+						nextIsOther("=".code) ? {op: "==", len: 2} : {op: "=", len: 1};
+					case "!".code:
+						nextIsOther("=".code) ? {op: "!=", len: 2} : null;
+					case "<".code:
+						nextIsOther("=".code) ? {op: "<=", len: 2} : {op: "<", len: 1};
+					case ">".code:
+						nextIsOther("=".code) ? {op: ">=", len: 2} : {op: ">", len: 1};
+					case "&".code:
+						nextIsOther("&".code) ? {op: "&&", len: 2} : {op: "&", len: 1};
+					case "|".code:
+						nextIsOther("|".code) ? {op: "||", len: 2} : {op: "|", len: 1};
+					case "+".code:
+						{op: "+", len: 1};
+					case "-".code:
+						{op: "-", len: 1};
+					case "*".code:
+						{op: "*", len: 1};
+					case "/".code:
+						{op: "/", len: 1};
+					case "%".code:
+						{op: "%", len: 1};
+					case _:
+						null;
+				}
+			case _:
+				null;
+		}
+	}
+
+	function consumeBinop(len:Int):Void {
+		for (_ in 0...len) bump();
+	}
+
+	function parseBinaryExpr(minPrec:Int, stop:()->Bool):HxExpr {
+		var left = parseUnaryExpr(stop);
+
+		while (true) {
+			if (stop()) break;
+			final peekedOp = peekBinop(stop);
+			if (peekedOp == null) {
+				break;
+			}
+			final op = peekedOp.op;
+			final prec = binopPrec(op);
+			if (prec < minPrec || prec == 0) {
+				break;
+			}
+
+			consumeBinop(peekedOp.len);
+			final nextMin = isRightAssoc(op) ? prec : (prec + 1);
+			final right = parseBinaryExpr(nextMin, stop);
+			left = EBinop(op, left, right);
+		}
+
+		return left;
+	}
+
+	function parseExpr(stop:()->Bool):HxExpr {
+		// Stage 3: small-but-real expression subset.
+		// Includes calls/field access, prefix unary, and basic binary ops with precedence.
+		return parseBinaryExpr(1, stop);
+	}
+
 	function parseReturnStmt():HxStmt {
 		// `return;` or `return <expr>;`
 		if (cur.kind.match(TSemicolon)) {
@@ -345,35 +472,96 @@ class HxParser {
 		}
 
 		final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-		if (cur.kind.match(TSemicolon)) bump();
+		syncToStmtEnd();
 		return SReturn(expr);
+	}
+
+	function syncToStmtEnd():Void {
+		// Best-effort resynchronization for statements.
+		//
+		// Why
+		// - Our expression grammar is intentionally incomplete; it may stop before `;`.
+		// - If we don't advance to the end of the statement, parsing can get stuck on
+		//   the same token forever.
+		while (!cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TLParen:
+					bump();
+					skipBalancedParens();
+				case TLBrace:
+					// Caller handles braces explicitly.
+					return;
+				case _:
+					bump();
+			}
+		}
+		if (cur.kind.match(TSemicolon)) bump();
+	}
+
+	function parseVarStmt():HxStmt {
+		// `var name[:Type] [= expr];`
+		final name = readIdent("variable name");
+		var typeHint = "";
+		if (cur.kind.match(TColon)) {
+			bump();
+			typeHint = readTypeHintText(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || isOtherChar("="));
+		}
+
+		var init:Null<HxExpr> = null;
+		if (acceptOtherChar("=")) {
+			init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
+		}
+		syncToStmtEnd();
+		return SVar(name, typeHint, init);
+	}
+
+	function parseStmt(stop:()->Bool):HxStmt {
+		if (stop()) return SExpr(EUnsupported("<eof-stmt>"));
+
+		return switch (cur.kind) {
+			case TLBrace:
+				bump();
+				final ss = new Array<HxStmt>();
+				while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+					ss.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+				}
+				expect(TRBrace, "'}'");
+				SBlock(ss);
+			case TKeyword(KReturn):
+				bump();
+				parseReturnStmt();
+			case TKeyword(KVar):
+				bump();
+				parseVarStmt();
+			case TKeyword(KIf):
+				bump();
+				expect(TLParen, "'('");
+				final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				expect(TRParen, "')'");
+				final thenBranch = parseStmt(stop);
+				final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
+				SIf(cond, thenBranch, elseBranch);
+			case _:
+				final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+				syncToStmtEnd();
+				SExpr(expr);
+		}
 	}
 
 	function parseFunctionBodyStatements():Array<HxStmt> {
 		// Called after consuming '{' (function body open brace).
 		final out = new Array<HxStmt>();
-		var depth = 1;
-		while (depth > 0) {
+		while (true) {
 			switch (cur.kind) {
 				case TEof:
 					fail("Unterminated function body");
-				case TLBrace:
-					depth++;
-					bump();
 				case TRBrace:
-					depth--;
 					bump();
-				case TKeyword(KReturn) if (depth == 1):
-					bump();
-					out.push(parseReturnStmt());
-				case TLParen:
-					bump();
-					skipBalancedParens();
-				default:
-					bump();
+					return out;
+				case _:
+					out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 			}
 		}
-		return out;
 	}
 
 	function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool):HxFunctionDecl {

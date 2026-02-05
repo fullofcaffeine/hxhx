@@ -44,15 +44,32 @@ class HxFunctionDecl {
 	}
 
 	public function getFirstReturnExpr():HxExpr {
-		for (s in body) {
-			switch (s) {
-				case SReturn(e): return e;
-				case SReturnVoid:
-					return EUnsupported("<return-void>");
-				case _:
+		function find(stmts:Array<HxStmt>):Null<HxExpr> {
+			for (s in stmts) {
+				switch (s) {
+					case SReturn(e):
+						return e;
+					case SReturnVoid:
+						return EUnsupported("<return-void>");
+					case SBlock(ss):
+						final r = find(ss);
+						if (r != null) return r;
+					case SIf(_cond, thenBranch, elseBranch):
+						// Pre-order: then, then else. This is a bootstrap heuristic for “first return”.
+						final r1 = find([thenBranch]);
+						if (r1 != null) return r1;
+						if (elseBranch != null) {
+							final r2 = find([elseBranch]);
+							if (r2 != null) return r2;
+						}
+					case _:
+				}
 			}
+			return null;
 		}
-		return EUnsupported("<no-return>");
+
+		final r = find(body);
+		return r == null ? EUnsupported("<no-return>") : r;
 	}
 
 	/**

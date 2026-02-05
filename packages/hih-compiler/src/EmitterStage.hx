@@ -130,6 +130,16 @@ class EmitterStage {
 				} else {
 					c + " " + args.map(a -> "(" + exprToOcaml(a) + ")").join(" ");
 				}
+			case EUnop(_op, _e):
+				// Stage 3 bring-up: operator semantics are not implemented yet.
+				// Collapse to a value that typechecks everywhere so we can keep discovering
+				// the next missing feature.
+				"(Obj.magic 0)";
+			case EBinop(_op, _a, _b):
+				// Stage 3 bring-up: operator semantics are not implemented yet.
+				// Collapse to a value that typechecks everywhere so we can keep discovering
+				// the next missing feature.
+				"(Obj.magic 0)";
 			case EUnsupported(_):
 				// Stage 3 bring-up: avoid aborting emission when partial parsing produces
 				// unsupported nodes inside a larger expression tree. The goal here is to
@@ -148,6 +158,14 @@ class EmitterStage {
 		function hasBringupPoison(e:HxExpr):Bool {
 			return switch (e) {
 				case EUnsupported(_), ENull:
+					true;
+				case EUnop(_op, _):
+					// Stage 3: operator typing/lowering is not implemented yet; treat as poison so we
+					// don't attempt partial OCaml emission that might accidentally compile incorrectly.
+					true;
+				case EBinop(_op, _, _):
+					// Stage 3: operator typing/lowering is not implemented yet; treat as poison so we
+					// don't attempt partial OCaml emission that might accidentally compile incorrectly.
 					true;
 				case EIdent(name):
 					// Stage 3 only models params and module names. Any other value identifier is
