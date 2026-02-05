@@ -55,7 +55,12 @@ class ResolverStage {
 				final imp = normalizeImport(rawImport);
 				if (imp == null) continue;
 				if (StringTools.endsWith(imp, ".*")) {
-					// Bootstrap simplicity: wildcard imports are not resolved in Stage 2 yet.
+					// Bootstrap rule: treat `import X.*` as a dependency on module `X` rather than
+					// performing a directory scan. This supports upstream patterns like `unit.Test.*`.
+					final base = imp.substr(0, imp.length - 2);
+					// If the base module doesn't exist as a file, treat this as a package-wildcard
+					// import (`import pack.*`) and ignore it for graph traversal.
+					if (resolveModuleFile(classPaths, base) != null) visit(base);
 					continue;
 				}
 				visit(imp);

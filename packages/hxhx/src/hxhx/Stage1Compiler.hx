@@ -150,7 +150,18 @@ class Stage1Compiler {
 			visited.set(imp, true);
 
 			if (StringTools.endsWith(imp, ".*")) {
-				Sys.println("stage1=warn import_wildcard " + imp);
+				// Bootstrap rule: treat `import X.*` as a dependency on module `X`.
+				// This matches upstream patterns like `import unit.Test.*`, where the wildcard
+				// imports types from the *module* (not a directory scan).
+				final base = imp.substr(0, imp.length - 2);
+				// If the base module doesn't exist as a file, treat this as a package-wildcard
+				// import (`import pack.*`) and ignore it for module-graph traversal.
+				final baseResolved = Stage1Resolver.resolveModule(classPaths, base, parsed.cwd);
+				if (baseResolved == null) {
+					Sys.println("stage1=warn import_wildcard " + imp);
+					continue;
+				}
+				if (!visited.exists(base)) queue.push(base);
 				continue;
 			}
 

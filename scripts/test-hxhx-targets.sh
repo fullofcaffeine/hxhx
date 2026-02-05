@@ -231,6 +231,26 @@ out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main4 --no-output)"
 echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing pack.Mod.SubType"
 
+echo "== Stage1 bring-up: module wildcard import trims to base module"
+cat >"$tmpdir/src/pack/Wild.hx" <<'HX'
+package pack;
+
+class Wild {}
+class WildSub {}
+HX
+cat >"$tmpdir/src/MainWildcard.hx" <<'HX'
+package;
+
+import pack.Wild.*;
+
+class MainWildcard {
+  static function main() {}
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main MainWildcard --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+echo "$out" | grep -vq "stage1=warn import_wildcard pack.Wild.*"
+
 echo "== Stage1 bring-up: toplevel main module (no class)"
 cat >"$tmpdir/src/ToplevelMain.hx" <<'HX'
 package;
