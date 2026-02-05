@@ -27,4 +27,24 @@ class Compiler {
 		// Ignore return payload; errors propagate as exceptions.
 		HostToCompilerRpc.call("compiler.define", tail);
 	}
+
+	/**
+		Request the compiler to emit an additional OCaml module.
+
+		Why
+		- This is the smallest “generate code” effect we can prove early:
+		  macros can ask the compiler to create extra target files.
+		- Later stages will replace this with real AST/field generation, but the
+		  artifact plumbing (macro → compiler → output) is the same.
+
+		What
+		- Sends a reverse RPC `compiler.emitOcamlModule` with:
+		  - `n` (module name)
+		  - `s` (raw `.ml` source)
+	**/
+	public static function emitOcamlModule(name:String, source:String):Void {
+		if (name == null || name.length == 0) return;
+		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("s", source == null ? "" : source);
+		HostToCompilerRpc.call("compiler.emitOcamlModule", tail);
+	}
 }

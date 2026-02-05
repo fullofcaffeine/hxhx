@@ -28,9 +28,11 @@ package hxhx.macro;
 **/
 class MacroState {
 	static final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+	static final ocamlModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 
 	public static function reset():Void {
 		defines.clear();
+		ocamlModules.clear();
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -95,5 +97,54 @@ class MacroState {
 		for (k in defines.keys()) out.push(k);
 		out.sort((a, b) -> (a < b ? -1 : (a > b ? 1 : 0)));
 		return out;
+	}
+
+	/**
+		Register an OCaml module to be emitted by the compilation pipeline.
+
+		Why
+		- This is our first concrete “generate code” effect for Stage 4:
+		  a macro can ask the compiler to emit additional target files.
+
+		What
+		- Stores an OCaml module as:
+		  - `name` (OCaml compilation unit name, e.g. `HxHxGen`)
+		  - `source` (raw `.ml` contents)
+
+		How
+		- Validates `name` with a conservative allowlist so generated filenames are safe and deterministic.
+	**/
+	public static function emitOcamlModule(name:String, source:String):Void {
+		if (name == null) return;
+		final n = StringTools.trim(name);
+		if (n.length == 0) return;
+
+		// Conservative OCaml module name check: [A-Za-z_][A-Za-z0-9_]* (no dots, no path separators).
+		// We don't enforce initial capital here; `EmitterStage` writes `<name>.ml` and OCaml will treat
+		// the unit name as `StringTools.capitalize(name)`. We only care about filesystem safety now.
+		inline function isAlpha(c:Int):Bool return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
+		inline function isDigit(c:Int):Bool return c >= "0".code && c <= "9".code;
+		inline function isUnderscore(c:Int):Bool return c == "_".code;
+		final first = n.charCodeAt(0);
+		if (!(isAlpha(first) || isUnderscore(first))) return;
+		for (i in 1...n.length) {
+			final c = n.charCodeAt(i);
+			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c))) return;
+		}
+
+		ocamlModules.set(n, source == null ? "" : source);
+	}
+
+	public static function listOcamlModuleNames():Array<String> {
+		final out = new Array<String>();
+		for (k in ocamlModules.keys()) out.push(k);
+		out.sort((a, b) -> (a < b ? -1 : (a > b ? 1 : 0)));
+		return out;
+	}
+
+	public static function getOcamlModuleSource(name:String):String {
+		if (name == null || name.length == 0) return "";
+		final v = ocamlModules.get(name);
+		return v == null ? "" : v;
 	}
 }

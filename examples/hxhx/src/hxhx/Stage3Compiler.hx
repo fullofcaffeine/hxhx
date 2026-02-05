@@ -110,7 +110,11 @@ class Stage3Compiler {
 		final ast = ResolvedModule.getParsed(root);
 
 		final typed = TyperStage.typeModule(ast);
-		final expanded = MacroStage.expand(typed);
+		final generated = new Array<MacroExpandedModule.GeneratedOcamlModule>();
+		for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
+			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
+		}
+		final expanded = MacroStage.expand(typed, generated);
 
 		final exe = try EmitterStage.emitToDir(expanded, outAbs) catch (e:Dynamic) {
 			return error("emit failed: " + Std.string(e));

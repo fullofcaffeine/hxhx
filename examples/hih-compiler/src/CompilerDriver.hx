@@ -151,7 +151,7 @@ class CompilerDriver {
 			);
 		}
 
-		final expanded = MacroStage.expand(typed);
+		final expanded = MacroStage.expand(typed, []);
 		Sys.println("macros=stub");
 
 		EmitterStage.emit(expanded);

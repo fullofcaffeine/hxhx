@@ -11,7 +11,7 @@
 	- Return the input unchanged in a placeholder container.
 **/
 class MacroStage {
-	public static function expand(m:TypedModule):MacroExpandedModule {
-		return new MacroExpandedModule(m, true);
+	public static function expand(m:TypedModule, ?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>):MacroExpandedModule {
+		return new MacroExpandedModule(m, true, generatedOcamlModules);
 	}
 }

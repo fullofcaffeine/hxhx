@@ -32,6 +32,25 @@ class BuiltinMacros {
 	}
 
 	/**
+		Generate an OCaml module in the compiler output (Stage 4 bring-up).
+
+		Why
+		- This is our first “macro generates code” rung without implementing full typed AST transforms.
+		- Upstream macros can generate classes/fields; we start by generating a target module file,
+		  proving the artifact plumbing works end-to-end.
+
+		What
+		- Emits a module `HxHxGen` with a single value `generated`.
+		- Defines `HXHX_GEN=1` so the compiler can observe that generation occurred.
+	**/
+	public static function genModule():String {
+		final src = "let generated : string = \"ok\"";
+		Compiler.emitOcamlModule("HxHxGen", src);
+		Compiler.define("HXHX_GEN", "1");
+		return "genModule=ok";
+	}
+
+	/**
 		Read a compiler define seeded from the compilation CLI (`-D`).
 
 		Why

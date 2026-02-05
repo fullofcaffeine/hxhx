@@ -127,6 +127,18 @@ Models the shape of `haxe.macro.Compiler.define(name, value)`.
 - request: `req <id> compiler.define n=<...> v=<...>`
 - response: `res <id> ok v=2:ok`
 
+### `compiler.emitOcamlModule` (bring-up rung)
+
+Stage 4 “generate code” rung: a macro can request the compiler to emit an additional OCaml compilation unit.
+
+This is not the long-term macro generation API (which will be typed AST/field generation). It exists so we can
+prove the artifact plumbing works end-to-end before we implement full transforms.
+
+- request: `req <id> compiler.emitOcamlModule n=<...> s=<...>`
+  - `n`: module name (e.g. `HxHxGen`)
+  - `s`: raw `.ml` source text
+- response: `res <id> ok v=2:ok`
+
 ### `context.defined`
 
 Models the shape of `haxe.macro.Context.defined(name)`.

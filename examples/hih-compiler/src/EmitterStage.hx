@@ -111,6 +111,20 @@ class EmitterStage {
 		final outAbs = haxe.io.Path.normalize(outDir);
 		if (!sys.FileSystem.exists(outAbs)) sys.FileSystem.createDirectory(outAbs);
 
+		// Stage 4 bring-up: emit macro-generated OCaml modules (if any).
+		//
+		// This is a minimal “generate code” effect: macros can request extra target compilation units
+		// without us implementing full typed AST transforms yet.
+		final generatedPaths = new Array<String>();
+		for (gm in m.getGeneratedOcamlModules()) {
+			if (gm == null) continue;
+			final name = gm.name == null ? "" : StringTools.trim(gm.name);
+			if (name.length == 0) continue;
+			final path = haxe.io.Path.join([outAbs, name + ".ml"]);
+			sys.io.File.saveContent(path, gm.source == null ? "" : gm.source);
+			generatedPaths.push(path);
+		}
+
 		final typed = m.getTyped();
 		final decl = typed.getParsed().getDecl();
 		final mainClass = HxModuleDecl.getMainClass(decl);
@@ -162,7 +176,13 @@ class EmitterStage {
 			(v == null || v.length == 0) ? "ocamlopt" : v;
 		}
 
-		final code = Sys.command(ocamlopt, ["-o", exePath, mlPath]);
+		// Compile generated modules first, then `out.ml` (so `out.ml` can refer to them if needed).
+		final args = new Array<String>();
+		args.push("-o");
+		args.push(exePath);
+		for (p in generatedPaths) args.push(p);
+		args.push(mlPath);
+		final code = Sys.command(ocamlopt, args);
 		if (code != 0) throw "stage3 emitter: ocamlopt failed with exit code " + code;
 		if (!sys.FileSystem.exists(exePath)) throw "stage3 emitter: missing built executable: " + exePath;
 		return exePath;

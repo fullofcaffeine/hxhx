@@ -209,21 +209,30 @@ private class MacroClient {
 			return;
 		}
 
-		try {
-			switch (method) {
-				case "compiler.define":
-					final name = MacroProtocol.kvGet(tail, "n");
-					final value = MacroProtocol.kvGet(tail, "v");
-					if (name == null || name.length == 0) {
-						replyErr(id, method + ": missing name");
-						return;
-					}
-					MacroState.setDefine(name, value);
-					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
-				case "context.defined":
-					final name = MacroProtocol.kvGet(tail, "n");
-					replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));
-				case "context.definedValue":
+			try {
+				switch (method) {
+					case "compiler.define":
+						final name = MacroProtocol.kvGet(tail, "n");
+						final value = MacroProtocol.kvGet(tail, "v");
+						if (name == null || name.length == 0) {
+							replyErr(id, method + ": missing name");
+							return;
+						}
+						MacroState.setDefine(name, value);
+						replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+					case "compiler.emitOcamlModule":
+						final name = MacroProtocol.kvGet(tail, "n");
+						final source = MacroProtocol.kvGet(tail, "s");
+						if (name == null || name.length == 0) {
+							replyErr(id, method + ": missing module name");
+							return;
+						}
+						MacroState.emitOcamlModule(name, source);
+						replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+					case "context.defined":
+						final name = MacroProtocol.kvGet(tail, "n");
+						replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));
+					case "context.definedValue":
 					final name = MacroProtocol.kvGet(tail, "n");
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.definedValue(name)));
 				case _:
