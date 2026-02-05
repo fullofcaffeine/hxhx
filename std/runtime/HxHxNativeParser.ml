@@ -205,6 +205,10 @@ let parse_module_from_tokens (toks : token array) :
     | Ident (s, _) ->
         bump ();
         s
+    | Kw ("new", _) ->
+        (* Constructor name: `function new(...)` is tokenized as a keyword by the bootstrap lexer. *)
+        bump ();
+        "new"
     | _ -> raise (Parse_error (pos_of (cur ()), "expected identifier"))
   in
   let read_dotted_path () : string =

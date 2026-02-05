@@ -193,7 +193,10 @@ class Stage3Compiler {
 			for (m in resolved) {
 				try {
 					final pm = ResolvedModule.getParsed(m);
-					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) headerOnlyCount += 1;
+					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) {
+						Sys.println("header_only_file[" + headerOnlyCount + "]=" + ResolvedModule.getFilePath(m));
+						headerOnlyCount += 1;
+					}
 					TyperStage.typeModule(pm);
 					typedCount += 1;
 				} catch (e:Dynamic) {
