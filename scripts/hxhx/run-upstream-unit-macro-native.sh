@@ -92,11 +92,8 @@ fi
 echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3)"
 (
   cd "$UPSTREAM_DIR/tests/unit"
-  # Allow the native frontend seam to fall back to header-only parsing when it encounters
-  # complex class bodies (bootstrapping). Stage1 bring-up remains strict by default.
-  #
   # Use `--hxhx-type-only` to avoid “false positive” success from the bootstrap emitter: Stage3 does
   # not implement real Haxe typing/codegen yet, so we want this runner to prove we can at least
   # resolve + type-check (best-effort) the transitive module graph.
-  HXHX_NATIVE_FRONTEND_HEADER_ONLY=1 HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only compile-macro.hxml
+  HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only compile-macro.hxml
 )
