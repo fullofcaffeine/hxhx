@@ -320,7 +320,7 @@ grep -q 'external_flag' "$stage3_out3/HxHxExternal.ml"
 
 echo "== Stage3 bring-up: upstream-ish Macro.init() compiles + runs (haxe.macro.Context override)"
 stage3_out4="$tmpdir/out_stage3_upstream_macro"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
+out="$(HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"

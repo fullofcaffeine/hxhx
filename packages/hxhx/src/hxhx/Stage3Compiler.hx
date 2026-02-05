@@ -81,6 +81,79 @@ class Stage3Compiler {
 		return Path.isAbsolute(path) ? Path.normalize(path) : Path.normalize(Path.join([cwd, path]));
 	}
 
+	static function inferRepoRootForScripts():String {
+		final env = Sys.getEnv("HXHX_REPO_ROOT");
+		if (env != null && env.length > 0 && sys.FileSystem.exists(env) && sys.FileSystem.isDirectory(env)) {
+			return env;
+		}
+
+		final prog = Sys.programPath();
+		if (prog == null || prog.length == 0) return "";
+
+		final abs = try sys.FileSystem.fullPath(prog) catch (_:Dynamic) prog;
+		var dir = try haxe.io.Path.directory(abs) catch (_:Dynamic) "";
+		if (dir == null || dir.length == 0) return "";
+
+		// Walk upwards a few levels looking for `scripts/hxhx/build-hxhx-macro-host.sh`.
+		for (_ in 0...10) {
+			final candidate = Path.join([dir, "scripts", "hxhx", "build-hxhx-macro-host.sh"]);
+			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) return dir;
+			final parent = Path.normalize(Path.join([dir, ".."]));
+			if (parent == dir) break;
+			dir = parent;
+		}
+
+		return "";
+	}
+
+	static function trim(s:String):String {
+		return s == null ? "" : StringTools.trim(s);
+	}
+
+	static function isBuiltinMacroExpr(expr:String):Bool {
+		final e = trim(expr);
+		return StringTools.startsWith(e, "BuiltinMacros.")
+			|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros.")
+			|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros");
+	}
+
+	static function anyNonBuiltinMacro(exprs:Array<String>):Bool {
+		for (e in exprs) if (!isBuiltinMacroExpr(e)) return true;
+		return false;
+	}
+
+	static function shouldAutoBuildMacroHost():Bool {
+		final v = trim(Sys.getEnv("HXHX_MACRO_HOST_AUTO_BUILD"));
+		return v == "1" || v == "true" || v == "yes";
+	}
+
+	static function buildMacroHostExe(repoRoot:String, extraCp:Array<String>, entrypoints:Array<String>):String {
+		final script = Path.join([repoRoot, "scripts", "hxhx", "build-hxhx-macro-host.sh"]);
+		if (!sys.FileSystem.exists(script)) throw "missing macro host build script: " + script;
+
+		// Environment passed through to the script.
+		Sys.putEnv("HXHX_MACRO_HOST_EXTRA_CP", (extraCp != null && extraCp.length > 0) ? extraCp.join(":") : "");
+		Sys.putEnv("HXHX_MACRO_HOST_ENTRYPOINTS", (entrypoints != null && entrypoints.length > 0) ? entrypoints.join(";") : "");
+
+		final p = new sys.io.Process("bash", [script]);
+		final lines = new Array<String>();
+		try {
+			while (true) lines.push(p.stdout.readLine());
+		} catch (_:Eof) {}
+
+		final code = p.exitCode();
+		p.close();
+		if (code != 0) throw "macro host build failed with exit code " + code;
+
+		var exe = "";
+		for (i in 0...lines.length) {
+			final l = trim(lines[i]);
+			if (l.length > 0) exe = l;
+		}
+		if (exe.length == 0) throw "macro host build produced no executable path";
+		return exe;
+	}
+
 	public static function run(args:Array<String>):Int {
 		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 		var outDir = "";
@@ -127,12 +200,40 @@ class Stage3Compiler {
 				return error("cwd is not a directory: " + cwd);
 			}
 
-			final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
+		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
 
-			if (parsed.macros.length > 0) {
-				hxhx.macro.MacroState.reset();
-				hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
-				hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
+		final macroHostClassPaths = {
+			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
+			final libs = new Array<String>();
+			for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
+			base.concat(libs);
+		}
+
+		if (parsed.macros.length > 0) {
+			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
+			// for the requested CLI `--macro` entrypoints.
+			//
+			// This is only enabled when `HXHX_MACRO_HOST_AUTO_BUILD=1` (or true/yes) is set.
+			//
+			// Notes
+			// - This is a bring-up tool. It is not meant to be used for production builds.
+			// - The produced macro host is built via stage0 `haxe` (the script), not via hxhx itself.
+			if (MacroHostClient.resolveMacroHostExePath().length == 0 && shouldAutoBuildMacroHost()) {
+				final repoRoot = inferRepoRootForScripts();
+				if (repoRoot.length == 0) return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
+
+				try {
+					final entrypoints = anyNonBuiltinMacro(parsed.macros) ? parsed.macros : new Array<String>();
+					final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
+					Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
+				} catch (e:Dynamic) {
+					return error("macro host auto-build failed: " + Std.string(e));
+				}
+			}
+
+			hxhx.macro.MacroState.reset();
+			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
+			hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
 				// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
 				//
@@ -159,9 +260,7 @@ class Stage3Compiler {
 		final classPaths = {
 			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 			final libs = new Array<String>();
-			for (lib in parsed.libs) {
-				for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
-			}
+			for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
 			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
 			final out = base.concat(libs).concat(extra);
 			if (hxhx.macro.MacroState.hasGeneratedHxModules()) {

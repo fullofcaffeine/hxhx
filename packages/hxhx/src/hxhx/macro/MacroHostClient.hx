@@ -30,6 +30,26 @@ package hxhx.macro;
 	  bring-up on OCaml with strict dune warning/error settings.
 **/
 class MacroHostClient {
+	/**
+		Resolve the macro host executable path as `hxhx` sees it.
+
+		Why
+		- Stage 4 macro execution is an out-of-process model (RPC macro host).
+		- For distribution, we want `hxhx` to “just work” when a sibling `hxhx-macro-host`
+		  executable exists next to the `hxhx` binary.
+		- For development/CI, we still allow overriding with `HXHX_MACRO_HOST_EXE`.
+
+		What
+		- Returns an absolute path when possible.
+		- Returns `""` if no macro host can be resolved.
+
+		Gotchas
+		- This is a best-effort heuristic; callers should treat `""` as “not available”.
+	**/
+	public static function resolveMacroHostExePath():String {
+		return resolveMacroHostExe();
+	}
+
 	public static function selftest():String {
 		final client = connect();
 		var out = "";
