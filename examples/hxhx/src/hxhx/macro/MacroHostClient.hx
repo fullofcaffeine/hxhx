@@ -142,7 +142,6 @@ class MacroHostClient {
 private class MacroClient {
 	final proc:sys.io.Process;
 	var nextId:Int = 1;
-	final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 
 	function new(proc:sys.io.Process) {
 		this.proc = proc;
@@ -219,15 +218,14 @@ private class MacroClient {
 						replyErr(id, method + ": missing name");
 						return;
 					}
-					defines.set(name, value == null ? "" : value);
+					MacroState.setDefine(name, value);
 					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case "context.defined":
 					final name = MacroProtocol.kvGet(tail, "n");
-					replyOk(id, MacroProtocol.encodeLen("v", (name != null && defines.exists(name)) ? "1" : "0"));
+					replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));
 				case "context.definedValue":
 					final name = MacroProtocol.kvGet(tail, "n");
-					final v = (name != null && defines.exists(name)) ? defines.get(name) : null;
-					replyOk(id, MacroProtocol.encodeLen("v", v == null ? "" : v));
+					replyOk(id, MacroProtocol.encodeLen("v", MacroState.definedValue(name)));
 				case _:
 					replyErr(id, "unknown method: " + method);
 			}

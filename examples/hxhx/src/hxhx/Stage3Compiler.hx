@@ -70,6 +70,8 @@ class Stage3Compiler {
 
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
 		if (parsed.macros.length > 0) {
+			hxhx.macro.MacroState.reset();
+
 			// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
 			//
 			// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
@@ -79,6 +81,13 @@ class Stage3Compiler {
 			}
 			for (i in 0...results.length) {
 				Sys.println("macro_run[" + i + "]=" + results[i]);
+			}
+
+			// Bring-up diagnostics: dump HXHX_* defines set by macros so tests can assert macro effects.
+			for (name in hxhx.macro.MacroState.listDefineNames()) {
+				if (StringTools.startsWith(name, "HXHX_")) {
+					Sys.println("macro_define[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+				}
 			}
 		}
 

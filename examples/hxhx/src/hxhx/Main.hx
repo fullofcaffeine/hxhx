@@ -1,6 +1,7 @@
 package hxhx;
 
 import hxhx.macro.MacroHostClient;
+import hxhx.macro.MacroState;
 
 /**
 	`hxhx` (Haxe-in-Haxe compiler) driver.
@@ -39,6 +40,7 @@ class Main {
 		// the ABI boundary early (spawn → handshake → stubbed Context/Compiler call).
 		if (args.length == 1 && args[0] == "--hxhx-macro-selftest") {
 			try {
+				MacroState.reset();
 				Sys.println(MacroHostClient.selftest());
 				Sys.println("OK hxhx macro rpc");
 				return;
@@ -54,6 +56,7 @@ class Main {
 		// execute real macro modules.
 		if (args.length == 2 && args[0] == "--hxhx-macro-run") {
 			try {
+				MacroState.reset();
 				Sys.println("macro_run=" + MacroHostClient.run(args[1]));
 				Sys.println("OK hxhx macro run");
 				return;
@@ -64,6 +67,7 @@ class Main {
 
 		if (args.length == 2 && args[0] == "--hxhx-macro-get-type") {
 			try {
+				MacroState.reset();
 				Sys.println("macro_getType=" + MacroHostClient.getType(args[1]));
 				Sys.println("OK hxhx macro getType");
 				return;
