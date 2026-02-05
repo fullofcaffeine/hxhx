@@ -1222,12 +1222,18 @@ class OcamlBuilder {
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "programPath"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 								case "executablePath" if (args.length == 0):
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "programPath"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-								case "getChar" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getChar"), [buildExpr(args[0])]);
-								case _:
-									#if macro
-									guardrailError("reflaxe.ocaml (M6): Sys." + cf.name + " is not implemented yet.", e.pos);
-									#end
+									case "getChar" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxSys"), "getChar"), [buildExpr(args[0])]);
+									case "stdin" if (args.length == 0):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stdin"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+									case "stdout" if (args.length == 0):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stdout"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+									case "stderr" if (args.length == 0):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Sys_io_Stdio"), "stderr"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+									case _:
+										#if macro
+										guardrailError("reflaxe.ocaml (M6): Sys." + cf.name + " is not implemented yet.", e.pos);
+										#end
 									anyNull;
 							}
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
@@ -1424,21 +1430,45 @@ class OcamlBuilder {
 								);
 							} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
 								buildStdString(args[0]);
-							} else {
-								final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
-									case TFun(fargs, _): fargs;
-									case _: null;
-								}
-								final builtArgs:Array<OcamlExpr> = [];
-								if (expectedArgs != null) {
-									for (i in 0...args.length) {
-										builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
-									}
 								} else {
-									for (a in args) builtArgs.push(buildExpr(a));
+									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+										case TFun(fargs, _): fargs;
+										case _: null;
+									}
+									inline function hxNullForType(t:Type):OcamlExpr {
+										return nullablePrimitiveKind(t) != null
+											? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+											: OcamlExpr.EApp(
+												OcamlExpr.EIdent("Obj.magic"),
+												[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+											);
+									}
+									final builtArgs:Array<OcamlExpr> = [];
+									if (expectedArgs != null) {
+										for (i in 0...args.length) {
+											builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+										}
+										if (args.length < expectedArgs.length) {
+											for (i in args.length...expectedArgs.length) {
+												final ea = expectedArgs[i];
+												if (!ea.opt) {
+													#if macro
+													guardrailError(
+														"reflaxe.ocaml: call is missing required argument '" + ea.name + "'.",
+														e.pos
+													);
+													#end
+													builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+												} else {
+													builtArgs.push(hxNullForType(ea.t));
+												}
+											}
+										}
+									} else {
+										for (a in args) builtArgs.push(buildExpr(a));
+									}
+									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 								}
-								OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
-							}
 					case TField(objExpr, FInstance(clsRef, _, cfRef)):
 						final cf = cfRef.get();
 						switch (cf.kind) {
@@ -1829,25 +1859,51 @@ class OcamlBuilder {
 												OcamlExpr.EConst(OcamlConst.CUnit);
 										}
 									}
-								} else {
-									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
-										case TFun(fargs, _): fargs;
-										case _: null;
-									}
-									final coercedArgs:Array<OcamlExpr> = [];
-									if (expectedArgs != null) {
-										for (i in 0...args.length) {
-											coercedArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
-										}
 									} else {
-										for (a in args) coercedArgs.push(buildExpr(a));
-									}
+										final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+											case TFun(fargs, _): fargs;
+											case _: null;
+										}
+										inline function hxNullForType(t:Type):OcamlExpr {
+											return nullablePrimitiveKind(t) != null
+												? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+												: OcamlExpr.EApp(
+													OcamlExpr.EIdent("Obj.magic"),
+													[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+												);
+										}
+										final coercedArgs:Array<OcamlExpr> = [];
+										if (expectedArgs != null) {
+											for (i in 0...args.length) {
+												coercedArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+											}
+											if (args.length < expectedArgs.length) {
+												for (i in args.length...expectedArgs.length) {
+													final ea = expectedArgs[i];
+													if (!ea.opt) {
+														#if macro
+														guardrailError(
+															"reflaxe.ocaml: call is missing required argument '" + ea.name + "'.",
+															e.pos
+														);
+														#end
+														coercedArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+													} else {
+														coercedArgs.push(hxNullForType(ea.t));
+													}
+												}
+											}
+										} else {
+											for (a in args) coercedArgs.push(buildExpr(a));
+										}
+	
+										final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
 
-									final unwrappedObj = unwrap(objExpr);
-									final isSuperReceiver = switch (unwrappedObj.expr) {
-										case TConst(TSuper): true;
-										case _: false;
-									}
+										final unwrappedObj = unwrap(objExpr);
+										final isSuperReceiver = switch (unwrappedObj.expr) {
+											case TConst(TSuper): true;
+											case _: false;
+										}
 
 									// Dynamic dispatch subset (M10): if the receiver's static type participates in
 									// inheritance/interfaces, call through the record-stored method function.
@@ -1858,7 +1914,7 @@ class OcamlBuilder {
 										&& ctx.currentTypeFullName != null
 										&& ctx.dispatchTypes.exists(ctx.currentTypeFullName);
 
-									if (isSuperReceiver && allowSuperCall) {
+										if (isSuperReceiver && allowSuperCall) {
 										// `super.foo(...)`: call the base implementation directly (no virtual dispatch).
 										final modName = moduleIdToOcamlModuleName(cls.module);
 										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
@@ -1867,36 +1923,36 @@ class OcamlBuilder {
 											? OcamlExpr.EIdent(implName)
 											: OcamlExpr.EField(OcamlExpr.EIdent(modName), implName);
 
-										final builtArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent("self")])].concat(coercedArgs);
-										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
-										if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-										OcamlExpr.EApp(callFn, builtArgs);
-									} else if (isDispatchRecv) {
+											final builtArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent("self")])].concat(coercedArgs);
+											// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+											if (expectsNoArgs) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+											OcamlExpr.EApp(callFn, builtArgs);
+										} else if (isDispatchRecv) {
 										final recvExpr = buildExpr(objExpr);
 										final tmpName = switch (recvExpr) {
 											case EIdent(_): null;
 											case _: freshTmp("obj");
 										}
 										final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
-										final methodField = OcamlExpr.EField(recvVar, cf.name);
-										final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(coercedArgs);
-										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
-										if (args.length == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-										final call = OcamlExpr.EApp(methodField, callArgs);
-										tmpName == null ? call : OcamlExpr.ELet(tmpName, recvExpr, call, false);
-									} else {
+											final methodField = OcamlExpr.EField(recvVar, cf.name);
+											final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(coercedArgs);
+											// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+											if (expectsNoArgs) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+											final call = OcamlExpr.EApp(methodField, callArgs);
+											tmpName == null ? call : OcamlExpr.ELet(tmpName, recvExpr, call, false);
+										} else {
 										final modName = moduleIdToOcamlModuleName(cls.module);
 										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
 										final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
-										final callFn = (selfMod != null && selfMod == modName)
-											? OcamlExpr.EIdent(scoped)
-											: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
-										final builtArgs = [buildExpr(objExpr)].concat(coercedArgs);
-										// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
-										if (args.length == 0) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-										OcamlExpr.EApp(callFn, builtArgs);
-									}
-									}
+											final callFn = (selfMod != null && selfMod == modName)
+												? OcamlExpr.EIdent(scoped)
+												: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+											final builtArgs = [buildExpr(objExpr)].concat(coercedArgs);
+											// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
+											if (expectsNoArgs) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+											OcamlExpr.EApp(callFn, builtArgs);
+										}
+										}
 								case _:
 									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (fn.t) {
 										case TFun(fargs, _): fargs;
@@ -2982,10 +3038,10 @@ class OcamlBuilder {
 		}
 
 				return switch (op) {
-					case OpAssign:
-						// Handle local ref assignment: x = v  ->  x := v
-						switch (e1.expr) {
-							case TLocal(v) if (isRefLocalId(v.id)):
+						case OpAssign:
+							// Handle local ref assignment: x = v  ->  x := v
+							switch (e1.expr) {
+								case TLocal(v) if (isRefLocalId(v.id)):
 								final tmp = freshTmp("assign");
 								final rhs = coerceForAssignment(v.t, e2);
 								OcamlExpr.ELet(
@@ -3011,15 +3067,50 @@ class OcamlBuilder {
 												OcamlExpr.EIdent(tmp)
 											]),
 											false
+											);
+										case _:
+											OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+								case TField(_, FStatic(clsRef, cfRef)):
+									final cls = clsRef.get();
+									final cf = cfRef.get();
+									final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
+									final isMutableStatic = switch (cf.kind) {
+										case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+										case _: false;
+									}
+									if (!isMutableStatic) {
+										#if macro
+										guardrailError(
+											"reflaxe.ocaml (M6): assignment to immutable static field '" + key + "' is not supported yet.",
+											e1.pos
 										);
-									case _:
+										#end
 										OcamlExpr.EConst(OcamlConst.CUnit);
-								}
-							case TField(obj, FAnon(cfRef)):
-								final cf = cfRef.get();
-								switch (cf.name) {
-									case "key", "value", "hasNext", "next":
-										OcamlExpr.EConst(OcamlConst.CUnit);
+									} else {
+										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+										final modName = moduleIdToOcamlModuleName(cls.module);
+										final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+										final lhsCell = (selfMod != null && selfMod == modName)
+											? OcamlExpr.EIdent(scoped)
+											: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+										final tmp = freshTmp("assign");
+										final rhs = coerceForAssignment(e1.t, e2);
+										OcamlExpr.ELet(
+											tmp,
+											rhs,
+											OcamlExpr.ESeq([
+												OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, OcamlExpr.EIdent(tmp)),
+												OcamlExpr.EIdent(tmp)
+											]),
+											false
+										);
+									}
+								case TField(obj, FAnon(cfRef)):
+									final cf = cfRef.get();
+									switch (cf.name) {
+										case "key", "value", "hasNext", "next":
+											OcamlExpr.EConst(OcamlConst.CUnit);
 									case _:
 										if (isSysFileStatAnon(obj.t)) {
 											OcamlExpr.EConst(OcamlConst.CUnit);
@@ -3081,11 +3172,11 @@ class OcamlBuilder {
 							case _:
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
-			case OpAssignOp(inner):
-					// Handle compound assignment for ref locals:
-					// x += v  ->  x := (!x) + v
-					switch (e1.expr) {
-						case TLocal(v) if (isRefLocalId(v.id)):
+				case OpAssignOp(inner):
+						// Handle compound assignment for ref locals:
+						// x += v  ->  x := (!x) + v
+						switch (e1.expr) {
+							case TLocal(v) if (isRefLocalId(v.id)):
 						final lhs = buildLocal(v);
 						final floatMode = isFloatType(v.t) || nullablePrimitiveKind(v.t) == "float";
 						final rhs = switch (inner) {
@@ -3127,10 +3218,76 @@ class OcamlBuilder {
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [lhs, toIntExpr(e2)]);
 							case _: OcamlExpr.EConst(OcamlConst.CUnit);
 						}
-							OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
-						case TField(obj, FInstance(_, _, cfRef)):
-							final cf = cfRef.get();
-							switch (cf.kind) {
+								OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
+							case TField(_, FStatic(clsRef, cfRef)):
+								final cls = clsRef.get();
+								final cf = cfRef.get();
+								final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
+								final isMutableStatic = switch (cf.kind) {
+									case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+									case _: false;
+								}
+								if (!isMutableStatic) {
+									#if macro
+									guardrailError(
+										"reflaxe.ocaml (M6): compound assignment to immutable static field '" + key + "' is not supported yet.",
+										e1.pos
+									);
+									#end
+									OcamlExpr.EConst(OcamlConst.CUnit);
+								} else {
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+									final lhsCell = (selfMod != null && selfMod == modName)
+										? OcamlExpr.EIdent(scoped)
+										: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+									final lhs = OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell);
+									final floatMode = isFloatType(e1.t) || nullablePrimitiveKind(e1.t) == "float";
+									final rhs = switch (inner) {
+										case OpAdd:
+											if (isStringType(e1.t) || isStringType(e2.t)) {
+												OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
+											} else if (floatMode) {
+												OcamlExpr.EBinop(OcamlBinop.AddF, lhs, toFloatExpr(e2));
+											} else {
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"), [lhs, toIntExpr(e2)]);
+											}
+										case OpSub:
+											floatMode
+												? OcamlExpr.EBinop(OcamlBinop.SubF, lhs, toFloatExpr(e2))
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "sub"), [lhs, toIntExpr(e2)]);
+										case OpMult:
+											floatMode
+												? OcamlExpr.EBinop(OcamlBinop.MulF, lhs, toFloatExpr(e2))
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "mul"), [lhs, toIntExpr(e2)]);
+										case OpDiv:
+											floatMode
+												? OcamlExpr.EBinop(OcamlBinop.DivF, lhs, toFloatExpr(e2))
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "div"), [lhs, toIntExpr(e2)]);
+										case OpMod:
+											floatMode
+												? OcamlExpr.EApp(OcamlExpr.EIdent("mod_float"), [lhs, toFloatExpr(e2)])
+												: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "rem"), [lhs, toIntExpr(e2)]);
+										case OpAnd:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logand"), [lhs, toIntExpr(e2)]);
+										case OpOr:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logor"), [lhs, toIntExpr(e2)]);
+										case OpXor:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "logxor"), [lhs, toIntExpr(e2)]);
+										case OpShl:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shl"), [lhs, toIntExpr(e2)]);
+										case OpShr:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "shr"), [lhs, toIntExpr(e2)]);
+										case OpUShr:
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [lhs, toIntExpr(e2)]);
+										case _: OcamlExpr.EConst(OcamlConst.CUnit);
+									}
+									OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, rhs);
+								}
+							case TField(obj, FInstance(_, _, cfRef)):
+								final cf = cfRef.get();
+								switch (cf.kind) {
 								case FVar(_, _):
 									// Support compound assignment on instance vars (notably used by
 									// inline-stdlib code like `StringBuf.add`, which lowers to `b += x`).
@@ -3953,16 +4110,41 @@ class OcamlBuilder {
 						);
 					}
 
-					switch (e.expr) {
-						case TLocal(v) if (isRefLocalId(v.id)):
-							incDec(
-								buildLocal(v),
-								(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal)
-							);
-						case TField(obj, FInstance(_, _, cfRef)):
-							final cf = cfRef.get();
-							switch (cf.kind) {
-								case FVar(_, _):
+						switch (e.expr) {
+							case TLocal(v) if (isRefLocalId(v.id)):
+								incDec(
+									buildLocal(v),
+									(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal)
+								);
+							case TField(_, FStatic(clsRef, cfRef)):
+								final cls = clsRef.get();
+								final cf = cfRef.get();
+								final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
+								final isMutableStatic = switch (cf.kind) {
+									case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+									case _: false;
+								}
+								if (!isMutableStatic) {
+									#if macro
+									guardrailError("reflaxe.ocaml (M10): ++/-- on immutable static field '" + key + "' is not supported yet.", e.pos);
+									#end
+									OcamlExpr.EConst(OcamlConst.CUnit);
+								} else {
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+									final lhsCell = (selfMod != null && selfMod == modName)
+										? OcamlExpr.EIdent(scoped)
+										: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+									incDec(
+										OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell),
+										(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal)
+									);
+								}
+							case TField(obj, FInstance(_, _, cfRef)):
+								final cf = cfRef.get();
+								switch (cf.kind) {
+									case FVar(_, _):
 									final objName = freshTmp("obj");
 									OcamlExpr.ELet(
 										objName,
@@ -4979,13 +5161,19 @@ class OcamlBuilder {
 					);
 
 					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
-				} else {
-					final modName = moduleIdToOcamlModuleName(cls.module);
-					final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
-					return (selfMod != null && selfMod == modName)
-						? OcamlExpr.EIdent(scoped)
-						: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
-				}
+					} else {
+						final modName = moduleIdToOcamlModuleName(cls.module);
+						final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+						final baseExpr = (selfMod != null && selfMod == modName)
+							? OcamlExpr.EIdent(scoped)
+							: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+						final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
+						final isMutableStatic = switch (cf.kind) {
+							case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+							case _: false;
+						}
+						return isMutableStatic ? OcamlExpr.EUnop(OcamlUnop.Deref, baseExpr) : baseExpr;
+					}
 					case FInstance(clsRef, _, cfRef):
 						final cls = clsRef.get();
 						final cf = cfRef.get();

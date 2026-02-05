@@ -60,7 +60,7 @@ class Main {
 				}
 
 			// Unknown line; respond with an error if it looks structured.
-			replyErr(0, "unknown message", "message");
+			replyErr(0, "unknown message");
 		}
 	}
 
@@ -79,57 +79,69 @@ class Main {
 		final tail = parts.length > 3 ? parts[3] : "";
 
 		if (id < 0) {
-			replyErr(0, "missing id", "parse");
+			replyErr(0, "missing id");
 			return;
 		}
 
-		switch (method) {
-			case "ping":
-				replyOk(id, Protocol.encodeLen("v", "pong"));
-			case "compiler.define":
-				final parsed = parseKV(tail);
-				final name = parsed.exists("n") ? parsed.get("n") : "";
-				final value = parsed.exists("v") ? parsed.get("v") : "";
-				if (name.length == 0) {
-					replyErr(id, "missing name", method);
-					return;
-				}
-				Compiler.define(name, value);
-				replyOk(id, Protocol.encodeLen("v", "ok"));
-			case "context.defined":
-				final parsed = parseKV(tail);
-				final name = parsed.exists("n") ? parsed.get("n") : "";
-				replyOk(id, Protocol.encodeLen("v", Context.defined(name) ? "1" : "0"));
-			case "context.definedValue":
-				final parsed = parseKV(tail);
-				final name = parsed.exists("n") ? parsed.get("n") : "";
-				replyOk(id, Protocol.encodeLen("v", Context.definedValue(name)));
-			case "macro.run":
-				// Stage 4 bring-up rung: invoke a builtin macro “entrypoint”.
-				//
-				// This does NOT execute arbitrary user-provided macro modules yet. Instead we:
-				// - parse a very small allowlist of builtin macro expressions
-				// - dispatch to a real Haxe function compiled into this macro host binary
-				// - return a deterministic summary string
-				final parsed = parseKV(tail);
-				final expr = parsed.exists("e") ? parsed.get("e") : "";
-				if (expr.length == 0) {
-					replyErr(id, "missing expr", method);
-					return;
-				}
-				replyOk(id, Protocol.encodeLen("v", runMacroExpr(expr)));
-			case "context.getType":
-				// Stage 4 bring-up rung: a minimal `Context.getType`-shaped call.
-				// Upstream returns a typed representation; for bring-up we return a deterministic descriptor.
-				final parsed = parseKV(tail);
-				final name = parsed.exists("n") ? parsed.get("n") : "";
-				if (name.length == 0) {
-					replyErr(id, "missing name", method);
-					return;
-				}
-				replyOk(id, Protocol.encodeLen("v", Context.getType(name)));
-			case _:
-				replyErr(id, "unknown method: " + method, method);
+		try {
+			switch (method) {
+				case "ping":
+					replyOk(id, Protocol.encodeLen("v", "pong"));
+				case "compiler.define":
+					final parsed = parseKV(tail);
+					final name = parsed.exists("n") ? parsed.get("n") : "";
+					final value = parsed.exists("v") ? parsed.get("v") : "";
+					if (name.length == 0) {
+						replyErr(id, method + ": missing name");
+						return;
+					}
+					Compiler.define(name, value);
+					replyOk(id, Protocol.encodeLen("v", "ok"));
+				case "context.defined":
+					final parsed = parseKV(tail);
+					final name = parsed.exists("n") ? parsed.get("n") : "";
+					replyOk(id, Protocol.encodeLen("v", Context.defined(name) ? "1" : "0"));
+				case "context.definedValue":
+					final parsed = parseKV(tail);
+					final name = parsed.exists("n") ? parsed.get("n") : "";
+					replyOk(id, Protocol.encodeLen("v", Context.definedValue(name)));
+				case "macro.run":
+					// Stage 4 bring-up rung: invoke a builtin macro “entrypoint”.
+					//
+					// This does NOT execute arbitrary user-provided macro modules yet. Instead we:
+					// - parse a very small allowlist of builtin macro expressions
+					// - dispatch to a real Haxe function compiled into this macro host binary
+					// - return a deterministic summary string
+					final parsed = parseKV(tail);
+					final expr = parsed.exists("e") ? parsed.get("e") : "";
+					if (expr.length == 0) {
+						replyErr(id, method + ": missing expr");
+						return;
+					}
+					replyOk(id, Protocol.encodeLen("v", runMacroExpr(expr)));
+				case "context.getType":
+					// Stage 4 bring-up rung: a minimal `Context.getType`-shaped call.
+					// Upstream returns a typed representation; for bring-up we return a deterministic descriptor.
+					final parsed = parseKV(tail);
+					final name = parsed.exists("n") ? parsed.get("n") : "";
+					if (name.length == 0) {
+						replyErr(id, method + ": missing name");
+						return;
+					}
+					replyOk(id, Protocol.encodeLen("v", Context.getType(name)));
+				case _:
+					replyErr(id, "unknown method: " + method);
+			}
+		} catch (e:Dynamic) {
+			// Prefer structured macro-host errors (with a position payload) when available.
+			final tag = Std.string(Reflect.field(e, "__hxhx_tag"));
+			if (tag == MacroError.TAG) {
+				final msg = Std.string(Reflect.field(e, "message"));
+				final p:Dynamic = Reflect.field(e, "pos"); // `{fileName, lineNumber, ...}` (PosInfos)
+				replyErr(id, method + ": " + msg, cast p);
+				return;
+			}
+			replyErr(id, method + ": exception: " + Std.string(e));
 		}
 	}
 
@@ -138,22 +150,15 @@ class Main {
 		return switch (e) {
 			case "hxhxmacrohost.BuiltinMacros.smoke()", "BuiltinMacros.smoke()":
 				BuiltinMacros.smoke();
+			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":
+				BuiltinMacros.fail();
 			case _:
 				"ran:" + e;
 		}
 	}
 
 	static function parseKV(tail:String):Map<String, String> {
-		final m:Map<String, String> = [];
-		if (tail == null || tail.length == 0) return m;
-		final parts = tail.split(" ").filter(p -> p.length > 0);
-		for (p in parts) {
-			final eq = p.indexOf("=");
-			if (eq <= 0) continue;
-			final key = p.substr(0, eq);
-			m.set(key, Protocol.decodeLenValue(p));
-		}
-		return m;
+		return Protocol.kvParse(tail);
 	}
 
 	static function parseDecInt(s:String):Int {
@@ -178,18 +183,18 @@ class Main {
 		flushStdout();
 	}
 
-	static function replyErr(id:Int, msg:String, pos:String):Void {
+	static function replyErr(id:Int, msg:String, ?pos:haxe.PosInfos):Void {
 		// Include a `p` (“position”) field so the client can surface where the error originated.
 		//
-		// Today this is a small structured tag (e.g. the RPC method name), not a macro-user source position.
+		// Today this is a macro-host *Haxe source* position (`file:line`), not a macro-user source position.
 		// Later stages will attach typed/macro AST positions over the protocol.
-		Sys.println("res " + id + " err " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("p", pos == null ? "" : pos));
+		final p = pos == null ? "" : (pos.fileName + ":" + pos.lineNumber);
+		Sys.println("res " + id + " err " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("p", p));
 		flushStdout();
 	}
 
 	static function flushStdout():Void {
-		// `Sys.stdout()` is not implemented yet in the portable OCaml stdlib surface.
-		// We still need to flush when talking over pipes, so we use an OCaml escape hatch.
-		untyped __ocaml__("flush stdout");
+		// Flush after writing to stdout when talking over pipes.
+		Sys.stdout().flush();
 	}
 }

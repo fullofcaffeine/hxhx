@@ -30,8 +30,19 @@ class CompilerInit {
 		}
 		#end
 
-		// Ensure std/_std injection is only applied when targeting OCaml.
-		CompilerBootstrap.InjectClassPaths();
+			// Ensure std/_std injection is only applied when targeting OCaml.
+			CompilerBootstrap.InjectClassPaths();
+			#if macro
+			final isOcamlTarget =
+				haxe.macro.Context.defined("ocaml_output") ||
+				haxe.macro.Context.definedValue("target.name") == "ocaml" ||
+				haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
+			if (isOcamlTarget) {
+				// Force-link OCaml-only std overrides that are reached via backend intrinsics
+				// rather than direct Haxe references (so DCE/module reachability would drop them).
+				haxe.macro.Compiler.include("sys.io");
+			}
+			#end
 
 		var prepasses:Array<ExpressionPreprocessor> = ExpressionPreprocessorHelper.defaults();
 		// Run early so later preprocessors operate on cleaner shapes.

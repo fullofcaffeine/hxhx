@@ -263,6 +263,17 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "
 echo "$out" | grep -q "^macro_run=smoke:type=builtin:String;define=yes$"
 echo "$out" | grep -q "^OK hxhx macro run$"
 
+echo "== Stage4 bring-up: macro.run errors include position payload"
+set +e
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "hxhxmacrohost.BuiltinMacros.fail()" 2>&1)"
+code=$?
+set -e
+if [ "$code" -eq 0 ]; then
+  echo "Expected macro.run failure, but command succeeded." >&2
+  exit 1
+fi
+echo "$out" | grep -q "BuiltinMacros.hx:"
+
 echo "== Stage4 bring-up: context.getType stub"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-get-type String)"
 echo "$out" | grep -q "^macro_getType=builtin:String$"

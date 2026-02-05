@@ -68,6 +68,57 @@ class MacroProtocol {
 		return unescapePayload(payload.substr(0, len));
 	}
 
+	/**
+		Parse a tail that contains one or more `key=<len>:<payload>` fragments.
+
+		Why
+		- The macro host protocol uses length prefixes so payloads can contain spaces.
+		- We therefore cannot reliably parse by splitting on spaces.
+
+		What
+		- Returns a map from key → decoded payload string.
+	**/
+	public static function kvParse(tail:String):Map<String, String> {
+		final out:Map<String, String> = [];
+		if (tail == null || tail.length == 0) return out;
+		var i = 0;
+		inline function isSpace(c:Int):Bool return c == " ".code || c == "\t".code || c == "\n".code || c == "\r".code;
+		inline function isDigit(c:Int):Bool return c >= "0".code && c <= "9".code;
+		while (i < tail.length) {
+			while (i < tail.length && isSpace(tail.charCodeAt(i))) i++;
+			if (i >= tail.length) break;
+
+			final keyStart = i;
+			while (i < tail.length) {
+				final c = tail.charCodeAt(i);
+				if (c == "=".code || isSpace(c)) break;
+				i++;
+			}
+			if (i >= tail.length || tail.charCodeAt(i) != "=".code) {
+				while (i < tail.length && !isSpace(tail.charCodeAt(i))) i++;
+				continue;
+			}
+			final key = tail.substr(keyStart, i - keyStart);
+			i++; // '='
+
+			final lenStart = i;
+			while (i < tail.length && isDigit(tail.charCodeAt(i))) i++;
+			if (i >= tail.length || tail.charCodeAt(i) != ":".code) {
+				while (i < tail.length && !isSpace(tail.charCodeAt(i))) i++;
+				continue;
+			}
+			final lenStr = tail.substr(lenStart, i - lenStart);
+			final len = Std.parseInt(lenStr);
+			i++; // ':'
+			if (len == null || len < 0 || i + len > tail.length) break;
+
+			final enc = tail.substr(i, len);
+			i += len;
+			out.set(key, unescapePayload(enc));
+		}
+		return out;
+	}
+
 	public static function splitN(s:String, n:Int):Array<String> {
 		final head = new Array<String>();
 		var i = 0;
@@ -88,12 +139,7 @@ class MacroProtocol {
 	}
 
 	public static function kvGet(tail:String, key:String):String {
-		if (tail == null || tail.length == 0) return "";
-		final parts = tail.split(" ").filter(p -> p.length > 0);
-		for (p in parts) {
-			if (StringTools.startsWith(p, key + "=")) return decodeLenValue(p);
-		}
-		return "";
+		final m = kvParse(tail);
+		return m.exists(key) ? m.get(key) : "";
 	}
 }
-

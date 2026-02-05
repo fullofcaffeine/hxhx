@@ -40,7 +40,11 @@ for dir in "$FIXTURE_ROOT"/*/; do
 
   out_tmp="$(mktemp)"
   err_tmp="$(mktemp)"
-  env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" >"$out_tmp" 2>"$err_tmp"
+  if [ -f "${dir}stdin.txt" ]; then
+    env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" <"${dir}stdin.txt" >"$out_tmp" 2>"$err_tmp"
+  else
+    env -u HX_TEST_ENV_MISSING_REFLAXE_OCAML HX_TEST_ENV=ok "$exe" >"$out_tmp" 2>"$err_tmp"
+  fi
 
   diff -u "${dir}expected.stdout" "$out_tmp"
 
@@ -58,4 +62,3 @@ for dir in "$FIXTURE_ROOT"/*/; do
 done
 
 echo "✓ Portable conformance OK"
-

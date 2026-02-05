@@ -148,10 +148,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
-			for (moduleId => list in moduleToClasses) {
-				if (list == null || list.length == 0) continue;
-				final base = OcamlNameTools.moduleBaseName(moduleId);
-				var primary:Null<String> = null;
+				for (moduleId => list in moduleToClasses) {
+					if (list == null || list.length == 0) continue;
+					final base = OcamlNameTools.moduleBaseName(moduleId);
+					var primary:Null<String> = null;
 				for (c in list) {
 					if (c.name == base) {
 						primary = c.name;
@@ -159,11 +159,70 @@ class OcamlCompiler extends DirectToStringCompiler {
 					}
 				}
 				if (primary == null) primary = list[0].name;
-				if (primary != null) ctx.primaryTypeNameByModule.set(moduleId, primary);
-			}
-		});
-		#end
-	}
+					if (primary != null) ctx.primaryTypeNameByModule.set(moduleId, primary);
+				}
+
+				// Mutable static field inference (M6+/bd: haxe.ocaml-xgv.3.7).
+				//
+				// Why
+				// - OCaml `let` bindings are immutable, but Haxe `static var` fields can be reassigned.
+				// - We need to know which static fields are written anywhere in the program so we can:
+				//   - emit them as `ref` cells (`let x = ref <init>`)
+				//   - lower reads/writes to `!x` and `x := v`.
+				//
+				// This is a whole-program decision: `MyClass.x = 1` may appear in a different module
+				// than `MyClass` itself.
+				ctx.mutableStaticFields.clear();
+
+				inline function staticKey(c:ClassType, fieldName:String):String {
+					return (c.pack ?? []).concat([c.name, fieldName]).join(".");
+				}
+
+				function markStaticLValue(lhs:TypedExpr):Void {
+					switch (lhs.expr) {
+						case TField(_, FStatic(cRef, cfRef)):
+							final c = cRef.get();
+							final cf = cfRef.get();
+							switch (cf.kind) {
+								case FVar(_, _):
+									ctx.mutableStaticFields.set(staticKey(c, cf.name), true);
+								case _:
+							}
+						case _:
+					}
+				}
+
+				function scan(e:TypedExpr):Void {
+					switch (e.expr) {
+						case TBinop(OpAssign, lhs, _):
+							markStaticLValue(lhs);
+						case TBinop(OpAssignOp(_), lhs, _):
+							markStaticLValue(lhs);
+						case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
+							markStaticLValue(inner);
+						case _:
+					}
+					haxe.macro.TypedExprTools.iter(e, scan);
+				}
+
+				for (t in types) {
+					switch (t) {
+						case TClassDecl(cRef):
+							final c = cRef.get();
+							for (f in c.fields.get()) {
+								final e = f.expr();
+								if (e != null) scan(e);
+							}
+							for (f in c.statics.get()) {
+								final e = f.expr();
+								if (e != null) scan(e);
+							}
+						case _:
+					}
+				}
+			});
+			#end
+		}
 
 	public override function generateOutputIterator():Iterator<DataAndFileInfo<reflaxe.output.StringOrBytes>> {
 		// Ensure type declarations (enums/typedefs/abstracts) appear before value
@@ -991,15 +1050,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// - This currently models *declaration + initialization* only.
 		// - Reassignment semantics (`MyClass.x = v`) require an explicit representation decision
 		//   (`ref` vs `mutable record field` vs other), and are handled separately.
-		for (v in varFields) {
-			if (!v.isStatic) continue;
-			final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
-			// Static var initializers are stored on the field itself (not in the constructor pre-assignments
-			// that `ClassVarData.findDefaultExpr()` uses for instance vars).
-			final init = v.field.expr();
-			final compiled = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
-			lets.push({ name: name, expr: compiled });
-		}
+			for (v in varFields) {
+				if (!v.isStatic) continue;
+				final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
+				final key = (classType.pack ?? []).concat([classType.name, v.field.name]).join(".");
+				final isMutableStatic = ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+				// Static var initializers are stored on the field itself (not in the constructor pre-assignments
+				// that `ClassVarData.findDefaultExpr()` uses for instance vars).
+				final init = v.field.expr();
+				final compiledInit = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+				final compiled = isMutableStatic ? OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [compiledInit]) : compiledInit;
+				lets.push({ name: name, expr: compiled });
+			}
 		if (lets.length > 0) {
 			for (g in orderLetBindingsForOcaml(lets)) {
 				items.push(OcamlModuleItem.ILet(g.bindings, g.isRec));

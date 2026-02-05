@@ -1,5 +1,8 @@
 {
 	"filesGenerated": [
+		"sys_io_Stdio.ml",
+		"sys_io_Process.ml",
+		"sys_io_FileSeek.ml",
 		"ocaml_Seq.ml",
 		"ocaml_Hashtbl.ml",
 		"ocaml_Char.ml",
@@ -8,6 +11,14 @@
 		"ocaml_Array.ml",
 		"haxe_iterators_ArrayKeyValueIterator.ml",
 		"haxe_iterators_ArrayIterator.ml",
+		"haxe_io_Output.ml",
+		"haxe_io_Input.ml",
+		"haxe_io_Error.ml",
+		"haxe_io_Eof.ml",
+		"haxe_io_Encoding.ml",
+		"haxe_io_BytesBuffer.ml",
+		"haxe_exceptions_PosException.ml",
+		"haxe_exceptions_NotImplementedException.ml",
 		"haxe_NativeStackTrace.ml",
 		"haxe_Exception.ml",
 		"haxe_CallStack.ml",

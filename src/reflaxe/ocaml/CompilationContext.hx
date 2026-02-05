@@ -16,6 +16,21 @@ class CompilationContext {
 	/** Tracks variables that are assigned after initialization (mutability inference hook). */
 	public final assignedVars:Map<String, Bool> = [];
 
+	/**
+	 * Set of static fields (`pack.Type.field`) that are assigned after initialization.
+	 *
+	 * Why
+	 * - In OCaml, `let x = ...` bindings are immutable.
+	 * - Haxe `static var` fields are mutable by default and can be reassigned from any module.
+	 * - We currently model mutable statics by emitting them as `ref` cells and lowering:
+	 *   - reads: `MyClass.x` → `!MyClass.x`
+	 *   - writes: `MyClass.x = v` → `MyClass.x := v`
+	 *
+	 * How
+	 * - Computed once after typing (see `OcamlCompiler`’s `onAfterTyping` prepass).
+	 */
+	public final mutableStaticFields:Map<String, Bool> = [];
+
 	/** Current module id (as seen by Reflaxe/Haxe), for debug and naming decisions. */
 	public var currentModuleId:Null<String> = null;
 

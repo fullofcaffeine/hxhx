@@ -30,5 +30,8 @@ class BuiltinMacros {
 		Compiler.define("HXHX_SMOKE", "1");
 		return "smoke:type=" + t + ";define=" + (Context.defined("HXHX_SMOKE") ? "yes" : "no");
 	}
-}
 
+	public static function fail():String {
+		return MacroError.raise("intentional macro host failure (for position payload tests)");
+	}
+}

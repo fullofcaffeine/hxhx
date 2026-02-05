@@ -7,11 +7,20 @@ let init () : unit =
   ignore (HxType.class_ "StringBuf");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
+  ignore (HxType.class_ "haxe.io.BytesBuffer");
+  ignore (HxType.class_ "haxe.io.Input");
+  ignore (HxType.class_ "haxe.io.Output");
   ignore (HxType.class_ "ocaml._Buffer.Buffer_Impl_");
   ignore (HxType.class_ "ocaml._IntMap.IntMap_Impl_");
   ignore (HxType.class_ "ocaml._IntSet.IntSet_Impl_");
   ignore (HxType.class_ "ocaml._StringMap.StringMap_Impl_");
   ignore (HxType.class_ "ocaml._StringSet.StringSet_Impl_");
+  ignore (HxType.class_ "sys.io.Process");
+  ignore (HxType.class_ "sys.io.Stdio");
+  ignore (HxType.class_ "sys.io._Process.OcamlProcessInput");
+  ignore (HxType.class_ "sys.io._Process.OcamlProcessOutput");
+  ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
+  ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   ignore (HxType.enum_ "ocaml.Option");
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
   HxType.register_class_tags "Main" [ "Main" ];
@@ -21,6 +30,12 @@ let init () : unit =
   HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
   HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
+  HxType.register_class_tags "haxe.exceptions.NotImplementedException" [ "haxe.Exception"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException" ];
+  HxType.register_class_tags "haxe.exceptions.PosException" [ "haxe.Exception"; "haxe.exceptions.PosException" ];
+  HxType.register_class_tags "haxe.io.BytesBuffer" [ "haxe.io.BytesBuffer" ];
+  HxType.register_class_tags "haxe.io.Eof" [ "haxe.io.Eof" ];
+  HxType.register_class_tags "haxe.io.Input" [ "haxe.io.Input" ];
+  HxType.register_class_tags "haxe.io.Output" [ "haxe.io.Output" ];
   HxType.register_class_tags "haxe.iterators.ArrayIterator" [ "haxe.iterators.ArrayIterator" ];
   HxType.register_class_tags "haxe.iterators.ArrayKeyValueIterator" [ "haxe.iterators.ArrayKeyValueIterator" ];
   HxType.register_class_tags "ocaml._Buffer.Buffer_Impl_" [ "ocaml._Buffer.Buffer_Impl_" ];
@@ -28,4 +43,10 @@ let init () : unit =
   HxType.register_class_tags "ocaml._IntSet.IntSet_Impl_" [ "ocaml._IntSet.IntSet_Impl_" ];
   HxType.register_class_tags "ocaml._StringMap.StringMap_Impl_" [ "ocaml._StringMap.StringMap_Impl_" ];
   HxType.register_class_tags "ocaml._StringSet.StringSet_Impl_" [ "ocaml._StringSet.StringSet_Impl_" ];
+  HxType.register_class_tags "sys.io.Process" [ "sys.io.Process" ];
+  HxType.register_class_tags "sys.io.Stdio" [ "sys.io.Stdio" ];
+  HxType.register_class_tags "sys.io._Process.OcamlProcessInput" [ "haxe.io.Input"; "sys.io._Process.OcamlProcessInput" ];
+  HxType.register_class_tags "sys.io._Process.OcamlProcessOutput" [ "haxe.io.Output"; "sys.io._Process.OcamlProcessOutput" ];
+  HxType.register_class_tags "sys.io._Stdio.OcamlStdioInput" [ "haxe.io.Input"; "sys.io._Stdio.OcamlStdioInput" ];
+  HxType.register_class_tags "sys.io._Stdio.OcamlStdioOutput" [ "haxe.io.Output"; "sys.io._Stdio.OcamlStdioOutput" ];
   ()

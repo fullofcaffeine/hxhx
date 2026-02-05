@@ -1,0 +1,6 @@
+-cp src
+-main Main
+--no-output
+-lib reflaxe.ocaml
+-D ocaml_output=out
+
