@@ -229,6 +229,14 @@ private class MacroClient {
 						}
 						MacroState.emitOcamlModule(name, source);
 						replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+					case "compiler.addClassPath":
+						final cp = MacroProtocol.kvGet(tail, "cp");
+						if (cp == null || cp.length == 0) {
+							replyErr(id, method + ": missing classpath");
+							return;
+						}
+						MacroState.addClassPath(cp);
+						replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 					case "context.defined":
 						final name = MacroProtocol.kvGet(tail, "n");
 						replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));

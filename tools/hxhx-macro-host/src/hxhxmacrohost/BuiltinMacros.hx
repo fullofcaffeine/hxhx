@@ -52,6 +52,25 @@ class BuiltinMacros {
 	}
 
 	/**
+		Add a classpath from an environment variable.
+
+		Why
+		- Our macro expression allowlist does not parse arguments yet.
+		- This lets CI tests pass a path deterministically without growing expression parsing.
+
+		What
+		- Reads `HXHX_ADD_CP` and calls `Compiler.addClassPath` if it is non-empty.
+	**/
+	public static function addCpFromEnv():String {
+		final cp = Sys.getEnv("HXHX_ADD_CP");
+		if (cp != null && StringTools.trim(cp).length > 0) {
+			Compiler.addClassPath(cp);
+			return "addCp=ok";
+		}
+		return "addCp=skip";
+	}
+
+	/**
 		Read a compiler define seeded from the compilation CLI (`-D`).
 
 		Why

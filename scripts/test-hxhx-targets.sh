@@ -261,6 +261,38 @@ if [ "$code" -eq 0 ]; then
 fi
 echo "$out" | grep -q "Contradiction"
 
+echo "== Stage3 bring-up: macro-added classpath affects import resolution"
+tmpcp="$tmpdir/cp_test"
+mkdir -p "$tmpcp/src" "$tmpcp/extra"
+cat >"$tmpcp/src/Main.hx" <<'HX'
+package;
+
+import Extra;
+
+class Main {
+  static function main() {
+    return 0;
+  }
+}
+HX
+cat >"$tmpcp/extra/Extra.hx" <<'HX'
+class Extra {}
+HX
+
+set +e
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpcp/src" -main Main --hxhx-out "$tmpcp/out_no_cp" 2>&1)"
+code=$?
+set -e
+if [ "$code" -eq 0 ]; then
+  echo "Expected missing import to fail, but stage3 succeeded." >&2
+  exit 1
+fi
+echo "$out" | grep -q "import_missing Extra"
+
+out="$(HXHX_ADD_CP="$tmpcp/extra" HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpcp/src" -main Main --macro 'BuiltinMacros.addCpFromEnv()' --hxhx-out "$tmpcp/out_with_cp")"
+echo "$out" | grep -q "^macro_run\\[0\\]=addCp=ok$"
+echo "$out" | grep -q "^stage3=ok$"
+
 echo "== Stage4 bring-up: macro host RPC handshake + stub Context/Compiler calls"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-selftest)"
 echo "$out" | grep -q "^macro_host=ok$"

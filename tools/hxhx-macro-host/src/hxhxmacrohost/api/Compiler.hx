@@ -47,4 +47,22 @@ class Compiler {
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("s", source == null ? "" : source);
 		HostToCompilerRpc.call("compiler.emitOcamlModule", tail);
 	}
+
+	/**
+		Add a compiler classpath (macro-time configuration).
+
+		Why
+		- Real-world macros (and targets/plugins like Reflaxe backends) often add classpaths
+		  during `--macro` initialization.
+		- This is also a useful early “macro influences compilation” effect that does not
+		  require typed AST transforms yet: it changes which modules can be resolved.
+
+		What
+		- Sends a reverse RPC `compiler.addClassPath` with `cp=<...>`.
+	**/
+	public static function addClassPath(path:String):Void {
+		if (path == null || path.length == 0) return;
+		final tail = Protocol.encodeLen("cp", path);
+		HostToCompilerRpc.call("compiler.addClassPath", tail);
+	}
 }

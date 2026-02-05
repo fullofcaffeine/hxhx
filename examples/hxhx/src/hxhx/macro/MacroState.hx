@@ -29,10 +29,12 @@ package hxhx.macro;
 class MacroState {
 	static final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final ocamlModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+	static final classPaths:Array<String> = [];
 
 	public static function reset():Void {
 		defines.clear();
 		ocamlModules.clear();
+		classPaths.resize(0);
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -146,5 +148,23 @@ class MacroState {
 		if (name == null || name.length == 0) return "";
 		final v = ocamlModules.get(name);
 		return v == null ? "" : v;
+	}
+
+	/**
+		Macro-time classpaths added via `Compiler.addClassPath`.
+
+		Why
+		- This is an early “macro influences compilation” effect that does not require typed AST transforms:
+		  it changes which modules can be resolved.
+	**/
+	public static function addClassPath(path:String):Void {
+		if (path == null) return;
+		final p = StringTools.trim(path);
+		if (p.length == 0) return;
+		if (classPaths.indexOf(p) == -1) classPaths.push(p);
+	}
+
+	public static function listClassPaths():Array<String> {
+		return classPaths.copy();
 	}
 }

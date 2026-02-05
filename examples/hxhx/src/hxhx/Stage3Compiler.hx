@@ -69,6 +69,13 @@ class Stage3Compiler {
 		if (parsed == null) return 2;
 
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
+
+		final hostCwd = try Sys.getCwd() catch (_:Dynamic) ".";
+		final cwd = absFromCwd(hostCwd, parsed.cwd);
+		if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
+			return error("cwd is not a directory: " + cwd);
+		}
+
 		if (parsed.macros.length > 0) {
 			hxhx.macro.MacroState.reset();
 			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
@@ -92,13 +99,11 @@ class Stage3Compiler {
 			}
 		}
 
-		final hostCwd = try Sys.getCwd() catch (_:Dynamic) ".";
-		final cwd = absFromCwd(hostCwd, parsed.cwd);
-		if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
-			return error("cwd is not a directory: " + cwd);
+		final classPaths = {
+			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
+			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
+			base.concat(extra);
 		}
-
-		final classPaths = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
 
 		final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {

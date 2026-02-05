@@ -139,6 +139,16 @@ prove the artifact plumbing works end-to-end before we implement full transforms
   - `s`: raw `.ml` source text
 - response: `res <id> ok v=2:ok`
 
+### `compiler.addClassPath` (bring-up rung)
+
+Stage 4 macro-time configuration rung: a macro can add a compiler classpath.
+
+This models the shape of `haxe.macro.Compiler.addClassPath(path)` and is a useful early “macro influences compilation”
+effect: it changes which modules can be resolved.
+
+- request: `req <id> compiler.addClassPath cp=<...>`
+- response: `res <id> ok v=2:ok`
+
 ### `context.defined`
 
 Models the shape of `haxe.macro.Context.defined(name)`.
