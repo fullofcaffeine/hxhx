@@ -391,17 +391,35 @@ class Stage1Resolver {
 		className:String,
 	}> {
 		// For now, treat module path and class path as equivalent: `a.b.C` -> `a/b/C.hx`.
+		//
+		// Also support common "sub-type" imports where the file is the module, not the
+		// leaf type: `a.b.Mod.SubType` should resolve to `a/b/Mod.hx` if
+		// `a/b/Mod/SubType.hx` doesn't exist.
 		final parts = modulePath.split(".");
 		if (parts.length == 0) return null;
-		final className = parts[parts.length - 1];
-		final pkgParts = parts.slice(0, parts.length - 1);
-		final pkg = pkgParts.join(".");
+		final leafName = parts[parts.length - 1];
 
 		for (cp in classPaths) {
 			final base = resolveClassPath(cwd, cp);
-			final candidate = Path.join([base].concat(pkgParts).concat([className + ".hx"]));
-			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
-				return { path: candidate, packagePath: pkg, className: className };
+			// 1) Exact: a/b/C.hx
+			{
+				final pkgParts = parts.slice(0, parts.length - 1);
+				final pkg = pkgParts.join(".");
+				final candidate = Path.join([base].concat(pkgParts).concat([leafName + ".hx"]));
+				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
+					return { path: candidate, packagePath: pkg, className: leafName };
+				}
+			}
+
+			// 2) Sub-type fallback: a/b/Mod.hx for import a.b.Mod.SubType
+			if (parts.length >= 2) {
+				final modName = parts[parts.length - 2];
+				final pkgParts = parts.slice(0, parts.length - 2);
+				final pkg = pkgParts.join(".");
+				final candidate = Path.join([base].concat(pkgParts).concat([modName + ".hx"]));
+				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
+					return { path: candidate, packagePath: pkg, className: modName };
+				}
 			}
 		}
 		return null;

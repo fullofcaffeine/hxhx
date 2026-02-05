@@ -183,6 +183,27 @@ HX
 out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main3 --no-output)"
 echo "$out" | grep -q "^stage1=ok$"
 
+echo "== Stage1 bring-up: import subtype resolves to module file"
+mkdir -p "$tmpdir/src/pack"
+cat >"$tmpdir/src/pack/Mod.hx" <<'HX'
+package pack;
+
+class Mod {}
+class SubType {}
+HX
+cat >"$tmpdir/src/Main4.hx" <<'HX'
+package;
+
+import pack.Mod.SubType;
+
+class Main4 {
+  static function main() {}
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main Main4 --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+echo "$out" | grep -vq "stage1=warn import_missing pack.Mod.SubType"
+
 echo "== Contradiction fails fast"
 set +e
 out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"
