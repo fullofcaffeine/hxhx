@@ -104,7 +104,7 @@ Lowered forms:
 
 - `x = v` → `x := v` when `x` is a `ref` local
 - `x += v` → `x := !x + v`
-- `++x` / `x++` → `x := !x + 1` (value-position nuances are still evolving; prefer statement form for now)
+- `++x` / `x++` → `x := !x + 1` (the value-position semantics are subtle; we validate common cases via fixtures)
 
 For **field assignment** on instances:
 
@@ -209,15 +209,23 @@ constructor parameters as pattern variables.
 
 ### Exceptions (`throw` / `try`)
 
-At the moment, Haxe exceptions are routed through a minimal runtime:
+Haxe exceptions are routed through a runtime wrapper so we can preserve:
 
-- `throw v` becomes `HxRuntime.hx_throw (Obj.repr v)`
-- `try { ... } catch (e:Dynamic) { ... }` becomes a `HxRuntime.hx_try` call
+- “throw any value” semantics (including primitives),
+- predictable typed catches (`catch (e:T)`) for a useful set of types, and
+- correct interaction with internal control-flow exceptions (`break` / `continue` / synthetic returns).
 
-Current limitations:
+For the full strategy (typed catch matching, tagging, and `haxe.Exception` / `haxe.ValueException` behavior), see:
 
-- Only `catch (e:Dynamic)` is supported right now.
-- Typed catches, multiple catches, and some reflection-heavy patterns are still on the roadmap.
+- `docs/02-user-guide/TRY_CATCH_AND_EXCEPTIONS.md:1`
+
+Key points:
+
+- `throw e` raises a dedicated runtime exception (`HxRuntime.Hx_exception`) carrying a boxed payload (`Obj.repr e`)
+  plus best-effort type tags.
+- `try/catch` lowers to an OCaml `try ... with` where:
+  - internal control-flow exceptions are **re-thrown** immediately (so Haxe `try` never swallows loop control), and
+  - typed catches are implemented by matching against the tag list (and runtime class tags when available).
 
 ### Escape hatch
 
@@ -229,6 +237,14 @@ untyped __ocaml__("(* ocaml here *)")
 
 This is intentionally constrained (constant string only) and should be reserved for early bring-up or interop;
 prefer a typed extern surface when something will be reused.
+
+### Reflection note (portable)
+
+Portable reflection is intentionally a “subset” feature: we support the pieces that unblock stdlib and common
+libraries, but we do not try to match every edge of upstream reflection immediately.
+
+Example: `Reflect.callMethod(obj, fn, args)` lowers to a runtime helper (`HxReflect.callMethod`) that performs a
+best-effort dynamic apply based on the argument count.
 
 ## OCaml-native surface: how it changes the lowering
 

@@ -44,15 +44,15 @@ Legend:
 | `if` / `else` | ✅ | Fixtures + integration |
 | `switch` (enums/values) | ✅ | Lowered to OCaml `match` |
 | `while` + `break/continue` | ✅ | `break/continue` via control exceptions |
-| `do { } while` | 🟡 | Lowered as `while` today (`bd: haxe.ocaml-4dw`) |
+| `do { } while` | ✅ | Covered by portable fixtures |
 | Enums + constructor args | ✅ | Snapshot + integration |
 | Classes | ✅ | Record-backed instances |
 | Inheritance + overrides | ✅ | Dispatch records; see `M10_LANGUAGE_SURFACE_AUDIT.md` |
 | Interfaces dispatch | ✅ | Covered by portable fixtures |
 | `try/catch`, typed catches | ✅ | Tagged throw strategy; see `TRY_CATCH_AND_EXCEPTIONS.md` |
-| Exception parity (full) | 🟡 | Stack/rethrow hierarchy still evolving (`bd: haxe.ocaml-56s`) |
-| Method-as-value (`obj.method`) | 🟡 | Not complete yet (`bd: haxe.ocaml-d3c`) |
-| Reflect/dynamic field access | 🟡 | Partial; see audit (`bd: haxe.ocaml-k7o`) |
+| Exception parity (full) | 🟡 | Best-effort parity; see `TRY_CATCH_AND_EXCEPTIONS.md` for the portable strategy |
+| Method-as-value (`obj.method`) | ✅ | Covered by portable fixtures |
+| Reflect/dynamic field access | 🟡 | Portable subset: `Reflect.field/setField/hasField/callMethod` (other APIs still evolving) |
 
 ## Stdlib coverage (portable)
 
@@ -97,7 +97,9 @@ This is “what we validate continuously” rather than a complete list of the H
 
 ## Macro / HXHX status (bootstrapping path)
 
-- Today, macros are executed by the **system `haxe`** (Stage 0) during compilation.
-- `hxhx` is currently a bring-up harness and stage0 shim; see:
+- `hxhx` is a bring-up harness and stage0 shim by default, with explicit Stage 1/3 flags for bootstrap rungs.
+- Macro transport and Stage 4 API overrides exist for bring-up and CI selftests, but upstream “replacement” gates
+  are still tracked separately.
+- See:
   - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`
   - `docs/02-user-guide/HXHX_DISTRIBUTION.md:1`
