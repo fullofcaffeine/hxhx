@@ -1273,24 +1273,38 @@ class OcamlBuilder {
 							}
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Reflect") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-							switch (cf.name) {
-								case "field" if (args.length == 2):
-									OcamlExpr.EApp(
-										OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
-										[
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
-												[
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
-													buildExpr(args[1])
-												]
-											)
-										]
-									);
-								case "setField" if (args.length == 3):
-									final rhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[2])]);
-									OcamlExpr.EApp(
-										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+								switch (cf.name) {
+									case "field" if (args.length == 2):
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+											[
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
+													[
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+														buildExpr(args[1])
+													]
+												)
+											]
+										);
+									case "callMethod" if (args.length == 3):
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+											[
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"),
+													[
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[1])]),
+														buildExpr(args[2])
+													]
+												)
+											]
+										);
+									case "setField" if (args.length == 3):
+										final rhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[2])]);
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
 										[
 											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
 											buildExpr(args[1]),
