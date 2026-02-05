@@ -62,6 +62,16 @@ fi
 cp "$HXHX_BIN" "$bin_dir/hxhx"
 chmod +x "$bin_dir/hxhx"
 
+echo "== Building hxhx macro host binary"
+HXHX_MACRO_HOST_BIN="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+if [ -z "$HXHX_MACRO_HOST_BIN" ] || [ ! -f "$HXHX_MACRO_HOST_BIN" ]; then
+  echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
+  exit 1
+fi
+
+cp "$HXHX_MACRO_HOST_BIN" "$bin_dir/hxhx-macro-host"
+chmod +x "$bin_dir/hxhx-macro-host"
+
 cp "$ROOT/README.md" "$dist_dir/README.md"
 cp "$ROOT/LICENSE" "$dist_dir/LICENSE"
 cp "$ROOT/CHANGELOG.md" "$dist_dir/CHANGELOG.md"

@@ -35,12 +35,25 @@ npx lix download
 bash scripts/hxhx/build-hxhx.sh
 ```
 
+## Macro host discovery
+
+Stage 4 macro bring-up uses a separate macro host process.
+
+By default, `hxhx` looks for a sibling executable next to itself:
+
+- `hxhx-macro-host`
+
+Override with:
+
+- `HXHX_MACRO_HOST_EXE=/path/to/hxhx-macro-host`
+
 ## Distribution artifact layout
 
 `scripts/hxhx/build-dist.sh` produces a versioned artifact under:
 
 - `dist/hxhx/<version>/<platform>-<arch>/`
   - `bin/hxhx` (the executable)
+  - `bin/hxhx-macro-host` (Stage 4 macro host)
   - `README.md`, `LICENSE`, `CHANGELOG.md`
   - `BUILD_INFO.txt` (toolchain + timestamp)
 

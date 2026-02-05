@@ -22,6 +22,19 @@ if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
   exit 1
 fi
 
+echo "== Stage4 bring-up: macro host autodiscovery (sibling binary)"
+tmpbin="$(mktemp -d)"
+cp "$HXHX_BIN" "$tmpbin/hxhx"
+chmod +x "$tmpbin/hxhx"
+cp "$HXHX_MACRO_HOST_EXE" "$tmpbin/hxhx-macro-host"
+chmod +x "$tmpbin/hxhx-macro-host"
+out="$(
+  HXHX_MACRO_HOST_EXE="" "$tmpbin/hxhx" --hxhx-macro-selftest
+)"
+echo "$out" | grep -q "^macro_host=ok$"
+echo "$out" | grep -q "^OK hxhx macro rpc$"
+rm -rf "$tmpbin"
+
 echo "== Listing targets"
 targets="$("$HXHX_BIN" --hxhx-list-targets)"
 echo "$targets" | grep -qx "ocaml"

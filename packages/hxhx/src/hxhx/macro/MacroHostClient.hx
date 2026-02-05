@@ -121,6 +121,33 @@ class MacroHostClient {
 	static function resolveMacroHostExe():String {
 		final env = Sys.getEnv("HXHX_MACRO_HOST_EXE");
 		if (env != null && env.length > 0) return env;
+
+		// Distribution-friendly default: if `hxhx-macro-host` is shipped next to the `hxhx` binary,
+		// discover it automatically so users don't have to set `HXHX_MACRO_HOST_EXE`.
+		//
+		// This is a best-effort heuristic:
+		// - If `Sys.programPath()` is unavailable or points somewhere unexpected, we fall back to "".
+		// - The env var always wins (useful for local dev or non-standard layouts).
+		final prog = Sys.programPath();
+		if (prog == null || prog.length == 0) return "";
+
+		final abs = try sys.FileSystem.fullPath(prog) catch (_:Dynamic) prog;
+		final dir = try haxe.io.Path.directory(abs) catch (_:Dynamic) "";
+		if (dir == null || dir.length == 0) return "";
+
+		final candidates = [
+			"hxhx-macro-host",
+			"hxhx-macro-host.exe",
+			"hxhx-macro",
+			"hxhx-macro.exe",
+		];
+		for (name in candidates) {
+			final p = haxe.io.Path.join([dir, name]);
+			try {
+				if (sys.FileSystem.exists(p) && !sys.FileSystem.isDirectory(p)) return p;
+			} catch (_:Dynamic) {}
+		}
+
 		return "";
 	}
 
