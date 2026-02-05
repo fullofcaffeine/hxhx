@@ -105,6 +105,29 @@ class BuiltinMacros {
 		return "flag=" + Context.definedValue("HXHX_FLAG");
 	}
 
+	/**
+		Enumerate defines (bring-up rung).
+
+		Why
+		- Gate1/Gate2 macro suites commonly enumerate all defines.
+		- This builtin gives us a deterministic probe for:
+		  - `Context.getDefines()` roundtrip
+		  - `Compiler.getDefine()` roundtrip
+		  - ordering-independence (we assert on specific keys/values)
+
+		What
+		- Defines `HXHX_ENUM=1` and then reports values observed via both APIs.
+	**/
+	public static function dumpDefines():String {
+		Compiler.define("HXHX_ENUM", "1");
+		final defs = Context.getDefines();
+		final flagMap = defs.exists("HXHX_FLAG") ? defs.get("HXHX_FLAG") : null;
+		final enumMap = defs.exists("HXHX_ENUM") ? defs.get("HXHX_ENUM") : null;
+		final flagGet = Compiler.getDefine("HXHX_FLAG");
+		final enumGet = Compiler.getDefine("HXHX_ENUM");
+		return "defines:flag_map=" + Std.string(flagMap) + ";flag_get=" + Std.string(flagGet) + ";enum_map=" + Std.string(enumMap) + ";enum_get=" + Std.string(enumGet);
+	}
+
 	public static function fail():String {
 		return MacroError.raise("intentional macro host failure (for position payload tests)");
 	}

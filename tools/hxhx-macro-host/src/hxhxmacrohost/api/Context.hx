@@ -34,6 +34,40 @@ class Context {
 		return HostToCompilerRpc.call("context.definedValue", Protocol.encodeLen("n", name));
 	}
 
+	/**
+		Return a snapshot of all compiler defines.
+
+		Why
+		- Real macro libraries commonly enumerate defines to enable/disable features.
+		- This is a cheap bring-up rung that unlocks a lot of upstream-ish macro patterns.
+
+		What
+		- Returns a `Map<String,String>` that contains all known defines at the time of the call.
+		- Modifying the returned map has no effect on the compiler.
+
+		How
+		- Implemented as a reverse RPC (`context.getDefines`) that returns a JSON-encoded list of
+		  `[key, value]` pairs in the `v=` payload.
+	**/
+	public static function getDefines():Map<String, String> {
+		final out:Map<String, String> = [];
+		final payload = HostToCompilerRpc.call("context.getDefines", "");
+		if (payload == null || payload.length == 0) return out;
+
+		final m = Protocol.kvParse(payload);
+		final countStr = m.exists("c") ? m.get("c") : "";
+		final count = Std.parseInt(countStr);
+		if (count == null || count <= 0) return out;
+
+		for (i in 0...count) {
+			final kKey = "k" + i;
+			final vKey = "v" + i;
+			if (!m.exists(kKey)) continue;
+			out.set(m.get(kKey), m.exists(vKey) ? m.get(vKey) : "");
+		}
+		return out;
+	}
+
 	public static function getType(name:String):String {
 		if (name == null || name.length == 0) return "missing";
 		return MacroRuntime.builtinTypeDesc(name);

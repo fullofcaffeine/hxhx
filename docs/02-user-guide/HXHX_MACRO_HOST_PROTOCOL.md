@@ -127,6 +127,20 @@ Models the shape of `haxe.macro.Compiler.define(name, value)`.
 - request: `req <id> compiler.define n=<...> v=<...>`
 - response: `res <id> ok v=2:ok`
 
+### `compiler.getDefine` (bring-up rung)
+
+Bring-up read-define primitive (roughly corresponds to `haxe.macro.Compiler.getDefine` expanding to `Context.definedValue`).
+
+- request: `req <id> compiler.getDefine n=<...>`
+- response: `res <id> ok v=<len>:<payload>`
+
+`<payload>` is a list of length-prefixed fragments:
+
+- `d=<len>:<0|1>` (defined?)
+- `v=<len>:<value>` (define value)
+
+The macro host treats `defined=false` as “no define” and returns `null`.
+
 ### `compiler.emitOcamlModule` (bring-up rung)
 
 Stage 4 “generate code” rung: a macro can request the compiler to emit an additional OCaml compilation unit.
@@ -175,6 +189,18 @@ Models the shape of `haxe.macro.Context.definedValue(name)`.
 
 - request: `req <id> context.definedValue n=<...>`
 - response: `res <id> ok v=<len>:<value>`
+
+### `context.getDefines` (bring-up rung)
+
+Bring-up define enumeration primitive (corresponds to `haxe.macro.Context.getDefines()`).
+
+- request: `req <id> context.getDefines`
+- response: `res <id> ok v=<len>:<payload>`
+
+`<payload>` is a list of length-prefixed fragments:
+
+- `c=<len>:<count>`
+- then `k0=<...> v0=<...> k1=<...> v1=<...> ...` (sorted by key)
 
 ### `macro.run` (bring-up rung)
 

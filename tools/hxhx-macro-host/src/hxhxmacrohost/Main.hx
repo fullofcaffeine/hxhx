@@ -158,6 +158,8 @@ class Main {
 				BuiltinMacros.genHxModule();
 			case "hxhxmacrohost.BuiltinMacros.readFlag()", "BuiltinMacros.readFlag()":
 				BuiltinMacros.readFlag();
+			case "hxhxmacrohost.BuiltinMacros.dumpDefines()", "BuiltinMacros.dumpDefines()":
+				BuiltinMacros.dumpDefines();
 			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":
 				BuiltinMacros.fail();
 			case _:

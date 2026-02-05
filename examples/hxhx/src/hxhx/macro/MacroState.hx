@@ -106,6 +106,24 @@ class MacroState {
 	}
 
 	/**
+		Return a JSON-serializable snapshot of all defines.
+
+		Why
+		- Stage4 reverse RPC is string-based, so complex payloads need a stable encoding.
+		- Using a list of `[key, value]` pairs preserves ordering and avoids relying on map serialization.
+
+		What
+		- Returns an array of `[key, value]` pairs sorted by key.
+	**/
+	public static function listDefinesPairsSorted():Array<Array<String>> {
+		final out = new Array<Array<String>>();
+		for (k in listDefineNames()) {
+			out.push([k, definedValue(k)]);
+		}
+		return out;
+	}
+
+	/**
 		Register an OCaml module to be emitted by the compilation pipeline.
 
 		Why

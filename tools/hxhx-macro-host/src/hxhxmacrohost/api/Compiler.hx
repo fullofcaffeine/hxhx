@@ -21,6 +21,33 @@ import hxhxmacrohost.Protocol;
 	  - the compiler owns the define store and replies with `res ... ok ...`
 **/
 class Compiler {
+	/**
+		Get a compiler define value.
+
+		Why
+		- Upstream has `haxe.macro.Compiler.getDefine`, which is a macro expanding to
+		  `Context.definedValue`. In practice, macro code still needs a “read define” primitive.
+		- Exposing this as a bring-up rung lets us validate the reverse RPC path without pulling in
+		  full `haxe.macro.*` emulation yet.
+
+		What
+		- Returns `null` if the flag is not defined.
+		- Returns the define value otherwise (including `"1"` for bare `-D KEY`).
+
+		How
+		- Reverse RPC `compiler.getDefine` returns a JSON object `{ defined:Bool, value:String }`
+		  in the `v=` payload.
+	**/
+	public static function getDefine(key:String):Null<String> {
+		if (key == null || key.length == 0) return null;
+		final payload = HostToCompilerRpc.call("compiler.getDefine", Protocol.encodeLen("n", key));
+		if (payload == null || payload.length == 0) return null;
+		final m = Protocol.kvParse(payload);
+		final defined = m.exists("d") && m.get("d") == "1";
+		if (!defined) return null;
+		return m.exists("v") ? m.get("v") : "";
+	}
+
 	public static function define(name:String, value:String):Void {
 		if (name == null || name.length == 0) return;
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("v", value == null ? "" : value);
