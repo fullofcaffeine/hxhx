@@ -224,8 +224,8 @@ class ParserStage {
 		return try {
 			HxParser.parseExprText(s);
 		} catch (_:Dynamic) {
-			// Last resort: treat as an identifier.
-			EIdent(s);
+			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
+			EUnsupported(s);
 		}
 	}
 

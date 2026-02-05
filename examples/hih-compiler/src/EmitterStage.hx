@@ -47,6 +47,26 @@ class EmitterStage {
 		return isUpper ? (String.fromCharCode(c + 32) + name.substr(1)) : name;
 	}
 
+	static function isOcamlKeyword(name:String):Bool {
+		if (name == null) return false;
+		return switch (name) {
+			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "else"
+				| "end" | "exception" | "external" | "false" | "for" | "fun" | "function" | "functor" | "if" | "in"
+				| "include" | "inherit" | "initializer" | "lazy" | "let" | "match" | "method" | "module" | "mutable"
+				| "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" | "struct" | "then"
+				| "to" | "true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
+				true;
+			case _:
+				false;
+		}
+	}
+
+	static function ocamlValueIdent(raw:String):String {
+		final base = lowerFirst(raw);
+		if (base == "_" || base.length == 0) return "_";
+		return isOcamlKeyword(base) ? (base + "_") : base;
+	}
+
 	static function isUpperStart(name:String):Bool {
 		if (name == null || name.length == 0) return false;
 		final c = name.charCodeAt(0);
@@ -71,11 +91,11 @@ class EmitterStage {
 			case EInt(v): Std.string(v);
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
-			case EIdent(name): isUpperStart(name) ? name : lowerFirst(name);
+			case EIdent(name): isUpperStart(name) ? name : ocamlValueIdent(name);
 			case ENull:
 				throw "stage3 emitter: null literal emission is not implemented yet";
 			case EField(obj, field):
-				exprToOcaml(obj) + "." + lowerFirst(field);
+				exprToOcaml(obj) + "." + ocamlValueIdent(field);
 			case ECall(callee, args):
 				final c = exprToOcaml(callee);
 				if (args.length == 0) {
@@ -89,10 +109,15 @@ class EmitterStage {
 	}
 
 	static function returnExprToOcaml(expr:HxExpr):String {
-		// Stage 3: if we couldn't parse a return expression, treat it as `Void`.
+		// Stage 3 bring-up: if we couldn't parse/type an expression, keep compilation moving.
+		//
+		// `Obj.magic` is a deliberate bootstrap escape hatch:
+		// - it typechecks against any return annotation, which helps us progress through
+		//   upstream-shaped code without having to implement full typing/emission yet.
+		// - it is *not* semantically correct; it is only for bring-up.
 		return switch (expr) {
-			case EUnsupported(_):
-				"()";
+			case EUnsupported(_), ENull:
+				"(Obj.magic 0)";
 			case _:
 				exprToOcaml(expr);
 		}
@@ -156,22 +181,24 @@ class EmitterStage {
 			out.push("");
 
 			var sawMain = false;
-			for (tf in typedFns) {
+			for (i in 0...typedFns.length) {
+				final tf = typedFns[i];
 				final nameRaw = tf.getName();
-				final name = lowerFirst(nameRaw);
+				final name = ocamlValueIdent(nameRaw);
 				if (name == "main") sawMain = true;
 
 				final args = tf.getParams();
 				final ocamlArgs = args.length == 0
 					? "()"
-					: args.map(a -> "(" + lowerFirst(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
+					: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
 
 				final parsedFn = parsedByName.get(nameRaw);
 				final retTy = ocamlTypeFromTy(tf.getReturnType());
 				final body = parsedFn == null ? "()" : returnExprToOcaml(parsedFn.getFirstReturnExpr());
 
 				// Keep return type annotation to make early typing behavior visible.
-				out.push("let " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
+				final kw = i == 0 ? "let rec" : "and";
+				out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 				out.push("");
 			}
 

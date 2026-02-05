@@ -527,6 +527,10 @@ let parse_module_from_tokens (toks : token array) :
               | Kw ("static", _) ->
                   cur_static := true;
                   bump ()
+              | Kw (("inline" | "override" | "final" | "macro" | "extern" | "dynamic"), _) ->
+                  (* Common Haxe member modifiers we don't model yet. Treat them as no-ops so we can
+                     still detect `function` declarations that follow. *)
+                  bump ()
               | Kw ("function", _) -> (
                   bump ();
                   let name = read_ident () in
