@@ -162,7 +162,7 @@ class Main {
 
 	static function runMacroExpr(expr:String):String {
 		final e = expr == null ? "" : StringTools.trim(expr);
-		return switch (e) {
+		final builtin = switch (e) {
 			case "hxhxmacrohost.BuiltinMacros.smoke()", "BuiltinMacros.smoke()":
 				BuiltinMacros.smoke();
 			case "hxhxmacrohost.BuiltinMacros.genModule()", "BuiltinMacros.genModule()":
@@ -177,14 +177,17 @@ class Main {
 				BuiltinMacros.dumpDefines();
 			case "hxhxmacrohost.BuiltinMacros.registerHooks()", "BuiltinMacros.registerHooks()":
 				BuiltinMacros.registerHooks();
-			// Non-builtin macro module rung (compiled in via an extra `-cp` for tests).
-			case "hxhxmacros.ExternalMacros.external()":
-				hxhxmacros.ExternalMacros.external();
 			case "hxhxmacrohost.BuiltinMacros.fail()", "BuiltinMacros.fail()":
 				BuiltinMacros.fail();
 			case _:
-				"ran:" + e;
+				null;
 		}
+		if (builtin != null) return builtin;
+
+		final ext = EntryPoints.run(e);
+		if (ext != null) return ext;
+
+		return "ran:" + e;
 	}
 
 	static function parseKV(tail:String):Map<String, String> {

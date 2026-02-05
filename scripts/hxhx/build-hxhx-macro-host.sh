@@ -26,6 +26,60 @@ fi
   rm -rf out
   mkdir -p out
   extra=()
+  gen_cp=""
+  if [ -n "${HXHX_MACRO_HOST_ENTRYPOINTS:-}" ]; then
+    gen_cp="$TOOL_DIR/out/_gen_hx"
+    mkdir -p "$gen_cp/hxhxmacrohost"
+    gen_file="$gen_cp/hxhxmacrohost/EntryPointsGen.hx"
+
+    # Generate a tiny registry that avoids reflection.
+    #
+    # `HXHX_MACRO_HOST_ENTRYPOINTS` is a `;`-separated list of exact expression strings to dispatch,
+    # e.g.: `hxhxmacros.ExternalMacros.external();some.pack.M.foo()`
+    #
+    # For bring-up we only support the shape `pack.Class.method()` (no args).
+    {
+      echo "package hxhxmacrohost;"
+      echo ""
+      echo "class EntryPointsGen {"
+      echo "  public static function run(expr:String):Null<String> {"
+      echo "    if (expr == null) return null;"
+      echo "    final e = StringTools.trim(expr);"
+      echo "    return switch (e) {"
+
+      IFS=';' read -r -a entries <<<"${HXHX_MACRO_HOST_ENTRYPOINTS}"
+      for raw in "${entries[@]}"; do
+        entry="$(echo "$raw" | xargs)"
+        if [ -z "$entry" ]; then
+          continue
+        fi
+        # Expect `...(...)` and only support `()` right now.
+        if [[ "$entry" != *"()" ]]; then
+          echo "      // Skipping unsupported entry (expected no-arg call): $entry"
+          continue
+        fi
+        call="${entry%()}"
+        cls="${call%.*}"
+        meth="${call##*.}"
+        if [ -z "$cls" ] || [ -z "$meth" ] || [ "$cls" = "$call" ]; then
+          echo "      // Skipping malformed entry: $entry"
+          continue
+        fi
+
+        # Emit case. We reference the method directly so Haxe resolves it statically.
+        # We intentionally only dispatch exact strings for auditability.
+        echo "      case \"${entry}\": ${cls}.${meth}();"
+      done
+
+      echo "      case _: null;"
+      echo "    }"
+      echo "  }"
+      echo "}"
+    } >"$gen_file"
+
+    extra+=("-cp" "$gen_cp" "-D" "hxhx_entrypoints")
+  fi
+
   if [ -n "${HXHX_MACRO_HOST_EXTRA_CP:-}" ]; then
     IFS=':' read -r -a cps <<<"${HXHX_MACRO_HOST_EXTRA_CP}"
     for cp in "${cps[@]}"; do
