@@ -4,5 +4,12 @@ import demo.Util;
 
 class A {
   static function main() {}
-}
 
+  // Acceptance fixture for Stage 3 typer:
+  // - no return type hint (must infer `String`)
+  static function greet() return "hello";
+
+  // Acceptance fixture for Stage 3 local scope:
+  // - infer return type via identifier resolution (`s : String`)
+  static function echo(s:String) return s;
+}

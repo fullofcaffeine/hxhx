@@ -70,5 +70,6 @@ class HxFunctionDecl {
 	public static function getIsStatic(fn:HxFunctionDecl):Bool return fn.isStatic;
 	public static function getArgs(fn:HxFunctionDecl):Array<HxFunctionArg> return fn.args;
 	public static function getReturnTypeHint(fn:HxFunctionDecl):String return fn.returnTypeHint;
+	public static function getBody(fn:HxFunctionDecl):Array<HxStmt> return fn.body;
 	public static function getReturnStringLiteral(fn:HxFunctionDecl):String return fn.returnStringLiteral;
 }

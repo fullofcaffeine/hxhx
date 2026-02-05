@@ -142,7 +142,13 @@ class CompilerDriver {
 		final typedFns = typed.getEnv().getMainClass().getFunctions();
 		Sys.println("typed_functions=" + typedFns.length);
 		for (tf in typedFns) {
-			Sys.println("typed_fn=" + tf.getName() + " args=" + tf.getParams().length + " ret=" + tf.getReturnType().toString());
+			Sys.println(
+				"typed_fn=" + tf.getName()
+				+ " args=" + tf.getParams().length
+				+ " locals=" + tf.getLocals().length
+				+ " ret=" + tf.getReturnType().toString()
+				+ " retExpr=" + tf.getReturnExprType().toString()
+			);
 		}
 
 		final expanded = MacroStage.expand(typed);

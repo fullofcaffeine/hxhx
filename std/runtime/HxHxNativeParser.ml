@@ -323,10 +323,10 @@ let parse_module_from_tokens (toks : token array) :
           | Sym (',', _) when !paren = 1 ->
               want_name := true;
               bump ()
-          | Ident (_, _) when !paren = 1 && !want_name ->
+          | Ident (_, _) when !paren = 1 && not !want_name ->
               (* Likely a type identifier; ignore. *)
               bump ()
-          | Ident (name, _) when !paren = 1 && !want_name = true ->
+          | Ident (name, _) when !paren = 1 && !want_name ->
               args := !args @ [ name ];
               want_name := false;
               bump ()
