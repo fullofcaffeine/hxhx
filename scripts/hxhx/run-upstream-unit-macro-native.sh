@@ -43,7 +43,15 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
-# Stage3 bring-up relies on an explicit std root. Prefer inferring it from the stage0 `haxe` binary.
+# Stage3 bring-up relies on an explicit std root.
+#
+# Prefer upstream's `std/` when available, because `haxe` can be a shim (e.g. lix)
+# that doesn't sit next to a `std` folder on disk.
+if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
+  export HAXE_STD_PATH="$UPSTREAM_DIR/std"
+fi
+
+# Otherwise, try inferring it from the stage0 `haxe` binary.
 if [ -z "${HAXE_STD_PATH:-}" ]; then
   stage0_haxe=""
   if [ -x "$HOME/haxe/versions/$UPSTREAM_REF/haxe" ]; then

@@ -7,6 +7,7 @@ import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 #else
 import hxhxmacrohost.api.Context as HostContext;
+import hxhxmacrohost.MacroError;
 #end
 
 /**
@@ -301,12 +302,48 @@ class Context {
 		return HostContext.getDefines();
 	}
 
+	public static function error(msg:String, pos:Position, ?depth:Int = 0):Dynamic {
+		// Bring-up rung: we cannot attach a real macro `Position` yet.
+		// Still raise a tagged error so the compiler can surface *some* `file:line` info.
+		// Touch args so OCaml warning-as-error builds don't fail on unused parameters.
+		if (pos != null) {}
+		if (depth != 0) {}
+		return MacroError.raise(msg);
+	}
+
+	public static function fatalError(msg:String, pos:Position, ?depth:Int = 0):Dynamic {
+		if (pos != null) {}
+		if (depth != 0) {}
+		return MacroError.raise(msg);
+	}
+
+	public static function warning(msg:String, pos:Position, ?depth:Int = 0):Void {
+		// Bring-up rung: warnings are currently ignored at runtime.
+		if (msg != null) {}
+		if (pos != null) {}
+		if (depth != 0) {}
+	}
+
+	public static function info(msg:String, pos:Position, ?depth:Int = 0):Void {
+		if (msg != null) {}
+		if (pos != null) {}
+		if (depth != 0) {}
+	}
+
+	public static function currentPos():Position {
+		return null;
+	}
+
 	public static function onGenerate(callback:Array<Dynamic>->Void, persistent:Bool = true):Void {
 		HostContext.onGenerate(callback, persistent);
 	}
 
 	public static function onAfterTyping(callback:Array<Dynamic>->Void):Void {
 		HostContext.onAfterTyping(callback);
+	}
+
+	public static function getMessages():Array<Message> {
+		return [];
 	}
 
 	public static function filterMessages(predicate:Message->Bool):Void {

@@ -251,6 +251,14 @@ In the current bring-up rung:
 - A small allowlist may include non-builtin macro modules compiled into the macro host binary for tests
   (e.g. `hxhxmacros.ExternalMacros.external()` when built with an extra `-cp`).
 
+Bring-up limitation (important):
+
+- The generated allowlist dispatcher (`scripts/hxhx/build-hxhx-macro-host.sh`) currently supports only
+  **no-argument** calls in the shape `pack.Class.method()`.
+- Expressions like `include("unit.TestInt64")` or `nullSafety("reflaxe")` are not executed yet in the
+  Stage 4 bring-up model. They will become supported once we replace the allowlist with a real
+  macro-expression evaluation model and/or a richer entrypoint registry.
+
 - request: `req <id> macro.run e=<len>:<expr>`
 - response: `res <id> ok v=<len>:<result>`
 
