@@ -16,7 +16,10 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 echo "== Building hxhx macro host (RPC skeleton)"
-HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn();hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn();hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar();hxhxmacros.ExprMacroShim.hello();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+# By default this uses the committed Stage4 bootstrap snapshot under:
+#   tools/hxhx-macro-host/bootstrap_out
+# so `npm test` can run without a stage0 `haxe` binary on PATH.
+HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
 if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
   echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
   exit 1

@@ -25,6 +25,8 @@ packages/**/out_stage*/
 
 # Tools build output
 tools/**/out/
+tools/**/bootstrap_out/_build/
+tools/**/bootstrap_out/*.install
 
 # Dist artifacts
 dist/

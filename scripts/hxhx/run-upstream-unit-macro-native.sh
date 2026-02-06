@@ -70,15 +70,16 @@ fi
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
 if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
-  # Gate1's `compile-macro.hxml` runs `--macro Macro.init()`, which lives in the upstream unit sources.
-  # Build a macro host that:
-  # - includes the upstream unit classpath, and
-  # - allowlists the exact Macro.init() entrypoint for the bring-up dispatch registry.
-  HXHX_MACRO_HOST_EXE="$(
-    HXHX_MACRO_HOST_EXTRA_CP="$UPSTREAM_DIR/tests/unit/src" \
-    HXHX_MACRO_HOST_ENTRYPOINTS="Macro.init()" \
-    "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1
-  )"
+  # Gate1's `compile-macro.hxml` runs `--macro Macro.init()`.
+  #
+  # For CI-friendliness and to keep this runner stage0-free with respect to macro-host
+  # selection, we use the repo's committed bootstrap macro host snapshot when available
+  # (see `tools/hxhx-macro-host/bootstrap_out`).
+  #
+  # NOTE: This does *not* execute upstream's real `tests/unit/src/Macro.hx` yet. The
+  # bring-up goal here is to exercise the macro ABI boundary (spawn + handshake +
+  # hook registration), not to validate upstream macro semantics.
+  HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
   export HXHX_MACRO_HOST_EXE
 fi
 

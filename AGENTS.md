@@ -110,6 +110,22 @@ These are hard constraints for all contributors and all Codex changes in this re
   - what was used,
   - and any required attribution text.
 
+### Bootstrap artifacts (generated OCaml snapshots)
+
+To keep Stage4 macro-host selection/build **stage0-free by default**, we may commit *generated OCaml output*
+from our own Haxe sources as **bootstrap snapshots**.
+
+Current bootstrap snapshot locations:
+
+- `tools/hxhx-macro-host/bootstrap_out/` — generated OCaml sources + dune files for `hxhx-macro-host`.
+
+Rules:
+
+- Treat these directories as **generated**: do not hand-edit files inside them.
+- Regenerate only via repo scripts (behavior-preserving), and keep the diff reviewable.
+- Bootstrap snapshots must be generated only from **repo-owned Haxe sources** + our backend/runtime (no upstream compiler/test sources).
+- If a bootstrap snapshot must embed additional third-party code, update `THIRD_PARTY_NOTICES.md` accordingly.
+
 **If unsure**
 
 - If any change feels “too close” to upstream source (data structure, function layout, line-by-line mapping), stop and:
