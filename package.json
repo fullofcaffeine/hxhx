@@ -50,6 +50,7 @@
     "test:upstream:unit-macro-ocaml": "bash scripts/hxhx/run-upstream-unit-macro-ocaml.sh",
     "test:upstream:unit-macro-native": "bash scripts/hxhx/run-upstream-unit-macro-native.sh",
     "test:upstream:unit-macro-stage1": "bash scripts/hxhx/run-upstream-unit-macro-stage1.sh",
+    "test:upstream:unit-macro-stage3-typeonly": "bash scripts/hxhx/run-upstream-unit-macro-stage3-typeonly.sh",
     "test:upstream:runci-macro": "bash scripts/hxhx/run-upstream-runci-macro.sh",
     "test:upstream:stage2": "bash scripts/hxhx/stage2-repro.sh",
     "test:upstream:runci-targets": "bash scripts/hxhx/run-upstream-runci-targets.sh",

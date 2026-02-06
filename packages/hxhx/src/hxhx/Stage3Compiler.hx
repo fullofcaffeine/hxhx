@@ -186,6 +186,21 @@ class Stage3Compiler {
 
 		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
 
+		// Type-only mode is intended to answer “how far does the typer get?” without requiring a
+		// working macro host. Upstream-ish workloads (e.g. `tests/unit/compile-macro.hxml`) often
+		// include `--macro` directives which are essential for *real* compilation, but are not
+		// necessary to diagnose missing parser/typer coverage.
+		//
+		// We therefore skip macros entirely when `--hxhx-type-only` is enabled.
+		//
+		// Note: This is a bring-up behavior. The Gate1 “non-delegating” acceptance run will
+		// require real macro execution; type-only is only for diagnostics.
+		if (typeOnly && parsed.macros.length > 0) {
+			for (i in 0...parsed.macros.length) {
+				Sys.println("macro_skipped[" + i + "]=" + parsed.macros[i]);
+			}
+		}
+
 		var macroSession:Null<MacroHostSession> = null;
 		inline function closeMacroSession():Void {
 			if (macroSession != null) {
@@ -209,7 +224,7 @@ class Stage3Compiler {
 			base.concat(libs);
 		}
 
-		if (parsed.macros.length > 0) {
+		if (!typeOnly && parsed.macros.length > 0) {
 			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
 			// for the requested CLI `--macro` entrypoints.
 			//
