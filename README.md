@@ -128,3 +128,7 @@ You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 ## Escape hatch
 
 - `untyped __ocaml__("...")` injects raw OCaml snippets (intended for interop and early bring-up).
+
+## License
+
+MIT (see `LICENSE`).

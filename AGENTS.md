@@ -44,6 +44,22 @@ bd sync               # Sync with git
 - Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
 - `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
 
+## Licensing (MIT Goal, Keep Private for Now)
+
+This repository is intended to become a **MIT-licensed** OCaml target *and* (eventually) a **MIT-licensed Haxe-in-Haxe compiler** (`hxhx`).
+
+To avoid GPL “viral” obligations and preserve the ability to embed/bundle `hxhx` in proprietary apps:
+
+- **Do not copy** upstream Haxe *compiler* source code (`vendor/haxe/src`) into this repo.
+  - Reading upstream as a behavioral/architectural reference is fine; copying code is the risk.
+- **Do not vendor upstream Haxe tests** into this repo.
+  - Run upstream suites from a local checkout (`vendor/haxe`, ignored by git) as an oracle.
+- Keep the upstream checkout **untracked** (`vendor/haxe` via `scripts/vendor/fetch-haxe-upstream.sh` or a symlink).
+- Any OCaml shims (`*.ml`) must be **written from scratch** (no copy/paste from upstream compiler sources).
+- Be cautious about bundling a stage0 `haxe` binary in distributions: if you ship it, you must comply with its license.
+  - Prefer making `hxhx` truly non-delegating before publishing “batteries included” builds.
+- Inbound contributions must be MIT-compatible; avoid accepting code with unclear provenance/licensing.
+
 ## Upstream OCaml Reference (vendored checkout)
 
 When implementing backend semantics or Haxe-in-Haxe bootstrap behavior, cross-check against upstream Haxe’s **existing OCaml implementation**:

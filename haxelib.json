@@ -1,7 +1,7 @@
 {
   "name": "reflaxe.ocaml",
   "url": "https://github.com/fullofcaffeine/reflaxe.ocaml",
-  "license": "GPL-3.0",
+  "license": "MIT",
   "tags": [
     "cross",
     "ocaml",

@@ -9,7 +9,7 @@
  * - package-lock.json version (+ packages[""].version)
  * - haxelib.json version
  * - haxe_libraries/reflaxe.ocaml.hxml (-D reflaxe.ocaml=...)
- * - LICENSE exists and looks like GPLv3
+ * - LICENSE exists and looks like MIT
  */
 
 const fs = require('fs')
@@ -66,19 +66,19 @@ function main() {
     fail(`haxe_libraries/reflaxe.ocaml.hxml reflaxe.ocaml define (${hxmlVersion}) != package.json version (${version})`)
   }
 
-  if (haxelib.license !== 'GPL-3.0') {
-    fail(`haxelib.json license (${haxelib.license}) != GPL-3.0`)
+  if (haxelib.license !== 'MIT') {
+    fail(`haxelib.json license (${haxelib.license}) != MIT`)
   }
 
   if (!fs.existsSync('LICENSE')) {
     fail('LICENSE file missing at repo root')
   } else {
     const license = readUtf8('LICENSE')
-    if (!license.includes('GNU GENERAL PUBLIC LICENSE')) {
-      fail('LICENSE does not look like GNU GPL (missing header)')
+    if (!license.includes('MIT License')) {
+      fail('LICENSE does not look like MIT (missing header)')
     }
-    if (!license.includes('Version 3, 29 June 2007')) {
-      fail('LICENSE does not look like GPLv3 (missing version header)')
+    if (!license.includes('Permission is hereby granted, free of charge')) {
+      fail('LICENSE does not look like MIT (missing permission grant)')
     }
   }
 
