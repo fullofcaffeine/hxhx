@@ -19,3 +19,5 @@ let create = fun a2 h2 -> let self = ({ __hx_type = HxType.class_ "Box"; a = Obj
   ));
   self
 )
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Box"; a = Obj.magic (); h = Obj.magic () } : t)

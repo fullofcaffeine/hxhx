@@ -3,3 +3,12 @@
 (* Haxe type: haxe._Int32.Int32_Impl_ *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe._Int32.Int32_Impl_" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe._Int32.Int32_Impl_" } : t)

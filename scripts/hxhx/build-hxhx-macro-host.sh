@@ -106,7 +106,11 @@ normalize_cp() {
       fi
     done
   fi
-  "$HAXE_BIN" build.hxml -D ocaml_build=native "${extra[@]}"
+  cmd=("$HAXE_BIN" build.hxml -D ocaml_build=native)
+  if [ "${#extra[@]}" -gt 0 ]; then
+    cmd+=("${extra[@]}")
+  fi
+  "${cmd[@]}"
 )
 
 BIN="$TOOL_DIR/out/_build/default/out.exe"

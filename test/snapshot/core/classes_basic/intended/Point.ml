@@ -20,6 +20,8 @@ let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0
   self
 )
 
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t)
+
 let incX = fun self () -> ignore (let __assign_3 = HxInt.add (self.x) 1 in (
   self.x <- __assign_3;
   __assign_3

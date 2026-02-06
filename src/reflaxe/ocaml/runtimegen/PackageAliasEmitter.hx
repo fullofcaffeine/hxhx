@@ -27,7 +27,7 @@ import reflaxe.output.OutputManager;
  * - Emit one `.ml` file per package node.
  * - Avoid collisions with existing real modules by suffixing `_` as needed.
  */
-class PackageAliasEmitter {
+	class PackageAliasEmitter {
 	static inline final LINE_DIRECTIVE_DISABLE_DEFINE = "ocaml_no_line_directives";
 
 	static function escapeLineDirectivePath(path:String):String {
@@ -66,19 +66,23 @@ class PackageAliasEmitter {
 		return name;
 	}
 
-	public static function emit(output:OutputManager, haxeModules:Array<String>):Void {
-		if (output == null || output.outputDir == null) return;
+		public static function emit(
+			output:OutputManager,
+			haxeModules:Array<String>,
+			?ocamlModuleNameForHaxeModuleId:(String)->String
+		):Void {
+			if (output == null || output.outputDir == null) return;
 
-		final leafOcamlModules:Map<String, String> = [];
-		final used:Map<String, Bool> = [];
+			final leafOcamlModules:Map<String, String> = [];
+			final used:Map<String, Bool> = [];
 
-		// Track “real” modules that already exist (compiled output units).
-		for (m in haxeModules) {
-			if (m == null || m.length == 0) continue;
-			final ocaml = moduleIdToOcamlModuleName(m);
-			leafOcamlModules.set(m, ocaml);
-			used.set(ocaml, true);
-		}
+			// Track “real” modules that already exist (compiled output units).
+			for (m in haxeModules) {
+				if (m == null || m.length == 0) continue;
+				final ocaml = ocamlModuleNameForHaxeModuleId != null ? ocamlModuleNameForHaxeModuleId(m) : moduleIdToOcamlModuleName(m);
+				leafOcamlModules.set(m, ocaml);
+				used.set(ocaml, true);
+			}
 
 		// Tree node: package prefix -> child packages + leaf modules.
 		final childPackages:Map<String, Map<String, Bool>> = [];

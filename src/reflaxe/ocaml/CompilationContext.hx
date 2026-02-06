@@ -109,6 +109,134 @@ class CompilationContext {
 	public final nonStdTypeRegistryEnums:Map<String, Bool> = [];
 
 	/**
+	 * Enum constructor names by enum full name (`pack.Enum`).
+	 *
+	 * Why
+	 * - `Type.getEnumConstructs(E)` returns the list of constructor identifiers for `E`.
+	 * - OCaml variants do not carry reflection metadata; we must generate it at compile time.
+	 */
+	public final enumConstructsByFullName:Map<String, Array<String>> = [];
+
+	/**
+	 * Defining module id for each compiled enum full name (`pack.Enum` → `pack.Module`).
+	 *
+	 * Why
+	 * - The runtime constructor registry (`HxType.register_enum_ctor`) needs to reference the
+	 *   actual OCaml variant constructors, which live in the module that defines the enum.
+	 * - `HxTypeRegistry.ml` is emitted at the end of compilation, so it can't cheaply “look
+	 *   back” to the originating enum module unless we record it during enum compilation.
+	 */
+	public final enumModuleIdByFullName:Map<String, String> = [];
+
+	/**
+	 * Constructor signatures by enum+constructor (`pack.Enum:Ctor`).
+	 *
+	 * Why
+	 * - `Type.createEnum(e, ctorName, params)` accepts `e : Dynamic` in portable code.
+	 *   Upstream tests intentionally do `var ex:Dynamic = MyEnum; Type.createEnum(ex, ...)`
+	 *   to ensure targets handle the runtime case (not just compile-time lowering).
+	 * - To implement that efficiently in OCaml, we generate a runtime registry of constructor
+	 *   closures that:
+	 *   - validate required arity,
+	 *   - pad omitted optional args with `hx_null`,
+	 *   - unbox dynamic primitives (notably boxed Bool) into the expected OCaml types.
+	 *
+	 * How
+	 * - Seeded in `OcamlCompiler.compileEnumImpl` from each enum field's typed function signature.
+	 * - Consumed in `OcamlCompiler.onOutputComplete()` to emit `HxType.register_enum_ctor` entries.
+	 */
+	public final enumCtorArgsByFullNameAndCtor:Map<String, Array<{ name:String, opt:Bool, t:Type }>> = [];
+
+	/**
+	 * Output file id overrides for Haxe modules.
+	 *
+	 * Why
+	 * - Reflaxe derives the output filename (compilation unit) from `BaseType.moduleId()`, which
+	 *   flattens module ids by replacing `.` with `_`.
+	 * - Haxe `@:generic` specialization can produce *extremely long* module ids that embed the
+	 *   fully-qualified type parameters (see upstream `Issue3090`), which can exceed OS filename
+	 *   limits (e.g. 255 bytes on macOS) and crash codegen mid-run.
+	 *
+	 * How
+	 * - For “normal” module ids we keep the default file id.
+	 * - When the flattened file id would exceed our safe threshold, we generate a stable,
+	 *   hash-suffixed short id and use it consistently:
+	 *   - as the output filename override (via `BaseCompiler.setOutputFileName`)
+	 *   - as the OCaml module name used at cross-module reference sites.
+	 */
+	public final fileIdOverrideByModuleId:Map<String, String> = [];
+
+	public function fileIdForModuleId(moduleId:String):String {
+		if (moduleId == null || moduleId.length == 0) return "Main";
+		final existing = fileIdOverrideByModuleId.get(moduleId);
+		if (existing != null) return existing;
+
+		// Mirror Reflaxe's default `BaseType.moduleId()` behavior for non-overridden modules.
+		final raw = StringTools.replace(moduleId, ".", "_");
+
+		// Conservative safety margin below common filesystem limits for a single path component.
+		final maxLen = 180;
+		if (raw.length <= maxLen) return raw;
+
+		final hash = haxe.crypto.Md5.encode(raw).substr(0, 12);
+		final keep = 64;
+		final prefix = raw.substr(0, keep);
+		var shortId = prefix + "__" + hash;
+
+		// Ensure we never exceed the safety margin (worst-case: prefix contains multi-byte chars).
+		if (shortId.length > maxLen) {
+			shortId = raw.substr(0, 32) + "__" + hash;
+		}
+
+		fileIdOverrideByModuleId.set(moduleId, shortId);
+		return shortId;
+	}
+
+	public function ocamlModuleNameForModuleId(moduleId:String):String {
+		final fileId = fileIdForModuleId(moduleId);
+		if (fileId == null || fileId.length == 0) return "Main";
+		final first = fileId.charCodeAt(0);
+		final isLower = first >= 97 && first <= 122;
+		return isLower ? (String.fromCharCode(first - 32) + fileId.substr(1)) : fileId;
+	}
+
+	/**
+	 * Constructor signatures by class full name (`pack.Type`).
+	 *
+	 * Why
+	 * - `Type.createInstance(C, args)` needs to call `C`'s constructor at runtime.
+	 * - Our compiled constructors are regular OCaml functions with a fixed arity.
+	 * - Reflection passes arguments as `Array<Dynamic>`, so we need constructor metadata to:
+	 *   - validate required args
+	 *   - pad omitted optional args with `hx_null` (to avoid partial application)
+	 *   - unbox dynamic primitives (notably boxed Bool) into the expected OCaml types.
+	 *
+	 * How
+	 * - Seeded in `OcamlCompiler.compileClassImpl` from the typed constructor signature.
+	 * - Consumed in `OcamlCompiler.onOutputComplete()` to generate `HxTypeRegistry` ctor registrations.
+	 */
+	public final ctorArgsByFullName:Map<String, Array<{ name:String, opt:Bool, t:Type }>> = [];
+	/**
+	 * Whether a class has a constructor available after typing/DCE.
+	 *
+	 * Why
+	 * - Some “static-only” utility classes have their implicit default constructor
+	 *   removed by DCE when no `new`/reflection path can reach it.
+	 * - `HxTypeRegistry` should only register `Type.createInstance` constructors for
+	 *   classes that actually have a `create`/constructor surface emitted.
+	 */
+	public final ctorPresentByFullName:Map<String, Bool> = [];
+
+	/**
+	 * The defining module id for each compiled class full name (`pack.Type` → `pack.Module`).
+	 *
+	 * Why
+	 * - Our OCaml value names are scoped by module and "primary type", so registry code
+	 *   needs the module id to reference `Type.create` correctly.
+	 */
+	public final classModuleIdByFullName:Map<String, String> = [];
+
+	/**
 	 * For each compiled class full name, the full set of runtime "type tags" that should
 	 * be considered a match for typed catches.
 	 *
@@ -122,6 +250,30 @@ class CompilationContext {
 	 * runtime merging at throw time. (bd: haxe.ocaml-3ta)
 	 */
 	public final classTagsByFullName:Map<String, Array<String>> = [];
+
+	/**
+	 * Direct instance field names declared on each compiled class (`Type.getInstanceFields` support).
+	 *
+	 * Note: `Type.getInstanceFields` includes inherited fields, but the runtime registry stores the
+	 * precomputed transitive closure. We keep direct fields here so `HxTypeRegistry` generation can
+	 * build the inherited set deterministically at the end of compilation.
+	 */
+	public final directInstanceFieldsByFullName:Map<String, Array<String>> = [];
+
+	/**
+	 * Direct static field names declared on each compiled class (`Type.getClassFields` support).
+	 *
+	 * Semantics: Haxe does not include inherited static fields in `Type.getClassFields`, so we keep
+	 * this as the direct (non-inherited) set.
+	 */
+	public final directStaticFieldsByFullName:Map<String, Array<String>> = [];
+
+	/**
+	 * Immediate superclass full name for each compiled class, when one exists.
+	 *
+	 * Used to compute inherited instance fields at registry generation time.
+	 */
+	public final superByFullName:Map<String, String> = [];
 
 	/**
 	 * Whether the output needs OCaml-native functor instantiations (Map/Set modules).

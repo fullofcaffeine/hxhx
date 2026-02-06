@@ -21,12 +21,11 @@ package hxhxmacrohost;
 	- Generation is enabled by defining `hxhx_entrypoints` during the macro host build.
 **/
 class EntryPoints {
-	public static function run(expr:String):Null<String> {
+	public static function run(_expr:String):Null<String> {
 		#if hxhx_entrypoints
-		return EntryPointsGen.run(expr);
+		return EntryPointsGen.run(_expr);
 		#else
 		return null;
 		#end
 	}
 }
-

@@ -192,6 +192,8 @@ let create = fun message2 previous2 native2 -> let self = ({ __hx_type = HxType.
   self
 )
 
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.Exception"; message = ""; stack = Obj.magic (); previous = Obj.magic (); native = Obj.magic (); __exceptionMessage = ""; __exceptionStack = Obj.magic (); __nativeStack = Obj.magic (); __skipStack = 0; __nativeException = Obj.magic (); __previousException = Obj.magic (); unwrap = (fun o () -> unwrap__impl (Obj.magic o) ()); toString = (fun o () -> toString__impl (Obj.magic o) ()); details = (fun o () -> details__impl (Obj.magic o) ()); __shiftStack = (fun o () -> __shiftStack__impl (Obj.magic o) ()); __unshiftStack = (fun o () -> __unshiftStack__impl (Obj.magic o) ()); get_message = (fun o () -> get_message__impl (Obj.magic o) ()); get_previous = (fun o () -> get_previous__impl (Obj.magic o) ()); get_native = (fun o () -> get_native__impl (Obj.magic o) ()); get_stack = (fun o () -> get_stack__impl (Obj.magic o) ()) } : t)
+
 let caught = fun value -> let tempResult = ref (Obj.magic ()) in (
   ignore (if HxType.isOfType value (HxType.class_ "haxe.Exception") then let __assign_40 = Obj.obj value in (
     tempResult := __assign_40;

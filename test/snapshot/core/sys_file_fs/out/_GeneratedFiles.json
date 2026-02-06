@@ -2,6 +2,9 @@
 	"filesGenerated": [
 		"sys_io_Stdio.ml",
 		"sys_io_FileSeek.ml",
+		"sys_io_FileOutput.ml",
+		"sys_io_FileInput.ml",
+		"sys_io_File.ml",
 		"ocaml_Buffer.ml",
 		"haxe_iterators_StringKeyValueIterator.ml",
 		"haxe_iterators_StringIteratorUnicode.ml",

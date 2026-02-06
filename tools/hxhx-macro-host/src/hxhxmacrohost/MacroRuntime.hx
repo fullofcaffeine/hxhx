@@ -33,7 +33,7 @@ class MacroRuntime {
 		Note: this is intentionally initialized once per macro host process. The early Stage 4 runner
 		spawns a fresh macro host per call, so per-compilation reset is implicitly covered.
 	**/
-	public static var defines(default, null):Map<String, String> = [];
+	public static final defines:Map<String, String> = [];
 
 	/**
 		Hook callbacks registered via `Context.onAfterTyping`.

@@ -4,6 +4,15 @@
 
 let __reflaxe_ocaml__ = ()
 
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+
 let main = fun () -> let i = ref 0 in let sum = ref 0 in (
   ignore (try while true do try ignore ((
     ignore (let __old_1 = !i in let __new_2 = HxInt.add __old_1 1 in (

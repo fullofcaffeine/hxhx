@@ -14,6 +14,15 @@ type stackitem =
 
 let __reflaxe_ocaml__ = ()
 
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe._CallStack.CallStack_Impl_" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe._CallStack.CallStack_Impl_" } : t)
+
 let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
   ignore (if item1 == Obj.magic (HxRuntime.hx_null) then if item2 == Obj.magic (HxRuntime.hx_null) then let __assign_13 = true in (
     tempResult := __assign_13;

@@ -82,3 +82,47 @@ let has (o : Obj.t) (field : string) : bool =
   else
     let tbl : t = Obj.obj (Obj.field o 1) in
     Hashtbl.mem tbl field
+
+(* `Reflect.fields` support (minimal).
+
+   Why
+   - Portable Haxe code (and upstream test harnesses like utest) use `Reflect.fields`
+     on anonymous structures to probe for "duck-typed" capabilities (e.g. iterator()).
+
+   What
+   - Returns the list of enumerable field names for `o` if it is an `HxAnon` object.
+   - For non-anon values, returns an empty array.
+
+   Notes
+   - Order is unspecified (matches Haxe contract). *)
+let fields (o : Obj.t) : string HxArray.t =
+  if not (is_anon o) then
+    HxArray.create ()
+  else
+    let tbl : t = Obj.obj (Obj.field o 1) in
+    let out = HxArray.create () in
+    Hashtbl.iter (fun k _v -> ignore (HxArray.push out k)) tbl;
+    out
+
+(* `Reflect.deleteField` support (minimal). *)
+let delete (o : Obj.t) (field : string) : bool =
+  if not (is_anon o) then
+    false
+  else
+    let tbl : t = Obj.obj (Obj.field o 1) in
+    let existed = Hashtbl.mem tbl field in
+    if existed then Hashtbl.remove tbl field;
+    existed
+
+(* `Reflect.copy` support (minimal). *)
+let copy (o : Obj.t) : Obj.t =
+  if HxRuntime.is_null o then
+    HxRuntime.hx_null
+  else if not (is_anon o) then
+    (* Only guaranteed for anonymous structures. Best-effort: return original. *)
+    o
+  else
+    let tbl : t = Obj.obj (Obj.field o 1) in
+    let out = create () in
+    Hashtbl.iter (fun k v -> set out k v) tbl;
+    out

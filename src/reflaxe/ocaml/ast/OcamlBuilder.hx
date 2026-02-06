@@ -629,13 +629,17 @@ class OcamlBuilder {
 			if (isFloatType(elemType)) return OcamlExpr.EIdent("string_of_float");
 		}
 
-		#if macro
-		guardrailError(
-			"reflaxe.ocaml (M6): Array.join currently supports elements of type String/Int/Float/Bool (others not implemented yet).",
-			pos
+		// Fallback: use `Std.string` on the boxed value.
+		//
+		// This is slower than direct `string_of_*`, but it matches portable expectations
+		// and is required by upstream workloads (e.g. `Array.toString` on `Array<Dynamic>`).
+		final v = renameVar("x");
+		return OcamlExpr.EFun(
+			[OcamlPat.PVar(v)],
+			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Std"), "string"), [
+				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(v)])
+			])
 		);
-		#end
-		return OcamlExpr.EFun([OcamlPat.PAny], OcamlExpr.EConst(OcamlConst.CString("<object>")));
 	}
 
 	static function unwrap(e:TypedExpr):TypedExpr {
@@ -701,20 +705,29 @@ class OcamlBuilder {
 				switch (e.expr) {
 					case TTypeExpr(t):
 						switch (t) {
-							case TClassDecl(clsRef):
-								final cls = clsRef.get();
-								final name = (cls.pack ?? []).concat([cls.name]).join(".");
-								OcamlExpr.EApp(
-									OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
-									[OcamlExpr.EConst(OcamlConst.CString(name))]
-								);
-							case TEnumDecl(enumRef):
-								final en = enumRef.get();
-								final name = (en.pack ?? []).concat([en.name]).join(".");
-								OcamlExpr.EApp(
-									OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enum_"),
-									[OcamlExpr.EConst(OcamlConst.CString(name))]
-								);
+								case TClassDecl(clsRef):
+									final cls = clsRef.get();
+									final full = (cls.pack ?? []).concat([cls.name]).join(".");
+									final native = extractNativeString(cls.meta);
+									final name = native != null ? native : full;
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"),
+										[OcamlExpr.EConst(OcamlConst.CString(name))]
+									);
+								case TEnumDecl(enumRef):
+									final en = enumRef.get();
+									final full = (en.pack ?? []).concat([en.name]).join(".");
+									final native = extractNativeString(en.meta);
+									final name = native != null ? native : full;
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enum_"),
+										[OcamlExpr.EConst(OcamlConst.CString(name))]
+									);
+								case TAbstract(_):
+									// Abstract type expressions (e.g. `Float`) do not correspond to a runtime class/enum
+									// value on this target. Represent them as `null` so reflective APIs like
+									// `Type.getClass(Float)` behave as expected in upstream unit tests.
+									OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 							case _:
 								#if macro
 								guardrailError(
@@ -1043,14 +1056,14 @@ class OcamlBuilder {
 							null;
 					};
 
-					if (injected != null) {
-						injected;
+						if (injected != null) {
+							injected;
 						} else switch (unwrap(fn).expr) {
 							case TConst(TSuper):
-								// Only lower `super()` when we are using the “virtual class” model (M10),
-								// otherwise keep the previous (limited) behavior for upstream stdlib output
-								// and other non-virtual cases.
-								final curFull = ctx.currentTypeFullName;
+									// Only lower `super()` when we are using the “virtual class” model (M10),
+									// otherwise keep the previous (limited) behavior for upstream stdlib output
+									// and other non-virtual cases.
+									final curFull = ctx.currentTypeFullName;
 								final allowSuperCtor = curFull != null && ctx.dispatchTypes.exists(curFull);
 								if (!allowSuperCtor) {
 									final builtArgs = args.map(buildExpr);
@@ -1107,8 +1120,8 @@ class OcamlBuilder {
 								}
 								#end
 								}
-							case _:
-								switch (fn.expr) {
+								case _:
+									switch (fn.expr) {
 						case TField(_, FStatic(clsRef, cfRef)):
 							final cls = clsRef.get();
 							final cf = cfRef.get();
@@ -1240,33 +1253,597 @@ class OcamlBuilder {
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Type") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
 							switch (cf.name) {
-								case "getClass" if (args.length == 1):
-									final a0 = args[0];
-									final a0Type = unwrapNullType(a0.t);
-									final a0Expr = buildExpr(a0);
-									final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null)
-										? a0Expr
-										: switch (a0Type) {
-											case TDynamic(_), TAnonymous(_), TMono(_), TLazy(_): a0Expr;
-											case _: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
+									case "getClass" if (args.length == 1):
+										final a0 = args[0];
+										final a0Type = unwrapNullType(a0.t);
+										final a0Expr = buildExpr(a0);
+										final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null)
+											? a0Expr
+											: switch (a0Type) {
+												case TDynamic(_), TAnonymous(_), TMono(_), TLazy(_): a0Expr;
+												case _: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
+											}
+										;
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClass"),
+											[asObj]
+										);
+									case "typeof" if (args.length == 1):
+										{
+											// `Type.typeof` is defined as `typeof(v:Dynamic):ValueType`, but it is used heavily by
+											// assertion/test harnesses (utest) to decide comparison strategies and to build
+											// human-friendly error messages.
+											//
+											// Important: implement this *in generated OCaml code* rather than in the runtime
+											// library, because the runtime library must not depend on the compiled `Type`
+											// module (dune builds the runtime as a separate library).
+											final a0 = args[0];
+											final a0Expr = buildExpr(a0);
+											final a0Unwrap = unwrapNullType(a0.t);
+
+											inline function toDynamicObj(e:TypedExpr, built:OcamlExpr):OcamlExpr {
+												if (isDynamicLike(e.t) || nullablePrimitiveKind(e.t) != null) return built;
+												final enumName = fullNameOfTypeEnum(e.t);
+												final nullableEnumName = isNullableEnumType(e.t);
+
+												var obj:OcamlExpr;
+												if (isBoolType(e.t)) {
+													obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [built]);
+												} else {
+													obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+												}
+
+												if (enumName != null) {
+													obj = OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+														[OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]
+													);
+												} else if (nullableEnumName != null) {
+													obj = OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+														[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), obj]
+													);
+												}
+												return obj;
+											}
+
+											final tmp = freshTmp("typeof_v");
+											final v = toDynamicObj(a0, a0Expr);
+
+											inline function vt0(name:String):OcamlExpr {
+												return OcamlExpr.EField(OcamlExpr.EIdent("Type"), name);
+											}
+											inline function vt1(name:String, arg:OcamlExpr):OcamlExpr {
+												return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Type"), name), [arg]);
+											}
+
+											final isNull = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"), [OcamlExpr.EIdent(tmp)]);
+											final isBoxedBool =
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_boxed_bool"), [OcamlExpr.EIdent(tmp)]);
+											final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [OcamlExpr.EIdent(tmp)]);
+											final tag = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [OcamlExpr.EIdent(tmp)]);
+											final isDouble = OcamlExpr.EBinop(OcamlBinop.Eq, tag, OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag"));
+											final isString = OcamlExpr.EBinop(OcamlBinop.Eq, tag, OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "string_tag"));
+											final isClosure = OcamlExpr.EBinop(OcamlBinop.Eq, tag, OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "closure_tag"));
+
+											final enumNameTmp = freshTmp("enum_name");
+											final classTmp = freshTmp("cls");
+
+											final enumCase = OcamlExpr.EMatch(
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "name_opt"), [OcamlExpr.EIdent(tmp)]),
+												[
+													{
+														pat: OcamlPat.PConstructor("Some", [OcamlPat.PVar(enumNameTmp)]),
+														guard: null,
+														expr: vt1("TEnum", OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enum_"), [OcamlExpr.EIdent(enumNameTmp)]))
+													},
+													{
+														pat: OcamlPat.PAny,
+														guard: null,
+														expr: OcamlExpr.ELet(
+															classTmp,
+															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClass"), [OcamlExpr.EIdent(tmp)]),
+															OcamlExpr.EIf(
+																OcamlExpr.EApp(
+																	OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"),
+																	[OcamlExpr.EIdent(classTmp)]
+																),
+																vt0("TObject"),
+																vt1("TClass", OcamlExpr.EIdent(classTmp))
+															),
+															false
+														)
+													}
+												]
+											);
+
+											final classify =
+												OcamlExpr.EIf(
+													isNull,
+													vt0("TNull"),
+													OcamlExpr.EIf(
+														isBoxedBool,
+														vt0("TBool"),
+														OcamlExpr.EIf(
+															isInt,
+															vt0("TInt"),
+															OcamlExpr.EIf(
+																isDouble,
+																vt0("TFloat"),
+																OcamlExpr.EIf(
+																	isString,
+																	vt1("TClass", OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "class_"), [OcamlExpr.EConst(OcamlConst.CString("String"))])),
+																	OcamlExpr.EIf(isClosure, vt0("TFunction"), enumCase)
+																)
+															)
+														)
+													)
+												);
+
+											OcamlExpr.ELet(tmp, v, classify, false);
 										}
-									;
-									OcamlExpr.EApp(
-										OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClass"),
-										[asObj]
-									);
-								case "getClassName" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClassName"), [buildExpr(args[0])]);
-								case "getEnumName" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getEnumName"), [buildExpr(args[0])]);
-								case "resolveClass" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "resolveClass"), [buildExpr(args[0])]);
-								case "resolveEnum" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "resolveEnum"), [buildExpr(args[0])]);
-								case _:
-									#if macro
-									guardrailError(
-										"reflaxe.ocaml (M10): Type." + cf.name + " is not implemented yet. (bd: haxe.ocaml-eli)",
+									case "getClassName" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClassName"), [buildExpr(args[0])]);
+									case "getEnumName" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getEnumName"), [buildExpr(args[0])]);
+									case "getSuperClass" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getSuperClass"), [buildExpr(args[0])]);
+									case "getEnum" if (args.length == 1):
+										{
+											final a0 = args[0];
+											switch (followNoAbstracts(unwrapNullType(a0.t))) {
+												case TEnum(eRef, _):
+													final en = eRef.get();
+													final native = extractNativeString(en.meta);
+													final runtimeName = native != null ? native : fullNameOfEnumType(en);
+													OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enum_"),
+														[OcamlExpr.EConst(OcamlConst.CString(runtimeName))]
+													);
+												case _:
+													final built = buildExpr(a0);
+													final asObj =
+														(isDynamicLike(a0.t) || nullablePrimitiveKind(a0.t) != null)
+															? built
+															: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+													OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+														[
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getEnum"),
+																[asObj]
+															)
+														]
+													);
+											}
+										}
+									case "getInstanceFields" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getInstanceFields"), [buildExpr(args[0])]);
+									case "getClassFields" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getClassFields"), [buildExpr(args[0])]);
+									case "getEnumConstructs" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "getEnumConstructs"), [buildExpr(args[0])]);
+									case "enumConstructor" if (args.length == 1):
+										{
+											final a0 = args[0];
+											final nullString:OcamlExpr = OcamlExpr.EApp(
+												OcamlExpr.EIdent("Obj.magic"),
+												[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+											);
+
+											switch (TypeTools.follow(unwrapNullType(a0.t))) {
+												case TEnum(eRef, _):
+													final en = eRef.get();
+
+													final tmp = freshTmp("enum_ctor");
+													final repr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(a0)]);
+													final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
+
+													final cases:Array<OcamlMatchCase> = [];
+													for (name in en.names) {
+														final ef = en.constructs.get(name);
+														if (ef == null) continue;
+														final native = extractNativeString(ef.meta);
+														final outName = native != null ? native : ef.name;
+														final hasArgs = switch (TypeTools.follow(ef.type)) {
+															case TFun(fargs, _): fargs != null && fargs.length > 0;
+															case _: false;
+														}
+														final patArgs = hasArgs ? [OcamlPat.PAny] : [];
+														cases.push({
+															pat: OcamlPat.PConstructor(ef.name, patArgs),
+															guard: null,
+															expr: OcamlExpr.EConst(OcamlConst.CString(outName))
+														});
+													}
+													final m = OcamlExpr.EMatch(buildExpr(a0), cases);
+
+													OcamlExpr.ELet(tmp, repr, OcamlExpr.EIf(isNull, nullString, m), false);
+												case _:
+													// Dynamic-friendly fallback (utest calls `Type.enumConstructor(v)` where `v:Dynamic`).
+													final built = buildExpr(a0);
+													final asObj =
+														(isDynamicLike(a0.t) || nullablePrimitiveKind(a0.t) != null)
+															? built
+															: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+													OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumConstructor"),
+														[asObj]
+													);
+											}
+										}
+									case "enumIndex" if (args.length == 1):
+										{
+											final a0 = args[0];
+											final built = buildExpr(a0);
+											final asObj =
+												(isDynamicLike(a0.t) || nullablePrimitiveKind(a0.t) != null)
+													? built
+													: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumIndex"), [asObj]);
+										}
+									case "enumParameters" if (args.length == 1):
+										{
+											final a0 = args[0];
+											final built = buildExpr(a0);
+											final asObj =
+												(isDynamicLike(a0.t) || nullablePrimitiveKind(a0.t) != null)
+													? built
+													: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumParameters"), [asObj]);
+										}
+									case "resolveClass" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "resolveClass"), [buildExpr(args[0])]);
+									case "resolveEnum" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "resolveEnum"), [buildExpr(args[0])]);
+									case "createInstance" if (args.length == 2):
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+											[
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "createInstance"),
+													[buildExpr(args[0]), buildExpr(args[1])]
+												)
+											]
+										);
+									case "createEmptyInstance" if (args.length == 1):
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+											[
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "createEmptyInstance"),
+													[buildExpr(args[0])]
+												)
+											]
+										);
+										case "createEnum" if (args.length == 2 || args.length == 3):
+											{
+												final enumExpr = unwrap(args[0]);
+												final ctorExpr = unwrap(args[1]);
+
+												final paramsExpr:OcamlExpr = if (args.length == 2) {
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+												} else {
+													final a2 = unwrap(args[2]);
+													switch (a2.expr) {
+														case TConst(TNull):
+															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+														case _:
+														buildExpr(args[2]);
+												}
+											};
+
+											inline function dynArgToExpected(t:Type, obj:OcamlExpr):OcamlExpr {
+												final ot = typeExprFromHaxeType(t);
+												return switch (ot) {
+													case OcamlTypeExpr.TIdent("Obj.t"):
+														obj;
+													case OcamlTypeExpr.TIdent("bool"):
+														OcamlExpr.EApp(
+															OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"),
+															[obj]
+														);
+													case OcamlTypeExpr.TIdent("int")
+														| OcamlTypeExpr.TIdent("float")
+														| OcamlTypeExpr.TIdent("string")
+														| OcamlTypeExpr.TIdent("bytes")
+														| OcamlTypeExpr.TIdent("char"):
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [obj]);
+													case _:
+														OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [obj]);
+												}
+											}
+
+											inline function missingOptionalArg(t:Type):OcamlExpr {
+												final ot = typeExprFromHaxeType(t);
+												return switch (ot) {
+													case OcamlTypeExpr.TIdent("Obj.t"):
+														OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+													case _:
+														OcamlExpr.EApp(
+															OcamlExpr.EIdent("Obj.magic"),
+															[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+														);
+												}
+											}
+
+											inline function ctorExprForEnum(en:EnumType, name:String):OcamlExpr {
+												final modName = moduleIdToOcamlModuleName(en.module);
+												final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+												final isSameModule = selfMod != null && selfMod == modName;
+													return isSameModule ? OcamlExpr.EIdent(name) : OcamlExpr.EField(OcamlExpr.EIdent(modName), name);
+												}
+
+												function buildCtorCall(en:EnumType, ef:EnumField, paramsVar:String, lenVar:String):OcamlExpr {
+													final argsInfo:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(ef.type)) {
+														case TFun(fargs, _): fargs;
+														case _: null;
+													}
+												final argCount = argsInfo != null ? argsInfo.length : 0;
+												final ctorName = ef.name;
+												final baseCtor = ctorExprForEnum(en, ctorName);
+
+													if (argCount == 0) return baseCtor;
+
+													final getArg = function(i:Int, t:Type, opt:Bool):OcamlExpr {
+														final len = OcamlExpr.EIdent(lenVar);
+														final inBounds = OcamlExpr.EBinop(OcamlBinop.Gt, len, OcamlExpr.EConst(OcamlConst.CInt(i)));
+														final fetch = OcamlExpr.EApp(
+															OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+															[OcamlExpr.EIdent(paramsVar), OcamlExpr.EConst(OcamlConst.CInt(i))]
+													);
+													final ok = dynArgToExpected(t, fetch);
+													final missing = opt
+														? missingOptionalArg(t)
+														: OcamlExpr.EApp(
+															OcamlExpr.EIdent("failwith"),
+															[OcamlExpr.EConst(OcamlConst.CString("Type.createEnum: missing ctor arg '" + (argsInfo != null ? argsInfo[i].name : ("a" + i)) + "'"))]
+														);
+													return OcamlExpr.EIf(inBounds, ok, missing);
+												}
+
+												final callArgs:Array<OcamlExpr> = [];
+												for (i in 0...argCount) {
+													final ai = argsInfo[i];
+													callArgs.push(getArg(i, ai.t, ai.opt));
+												}
+
+													return (argCount > 1)
+														? OcamlExpr.EApp(baseCtor, [OcamlExpr.ETuple(callArgs)])
+														: OcamlExpr.EApp(baseCtor, [callArgs[0]]);
+												}
+
+												inline function runtimeCreateEnum():OcamlExpr {
+													return OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+														[
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "createEnum"),
+																[buildExpr(args[0]), buildExpr(args[1]), paramsExpr]
+															)
+														]
+													);
+												}
+
+												switch (enumExpr.expr) {
+													case TTypeExpr(TEnumDecl(enumRef)):
+														final en = enumRef.get();
+														switch (ctorExpr.expr) {
+															case TConst(TString(ctorName)):
+																final ef = en.constructs.get(ctorName);
+																if (ef != null) {
+																	final paramsVar = freshTmp("params");
+																	final lenVar = freshTmp("len");
+																	OcamlExpr.ELet(
+																		paramsVar,
+																		paramsExpr,
+																		OcamlExpr.ELet(
+																			lenVar,
+																			OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [OcamlExpr.EIdent(paramsVar)]),
+																			buildCtorCall(en, ef, paramsVar, lenVar),
+																			false
+																		),
+																		false
+																	);
+																} else {
+																	runtimeCreateEnum();
+																}
+															case _:
+																runtimeCreateEnum();
+														}
+													case _:
+														runtimeCreateEnum();
+												}
+											}
+										case "createEnumIndex" if (args.length == 2 || args.length == 3):
+											{
+												final enumExpr = unwrap(args[0]);
+												final idxExpr = args[1];
+
+											final paramsExpr:OcamlExpr = if (args.length == 2) {
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+											} else {
+												final a2 = unwrap(args[2]);
+												switch (a2.expr) {
+													case TConst(TNull):
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+													case _:
+														buildExpr(args[2]);
+												}
+											};
+
+											inline function dynArgToExpected(t:Type, obj:OcamlExpr):OcamlExpr {
+												final ot = typeExprFromHaxeType(t);
+												return switch (ot) {
+													case OcamlTypeExpr.TIdent("Obj.t"):
+														obj;
+													case OcamlTypeExpr.TIdent("bool"):
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [obj]);
+													case OcamlTypeExpr.TIdent("int")
+														| OcamlTypeExpr.TIdent("float")
+														| OcamlTypeExpr.TIdent("string")
+														| OcamlTypeExpr.TIdent("bytes")
+														| OcamlTypeExpr.TIdent("char"):
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [obj]);
+													case _:
+														OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [obj]);
+												}
+											}
+
+											inline function missingOptionalArg(t:Type):OcamlExpr {
+												final ot = typeExprFromHaxeType(t);
+												return switch (ot) {
+													case OcamlTypeExpr.TIdent("Obj.t"):
+														OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+													case _:
+														OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+												}
+											}
+
+											inline function ctorExprForEnum(en:EnumType, name:String):OcamlExpr {
+												final modName = moduleIdToOcamlModuleName(en.module);
+												final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+												final isSameModule = selfMod != null && selfMod == modName;
+													return isSameModule ? OcamlExpr.EIdent(name) : OcamlExpr.EField(OcamlExpr.EIdent(modName), name);
+												}
+
+												function buildCtorCall(en:EnumType, ef:EnumField, paramsVar:String, lenVar:String):OcamlExpr {
+													final argsInfo:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(ef.type)) {
+														case TFun(fargs, _): fargs;
+														case _: null;
+													}
+												final argCount = argsInfo != null ? argsInfo.length : 0;
+													final baseCtor = ctorExprForEnum(en, ef.name);
+													if (argCount == 0) return baseCtor;
+
+													final getArg = function(i:Int, t:Type, opt:Bool):OcamlExpr {
+														final len = OcamlExpr.EIdent(lenVar);
+														final inBounds = OcamlExpr.EBinop(OcamlBinop.Gt, len, OcamlExpr.EConst(OcamlConst.CInt(i)));
+														final fetch = OcamlExpr.EApp(
+															OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+															[OcamlExpr.EIdent(paramsVar), OcamlExpr.EConst(OcamlConst.CInt(i))]
+													);
+													final ok = dynArgToExpected(t, fetch);
+													final missing = opt
+														? missingOptionalArg(t)
+														: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Type.createEnumIndex: missing ctor arg"))]);
+													return OcamlExpr.EIf(inBounds, ok, missing);
+												}
+
+												final callArgs:Array<OcamlExpr> = [];
+												for (i in 0...argCount) {
+													final ai = argsInfo[i];
+													callArgs.push(getArg(i, ai.t, ai.opt));
+												}
+
+													return (argCount > 1)
+														? OcamlExpr.EApp(baseCtor, [OcamlExpr.ETuple(callArgs)])
+														: OcamlExpr.EApp(baseCtor, [callArgs[0]]);
+												}
+
+												inline function runtimeCreateEnumIndex():OcamlExpr {
+													return OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+														[
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "createEnumIndex"),
+																[buildExpr(args[0]), buildExpr(idxExpr), paramsExpr]
+															)
+														]
+													);
+												}
+
+												switch (enumExpr.expr) {
+													case TTypeExpr(TEnumDecl(enumRef)):
+														final en = enumRef.get();
+														final paramsVar = freshTmp("params");
+														final lenVar = freshTmp("len");
+													final idxTmp = freshTmp("idx");
+
+													final ctors:Array<EnumField> = [];
+													for (name in en.names) {
+														final ef = en.constructs.get(name);
+														if (ef != null) ctors.push(ef);
+													}
+													ctors.sort((a, b) -> a.index - b.index);
+
+													final arms:Array<OcamlMatchCase> = [];
+														for (ef in ctors) {
+															arms.push({
+																pat: OcamlPat.PConst(OcamlConst.CInt(ef.index)),
+																guard: null,
+																expr: buildCtorCall(en, ef, paramsVar, lenVar)
+															});
+														}
+
+													final defaultExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+													final body = (arms.length == 0)
+														? defaultExpr
+														: OcamlExpr.EMatch(OcamlExpr.EIdent(idxTmp), arms.concat([{ pat: OcamlPat.PAny, guard: null, expr: defaultExpr }]));
+
+													OcamlExpr.ELet(
+														paramsVar,
+														paramsExpr,
+														OcamlExpr.ELet(
+															lenVar,
+															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [OcamlExpr.EIdent(paramsVar)]),
+															OcamlExpr.ELet(idxTmp, buildExpr(idxExpr), body, false),
+															false
+														),
+															false
+														);
+													case _:
+														runtimeCreateEnumIndex();
+												}
+											}
+									case "enumEq" if (args.length == 2):
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "enum_eq"),
+											[
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[1])])
+											]
+										);
+									case "allEnums" if (args.length == 1):
+										switch (unwrap(args[0]).expr) {
+											case TTypeExpr(TEnumDecl(enumRef)):
+												final en = enumRef.get();
+												final modName = moduleIdToOcamlModuleName(en.module);
+												final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+												final isSameModule = selfMod != null && selfMod == modName;
+
+												final tmp = freshTmp("allEnums");
+												final init = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+												final pushes:Array<OcamlExpr> = [];
+												for (name in en.names) {
+													final ef = en.constructs.get(name);
+													if (ef == null) continue;
+													final hasArgs = switch (TypeTools.follow(ef.type)) {
+														case TFun(args2, _): args2 != null && args2.length > 0;
+														case _: false;
+													}
+													if (hasArgs) continue;
+													final ctorExpr = isSameModule
+														? OcamlExpr.EIdent(name)
+														: OcamlExpr.EField(OcamlExpr.EIdent(modName), name);
+													pushes.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"), [OcamlExpr.EIdent(tmp), ctorExpr])
+													]));
+												}
+												OcamlExpr.ELet(tmp, init, OcamlExpr.ESeq(pushes.concat([OcamlExpr.EIdent(tmp)])), false);
+											case _:
+												#if macro
+												guardrailError(
+													"reflaxe.ocaml (M10): Type.allEnums currently only supports enum type expressions (e.g. Type.allEnums(MyEnum)). (bd: haxe.ocaml-eli)",
+													e.pos
+												);
+												#end
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+										}
+									case _:
+										#if macro
+										guardrailError(
+											"reflaxe.ocaml (M10): Type." + cf.name + " is not implemented yet. (bd: haxe.ocaml-eli)",
 										e.pos
 									);
 									#end
@@ -1274,6 +1851,36 @@ class OcamlBuilder {
 							}
 						} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Reflect") {
 							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+							inline function toObjArg(e:TypedExpr):OcamlExpr {
+								if (isDynamicLike(e.t) || nullablePrimitiveKind(e.t) != null) return buildExpr(e);
+								return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e)]);
+							}
+
+							inline function toObjValue(e:TypedExpr):OcamlExpr {
+								if (isDynamicLike(e.t) || nullablePrimitiveKind(e.t) != null) return buildExpr(e);
+								final enumName = fullNameOfTypeEnum(e.t);
+								final nullableEnumName = isNullableEnumType(e.t);
+
+								var obj:OcamlExpr;
+								if (isBoolType(e.t)) {
+									obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(e)]);
+								} else {
+									obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e)]);
+								}
+
+								if (enumName != null) {
+									obj = OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+										[OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]
+									);
+								} else if (nullableEnumName != null) {
+									obj = OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+										[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), obj]
+									);
+								}
+								return obj;
+							}
 								switch (cf.name) {
 									case "field" if (args.length == 2):
 										OcamlExpr.EApp(
@@ -1282,43 +1889,104 @@ class OcamlBuilder {
 												OcamlExpr.EApp(
 													OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
 													[
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+														toObjArg(args[0]),
 														buildExpr(args[1])
 													]
 												)
 											]
 										);
 									case "callMethod" if (args.length == 3):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+												[
+													OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"),
+													[
+														toObjArg(args[0]),
+														toObjArg(args[1]),
+														buildExpr(args[2])
+													]
+												)
+												]
+											);
+										case "isFunction" if (args.length == 1):
+											{
+												final a0 = args[0];
+												final a0Type = unwrapNullType(a0.t);
+												final a0Expr = buildExpr(a0);
+												final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null)
+													? a0Expr
+													: switch (followNoAbstracts(a0Type)) {
+														case TDynamic(_), TAnonymous(_), TMono(_), TLazy(_):
+															a0Expr;
+														case _:
+															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
+													};
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "isFunction"), [asObj]);
+											}
+										case "makeVarArgs" if (args.length == 1):
+											final f = args[0];
+											final isVoid = switch (followNoAbstracts(f.t)) {
+												case TFun(_, ret): isVoidType(ret);
+											case _: false;
+										};
+										final fnName = isVoid ? "makeVarArgsVoid" : "makeVarArgs";
 										OcamlExpr.EApp(
 											OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
 											[
 												OcamlExpr.EApp(
-													OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"),
-													[
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
-														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[1])]),
-														buildExpr(args[2])
-													]
+													OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), fnName),
+													[OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(f)])]
 												)
 											]
 										);
 									case "setField" if (args.length == 3):
-										final rhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[2])]);
 										OcamlExpr.EApp(
 											OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
 										[
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+											toObjArg(args[0]),
 											buildExpr(args[1]),
-											rhs
+											toObjValue(args[2])
 										]
 									);
 								case "hasField" if (args.length == 2):
 									OcamlExpr.EApp(
 										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "has"),
 										[
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(args[0])]),
+											toObjArg(args[0]),
 											buildExpr(args[1])
 										]
+									);
+								case "fields" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "fields"), [toObjArg(args[0])]);
+								case "deleteField" if (args.length == 2):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "delete"),
+										[toObjArg(args[0]), buildExpr(args[1])]
+									);
+								case "copy" if (args.length == 1):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+										[OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "copy"), [toObjArg(args[0])])]
+									);
+								case "compare" if (args.length == 2):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "compare"),
+										[toObjValue(args[0]), toObjValue(args[1])]
+									);
+								case "isObject" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "isObject"), [toObjValue(args[0])]);
+								case "isEnumValue" if (args.length == 1):
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "isEnumValue"), [toObjValue(args[0])]);
+								case "same_closure" if (args.length == 2):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "same_closure"),
+										[toObjValue(args[0]), toObjValue(args[1])]
+									);
+								case "compareMethods" if (args.length == 2):
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "same_closure"),
+										[toObjValue(args[0]), toObjValue(args[1])]
 									);
 								case _:
 									#if macro
@@ -1355,27 +2023,7 @@ class OcamlBuilder {
 									#end
 									anyNull;
 							}
-						} else if (cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "sys" && cls.pack[1] == "io" && cls.name == "File") {
-							final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-							switch (cf.name) {
-								case "getContent" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "getContent"), [buildExpr(args[0])]);
-								case "saveContent" if (args.length == 2):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "saveContent"), [buildExpr(args[0]), buildExpr(args[1])]);
-								case "getBytes" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "getBytes"), [buildExpr(args[0])]);
-								case "saveBytes" if (args.length == 2):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "saveBytes"), [buildExpr(args[0]), buildExpr(args[1])]);
-								case "copy" if (args.length == 2):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxFile"), "copy"), [buildExpr(args[0]), buildExpr(args[1])]);
-								case _:
-									#if macro
-									guardrailError("reflaxe.ocaml (M6): sys.io.File." + cf.name + " is not implemented yet.", e.pos);
-									#end
-									anyNull;
-							}
-						} else
-						if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
+						} else if (isStdStringClass(cls) && cf.name == "fromCharCode" && args.length == 1) {
 							final a0 = args[0];
 							final coerced = nullablePrimitiveKind(a0.t) == "int" ? safeUnboxNullableInt(buildExpr(a0)) : buildExpr(a0);
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [coerced]);
@@ -1428,30 +2076,115 @@ class OcamlBuilder {
 									case _:
 										OcamlExpr.EApp(OcamlExpr.EIdent("int_of_float"), [buildExpr(arg)]);
 								}
-							} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "isOfType" && args.length == 2) {
-								final a0 = args[0];
-								final a0Type = unwrapNullType(a0.t);
-								final a0Expr = buildExpr(a0);
-								final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null)
-									? a0Expr
-									: switch (followNoAbstracts(a0Type)) {
-										case TDynamic(_):
-											a0Expr;
-										case TAbstract(_, _) if (isStdAnyAbstract(a0Type)):
-											a0Expr;
-										case TAnonymous(_) if (shouldAnonUseHxAnon(a0.t)):
-											a0Expr;
+								} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "isOfType" && args.length == 2) {
+									final a0 = args[0];
+									final a0Type = unwrapNullType(a0.t);
+									final a0Expr = buildExpr(a0);
+									final asObj:OcamlExpr = (nullablePrimitiveKind(a0Type) != null)
+										? a0Expr
+										: switch (followNoAbstracts(a0Type)) {
+											case TDynamic(_):
+												a0Expr;
+											case TAbstract(_, _) if (isStdAnyAbstract(a0Type)):
+												a0Expr;
+											case TAnonymous(_) if (shouldAnonUseHxAnon(a0.t)):
+												a0Expr;
+											case _:
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
+										}
+									;
+									switch (unwrap(args[1]).expr) {
+										// Core abstracts are not classes/enums in our runtime; implement best-effort
+										// checks directly to support the `is` operator (which lowers to Std.isOfType).
+										// (bd: haxe.ocaml-s16)
+										case TTypeExpr(TAbstract(absRef)):
+											final abs = absRef.get();
+											final pack = abs.pack ?? [];
+											if (pack.length == 0) {
+												switch (abs.name) {
+													case "Int":
+														if (isIntType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(true));
+														} else if (isFloatType(a0.t) || isBoolType(a0.t) || isStringType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(false));
+														} else {
+															final tmp = freshTmp("isInt");
+															final v = OcamlExpr.EIdent(tmp);
+															final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v, OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
+															final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [v]);
+															final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_boxed_bool"), [v]);
+															final notBool = OcamlExpr.EUnop(OcamlUnop.Not, isBoxedBool);
+															OcamlExpr.ELet(tmp, asObj, OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), OcamlExpr.EBinop(OcamlBinop.And, isInt, notBool)), false);
+														}
+													case "Float":
+														if (isFloatType(a0.t) || isIntType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(true));
+														} else if (isBoolType(a0.t) || isStringType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(false));
+														} else {
+															final tmp = freshTmp("isFloat");
+															final v = OcamlExpr.EIdent(tmp);
+															final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v, OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
+															final isInt = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"), [v]);
+															final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_boxed_bool"), [v]);
+															final notBool = OcamlExpr.EUnop(OcamlUnop.Not, isBoxedBool);
+															final intOk = OcamlExpr.EBinop(OcamlBinop.And, isInt, notBool);
+															final isDouble = OcamlExpr.EBinop(
+																OcamlBinop.Eq,
+																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [v]),
+																OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag")
+															);
+															OcamlExpr.ELet(tmp, asObj, OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), OcamlExpr.EBinop(OcamlBinop.Or, intOk, isDouble)), false);
+														}
+													case "Bool":
+														if (isBoolType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(true));
+														} else if (isIntType(a0.t) || isFloatType(a0.t) || isStringType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(false));
+														} else {
+															final tmp = freshTmp("isBool");
+															final v = OcamlExpr.EIdent(tmp);
+															final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v, OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
+															final isBoxedBool = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_boxed_bool"), [v]);
+															OcamlExpr.ELet(tmp, asObj, OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), isBoxedBool), false);
+														}
+													case "String":
+														if (isStringType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(true));
+														} else if (isIntType(a0.t) || isFloatType(a0.t) || isBoolType(a0.t)) {
+															OcamlExpr.EConst(OcamlConst.CBool(false));
+														} else {
+															final tmp = freshTmp("isString");
+															final v = OcamlExpr.EIdent(tmp);
+															final isNull = OcamlExpr.EBinop(OcamlBinop.PhysEq, v, OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"));
+															final isString = OcamlExpr.EBinop(
+																OcamlBinop.Eq,
+																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [v]),
+																OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "string_tag")
+															);
+															OcamlExpr.ELet(tmp, asObj, OcamlExpr.EIf(isNull, OcamlExpr.EConst(OcamlConst.CBool(false)), isString), false);
+														}
+													case _:
+														OcamlExpr.EApp(
+															OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"),
+															[asObj, buildExpr(args[1])]
+														);
+												}
+											} else {
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"),
+													[asObj, buildExpr(args[1])]
+												);
+											}
 										case _:
-											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [a0Expr]);
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"),
+												[asObj, buildExpr(args[1])]
+											);
 									}
-								;
-								OcamlExpr.EApp(
-									OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "isOfType"),
-									[asObj, buildExpr(args[1])]
-								);
-							} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
-								buildStdString(args[0]);
-								} else {
+								} else if (cls.pack != null && cls.pack.length == 0 && cls.name == "Std" && cf.name == "string" && args.length == 1) {
+									buildStdString(args[0]);
+									} else {
 									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
 										case TFun(fargs, _): fargs;
 										case _: null;
@@ -1497,9 +2230,9 @@ class OcamlBuilder {
 									}
 									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
 								}
-					case TField(objExpr, FInstance(clsRef, _, cfRef)):
-						final cf = cfRef.get();
-						switch (cf.kind) {
+						case TField(objExpr, FInstance(clsRef, _, cfRef)):
+							final cf = cfRef.get();
+							switch (cf.kind) {
 							case FMethod(_):
 								final cls = clsRef.get();
 								if (isStdArrayClass(cls)) {
@@ -1513,6 +2246,15 @@ class OcamlBuilder {
 												OcamlExpr.EApp(
 													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"),
 													[buildExpr(objExpr), buildExpr(args[0]), buildArrayJoinStringifier(objExpr, e.pos)]
+												);
+											case "toString" if (args.length == 0):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "join"),
+													[
+														buildExpr(objExpr),
+														OcamlExpr.EConst(OcamlConst.CString(",")),
+														buildArrayJoinStringifier(objExpr, e.pos)
+													]
 												);
 											case "push":
 												OcamlExpr.EApp(
@@ -2148,15 +2890,62 @@ class OcamlBuilder {
 						} else if (args.length > 1) {
 							// Enum constructors with multiple args take a tuple in OCaml: `C (a, b)`.
 							OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))]);
-							} else {
-								OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
-							}
-							case _:
-								final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(fn.t)) {
-									case TFun(fargs, _): fargs;
-									case _: null;
+								} else {
+									OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
 								}
-								inline function hxNullForType(t:Type):OcamlExpr {
+								case _:
+									final isDynamicCall = switch (followNoAbstracts(unwrap(fn).t)) {
+										case TDynamic(_): true;
+										case _: false;
+									};
+									if (isDynamicCall) {
+										final tmp = freshTmp("dyn_args");
+										final create = OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "create"),
+											[OcamlExpr.EConst(OcamlConst.CUnit)]
+										);
+										final seq:Array<OcamlExpr> = [];
+										for (a in args) {
+											seq.push(
+												OcamlExpr.EApp(
+													OcamlExpr.EIdent("ignore"),
+													[
+														OcamlExpr.EApp(
+															OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "push"),
+															[
+																OcamlExpr.EIdent(tmp),
+																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(a)])
+															]
+														)
+													]
+												)
+											);
+										}
+
+										final callObj = OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"),
+											[
+												OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null"),
+												OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(fn)]),
+												OcamlExpr.EIdent(tmp)
+											]
+										);
+										final callDyn = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [callObj]);
+
+										if (isVoidType(e.t)) {
+											seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [callDyn]));
+											seq.push(OcamlExpr.EConst(OcamlConst.CUnit));
+										} else {
+											seq.push(callDyn);
+										}
+
+										OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
+									} else {
+									final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(fn.t)) {
+										case TFun(fargs, _): fargs;
+										case _: null;
+									}
+									inline function hxNullForType(t:Type):OcamlExpr {
 									return nullablePrimitiveKind(t) != null
 										? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
 										: OcamlExpr.EApp(
@@ -2188,10 +2977,11 @@ class OcamlBuilder {
 								} else {
 									for (a in args) builtArgs.push(buildExpr(a));
 								}
-								final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
-								if (expectsNoArgs) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
-								OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
-						}
+									final expectsNoArgs = expectedArgs != null ? expectedArgs.length == 0 : args.length == 0;
+									if (expectsNoArgs) builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+									OcamlExpr.EApp(buildExpr(fn), builtArgs.length == 0 ? [OcamlExpr.EConst(OcamlConst.CUnit)] : builtArgs);
+									}
+							}
 						}
 					}
 				case TField(obj, fa):
@@ -2438,7 +3228,16 @@ class OcamlBuilder {
 									if (arms.length == 0) OcamlExpr.EConst(OcamlConst.CInt(-1)) else OcamlExpr.EMatch(scrut, arms);
 								}
 							case _:
-								OcamlExpr.EConst(OcamlConst.CInt(-1));
+								// Dynamic-friendly fallback: `Type.enumIndex(v)` is commonly called with `v:Dynamic`
+								// (notably by utest). In that case the typed AST can still use `TEnumIndex`, but we
+								// have no static enum identity to pattern-match on. Defer to the runtime best-effort
+								// inspection (`HxType.enumIndex`) which understands boxed enum values.
+								final built = buildExpr(enumValueExpr);
+								final asObj =
+									(isDynamicLike(enumValueExpr.t) || nullablePrimitiveKind(enumValueExpr.t) != null)
+										? built
+										: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxType"), "enumIndex"), [asObj]);
 						}
 					case _:
 						OcamlExpr.EConst(OcamlConst.CInt(-1));
@@ -3232,12 +4031,12 @@ class OcamlBuilder {
 			return { l: buildExpr(left), r: buildExpr(right) };
 		}
 
-				return switch (op) {
-						case OpAssign:
-							// Handle local ref assignment: x = v  ->  x := v
-							switch (e1.expr) {
-								case TLocal(v) if (isRefLocalId(v.id)):
-								final tmp = freshTmp("assign");
+					return switch (op) {
+							case OpAssign:
+								// Handle local ref assignment: x = v  ->  x := v
+								switch (e1.expr) {
+									case TLocal(v) if (isRefLocalId(v.id)):
+									final tmp = freshTmp("assign");
 								final rhs = coerceForAssignment(v.t, e2);
 								OcamlExpr.ELet(
 									tmp,
@@ -3266,18 +4065,19 @@ class OcamlBuilder {
 										case _:
 											OcamlExpr.EConst(OcamlConst.CUnit);
 									}
-								case TField(_, FStatic(clsRef, cfRef)):
-									final cls = clsRef.get();
-									final cf = cfRef.get();
-									final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
-									final isMutableStatic = switch (cf.kind) {
-										case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
-										case _: false;
-									}
-									if (!isMutableStatic) {
-										#if macro
-										guardrailError(
-											"reflaxe.ocaml (M6): assignment to immutable static field '" + key + "' is not supported yet.",
+									case TField(_, FStatic(clsRef, cfRef)):
+										final cls = clsRef.get();
+										final cf = cfRef.get();
+										final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
+										final isMutableStatic = switch (cf.kind) {
+											case FVar(_, _): !cf.isFinal;
+											case FMethod(MethDynamic): true;
+											case _: false;
+										}
+										if (!isMutableStatic) {
+											#if macro
+											guardrailError(
+												"reflaxe.ocaml (M6): assignment to immutable static field '" + key + "' is not supported yet.",
 											e1.pos
 										);
 										#end
@@ -3419,7 +4219,7 @@ class OcamlBuilder {
 								final cf = cfRef.get();
 								final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
 								final isMutableStatic = switch (cf.kind) {
-									case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+									case FVar(_, _): !cf.isFinal;
 									case _: false;
 								}
 								if (!isMutableStatic) {
@@ -4050,6 +4850,109 @@ class OcamlBuilder {
 				if (rhsKind != null) {
 					return buildExpr(rhs);
 				}
+
+				// Structural typing: class instance -> anonymous-structure slot (HxAnon).
+				//
+				// Example (upstream Issue8537):
+				//   typedef A = { function bar():String; }
+				//   function extract(a:A) return invoke(a.bar);
+				//
+				// Here `new C()` is structurally compatible with `A`, but our portable representation
+				// for `A` is `HxAnon` (`Obj.t`). To preserve Haxe semantics for method closures, we
+				// must wrap the class instance into an `HxAnon` object whose fields are *bound*
+				// closures/values extracted from the class instance.
+				switch (followNoAbstracts(unwrapNullType(rhs.t))) {
+					case TInst(cRef, _) if (!isDynamicLike(rhs.t)):
+						switch (followNoAbstracts(lhsUnwrapped)) {
+							case TAnonymous(aRef):
+								final anon = aRef.get();
+								final cls0 = cRef.get();
+
+								function findField(owner:ClassType, name:String):Null<{ owner:ClassType, field:ClassField }> {
+									for (f in owner.fields.get()) {
+										if (f.name == name) return { owner: owner, field: f };
+									}
+									return owner.superClass != null ? findField(owner.superClass.t.get(), name) : null;
+								}
+
+								inline function boxExprForObj(t:Type, expr:OcamlExpr):OcamlExpr {
+									if (nullablePrimitiveKind(t) != null || isDynamicLike(t)) return expr;
+									if (isBoolType(t)) {
+										return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [expr]);
+									}
+
+									var obj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [expr]);
+									final enumName = fullNameOfTypeEnum(t);
+									final nullableEnumName = isNullableEnumType(t);
+									if (enumName != null) {
+										obj = OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+											[OcamlExpr.EConst(OcamlConst.CString(enumName)), obj]
+										);
+									} else if (nullableEnumName != null) {
+										obj = OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+											[OcamlExpr.EConst(OcamlConst.CString(nullableEnumName)), obj]
+										);
+									}
+									return obj;
+								}
+
+								final objTmp = freshTmp("struct_obj");
+								final anonTmp = freshTmp("struct_anon");
+								final objVar = OcamlExpr.EIdent(objTmp);
+
+								final initAnon = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+								final sets:Array<OcamlExpr> = [];
+
+								for (f in anon.fields) {
+									final found = findField(cls0, f.name);
+									if (found == null) {
+										#if macro
+										guardrailError(
+											"reflaxe.ocaml (M10): structural coercion expected field '" + f.name + "' on class '" + fullNameOfClassType(cls0) + "', but it was not found.",
+											rhs.pos
+										);
+										#end
+										continue;
+									}
+
+									final valueObj:OcamlExpr = switch (found.field.kind) {
+										case FMethod(_):
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"),
+												[buildBoundMethodClosureFromReceiverVar(objVar, rhs.t, found.owner, found.field, rhs.pos)]
+											);
+										case FVar(_, _):
+											boxExprForObj(found.field.type, OcamlExpr.EField(objVar, found.field.name));
+										case _:
+											OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+									}
+
+									sets.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
+										OcamlExpr.EApp(
+											OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+											[OcamlExpr.EIdent(anonTmp), OcamlExpr.EConst(OcamlConst.CString(f.name)), valueObj]
+										)
+									]));
+								}
+
+								return OcamlExpr.ELet(
+									objTmp,
+									buildExpr(rhs),
+									OcamlExpr.ELet(
+										anonTmp,
+										initAnon,
+										OcamlExpr.ESeq(sets.concat([OcamlExpr.EIdent(anonTmp)])),
+										false
+									),
+									false
+								);
+							case _:
+						}
+					case _:
+				}
+
 				final rhsNullableEnumName = isNullableEnumType(rhs.t);
 				if (rhsNullableEnumName != null) {
 					return OcamlExpr.EApp(
@@ -4246,41 +5149,298 @@ class OcamlBuilder {
 							final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [v]);
 						}
-				case OpIncrement, OpDecrement:
-				// ++x / x++ / --x / x--:
+					case OpIncrement, OpDecrement:
+					// ++x / x++ / --x / x--:
 				//
 				// Haxe semantics:
 				// - prefix: ++x returns the updated value
 				// - postfix: x++ returns the old value
 				//
 				// We support:
-				// - ref locals (`let x = ref ...`)
-				// - instance var fields (record fields on `t`)
-				// - array elements (`HxArray.get/set`)
-				final lvalueNullableKind = nullablePrimitiveKind(e.t);
-				final kind = if (isIntType(e.t)) {
-					"int";
-				} else if (isFloatType(e.t)) {
-					"float";
-				} else if (lvalueNullableKind != null) {
-					lvalueNullableKind;
-				} else {
-					null;
-				}
+					// - ref locals (`let x = ref ...`)
+					// - instance var fields (record fields on `t`)
+					// - array elements (`HxArray.get/set`)
+						final lvalueNullableKind = nullablePrimitiveKind(e.t);
+						function numericKind(t:Type, depth:Int):Null<String> {
+							if (depth > 16) return null;
+							if (isDynamicLike(t)) return "dynamic";
 
-				final resultNullableKind = nullablePrimitiveKind(resultType);
-				final resultIsNullable = resultNullableKind != null;
+							final direct = if (isIntType(t)) {
+								"int";
+							} else if (isFloatType(t)) {
+							"float";
+						} else if (nullablePrimitiveKind(t) != null) {
+							nullablePrimitiveKind(t);
+						} else {
+							null;
+						}
+						if (direct != null) return direct;
 
-				if (kind == null || kind == "bool") {
-					#if macro
-					guardrailError("reflaxe.ocaml (M10): ++/-- is only supported for Int/Float (and their nullable forms) for now.", e.pos);
-					#end
-					OcamlExpr.EConst(OcamlConst.CUnit);
-				} else {
-					final lvalueIsNullable = lvalueNullableKind != null;
-					final deltaInt = op == OpIncrement ? 1 : -1;
-					final deltaFloatLiteral = op == OpIncrement ? "1." : "-1.";
-					final deltaPrimExpr = kind == "float"
+						return switch (followNoAbstracts(unwrapNullType(t))) {
+							case TAbstract(aRef, params):
+								final a = aRef.get();
+								// Follow the underlying representation of the abstract with the current type params applied.
+								final under = TypeTools.applyTypeParameters(a.type, a.params, params);
+								numericKind(under, depth + 1);
+							case TInst(cRef, _):
+								switch (cRef.get().kind) {
+									case KTypeParameter(constraints):
+										var out:Null<String> = null;
+										if (constraints != null) {
+											for (c in constraints) {
+												if (out == null && isFloatType(c)) out = "float";
+												if (out == null && isIntType(c)) out = "int";
+											}
+										}
+										out;
+									case _:
+										null;
+								}
+							case _:
+								null;
+						}
+						}
+
+						final kind = numericKind(e.t, 0);
+
+					final resultNullableKind = nullablePrimitiveKind(resultType);
+					final resultIsNullable = resultNullableKind != null;
+					final resultIsDynamic = isDynamicLike(resultType);
+
+					if (kind == null || kind == "bool") {
+						#if macro
+						guardrailError("reflaxe.ocaml (M10): ++/-- is only supported for Int/Float (and their nullable forms) for now.", e.pos);
+						#end
+						OcamlExpr.EConst(OcamlConst.CUnit);
+					} else if (kind == "dynamic") {
+						final deltaInt = op == OpIncrement ? 1 : -1;
+						final deltaFloatLiteral = op == OpIncrement ? "1." : "-1.";
+						final deltaFloatExpr = OcamlExpr.EConst(OcamlConst.CFloat(deltaFloatLiteral));
+
+						inline function incDecDynamic(getOldObj:OcamlExpr, setNewObj:OcamlExpr->OcamlExpr):OcamlExpr {
+							final oldName = freshTmp("old");
+							final isNullName = freshTmp("isNull");
+							final isRawIntName = freshTmp("isInt");
+							final oldFloatName = freshTmp("oldf");
+							final oldIntName = freshTmp("oldi");
+							final isIntName = freshTmp("useInt");
+							final newFloatName = freshTmp("newf");
+							final newIntName = freshTmp("newi");
+							final newRepName = freshTmp("new");
+
+							final isNullExpr = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "is_null"),
+								[OcamlExpr.EIdent(oldName)]
+							);
+							final isRawIntExpr = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "is_int"),
+								[OcamlExpr.EIdent(oldName)]
+							);
+							final isDoubleExpr = OcamlExpr.EBinop(
+								OcamlBinop.Eq,
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "tag"), [OcamlExpr.EIdent(oldName)]),
+								OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "double_tag")
+							);
+
+							final oldFloatExpr:OcamlExpr = OcamlExpr.EIf(
+								OcamlExpr.EIdent(isNullName),
+								OcamlExpr.EConst(OcamlConst.CFloat("0.")),
+								OcamlExpr.EIf(
+									OcamlExpr.EIdent(isRawIntName),
+									OcamlExpr.EApp(
+										OcamlExpr.EIdent("float_of_int"),
+										[OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(oldName)])]
+									),
+									OcamlExpr.EIf(
+										isDoubleExpr,
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(oldName)]),
+										OcamlExpr.EConst(OcamlConst.CFloat("0."))
+									)
+								)
+							);
+
+							final oldIntExpr:OcamlExpr = OcamlExpr.EIf(
+								OcamlExpr.EIdent(isNullName),
+								OcamlExpr.EConst(OcamlConst.CInt(0)),
+								OcamlExpr.EIf(
+									OcamlExpr.EIdent(isRawIntName),
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(oldName)]),
+									OcamlExpr.EApp(OcamlExpr.EIdent("int_of_float"), [OcamlExpr.EIdent(oldFloatName)])
+								)
+							);
+
+							final isIntExpr:OcamlExpr = OcamlExpr.EBinop(
+								OcamlBinop.Or,
+								OcamlExpr.EIdent(isNullName),
+								OcamlExpr.EIdent(isRawIntName)
+							);
+
+							final newFloatExpr = OcamlExpr.EBinop(OcamlBinop.AddF, OcamlExpr.EIdent(oldFloatName), deltaFloatExpr);
+							final newIntExpr = OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "add"),
+								[OcamlExpr.EIdent(oldIntName), OcamlExpr.EConst(OcamlConst.CInt(deltaInt))]
+							);
+							final newRepExpr = OcamlExpr.EIf(
+								OcamlExpr.EIdent(isIntName),
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(newIntName)]),
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(newFloatName)])
+							);
+
+							final resultExpr:OcamlExpr = if (resultIsDynamic || resultIsNullable) {
+								postFix ? OcamlExpr.EIdent(oldName) : OcamlExpr.EIdent(newRepName);
+							} else {
+								final resKind = numericKind(resultType, 0);
+								(resKind == "float")
+									? (postFix ? OcamlExpr.EIdent(oldFloatName) : OcamlExpr.EIdent(newFloatName))
+									: (postFix ? OcamlExpr.EIdent(oldIntName) : OcamlExpr.EIdent(newIntName));
+							}
+
+							final setExpr = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [setNewObj(OcamlExpr.EIdent(newRepName))]);
+
+							return OcamlExpr.ELet(
+								oldName,
+								getOldObj,
+								OcamlExpr.ELet(
+									isNullName,
+									isNullExpr,
+									OcamlExpr.ELet(
+										isRawIntName,
+										isRawIntExpr,
+										OcamlExpr.ELet(
+											oldFloatName,
+											oldFloatExpr,
+											OcamlExpr.ELet(
+												oldIntName,
+												oldIntExpr,
+												OcamlExpr.ELet(
+													isIntName,
+													isIntExpr,
+													OcamlExpr.ELet(
+														newFloatName,
+														newFloatExpr,
+														OcamlExpr.ELet(
+															newIntName,
+															newIntExpr,
+															OcamlExpr.ELet(
+																newRepName,
+																newRepExpr,
+																OcamlExpr.ESeq([setExpr, resultExpr]),
+																false
+															),
+															false
+														),
+														false
+													),
+													false
+												),
+												false
+											),
+											false
+										),
+										false
+									),
+									false
+								),
+								false
+							);
+						}
+
+						switch (e.expr) {
+							case TLocal(v) if (isRefLocalId(v.id)):
+								incDecDynamic(
+									buildLocal(v),
+									(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), newVal)
+								);
+							case TField(obj, FStatic(clsRef, cfRef)):
+								final cls = clsRef.get();
+								final cf = cfRef.get();
+								final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
+								final isMutableStatic = switch (cf.kind) {
+									case FVar(_, _): !cf.isFinal;
+									case _: false;
+								}
+								if (!isMutableStatic) {
+									#if macro
+									guardrailError("reflaxe.ocaml (M10): ++/-- on immutable static field '" + key + "' is not supported yet.", e.pos);
+									#end
+									OcamlExpr.EConst(OcamlConst.CUnit);
+								} else {
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+									final lhsCell = (selfMod != null && selfMod == modName)
+										? OcamlExpr.EIdent(scoped)
+										: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+									incDecDynamic(
+										OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell),
+										(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal)
+									);
+								}
+							case TField(obj, FInstance(_, _, cfRef)):
+								final cf = cfRef.get();
+								switch (cf.kind) {
+									case FVar(_, _):
+										final objName = freshTmp("obj");
+										OcamlExpr.ELet(
+											objName,
+											buildExpr(obj),
+											incDecDynamic(
+												OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
+												(newVal) -> OcamlExpr.EAssign(
+													OcamlAssignOp.FieldSet,
+													OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
+													newVal
+												)
+											),
+											false
+										);
+									case _:
+										OcamlExpr.EConst(OcamlConst.CUnit);
+								}
+							case TField(obj, FDynamic(name)):
+								final objName = freshTmp("obj");
+								final recvObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [OcamlExpr.EIdent(objName)]);
+								final fieldName = OcamlExpr.EConst(OcamlConst.CString(name));
+								OcamlExpr.ELet(
+									objName,
+									buildExpr(obj),
+									incDecDynamic(
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [recvObj, fieldName]),
+										(newVal) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"), [recvObj, fieldName, newVal])
+									),
+									false
+								);
+							case TArray(arr, idx):
+								final arrName = freshTmp("arr");
+								final idxName = freshTmp("idx");
+								OcamlExpr.ELet(
+									arrName,
+									buildExpr(arr),
+									OcamlExpr.ELet(
+										idxName,
+										buildExpr(idx),
+										incDecDynamic(
+											OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+												[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]
+											),
+											(newVal) -> OcamlExpr.EApp(
+												OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+												[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal]
+											)
+										),
+										false
+									),
+									false
+								);
+							case _:
+								OcamlExpr.EConst(OcamlConst.CUnit);
+						}
+					} else {
+						final lvalueIsNullable = lvalueNullableKind != null;
+						final deltaInt = op == OpIncrement ? 1 : -1;
+						final deltaFloatLiteral = op == OpIncrement ? "1." : "-1.";
+						final deltaPrimExpr = kind == "float"
 						? OcamlExpr.EConst(OcamlConst.CFloat(deltaFloatLiteral))
 						: OcamlExpr.EConst(OcamlConst.CInt(deltaInt));
 
@@ -4374,7 +5534,7 @@ class OcamlBuilder {
 								final cf = cfRef.get();
 								final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
 								final isMutableStatic = switch (cf.kind) {
-									case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
+									case FVar(_, _): !cf.isFinal;
 									case _: false;
 								}
 								if (!isMutableStatic) {
@@ -4462,132 +5622,158 @@ class OcamlBuilder {
 		return result;
 	}
 
-		function buildBlockFromIndex(exprs:Array<TypedExpr>, index:Int, allowDirectReturn:Bool):OcamlExpr {
-			if (index >= exprs.length) return OcamlExpr.EConst(OcamlConst.CUnit);
-
-			final e = exprs[index];
-			return switch (e.expr) {
-				case TVar(v, init):
-				final isUsed = currentUsedLocalIds != null
-					&& currentUsedLocalIds.exists(v.id)
-					&& currentUsedLocalIds.get(v.id) == true;
-
-				if (!isUsed) {
-					final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
-					if (init == null) return rest;
-					final initUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(init)]);
-					return switch (rest) {
-						case ESeq(items): OcamlExpr.ESeq([initUnit].concat(items));
-						case _: OcamlExpr.ESeq([initUnit, rest]);
-					}
-				}
-
-				// Variable declarations are the primary place Haxe inserts implicit conversions
-				// (notably between `Null<primitive>` and `primitive`, and also Int->Float).
+			function buildBlockFromIndex(exprs:Array<TypedExpr>, index:Int, allowDirectReturn:Bool):OcamlExpr {
+				// NOTE: This must be iterative, not recursive.
 				//
-				// If we ignore those coercions here, we can end up binding a value with a
-				// different OCaml representation than the variable's declared Haxe type,
-				// leading to downstream type errors (e.g. `String.charCodeAt` flows).
-				final initExpr = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
-				final isMutable = currentMutatedLocalIds != null
-					&& currentMutatedLocalIds.exists(v.id)
-					&& currentMutatedLocalIds.get(v.id) == true;
+				// Why
+				// - Upstream macro/unit workloads contain some very large blocks (thousands of
+				//   sequential expressions after typing/lowering).
+				// - A naive recursive `buildBlockFromIndex(i+1)` approach can overflow the
+				//   Haxe macro VM stack during codegen.
+				//
+				// Approach
+				// - Scan forward to build a list of "wrappers" (let-bindings and ignored side-effect
+				//   statements) while updating `refLocals` *before* compiling statements that
+				//   depend on that mutability classification.
+				// - Determine the base expression (the last expression or an early `return`).
+				// - Apply wrappers in reverse order to build the final expression tree.
+				if (index >= exprs.length) return OcamlExpr.EConst(OcamlConst.CUnit);
 
-				// If this local is immutable (let-bound) and its initial value is never read before
-				// the next write, binding it is a dead-store and can trigger OCaml's unused-var warning
-				// if it is immediately shadowed (a common pattern in the typed AST).
-				if (!isMutable) {
-					final shouldBind = isLocalReadBeforeNextWrite(exprs, index + 1, v.id);
-					if (!shouldBind) {
-						final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
-						if (init == null) return rest;
-						final initUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [initExpr]);
-						return switch (rest) {
-							case ESeq(items): OcamlExpr.ESeq([initUnit].concat(items));
-							case _: OcamlExpr.ESeq([initUnit, rest]);
-						}
+				inline function seq2(unitExpr:OcamlExpr, rest:OcamlExpr):OcamlExpr {
+					return switch (rest) {
+						case ESeq(items): OcamlExpr.ESeq([unitExpr].concat(items));
+						case _: OcamlExpr.ESeq([unitExpr, rest]);
 					}
 				}
 
-				final rhs = if (isMutable) {
-					refLocals.set(v.id, true);
-					OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
-				} else {
-					refLocals.remove(v.id);
-					initExpr;
-					}
-					OcamlExpr.ELet(renameVar(v.name), rhs, buildBlockFromIndex(exprs, index + 1, allowDirectReturn), false);
-				case TBinop(OpAssign, lhs, rhs):
-					switch (lhs.expr) {
-						case TLocal(v) if (!isRefLocalId(v.id)):
-							// Optimization (M14.5.1): avoid `ref` for straight-line local assignments when safe.
-							//
-							// Instead of allocating `let x = ref ...` and emitting `x := v`, we "rebind" with
-							// `let x = v in ...`, which is idiomatic in OCaml and avoids mutable cells.
-							//
-							// Safety note:
-							// This path only runs for locals that were *not* classified as needing `ref` by
-							// `collectRefLocalIdsFromExprs` (loops, nested-block mutations, closure capture, and
-							// non-statement assignment expressions keep using `ref`).
-							final rhsExpr = coerceForAssignment(v.t, rhs);
-							final shouldBind = isLocalReadBeforeNextWrite(exprs, index + 1, v.id);
-							if (index == exprs.length - 1) {
-								rhsExpr;
+					final wraps:Array<{ kind:String, name:Null<String>, expr:OcamlExpr }> = [];
+
+				var base:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
+				var hasBase = false;
+
+				var i = index;
+				while (i < exprs.length) {
+					final e = exprs[i];
+					final isLast = i == exprs.length - 1;
+
+					switch (e.expr) {
+						case TVar(v, init):
+							final isUsed = currentUsedLocalIds != null
+								&& currentUsedLocalIds.exists(v.id)
+								&& currentUsedLocalIds.get(v.id) == true;
+
+							if (!isUsed) {
+								if (init != null) {
+									wraps.push({
+										kind: "seq",
+										name: null,
+										expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [buildExpr(init)])
+									});
+								}
+								if (isLast) {
+									base = OcamlExpr.EConst(OcamlConst.CUnit);
+									hasBase = true;
+								}
 							} else {
-								if (shouldBind) {
-									OcamlExpr.ELet(renameVar(v.name), rhsExpr, buildBlockFromIndex(exprs, index + 1, allowDirectReturn), false);
-								} else {
-									// Dead-store in this block: preserve RHS side effects but don't bind an unused `let`,
-									// since dune/warn-error treats unused vars as errors.
-									final currentUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [rhsExpr]);
-									final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
-									switch (rest) {
-										case ESeq(items):
-											OcamlExpr.ESeq([currentUnit].concat(items));
-										case _:
-											OcamlExpr.ESeq([currentUnit, rest]);
+								final initExpr = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+								final isMutable = currentMutatedLocalIds != null
+									&& currentMutatedLocalIds.exists(v.id)
+									&& currentMutatedLocalIds.get(v.id) == true;
+
+								if (!isMutable) {
+									final shouldBind = isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
+									if (!shouldBind) {
+										if (init != null) {
+											wraps.push({
+												kind: "seq",
+												name: null,
+												expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [initExpr])
+											});
+										}
+									} else {
+										refLocals.remove(v.id);
+										wraps.push({ kind: "let", name: renameVar(v.name), expr: initExpr });
 									}
+								} else {
+									refLocals.set(v.id, true);
+									wraps.push({
+										kind: "let",
+										name: renameVar(v.name),
+										expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr])
+									});
+								}
+
+								if (isLast) {
+									base = OcamlExpr.EConst(OcamlConst.CUnit);
+									hasBase = true;
 								}
 							}
+
+						case TBinop(OpAssign, lhs, rhs):
+							switch (lhs.expr) {
+								case TLocal(v) if (!isRefLocalId(v.id)):
+									final rhsExpr = coerceForAssignment(v.t, rhs);
+									final shouldBind = isLocalReadBeforeNextWrite(exprs, i + 1, v.id);
+									if (isLast) {
+										base = rhsExpr;
+										hasBase = true;
+									} else if (shouldBind) {
+										wraps.push({ kind: "let", name: renameVar(v.name), expr: rhsExpr });
+									} else {
+										wraps.push({ kind: "seq", name: null, expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [rhsExpr]) });
+									}
+								case _:
+									final current = buildExpr(e);
+									if (isLast) {
+										base = current;
+										hasBase = true;
+									} else {
+										wraps.push({ kind: "seq", name: null, expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [current]) });
+									}
+							}
+
+						case TReturn(ret):
+							// `return` terminates the block: ignore any following expressions.
+							base = if (allowDirectReturn) {
+								ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+							} else {
+								final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
+								final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
+								OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+							}
+							hasBase = true;
+							break;
+
 						case _:
 							final current = buildExpr(e);
-							if (index == exprs.length - 1) {
-								current;
+							if (isLast) {
+								base = current;
+								hasBase = true;
 							} else {
-								final currentUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [current]);
-								final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
-								switch (rest) {
-									case ESeq(items):
-										OcamlExpr.ESeq([currentUnit].concat(items));
-									case _:
-										OcamlExpr.ESeq([currentUnit, rest]);
-								}
+								wraps.push({ kind: "seq", name: null, expr: OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [current]) });
 							}
 					}
-				case TReturn(ret):
-					if (allowDirectReturn) {
-						ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
-					} else {
-					final valueExpr = ret != null ? buildExpr(ret) : OcamlExpr.EConst(OcamlConst.CUnit);
-					final payload = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [valueExpr]);
-					OcamlExpr.ERaise(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "Hx_return"), [payload]));
+
+					i += 1;
 				}
-			case _:
-				final current = buildExpr(e);
-				if (index == exprs.length - 1) {
-					current;
-				} else {
-					final currentUnit = OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [current]);
-					final rest = buildBlockFromIndex(exprs, index + 1, allowDirectReturn);
-					switch (rest) {
-						case ESeq(items):
-							OcamlExpr.ESeq([currentUnit].concat(items));
+
+				var out = hasBase ? base : OcamlExpr.EConst(OcamlConst.CUnit);
+				var j = wraps.length - 1;
+				while (j >= 0) {
+					final w = wraps[j];
+					out = switch (w.kind) {
+						case "let":
+							OcamlExpr.ELet(w.name, w.expr, out, false);
+						case "seq":
+							seq2(w.expr, out);
 						case _:
-							OcamlExpr.ESeq([currentUnit, rest]);
+							out;
 					}
+					j -= 1;
 				}
-		}
-	}
+
+				return out;
+			}
 
 	function buildFunctionBodyBlock(exprs:Array<TypedExpr>):OcamlExpr {
 		final refIds = collectRefLocalIdsFromExprs(exprs);
@@ -5414,21 +6600,21 @@ class OcamlBuilder {
 					);
 
 					return OcamlExpr.EField(resolved.moduleExpr, resolved.fieldName);
-					} else {
-						final modName = moduleIdToOcamlModuleName(cls.module);
-						final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
-						final baseExpr = (selfMod != null && selfMod == modName)
-							? OcamlExpr.EIdent(scoped)
-							: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
-						final key = (cls.pack ?? []).concat([cls.name, cf.name]).join(".");
-						final isMutableStatic = switch (cf.kind) {
-							case FVar(_, _): ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
-							case _: false;
+						} else {
+							final modName = moduleIdToOcamlModuleName(cls.module);
+							final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+							final baseExpr = (selfMod != null && selfMod == modName)
+								? OcamlExpr.EIdent(scoped)
+								: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+							final isMutableStatic = switch (cf.kind) {
+								case FVar(_, _): !cf.isFinal;
+								case FMethod(MethDynamic): true;
+								case _: false;
+							}
+							return isMutableStatic ? OcamlExpr.EUnop(OcamlUnop.Deref, baseExpr) : baseExpr;
 						}
-						return isMutableStatic ? OcamlExpr.EUnop(OcamlUnop.Deref, baseExpr) : baseExpr;
-					}
-						case FInstance(clsRef, _, cfRef):
-							final cls = clsRef.get();
+							case FInstance(clsRef, _, cfRef):
+								final cls = clsRef.get();
 							final cf = cfRef.get();
 							switch (cf.kind) {
 								case FVar(_, _):
@@ -5467,10 +6653,37 @@ class OcamlBuilder {
 					final cf = cfRef.get();
 					final owner:Null<ClassType> = c != null ? c.c.get() : classTypeFromType(obj.t);
 					if (owner == null) {
+						// Structural typing can produce method closures where the compiler does not provide an
+						// "owner class" (e.g. `typedef A = { function foo():Int; }` and `function f(a:A) a.foo`).
+						//
+						// In portable mode we represent most anonymous structures as `HxAnon` (`Obj.t`), so in
+						// that case we can lower to a dynamic field read and cast the stored closure back.
+						//
+						// Note: this relies on callsites coercing class instances into `HxAnon` when assigned
+						// to such structural types (see `coerceForAssignment`).
+						if (isDynamicLike(obj.t) || (switch (followNoAbstracts(unwrapNullType(obj.t))) {
+							case TAnonymous(_) if (shouldAnonUseHxAnon(obj.t)): true;
+							case _: false;
+						})) {
+							final recv = buildExpr(obj);
+							final asObj = (isDynamicLike(obj.t) || nullablePrimitiveKind(obj.t) != null)
+								? recv
+								: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [recv]);
+							OcamlExpr.EApp(
+								OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"),
+								[
+									OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
+										[asObj, OcamlExpr.EConst(OcamlConst.CString(cf.name))]
+									)
+								]
+							);
+						} else {
 						#if macro
 						guardrailError("reflaxe.ocaml (M10): unsupported method-closure without owner class metadata ('" + cf.name + "').", pos);
 						#end
 						OcamlExpr.EConst(OcamlConst.CUnit);
+						}
 					} else {
 						buildBoundMethodClosure(obj, owner, cf, pos);
 					}
@@ -5620,11 +6833,65 @@ class OcamlBuilder {
 			return OcamlExpr.EFun(params, body);
 		}
 
-			static function moduleIdToOcamlModuleName(moduleId:String):String {
-				if (moduleId == null || moduleId.length == 0) return "Main";
-				final flat = moduleId.split(".").join("_");
-				return flat.substr(0, 1).toUpperCase() + flat.substr(1);
+		/**
+			Builds a bound method closure when the receiver is already available as an OCaml expression.
+
+			Why:
+			- Some coercions (notably class -> structural anonymous `HxAnon`) must evaluate the receiver once,
+			  bind it to a temporary, and then build multiple closures that capture that receiver.
+			- The regular `buildBoundMethodClosure` takes a `TypedExpr` receiver and will re-emit `buildExpr`
+			  (which would duplicate side effects for expressions like `new C()`).
+		**/
+		function buildBoundMethodClosureFromReceiverVar(recvVar:OcamlExpr, recvType:Type, cls:ClassType, cf:ClassField, pos:Position):OcamlExpr {
+			final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (cf.type) {
+				case TFun(fargs, _): fargs;
+				case _: null;
+			}
+			final argCount = expectedArgs != null ? expectedArgs.length : 0;
+
+			final paramNames:Array<String> = [];
+			final params:Array<OcamlPat> = argCount == 0
+				? [OcamlPat.PConst(OcamlConst.CUnit)]
+				: {
+					final out:Array<OcamlPat> = [];
+					for (i in 0...argCount) {
+						final n = "a" + Std.string(i);
+						paramNames.push(n);
+						out.push(OcamlPat.PVar(n));
+					}
+					out;
+				};
+
+			final argExprs:Array<OcamlExpr> = [];
+			for (n in paramNames) argExprs.push(OcamlExpr.EIdent(n));
+
+			final recvFullName = classFullNameFromType(recvType);
+			final isDispatchRecv = recvFullName != null && (ctx.dispatchTypes.exists(recvFullName) || ctx.interfaceTypes.exists(recvFullName));
+
+			final call:OcamlExpr = if (isDispatchRecv) {
+				final methodField = OcamlExpr.EField(recvVar, cf.name);
+				final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(argExprs);
+				if (argCount == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+				OcamlExpr.EApp(methodField, callArgs);
+			} else {
+				final modName = moduleIdToOcamlModuleName(cls.module);
+				final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+				final scoped = ctx.scopedValueName(cls.module, cls.name, cf.name);
+				final callFn = (selfMod != null && selfMod == modName)
+					? OcamlExpr.EIdent(scoped)
+					: OcamlExpr.EField(OcamlExpr.EIdent(modName), scoped);
+
+				final callArgs = [recvVar].concat(argExprs);
+				if (argCount == 0) callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+				OcamlExpr.EApp(callFn, callArgs);
+			}
+
+			return OcamlExpr.EFun(params, call);
 		}
+
+			inline function moduleIdToOcamlModuleName(moduleId:String):String {
+				return ctx.ocamlModuleNameForModuleId(moduleId);
+			}
 
 		static function classFullNameFromType(t:Type):Null<String> {
 			return switch (TypeTools.follow(t)) {

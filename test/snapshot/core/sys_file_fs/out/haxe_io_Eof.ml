@@ -11,6 +11,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Eof" } :
   self
 )
 
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.Eof" } : t)
+
 let toString = fun self () -> (
   ignore self;
   "Eof"

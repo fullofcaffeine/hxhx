@@ -55,9 +55,26 @@ class CompilerInit {
 			}
 			#end
 
-		var prepasses:Array<ExpressionPreprocessor> = ExpressionPreprocessorHelper.defaults();
+		// Expression preprocessors rewrite typed expressions to be more codegen-friendly.
+		//
+		// NOTE (Gate1 bring-up):
+		// Some upstream test workloads are extremely sensitive to any typed-AST mutation that
+		// happens before Haxe's internal expression filters (e.g. `renameVars`) run.
+		//
+		// To keep Gate1 stable while we iterate on where and how we apply rewrites,
+		// allow disabling all preprocessors via a define.
+		var prepasses:Array<ExpressionPreprocessor> =
+			#if macro
+			if (haxe.macro.Context.defined("reflaxe_ocaml_disable_expression_preprocessors")) []
+			else
+			#end
+			ExpressionPreprocessorHelper.defaults();
+
 		// Run early so later preprocessors operate on cleaner shapes.
-		prepasses.unshift(ExpressionPreprocessor.Custom(new InlineSwitchTempImpl()));
+		// This pass is purely "pretty output" for OCaml, so it is safe to skip in bring-up runs.
+		if (prepasses.length > 0) {
+			prepasses.unshift(ExpressionPreprocessor.Custom(new InlineSwitchTempImpl()));
+		}
 
 		ReflectCompiler.AddCompiler(new OcamlCompiler(), {
 			fileOutputExtension: ".ml",

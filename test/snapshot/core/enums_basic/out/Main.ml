@@ -4,6 +4,15 @@
 
 let __reflaxe_ocaml__ = ()
 
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+
 let main = fun () -> let e = ref (MyEnum.C (1, "x")) in match !e with
   | MyEnum.A -> ignore (let __assign_1 = MyEnum.B 2 in (
     e := __assign_1;

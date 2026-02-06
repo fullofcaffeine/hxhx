@@ -97,6 +97,8 @@ echo "== Gate 1 (ocaml --interp emulation): upstream tests/unit/compile-macro.hx
     --macro 'reflaxe.ocaml.CompilerInit.Start()' \
     -D reflaxe-target=ocaml \
     -D reflaxe-target-code-injection=ocaml \
+    -D reflaxe_ocaml_full_type_registry \
+    -D reflaxe_ocaml_disable_expression_preprocessors \
     -D retain-untyped-meta \
     compile-macro.hxml
 )

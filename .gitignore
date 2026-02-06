@@ -8,6 +8,10 @@ dump_tmp/NullCoal.hx
 dump_*/
 dump_out_*/
 repomix-output-*
+repomix-output.xml
+
+# Local upstream repro scratch
+test/upstream_min_repro/
 
 # Examples build output
 examples/**/out/

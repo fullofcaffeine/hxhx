@@ -4,4 +4,13 @@
 
 let __reflaxe_ocaml__ = ()
 
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+
 let main = fun () -> let x = 1 in let x = HxInt.add x 2 in print_endline (string_of_int x)

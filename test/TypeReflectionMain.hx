@@ -1,7 +1,6 @@
 class TypeReflectionMain {
 	static function main() {
-		// Keep a hard guardrail for `Type.*` until we implement the minimal `Type` API.
-		// (bd: haxe.ocaml-eli)
+		// Smoke test: minimal `Type.*` reflection API should compile.
 		final fields = Type.getClassFields(TypeReflectionMain);
 		Sys.println(fields.length);
 	}

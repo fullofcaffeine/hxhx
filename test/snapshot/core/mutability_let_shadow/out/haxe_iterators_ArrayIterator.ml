@@ -20,6 +20,8 @@ let create = fun array2 -> let self = ({ __hx_type = HxType.class_ "haxe.iterato
   self
 )
 
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.ArrayIterator"; array = Obj.magic (); current = 0 } : t)
+
 let hasNext = fun self () -> self.current < HxArray.length (self.array)
 
 let next = fun self () -> HxArray.get (self.array) (let __obj_3 = self in let __old_4 = __obj_3.current in let __new_5 = HxInt.add __old_4 1 in (

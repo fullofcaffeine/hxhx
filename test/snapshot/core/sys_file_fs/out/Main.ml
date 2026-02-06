@@ -4,6 +4,15 @@
 
 let __reflaxe_ocaml__ = ()
 
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
+
 let main = fun () -> let args = HxSys.args () in (
   ignore (print_endline (string_of_int (HxArray.length args)));
   ignore (print_endline (string_of_float (HxSys.time ())));

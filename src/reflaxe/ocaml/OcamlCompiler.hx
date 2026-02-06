@@ -5,6 +5,7 @@ package reflaxe.ocaml;
 import haxe.io.Path;
 #if macro
 import haxe.macro.Context;
+import haxe.macro.Expr;
 #end
 import haxe.macro.Type;
 import haxe.macro.Type.TConstant;
@@ -192,18 +193,25 @@ class OcamlCompiler extends DirectToStringCompiler {
 					}
 				}
 
-				function scan(e:TypedExpr):Void {
-					switch (e.expr) {
-						case TBinop(OpAssign, lhs, _):
-							markStaticLValue(lhs);
-						case TBinop(OpAssignOp(_), lhs, _):
-							markStaticLValue(lhs);
-						case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
-							markStaticLValue(inner);
-						case _:
+					function scan(e:TypedExpr):Void {
+						switch (e.expr) {
+							// TypedExprTools.iter does not descend into function bodies, so we must
+							// explicitly traverse them here. Otherwise, assignments like:
+							//   class C { static var x; function new() x = 1; }
+							// would never be seen and we'd incorrectly emit `let x = <init>` (immutable)
+							// instead of `let x = ref <init>` (mutable). (bd: haxe.ocaml-xgv.3.7)
+							case TFunction(fn):
+								scan(fn.expr);
+							case TBinop(OpAssign, lhs, _):
+								markStaticLValue(lhs);
+							case TBinop(OpAssignOp(_), lhs, _):
+								markStaticLValue(lhs);
+							case TUnop(OpIncrement, _, inner) | TUnop(OpDecrement, _, inner):
+								markStaticLValue(inner);
+							case _:
+						}
+						haxe.macro.TypedExprTools.iter(e, scan);
 					}
-					haxe.macro.TypedExprTools.iter(e, scan);
-				}
 
 				for (t in types) {
 					switch (t) {
@@ -453,6 +461,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 		ctx.currentTypeName = classType.name;
 		ctx.variableRenameMap.clear();
 		ctx.assignedVars.clear();
+		// Avoid OS filename limits for `@:generic` specializations by hashing long module ids.
+		// Only apply the override when needed so we don't accidentally diverge from Reflaxe's
+		// default `BaseType.moduleId()` naming for normal modules.
+		final moduleFileId = ctx.fileIdForModuleId(classType.module);
+		if (ctx.fileIdOverrideByModuleId.exists(classType.module)) {
+			setOutputFileName(moduleFileId);
+		}
 		#if macro
 		ctx.currentIsHaxeStd = isPosInHaxeStd(classType.pos);
 		#end
@@ -465,14 +480,75 @@ class OcamlCompiler extends DirectToStringCompiler {
 			case _: false;
 		}
 		if (isMain) {
-			mainModuleId = StringTools.replace(classType.module, ".", "_");
+			mainModuleId = moduleFileId;
 		}
 
-		final fullName = (classType.pack ?? []).concat([classType.name]).join(".");
-		ctx.currentTypeFullName = fullName;
-		ctx.classTagsByFullName.set(fullName, classTagsForClassType(classType));
+			final fullName = (classType.pack ?? []).concat([classType.name]).join(".");
+			ctx.currentTypeFullName = fullName;
+			ctx.classTagsByFullName.set(fullName, classTagsForClassType(classType));
+			#if macro
+			// Seed reflection metadata for `Type.createInstance` (M10).
+			//
+			// We capture the constructor signature and defining module id so that the
+			// generated `HxTypeRegistry.init()` can register a per-class constructor
+			// closure capable of:
+			// - validating required arity,
+			// - padding omitted optional args with `hx_null`,
+			// - unboxing dynamic primitives.
+			ctx.classModuleIdByFullName.set(fullName, classType.module);
+			// Haxe classes are instantiable by default, even if they only define static members.
+			// Some compiler paths expose `classType.constructor == null` for those, but `new C()`
+			// and `Type.createInstance(C, [])` must still work. Treat missing constructor info
+			// as an implicit `new():Void` for non-extern, non-interface classes.
+			final isOcamlNativeSurface = classType.pack != null && classType.pack.length > 0 && classType.pack[0] == "ocaml";
+			final hasCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface);
+			ctx.ctorPresentByFullName.set(fullName, hasCtor);
+			final ctorArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = if (!hasCtor) {
+				null;
+			} else {
+				if (classType.constructor == null) {
+					[];
+				} else {
+					final ctorField = classType.constructor.get();
+					switch (TypeTools.follow(ctorField.type)) {
+						case TFun(args, _): args;
+						case _: [];
+					}
+				}
+			}
+			if (!hasCtor) {
+				ctx.ctorArgsByFullName.remove(fullName);
+			} else {
+				ctx.ctorArgsByFullName.set(fullName, ctorArgs != null ? ctorArgs : []);
+			}
+			#end
+
+			// `Type.getInstanceFields` / `Type.getClassFields` registry seeds (M10).
+			//
+			// We record direct field names here, then compute inherited instance fields when
+		// generating `HxTypeRegistry.ml` at the end of compilation (after DCE/filtering).
 		#if macro
-		if (!ctx.currentIsHaxeStd) {
+		{
+			final inst:Array<String> = [];
+			final stat:Array<String> = [];
+			for (v in varFields) {
+				final n = v.field.name;
+				if (n == "new") continue;
+				(v.isStatic ? stat : inst).push(n);
+			}
+			for (f in funcFields) {
+				final n = f.field.name;
+				if (n == "new") continue;
+				(f.isStatic ? stat : inst).push(n);
+			}
+			inst.sort(Reflect.compare);
+			stat.sort(Reflect.compare);
+			ctx.directInstanceFieldsByFullName.set(fullName, inst);
+			ctx.directStaticFieldsByFullName.set(fullName, stat);
+		}
+		#end
+		#if macro
+		if (!ctx.currentIsHaxeStd || haxe.macro.Context.defined("reflaxe_ocaml_full_type_registry")) {
 			ctx.nonStdTypeRegistryClasses.set(fullName, true);
 		}
 		#end
@@ -482,6 +558,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.currentSuperModuleId = sup.module;
 			ctx.currentSuperTypeName = sup.name;
 			ctx.currentSuperCtorArgs = null;
+			#if macro
+			ctx.superByFullName.set(fullName, ctx.currentSuperFullName);
+			#end
 			if (sup.constructor != null) {
 				final ctorField = sup.constructor.get();
 				switch (TypeTools.follow(ctorField.type)) {
@@ -495,6 +574,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 			ctx.currentSuperModuleId = null;
 			ctx.currentSuperTypeName = null;
 			ctx.currentSuperCtorArgs = null;
+			#if macro
+			ctx.superByFullName.remove(fullName);
+			#end
 		}
 
 			// Guardrails (M5+): fail fast for features we haven't implemented.
@@ -554,7 +636,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-				final hasInstanceSurface = hasInstanceVarsLocal || instanceMethods.length > 0 || ctorFunc != null;
+					// Any concrete (non-interface) Haxe class is instantiable, even if it only
+					// contains static members. The Haxe typer still provides a constructor
+					// signature (`classType.constructor`) for the implicit default ctor.
+					//
+					// We therefore always emit a minimal instance surface (`type t = { __hx_type : Obj.t }`
+					// + `create : unit -> t`) for instantiable classes so:
+					// - `new C()` can work,
+					// - `Type.createInstance(C, [])` can work,
+					// - runtime class identity (`Type.getClass`) works consistently.
+					final hasImplicitCtor = (!classType.isInterface) && (!classType.isExtern) && (!isOcamlNativeSurface);
+					final hasInstanceSurface = hasInstanceVarsLocal || instanceMethods.length > 0 || ctorFunc != null || hasImplicitCtor;
 			if (hasInstanceSurface) {
 				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
 				final createName = ctx.scopedValueName(classType.module, classType.name, "create");
@@ -973,6 +1065,18 @@ class OcamlCompiler extends DirectToStringCompiler {
 				);
 				lets.push({ name: createName, expr: OcamlExpr.EFun(createParams, createBody) });
 
+				// `Type.createEmptyInstance` support (M10): allocate an instance without running
+				// the constructor body. This uses the same record initializer as `create`, so the
+				// instance has a well-formed `__hx_type` marker and default field values.
+				//
+				// Note: upstream semantics for field initializers vs constructor execution varies
+				// per target; for now, this matches the "default-initialized record" behavior.
+				final emptyName = ctx.scopedValueName(classType.module, classType.name, "__empty");
+				lets.push({
+					name: emptyName,
+					expr: OcamlExpr.EFun([OcamlPat.PConst(OcamlConst.CUnit)], selfInit)
+				});
+
 				// Dispatch constructor function (used by `super()` lowering). This intentionally mirrors
 				// the constructor body used in `create`, but takes `self` explicitly.
 					if (isDispatch) {
@@ -1062,20 +1166,34 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-		// Static functions (M2+)
-		for (f in funcFields) {
-			if (f.expr == null) continue;
-			if (!f.isStatic) continue;
+			// Static functions (M2+)
+			for (f in funcFields) {
+				if (f.expr == null) continue;
+				if (!f.isStatic) continue;
 
-			final name = ctx.scopedValueName(classType.module, classType.name, f.field.name);
-			final argInfo = f.args.map(a -> ({
-				id: a.tvar != null ? a.tvar.id : -1,
-				name: a.getName()
-			}));
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr);
+				final name = ctx.scopedValueName(classType.module, classType.name, f.field.name);
+				final argInfo = f.args.map(a -> ({
+					id: a.tvar != null ? a.tvar.id : -1,
+					name: a.getName()
+				}));
+				final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr);
 
-			lets.push({ name: name, expr: compiled });
-		}
+				// `dynamic function` fields are mutable in Haxe: they can be reassigned at runtime
+				// (including statics, see upstream Issue5556). Model them like mutable statics:
+				// - store as `ref` cell
+				// - lower reads to `!x` and writes to `x := v` in the builder.
+				final isDynamicMethod = switch (f.field.kind) {
+					case FMethod(MethDynamic): true;
+					case _: false;
+				}
+				final expr = if (isDynamicMethod) {
+					final t = ocamlTypeExprFromHaxeType(f.field.type);
+					OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EAnnot(compiled, t)]);
+				} else {
+					compiled;
+				}
+				lets.push({ name: name, expr: expr });
+			}
 
 		// Static vars (M6+)
 		//
@@ -1085,18 +1203,37 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// - This currently models *declaration + initialization* only.
 		// - Reassignment semantics (`MyClass.x = v`) require an explicit representation decision
 		//   (`ref` vs `mutable record field` vs other), and are handled separately.
-			for (v in varFields) {
-				if (!v.isStatic) continue;
-				final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
-				final key = (classType.pack ?? []).concat([classType.name, v.field.name]).join(".");
-				final isMutableStatic = ctx.mutableStaticFields.exists(key) && ctx.mutableStaticFields.get(key) == true;
-				// Static var initializers are stored on the field itself (not in the constructor pre-assignments
-				// that `ClassVarData.findDefaultExpr()` uses for instance vars).
-				final init = v.field.expr();
-				final compiledInit = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
-				final compiled = isMutableStatic ? OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [compiledInit]) : compiledInit;
-				lets.push({ name: name, expr: compiled });
-			}
+				for (v in varFields) {
+					if (!v.isStatic) continue;
+					final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
+
+					// Haxe `static var` is mutable by default. We currently model this uniformly as a
+					// `ref` cell in OCaml and lower reads/writes to `!x` / `x := v`.
+					//
+					// Note: we previously tried to infer mutability by scanning assignments, but
+					// upstream tests write to statics from inside methods (e.g. `staticVar = "x"`),
+					// and the macro API does not reliably expose all function bodies through
+					// `ClassField.expr()` at this stage. Until we have a robust whole-program
+					// analysis over the same typed tree we codegen from, we keep the semantics
+					// correct by treating all static vars as mutable. (bd: haxe.ocaml-xgv.3.7)
+					final isMutableStatic = !v.field.isFinal;
+					// Static var initializers are stored on the field itself (not in the constructor pre-assignments
+					// that `ClassVarData.findDefaultExpr()` uses for instance vars).
+					final init = v.field.expr();
+					final compiledInit = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+					final compiled = if (isMutableStatic) {
+						// OCaml value restriction: `ref (HxArray.create ())` yields a weak type variable
+						// unless we pin the element type. We do that by annotating the initializer with
+						// the field's (translated) OCaml type, so the `ref` cell becomes monomorphic.
+						// This is especially important for `Array<T>` statics used heavily in macro
+						// state. (bd: haxe.ocaml-xgv.2)
+						final initT = ocamlTypeExprFromHaxeType(v.field.type);
+						OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EAnnot(compiledInit, initT)]);
+					} else {
+						compiledInit;
+					}
+					lets.push({ name: name, expr: compiled });
+				}
 		if (lets.length > 0) {
 			for (g in orderLetBindingsForOcaml(lets)) {
 				items.push(OcamlModuleItem.ILet(g.bindings, g.isRec));
@@ -1143,14 +1280,68 @@ class OcamlCompiler extends DirectToStringCompiler {
 					return "[ " + items.map(ocamlStringLiteral).join("; ") + " ]";
 				}
 
-				final lines:Array<String> = [
-					if (useLineDirectives) "# 1 \"HxTypeRegistry.ml\"" else null,
-					"(* Generated by reflaxe.ocaml (WIP) *)",
-					"(* Type registry used by `Type.resolveClass/resolveEnum` and typed catches. *)",
-					"",
-					"let init () : unit ="
-				];
-				lines.remove(null);
+				function computeInstanceFields(fullName:String):Array<String> {
+					final out:Array<String> = [];
+					final seen:Map<String, Bool> = [];
+					var cur:Null<String> = fullName;
+					var guard = 0;
+					while (cur != null && guard < 1000) {
+						guard++;
+						final direct = ctx.directInstanceFieldsByFullName.get(cur);
+						if (direct != null) {
+							for (f in direct) {
+								if (!seen.exists(f)) {
+									seen.set(f, true);
+									out.push(f);
+								}
+							}
+						}
+						cur = ctx.superByFullName.get(cur);
+					}
+					out.sort(Reflect.compare);
+					return out;
+				}
+
+					function computeStaticFields(fullName:String):Array<String> {
+						final direct = ctx.directStaticFieldsByFullName.get(fullName);
+						final out = direct != null ? direct.copy() : [];
+						out.sort(Reflect.compare);
+						return out;
+					}
+
+					function ocamlExprForDynArgToExpected(t:Type, objExpr:String):String {
+						final ot = ocamlTypeExprFromHaxeType(t);
+						return switch (ot) {
+							case OcamlTypeExpr.TIdent("Obj.t"):
+								objExpr;
+							case OcamlTypeExpr.TIdent("bool"):
+								"HxRuntime.unbox_bool_or_obj (" + objExpr + ")";
+							case OcamlTypeExpr.TIdent("int") | OcamlTypeExpr.TIdent("float") | OcamlTypeExpr.TIdent("string") | OcamlTypeExpr.TIdent("bytes")
+								| OcamlTypeExpr.TIdent("char"):
+								"Obj.obj (" + objExpr + ")";
+							case _:
+								"Obj.magic (" + objExpr + ")";
+						}
+					}
+
+					function ocamlExprForMissingOptionalArg(t:Type):String {
+						final ot = ocamlTypeExprFromHaxeType(t);
+						return switch (ot) {
+							case OcamlTypeExpr.TIdent("Obj.t"):
+								"HxRuntime.hx_null";
+							case _:
+								"Obj.magic HxRuntime.hx_null";
+						}
+					}
+
+					final lines:Array<String> = [
+						if (useLineDirectives) "# 1 \"HxTypeRegistry.ml\"" else null,
+						"(* Generated by reflaxe.ocaml (WIP) *)",
+						"(* Type registry used by `Type.resolveClass/resolveEnum`, `Type.get*Fields`, `Type.createInstance`, and typed catches. *)",
+						"",
+						"let init () : unit ="
+					];
+					lines.remove(null);
 
 				if (classNames.length == 0 && enumNames.length == 0 && classTagNames.length == 0) {
 					lines.push("  ()");
@@ -1158,8 +1349,140 @@ class OcamlCompiler extends DirectToStringCompiler {
 					for (n in classNames) {
 						lines.push("  ignore (HxType.class_ " + ocamlStringLiteral(n) + ");");
 					}
-					for (n in enumNames) {
-						lines.push("  ignore (HxType.enum_ " + ocamlStringLiteral(n) + ");");
+						for (n in enumNames) {
+							lines.push("  ignore (HxType.enum_ " + ocamlStringLiteral(n) + ");");
+						}
+							for (n in enumNames) {
+								final ctors = ctx.enumConstructsByFullName.get(n);
+								if (ctors == null) continue;
+								lines.push("  HxType.register_enum_ctors " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(ctors) + ";");
+							}
+							// `Type.createEnum` / `Type.createEnumIndex` constructor registry (M10).
+							for (n in enumNames) {
+								final ctors = ctx.enumConstructsByFullName.get(n);
+								if (ctors == null) continue;
+								final modId = ctx.enumModuleIdByFullName.get(n);
+								if (modId == null) continue;
+								final modName = moduleIdToOcamlModuleName(modId);
+								for (ctorName in ctors) {
+									final key = n + ":" + ctorName;
+									final expected = ctx.enumCtorArgsByFullNameAndCtor.get(key);
+									final argsInfo = expected != null ? expected : [];
+
+									final argsName = argsInfo.length == 0 ? "_args" : "args";
+									lines.push(
+										"  HxType.register_enum_ctor "
+											+ ocamlStringLiteral(n)
+											+ " "
+											+ ocamlStringLiteral(ctorName)
+											+ " (fun ("
+											+ argsName
+											+ " : Obj.t HxArray.t) ->"
+									);
+									if (argsInfo.length == 0) {
+										lines.push("    Obj.repr (" + modName + "." + ctorName + ")");
+									} else {
+										lines.push("    let len = HxArray.length args in");
+										for (i in 0...argsInfo.length) {
+											final ea = argsInfo[i];
+											final fetch = "(HxArray.get args " + Std.string(i) + ")";
+											final inBounds = ocamlExprForDynArgToExpected(ea.t, fetch);
+											final outOfBounds = ea.opt
+												? ocamlExprForMissingOptionalArg(ea.t)
+												: ("failwith " + ocamlStringLiteral("Type.createEnum: missing ctor arg '" + ea.name + "' for " + n + "." + ctorName));
+											lines.push(
+												"    let a"
+													+ Std.string(i)
+													+ " = if len > "
+													+ Std.string(i)
+													+ " then "
+													+ inBounds
+													+ " else "
+													+ outOfBounds
+													+ " in"
+											);
+										}
+										final argList = [for (i in 0...argsInfo.length) ("a" + Std.string(i))];
+										final ctorCall = argsInfo.length > 1
+											? (modName + "." + ctorName + " (" + argList.join(", ") + ")")
+											: (modName + "." + ctorName + " " + argList[0]);
+										lines.push("    Obj.repr (" + ctorCall + ")");
+									}
+									lines.push("  );");
+								}
+							}
+							// `Type.createInstance` constructor registry.
+							for (n in classNames) {
+								final hasCtor = ctx.ctorPresentByFullName.exists(n) && ctx.ctorPresentByFullName.get(n) == true;
+								if (!hasCtor) continue;
+							final modId = ctx.classModuleIdByFullName.get(n);
+							if (modId == null) continue;
+							final parts = n.split(".");
+							if (parts.length == 0) continue;
+							final typeName = parts[parts.length - 1];
+							final modName = moduleIdToOcamlModuleName(modId);
+							final createName = ctx.scopedValueName(modId, typeName, "create");
+							final ctorArgs = ctx.ctorArgsByFullName.get(n);
+							final expected = ctorArgs != null ? ctorArgs : [];
+
+							final argsName = expected.length == 0 ? "_args" : "args";
+							lines.push("  HxType.register_class_ctor " + ocamlStringLiteral(n) + " (fun (" + argsName + " : Obj.t HxArray.t) ->");
+							if (expected.length == 0) {
+								lines.push("    Obj.repr (" + modName + "." + createName + " ())");
+							} else {
+								lines.push("    let len = HxArray.length args in");
+								for (i in 0...expected.length) {
+									final ea = expected[i];
+									final fetch = "(HxArray.get args " + Std.string(i) + ")";
+									final inBounds = ocamlExprForDynArgToExpected(ea.t, fetch);
+									final outOfBounds = ea.opt
+										? ocamlExprForMissingOptionalArg(ea.t)
+										: ("failwith " + ocamlStringLiteral("Type.createInstance: missing ctor arg '" + ea.name + "' for " + n));
+									lines.push("    let a" + Std.string(i) + " = if len > " + Std.string(i) + " then " + inBounds + " else " + outOfBounds + " in");
+								}
+								final argList = [for (i in 0...expected.length) ("a" + Std.string(i))];
+								lines.push("    Obj.repr (" + modName + "." + createName + " " + argList.join(" ") + ")");
+							}
+							lines.push("  );");
+						}
+						// `Type.createEmptyInstance` registry.
+						for (n in classNames) {
+							final hasCtor = ctx.ctorPresentByFullName.exists(n) && ctx.ctorPresentByFullName.get(n) == true;
+							if (!hasCtor) continue;
+							final modId = ctx.classModuleIdByFullName.get(n);
+							if (modId == null) continue;
+							final parts = n.split(".");
+							if (parts.length == 0) continue;
+							final typeName = parts[parts.length - 1];
+							final modName = moduleIdToOcamlModuleName(modId);
+							final emptyName = ctx.scopedValueName(modId, typeName, "__empty");
+							lines.push(
+								"  HxType.register_class_empty_ctor "
+									+ ocamlStringLiteral(n)
+									+ " (fun () -> Obj.repr ("
+									+ modName
+									+ "."
+									+ emptyName
+									+ " ()));"
+							);
+						}
+						for (n in classNames) {
+							final inst = computeInstanceFields(n);
+							final stat = computeStaticFields(n);
+							lines.push("  HxType.register_class_instance_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(inst) + ";");
+						lines.push("  HxType.register_class_static_fields " + ocamlStringLiteral(n) + " " + ocamlStringListLiteral(stat) + ";");
+					}
+					// `Type.getSuperClass` registry.
+					for (n in classNames) {
+						final sup = ctx.superByFullName.get(n);
+						if (sup == null) continue;
+						lines.push(
+							"  HxType.register_class_super "
+								+ ocamlStringLiteral(n)
+								+ " (HxType.class_ "
+								+ ocamlStringLiteral(sup)
+								+ ");"
+						);
 					}
 					for (n in classTagNames) {
 						final tags = ctx.classTagsByFullName.get(n);
@@ -1233,11 +1556,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// Package alias modules (M8): generate dot-path access helpers unless disabled.
 		final emitAliasesValue = haxe.macro.Context.definedValue("ocaml_emit_package_aliases");
 		final emitAliases = emitAliasesValue == null || emitAliasesValue != "0";
-		if (emitAliases) {
-			final modules:Array<String> = [];
-			for (m => _ in ctx.emittedHaxeModules) modules.push(m);
-			PackageAliasEmitter.emit(output, modules);
-		}
+			if (emitAliases) {
+				final modules:Array<String> = [];
+				for (m => _ in ctx.emittedHaxeModules) modules.push(m);
+				PackageAliasEmitter.emit(output, modules, (m) -> ctx.ocamlModuleNameForModuleId(m));
+			}
 
 		final buildMode = haxe.macro.Context.definedValue("ocaml_build");
 		final shouldRun = haxe.macro.Context.defined("ocaml_run");
@@ -1299,17 +1622,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	public function compileEnumImpl(enumType:EnumType, options:Array<EnumOptionData>):Null<String> {
-		ctx.emittedHaxeModules.set(enumType.module, true);
-		ctx.currentModuleId = enumType.module;
-		final fullName = (enumType.pack ?? []).concat([enumType.name]).join(".");
-		#if macro
-		ctx.currentIsHaxeStd = isPosInHaxeStd(enumType.pos);
-		if (!ctx.currentIsHaxeStd) {
-			ctx.nonStdTypeRegistryEnums.set(fullName, true);
-		}
-		#end
-
-		// ocaml.* surface types map to native Stdlib types; do not emit duplicate type decls.
+		// ocaml.* surface types map to native Stdlib types; do not emit duplicate type decls
+		// and do not register reflection metadata for modules that won't exist.
 		if (enumType.pack != null && enumType.pack.length == 1 && enumType.pack[0] == "ocaml") {
 			switch (enumType.name) {
 				case "List", "Option", "Result":
@@ -1317,6 +1631,47 @@ class OcamlCompiler extends DirectToStringCompiler {
 				case _:
 			}
 		}
+
+		ctx.emittedHaxeModules.set(enumType.module, true);
+		ctx.currentModuleId = enumType.module;
+		final moduleFileId = ctx.fileIdForModuleId(enumType.module);
+		if (ctx.fileIdOverrideByModuleId.exists(enumType.module)) {
+			setOutputFileName(moduleFileId);
+		}
+		final fullName = (enumType.pack ?? []).concat([enumType.name]).join(".");
+		#if macro
+		ctx.currentIsHaxeStd = isPosInHaxeStd(enumType.pos);
+		final runtimeName = {
+			final n = extractNativeString(enumType.meta);
+			n != null ? n : fullName;
+		};
+		if (!ctx.currentIsHaxeStd || haxe.macro.Context.defined("reflaxe_ocaml_full_type_registry")) {
+			ctx.nonStdTypeRegistryEnums.set(runtimeName, true);
+		}
+		ctx.enumModuleIdByFullName.set(runtimeName, enumType.module);
+		// Enum constructor names for `Type.getEnumConstructs` (M10).
+		{
+			final ctors = options.map(o -> {
+				final n = extractNativeString(o.field.meta);
+				n != null ? n : o.name;
+			});
+			ctx.enumConstructsByFullName.set(runtimeName, ctors);
+		}
+		// Enum constructor signatures for `Type.createEnum` / `Type.createEnumIndex` (M10).
+		{
+			for (opt in options) {
+				final ctorName = {
+					final n = extractNativeString(opt.field.meta);
+					n != null ? n : opt.name;
+				};
+				final args:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(opt.field.type)) {
+					case TFun(fargs, _): fargs;
+					case _: null;
+				};
+				ctx.enumCtorArgsByFullNameAndCtor.set(runtimeName + ":" + ctorName, args != null ? args : []);
+			}
+		}
+		#end
 
 		final typeName = ocamlTypeName(enumType.name);
 		final typeParams = enumType.params.map(p -> ocamlTypeParam(p.name));
@@ -1426,11 +1781,24 @@ class OcamlCompiler extends DirectToStringCompiler {
 		return s;
 	}
 
-	static function moduleIdToOcamlModuleName(moduleId:String):String {
-		if (moduleId == null || moduleId.length == 0) return "Main";
-		final flat = moduleId.split(".").join("_");
-		return flat.substr(0, 1).toUpperCase() + flat.substr(1);
-	}
+			inline function moduleIdToOcamlModuleName(moduleId:String):String {
+				return ctx.ocamlModuleNameForModuleId(moduleId);
+			}
+
+		static function extractNativeString(meta:Null<MetaAccess>):Null<String> {
+			#if macro
+			if (meta == null) return null;
+			for (m in meta.get()) {
+				if (m.name != ":native") continue;
+				if (m.params == null || m.params.length == 0) continue;
+				return switch (m.params[0].expr) {
+					case EConst(CString(s)): s;
+					case _: null;
+				}
+			}
+			#end
+			return null;
+		}
 
 	function ocamlTypeExprFromHaxeType(t:Type):OcamlTypeExpr {
 		return switch (t) {
@@ -1498,16 +1866,54 @@ class OcamlCompiler extends DirectToStringCompiler {
 						if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int32") {
 							return OcamlTypeExpr.TIdent("int");
 						}
-						// haxe.Int64 is an abstract over an internal record class (`haxe._Int64.___Int64`).
-						// Represent it as that concrete record type so consumers can access `high/low`
-						// without falling back to `Obj.t`.
-						if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int64") {
-							return OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t");
+					// haxe.Int64 is an abstract over an internal record class (`haxe._Int64.___Int64`).
+					// Represent it as that concrete record type so consumers can access `high/low`
+					// without falling back to `Obj.t`.
+					if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int64") {
+						return OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t");
+					}
+					// haxe.ds.Map is an abstract over `haxe.Constraints.IMap` with specialization
+					// for common key types (String/Int) and a fallback to ObjectMap.
+					//
+					// If we default this to `Obj.t`, we end up forcing top-level `ref` annotations
+					// (`ref (HxMap.create_string () : Obj.t)`) which breaks compilation because the
+					// concrete map implementation is not boxed.
+					//
+					// Represent it as its concrete OCaml runtime map type based on the key kind.
+					if (aPack.length == 2 && aPack[0] == "haxe" && aPack[1] == "ds" && a.name == "Map") {
+						final k = (params != null && params.length > 0) ? params[0] : null;
+						final v = (params != null && params.length > 1) ? params[1] : null;
+						final vT = v != null ? ocamlTypeExprFromHaxeType(v) : OcamlTypeExpr.TIdent("Obj.t");
+
+						// Follow key abstracts so `Map<Int, V>` (where Int is an abstract) is detected.
+						final kFollowed = k != null ? TypeTools.follow(k) : null;
+						switch (kFollowed) {
+							case TInst(cRef, _):
+								final c = cRef.get();
+								if (c.pack != null && c.pack.length == 0 && c.name == "String") {
+									return OcamlTypeExpr.TApp("HxMap.string_map", [vT]);
+								}
+								// Non-String class keys use ObjectMap.
+								final kT = ocamlTypeExprFromHaxeType(kFollowed);
+								return OcamlTypeExpr.TApp("HxMap.obj_map", [kT, vT]);
+							case TAbstract(kRef, _):
+								final ka = kRef.get();
+								if (ka.name == "Int") {
+									return OcamlTypeExpr.TApp("HxMap.int_map", [vT]);
+								}
+								// Unknown abstract keys: treat as ObjectMap.
+								final kT = ocamlTypeExprFromHaxeType(kFollowed);
+								return OcamlTypeExpr.TApp("HxMap.obj_map", [kT, vT]);
+							case _:
+								// Default to ObjectMap for any other key type.
+								final kT = kFollowed != null ? ocamlTypeExprFromHaxeType(kFollowed) : OcamlTypeExpr.TIdent("Obj.t");
+								return OcamlTypeExpr.TApp("HxMap.obj_map", [kT, vT]);
 						}
-						switch (a.name) {
-							case "Int": OcamlTypeExpr.TIdent("int");
-							case "Float": OcamlTypeExpr.TIdent("float");
-							case "Bool": OcamlTypeExpr.TIdent("bool");
+					}
+					switch (a.name) {
+						case "Int": OcamlTypeExpr.TIdent("int");
+						case "Float": OcamlTypeExpr.TIdent("float");
+						case "Bool": OcamlTypeExpr.TIdent("bool");
 						case "Void": OcamlTypeExpr.TIdent("unit");
 						case "CallStack":
 							// `haxe.CallStack` is an abstract over `Array<haxe.StackItem>`.

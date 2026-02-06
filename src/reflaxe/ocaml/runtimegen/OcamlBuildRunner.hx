@@ -123,28 +123,36 @@ class OcamlBuildRunner {
 		Sys.setCwd(outDir);
 		final outDirAbs = Sys.getCwd();
 		final notes:Array<String> = [];
-		try {
-			final target = duneTarget(cfg.exeName, mode);
-			final buildRes = runCapture("dune", ["build", target]);
-			if (buildRes.code != 0) {
-				final out = truncateOutput(buildRes.output);
-				Sys.setCwd(prev);
-				return cfg.strict
+			try {
+				final target = duneTarget(cfg.exeName, mode);
+				// IMPORTANT:
+				// When the OCaml output directory lives *inside* another dune workspace (e.g. inside the
+				// upstream Haxe repo, which contains its own `dune-project` / `dune-workspace.*`),
+				// dune will otherwise “walk up” and treat the outer workspace as the project root.
+				//
+				// Force the root to the generated output directory so Gate runners can nest outputs
+				// without colliding with upstream's own dune config.
+				final duneRoot = outDirAbs;
+				final buildRes = runCapture("dune", ["build", "--root", duneRoot, target]);
+				if (buildRes.code != 0) {
+					final out = truncateOutput(buildRes.output);
+					Sys.setCwd(prev);
+					return cfg.strict
 					? Err("dune build failed (exit " + buildRes.code + ")\n\n" + out)
 					: Ok("dune build failed (exit " + buildRes.code + ") (skipping)\n\n" + out);
 			} else {
 				if (cfg.mli != null) {
-					switch (cfg.mli) {
-						case "infer":
-							final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
-							switch (mliRes) {
-								case Ok(_):
-									// Rebuild so dune validates the newly-written interfaces.
-									final rebuildRes = runCapture("dune", ["build", target]);
-									if (rebuildRes.code != 0) {
-										final out = truncateOutput(rebuildRes.output);
-										Sys.setCwd(prev);
-										return cfg.mliStrict
+						switch (cfg.mli) {
+							case "infer":
+								final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
+								switch (mliRes) {
+									case Ok(_):
+										// Rebuild so dune validates the newly-written interfaces.
+										final rebuildRes = runCapture("dune", ["build", "--root", duneRoot, target]);
+										if (rebuildRes.code != 0) {
+											final out = truncateOutput(rebuildRes.output);
+											Sys.setCwd(prev);
+											return cfg.mliStrict
 											? Err("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ")\n\n" + out)
 											: Ok("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ") (skipping)\n\n" + out);
 									}
@@ -162,12 +170,12 @@ class OcamlBuildRunner {
 								case Ok(_):
 									final mliRes = OcamlMliGenerator.tryInferFromBuild(outDirAbs);
 									switch (mliRes) {
-										case Ok(_):
-											final rebuildRes = runCapture("dune", ["build", target]);
-											if (rebuildRes.code != 0) {
-												final out = truncateOutput(rebuildRes.output);
-												Sys.setCwd(prev);
-												return cfg.mliStrict
+											case Ok(_):
+												final rebuildRes = runCapture("dune", ["build", "--root", duneRoot, target]);
+												if (rebuildRes.code != 0) {
+													final out = truncateOutput(rebuildRes.output);
+													Sys.setCwd(prev);
+													return cfg.mliStrict
 													? Err("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ")\n\n" + out)
 													: Ok("dune rebuild failed after generating .mli (exit " + rebuildRes.code + ") (skipping)\n\n" + out);
 											}
@@ -187,12 +195,12 @@ class OcamlBuildRunner {
 					}
 				}
 
-				if (cfg.run) {
-					final runRes = runCapture("dune", ["exec", target]);
-					if (runRes.code != 0) {
-						final out = truncateOutput(runRes.output);
-						Sys.setCwd(prev);
-						return cfg.strict
+					if (cfg.run) {
+						final runRes = runCapture("dune", ["exec", "--root", duneRoot, target]);
+						if (runRes.code != 0) {
+							final out = truncateOutput(runRes.output);
+							Sys.setCwd(prev);
+							return cfg.strict
 							? Err("dune exec failed (exit " + runRes.code + ")\n\n" + out)
 							: Ok("dune exec failed (exit " + runRes.code + ") (skipping)\n\n" + out);
 					} else {

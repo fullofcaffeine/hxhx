@@ -14,6 +14,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.BytesBuf
   self
 )
 
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.io.BytesBuffer"; b = Obj.magic () } : t)
+
 let get_length = fun self () -> HxArray.length (self.b)
 
 let addByte = fun self (byte : int) -> ignore (HxArray.push (self.b) byte)

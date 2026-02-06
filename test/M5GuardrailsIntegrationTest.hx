@@ -52,12 +52,11 @@ class M5GuardrailsIntegrationTest {
 		sys.FileSystem.createDirectory(out3);
 		assertOk(common.concat(["-main", "ReflectionMain", "-D", "ocaml_output=" + out3]), "reflect field access supported");
 
-		final out4 = baseOut + "/type_reflection";
-		sys.FileSystem.createDirectory(out4);
-		assertFail(
-			common.concat(["-main", "TypeReflectionMain", "-D", "ocaml_output=" + out4]),
-			"Type.getClassFields",
-			"Type.* reflection guardrail"
-		);
+			final out4 = baseOut + "/type_reflection";
+			sys.FileSystem.createDirectory(out4);
+			assertOk(
+				common.concat(["-main", "TypeReflectionMain", "-D", "ocaml_output=" + out4]),
+				"Type.* reflection supported (minimal)"
+			);
+		}
 	}
-}

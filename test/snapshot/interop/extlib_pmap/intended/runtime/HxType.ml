@@ -38,6 +38,16 @@ let type_value_name (marker : Obj.t) (v : Obj.t) : string =
 let classes : (string, Obj.t) Hashtbl.t = Hashtbl.create 251
 let enums : (string, Obj.t) Hashtbl.t = Hashtbl.create 251
 let class_tags : (string, string list) Hashtbl.t = Hashtbl.create 251
+let class_supers : (string, Obj.t) Hashtbl.t = Hashtbl.create 251
+let class_instance_fields : (string, string list) Hashtbl.t = Hashtbl.create 251
+let class_static_fields : (string, string list) Hashtbl.t = Hashtbl.create 251
+let class_ctors : (string, Obj.t HxArray.t -> Obj.t) Hashtbl.t = Hashtbl.create 251
+let class_empty_ctors : (string, unit -> Obj.t) Hashtbl.t = Hashtbl.create 251
+let enum_ctors : (string, string list) Hashtbl.t = Hashtbl.create 251
+let enum_ctor_fns : (string, Obj.t HxArray.t -> Obj.t) Hashtbl.t = Hashtbl.create 251
+
+let enum_ctor_key (enum_name : string) (ctor_name : string) : string =
+  enum_name ^ "." ^ ctor_name
 
 let class_ (name : string) : Obj.t =
   match Hashtbl.find_opt classes name with
@@ -98,6 +108,265 @@ let resolveEnum (name : string) : Obj.t =
 
 let register_class_tags (name : string) (tags : string list) : unit =
   Hashtbl.replace class_tags name tags
+
+(* `Type.getSuperClass` support (minimal).
+
+   Why
+   - Some portable code and upstream unit tests query inheritance at runtime.
+   - OCaml records do not preserve inheritance metadata, so we register the superclass
+     relation at compile time in `HxTypeRegistry.init()`.
+
+   Semantics
+   - Returns `null` if `c` has no known superclass or `c` is null/unknown. *)
+let register_class_super (name : string) (super_ : Obj.t) : unit =
+  Hashtbl.replace class_supers name super_
+
+let getSuperClass (c : Obj.t) : Obj.t =
+  if HxRuntime.is_null c then
+    HxRuntime.hx_null
+  else
+    let name = getClassName c in
+    if HxRuntime.is_null (Obj.repr name) then
+      HxRuntime.hx_null
+    else
+      match Hashtbl.find_opt class_supers name with
+      | Some s -> s
+      | None -> HxRuntime.hx_null
+
+(* Minimal `Type.getInstanceFields` / `Type.getClassFields` support.
+
+   Why
+   - Upstream test harnesses and portable code frequently ask for "what fields
+     does this class have?", and expect DCE-filtered results.
+   - OCaml records do not carry reflection metadata, so we generate and register
+     field name lists at compile time in `HxTypeRegistry.init()`.
+
+   Semantics (mirrors Haxe)
+   - `getInstanceFields(C)` includes inherited instance fields.
+   - `getClassFields(C)` includes only fields declared on `C` (no inheritance).
+   - `null` / unknown classes return an empty array. *)
+
+let register_class_instance_fields (name : string) (fields : string list) : unit =
+  Hashtbl.replace class_instance_fields name fields
+
+let register_class_static_fields (name : string) (fields : string list) : unit =
+  Hashtbl.replace class_static_fields name fields
+
+(* `Type.createInstance` support (minimal).
+
+   Why
+   - Upstream tests and portable code frequently construct types from runtime class
+     values (e.g. macro toolchains).
+   - In OCaml we compile constructors as regular functions with fixed arity, so a
+     generic "apply array of args" requires metadata.
+
+   Strategy
+   - Generated `HxTypeRegistry.init()` registers, for each compiled class name, a
+     closure of type `Obj.t HxArray.t -> Obj.t` that:
+       - validates required arg count,
+       - pads omitted optional args with `hx_null` (to avoid partial application),
+       - unboxes dynamic primitives (notably boxed Bool),
+       - calls the class's emitted `create` function and returns the instance as `Obj.t`.
+   - `createInstance` looks up and invokes that closure.
+
+   Note
+   - This intentionally supports only compiled classes. Extern/native classes should
+     be handled separately via OCaml-native APIs. *)
+
+let register_class_ctor (name : string) (ctor : Obj.t HxArray.t -> Obj.t) : unit =
+  Hashtbl.replace class_ctors name ctor
+
+let register_class_empty_ctor (name : string) (ctor : unit -> Obj.t) : unit =
+  Hashtbl.replace class_empty_ctors name ctor
+
+let createInstance (c : Obj.t) (args : Obj.t HxArray.t) : Obj.t =
+  if HxRuntime.is_null c then
+    HxRuntime.hx_null
+  else
+    let name = getClassName c in
+    if HxRuntime.is_null (Obj.repr name) then
+      HxRuntime.hx_null
+    else
+      match Hashtbl.find_opt class_ctors name with
+      | Some ctor -> ctor args
+      | None -> HxRuntime.hx_null
+
+let createEmptyInstance (c : Obj.t) : Obj.t =
+  if HxRuntime.is_null c then
+    HxRuntime.hx_null
+  else
+    let name = getClassName c in
+    if HxRuntime.is_null (Obj.repr name) then
+      HxRuntime.hx_null
+    else
+      match Hashtbl.find_opt class_empty_ctors name with
+      | Some ctor -> ctor ()
+      | None -> HxRuntime.hx_null
+
+let fields_to_hx_array (fields : string list) : string HxArray.t =
+  let a = HxArray.create () in
+  List.iter (fun f -> ignore (HxArray.push a f)) fields;
+  a
+
+let getInstanceFields (c : Obj.t) : string HxArray.t =
+  if HxRuntime.is_null c then
+    fields_to_hx_array []
+  else
+    let name = getClassName c in
+    if HxRuntime.is_null (Obj.repr name) then
+      fields_to_hx_array []
+    else
+      match Hashtbl.find_opt class_instance_fields name with
+      | Some fields -> fields_to_hx_array fields
+      | None -> fields_to_hx_array []
+
+let getClassFields (c : Obj.t) : string HxArray.t =
+  if HxRuntime.is_null c then
+    fields_to_hx_array []
+  else
+    let name = getClassName c in
+    if HxRuntime.is_null (Obj.repr name) then
+      fields_to_hx_array []
+    else
+      match Hashtbl.find_opt class_static_fields name with
+      | Some fields -> fields_to_hx_array fields
+      | None -> fields_to_hx_array []
+
+(* `Type.getEnumConstructs` support. *)
+
+let register_enum_ctors (name : string) (ctors : string list) : unit =
+  Hashtbl.replace enum_ctors name ctors
+
+(* `Type.createEnum` / `Type.createEnumIndex` support.
+
+   Why
+   - Portable code can pass `Enum<T>` values through `Dynamic` (e.g. `var e:Dynamic = MyEnum`)
+     and still call `Type.createEnum(e, ...)`.
+   - OCaml variants have no “enum object” at runtime, so we register constructor closures
+     at compile time (see generated `HxTypeRegistry.init()`).
+
+   Semantics (best-effort, matches upstream unit tests)
+   - Returns `null` when `e` is null or unknown.
+   - Throws (via `failwith`) when required constructor args are missing (enforced by the
+     generated constructor closures). *)
+
+let register_enum_ctor (enum_name : string) (ctor_name : string)
+    (f : Obj.t HxArray.t -> Obj.t) : unit =
+  Hashtbl.replace enum_ctor_fns (enum_ctor_key enum_name ctor_name) f
+
+let createEnum (e : Obj.t) (ctor_name : string) (params : Obj.t HxArray.t) : Obj.t =
+  if HxRuntime.is_null e then
+    HxRuntime.hx_null
+  else if is_type_value enum_marker e then
+    let enum_name = type_value_name enum_marker e in
+    match Hashtbl.find_opt enum_ctor_fns (enum_ctor_key enum_name ctor_name) with
+    | Some f -> f params
+    | None -> HxRuntime.hx_null
+  else
+    HxRuntime.hx_null
+
+let createEnumIndex (e : Obj.t) (idx : int) (params : Obj.t HxArray.t) : Obj.t =
+  if HxRuntime.is_null e then
+    HxRuntime.hx_null
+  else if is_type_value enum_marker e then
+    let enum_name = type_value_name enum_marker e in
+    match Hashtbl.find_opt enum_ctors enum_name with
+    | None -> HxRuntime.hx_null
+    | Some ctors ->
+        if idx < 0 || idx >= List.length ctors then
+          HxRuntime.hx_null
+        else
+          let ctor_name = List.nth ctors idx in
+          createEnum e ctor_name params
+  else
+    HxRuntime.hx_null
+
+let getEnumConstructs (e : Obj.t) : string HxArray.t =
+  if HxRuntime.is_null e then
+    fields_to_hx_array []
+  else
+    let name = getEnumName e in
+    if HxRuntime.is_null (Obj.repr name) then
+      fields_to_hx_array []
+    else
+      match Hashtbl.find_opt enum_ctors name with
+      | Some ctors -> fields_to_hx_array ctors
+      | None -> fields_to_hx_array []
+
+(* `Type.getEnum` / enum introspection support (minimal, dynamic-friendly).
+
+   Why
+   - Portable test harnesses (utest) call `Type.getEnum/enumIndex/enumParameters/enumConstructor`
+     on values typed as `Dynamic`. This means we must operate on the dynamic (`Obj.t`)
+     representation and handle boxed enum values.
+
+   Strategy
+   - Enum values that cross into `Dynamic` should be boxed via `HxEnum.box_if_needed` so we can:
+     - recover the enum name (`HxEnum.name_opt`), and
+     - inspect the raw OCaml variant payload for ctor index + args.
+   - For non-boxed values, `enumIndex/enumParameters` still work best-effort by inspecting the
+     raw OCaml value shape (int immediates and variant blocks). `getEnum/enumConstructor` need
+     the enum name, so they return null/`null`-string when not boxed. *)
+
+let getEnum (o : Obj.t) : Obj.t =
+  if HxRuntime.is_null o then
+    HxRuntime.hx_null
+  else
+    match HxEnum.name_opt o with
+    | Some name -> enum_ name
+    | None -> HxRuntime.hx_null
+
+let enumIndex (o : Obj.t) : int =
+  if HxRuntime.is_null o then
+    -1
+  else
+    let v =
+      match HxEnum.name_opt o with
+      | Some _ -> Obj.field o 2
+      | None -> o
+    in
+    if Obj.is_int v then
+      (Obj.obj v : int)
+    else
+      Obj.tag v
+
+let enumParameters (o : Obj.t) : Obj.t HxArray.t =
+  let out = HxArray.create () in
+  if HxRuntime.is_null o then
+    out
+  else
+    let v =
+      match HxEnum.name_opt o with
+      | Some _ -> Obj.field o 2
+      | None -> o
+    in
+    if Obj.is_int v then
+      out
+    else (
+      let size = Obj.size v in
+      for i = 0 to size - 1 do
+        ignore (HxArray.push out (Obj.field v i))
+      done;
+      out)
+
+let enumConstructor (o : Obj.t) : string =
+  if HxRuntime.is_null o then
+    hx_null_string
+  else
+    match HxEnum.name_opt o with
+    | None -> hx_null_string
+    | Some name ->
+        let v = Obj.field o 2 in
+        let idx =
+          if Obj.is_int v then
+            (Obj.obj v : int)
+          else
+            Obj.tag v
+        in
+        match Hashtbl.find_opt enum_ctors name with
+        | None -> hx_null_string
+        | Some ctors -> (
+            try List.nth ctors idx with _ -> hx_null_string)
 
 let merge_tags (a : string list) (b : string list) : string list =
   let seen : (string, unit) Hashtbl.t =

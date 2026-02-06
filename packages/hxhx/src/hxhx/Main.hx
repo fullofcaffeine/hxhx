@@ -62,6 +62,31 @@ class Main {
 		return out;
 	}
 
+	static function hasAnyTarget(args:Array<String>):Bool {
+		// Not exhaustive; just enough to detect "some real platform was chosen".
+		//
+		// In `--hxhx-ocaml-interp` mode we primarily care about avoiding the "no target"
+		// compiler configuration, which can trigger internal stage0 crashes in upstream
+		// workloads (Gate1).
+		final targetFlags = [
+			"-js", "--js",
+			"-lua", "--lua",
+			"-python", "--python",
+			"-php", "--php",
+			"-neko", "--neko",
+			"-cpp", "--cpp",
+			"-cs", "--cs",
+			"-java", "--java",
+			"-jvm", "--jvm",
+			"-hl", "--hl",
+			"-swf", "--swf",
+			"-as3", "--as3",
+			"-xml", "--xml"
+		];
+		for (a in args) if (targetFlags.indexOf(a) != -1) return true;
+		return false;
+	}
+
 	static function sanitizeName(name:String):String {
 		final out = new StringBuf();
 		final s = name == null ? "" : name;
@@ -166,6 +191,26 @@ class Main {
 		final outDir = getDefineValue(argv, "ocaml_output");
 		if (outDir == null || outDir.length == 0) {
 			fatal("hxhx: ocaml run mode requires -D ocaml_output=<dir> (or use --target ocaml preset)");
+		}
+
+		// NOTE (Gate1 bring-up):
+		// Some upstream workloads trigger internal stage0 compiler failures when invoked in a
+		// "no target selected" configuration (even if a custom target will generate output
+		// via `onAfterGenerate`).
+		//
+		// To keep the harness stable, inject a sys-capable dummy platform so the compiler
+		// has a concrete backend selected, then disable that backend's output.
+		//
+		// We use `--neko` because it allows `sys.*` (unlike JS). The emitted Neko output is
+		// suppressed via `--no-output`; the actual artifact we care about is the OCaml output
+		// produced by `reflaxe.ocaml`.
+		if (!hasAnyTarget(argv)) {
+			argv = argv.copy();
+			argv.push("--neko");
+			argv.push(haxe.io.Path.join([outDir, "_hxhx_dummy.n"]));
+			if (argv.indexOf("--no-output") == -1) {
+				argv.push("--no-output");
+			}
 		}
 
 		// Clean output dir to avoid stale dune artifacts.

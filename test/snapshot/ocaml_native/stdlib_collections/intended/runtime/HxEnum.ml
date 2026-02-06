@@ -68,3 +68,45 @@ let unbox_or_obj (expected : string) (v : Obj.t) : Obj.t =
     if name = expected then Obj.field v 2 else v
   else
     v
+
+(* `Type.enumEq` support (minimal).
+
+   Why
+   - Haxe disallows `==` on enums with arguments, but provides `Type.enumEq` to
+     compare enum values structurally (constructor + args).
+   - Our backend represents enums as native OCaml variants for idiomatic codegen,
+     which means we can inspect constructor tags/fields via `Obj`.
+
+   Semantics (best-effort, aligns with static targets)
+   - `null` only equals `null`.
+   - Constant constructors compare by constructor index.
+   - Constructors with args compare by tag + arity, then compare each argument
+     using Haxe dynamic equality (`HxRuntime.dynamic_equals`) so object identity
+     is preserved (and Int/Float/String behave like Haxe `==`).
+
+   Note
+   - This expects raw (unboxed) enum values (`Obj.repr` of the OCaml variant).
+     When enum values are carried as `Obj.t` in Dynamic contexts, they may be
+     boxed via `box_if_needed`; those callsites should unbox first if needed. *)
+
+let enum_eq (a : Obj.t) (b : Obj.t) : bool =
+  if HxRuntime.is_null a || HxRuntime.is_null b then
+    HxRuntime.is_null a && HxRuntime.is_null b
+  else if Obj.is_int a then
+    Obj.is_int b && (Obj.obj a : int) = (Obj.obj b : int)
+  else if Obj.is_int b then
+    false
+  else if Obj.tag a <> Obj.tag b then
+    false
+  else
+    let sa = Obj.size a in
+    let sb = Obj.size b in
+    if sa <> sb then
+      false
+    else (
+      let rec loop i =
+        if i >= sa then true
+        else if HxRuntime.dynamic_equals (Obj.field a i) (Obj.field b i) then loop (i + 1)
+        else false
+      in
+      loop 0)

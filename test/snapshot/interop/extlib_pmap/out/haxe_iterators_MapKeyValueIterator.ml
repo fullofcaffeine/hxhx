@@ -3,3 +3,12 @@
 (* Haxe type: haxe.iterators.MapKeyValueIterator *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t }
+
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.iterators.MapKeyValueIterator" } : t) in (
+  ignore ();
+  self
+)
+
+let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.iterators.MapKeyValueIterator" } : t)
