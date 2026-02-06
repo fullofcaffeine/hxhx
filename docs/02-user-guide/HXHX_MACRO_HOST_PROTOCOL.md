@@ -252,9 +252,11 @@ Notes:
   - `pos` is currently `null` (no macro-user positions yet)
   - `FFun` bodies are stubbed with a trivial `null` expression
   - only `name`, `access`, and a coarse `kind` (`fun` vs `var`) are preserved
-- When an allowlisted build-macro entrypoint returns `Array<Field>`, the macro host computes a shallow delta
-  by field name against the snapshot returned by `Context.getBuildFields()` and emits only **new** members
-  via `compiler.emitBuildFields`. Modifying existing fields is intentionally ignored at this rung.
+- When an allowlisted build-macro entrypoint returns `Array<Field>`, the macro host prints the supported
+  subset of fields into raw member snippets and forwards them via `compiler.emitBuildFields`.
+  - If the emitted snippet has the same name as an existing member, the compiler treats it as a
+    **replacement** (drop old, keep new).
+  - Deletion by omission is not supported yet.
 
 ### `context.defined`
 

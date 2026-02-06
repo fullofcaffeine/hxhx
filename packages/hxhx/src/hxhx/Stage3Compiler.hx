@@ -563,8 +563,42 @@ class Stage3Compiler {
 
 				final oldDecl = pm.getDecl();
 				final oldCls = HxModuleDecl.getMainClass(oldDecl);
-				final mergedFns = HxClassDecl.getFunctions(oldCls).concat(gen.functions);
-				final mergedFields = HxClassDecl.getFields(oldCls).concat(gen.fields);
+				// Stage4 build-macro bring-up: treat emitted members as "add or replace".
+				//
+				// Why
+				// - Upstream build macros commonly return a full `Array<Field>` where some entries
+				//   are modifications of existing members.
+				// - Our transport is still raw member snippets, so we implement a conservative
+				//   replacement model: if the emitted snippet parses to a member with the same
+				//   name as an existing one, we drop the existing member and keep the new one.
+				//
+				// Non-goal
+				// - True deletion by omission is not supported yet.
+				inline function fnKey(fn:HxFunctionDecl):String {
+					// In our Stage3 bootstrap AST, `static`/visibility parsing is still incomplete for
+					// some member forms. For replacement semantics we therefore match by name only.
+					return HxFunctionDecl.getName(fn);
+				}
+				inline function fieldKey(f:HxFieldDecl):String {
+					return HxFieldDecl.getName(f);
+				}
+
+				final genFnKeys:Map<String, Bool> = new Map();
+				for (fn in gen.functions) genFnKeys.set(fnKey(fn), true);
+				final genFieldKeys:Map<String, Bool> = new Map();
+				for (f in gen.fields) genFieldKeys.set(fieldKey(f), true);
+
+				final keptFns = new Array<HxFunctionDecl>();
+				for (fn in HxClassDecl.getFunctions(oldCls)) {
+					if (!genFnKeys.exists(fnKey(fn))) keptFns.push(fn);
+				}
+				final mergedFns = keptFns.concat(gen.functions);
+
+				final keptFields = new Array<HxFieldDecl>();
+				for (f in HxClassDecl.getFields(oldCls)) {
+					if (!genFieldKeys.exists(fieldKey(f))) keptFields.push(f);
+				}
+				final mergedFields = keptFields.concat(gen.fields);
 				final newCls = new HxClassDecl(
 					HxClassDecl.getName(oldCls),
 					HxClassDecl.getHasStaticMain(oldCls),

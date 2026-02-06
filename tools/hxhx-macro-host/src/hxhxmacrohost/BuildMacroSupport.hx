@@ -18,7 +18,10 @@ import hxhxmacrohost.api.Compiler;
 	- Emit only **new** fields back to the compiler via `Compiler.emitBuildFields(...)`.
 
 	Gotchas
-	- Delta is by field name only. Modifications to existing fields are ignored in this rung.
+	- Replacement is by field name only. If a returned field name already exists, we treat the
+	  emitted member snippet as a **replacement** for the existing member (compiler-side merge
+	  removes the old by name before adding the new one).
+	- Removals are not supported yet (omitting a field from the returned array does not delete it).
 	- If a build macro does not call `Context.getBuildFields()`, we cannot compute a delta, so we emit nothing.
 **/
 class BuildMacroSupport {
@@ -86,9 +89,8 @@ class BuildMacroSupport {
 		return switch (f.kind) {
 			case FFun(fn):
 				final msg = tryExtractTraceString(fn == null ? null : fn.expr);
-				final body = (msg == null)
-					? "{}"
-					: "{ trace(\"" + escapeHaxeString(msg) + "\"); }";
+				if (msg == null) return null;
+				final body = "{ trace(\"" + escapeHaxeString(msg) + "\"); }";
 				vis + stat + " function " + f.name + "():Void " + body;
 			case _:
 				null;
@@ -125,7 +127,8 @@ class BuildMacroSupport {
 			MacroRuntime.clearCurrentBuildFieldSnapshot();
 			return;
 		}
-		final newFields = new Array<Field>();
+		final emittedFields = new Array<Field>();
+		final seenByName:Map<String, Bool> = new Map();
 
 		for (raw in arr) {
 			if (raw == null) continue;
@@ -133,17 +136,24 @@ class BuildMacroSupport {
 			final f:Field = cast raw;
 			if (f == null || f.name == null || f.name.length == 0) continue;
 
-			if (MacroRuntime.hasCurrentBuildFieldName(f.name)) continue;
-			newFields.push(f);
+			if (seenByName.exists(f.name)) continue;
+			seenByName.set(f.name, true);
+
+			// Emit both:
+			// - truly new fields (name not in snapshot), and
+			// - supported replacements (name already in snapshot).
+			//
+			// Replacement behavior is implemented compiler-side when merging emitted members.
+			emittedFields.push(f);
 		}
 
-		if (newFields.length == 0) {
+		if (emittedFields.length == 0) {
 			MacroRuntime.clearCurrentBuildFieldSnapshot();
 			return;
 		}
 
 		final lines = new Array<String>();
-		for (f in newFields) {
+		for (f in emittedFields) {
 			final text = printFieldMinimal(f);
 			if (text != null && text.length > 0) lines.push(text);
 		}
