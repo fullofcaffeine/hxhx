@@ -16,14 +16,16 @@
 **/
 class TyperContext {
 	final index:TyperIndex;
+	final loader:Null<LazyTypeLoader>;
 	final filePath:String;
 	final modulePath:String;
 	final packagePath:String;
 	final imports:Array<String>;
 	final classFullName:String;
 
-	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, imports:Array<String>, classFullName:String) {
+	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, imports:Array<String>, classFullName:String, ?loader:LazyTypeLoader) {
 		this.index = index;
+		this.loader = loader;
 		this.filePath = filePath == null || filePath.length == 0 ? "<unknown>" : filePath;
 		this.modulePath = modulePath == null ? "" : modulePath;
 		this.packagePath = packagePath == null ? "" : packagePath;
@@ -47,7 +49,10 @@ class TyperContext {
 	public function getClassFullName():String return classFullName;
 
 	public function resolveType(typePath:String):Null<TyClassInfo> {
-		return index == null ? null : index.resolveTypePath(typePath, packagePath, imports);
+		if (index == null) return null;
+		final hit = index.resolveTypePath(typePath, packagePath, imports);
+		if (hit != null) return hit;
+		return loader == null ? null : loader.ensureTypeAvailable(typePath, packagePath, imports);
 	}
 
 	public function currentClass():Null<TyClassInfo> {

@@ -72,7 +72,7 @@ class TyperStage {
 		- Stage 3.3 needs cross-module knowledge (imports, class fields, statics)
 		  to type `Util.ping()` and `this.x` in upstream-shaped code.
 	**/
-	public static function typeResolvedModule(m:ResolvedModule, index:TyperIndex):TypedModule {
+	public static function typeResolvedModule(m:ResolvedModule, index:TyperIndex, ?loader:ModuleLoader):TypedModule {
 		final pm = ResolvedModule.getParsed(m);
 		final decl = pm.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
@@ -80,7 +80,7 @@ class TyperStage {
 		final cls = HxModuleDecl.getMainClass(decl);
 		final className = HxClassDecl.getName(cls);
 		final classFullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-		final ctx = new TyperContext(index, pm.getFilePath(), ResolvedModule.getModulePath(m), pkg, imports, classFullName);
+		final ctx = new TyperContext(index, pm.getFilePath(), ResolvedModule.getModulePath(m), pkg, imports, classFullName, loader);
 
 		final typedFns = new Array<TyFunctionEnv>();
 		for (fn in HxClassDecl.getFunctions(cls)) typedFns.push(typeFunction(fn, ctx));

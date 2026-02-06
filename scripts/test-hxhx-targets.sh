@@ -348,6 +348,33 @@ echo "$out" | grep -q "^OK$"
 echo "$out" | grep -vq "^BAD$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: lazy type-driven module loading (same-package type)"
+tmplazy="$tmpdir/lazy_module_loading"
+mkdir -p "$tmplazy/src/p"
+cat >"$tmplazy/src/p/Main.hx" <<'HX'
+package p;
+
+class Main {
+  static function main() {
+    // No `import p.Util;` here. In real Haxe this resolves via same-package lookup.
+    Util.ping();
+  }
+}
+HX
+cat >"$tmplazy/src/p/Util.hx" <<'HX'
+package p;
+
+class Util {
+  public static function ping() {
+    Sys.println("lazy=ok");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmplazy/src" -main p.Main --hxhx-out "$tmplazy/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^lazy=ok$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: type-only checks full graph"
 type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"

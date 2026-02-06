@@ -1,0 +1,231 @@
+import haxe.io.Path;
+
+/**
+	Stage3 module loader: type-driven, on-demand module parsing and indexing.
+
+	Why
+	- Stage2/Stage3 resolution currently builds a module graph by following explicit imports.
+	  That is insufficient for real-world Haxe, where unimported types can still be resolved via:
+	  - same-package lookup (`package p; class Main { static function main() new Util(); }`)
+	  - fully-qualified type paths used directly (`new p.Util()`)
+	- Upstream’s compiler loads modules lazily: typing drives which modules enter the cache.
+	- For Gate1 bring-up, we want to replace brittle “same package scan” heuristics with a
+	  deterministic, type-driven loader that can be exercised via tests.
+
+	What
+	- Given:
+	  - a set of classpaths,
+	  - a `defines` map (for conditional compilation filtering),
+	  - and a shared `TyperIndex`,
+	  this loader can:
+	  - resolve a *module path* to a `.hx` file,
+	  - parse it (via `ParserStage`),
+	  - insert its class signature into the `TyperIndex`,
+	  - and expose newly-loaded `ResolvedModule` values to the Stage3 driver.
+
+	How
+	- This loader is intentionally conservative:
+	  - It only attempts candidate module paths that are derivable from the current typing context
+	    (fully-qualified, explicit imports, same-package).
+	  - It is cycle-safe via a `visited` set keyed by module path.
+	  - It applies `HxConditionalCompilation.filterSource` before parsing so inactive branches
+	    don’t spuriously pull modules into the compilation.
+
+	Gotchas
+	- Stage3 still does not model full “module has multiple types” semantics. We index only the
+	  main class of each module (consistent with the bootstrap parser/model).
+**/
+class ModuleLoader extends LazyTypeLoader {
+	final classPaths:Array<String>;
+	final defines:haxe.ds.StringMap<String>;
+	final index:TyperIndex;
+
+	// Module-path based cycle/dup guard.
+	final visited:haxe.ds.StringMap<Bool>;
+
+	// Newly loaded modules (drained by the Stage3 driver).
+	final pending:Array<ResolvedModule>;
+
+	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex) {
+		super();
+		this.classPaths = classPaths == null ? [] : classPaths;
+		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
+		this.index = index;
+		this.visited = new haxe.ds.StringMap<Bool>();
+		this.pending = [];
+	}
+
+	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {
+		if (resolved == null) return;
+		for (m in resolved) {
+			final mp = ResolvedModule.getModulePath(m);
+			if (mp != null && mp.length > 0) visited.set(mp, true);
+		}
+	}
+
+	public function drainNewModules():Array<ResolvedModule> {
+		if (pending.length == 0) return [];
+		final out = pending.copy();
+		pending.resize(0);
+		return out;
+	}
+
+	/**
+		Ensure that a type path can be resolved against the shared `TyperIndex`, loading a module
+		on-demand if needed.
+
+		Returns the resolved `TyClassInfo` or `null` if it still cannot be resolved.
+	**/
+	override public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyClassInfo> {
+		if (typePath == null) return null;
+		final raw = StringTools.trim(typePath);
+		if (raw.length == 0) return null;
+
+		// Fast path: already indexed.
+		final pkg = packagePath == null ? "" : packagePath;
+		final hit0 = index == null ? null : index.resolveTypePath(raw, pkg, imports);
+		if (hit0 != null) return hit0;
+
+		// Try deriving candidate module paths from the typing context.
+		final candidates = candidateModulePaths(raw, pkg, imports);
+		for (mp in candidates) {
+			if (mp == null || mp.length == 0) continue;
+			loadModuleByPath(mp);
+
+			final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
+			if (hit != null) return hit;
+		}
+
+		return null;
+	}
+
+	static function candidateModulePaths(typePath:String, packagePath:String, imports:Array<String>):Array<String> {
+		final out = new Array<String>();
+		final raw = typePath == null ? "" : StringTools.trim(typePath);
+		if (raw.length == 0) return out;
+
+		// Fully-qualified candidate first.
+		if (raw.indexOf(".") >= 0) out.push(raw);
+
+		// Imported candidates (match by last segment).
+		if (imports != null) {
+			for (imp in imports) {
+				if (imp == null) continue;
+				final s = StringTools.trim(imp);
+				if (s.length == 0) continue;
+				if (StringTools.endsWith(s, ".*")) continue;
+				final parts = s.split(".");
+				final last = parts.length == 0 ? "" : parts[parts.length - 1];
+				if (last == raw) out.push(s);
+			}
+		}
+
+		// Same-package candidate.
+		final pkg = packagePath == null ? "" : StringTools.trim(packagePath);
+		if (pkg.length > 0 && raw.indexOf(".") == -1) out.push(pkg + "." + raw);
+
+		// Dedupe while preserving order.
+		final seen = new haxe.ds.StringMap<Bool>();
+		final uniq = new Array<String>();
+		for (m in out) {
+			if (m == null || m.length == 0) continue;
+			if (seen.exists(m)) continue;
+			seen.set(m, true);
+			uniq.push(m);
+		}
+		return uniq;
+	}
+
+	function loadModuleByPath(modulePath:String):Void {
+		if (modulePath == null || modulePath.length == 0) return;
+		if (visited.exists(modulePath)) return;
+		visited.set(modulePath, true);
+
+		final filePath = resolveModuleFile(modulePath);
+		if (filePath == null) return;
+
+		final source = try sys.io.File.getContent(filePath) catch (_:Dynamic) null;
+		if (source == null) return;
+
+		final filtered = HxConditionalCompilation.filterSource(source, defines);
+		final parsed = try ParserStage.parse(filtered, filePath) catch (_:Dynamic) null;
+		if (parsed == null) return;
+
+		final rm = new ResolvedModule(modulePath, filePath, parsed);
+		pending.push(rm);
+
+		if (index != null) {
+			final info = TyperIndexBuild.fromResolvedModule(rm);
+			if (info != null) index.addClass(info);
+		}
+	}
+
+	function resolveModuleFile(modulePath:String):Null<String> {
+		final parts = modulePath.split(".");
+		if (parts.length == 0) return null;
+
+		final direct = parts.join("/") + ".hx";
+		for (cp in classPaths) {
+			final candidate = Path.join([cp, direct]);
+			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) return candidate;
+		}
+
+		// Sub-type fallback: pack.Mod.SubType -> pack/Mod.hx
+		if (parts.length >= 2) {
+			final fallbackParts = parts.slice(0, parts.length - 1);
+			final fallback = fallbackParts.join("/") + ".hx";
+			for (cp in classPaths) {
+				final candidate = Path.join([cp, fallback]);
+				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) return candidate;
+			}
+		}
+
+		return null;
+	}
+}
+
+/**
+	Small helper to build `TyClassInfo` incrementally (without rebuilding a whole `TyperIndex`).
+
+	Why
+	- `TyperIndex.build(...)` scans a whole resolved module list.
+	- The lazy loader needs to add a single module’s signature into the existing index.
+**/
+class TyperIndexBuild {
+	static function classFullName(pkg:String, cls:String):String {
+		final p = pkg == null ? "" : StringTools.trim(pkg);
+		return (p.length == 0) ? cls : (p + "." + cls);
+	}
+
+	public static function fromResolvedModule(m:ResolvedModule):Null<TyClassInfo> {
+		if (m == null) return null;
+		final pm = ResolvedModule.getParsed(m);
+		if (pm == null) return null;
+		final decl = pm.getDecl();
+		final pkg = HxModuleDecl.getPackagePath(decl);
+		final cls = HxModuleDecl.getMainClass(decl);
+		final clsName = HxClassDecl.getName(cls);
+		final full = classFullName(pkg, clsName);
+
+		final fields = new haxe.ds.StringMap<TyType>();
+		for (f in HxClassDecl.getFields(cls)) {
+			fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
+		}
+
+		final statics = new haxe.ds.StringMap<TyFunSig>();
+		final instances = new haxe.ds.StringMap<TyFunSig>();
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			final fnName = HxFunctionDecl.getName(fn);
+			final isStatic = HxFunctionDecl.getIsStatic(fn);
+			final args = new Array<TyType>();
+			for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+
+			final retHint = HxFunctionDecl.getReturnTypeHint(fn);
+			final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
+			final sig = new TyFunSig(fnName, isStatic, args, ret);
+			if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
+		}
+
+		return new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances);
+	}
+}

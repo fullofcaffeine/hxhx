@@ -822,6 +822,8 @@ class Stage3Compiler {
 		}
 
 		final typerIndex = TyperIndex.build(resolvedForTyping);
+		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex);
+		moduleLoader.markResolvedAlready(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
 		//
@@ -844,7 +846,12 @@ class Stage3Compiler {
 			var unsupportedFnCount = 0;
 			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
 			var rootTyped:Null<TypedModule> = null;
-			for (m in resolvedForTyping) {
+			// Worklist so the typer can lazily load modules on demand.
+			final toType = resolvedForTyping.copy();
+			var cursor = 0;
+			while (cursor < toType.length) {
+				final m = toType[cursor];
+				cursor += 1;
 				try {
 					final pm = ResolvedModule.getParsed(m);
 					final unsupportedInFile = countUnsupportedExprsInModule(pm);
@@ -891,7 +898,7 @@ class Stage3Compiler {
 						headerOnlyCount += 1;
 					}
 					parsedMethodsTotal += HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
-					final typed = TyperStage.typeResolvedModule(m, typerIndex);
+					final typed = TyperStage.typeResolvedModule(m, typerIndex, moduleLoader);
 					if (ResolvedModule.getFilePath(m) == rootFilePath) rootTyped = typed;
 					typedCount += 1;
 				} catch (e:Dynamic) {
@@ -899,6 +906,11 @@ class Stage3Compiler {
 					return error(
 						"type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e)
 					);
+				}
+				// Incorporate any newly loaded modules into the worklist.
+				for (nm in moduleLoader.drainNewModules()) {
+					resolvedForTyping.push(nm);
+					toType.push(nm);
 				}
 			}
 
@@ -963,12 +975,22 @@ class Stage3Compiler {
 		// Stage3 "real compiler" rung: type the full resolved graph (best-effort),
 		// then emit/build an executable from the typed program.
 		final typedModules = new Array<TypedModule>();
-		for (m in resolvedForTyping) {
+		// Worklist so the typer can lazily load modules on demand. Newly loaded modules are typed and
+		// included in the emitted program so `dune build` does not fail on missing modules.
+		final toType = resolvedForTyping.copy();
+		var cursor = 0;
+		while (cursor < toType.length) {
+			final m = toType[cursor];
+			cursor += 1;
 			try {
-				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex));
+				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex, moduleLoader));
 			} catch (e:Dynamic) {
 				closeMacroSession();
 				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e));
+			}
+			for (nm in moduleLoader.drainNewModules()) {
+				resolvedForTyping.push(nm);
+				toType.push(nm);
 			}
 		}
 
