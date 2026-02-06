@@ -60,6 +60,29 @@ To avoid GPL “viral” obligations and preserve the ability to embed/bundle `h
   - Prefer making `hxhx` truly non-delegating before publishing “batteries included” builds.
 - Inbound contributions must be MIT-compatible; avoid accepting code with unclear provenance/licensing.
 
+### “Not a translation” rule (non-derivative development)
+
+When using upstream Haxe (GPL compiler) as a reference, the rule is:
+
+- Use upstream **only as an oracle for behavior** (tests, CLI output, runtime semantics).
+- Reading upstream source to understand intent/constraints is OK, but **do not translate/port** upstream compiler code (OCaml → Haxe) into this repository.
+
+Practical workflow to enforce this:
+
+- Prefer writing or running a **test** (repo-local fixture or upstream oracle run) that demonstrates the behavior we need.
+- If you must consult upstream implementation details:
+  - write down a *short, behavior-level* note in the relevant bead comment (what/why/expected outcome),
+  - then implement from that note + tests, not by “mechanically rewriting” the upstream code.
+- Do not copy/paste code blocks, unique data structures, or large-scale organization from `vendor/haxe/src`.
+  - If a solution naturally converges on a common algorithm (e.g. unification/DCE), implement it independently and document it.
+
+Legal reality note (engineering guidance, not legal advice):
+
+- We cannot prevent anyone from *attempting* a claim, but we can make it easy to demonstrate good provenance:
+  - upstream is not vendored,
+  - changes are test-driven and documented,
+  - and we are not shipping translated upstream compiler code.
+
 ## Upstream OCaml Reference (vendored checkout)
 
 When implementing backend semantics or Haxe-in-Haxe bootstrap behavior, cross-check against upstream Haxe’s **existing OCaml implementation**:
