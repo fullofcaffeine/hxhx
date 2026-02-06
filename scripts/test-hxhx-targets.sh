@@ -290,6 +290,25 @@ exe="$(echo "$out" | sed -n 's/^exe=//p' | tail -n 1)"
 test -n "$exe"
 test -f "$exe"
 
+echo "== Stage3 bring-up: omitted optional args don't partial apply"
+tmpopt="$tmpdir/optional_args"
+mkdir -p "$tmpopt/src"
+cat >"$tmpopt/src/Main.hx" <<'HX'
+class Main {
+  static function f(a:Int, b:Int, ?c:Int):Int {
+    return a;
+  }
+
+  static function main() {
+    // Bring-up regression: calling a known function with fewer args than its declaration
+    // must not emit an OCaml partial application (should fill missing optional/default args).
+    f(1, 2);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 -cp "$tmpopt/src" -main Main --hxhx-out "$tmpopt/out")"
+echo "$out" | grep -q "^stage3=ok$"
+
 echo "== Stage3 bring-up: emits full bodies (trace prints)"
 tmpfull="$tmpdir/full_body"
 mkdir -p "$tmpfull/src"
@@ -347,6 +366,13 @@ stage3_out4="$tmpdir/out_stage3_upstream_macro"
 out="$(HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
+echo "$out" | grep -q "^stage3=ok$"
+
+echo "== Stage3 bring-up: runs a non-builtin macro entrypoint with a String arg"
+stage3_out5="$tmpdir/out_stage3_arg_macro"
+out="$(HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'hxhxmacros.ArgsMacros.setArg("ok")' --hxhx-out "$stage3_out5")"
+echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Contradiction fails fast"

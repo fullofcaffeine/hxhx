@@ -34,6 +34,19 @@ normalize_cp() {
   echo "$cp"
 }
 
+escape_hx_string() {
+  local s="$1"
+  # Escape for inclusion inside a Haxe string literal.
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  echo "$s"
+}
+
+trim_ws() {
+  # Trim leading/trailing whitespace without interpreting quotes.
+  echo "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
 (
   cd "$TOOL_DIR"
   rm -rf out
@@ -50,7 +63,9 @@ normalize_cp() {
     # `HXHX_MACRO_HOST_ENTRYPOINTS` is a `;`-separated list of exact expression strings to dispatch,
     # e.g.: `hxhxmacros.ExternalMacros.external();some.pack.M.foo()`
     #
-    # For bring-up we only support the shape `pack.Class.method()` (no args).
+    # For bring-up we only support:
+    # - `pack.Class.method()` (no args)
+    # - `pack.Class.method(\"...\")` (one String literal arg)
     {
       echo "package hxhxmacrohost;"
       echo ""
@@ -62,22 +77,45 @@ normalize_cp() {
 
       IFS=';' read -r -a entries <<<"${HXHX_MACRO_HOST_ENTRYPOINTS}"
       for raw in "${entries[@]}"; do
-        entry="$(echo "$raw" | xargs)"
+        entry="$(trim_ws "$raw")"
         if [ -z "$entry" ]; then
           continue
         fi
-        # Expect `...(...)` and only support `()` right now.
-        if [[ "$entry" != *"()" ]]; then
-          echo "      // Skipping unsupported entry (expected no-arg call): $entry"
+
+        # Expect `pack.Class.method(...)`.
+        if [[ "$entry" != *")" ]]; then
+          echo "      // Skipping unsupported entry (expected call expression): $entry"
           continue
         fi
-        call="${entry%()}"
-        cls="${call%.*}"
-        meth="${call##*.}"
-        if [ -z "$cls" ] || [ -z "$meth" ] || [ "$cls" = "$call" ]; then
+
+        call_prefix="${entry%%(*}"
+        args_inside="${entry#*(}"
+        args_inside="${args_inside%)}"
+
+        cls="${call_prefix%.*}"
+        meth="${call_prefix##*.}"
+        if [ -z "$cls" ] || [ -z "$meth" ] || [ "$cls" = "$call_prefix" ]; then
           echo "      // Skipping malformed entry: $entry"
           continue
         fi
+
+        args_inside="$(trim_ws "$args_inside")"
+        call_args=""
+        if [ -n "$args_inside" ]; then
+          # Bring-up rung: only support a single String literal argument.
+          #
+          # Examples:
+          # - foo.Bar.baz(\"ok\")
+          # - foo.Bar.baz('ok')  (accepted by Haxe for string literals)
+          if [[ ( "$args_inside" == \"*\" && "$args_inside" == *\" ) || ( "$args_inside" == \'*\' && "$args_inside" == *\' ) ]]; then
+            call_args="$args_inside"
+          else
+            echo "      // Skipping unsupported entry (expected 0 args or 1 string literal arg): $entry"
+            continue
+          fi
+        fi
+
+        entry_escaped="$(escape_hx_string "$entry")"
 
         # Emit case. We reference the method directly so Haxe resolves it statically.
         # We intentionally only dispatch exact strings for auditability.
@@ -85,7 +123,11 @@ normalize_cp() {
         # We discard the entrypoint return value and return `"ok"` so we can support both:
         # - `Void` macro entrypoints like `Macro.init()`
         # - `String` macro entrypoints used for deterministic bring-up reports
-        echo "      case \"${entry}\": { ${cls}.${meth}(); \"ok\"; }"
+        if [ -n "$call_args" ]; then
+          echo "      case \"${entry_escaped}\": { ${cls}.${meth}(${call_args}); \"ok\"; }"
+        else
+          echo "      case \"${entry_escaped}\": { ${cls}.${meth}(); \"ok\"; }"
+        fi
       done
 
       echo "      case _: null;"

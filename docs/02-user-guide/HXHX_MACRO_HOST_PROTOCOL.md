@@ -254,7 +254,9 @@ In the current bring-up rung:
 Bring-up limitation (important):
 
 - The generated allowlist dispatcher (`scripts/hxhx/build-hxhx-macro-host.sh`) currently supports only
-  **no-argument** calls in the shape `pack.Class.method()`.
+  calls of the shapes:
+  - `pack.Class.method()` (no args)
+  - `pack.Class.method("...")` (one String literal arg)
 - Expressions like `include("unit.TestInt64")` or `nullSafety("reflaxe")` are not executed yet in the
   Stage 4 bring-up model. They will become supported once we replace the allowlist with a real
   macro-expression evaluation model and/or a richer entrypoint registry.
