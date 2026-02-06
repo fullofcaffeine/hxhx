@@ -122,3 +122,28 @@ Instead, prefer:
 
 - a small repo-local acceptance example that uses a build macro and asserts runtime behavior (fast regression signal),
 - plus the upstream gates (`compile-macro.hxml`, then `runci Macro`) as the long-term oracle.
+
+## ABI versioning (Stage 4 bring-up)
+
+Stage 4’s first macro execution model runs macros in an out-of-process “macro host” and communicates over a
+versioned, line-based RPC protocol.
+
+Contract (current bring-up):
+
+- Macro host prints `hxhx_macro_rpc_v=1` as its first line (server banner).
+- Compiler replies `hello proto=1`.
+- Macro host replies `ok`.
+
+This is intentionally small but **strict**: if the version mismatches, `hxhx` must fail fast with a clear error.
+
+Why this matters
+
+- It lets us evolve the macro/plugin boundary (hooks, emitted artifacts, typed AST transport) without silently
+  breaking older builds.
+- It gives the repo a stable “plugin ABI” concept even before we support upstream’s full macro surface.
+
+Tests
+
+- `scripts/test-hxhx-targets.sh` exercises:
+  - handshake + stub APIs (`--hxhx-macro-selftest`)
+  - fixture macro libraries that behave like compiler plugins (hooks + defines + classpath injection + emission)

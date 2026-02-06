@@ -399,6 +399,48 @@ echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 
+echo "== Stage4 bring-up: fixture plugin exercises defines + classpath injection + hook emission"
+tmpplugin="$tmpdir/plugin_fixture"
+mkdir -p "$tmpplugin/src"
+mkdir -p "$tmpplugin/plugin_cp"
+cat >"$tmpplugin/src/Main.hx" <<'HX'
+import AddedFromPlugin;
+
+class Main {
+  static function main() {
+    AddedFromPlugin.ping();
+    Sys.println("main=ok");
+  }
+}
+HX
+cat >"$tmpplugin/plugin_cp/AddedFromPlugin.hx" <<'HX'
+class AddedFromPlugin {
+  public static function ping() {
+    Sys.println("plugin_cp=ok");
+  }
+}
+HX
+plugin_out="$tmpplugin/out"
+out="$(
+  HXHX_PLUGIN_FIXTURE_CP="$tmpplugin/plugin_cp" \
+  HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 \
+  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
+    -cp "$tmpplugin/src" \
+    -cp "$ROOT/examples/hxhx-macros/src" \
+    -main Main \
+    --macro 'hxhxmacros.PluginFixtureMacros.init()' \
+    --hxhx-out "$plugin_out"
+)"
+echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_PLUGIN_FIXTURE\\]=1$"
+echo "$out" | grep -q "^hook_afterTyping\\[0\\]=ok$"
+echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
+echo "$out" | grep -q "^stage3=ok$"
+test -f "$plugin_out/HxHxPluginFixtureGen.ml"
+echo "$out" | grep -q "^plugin_cp=ok$"
+echo "$out" | grep -q "^main=ok$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: expression macro expansion replaces call sites"
 tmpexpr="$tmpdir/expr_macro"
 mkdir -p "$tmpexpr/src"
