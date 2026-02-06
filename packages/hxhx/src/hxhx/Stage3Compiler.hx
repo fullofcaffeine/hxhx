@@ -6,6 +6,41 @@ import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
 
+private typedef HaxelibSpec = {
+	/**
+		Directories that should be added to the Haxe classpath.
+
+		Notes
+		- `haxelib path <lib>` historically prints these as raw lines (without a `-cp` prefix).
+		- Some libraries also emit explicit `-cp` lines via `extraParams.hxml`. We normalize those
+		  into this array as well.
+	**/
+	final classPaths:Array<String>;
+
+	/**
+		Raw `-D` defines from the library.
+
+		Why keep them raw
+		- Our conditional compilation + macro-state define seeding already expects the upstream-ish
+		  `"name=value"` shape used by CLI `-D`.
+	**/
+	final defines:Array<String>;
+
+	/**
+		Raw `--macro <expr>` entries from the library.
+
+		Important bring-up note
+		- Stage3 currently treats `--library` primarily as classpath + define resolution.
+		- Executing library-provided `--macro` initializers is intentionally **opt-in** via
+		  `HXHX_RUN_HAXELIB_MACROS=1` to keep bring-up deterministic (and to avoid failing whenever
+		  a library's macros aren't compiled into the current macro host).
+	**/
+	final macros:Array<String>;
+
+	/** Any other flags printed by `haxelib path` that we don't recognize yet. **/
+	final unknownArgs:Array<String>;
+};
+
 /**
 	Stage 3 compiler bring-up (`--hxhx-stage3`).
 
@@ -219,8 +254,11 @@ class Stage3Compiler {
 		return (v == null || v.length == 0) ? "haxelib" : v;
 	}
 
-	static function resolveHaxelibPaths(lib:String):Array<String> {
-		final paths = new Array<String>();
+	static function resolveHaxelibSpec(lib:String):HaxelibSpec {
+		final classPaths = new Array<String>();
+		final defines = new Array<String>();
+		final macros = new Array<String>();
+		final unknownArgs = new Array<String>();
 		final p = new sys.io.Process(haxelibBin(), ["path", lib]);
 
 		try {
@@ -228,9 +266,35 @@ class Stage3Compiler {
 				final raw = p.stdout.readLine();
 				final line = StringTools.trim(raw);
 				if (line.length == 0) continue;
-				// `haxelib path` prints `-D name=ver` lines; only paths matter here.
-				if (StringTools.startsWith(line, "-")) continue;
-				paths.push(line);
+				if (!StringTools.startsWith(line, "-")) {
+					classPaths.push(line);
+					continue;
+				}
+
+				// `haxelib path` prints a 1-arg-per-line stream that may include `-D`, `--macro`, and
+				// other compiler flags from `extraParams.hxml`.
+				if (StringTools.startsWith(line, "-D ")) {
+					final def = StringTools.trim(line.substr(3));
+					if (def.length > 0) defines.push(def);
+					continue;
+				}
+				if (StringTools.startsWith(line, "--macro ")) {
+					final expr = StringTools.trim(line.substr(8));
+					if (expr.length > 0) macros.push(expr);
+					continue;
+				}
+				if (StringTools.startsWith(line, "-cp ")) {
+					final cp = StringTools.trim(line.substr(4));
+					if (cp.length > 0) classPaths.push(cp);
+					continue;
+				}
+				if (StringTools.startsWith(line, "--class-path ")) {
+					final cp = StringTools.trim(line.substr(13));
+					if (cp.length > 0) classPaths.push(cp);
+					continue;
+				}
+
+				unknownArgs.push(line);
 			}
 		} catch (_:Eof) {}
 
@@ -238,7 +302,7 @@ class Stage3Compiler {
 		if (code != 0) {
 			return throw "haxelib path " + lib + " failed with exit code " + code;
 		}
-		return paths;
+		return { classPaths: classPaths, defines: defines, macros: macros, unknownArgs: unknownArgs };
 	}
 
 	static function absFromCwd(cwd:String, path:String):String {
@@ -547,13 +611,31 @@ class Stage3Compiler {
 
 			// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
 			hxhx.macro.MacroState.reset();
-			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
+			final libsResolved = {
+				final out = new Array<HaxelibSpec>();
+				for (lib in parsed.libs) out.push(resolveHaxelibSpec(lib));
+				out;
+			}
+			final libDefines = {
+				final out = new Array<String>();
+				for (s in libsResolved) for (d in s.defines) if (out.indexOf(d) == -1) out.push(d);
+				out;
+			}
+			final allDefines = parsed.defines.concat(libDefines);
+			hxhx.macro.MacroState.seedFromCliDefines(allDefines);
 			hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
+
+			final libMacros = {
+				final out = new Array<String>();
+				for (s in libsResolved) for (m in s.macros) if (out.indexOf(m) == -1) out.push(m);
+				out;
+			}
+			final runHaxelibMacros = isTrueEnv("HXHX_RUN_HAXELIB_MACROS");
 
 			final macroHostClassPaths = {
 				final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 				final libs = new Array<String>();
-				for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
+				for (s in libsResolved) for (p in s.classPaths) libs.push(absFromCwd(cwd, p));
 				final outAll = base.concat(libs);
 
 				// Avoid passing an explicit std classpath to the macro host build.
@@ -575,7 +657,7 @@ class Stage3Compiler {
 				}
 			}
 
-		if (!typeOnly && (parsed.macros.length > 0 || exprMacros.length > 0)) {
+		if (!typeOnly && (parsed.macros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0))) {
 			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
 			// for:
 			// - requested CLI `--macro` entrypoints, and
@@ -592,6 +674,10 @@ class Stage3Compiler {
 
 				try {
 					final entrypoints = new Array<String>();
+					// Library-provided macros (from `haxelib path <lib>` output) when enabled.
+					if (runHaxelibMacros) {
+						for (e in libMacros) if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1) entrypoints.push(e);
+					}
 					// CLI macros: include only non-builtin expressions (builtins are already compiled into the host).
 					if (anyNonBuiltinMacro(parsed.macros)) {
 						for (e in parsed.macros) if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1) entrypoints.push(e);
@@ -611,6 +697,9 @@ class Stage3Compiler {
 				// “execute macro expressions and surface deterministic results/errors”.
 				try {
 					macroSession = MacroHostClient.openSession();
+					if (runHaxelibMacros) {
+						for (i in 0...libMacros.length) Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
+					}
 					for (i in 0...parsed.macros.length) Sys.println("macro_run[" + i + "]=" + macroSession.run(parsed.macros[i]));
 				} catch (e:Dynamic) {
 					closeMacroSession();
@@ -628,7 +717,7 @@ class Stage3Compiler {
 		final classPaths = {
 			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 			final libs = new Array<String>();
-			for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
+			for (s in libsResolved) for (p in s.classPaths) libs.push(absFromCwd(cwd, p));
 			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
 			final out = base.concat(libs).concat(extra);
 			if (hxhx.macro.MacroState.hasGeneratedHxModules()) {
@@ -643,7 +732,7 @@ class Stage3Compiler {
 		// - CLI `-D` defines were seeded into MacroState at the start of the run.
 		// - Macro-time `Compiler.define(...)` calls (reverse RPC) also populate MacroState.
 		// - ResolverStage will use this map to strip inactive `#if` branches before parsing.
-		final definesMap = HxDefineMap.fromRawDefines(parsed.defines);
+		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
 		definesMap.set("ocaml", "1");
 		for (n in hxhx.macro.MacroState.listDefineNames()) {

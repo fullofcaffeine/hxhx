@@ -212,8 +212,10 @@ In the current Stage3 bring-up implementation, `hxhx --hxhx-stage3` resolves `--
 
 This is intentionally conservative:
 
-- We treat `--library` as **classpath resolution** (so code can import library modules).
-- We do *not* yet execute arbitrary library-provided `--macro` initializers from `haxe_libraries/*.hxml`.
+- We treat `--library` as **classpath + define resolution** (so code can import library modules and `#if` sees library `-D` flags).
+- We do *not* execute arbitrary library-provided `--macro` initializers by default.
+  - Opt-in: set `HXHX_RUN_HAXELIB_MACROS=1` to execute `--macro ...` lines printed by `haxelib path`.
+  - This staging avoids surprising failures when a library’s macros are not compiled into the current macro host yet.
 
 Why this staging is OK:
 
