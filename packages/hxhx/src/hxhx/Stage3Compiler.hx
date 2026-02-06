@@ -44,6 +44,114 @@ class Stage3Compiler {
 		return 2;
 	}
 
+	static function countUnsupportedExprsInExpr(e:Null<HxExpr>):Int {
+		if (e == null) return 0;
+		return switch (e) {
+			case EUnsupported(_): 1;
+			case EField(obj, _): countUnsupportedExprsInExpr(obj);
+			case ECall(callee, args):
+				var c = countUnsupportedExprsInExpr(callee);
+				for (a in args) c += countUnsupportedExprsInExpr(a);
+				c;
+			case ENew(_typePath, args):
+				var c = 0;
+				for (a in args) c += countUnsupportedExprsInExpr(a);
+				c;
+			case EUnop(_op, expr): countUnsupportedExprsInExpr(expr);
+			case EBinop(_op, left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
+			case _:
+				0;
+		}
+	}
+
+	static function collectUnsupportedExprRawInExpr(e:Null<HxExpr>, out:Array<String>, max:Int):Void {
+		if (e == null) return;
+		if (out.length >= max) return;
+		switch (e) {
+			case EUnsupported(raw):
+				if (out.length < max) out.push(raw);
+			case EField(obj, _):
+				collectUnsupportedExprRawInExpr(obj, out, max);
+			case ECall(callee, args):
+				collectUnsupportedExprRawInExpr(callee, out, max);
+				for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
+			case ENew(_typePath, args):
+				for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
+			case EUnop(_op, expr):
+				collectUnsupportedExprRawInExpr(expr, out, max);
+			case EBinop(_op, left, right):
+				collectUnsupportedExprRawInExpr(left, out, max);
+				collectUnsupportedExprRawInExpr(right, out, max);
+			case _:
+		}
+	}
+
+	static function collectUnsupportedExprRawInStmt(s:HxStmt, out:Array<String>, max:Int):Void {
+		if (out.length >= max) return;
+		switch (s) {
+			case SBlock(stmts, _pos):
+				for (ss in stmts) collectUnsupportedExprRawInStmt(ss, out, max);
+			case SVar(_name, _hint, init, _pos):
+				collectUnsupportedExprRawInExpr(init, out, max);
+			case SIf(cond, thenBranch, elseBranch, _pos):
+				collectUnsupportedExprRawInExpr(cond, out, max);
+				collectUnsupportedExprRawInStmt(thenBranch, out, max);
+				if (elseBranch != null) collectUnsupportedExprRawInStmt(elseBranch, out, max);
+			case SReturnVoid(_pos):
+			case SReturn(expr, _pos):
+				collectUnsupportedExprRawInExpr(expr, out, max);
+			case SExpr(expr, _pos):
+				collectUnsupportedExprRawInExpr(expr, out, max);
+		}
+	}
+
+	static function collectUnsupportedExprRawInModule(pm:ParsedModule, max:Int):Array<String> {
+		final decl = pm.getDecl();
+		final cls = HxModuleDecl.getMainClass(decl);
+		final out = new Array<String>();
+		for (f in HxClassDecl.getFields(cls)) collectUnsupportedExprRawInExpr(HxFieldDecl.getInit(f), out, max);
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			for (s in HxFunctionDecl.getBody(fn)) collectUnsupportedExprRawInStmt(s, out, max);
+		}
+		return out;
+	}
+
+	static function countUnsupportedExprsInStmt(s:HxStmt):Int {
+		return switch (s) {
+			case SBlock(stmts, _pos):
+				var c = 0;
+				for (ss in stmts) c += countUnsupportedExprsInStmt(ss);
+				c;
+			case SVar(_name, _hint, init, _pos):
+				countUnsupportedExprsInExpr(init);
+			case SIf(cond, thenBranch, elseBranch, _pos):
+				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(thenBranch) + (elseBranch == null ? 0 : countUnsupportedExprsInStmt(elseBranch));
+			case SReturnVoid(_pos):
+				0;
+			case SReturn(expr, _pos):
+				countUnsupportedExprsInExpr(expr);
+			case SExpr(expr, _pos):
+				countUnsupportedExprsInExpr(expr);
+		}
+	}
+
+	static function countUnsupportedExprsInModule(pm:ParsedModule):Int {
+		final decl = pm.getDecl();
+		final cls = HxModuleDecl.getMainClass(decl);
+		var c = 0;
+		for (f in HxClassDecl.getFields(cls)) c += countUnsupportedExprsInExpr(HxFieldDecl.getInit(f));
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			for (s in HxFunctionDecl.getBody(fn)) c += countUnsupportedExprsInStmt(s);
+		}
+		return c;
+	}
+
+	static function bool01(v:Bool):String return v ? "1" : "0";
+	static function isTrueEnv(name:String):Bool {
+		final v = trim(Sys.getEnv(name));
+		return v == "1" || v == "true" || v == "yes";
+	}
+
 		static function formatException(e:Dynamic):String {
 			if (Std.isOfType(e, String)) return cast e;
 
@@ -645,11 +753,33 @@ class Stage3Compiler {
 			var typedCount = 0;
 			var headerOnlyCount = 0;
 			var parsedMethodsTotal = 0;
+			var unsupportedExprsTotal = 0;
+			var unsupportedFilesCount = 0;
+			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
+			var unsupportedRawCount = 0;
 			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
 			var rootTyped:Null<TypedModule> = null;
 			for (m in resolvedForTyping) {
 				try {
 					final pm = ResolvedModule.getParsed(m);
+					final unsupportedInFile = countUnsupportedExprsInModule(pm);
+					unsupportedExprsTotal += unsupportedInFile;
+					if (unsupportedInFile > 0) {
+						Sys.println(
+							"unsupported_file[" + unsupportedFilesCount + "]="
+							+ ResolvedModule.getFilePath(m)
+							+ " header_only=" + bool01(HxModuleDecl.getHeaderOnly(pm.getDecl()))
+							+ " unsupported_exprs=" + unsupportedInFile
+						);
+						if (traceUnsupported) {
+							for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
+								Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":" + raw);
+								unsupportedRawCount += 1;
+								if (unsupportedRawCount >= 50) break;
+							}
+						}
+						unsupportedFilesCount += 1;
+					}
 					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) {
 						Sys.println("header_only_file[" + headerOnlyCount + "]=" + ResolvedModule.getFilePath(m));
 						headerOnlyCount += 1;
@@ -718,6 +848,8 @@ class Stage3Compiler {
 			Sys.println("typed_modules=" + typedCount);
 			Sys.println("header_only_modules=" + headerOnlyCount);
 			Sys.println("parsed_methods_total=" + parsedMethodsTotal);
+			Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
+			Sys.println("unsupported_files=" + unsupportedFilesCount);
 			Sys.println("stage3=type_only_ok");
 			return 0;
 		}
@@ -772,8 +904,32 @@ class Stage3Compiler {
 			// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
 			// coverage without being blocked by the bootstrap emitter/codegen.
 			if (noEmit) {
+				var headerOnlyCount = 0;
+				var unsupportedExprsTotal = 0;
+				var unsupportedFilesCount = 0;
+				final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
+				var unsupportedRawCount = 0;
+				for (m in resolvedForTyping) {
+					final pm = ResolvedModule.getParsed(m);
+					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) headerOnlyCount += 1;
+					final unsupportedInFile = countUnsupportedExprsInModule(pm);
+					unsupportedExprsTotal += unsupportedInFile;
+					if (unsupportedInFile > 0) {
+						unsupportedFilesCount += 1;
+						if (traceUnsupported) {
+							for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
+								Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":" + raw);
+								unsupportedRawCount += 1;
+								if (unsupportedRawCount >= 50) break;
+							}
+						}
+					}
+				}
 				closeMacroSession();
 				Sys.println("typed_modules=" + typedModules.length);
+				Sys.println("header_only_modules=" + headerOnlyCount);
+				Sys.println("unsupported_exprs_total=" + unsupportedExprsTotal);
+				Sys.println("unsupported_files=" + unsupportedFilesCount);
 				Sys.println("stage3=no_emit_ok");
 				return 0;
 			}
