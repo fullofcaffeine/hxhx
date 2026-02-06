@@ -724,15 +724,19 @@ class HxParser {
 					}
 
 					if (acceptKeyword(KVar)) {
-						// Class field: `var name[:Type];` (subset; no init/properties yet).
+						// Class field: `var name[:Type] [= expr];` (subset; no properties yet).
 						final name = readIdent("field name");
 						var typeHint = "";
+						var init:Null<HxExpr> = null;
 						if (cur.kind.match(TColon)) {
 							bump();
-							typeHint = readTypeHintText(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+							typeHint = readTypeHintText(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || isOtherChar("="));
+						}
+						if (acceptOtherChar("=")) {
+							init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
 						}
 						expect(TSemicolon, "';'");
-						fields.push(new HxFieldDecl(name, visibility, isStatic, typeHint));
+						fields.push(new HxFieldDecl(name, visibility, isStatic, typeHint, init));
 						continue;
 					}
 

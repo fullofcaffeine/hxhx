@@ -59,6 +59,60 @@ class BuildMacroSupport {
 		}
 	}
 
+	static function tryExtractReturnString(e:Null<Expr>):Null<String> {
+		if (e == null) return null;
+		return switch (e.expr) {
+			case EBlock(stmts) if (stmts != null && stmts.length == 1):
+				tryExtractReturnString(stmts[0]);
+			case EReturn(v):
+				if (v == null) null else switch (v.expr) {
+					case EConst(CString(s, _)):
+						s;
+					case _:
+						null;
+				}
+			case _:
+				null;
+		}
+	}
+
+	static function tryExtractReturnInt(e:Null<Expr>):Null<Int> {
+		if (e == null) return null;
+		return switch (e.expr) {
+			case EBlock(stmts) if (stmts != null && stmts.length == 1):
+				tryExtractReturnInt(stmts[0]);
+			case EReturn(v):
+				if (v == null) null else switch (v.expr) {
+					case EConst(CInt(s)):
+						Std.parseInt(s);
+					case _:
+						null;
+				}
+			case _:
+				null;
+		}
+	}
+
+	static function tryConstToHaxe(e:Null<Expr>):Null<String> {
+		if (e == null) return null;
+		return switch (e.expr) {
+			case EConst(CString(s, _)):
+				"\"" + escapeHaxeString(s) + "\"";
+			case EConst(CInt(s)):
+				s;
+			case EConst(CFloat(s)):
+				s;
+			case EConst(CIdent("true")):
+				"true";
+			case EConst(CIdent("false")):
+				"false";
+			case EConst(CIdent("null")):
+				"null";
+			case _:
+				null;
+		}
+	}
+
 	/**
 		Print a tiny subset of `haxe.macro.Expr.Field` values to raw Haxe member snippets.
 
@@ -71,9 +125,13 @@ class BuildMacroSupport {
 
 		What
 		- Supports only `FFun` with:
-		  - no args
-		  - body being a single `trace("...")` (directly or wrapped in a 1-statement block)
-		- Emits a `public/private static` function with `:Void`.
+		  - non-optional args (names only; no types/defaults)
+		  - body being one of:
+		    - a single `trace("...")` (directly or wrapped in a 1-statement block)
+		    - `return "<...>"` (string literal)
+		    - `return <int>` (int literal)
+		- Supports only `FVar` as `var name:Dynamic;` (no init / no properties).
+		- Emits members with `public/private` + optional `static`.
 
 		Non-goals (current rung)
 		- Printing arbitrary expressions, types, arguments, metadata, properties, etc.
@@ -88,10 +146,45 @@ class BuildMacroSupport {
 
 		return switch (f.kind) {
 			case FFun(fn):
-				final msg = tryExtractTraceString(fn == null ? null : fn.expr);
-				if (msg == null) return null;
-				final body = "{ trace(\"" + escapeHaxeString(msg) + "\"); }";
-				vis + stat + " function " + f.name + "():Void " + body;
+				if (fn == null) return null;
+
+				// Keep arg handling very conservative: Stage3's bootstrap parser doesn't
+				// support optional args (`?x`) or default values robustly yet.
+				final argNames = new Array<String>();
+				if (fn.args != null) {
+					for (a in fn.args) {
+						if (a == null || a.name == null || a.name.length == 0) return null;
+						if (a.opt == true) return null;
+						argNames.push(a.name);
+					}
+				}
+
+				final msg = tryExtractTraceString(fn.expr);
+				if (msg != null) {
+					final body = "{ trace(\"" + escapeHaxeString(msg) + "\"); }";
+					return vis + stat + " function " + f.name + "(" + argNames.join(", ") + ") " + body;
+				}
+
+				final retStr = tryExtractReturnString(fn.expr);
+				if (retStr != null) {
+					final body = "{ return \"" + escapeHaxeString(retStr) + "\"; }";
+					return vis + stat + " function " + f.name + "(" + argNames.join(", ") + ") " + body;
+				}
+
+				final retInt = tryExtractReturnInt(fn.expr);
+				if (retInt != null) {
+					final body = "{ return " + Std.string(retInt) + "; }";
+					return vis + stat + " function " + f.name + "(" + argNames.join(", ") + ") " + body;
+				}
+
+				null;
+			case FVar(_t, e):
+				final init = tryConstToHaxe(e);
+				if (init != null) {
+					vis + stat + " var " + f.name + " = " + init + ";";
+				} else {
+					vis + stat + " var " + f.name + ":Dynamic;";
+				}
 			case _:
 				null;
 		}

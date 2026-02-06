@@ -2968,7 +2968,7 @@ class OcamlBuilder {
 								for (a in args) builtArgs.push(buildExpr(a));
 							}
 
-							(args.length > 1)
+							(builtArgs.length > 1)
 								? OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(builtArgs)])
 								: OcamlExpr.EApp(buildExpr(fn), builtArgs);
 						}
