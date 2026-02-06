@@ -97,17 +97,18 @@ if ! has_utest; then
   "$HAXELIB_BIN" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
 fi
 
-echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3)"
+echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3 --hxhx-no-emit)"
 out="$(
   cd "$UPSTREAM_DIR/tests/unit"
-  # Use `--hxhx-type-only` to avoid “false positive” success from the bootstrap emitter: Stage3 does
-  # not implement real Haxe typing/codegen yet, so we want this runner to prove we can at least
-  # resolve + type-check (best-effort) the transitive module graph.
-  HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only compile-macro.hxml 2>&1
+  # Use `--hxhx-no-emit` so we execute `--macro Macro.init()` and the `onGenerate` hook, while
+  # still avoiding “false positive” success from the Stage3 bootstrap emitter (the emitted OCaml
+  # is still non-semantic and would not prove Gate1 correctness).
+  HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit compile-macro.hxml 2>&1
 )"
 echo "$out"
 
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^typed_modules="
-echo "$out" | grep -q "^header_only_modules=0$"
-echo "$out" | grep -q "^stage3=type_only_ok$"
+echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
+echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
