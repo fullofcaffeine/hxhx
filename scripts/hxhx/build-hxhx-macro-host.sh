@@ -120,13 +120,14 @@ trim_ws() {
         # Emit case. We reference the method directly so Haxe resolves it statically.
         # We intentionally only dispatch exact strings for auditability.
         #
-        # We discard the entrypoint return value and return `"ok"` so we can support both:
-        # - `Void` macro entrypoints like `Macro.init()`
-        # - `String` macro entrypoints used for deterministic bring-up reports
+        # Return value policy:
+        # - If the entrypoint returns a `String`, propagate it (useful for macro.run summaries
+        #   and for `macro.expandExpr` which returns expression text).
+        # - Otherwise return `"ok"` (for `Void` entrypoints and non-string results).
         if [ -n "$call_args" ]; then
-          echo "      case \"${entry_escaped}\": { final r:Dynamic = untyped ${cls}.${meth}(${call_args}); hxhxmacrohost.BuildMacroSupport.afterEntrypoint(r); \"ok\"; }"
+          echo "      case \"${entry_escaped}\": { final r:Dynamic = untyped ${cls}.${meth}(${call_args}); hxhxmacrohost.BuildMacroSupport.afterEntrypoint(r); Std.isOfType(r, String) ? (cast r) : \"ok\"; }"
         else
-          echo "      case \"${entry_escaped}\": { final r:Dynamic = untyped ${cls}.${meth}(); hxhxmacrohost.BuildMacroSupport.afterEntrypoint(r); \"ok\"; }"
+          echo "      case \"${entry_escaped}\": { final r:Dynamic = untyped ${cls}.${meth}(); hxhxmacrohost.BuildMacroSupport.afterEntrypoint(r); Std.isOfType(r, String) ? (cast r) : \"ok\"; }"
         fi
       done
 

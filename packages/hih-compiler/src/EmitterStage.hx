@@ -102,12 +102,31 @@ class EmitterStage {
 	static function escapeOcamlString(s:String):String {
 		if (s == null) return "\"\"";
 		// Minimal escaping: enough for our fixtures.
-		var out = s;
-		out = StringTools.replace(out, "\\", "\\\\");
-		out = StringTools.replace(out, "\"", "\\\"");
-		out = StringTools.replace(out, "\n", "\\n");
-		out = StringTools.replace(out, "\r", "\\r");
-		out = StringTools.replace(out, "\t", "\\t");
+		//
+		// Note (bootstrap/OCaml backend):
+		// - Avoid re-assigning the same local repeatedly (`out = ...`) here.
+		// - During Stage3 bring-up, `hxhx` itself is compiled by our OCaml backend, and a
+		//   bug/limitation in local-rebinding codegen can cause `out = StringTools.replace(...)`
+		//   to drop the new value (result is evaluated and ignored).
+		// - Nesting calls keeps the semantics correct even under conservative codegen.
+		final out =
+			StringTools.replace(
+				StringTools.replace(
+					StringTools.replace(
+						StringTools.replace(
+							StringTools.replace(s, "\\", "\\\\"),
+							"\"",
+							"\\\""
+						),
+						"\n",
+						"\\n"
+					),
+					"\r",
+					"\\r"
+				),
+				"\t",
+				"\\t"
+			);
 		return "\"" + out + "\"";
 	}
 

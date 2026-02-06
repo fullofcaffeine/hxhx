@@ -444,6 +444,29 @@ class MacroHostSession {
 		return client.call("macro.run", MacroProtocol.encodeLen("e", expr));
 	}
 
+	/**
+		Expand an allowlisted “expression macro” call.
+
+		Why
+		- Expression macros are a core upstream feature: a call in normal code is executed at compile time
+		  and replaced with the returned expression.
+		- Stage4 bring-up models this by executing the call out-of-process (macro host) and returning
+		  a Haxe expression text snippet for the compiler to parse into the bootstrap AST.
+
+		What
+		- Calls RPC `macro.expandExpr` with:
+		  - `e`: the *exact* call text (e.g. `pack.Mod.meth()`).
+		- Returns a Haxe expression text snippet (e.g. `"hello"` or `0`).
+
+		Gotchas
+		- This is a bring-up ABI. Today it is:
+		  - allowlist-only (exact expression match),
+		  - limited to a small expression grammar on the compiler side.
+	**/
+	public function expandExpr(expr:String):String {
+		return client.call("macro.expandExpr", MacroProtocol.encodeLen("e", expr));
+	}
+
 	public function runHook(kind:String, id:Int):Void {
 		final tail = MacroProtocol.encodeLen("k", kind == null ? "" : kind) + " " + MacroProtocol.encodeLen("i", Std.string(id));
 		client.call("macro.runHook", tail);

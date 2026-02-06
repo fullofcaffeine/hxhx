@@ -217,12 +217,19 @@ class OcamlASTPrinter {
 	}
 
 	function escapeString(s:String):String {
-		return s
-			.replace("\\", "\\\\")
-			.replace("\"", "\\\"")
-			.replace("\n", "\\n")
-			.replace("\r", "\\r")
-			.replace("\t", "\\t");
+		// Use `StringTools.replace` (not `String.replace`) so escaping is stable across
+		// macro/eval runtimes and replaces all occurrences.
+		//
+		// This is correctness-critical: failing to escape `"` yields invalid OCaml
+		// (e.g. `""HELLO""`), which breaks macro-host builds and any code that embeds
+		// quotes in string literals.
+		var out = s;
+		out = StringTools.replace(out, "\\", "\\\\");
+		out = StringTools.replace(out, "\"", "\\\"");
+		out = StringTools.replace(out, "\n", "\\n");
+		out = StringTools.replace(out, "\r", "\\r");
+		out = StringTools.replace(out, "\t", "\\t");
+		return out;
 	}
 
 	function printSeq(exprs:Array<OcamlExpr>, indentLevel:Int):String {

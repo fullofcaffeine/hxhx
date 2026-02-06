@@ -46,13 +46,24 @@ class Stage3Compiler {
 
 	static function escapeOneLine(s:String):String {
 		if (s == null) return "";
-		var out = s;
 		// Keep logs parseable and stable even when we store raw source snippets.
-		out = StringTools.replace(out, "\\", "\\\\");
-		out = StringTools.replace(out, "\r", "\\r");
-		out = StringTools.replace(out, "\n", "\\n");
-		out = StringTools.replace(out, "\t", "\\t");
-		return out;
+		//
+		// Note: avoid repeated local rebinding (`out = replace(out, ...)`) here. During
+		// Stage3 bring-up, `hxhx` is compiled by our OCaml backend, and conservative
+		// codegen can drop intermediate assignment values.
+		return StringTools.replace(
+			StringTools.replace(
+				StringTools.replace(
+					StringTools.replace(s, "\\", "\\\\"),
+					"\r",
+					"\\r"
+				),
+				"\n",
+				"\\n"
+			),
+			"\t",
+			"\\t"
+		);
 	}
 
 	static function countUnsupportedExprsInExpr(e:Null<HxExpr>):Int {
@@ -262,6 +273,23 @@ class Stage3Compiler {
 
 	static function trim(s:String):String {
 		return s == null ? "" : StringTools.trim(s);
+	}
+
+	static function parseDelimitedList(raw:String):Array<String> {
+		final out = new Array<String>();
+		if (raw == null) return out;
+		final s = StringTools.trim(raw);
+		if (s.length == 0) return out;
+
+		// Accept either ';' or ',' as separators (bring-up convenience).
+		final parts = s.indexOf(";") != -1 ? s.split(";") : s.split(",");
+		for (p in parts) {
+			if (p == null) continue;
+			final t = StringTools.trim(p);
+			if (t.length == 0) continue;
+			if (out.indexOf(t) == -1) out.push(t);
+		}
+		return out;
 	}
 
 	static function isBuiltinMacroExpr(expr:String):Bool {
@@ -495,6 +523,12 @@ class Stage3Compiler {
 			}
 		}
 
+		// Stage4 bring-up: expression macro allowlist.
+		//
+		// These are call sites in *normal code* (not CLI `--macro`) that we will attempt to expand
+		// before typing by asking the macro host for a replacement expression snippet.
+		final exprMacros = parseDelimitedList(Sys.getEnv("HXHX_EXPR_MACROS"));
+
 		var macroSession:Null<MacroHostSession> = null;
 		inline function closeMacroSession():Void {
 			if (macroSession != null) {
@@ -541,9 +575,11 @@ class Stage3Compiler {
 				}
 			}
 
-		if (!typeOnly && parsed.macros.length > 0) {
+		if (!typeOnly && (parsed.macros.length > 0 || exprMacros.length > 0)) {
 			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
-			// for the requested CLI `--macro` entrypoints.
+			// for:
+			// - requested CLI `--macro` entrypoints, and
+			// - expression macro allowlist entrypoints (HXHX_EXPR_MACROS).
 			//
 			// This is only enabled when `HXHX_MACRO_HOST_AUTO_BUILD=1` (or true/yes) is set.
 			//
@@ -555,7 +591,13 @@ class Stage3Compiler {
 				if (repoRoot.length == 0) return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
 
 				try {
-					final entrypoints = anyNonBuiltinMacro(parsed.macros) ? parsed.macros : new Array<String>();
+					final entrypoints = new Array<String>();
+					// CLI macros: include only non-builtin expressions (builtins are already compiled into the host).
+					if (anyNonBuiltinMacro(parsed.macros)) {
+						for (e in parsed.macros) if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1) entrypoints.push(e);
+					}
+					// Expression macros: always include (they are not builtins by default).
+					for (e in exprMacros) if (entrypoints.indexOf(e) == -1) entrypoints.push(e);
 					final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
 					Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
 				} catch (e:Dynamic) {
@@ -569,9 +611,7 @@ class Stage3Compiler {
 				// “execute macro expressions and surface deterministic results/errors”.
 				try {
 					macroSession = MacroHostClient.openSession();
-					for (i in 0...parsed.macros.length) {
-						Sys.println("macro_run[" + i + "]=" + macroSession.run(parsed.macros[i]));
-					}
+					for (i in 0...parsed.macros.length) Sys.println("macro_run[" + i + "]=" + macroSession.run(parsed.macros[i]));
 				} catch (e:Dynamic) {
 					closeMacroSession();
 					return error("macro failed: " + Std.string(e));
@@ -765,6 +805,20 @@ class Stage3Compiler {
 					i += 1;
 				}
 			}
+		}
+
+		// Stage4 bring-up: expression macro expansion pass (pre-typing).
+		//
+		// This is a small rung that only expands allowlisted exact call strings, and only supports
+		// a tiny returned expression subset (parsed by `HxParser.parseExprText`).
+		if (!typeOnly && exprMacros.length > 0) {
+			if (macroSession == null) {
+				closeMacroSession();
+				return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
+			}
+			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, macroSession, exprMacros);
+			resolvedForTyping = exp.modules;
+			Sys.println("expr_macros_expanded=" + exp.expandedCount);
 		}
 
 		final typerIndex = TyperIndex.build(resolvedForTyping);

@@ -16,7 +16,7 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 echo "== Building hxhx macro host (RPC skeleton)"
-HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn();hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn();hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn();hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn();hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar();hxhxmacros.ExprMacroShim.hello();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
 if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
   echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
   exit 1
@@ -376,7 +376,7 @@ test -f "$stage3_out2/HxHxHook.ml"
 echo "== Stage3 bring-up: runs a non-builtin macro module compiled into the macro host"
 stage3_out3="$tmpdir/out_stage3_external"
 out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'hxhxmacros.ExternalMacros.external()' --hxhx-out "$stage3_out3")"
-echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
+echo "$out" | grep -q "^macro_run\\[0\\]=external=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_EXTERNAL\\]=1$"
 echo "$out" | grep -q "^stage3=ok$"
 test -f "$stage3_out3/HxHxExternal.ml"
@@ -395,6 +395,23 @@ out="$(HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 "$HXHX_BIN" --hxhx-st
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
+
+echo "== Stage3 bring-up: expression macro expansion replaces call sites"
+tmpexpr="$tmpdir/expr_macro"
+mkdir -p "$tmpexpr/src"
+cat >"$tmpexpr/src/Main.hx" <<'HX'
+import hxhxmacros.ExprMacroShim;
+
+class Main {
+  static function main() {
+    trace(ExprMacroShim.hello());
+  }
+}
+HX
+out="$(HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpexpr/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpexpr/out")"
+echo "$out" | grep -q "^expr_macros_expanded=1$"
+echo "$out" | grep -q "^HELLO$"
+echo "$out" | grep -q "^run=ok$"
 
 echo "== Contradiction fails fast"
 set +e
