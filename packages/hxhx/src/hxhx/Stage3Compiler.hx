@@ -222,21 +222,6 @@ class Stage3Compiler {
 
 			final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
 
-			// Stage3 bring-up rung: full-body emission needs the pure-Haxe parser.
-			//
-			// Why
-			// - The native frontend protocol v1 only captures headers/first-return and
-			//   cannot represent full statement bodies.
-			// - `--hxhx-emit-full-bodies` is explicitly about validating statement
-			//   lowering end-to-end, so we must ensure bodies exist.
-			//
-			// How
-			// - Force `ParserStage` to select `HxParser` even when compiled with
-			//   `-D hih_native_parser`.
-			if (emitFullBodies) {
-				Sys.putEnv("HIH_FORCE_HX_PARSER", "1");
-			}
-
 			final macroHostClassPaths = {
 				final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 				final libs = new Array<String>();

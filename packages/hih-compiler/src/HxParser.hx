@@ -54,6 +54,32 @@ class HxParser {
 		return e;
 	}
 
+	/**
+		Parse a function body statement list from standalone source text.
+
+		Why
+		- The native OCaml frontend seam can report method bodies as raw source slices
+		  (`ast method_body`) without transmitting a full statement AST.
+		- Stage 3 bring-up wants to validate "full body" lowering (e.g. `trace("HELLO");`)
+		  while still using the native frontend for the rest of the module graph.
+
+		What
+		- Takes the raw text *inside* a function body (between `{` and `}`) and returns
+		  the parsed statement list (`Array<HxStmt>`).
+
+		How
+		- Wraps the body in braces and reuses the same lexer/parser routines as normal
+		  module parsing.
+		- This is best-effort and only supports the current Stage 3 statement subset.
+	**/
+	public static function parseFunctionBodyText(bodySource:String):Array<HxStmt> {
+		final src = "{\n" + (bodySource == null ? "" : bodySource) + "\n}";
+		final p = new HxParser(src);
+		if (!p.cur.kind.match(TLBrace)) return [];
+		p.bump(); // consume '{'
+		return p.parseFunctionBodyStatements();
+	}
+
 	inline function bump():Void {
 		if (peeked != null) {
 			cur = peeked;

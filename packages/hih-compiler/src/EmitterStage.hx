@@ -429,10 +429,15 @@ class EmitterStage {
 					: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
 
 				final parsedFn = parsedByName.get(nameRaw);
-				final retTy = ocamlTypeFromTy(tf.getReturnType());
-				final allowed:Map<String, Bool> = new Map();
-				for (a in args) allowed.set(a.getName(), true);
-				for (l in tf.getLocals()) allowed.set(l.getName(), true);
+					final retTy = ocamlTypeFromTy(tf.getReturnType());
+					final allowed:Map<String, Bool> = new Map();
+					for (a in args) allowed.set(a.getName(), true);
+					// Only allow locals when we're actually emitting statement bodies that bind them.
+					// In the "return-expression-only" rung, referencing locals would produce unbound
+					// identifiers in OCaml, so we treat them as poison and collapse to `Obj.magic`.
+					if (emitFullBodies) {
+						for (l in tf.getLocals()) allowed.set(l.getName(), true);
+					}
 
 				final body = if (parsedFn == null) {
 					"()";

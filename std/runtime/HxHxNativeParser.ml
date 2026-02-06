@@ -54,6 +54,7 @@ type method_decl = {
   return_string : string option;
   return_ident : string option;
   return_expr : string option;
+  body_src : string option;
 }
 
 let starts_with (s : string) (prefix : string) : bool =
@@ -183,7 +184,7 @@ let token_eq_sym (t : token) (c : char) : bool =
   | Sym (cc, _) when cc = c -> true
   | _ -> false
 
-let parse_module_from_tokens (toks : token array) :
+let parse_module_from_tokens (src : string) (toks : token array) :
     (string * string list * bool * string * bool * method_decl list) =
   let i = ref 0 in
   let cur () : token =
@@ -400,7 +401,7 @@ let parse_module_from_tokens (toks : token array) :
       in
 
       let parse_body_and_return_expr () :
-          (string option * string option * string option) =
+          (string option * string option * string option * string option) =
         (* Supports:
              - `{ ... }` bodies (scan for `return "..."`)
              - `return "..." ;` expression bodies
@@ -457,8 +458,16 @@ let parse_module_from_tokens (toks : token array) :
         match cur () with
         | Sym (';', _) ->
             bump ();
-            (None, None, None)
-        | Sym ('{', _) ->
+            (None, None, None, None)
+        | Sym ('{', open_p) ->
+            (* Capture the raw body substring from the original source so Haxe-side
+               bring-up code can parse statements without reconstituting token text.
+
+               Indices are character offsets into `src` (0-based). We capture the
+               region strictly between the braces (excluding '{' and '}'). *)
+            let body_start = open_p.index + 1 in
+            let body_end : int option ref = ref None in
+
             bump ();
             depth := !depth + 1;
             let found_str = ref None in
@@ -470,7 +479,9 @@ let parse_module_from_tokens (toks : token array) :
               | Sym ('{', _) ->
                   depth := !depth + 1;
                   bump ()
-              | Sym ('}', _) ->
+              | Sym ('}', close_p) ->
+                  (* When we are at depth=2, this brace closes the function body. *)
+                  if !depth = 2 && !body_end = None then body_end := Some close_p.index;
                   depth := !depth - 1;
                   bump ()
               | Kw ("return", _) -> (
@@ -488,12 +499,20 @@ let parse_module_from_tokens (toks : token array) :
                   | _ -> ()))
               | _ -> bump ()
             done;
-            (!found_str, !found_ident, !found_expr)
+            let body_src =
+              match !body_end with
+              | None -> None
+              | Some end_idx ->
+                  if body_start < 0 || end_idx < body_start then None
+                  else if end_idx > String.length src then None
+                  else Some (String.sub src body_start (end_idx - body_start))
+            in
+            (!found_str, !found_ident, !found_expr, body_src)
         | Kw ("return", _) -> (
             bump ();
             let found_str, found_ident = capture_first_atom () in
             let found_expr = capture_return_expr_text () in
-            (found_str, found_ident, found_expr))
+            (found_str, found_ident, found_expr, None))
         | _ ->
             (* Unknown body shape; consume until ';' or '{' to avoid infinite loops. *)
             while
@@ -509,7 +528,7 @@ let parse_module_from_tokens (toks : token array) :
             do
               ()
             done;
-            (None, None, None)
+            (None, None, None, None)
       in
 
       while !depth > 0 do
@@ -543,7 +562,7 @@ let parse_module_from_tokens (toks : token array) :
                     else []
                   in
                   let return_type_hint = parse_return_type_hint () in
-                  let return_string, return_ident, return_expr =
+                  let return_string, return_ident, return_expr, body_src =
                     parse_body_and_return_expr ()
                   in
                   methods :=
@@ -558,6 +577,7 @@ let parse_module_from_tokens (toks : token array) :
                           return_string;
                           return_ident;
                           return_expr;
+                          body_src;
                         };
                       ];
                   reset_mods ())
@@ -776,7 +796,23 @@ let encode_ast_lines (package_path : string) (imports : string list)
         Printf.sprintf "ast method %d:%s" (String.length enc) enc)
       methods
   in
-  String.concat "\n" (base @ method_lines)
+  let body_lines =
+    methods
+    |> List.filter_map (fun (m : method_decl) ->
+           match m.body_src with
+           | None -> None
+           | Some body ->
+               (* Payload format:
+                    <methodName>\n<bodySource>
+
+                  The entire payload is escaped + len-prefixed, so the body can contain
+                  arbitrary characters including '|' (which would otherwise conflict with
+                  `ast method`'s field separators). *)
+               let payload = m.name ^ "\n" ^ body in
+               let enc = escape_payload payload in
+               Some (Printf.sprintf "ast method_body %d:%s" (String.length enc) enc))
+  in
+  String.concat "\n" (base @ method_lines @ body_lines)
 
 let encode_err_line (p : pos) (msg : string) : string =
   let enc = escape_payload msg in
@@ -816,7 +852,7 @@ let parse_module_decl (src : string) : string =
         let base = strip_terminal_ok lex_stream in
         try
           let package_path, imports, has_toplevel_main, class_name, has_static_main, methods =
-            parse_module_from_tokens toks
+            parse_module_from_tokens src toks
           in
           String.concat "\n"
             [

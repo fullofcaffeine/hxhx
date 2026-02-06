@@ -29,7 +29,7 @@ compiler was built with `-D hih_native_parser`.
 Why this exists:
 
 - Protocol v1 is intentionally *summary-only*: even in non-`header_only` mode it does **not** transmit full
-  statement bodies.
+  statement bodies as a structured AST.
 - Some bring-up rungs (notably Stage 3 `--hxhx-emit-full-bodies`) need statement bodies so we can validate
   lowering end-to-end.
 
@@ -103,6 +103,7 @@ ast header_only <len>:<payload>
 ast toplevel_main <len>:<payload>
 ast static_main 0|1
 ast method <len>:<payload>
+ast method_body <len>:<payload>
 ```
 
 Notes:
@@ -130,10 +131,29 @@ Notes:
 
 - `retid`/`argtypes`/`retexpr` are optional fields added in a backward-compatible way: Stage 2 decoders that only
   understand `name|vis|static|args|ret|retstr` will ignore the extra segments.
-- Even when the native side *parses* more syntax, protocol v1 intentionally only transmits a method **summary**
-  (signature + first-return hints). It does **not** currently carry full statement bodies.
+- `ast method` intentionally transmits only a method **summary** (signature + first-return hints), which keeps the
+  protocol stable even while the OCaml-side parser remains minimal.
 - Because `ast method` uses `|` as its own field separator, `retid` and `argtypes` must not contain `|` characters.
   The same constraint applies to `retexpr`.
+
+### Method body record
+
+Optional record carrying a raw source slice for the method body:
+
+```
+ast method_body <len>:<payload>
+```
+
+Payload format (after unescaping):
+
+- First line: method name
+- Remaining text: method body source (the text between `{` and `}`), as-is
+
+Why this exists:
+
+- Stage 3 bring-up sometimes needs statement bodies for end-to-end lowering tests, but we do not want to commit to
+  an OCaml-side statement AST yet.
+- The Haxe-side decoder can parse a small statement subset from this raw source to build `HxFunctionDecl.body`.
 
 ### Terminal records
 

@@ -67,23 +67,25 @@ class ParserStage {
 		- See `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md:1` for the exact
 		  wire format and versioning rules.
 	**/
-		static function decodeNativeProtocol(encoded:String):HxModuleDecl {
-			final lines = encoded.split("\n").filter(l -> l.length > 0);
-			if (lines.length == 0 || lines[0] != "hxhx_frontend_v=1") {
-				throw "Native frontend: missing/invalid protocol header";
-			}
+			static function decodeNativeProtocol(encoded:String):HxModuleDecl {
+				final lines = encoded.split("\n").filter(l -> l.length > 0);
+				if (lines.length == 0 || lines[0] != "hxhx_frontend_v=1") {
+					throw "Native frontend: missing/invalid protocol header";
+				}
 
-			var packagePath = "";
-			final imports = new Array<String>();
-			var className = "Unknown";
-			var headerOnly = false;
-			var hasToplevelMain = false;
-			var hasStaticMain = false;
-			final functions = new Array<HxFunctionDecl>();
-			var sawOk = false;
+				var packagePath = "";
+				final imports = new Array<String>();
+				var className = "Unknown";
+				var headerOnly = false;
+				var hasToplevelMain = false;
+				var hasStaticMain = false;
+				final methodPayloads = new Array<String>();
+				final methodBodies:Map<String, String> = [];
+				final functions = new Array<HxFunctionDecl>();
+				var sawOk = false;
 
-		for (i in 1...lines.length) {
-			final line = lines[i];
+			for (i in 1...lines.length) {
+				final line = lines[i];
 			if (line == "ok") {
 				sawOk = true;
 				continue;
@@ -104,40 +106,57 @@ class ParserStage {
 				final firstSpace = rest.indexOf(" ");
 				if (firstSpace <= 0) continue;
 				final key = rest.substr(0, firstSpace);
-					final payload = decodeLenPayload(rest.substr(firstSpace + 1));
-					switch (key) {
-						case "package":
-							packagePath = payload;
-						case "imports":
-							if (payload.length > 0) {
-								for (p in payload.split("|")) if (p.length > 0) imports.push(p);
-							}
-						case "class":
-							className = payload;
-						case "header_only":
-							headerOnly = payload == "1";
-						case "toplevel_main":
-							hasToplevelMain = payload == "1";
-						case "method":
-							functions.push(decodeMethodPayload(payload));
-						case _:
-					}
-					continue;
+						final payload = decodeLenPayload(rest.substr(firstSpace + 1));
+						switch (key) {
+							case "package":
+								packagePath = payload;
+							case "imports":
+								if (payload.length > 0) {
+									for (p in payload.split("|")) if (p.length > 0) imports.push(p);
+								}
+							case "class":
+								className = payload;
+							case "header_only":
+								headerOnly = payload == "1";
+							case "toplevel_main":
+								hasToplevelMain = payload == "1";
+							case "method":
+								methodPayloads.push(payload);
+							case "method_body":
+								// Payload format: "<methodName>\n<bodySource>"
+								final nl = payload.indexOf("\n");
+								if (nl > 0) {
+									final name = payload.substr(0, nl);
+									if (!methodBodies.exists(name)) {
+										methodBodies.set(name, payload.substr(nl + 1));
+									}
+								}
+							case _:
+						}
+						continue;
+				}
 			}
-		}
 
-		if (!sawOk) {
-				throw "Native frontend: missing terminal 'ok'";
+			if (!sawOk) {
+					throw "Native frontend: missing terminal 'ok'";
+				}
+
+				for (mp in methodPayloads) {
+					final name = {
+						final parts = mp.split("|");
+						parts.length == 0 ? "" : parts[0];
+					};
+					functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
+				}
+
+				return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), headerOnly, hasToplevelMain);
 			}
 
-			return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), headerOnly, hasToplevelMain);
-		}
-
-	static function decodeMethodPayload(payload:String):HxFunctionDecl {
-		// Bootstrap note: payload is a `|` separated list (unescaped for '|').
-		//
-		// v=1:
-		//   name|vis|static|args|ret|retstr
+		static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>):HxFunctionDecl {
+			// Bootstrap note: payload is a `|` separated list (unescaped for '|').
+			//
+			// v=1:
+			//   name|vis|static|args|ret|retstr
 		//
 		// v=1 (backward-compatible extensions; optional fields):
 		//   name|vis|static|args|ret|retstr|retid|argtypes|retexpr
@@ -180,20 +199,36 @@ class ParserStage {
 		final retStr = parts[5];
 		final retId = parts[6];
 		final retExpr = parts[8];
-		final body = new Array<HxStmt>();
-		final pos = HxPos.unknown();
-		// Prefer the richer `retexpr` field when present (it can represent `Util.ping()`),
-		// but keep legacy fields for older protocol emitters.
-		if (retExpr.length > 0) {
-			body.push(SReturn(parseReturnExprText(retExpr), pos));
-		} else if (retStr.length > 0) {
-			body.push(SReturn(EString(retStr), pos));
-		} else if (retId.length > 0) {
-			body.push(SReturn(EIdent(retId), pos));
-		}
+			final body = new Array<HxStmt>();
+			final pos = HxPos.unknown();
+			// Prefer the richer `retexpr` field when present (it can represent `Util.ping()`),
+			// but keep legacy fields for older protocol emitters.
+			if (retExpr.length > 0) {
+				body.push(SReturn(parseReturnExprText(retExpr), pos));
+			} else if (retStr.length > 0) {
+				body.push(SReturn(EString(retStr), pos));
+			} else if (retId.length > 0) {
+				body.push(SReturn(EIdent(retId), pos));
+			}
 
-		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, body, retStr);
-	}
+			var outBody = body;
+			if (methodBodySrc != null && methodBodySrc.length > 0) {
+				// Best-effort: recover a structured statement list from the raw source slice.
+				//
+				// Why
+				// - The native frontend protocol v1+ transmits method bodies as raw source
+				//   (via `ast method_body`) rather than an OCaml-side statement AST.
+				// - Stage3 bring-up wants bodies so it can validate full-body lowering.
+				try {
+					outBody = HxParser.parseFunctionBodyText(methodBodySrc);
+				} catch (_:Dynamic) {
+					// Fall back to the summary-only body.
+					outBody = body;
+				}
+			}
+
+			return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+		}
 
 	static function parseReturnExprText(raw:String):HxExpr {
 		final s = StringTools.trim(raw);
