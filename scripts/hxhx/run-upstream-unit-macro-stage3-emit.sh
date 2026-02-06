@@ -71,7 +71,7 @@ out="$(
   rm -rf out_hxhx_unit_macro_stage3_emit
   HXHX_MACRO_HOST_AUTO_BUILD=1 \
     HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" \
-    "$HXHX_BIN" --hxhx-stage3 compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
+    "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
 )"
 echo "$out"
 
@@ -79,4 +79,3 @@ echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
-

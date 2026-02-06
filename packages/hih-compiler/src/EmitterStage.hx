@@ -47,6 +47,20 @@ class EmitterStage {
 			case "Bool": "bool";
 			case "String": "string";
 			case "Void": "unit";
+			// Stage 3 bring-up: enough structure for common debug/log/utest patterns.
+			//
+			// Why
+			// - Upstream code (and utest) uses `haxe.PosInfos` for callsite reporting.
+			// - Without a record type, emitting `pos.fileName` fails with "Unbound record field".
+			//
+			// How
+			// - We provide a tiny OCaml shim module `HxPosInfos.ml` that defines a record type `t`
+			//   with the fields used by upstream (`fileName`, `lineNumber`, ...).
+			// - This is still bootstrap-only: values are often `Obj.magic` in bring-up code paths.
+			case "haxe.PosInfos", "PosInfos": "HxPosInfos.t";
+			// Stage 3 bring-up: enough structure for `haxe.Int64` callsites that destructure
+			// into `{ low, high }` (common in stdlib and upstream unit tests).
+			case "haxe.Int64", "Int64": "HxInt64.t";
 			// Stage 3: anything else is unknown; avoid making up a type.
 			case _: "_";
 		}
@@ -97,17 +111,64 @@ class EmitterStage {
 		return "\"" + out + "\"";
 	}
 
-	static function exprToOcamlString(e:HxExpr):String {
+	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>):String {
 		return switch (e) {
 			case EString(v): escapeOcamlString(v);
 			case EInt(v): "string_of_int " + Std.string(v);
 			case EBool(v): "string_of_bool " + (v ? "true" : "false");
 			case EFloat(v): "string_of_float " + Std.string(v);
+			case EIdent(name)
+				if (tyByIdent != null
+					&& tyByIdent.exists(name)
+					&& tyByIdent.get(name) != null
+					&& tyByIdent.get(name).toString() == "Int"):
+				"string_of_int " + ocamlValueIdent(name);
+			case EIdent(name)
+				if (tyByIdent != null
+					&& tyByIdent.exists(name)
+					&& tyByIdent.get(name) != null
+					&& tyByIdent.get(name).toString() == "Float"):
+				"string_of_float " + ocamlValueIdent(name);
+			case EIdent(name)
+				if (tyByIdent != null
+					&& tyByIdent.exists(name)
+					&& tyByIdent.get(name) != null
+					&& tyByIdent.get(name).toString() == "Bool"):
+				"string_of_bool " + ocamlValueIdent(name);
 			case _: escapeOcamlString("<unsupported>");
 		}
 	}
 
-	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>):String {
+	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>):String {
+		inline function tyForIdent(name:String):String {
+			if (tyByIdent == null) return "";
+			if (!tyByIdent.exists(name)) return "";
+			final t = tyByIdent.get(name);
+			return t == null ? "" : t.toString();
+		}
+
+		function isFloatExpr(expr:HxExpr):Bool {
+			return switch (expr) {
+				case EFloat(_):
+					true;
+				case EIdent(name):
+					tyForIdent(name) == "Float";
+				case _:
+					false;
+			}
+		}
+
+		function isIntExpr(expr:HxExpr):Bool {
+			return switch (expr) {
+				case EInt(_):
+					true;
+				case EIdent(name):
+					tyForIdent(name) == "Int";
+				case _:
+					false;
+			}
+		}
+
 		return switch (e) {
 			// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
 			//
@@ -121,11 +182,15 @@ class EmitterStage {
 			// - These rewrites exist only to keep bring-up moving; Stage1/Stage4 must
 			//   eventually implement real semantics in the proper backend/runtime.
 			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
-				"(classify_float (" + exprToOcaml(arg, arityByIdent) + ") = FP_nan)";
+				"(classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent) + ") = FP_nan)";
 			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
-				"(match classify_float (" + exprToOcaml(arg, arityByIdent) + ") with | FP_nan | FP_infinite -> false | _ -> true)";
+				"(match classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent) + ") with | FP_nan | FP_infinite -> false | _ -> true)";
 			case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
-				"(classify_float (" + exprToOcaml(arg, arityByIdent) + ") = FP_infinite)";
+				"(classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent) + ") = FP_infinite)";
+			case ECall(EField(EIdent("Math"), "abs"), [arg]):
+				// Best-effort numeric abs. Prefer float when the expression looks float-typed.
+				(isFloatExpr(arg) ? "abs_float " : (isIntExpr(arg) ? "abs " : "abs_float "))
+				+ "(" + exprToOcaml(arg, arityByIdent, tyByIdent) + ")";
 			case EField(EIdent("Math"), "NaN"):
 				"nan";
 			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
@@ -140,9 +205,9 @@ class EmitterStage {
 			// This is *not* a real stdlib/runtime mapping; it's a bootstrap convenience so we can
 			// observe that emitted function bodies are actually executing.
 			case ECall(EIdent("trace"), [arg]):
-				"print_endline (" + exprToOcamlString(arg) + ")";
+				"print_endline (" + exprToOcamlString(arg, tyByIdent) + ")";
 			case ECall(EField(EIdent("Sys"), "println"), [arg]):
-				"print_endline (" + exprToOcamlString(arg) + ")";
+				"print_endline (" + exprToOcamlString(arg, tyByIdent) + ")";
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
@@ -162,7 +227,7 @@ class EmitterStage {
 				// Stage 3 bring-up: allocation + constructors are not modeled yet.
 				"(Obj.magic 0)";
 			case EField(obj, field):
-				exprToOcaml(obj, arityByIdent) + "." + ocamlValueIdent(field);
+				exprToOcaml(obj, arityByIdent, tyByIdent) + "." + ocamlValueIdent(field);
 			case ECall(callee, args):
 				// Stage 3 bring-up: avoid partial applications when Haxe calls a function
 				// with omitted optional/default parameters.
@@ -188,14 +253,14 @@ class EmitterStage {
 							0;
 					}
 
-				final c = exprToOcaml(callee, arityByIdent);
+				final c = exprToOcaml(callee, arityByIdent, tyByIdent);
 				final fullArgs = args.copy();
 				for (_ in 0...missing) fullArgs.push(ENull);
 
 				if (fullArgs.length == 0) {
 					c + " ()";
 				} else {
-					c + " " + fullArgs.map(a -> "(" + exprToOcaml(a, arityByIdent) + ")").join(" ");
+					c + " " + fullArgs.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent) + ")").join(" ");
 				}
 			case EUnop(op, expr):
 				// Stage 3 expansion: support a tiny subset of unary ops so simple control-flow
@@ -205,9 +270,9 @@ class EmitterStage {
 				// If we can't emit safely, fall back to bring-up poison.
 				switch (op) {
 					case "!":
-						"(not (" + exprToOcaml(expr, arityByIdent) + "))";
+						"(not (" + exprToOcaml(expr, arityByIdent, tyByIdent) + "))";
 					case "-":
-						"(-(" + exprToOcaml(expr, arityByIdent) + "))";
+						"(-(" + exprToOcaml(expr, arityByIdent, tyByIdent) + "))";
 					case _:
 						"(Obj.magic 0)";
 				}
@@ -218,11 +283,32 @@ class EmitterStage {
 				// Important: this emitter does not have reliable type information yet, so we
 				// intentionally only support operators that are unambiguous enough for our
 				// bring-up fixtures (primarily `Int` + boolean comparisons).
-				final la = exprToOcaml(a, arityByIdent);
-				final rb = exprToOcaml(b, arityByIdent);
+				final la = exprToOcaml(a, arityByIdent, tyByIdent);
+				final rb = exprToOcaml(b, arityByIdent, tyByIdent);
 				switch (op) {
 					case "+" | "-" | "*" | "/" | "%":
-						"((" + la + ") " + op + " (" + rb + "))";
+						// Best-effort numeric lowering:
+						// - if both sides look like floats, use OCaml float operators,
+						// - if both sides look like ints, use OCaml int operators,
+						// - otherwise, collapse to bring-up poison to avoid type errors.
+						final aIsF = isFloatExpr(a);
+						final bIsF = isFloatExpr(b);
+						final aIsI = isIntExpr(a);
+						final bIsI = isIntExpr(b);
+						if ((aIsF && bIsF) && (op == "+" || op == "-" || op == "*" || op == "/")) {
+							final fop = switch (op) {
+								case "+": "+.";
+								case "-": "-.";
+								case "*": "*.";
+								case "/": "/.";
+								case _: op;
+							}
+							"((" + la + ") " + fop + " (" + rb + "))";
+						} else if ((aIsI && bIsI) || (!aIsF && !bIsF)) {
+							"((" + la + ") " + op + " (" + rb + "))";
+						} else {
+							"(Obj.magic 0)";
+						}
 					case "==":
 						"((" + la + ") = (" + rb + "))";
 					case "!=":
@@ -242,7 +328,12 @@ class EmitterStage {
 		}
 	}
 
-	static function returnExprToOcaml(expr:HxExpr, allowedValueIdents:Map<String, Bool>, ?arityByIdent:Map<String, Int>):String {
+	static function returnExprToOcaml(
+		expr:HxExpr,
+		allowedValueIdents:Map<String, Bool>,
+		?arityByIdent:Map<String, Int>,
+		?tyByIdent:Map<String, TyType>
+	):String {
 		// Stage 3 bring-up: if we couldn't parse/type an expression, keep compilation moving.
 		//
 		// `Obj.magic` is a deliberate bootstrap escape hatch:
@@ -311,20 +402,33 @@ class EmitterStage {
 			// Collapse to the bootstrap escape hatch instead.
 		if (hasBringupPoison(expr)) return "(Obj.magic 0)";
 
-		return exprToOcaml(expr, arityByIdent);
+		return exprToOcaml(expr, arityByIdent, tyByIdent);
 	}
 
-	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Map<String, Int>):String {
+	static function stmtListToOcaml(
+		stmts:Array<HxStmt>,
+		allowedValueIdents:Map<String, Bool>,
+		returnExc:String,
+		?arityByIdent:Map<String, Int>,
+		?tyByIdent:Map<String, TyType>
+	):String {
 		if (stmts == null || stmts.length == 0) return "()";
 
 		function condToOcamlBool(e:HxExpr):String {
+			inline function boolOrTrue(s:String):String {
+				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
+				// In a condition position we prefer "always true" over emitting an unbound identifier
+				// that would abort OCaml compilation.
+				return s == "(Obj.magic 0)" ? "true" : s;
+			}
+
 			return switch (e) {
 				case EBool(v):
 					v ? "true" : "false";
 				case EUnop("!", _):
-					exprToOcaml(e, arityByIdent);
+					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, arityByIdent, tyByIdent));
 				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-					exprToOcaml(e, arityByIdent);
+					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, arityByIdent, tyByIdent));
 				case _:
 					// Conservative default: we do not have real typing for conditions yet.
 					// Keep bring-up resilient by treating unknown conditions as true.
@@ -335,7 +439,7 @@ class EmitterStage {
 		function stmtToUnit(s:HxStmt):String {
 			return switch (s) {
 				case SBlock(ss, _pos):
-					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent);
+					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyByIdent);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
@@ -346,14 +450,14 @@ class EmitterStage {
 				case SReturnVoid(_pos):
 					"raise (" + returnExc + " (Obj.repr ()))";
 				case SReturn(expr, _pos):
-					"raise (" + returnExc + " (Obj.repr (" + returnExprToOcaml(expr, allowedValueIdents, arityByIdent) + ")))";
+					"raise (" + returnExc + " (Obj.repr (" + returnExprToOcaml(expr, allowedValueIdents, arityByIdent, tyByIdent) + ")))";
 				case SExpr(expr, _pos):
 					// Avoid emitting invalid OCaml when we parse Haxe assignment as `EBinop("=")`.
 					switch (expr) {
 						case EBinop("=", _l, _r):
 							"()";
 						case _:
-							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, arityByIdent) + ")";
+							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, arityByIdent, tyByIdent) + ")";
 			}
 		}
 		}
@@ -364,7 +468,7 @@ class EmitterStage {
 			final s = stmts[stmts.length - 1 - i];
 			switch (s) {
 				case SVar(name, _typeHint, init, _pos):
-					final rhs = init == null ? "(Obj.magic 0)" : returnExprToOcaml(init, allowedValueIdents, arityByIdent);
+					final rhs = init == null ? "(Obj.magic 0)" : returnExprToOcaml(init, allowedValueIdents, arityByIdent, tyByIdent);
 					out = "let " + ocamlValueIdent(name) + " = " + rhs + " in (" + out + ")";
 				case _:
 					out = "(" + stmtToUnit(s) + "; " + out + ")";
@@ -465,6 +569,69 @@ class EmitterStage {
 					shimPath,
 					"(* hxhx(stage3) bootstrap shim: Std *)\n"
 					+ "let isOfType _ _ = false\n"
+					+ "let string _ = \"\"\n"
+				);
+				generatedPaths.push(shimName + ".ml");
+			}
+		}
+		{
+			final shimName = "Lambda";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+				sys.io.File.saveContent(
+					shimPath,
+					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
+					+ "let has _ _ = false\n"
+					+ "let exists _ _ = false\n"
+					+ "let iter _ _ = ()\n"
+					+ "let count _ = 0\n"
+				);
+				generatedPaths.push(shimName + ".ml");
+			}
+		}
+		{
+			final shimName = "Reflect";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+				sys.io.File.saveContent(
+					shimPath,
+					"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
+					+ "let field _ _ = (Obj.magic 0)\n"
+					+ "let isFunction _ = false\n"
+					+ "let compare _ _ = 0\n"
+				);
+				generatedPaths.push(shimName + ".ml");
+			}
+		}
+		{
+			final shimName = "HxPosInfos";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+					sys.io.File.saveContent(
+						shimPath,
+						"(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n"
+						+ "type t = {\n"
+						+ "  fileName : string;\n"
+						+ "  lineNumber : int;\n"
+						+ "  className : string;\n"
+						+ "  methodName : string;\n"
+						+ "  customParams : Obj.t;\n"
+						+ "}\n"
+					);
+					generatedPaths.push(shimName + ".ml");
+				}
+		}
+		{
+			final shimName = "HxInt64";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+				sys.io.File.saveContent(
+					shimPath,
+					"(* hxhx(stage3) bootstrap shim: haxe.Int64 (shape-only) *)\n"
+					+ "type t = {\n"
+					+ "  low : int;\n"
+					+ "  high : int;\n"
+					+ "}\n"
 				);
 				generatedPaths.push(shimName + ".ml");
 			}
@@ -504,11 +671,13 @@ class EmitterStage {
 					? "()"
 					: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
 
-				final parsedFn = parsedByName.get(nameRaw);
-					final retTy = ocamlTypeFromTy(tf.getReturnType());
-					final allowed:Map<String, Bool> = new Map();
-					for (a in args) allowed.set(a.getName(), true);
-					// Allow calls between methods in the same emitted module.
+					final parsedFn = parsedByName.get(nameRaw);
+						final retTy = ocamlTypeFromTy(tf.getReturnType());
+						final allowed:Map<String, Bool> = new Map();
+						final tyByIdent:Map<String, TyType> = new Map();
+						for (a in args) allowed.set(a.getName(), true);
+						for (a in args) tyByIdent.set(a.getName(), a.getType());
+						// Allow calls between methods in the same emitted module.
 					//
 					// Why
 					// - In Haxe, an unqualified call like `generated()` inside `Main.main` refers to a
@@ -519,21 +688,36 @@ class EmitterStage {
 					// Only allow locals when we're actually emitting statement bodies that bind them.
 					// In the "return-expression-only" rung, referencing locals would produce unbound
 					// identifiers in OCaml, so we treat them as poison and collapse to `Obj.magic`.
-					if (emitFullBodies) {
-						for (l in tf.getLocals()) allowed.set(l.getName(), true);
-					}
+						if (emitFullBodies) {
+							for (l in tf.getLocals()) allowed.set(l.getName(), true);
+							for (l in tf.getLocals()) tyByIdent.set(l.getName(), l.getType());
+						}
 
 				final body = if (parsedFn == null) {
 					"()";
-				} else if (!emitFullBodies) {
-					returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, arityByName);
-				} else {
+					} else if (!emitFullBodies) {
+						returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, arityByName, tyByIdent);
+					} else {
 					// OCaml exception constructors must start with an uppercase letter.
 					final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
 					exceptions.push("exception " + exc + " of Obj.t");
 					final stmts = HxFunctionDecl.getBody(parsedFn);
-					"try (" + stmtListToOcaml(stmts, allowed, exc, arityByName) + ") with " + exc + " v -> (Obj.magic v : " + retTy + ")";
-				};
+					// Ensure the `try` expression itself typechecks as the function return type.
+					//
+					// Why
+					// - In this bring-up emitter we implement `return` via exceptions.
+					// - The typed OCaml expression in the `try` body must still have type `retTy`,
+					//   even if the only "real" return path is the exception handler.
+					//
+					// How
+					// - Append `(Obj.magic 0)` in the no-return path and cast the entire `try` to `retTy`.
+					// - This is intentionally non-semantic but avoids OCaml type errors like:
+					//   "This variant expression is expected to have type bool; There is no constructor () within type bool".
+						"((" //
+						+ "try (" + stmtListToOcaml(stmts, allowed, exc, arityByName, tyByIdent) + "; (Obj.magic 0)) "
+						+ "with " + exc + " v -> (Obj.magic v)"
+						+ ") : " + retTy + ")";
+					};
 
 				// Keep return type annotation to make early typing behavior visible.
 				final kw = i == 0 ? "let rec" : "and";
