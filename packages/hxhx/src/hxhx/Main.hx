@@ -369,6 +369,13 @@ class Main {
 				Sys.exit(1);
 			}
 			final src = sys.io.File.getContent(path);
+			final parseDebug = Sys.getEnv("HXHX_PARSE_DEBUG");
+			if (parseDebug == "1" || parseDebug == "true" || parseDebug == "yes") {
+				try {
+					final tail = src.length > 80 ? src.substr(src.length - 80) : src;
+					Sys.stderr().writeString("[hxhx parse] len=" + src.length + " tail=" + tail.split("\n").join("\\n") + "\n");
+				} catch (_:Dynamic) {}
+			}
 			final decl = ParserStage.parse(src).getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final imports = HxModuleDecl.getImports(decl);

@@ -94,7 +94,7 @@ OCaml target can compile a non-trivial Haxe codebase.
 
 Provide an OCaml-interop story (externs) for existing OCaml libs (ExtLib etc.).
 
-Provide ML-friendly primitives (lists/options) so translated compiler code remains clean.
+Provide ML-friendly primitives (lists/options) so reimplemented compiler code remains clean.
 
 Later: compile an early “Haxe compiler in Haxe” prototype to OCaml and run it.
 
@@ -1057,7 +1057,7 @@ The current Haxe build pipeline and dependencies are OCaml-native. Haxe’s own 
 
 So emitting OCaml keeps you “in the same world” for building, linking, CI, performance profiling, etc.
 
-2) It allows incremental porting (huge practical win)
+2) It allows incremental reimplementation (huge practical win)
 
 Issue #6843 suggests ML2HX (OCaml-to-Haxe translation) and explicitly says lexer/parsing can stay OCaml “externs” initially:
 
@@ -1118,7 +1118,7 @@ And #6843 explicitly notes you shouldn’t try to support the whole Haxe languag
 
 So the backend’s initial “definition of done” can be:
 
-compile the translated compiler code (Haxe) into OCaml,
+compile the reimplemented compiler code (Haxe) into OCaml,
 
 compile that OCaml into a working binary,
 

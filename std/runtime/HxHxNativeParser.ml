@@ -2,7 +2,7 @@
 
    Why this exists:
    - Matches the upstream bootstrap strategy: keep lexer/parser native initially
-     while porting the rest of the compiler pipeline into Haxe.
+     while reimplementing the rest of the compiler pipeline in Haxe.
 
    What it does (today):
    - Calls `HxHxNativeLexer.tokenize` to obtain tokens (with positions).

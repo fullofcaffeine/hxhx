@@ -2,7 +2,7 @@
 
    Why this exists:
    - Upstream Haxe (#6843) suggests keeping the lexer/parser in OCaml initially
-     while the rest of the compiler is ported to Haxe.
+     while the rest of the compiler is reimplemented in Haxe.
    - This module is a small proof that `reflaxe.ocaml`-generated code can call
      “real” OCaml code via externs and link cleanly via dune.
 
@@ -139,7 +139,7 @@ let tokenize (src : string) : string =
     String.sub src start (!idx - start)
   in
 
-  let read_string () : string =
+  let read_quoted_string (quote : char) : string =
     (* Opening quote already present at cursor. *)
     ignore (bump ());
     let b = Buffer.create 16 in
@@ -147,12 +147,12 @@ let tokenize (src : string) : string =
       if eof () then failwith "HxHxNativeLexer: unterminated string"
       else
         match bump () with
-        | '"' -> Buffer.contents b
+        | c when c = quote -> Buffer.contents b
         | '\\' ->
             if eof () then failwith "HxHxNativeLexer: unterminated escape"
             else (
               match bump () with
-              | '"' -> Buffer.add_char b '"'
+              | c when c = quote -> Buffer.add_char b quote
               | '\\' -> Buffer.add_char b '\\'
               | 'n' -> Buffer.add_char b '\n'
               | 'r' -> Buffer.add_char b '\r'
@@ -178,7 +178,15 @@ let tokenize (src : string) : string =
       match peek 0 with
       | Some '"' -> (
           try
-            let s = read_string () in
+            let s = read_quoted_string '"' in
+            add_tok "string" at_idx at_line at_col s;
+            loop ()
+          with Failure msg ->
+            add_err at_idx at_line at_col msg;
+            Buffer.contents buf)
+      | Some '\'' -> (
+          try
+            let s = read_quoted_string '\'' in
             add_tok "string" at_idx at_line at_col s;
             loop ()
           with Failure msg ->

@@ -5,8 +5,7 @@ package native;
 
 	Why:
 	- Upstream Haxe’s bootstrapping plan (#6843) explicitly suggests keeping
-	  the lexer/parser in OCaml initially, while translating/rewriting the rest
-	  of the compiler into Haxe.
+	  the lexer/parser in OCaml initially, while rewriting the rest of the compiler into Haxe.
 	- This extern proves that our generated OCaml can call a “real” OCaml module
 	  and link it via dune.
 

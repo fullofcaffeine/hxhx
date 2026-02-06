@@ -25,7 +25,7 @@ Native frontend hook:
   - `std/runtime/HxHxNativeLexer.ml`
   - `std/runtime/HxHxNativeParser.ml`
 - This matches the upstream bootstrap strategy (#6843): keep lexer/parser native
-  while porting the rest of the compiler pipeline into Haxe.
+  while reimplementing the rest of the compiler pipeline in Haxe.
 - Wire format: `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md`
 - Upstream alignment: `CompilerDriver` embeds a tiny subset of fixtures shaped
   after upstream `tests/misc` module-resolution files (and asserts native vs

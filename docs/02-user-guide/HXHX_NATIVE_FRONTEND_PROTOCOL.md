@@ -36,7 +36,7 @@ Why this exists:
 Notes:
 
 - This is a bring-up switch, not a long-term architecture commitment.
-- The “real” long-term options are either (a) evolve the protocol to carry a richer AST, or (b) port the frontend
+- The “real” long-term options are either (a) evolve the protocol to carry a richer AST, or (b) reimplement the frontend
   into Haxe fully and remove the native seam.
 
 ### `HXHX_NATIVE_FRONTEND_HEADER_ONLY`

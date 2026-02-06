@@ -65,7 +65,7 @@ To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in
 When using the upstream Haxe compiler (copyleft-licensed) as a reference, the rule is:
 
 - Use upstream **only as an oracle for behavior** (tests, CLI output, runtime semantics).
-- Reading upstream source to understand intent/constraints is OK, but **do not translate/port** upstream compiler code (OCaml → Haxe) into this repository.
+- Reading upstream source to understand intent/constraints is OK, but **do not transcribe** upstream compiler code (OCaml → Haxe) into this repository.
 
 Practical workflow to enforce this:
 
@@ -78,10 +78,10 @@ Practical workflow to enforce this:
 
 Legal reality note (engineering guidance, not legal advice):
 
-- We cannot prevent anyone from *attempting* a claim, but we can make it easy to demonstrate good provenance:
-  - upstream is not vendored,
-  - changes are test-driven and documented,
-  - and we are not shipping translated upstream compiler code.
+  - We cannot prevent anyone from *attempting* a claim, but we can make it easy to demonstrate good provenance:
+    - upstream is not vendored,
+    - changes are test-driven and documented,
+    - and we are not shipping code derived from upstream compiler sources.
 
 ## Upstream OCaml Reference (vendored checkout)
 

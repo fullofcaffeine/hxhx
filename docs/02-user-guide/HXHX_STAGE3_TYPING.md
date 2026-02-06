@@ -203,7 +203,6 @@ Stage 3 typing is the bridge to “real” `hxhx`:
 
 - Without typing, `hxhx` cannot reliably typecheck the compiler sources (or plugins) and can’t run upstream suites.
 - With typing (even a subset), we can:
-  - port compiler subsystems into Haxe incrementally
+  - reimplement compiler subsystems in Haxe incrementally
   - start validating those subsystems against upstream tests
   - build toward Stage 4 macros/plugin ABI without re-architecting the frontend
-

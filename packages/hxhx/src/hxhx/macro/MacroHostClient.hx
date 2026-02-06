@@ -198,6 +198,10 @@ class MacroHostClient {
 private class MacroClient {
 	final proc:sys.io.Process;
 	var nextId:Int = 1;
+	static final TRACE:Bool = {
+		final v = Sys.getEnv("HXHX_MACRO_TRACE");
+		v == "1" || v == "true" || v == "yes";
+	};
 
 	function new(proc:sys.io.Process) {
 		this.proc = proc;
@@ -222,6 +226,9 @@ private class MacroClient {
 
 	public function call(method:String, tail:String):String {
 		final id = nextId++;
+		if (TRACE) {
+			try Sys.stderr().writeString("[hxhx macro rpc] -> " + method + "\n") catch (_:Dynamic) {}
+		}
 		final msg = tail == null || tail.length == 0
 			? ("req " + id + " " + method + "\n")
 			: ("req " + id + " " + method + " " + tail + "\n");
@@ -260,6 +267,9 @@ private class MacroClient {
 		final id = Std.parseInt(parts[1]);
 		final method = parts[2];
 		final tail = parts[3];
+		if (TRACE) {
+			try Sys.stderr().writeString("[hxhx macro rpc] <- " + method + "\n") catch (_:Dynamic) {}
+		}
 		if (id == null) {
 			replyErr(0, "missing id");
 			return;

@@ -4,7 +4,7 @@ package native;
 	Native OCaml parser hook for the Stage 2 `hih-compiler` example.
 
 	Why:
-	- Keeps the “native frontend” escape hatch available while we port more of
+	- Keeps the “native frontend” escape hatch available while we reimplement more of
 	  the real compiler into Haxe.
 	- Lets us validate the end-to-end integration seam: Haxe → OCaml emission →
 	  dune build/link → calls into native OCaml modules.

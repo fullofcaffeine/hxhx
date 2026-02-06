@@ -140,7 +140,7 @@ Pros:
 
 Cons:
 
-- largest implementation effort (essentially porting upstream eval machinery)
+- largest implementation effort (essentially reimplementing the upstream macro execution model)
 
 ## Chosen rollout (Stage 4 plan)
 

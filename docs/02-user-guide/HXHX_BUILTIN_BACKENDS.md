@@ -84,7 +84,7 @@ Each entry must define:
 
 - `id`: the CLI name (e.g. `ocaml`, `elixir`)
 - `kind`: `bundled` | `builtin` | `both`
-- `inject(haxeArgs)`: how to translate `--target <id>` into concrete flags
+- `inject(haxeArgs)`: how to expand `--target <id>` into concrete flags
 - `validate(haxeArgs)`: best-effort checks for missing required config
 
 Pseudo-Haxe (sketch):

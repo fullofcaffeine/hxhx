@@ -13,7 +13,7 @@
 	- When `-D hih_native_parser` is enabled, we call into the OCaml “native”
 	  lexer/parser stubs (`HxHxNativeLexer` / `HxHxNativeParser`) via externs.
 	  This matches the upstream bootstrap strategy: keep the frontend native
-	  while we port the rest of the compiler pipeline into Haxe.
+	  while we reimplement the rest of the compiler pipeline in Haxe.
 **/
 class ParserStage {
 	public function new() {}
@@ -35,7 +35,24 @@ class ParserStage {
 			((() -> {
 				final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
 				if (v == "1" || v == "true" || v == "yes") return new HxParser(source).parseModule();
-				return parseViaNativeHooks(source);
+				try {
+					return parseViaNativeHooks(source);
+				} catch (eNative:Dynamic) {
+					final strict = Sys.getEnv("HIH_NATIVE_PARSER_STRICT");
+					if (strict == "1" || strict == "true" || strict == "yes") throw eNative;
+
+					// Fallback: the pure-Haxe frontend is slower, but it can unblock bring-up when the
+					// native lexer/parser cannot yet handle an upstream-shaped input.
+					//
+					// This is especially useful when widening the module graph for upstream suites
+					// (e.g. enabling heuristic same-package type resolution).
+					try {
+						return new HxParser(source).parseModule();
+					} catch (_:Dynamic) {
+						// Prefer the native error (it is usually more specific about the failure mode).
+						throw eNative;
+					}
+				}
 			})());
 		#else
 			new HxParser(source).parseModule();
