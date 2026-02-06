@@ -202,6 +202,10 @@ private class MacroClient {
 		final v = Sys.getEnv("HXHX_MACRO_TRACE");
 		v == "1" || v == "true" || v == "yes";
 	};
+	static final TRACE_HOST:Bool = {
+		final v = Sys.getEnv("HXHX_MACRO_HOST_TRACE");
+		v == "1" || v == "true" || v == "yes";
+	};
 
 	function new(proc:sys.io.Process) {
 		this.proc = proc;
@@ -401,6 +405,20 @@ private class MacroClient {
 			proc.stdin.writeString("quit\n", null);
 			proc.stdin.flush();
 		} catch (_:Dynamic) {}
+
+		// Optional bring-up diagnostics: if the macro host logs to stderr (e.g. reverse-RPC tracing),
+		// drain it after requesting shutdown so the output is visible in CI logs.
+		if (TRACE_HOST) {
+			try {
+				while (true) {
+					final line = proc.stderr.readLine();
+					Sys.stderr().writeString(line + "\n");
+				}
+			} catch (_:haxe.io.Eof) {
+				// expected
+			} catch (_:Dynamic) {}
+		}
+
 		proc.close();
 	}
 }

@@ -156,6 +156,24 @@ class HxLexer {
 			while (!eof() && isDigit(peek(0))) bump();
 		}
 
+		// Scientific notation (Stage 3 expansion): `1e-5`, `1E10`, `3.14e+2`.
+		//
+		// Why
+		// - Upstream-ish test suites (e.g. utest) use constants like `1e-5`.
+		// - Without exponent support, we tokenize `1e-5` as `TInt(1)` then `TIdent("e")`..., which
+		//   cascades into `EUnsupported` placeholders in bring-up rungs.
+		if (!eof() && (peek(0) == "e".code || peek(0) == "E".code)) {
+			var off = 1;
+			final sign = peek(1);
+			if (sign == "+".code || sign == "-".code) off = 2;
+			if (isDigit(peek(off))) {
+				isFloat = true;
+				bump(); // 'e' or 'E'
+				if (peek(0) == "+".code || peek(0) == "-".code) bump();
+				while (!eof() && isDigit(peek(0))) bump();
+			}
+		}
+
 		final text = src.substring(start, index);
 		if (isFloat) {
 			final value = Std.parseFloat(text);

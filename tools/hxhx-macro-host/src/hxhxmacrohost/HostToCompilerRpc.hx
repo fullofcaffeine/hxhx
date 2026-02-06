@@ -28,8 +28,50 @@ package hxhxmacrohost;
 class HostToCompilerRpc {
 	static var nextId:Int = -1;
 
+	static inline function isTrueEnv(name:String):Bool {
+		final v = Sys.getEnv(name);
+		if (v == null) return false;
+		final t = StringTools.trim(v).toLowerCase();
+		return t == "1" || t == "true" || t == "yes";
+	}
+
+	/**
+		Write a single diagnostic line to stderr.
+
+		Why
+		- We want optional bring-up tracing that can be enabled in CI/debug logs.
+
+		Gotchas
+		- Do not name this `trace`. Haxe treats `trace(...)` as a builtin that can be compiled out
+		  under `-D no-traces`, even if a local function named `trace` exists.
+	**/
+	static function writeTraceLine(msg:String):Void {
+		try {
+			Sys.stderr().writeString(msg + "\n");
+			Sys.stderr().flush();
+		} catch (_:Dynamic) {}
+	}
+
+	static function traceEnabled():Bool {
+		return isTrueEnv("HXHX_MACRO_HOST_TRACE");
+	}
+
+	static function summarizeTail(tail:String):String {
+		if (tail == null || tail.length == 0) return "";
+		// Avoid dumping user payloads; only surface keys to show which ABI shape is being used.
+		try {
+			final m = Protocol.kvParse(tail);
+			final keys = new Array<String>();
+			for (k in m.keys()) keys.push(k);
+			return "keys=" + keys.join(",");
+		} catch (_:Dynamic) {
+			return "len=" + tail.length;
+		}
+	}
+
 	public static function call(method:String, tail:String):String {
 		final id = nextId--;
+		if (traceEnabled()) writeTraceLine("[hxhx macro host rpc] -> " + method + (tail == null || tail.length == 0 ? "" : (" " + summarizeTail(tail))));
 		final msg = (tail == null || tail.length == 0)
 			? ("req " + id + " " + method + "\n")
 			: ("req " + id + " " + method + " " + tail + "\n");
@@ -57,12 +99,14 @@ class HostToCompilerRpc {
 			final status = parts[2];
 			final respTail = parts[3];
 			if (status == "ok") {
+				if (traceEnabled()) writeTraceLine("[hxhx macro host rpc] <- " + method + " ok");
 				out = Protocol.kvGet(respTail, "v");
 				break;
 			}
 
 			final msg = Protocol.kvGet(respTail, "m");
 			final pos = Protocol.kvGet(respTail, "p");
+			if (traceEnabled()) writeTraceLine("[hxhx macro host rpc] <- " + method + " err");
 			throw (pos != null && pos.length > 0) ? ("compiler: " + msg + " (" + pos + ")") : ("compiler: " + msg);
 		}
 

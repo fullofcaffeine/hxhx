@@ -44,6 +44,17 @@ class Stage3Compiler {
 		return 2;
 	}
 
+	static function escapeOneLine(s:String):String {
+		if (s == null) return "";
+		var out = s;
+		// Keep logs parseable and stable even when we store raw source snippets.
+		out = StringTools.replace(out, "\\", "\\\\");
+		out = StringTools.replace(out, "\r", "\\r");
+		out = StringTools.replace(out, "\n", "\\n");
+		out = StringTools.replace(out, "\t", "\\t");
+		return out;
+	}
+
 	static function countUnsupportedExprsInExpr(e:Null<HxExpr>):Int {
 		if (e == null) return 0;
 		return switch (e) {
@@ -143,6 +154,12 @@ class Stage3Compiler {
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			for (s in HxFunctionDecl.getBody(fn)) c += countUnsupportedExprsInStmt(s);
 		}
+		return c;
+	}
+
+	static function countUnsupportedExprsInFunction(fn:HxFunctionDecl):Int {
+		var c = 0;
+		for (s in HxFunctionDecl.getBody(fn)) c += countUnsupportedExprsInStmt(s);
 		return c;
 	}
 
@@ -757,6 +774,7 @@ class Stage3Compiler {
 			var unsupportedFilesCount = 0;
 			final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
 			var unsupportedRawCount = 0;
+			var unsupportedFnCount = 0;
 			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
 			var rootTyped:Null<TypedModule> = null;
 			for (m in resolvedForTyping) {
@@ -772,8 +790,29 @@ class Stage3Compiler {
 							+ " unsupported_exprs=" + unsupportedInFile
 						);
 						if (traceUnsupported) {
+							// Per-function summary so unsupported shapes are actionable even when raw payloads
+							// come from native protocol rungs (which may not preserve source locations yet).
+							final cls = HxModuleDecl.getMainClass(pm.getDecl());
+							for (fn in HxClassDecl.getFunctions(cls)) {
+								final fnUnsupported = countUnsupportedExprsInFunction(fn);
+								if (fnUnsupported <= 0) continue;
+								Sys.println(
+									"unsupported_fn[" + unsupportedFnCount + "]="
+									+ ResolvedModule.getFilePath(m)
+									+ ":" + HxFunctionDecl.getName(fn)
+									+ " unsupported_exprs=" + fnUnsupported
+								);
+								unsupportedFnCount += 1;
+								if (unsupportedFnCount >= 50) break;
+							}
 							for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
-								Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":" + raw);
+								final escaped = escapeOneLine(raw);
+								Sys.println(
+									"unsupported_expr[" + unsupportedRawCount + "]="
+									+ ResolvedModule.getFilePath(m)
+									+ ":raw=" + escaped
+									+ " len=" + (raw == null ? 0 : raw.length)
+								);
 								unsupportedRawCount += 1;
 								if (unsupportedRawCount >= 50) break;
 							}
@@ -909,6 +948,7 @@ class Stage3Compiler {
 				var unsupportedFilesCount = 0;
 				final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
 				var unsupportedRawCount = 0;
+				var unsupportedFnCount = 0;
 				for (m in resolvedForTyping) {
 					final pm = ResolvedModule.getParsed(m);
 					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) headerOnlyCount += 1;
@@ -917,8 +957,27 @@ class Stage3Compiler {
 					if (unsupportedInFile > 0) {
 						unsupportedFilesCount += 1;
 						if (traceUnsupported) {
+							final cls = HxModuleDecl.getMainClass(pm.getDecl());
+							for (fn in HxClassDecl.getFunctions(cls)) {
+								final fnUnsupported = countUnsupportedExprsInFunction(fn);
+								if (fnUnsupported <= 0) continue;
+								Sys.println(
+									"unsupported_fn[" + unsupportedFnCount + "]="
+									+ ResolvedModule.getFilePath(m)
+									+ ":" + HxFunctionDecl.getName(fn)
+									+ " unsupported_exprs=" + fnUnsupported
+								);
+								unsupportedFnCount += 1;
+								if (unsupportedFnCount >= 50) break;
+							}
 							for (raw in collectUnsupportedExprRawInModule(pm, 20)) {
-								Sys.println("unsupported_expr[" + unsupportedRawCount + "]=" + ResolvedModule.getFilePath(m) + ":" + raw);
+								final escaped = escapeOneLine(raw);
+								Sys.println(
+									"unsupported_expr[" + unsupportedRawCount + "]="
+									+ ResolvedModule.getFilePath(m)
+									+ ":raw=" + escaped
+									+ " len=" + (raw == null ? 0 : raw.length)
+								);
 								unsupportedRawCount += 1;
 								if (unsupportedRawCount >= 50) break;
 							}
