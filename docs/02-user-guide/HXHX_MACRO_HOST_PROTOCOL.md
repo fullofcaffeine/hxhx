@@ -213,6 +213,12 @@ This is explicitly **not** the long-term implementation of upstream build macros
 - proves that `@:build(...)` can have an observable effect on typing + emission
 - transports raw Haxe member source strings that our bootstrap parser can re-parse
 
+In current bring-up, this method is used in two ways:
+
+- directly, by a macro calling `Compiler.emitBuildFields(modulePath, snippet)`
+- indirectly, when an allowlisted `@:build(...)` entrypoint returns `Array<haxe.macro.Expr.Field>`:
+  the macro host converts *new* fields into member snippets and forwards them via `compiler.emitBuildFields`
+
 - request: `req <id> compiler.emitBuildFields m=<...> s=<...>`
   - `m`: module path (e.g. `demo.Main`)
   - `s`: Haxe class-member snippet(s) to merge into that module’s main class
@@ -239,11 +245,16 @@ immediately throwing "Can't be called outside of macro".
 
 Notes:
 
-- This RPC is implemented on the compiler side, but it is **not wired** to a runtime implementation of
-  `haxe.macro.Context.getBuildFields()` yet because compiling the full `haxe.macro.Expr` AST surface to OCaml
-  currently fails under dune (tracked as a Gate1 blocker).
-- The intended use is to eventually expand this payload into structured field AST values, but Stage4 bring-up
-  still relies on `compiler.emitBuildFields` for deterministic field injection.
+- This RPC is wired to a runtime subset of `haxe.macro.Context.getBuildFields()` inside the macro host.
+  The macro host calls `context.getBuildFields` over reverse RPC and returns a shallow
+  `Array<haxe.macro.Expr.Field>`.
+- Returned `Field` values are **stubby** by design:
+  - `pos` is currently `null` (no macro-user positions yet)
+  - `FFun` bodies are stubbed with a trivial `null` expression
+  - only `name`, `access`, and a coarse `kind` (`fun` vs `var`) are preserved
+- When an allowlisted build-macro entrypoint returns `Array<Field>`, the macro host computes a shallow delta
+  by field name against the snapshot returned by `Context.getBuildFields()` and emits only **new** members
+  via `compiler.emitBuildFields`. Modifying existing fields is intentionally ignored at this rung.
 
 ### `context.defined`
 

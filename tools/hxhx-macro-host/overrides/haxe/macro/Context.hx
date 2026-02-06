@@ -6,6 +6,7 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 #else
+import haxe.macro.Expr;
 import hxhxmacrohost.api.Context as HostContext;
 import hxhxmacrohost.MacroError;
 #end
@@ -34,11 +35,7 @@ import hxhxmacrohost.MacroError;
 	Gotchas
 	- Do not grow the runtime subset opportunistically. Add methods only when a gate/test requires it.
 **/
-// Keep `Message` compatible with upstream in macro contexts. At runtime we
-// allow `Position` to degrade to `Dynamic` via a local typedef below.
-#if !(neko || eval || display)
-typedef Position = Dynamic;
-#end
+// Keep `Message` compatible with upstream.
 
 enum Message {
 	Info(msg:String, pos:Position);
@@ -300,6 +297,10 @@ class Context {
 
 	public static function getDefines():Map<String, String> {
 		return HostContext.getDefines();
+	}
+
+	public static function getBuildFields():Array<haxe.macro.Expr.Field> {
+		return HostContext.getBuildFields();
 	}
 
 	public static function error(msg:String, pos:Position, ?depth:Int = 0):Dynamic {

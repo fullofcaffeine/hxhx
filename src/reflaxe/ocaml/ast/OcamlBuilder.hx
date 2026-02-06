@@ -2237,6 +2237,8 @@ class OcamlBuilder {
 								final cls = clsRef.get();
 								if (isStdArrayClass(cls)) {
 									switch (cf.name) {
+											case "iterator" if (args.length == 0):
+												ocamlIteratorOfArray(buildExpr(objExpr));
 											case "concat":
 												OcamlExpr.EApp(
 													OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "concat"),
@@ -2887,12 +2889,89 @@ class OcamlBuilder {
 							OcamlExpr.EBinop(OcamlBinop.Cons, buildExpr(args[0]), buildExpr(args[1]));
 						} else if (isOcamlNativeEnumType(en, "List") && ef.name == "Nil" && args.length == 0) {
 							OcamlExpr.EList([]);
-						} else if (args.length > 1) {
-							// Enum constructors with multiple args take a tuple in OCaml: `C (a, b)`.
-							OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))]);
-								} else {
-									OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+						} else if (isOcamlNativeEnumType(en, "Option") || isOcamlNativeEnumType(en, "Result")) {
+							// OCaml-native enums: keep constructor calls idiomatic (`Some 1`, `Ok 1`)
+							// and let OCaml infer type parameters rather than degrading to `Obj.t`.
+							(args.length > 1)
+								? OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))])
+								: OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+						} else if (en.pack == null || en.pack.length < 2 || en.pack[0] != "haxe" || en.pack[1] != "macro") {
+							// Non-macro enums (portable surface):
+							// Keep constructor applications simple and stable. More aggressive coercion of
+							// enum constructor arguments (optional padding, nullable enum boxing, etc.)
+							// is introduced first for macro AST enums where upstream code requires it.
+							(args.length > 1)
+								? OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(args.map(buildExpr))])
+								: OcamlExpr.EApp(buildExpr(fn), args.map(buildExpr));
+						} else {
+							// Enum constructors: coerce arguments (optional args must be fully applied,
+							// and optional enum args use the nullable (Obj.t) representation).
+							final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(ef.type)) {
+								case TFun(fargs, _): fargs;
+								case _: null;
+							}
+
+							inline function hxNullForOptionalArg(ea:{ name:String, opt:Bool, t:Type }):OcamlExpr {
+								final isEnum = switch (TypeTools.follow(ea.t)) {
+									case TEnum(_, _): true;
+									case _: false;
 								}
+								// Nullable primitives and `Null<Enum>` use `Obj.t` with `hx_null`.
+								return (nullablePrimitiveKind(ea.t) != null || isEnum)
+									? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")
+									: OcamlExpr.EApp(
+										OcamlExpr.EIdent("Obj.magic"),
+										[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]
+									);
+							}
+
+							inline function coerceEnumCtorArg(ea:{ name:String, opt:Bool, t:Type }, arg:TypedExpr):OcamlExpr {
+								// Optional enum args behave like `Null<Enum>` and are represented as `Obj.t`.
+								// Box when present so they can safely carry `hx_null` when omitted.
+								final enumName = ea.opt ? fullNameOfTypeEnum(ea.t) : null;
+								if (enumName != null) {
+									final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(arg)]);
+									return OcamlExpr.EApp(
+										OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+										[OcamlExpr.EConst(OcamlConst.CString(enumName)), asObj]
+									);
+								}
+								return coerceForAssignment(ea.t, arg);
+							}
+
+							final builtArgs:Array<OcamlExpr> = [];
+							if (expectedArgs != null) {
+								for (i in 0...args.length) {
+									if (i >= expectedArgs.length) {
+										builtArgs.push(buildExpr(args[i]));
+										continue;
+									}
+									builtArgs.push(coerceEnumCtorArg(expectedArgs[i], args[i]));
+								}
+								if (args.length < expectedArgs.length) {
+									for (i in args.length...expectedArgs.length) {
+										final ea = expectedArgs[i];
+										if (!ea.opt) {
+											#if macro
+											guardrailError(
+												"reflaxe.ocaml: enum constructor call is missing required argument '" + ea.name + "'.",
+												e.pos
+											);
+											#end
+											builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+										} else {
+											builtArgs.push(hxNullForOptionalArg(ea));
+										}
+									}
+								}
+							} else {
+								for (a in args) builtArgs.push(buildExpr(a));
+							}
+
+							(args.length > 1)
+								? OcamlExpr.EApp(buildExpr(fn), [OcamlExpr.ETuple(builtArgs)])
+								: OcamlExpr.EApp(buildExpr(fn), builtArgs);
+						}
 								case _:
 									final isDynamicCall = switch (followNoAbstracts(unwrap(fn).t)) {
 										case TDynamic(_): true;
@@ -6644,7 +6723,23 @@ class OcamlBuilder {
 									OcamlExpr.EField(buildExpr(obj), cf.name);
 								}
 							case FMethod(_):
-								buildBoundMethodClosure(obj, cls, cf, pos);
+								// Array iterator bring-up: allow `arr.iterator` to be used as a value when
+								// arrays are coerced into `Iterable<T>` structural types (e.g. `Lambda.has(arr, x)`).
+								// Upstream expects this to be a `Void -> Iterator<T>` closure.
+								if (isStdArrayClass(cls) && cf.name == "iterator") {
+									final recvTmp = freshTmp("arr");
+									OcamlExpr.ELet(
+										recvTmp,
+										buildExpr(obj),
+										OcamlExpr.EFun(
+											[OcamlPat.PConst(OcamlConst.CUnit)],
+											ocamlIteratorOfArray(OcamlExpr.EIdent(recvTmp))
+										),
+										false
+									);
+								} else {
+									buildBoundMethodClosure(obj, cls, cf, pos);
+								}
 							case _:
 								// Methods/properties are handled at callsites; as values, we only support real methods for now.
 								OcamlExpr.EConst(OcamlConst.CUnit);
@@ -6712,8 +6807,38 @@ class OcamlBuilder {
 						OcamlExpr.EApp(OcamlExpr.EIdent("fst"), [buildExpr(obj)]);
 					case "value":
 						OcamlExpr.EApp(OcamlExpr.EIdent("snd"), [buildExpr(obj)]);
-					case "hasNext", "next":
-						OcamlExpr.EField(buildExpr(obj), cf.name);
+					case "hasNext":
+						// Iterator bring-up: avoid emitting raw record-label access (`it.hasNext`)
+						// in modules that don't reference `HxIterator`, which can fail under dune
+						// with "Unbound record field hasNext".
+						//
+						// We instead surface iterator primitives via helper functions:
+						//   it.hasNext()  -> HxIterator.hasNext it
+						//   it.hasNext    -> fun () -> HxIterator.hasNext it
+						//
+						// This preserves Haxe's `Void -> Bool` shape while keeping record-label use
+						// confined to `HxIterator` itself.
+						final recvTmp = freshTmp("iter");
+						OcamlExpr.ELet(
+							recvTmp,
+							buildExpr(obj),
+							OcamlExpr.EFun(
+								[OcamlPat.PConst(OcamlConst.CUnit)],
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "hasNext"), [OcamlExpr.EIdent(recvTmp)])
+							),
+							false
+						);
+					case "next":
+						final recvTmp = freshTmp("iter");
+						OcamlExpr.ELet(
+							recvTmp,
+							buildExpr(obj),
+							OcamlExpr.EFun(
+								[OcamlPat.PConst(OcamlConst.CUnit)],
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxIterator"), "next"), [OcamlExpr.EIdent(recvTmp)])
+							),
+							false
+						);
 					case _:
 						// Some typedef-backed anonymous structures are represented as real OCaml records
 						// for better performance/ergonomics (e.g. `sys.FileStat`).
@@ -6848,6 +6973,17 @@ class OcamlBuilder {
 				case _: null;
 			}
 			final argCount = expectedArgs != null ? expectedArgs.length : 0;
+
+			// Array iterator bring-up: structural coercions (`Array<T>` -> `Iterable<T>`) need a
+			// bound `Void -> Iterator<T>` closure. Our regular bound-closure builder would call
+			// the generated `Array.iterator recv ()`, but `Array` is not a real OCaml module.
+			// Use the runtime iterator representation instead.
+			if (isStdArrayClass(cls) && cf.name == "iterator" && argCount == 0) {
+				return OcamlExpr.EFun(
+					[OcamlPat.PConst(OcamlConst.CUnit)],
+					ocamlIteratorOfArray(recvVar)
+				);
+			}
 
 			final paramNames:Array<String> = [];
 			final params:Array<OcamlPat> = argCount == 0

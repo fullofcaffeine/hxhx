@@ -56,6 +56,42 @@ class MacroRuntime {
 	**/
 	static final onGenerateHooks:Array<Array<Dynamic>->Void> = [];
 
+	/**
+		Field names for the current `Context.getBuildFields()` snapshot.
+
+		Why
+		- In upstream semantics, build macros often return the *entire* field array (old + new).
+		- Our bring-up rung transports only *new* members as raw Haxe snippets back to the compiler
+		  (`compiler.emitBuildFields`).
+		- Keeping the original field name set in macro-host state allows us to compute a shallow delta:
+		  emit only fields that weren't present in the original snapshot.
+
+		Gotchas
+		- Delta is by field name only; modifications to existing fields are ignored.
+		- If a build macro doesn't call `Context.getBuildFields()` at all, we consider the snapshot absent.
+	**/
+	static var currentBuildFieldNames:Array<String> = [];
+	static var hasBuildFieldSnapshot:Bool = false;
+
+	public static function setCurrentBuildFieldNames(names:Array<String>):Void {
+		currentBuildFieldNames = (names == null) ? [] : names.copy();
+		hasBuildFieldSnapshot = true;
+	}
+
+	public static function clearCurrentBuildFieldSnapshot():Void {
+		currentBuildFieldNames = [];
+		hasBuildFieldSnapshot = false;
+	}
+
+	public static function hasCurrentBuildFieldSnapshot():Bool {
+		return hasBuildFieldSnapshot;
+	}
+
+	public static function hasCurrentBuildFieldName(name:String):Bool {
+		if (name == null || name.length == 0) return false;
+		return currentBuildFieldNames.indexOf(name) != -1;
+	}
+
 	public static function registerAfterTyping(cb:Array<Dynamic>->Void):Int {
 		afterTypingHooks.push(cb);
 		return afterTypingHooks.length - 1;

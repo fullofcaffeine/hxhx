@@ -16,7 +16,7 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 echo "== Building hxhx macro host (RPC skeleton)"
-HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
 if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
   echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
   exit 1
@@ -483,6 +483,25 @@ echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.BuildFieldMacros
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
 echo "$out" | grep -q "^from_hxhx_build_macro$"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: @:build return Array<Field> emits delta members"
+tmpbuild_ret="$tmpdir/build_fields_return_test"
+mkdir -p "$tmpbuild_ret/src"
+cat >"$tmpbuild_ret/src/Main.hx" <<'HX'
+@:build(hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn())
+class Main {
+  static function main() {
+    generated_return();
+  }
+}
+HX
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_ret/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_ret/out")"
+echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()$"
+echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
+echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
+echo "$out" | grep -q "^from_hxhx_build_macro_return$"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 

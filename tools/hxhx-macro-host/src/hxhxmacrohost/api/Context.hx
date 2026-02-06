@@ -1,5 +1,6 @@
 package hxhxmacrohost.api;
 
+import haxe.macro.Expr;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.MacroRuntime;
 import hxhxmacrohost.Protocol;
@@ -108,5 +109,76 @@ class Context {
 	public static function getType(name:String):String {
 		if (name == null || name.length == 0) return "missing";
 		return MacroRuntime.builtinTypeDesc(name);
+	}
+
+	/**
+		Return the fields of the class currently being built (Stage4 bring-up subset).
+
+		Why
+		- Many upstream build macros begin by calling `Context.getBuildFields()` and then either
+		  return the same list or push additional fields.
+		- Our bring-up ABI does not transport full typed AST yet, but we can still provide a
+		  minimal field list so these macros can run.
+
+		What
+		- Returns `Array<haxe.macro.Expr.Field>` values with:
+		  - `name`, `access`, `kind`, and `pos`
+		  - `FFun` bodies are stubbed with a trivial `null` expression so `ExprTools.map`-style
+		    traversals do not crash on `null` bodies.
+
+		How
+		- Reverse RPC `context.getBuildFields` returns a length-prefixed fragment list:
+		  `c=<count> n0=<name> k0=<kind> s0=<0|1> v0=<visibility> ...`
+	**/
+	public static function getBuildFields():Array<Field> {
+		final payload = HostToCompilerRpc.call("context.getBuildFields", "");
+		final out = new Array<Field>();
+		final names = new Array<String>();
+
+		if (payload == null || payload.length == 0) {
+			MacroRuntime.clearCurrentBuildFieldSnapshot();
+			return out;
+		}
+
+		final m = Protocol.kvParse(payload);
+		final countStr = m.exists("c") ? m.get("c") : "";
+		final count = Std.parseInt(countStr);
+		if (count == null || count < 0) {
+			MacroRuntime.clearCurrentBuildFieldSnapshot();
+			return out;
+		}
+
+		final nullExpr:Expr = { expr: EConst(CIdent("null")), pos: null };
+
+		for (i in 0...count) {
+			final nKey = "n" + i;
+			final kKey = "k" + i;
+			final sKey = "s" + i;
+			final vKey = "v" + i;
+			if (!m.exists(nKey)) continue;
+
+			final name = m.get(nKey);
+			if (name.length == 0) continue;
+
+			final kind = m.exists(kKey) ? m.get(kKey) : "";
+			final isStatic = m.exists(sKey) && m.get(sKey) == "1";
+			final vis = m.exists(vKey) ? m.get(vKey) : "";
+
+			final access = new Array<Access>();
+			if (vis == "Public") access.push(APublic) else access.push(APrivate);
+			if (isStatic) access.push(AStatic);
+
+			final field:Field = {
+				name: name,
+				access: access,
+				kind: (kind == "var") ? FVar(null, null) : FFun({ args: [], expr: nullExpr }),
+				pos: null
+			};
+			out.push(field);
+			names.push(name);
+		}
+
+		MacroRuntime.setCurrentBuildFieldNames(names);
+		return out;
 	}
 }

@@ -126,7 +126,36 @@ class OcamlASTPrinter {
 			case ERaise(exn):
 				"raise (" + printExprCtx(exn, PREC_TOP, indentLevel) + ")";
 			case ETuple(items):
-				"(" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join(", ") + ")";
+				// OCaml parsing gotcha: tuple elements that begin with `let ... in`, `if ... then`,
+				// `match`, etc. must be parenthesized, otherwise the comma can associate outside
+				// the intended tuple and constructors like `C (let x = ... in x, y)` fail to parse.
+				//
+				// We keep output stable by only adding parentheses for “statement-like” expressions.
+				function needsTupleElemParens(expr:OcamlExpr):Bool {
+					return switch (expr) {
+						case EPos(_, inner): needsTupleElemParens(inner);
+						case ELet(_, _, _, _)
+							| EFun(_, _)
+							| EIf(_, _, _)
+							| EMatch(_, _)
+							| ETry(_, _)
+							| ESeq(_)
+							| EWhile(_, _)
+							| EAssign(_, _, _)
+							| ERaise(_):
+							true;
+						case _:
+							false;
+					}
+				}
+				"("
+					+ items
+						.map(i -> {
+							final inner = printExprCtx(i, PREC_TOP, indentLevel);
+							needsTupleElemParens(i) ? ("(" + inner + ")") : inner;
+						})
+						.join(", ")
+					+ ")";
 			case EAnnot(expr, typ):
 				"(" + printExprCtx(expr, PREC_TOP, indentLevel) + " : " + printType(typ) + ")";
 			case ERecord(fields):

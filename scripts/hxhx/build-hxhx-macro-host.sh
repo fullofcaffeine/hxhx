@@ -124,9 +124,9 @@ trim_ws() {
         # - `Void` macro entrypoints like `Macro.init()`
         # - `String` macro entrypoints used for deterministic bring-up reports
         if [ -n "$call_args" ]; then
-          echo "      case \"${entry_escaped}\": { ${cls}.${meth}(${call_args}); \"ok\"; }"
+          echo "      case \"${entry_escaped}\": { final r:Dynamic = untyped ${cls}.${meth}(${call_args}); hxhxmacrohost.BuildMacroSupport.afterEntrypoint(r); \"ok\"; }"
         else
-          echo "      case \"${entry_escaped}\": { ${cls}.${meth}(); \"ok\"; }"
+          echo "      case \"${entry_escaped}\": { final r:Dynamic = untyped ${cls}.${meth}(); hxhxmacrohost.BuildMacroSupport.afterEntrypoint(r); \"ok\"; }"
         fi
       done
 

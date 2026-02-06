@@ -14,6 +14,28 @@ type 'a t = {
   next : unit -> 'a;
 }
 
+(* Iterator primitives
+
+   Why
+   - Many generated modules call iterator operations via the Haxe surface:
+       it.hasNext()
+       it.next()
+   - Emitting raw OCaml record-label access at callsites (`it.hasNext ()`) requires the
+     record type defining those labels to be present in the module's typing environment.
+     Some stdlib modules do not reference `HxIterator` directly and can fail under dune with:
+       `Error: Unbound record field hasNext`
+
+   How
+   - Keep record-label access confined to this module.
+   - Codegen lowers iterator operations to these helpers:
+       `HxIterator.hasNext it`
+       `HxIterator.next it` *)
+let hasNext (it : 'a t) : bool =
+  it.hasNext ()
+
+let next (it : 'a t) : 'a =
+  it.next ()
+
 let of_array (a : 'a HxArray.t) : 'a t =
   let i = ref 0 in
   {
@@ -24,4 +46,3 @@ let of_array (a : 'a HxArray.t) : 'a t =
         i := !i + 1;
         v);
   }
-
