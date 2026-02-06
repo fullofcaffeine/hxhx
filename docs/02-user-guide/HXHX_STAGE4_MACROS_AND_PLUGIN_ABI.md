@@ -80,6 +80,35 @@ Portability rule:
 
 We periodically reassess whether an OCaml-only shim can be retired in favor of a pure-Haxe transport.
 
+## ABI strategy for native shims (OCaml-inferred vs Haxe-derived signatures)
+
+There are two different “signature” problems in this repository, and they should not be conflated:
+
+1) **Project tooling `.mli` generation** for *emitted user projects* (editor UX, clearer type errors).
+   - For that, this repo deliberately prefers **OCaml inference** (`ocamlc -i`). See:
+     - `docs/02-user-guide/OCAML_TOOLING_MLI.md:1`
+
+2) **Native shim interfaces** for compiler/runtime services (e.g. process spawning, pipes, small host bridges).
+
+For native shims, the recommended strategy is:
+
+- Treat the **Haxe extern** declaration as the *IDL*:
+  - it defines the public name (`@:native`), arity, and Haxe-facing types,
+  - and it is what the compiler core is written against.
+- Keep the shim implementation small and explicitly scoped to the target:
+  - OCaml: implemented as a `std/runtime/*.ml` module compiled/linked into the binary.
+  - other native targets: provide an equivalent implementation (pure Haxe if the target supports it, otherwise a
+    similarly-small target shim).
+- Use OCaml inference (`ocamlc -i`) only as a **sanity check** (and optionally to generate a human-readable `.mli`),
+  but avoid making “OCaml is the source of truth” a dependency for the compiler core.
+
+Why this matters for `hxhx`:
+
+- If we later compile `hxhx` to a different native target (e.g. Rust/C++), any OCaml-only shim cannot be reused.
+  Keeping the *interface* Haxe-owned avoids baking “OCaml implementation details” into compiler architecture.
+- At the same time, using `ocamlc -i` for **tooling `.mli` generation** remains a great idea because OCaml’s type
+  system is the source of truth for the emitted OCaml code.
+
 ## Terms
 
 - **Stage0 `haxe`**: upstream OCaml compiler binary.

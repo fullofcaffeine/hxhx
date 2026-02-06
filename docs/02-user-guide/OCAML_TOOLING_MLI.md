@@ -39,6 +39,18 @@ No — this is an **OCaml-target tooling feature**, not a `hxhx` architectural d
 If/when we add additional “curated interface” modes, that work is about **OCaml user ergonomics** (stable interfaces
 and nicer editor/diagnostics), not about making the compiler core more or less portable.
 
+## Not to be confused with “native shim” interfaces
+
+This document is specifically about generating `.mli` files for **emitted user projects**.
+
+`hxhx` also has a separate concept of “native shims” (small `std/runtime/*.ml` helpers behind Haxe `extern` APIs).
+For those, we treat the **Haxe extern** as the interface/IDL and keep the shim replaceable per target; OCaml inference
+is at most a sanity check for the OCaml implementation.
+
+See:
+
+- `docs/02-user-guide/HXHX_STAGE4_MACROS_AND_PLUGIN_ABI.md:1` (ABI strategy for native shims)
+
 ## How to enable
 
 Pass:
