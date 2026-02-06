@@ -47,6 +47,7 @@
     "test:hxhx-targets": "bash scripts/test-hxhx-targets.sh",
     "test:acceptance": "bash scripts/test-acceptance.sh",
     "test:upstream:unit-macro": "bash scripts/hxhx/run-upstream-unit-macro.sh",
+    "test:upstream:unit-macro-stage0": "bash scripts/hxhx/run-upstream-unit-macro-stage0.sh",
     "test:upstream:unit-macro-ocaml": "bash scripts/hxhx/run-upstream-unit-macro-ocaml.sh",
     "test:upstream:unit-macro-native": "bash scripts/hxhx/run-upstream-unit-macro-native.sh",
     "test:upstream:unit-macro-stage1": "bash scripts/hxhx/run-upstream-unit-macro-stage1.sh",

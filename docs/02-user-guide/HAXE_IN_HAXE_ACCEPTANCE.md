@@ -105,6 +105,11 @@ Today, `npm run test:upstream:unit-macro` runs the suite through the **stage0 sh
 (delegating to the system `haxe` binary). That runner is still useful: it validates our upstream harness wiring,
 distribution presets, and CI toolchain expectations.
 
+As `hxhx` matures, this repo treats `npm run test:upstream:unit-macro` as the **non-delegating** Gate 1 entrypoint
+(no stage0 compilation delegation). The historical stage0-shim baseline remains available as:
+
+- `npm run test:upstream:unit-macro-stage0`
+
 #### OCaml note: how we emulate upstream `--interp`
 
 Upstream Gate 1 uses `--interp` as “compile + run”.

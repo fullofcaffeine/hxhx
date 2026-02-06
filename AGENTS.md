@@ -60,6 +60,61 @@ To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in
   - Prefer making `hxhx` truly non-delegating before publishing “batteries included” builds.
 - Inbound contributions must be MIT-compatible; avoid accepting code with unclear provenance/licensing.
 
+### Strict provenance rules (MUST follow on every change)
+
+These are hard constraints for all contributors and all Codex changes in this repo.
+
+**Absolute prohibitions**
+
+- Do **not** copy, translate, or mechanically rewrite any upstream Haxe *compiler* source into this repository
+  (including “retyping from memory” after reading it).
+- Do **not** copy upstream Haxe tests/fixtures into this repository (even “small snippets”).
+- Do **not** add third-party code unless its license is MIT-compatible *and* we retain required notices.
+- Do **not** commit upstream checkouts under `vendor/` (including submodules) unless explicitly approved and reviewed.
+
+**Allowed (and expected)**
+
+- Use upstream Haxe only as a **behavioral oracle**:
+  - run upstream tests from an untracked checkout (`vendor/haxe`) and compare behavior/output,
+  - use upstream CLI behavior as a reference point,
+  - use upstream architecture as inspiration at the concept level.
+- Write fresh implementations from:
+  - behavior-level specs,
+  - repo-local fixtures,
+  - and black-box oracle runs.
+
+**Clean implementation workflow**
+
+- Before implementing a tricky behavior:
+  - Add/extend a test (snapshot / portable fixture / upstream runner) that captures the behavior.
+  - Write a short “behavior spec” note (what should happen, observable outputs), ideally in the relevant bead.
+- If you consult upstream implementation code:
+  - Only record **behavior-level** conclusions (not code structure).
+  - Do not paste upstream code, and do not mirror upstream naming/structure in a way that suggests transcription.
+- After changes:
+  - Run `npm run ci:guards` locally (license/provenance guardrails).
+  - Prefer small commits with clear intent; keep diffs reviewable for provenance.
+
+**Documentation language**
+
+- Prefer “reimplement” / “clean-room” / “behavior-driven” wording.
+- Avoid “translate” / “port” wording when referring to upstream compiler implementation, because it tends to invite
+  transcription and muddles provenance.
+
+**Third-party notices**
+
+- If we ever incorporate third-party code (even permissive), add/maintain `THIRD_PARTY_NOTICES.md` (or similar) with:
+  - project name + license + source URL/commit,
+  - what was used,
+  - and any required attribution text.
+
+**If unsure**
+
+- If any change feels “too close” to upstream source (data structure, function layout, line-by-line mapping), stop and:
+  - write a behavior-level spec first,
+  - implement an alternative approach from first principles,
+  - or file a bead for a clean-room/second-pass redesign.
+
 ### “Not a translation” rule (non-derivative development)
 
 When using the upstream Haxe compiler (copyleft-licensed) as a reference, the rule is:
