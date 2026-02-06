@@ -38,6 +38,25 @@ function gitTrackedUnder(path) {
   }
 }
 
+function gitTrackedAll() {
+  try {
+    const out = cp.execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
+    return out.split('\0').filter(Boolean)
+  } catch (_) {
+    return []
+  }
+}
+
+function shouldScanText(path) {
+  // Keep this conservative: scan everything that is likely to be UTF-8 text.
+  // Skip obvious binary-ish extensions.
+  const lower = path.toLowerCase()
+  if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.gif') || lower.endsWith('.ico')) return false
+  if (lower.endsWith('.pdf') || lower.endsWith('.zip') || lower.endsWith('.gz') || lower.endsWith('.tar') || lower.endsWith('.tgz')) return false
+  if (lower.endsWith('.exe') || lower.endsWith('.bc') || lower.endsWith('.a') || lower.endsWith('.so') || lower.endsWith('.dylib')) return false
+  return true
+}
+
 function extractHxmlDefine(path, defineName) {
   const text = readUtf8(path)
   const escaped = defineName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -98,6 +117,46 @@ function main() {
   const trackedUpstream = gitTrackedUnder('vendor/haxe')
   if (trackedUpstream.length > 0) {
     fail(`Upstream Haxe checkout must not be committed (tracked files under vendor/haxe):\n- ${trackedUpstream.slice(0, 20).join('\n- ')}${trackedUpstream.length > 20 ? `\n- ... (${trackedUpstream.length} files total)` : ''}`)
+  }
+
+  // - keep common copyleft license markers out of the tracked source tree.
+  //
+  // Why
+  // - This repo has an explicit goal of staying permissively-licensed, and we want to avoid
+  //   accidentally committing upstream license texts or copyleft headers.
+  //
+  // What
+  // - Fail if a tracked text file contains common copyleft markers.
+  //
+  // Note
+  // - This is a lightweight string check, not a legal analysis tool.
+  const copyleftAcronym = 'G' + 'PL'
+  const forbiddenMarkers = [
+    ['GNU', 'GENERAL', 'PUBLIC', 'LICENSE'].join(' '),
+    copyleftAcronym,
+    `${copyleftAcronym}-[0-9]`,
+  ]
+  const forbidden = [
+    new RegExp(forbiddenMarkers[0], 'i'),
+    new RegExp(`\\b${forbiddenMarkers[1]}\\b`, 'i'),
+    new RegExp(forbiddenMarkers[2], 'i'),
+  ]
+
+  for (const path of gitTrackedAll()) {
+    if (!shouldScanText(path)) continue
+    let text
+    try {
+      text = readUtf8(path)
+    } catch (_) {
+      continue
+    }
+    for (const re of forbidden) {
+      if (re.test(text)) {
+        fail(`forbidden license marker found in tracked file: ${path} (matched ${re})`)
+        break
+      }
+    }
+    if (process.exitCode) break
   }
 
   if (process.exitCode) return

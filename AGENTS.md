@@ -48,7 +48,7 @@ bd sync               # Sync with git
 
 This repository is intended to become a **MIT-licensed** OCaml target *and* (eventually) a **MIT-licensed Haxe-in-Haxe compiler** (`hxhx`).
 
-To avoid GPL “viral” obligations and preserve the ability to embed/bundle `hxhx` in proprietary apps:
+To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in proprietary apps:
 
 - **Do not copy** upstream Haxe *compiler* source code (`vendor/haxe/src`) into this repo.
   - Reading upstream as a behavioral/architectural reference is fine; copying code is the risk.
@@ -62,7 +62,7 @@ To avoid GPL “viral” obligations and preserve the ability to embed/bundle `h
 
 ### “Not a translation” rule (non-derivative development)
 
-When using upstream Haxe (GPL compiler) as a reference, the rule is:
+When using the upstream Haxe compiler (copyleft-licensed) as a reference, the rule is:
 
 - Use upstream **only as an oracle for behavior** (tests, CLI output, runtime semantics).
 - Reading upstream source to understand intent/constraints is OK, but **do not translate/port** upstream compiler code (OCaml → Haxe) into this repository.

@@ -76,6 +76,11 @@ cp "$ROOT/README.md" "$dist_dir/README.md"
 cp "$ROOT/LICENSE" "$dist_dir/LICENSE"
 cp "$ROOT/CHANGELOG.md" "$dist_dir/CHANGELOG.md"
 
+if ! grep -q "Permission is hereby granted" "$dist_dir/LICENSE"; then
+  echo "Dist LICENSE does not look like MIT (missing 'Permission is hereby granted')." >&2
+  exit 1
+fi
+
 echo "== Bundling backend sources (best-effort)"
 lib_dir="$dist_dir/lib"
 mkdir -p "$lib_dir"
@@ -92,7 +97,11 @@ if command -v haxelib >/dev/null 2>&1; then
   if [ -n "$reflaxe_src" ] && [ -d "$reflaxe_src" ]; then
     reflaxe_root="$(cd "$(dirname "$reflaxe_src")/.." && pwd)"
     mkdir -p "$lib_dir/reflaxe"
-    cp -R "$reflaxe_root/src" "$lib_dir/reflaxe/src"
+    if [ -d "$reflaxe_root/src" ]; then
+      cp -R "$reflaxe_root/src" "$lib_dir/reflaxe/src"
+    else
+      echo "Note: reflaxe resolved, but src/ missing at $reflaxe_root/src; dist will require -lib reflaxe to be available."
+    fi
     cp "$reflaxe_root/haxelib.json" "$lib_dir/reflaxe/haxelib.json" 2>/dev/null || true
     cp "$reflaxe_root/extraParams.hxml" "$lib_dir/reflaxe/extraParams.hxml" 2>/dev/null || true
     cp "$reflaxe_root/LICENSE" "$lib_dir/reflaxe/LICENSE" 2>/dev/null || true
