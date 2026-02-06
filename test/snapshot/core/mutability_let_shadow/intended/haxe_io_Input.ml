@@ -6,7 +6,10 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; readByte : Obj.t -> unit -> int; readBytes : Obj.t -> HxBytes.t -> int -> int -> int; close : Obj.t -> unit -> unit; readAll : Obj.t -> Obj.t -> HxBytes.t; readFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; readLine : Obj.t -> unit -> string }
 
-let __ctor = fun (self : t) () -> ignore (self.set_bigEndian (Obj.magic self) false)
+let __ctor = fun (self : t) () -> ignore ((
+  ignore self;
+  ()
+))
 
 let set_bigEndian__impl = fun (self : t) b -> (
   ignore (let __assign_1 = b in (
@@ -20,7 +23,7 @@ let readByte__impl = fun (self : t) () -> (
   ignore self;
   HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (let __anon_2 = HxAnon.create () in (
     ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "haxe/io/Input.hx"));
-    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 41));
+    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 37));
     ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.io.Input"));
     ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "readByte"));
     __anon_2
@@ -115,6 +118,9 @@ let readLine__impl = fun (self : t) () -> let out = StringBuf.create () in (
 )
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Input"; bigEndian = false; set_bigEndian = (fun o a0 -> set_bigEndian__impl (Obj.magic o) a0); readByte = (fun o () -> readByte__impl (Obj.magic o) ()); readBytes = (fun o a0 a1 a2 -> readBytes__impl (Obj.magic o) a0 a1 a2); close = (fun o () -> close__impl (Obj.magic o) ()); readAll = (fun o a0 -> readAll__impl (Obj.magic o) a0); readFullBytes = (fun o a0 a1 a2 -> readFullBytes__impl (Obj.magic o) a0 a1 a2); readLine = (fun o () -> readLine__impl (Obj.magic o) ()) } : t) in (
-  ignore (self.set_bigEndian (Obj.magic self) false);
+  ignore ((
+    ignore self;
+    ()
+  ));
   self
 )

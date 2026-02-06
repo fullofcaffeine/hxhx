@@ -87,15 +87,14 @@ import haxe.io.Output;
 	This is intentionally minimal; we implement `readByte`, `readBytes`, and
 	`readLine` as those are the operations exercised by our macro-host transport.
 **/
-private class OcamlProcessInput extends Input {
+	private class OcamlProcessInput extends Input {
 	final handle:Int;
 	final stream:Int;
 
-	public function new(handle:Int, stream:Int) {
-		super();
-		this.handle = handle;
-		this.stream = stream;
-	}
+		public function new(handle:Int, stream:Int) {
+			this.handle = handle;
+			this.stream = stream;
+		}
 
 	public override function readByte():Int {
 		final b = NativeHxProcess.read_byte(handle, stream);
@@ -127,13 +126,12 @@ private class OcamlProcessInput extends Input {
 /**
 	`haxe.io.Output` implementation backed by `HxProcess` stdin.
 **/
-private class OcamlProcessOutput extends Output {
+	private class OcamlProcessOutput extends Output {
 	final handle:Int;
 
-	public function new(handle:Int) {
-		super();
-		this.handle = handle;
-	}
+		public function new(handle:Int) {
+			this.handle = handle;
+		}
 
 	public override function writeByte(c:Int):Void {
 		NativeHxProcess.write_byte(handle, c);

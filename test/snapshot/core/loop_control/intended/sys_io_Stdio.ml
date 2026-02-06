@@ -6,12 +6,9 @@ let __reflaxe_ocaml__ = ()
 
 type ocamlstdioinput_t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; readByte : Obj.t -> unit -> int; readBytes : Obj.t -> HxBytes.t -> int -> int -> int; close : Obj.t -> unit -> unit; readAll : Obj.t -> Obj.t -> HxBytes.t; readFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; readLine : Obj.t -> unit -> string; mutable stream : int }
 
-let ocamlstdioinput___ctor = fun (self : ocamlstdioinput_t) stream2 -> ignore ((
-  ignore (Haxe_io_Input.__ctor (Obj.magic self) ());
-  let __assign_1 = stream2 in (
-    self.stream <- __assign_1;
-    __assign_1
-  )
+let ocamlstdioinput___ctor = fun (self : ocamlstdioinput_t) stream2 -> ignore (let __assign_1 = stream2 in (
+  self.stream <- __assign_1;
+  __assign_1
 ))
 
 let ocamlstdioinput_readByte__impl = fun (self : ocamlstdioinput_t) () -> let b = HxStdio.read_byte (self.stream) in (
@@ -51,12 +48,9 @@ let ocamlstdioinput_readLine__impl = fun (self : ocamlstdioinput_t) () -> let s 
 )
 
 let ocamlstdioinput_create = fun stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Input.set_bigEndian__impl (Obj.magic o) a0); readByte = (fun o () -> ocamlstdioinput_readByte__impl (Obj.magic o) ()); readBytes = (fun o a0 a1 a2 -> ocamlstdioinput_readBytes__impl (Obj.magic o) a0 a1 a2); close = (fun o () -> Haxe_io_Input.close__impl (Obj.magic o) ()); readAll = (fun o a0 -> Haxe_io_Input.readAll__impl (Obj.magic o) a0); readFullBytes = (fun o a0 a1 a2 -> Haxe_io_Input.readFullBytes__impl (Obj.magic o) a0 a1 a2); readLine = (fun o () -> ocamlstdioinput_readLine__impl (Obj.magic o) ()); stream = 0 } : ocamlstdioinput_t) in (
-  ignore ((
-    ignore (Haxe_io_Input.__ctor (Obj.magic self) ());
-    let __assign_1 = stream2 in (
-      self.stream <- __assign_1;
-      __assign_1
-    )
+  ignore (let __assign_1 = stream2 in (
+    self.stream <- __assign_1;
+    __assign_1
   ));
   self
 )
@@ -68,12 +62,9 @@ let __reflaxe_ocaml__ = ()
 
 type ocamlstdiooutput_t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; writeByte : Obj.t -> int -> unit; writeBytes : Obj.t -> HxBytes.t -> int -> int -> int; flush : Obj.t -> unit -> unit; close : Obj.t -> unit -> unit; write : Obj.t -> HxBytes.t -> unit; writeFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; prepare : Obj.t -> int -> unit; writeInput : Obj.t -> Haxe_io_Input.t -> Obj.t -> unit; writeString : Obj.t -> string -> Obj.t -> unit; writeInt8 : Obj.t -> int -> unit; writeUInt8 : Obj.t -> int -> unit; writeInt16 : Obj.t -> int -> unit; writeUInt16 : Obj.t -> int -> unit; writeInt24 : Obj.t -> int -> unit; writeUInt24 : Obj.t -> int -> unit; writeInt32 : Obj.t -> int -> unit; mutable stream : int }
 
-let ocamlstdiooutput___ctor = fun (self : ocamlstdiooutput_t) stream2 -> ignore ((
-  ignore (Haxe_io_Output.__ctor (Obj.magic self) ());
-  let __assign_1 = stream2 in (
-    self.stream <- __assign_1;
-    __assign_1
-  )
+let ocamlstdiooutput___ctor = fun (self : ocamlstdiooutput_t) stream2 -> ignore (let __assign_1 = stream2 in (
+  self.stream <- __assign_1;
+  __assign_1
 ))
 
 let ocamlstdiooutput_writeByte__impl = fun (self : ocamlstdiooutput_t) c -> ignore (HxStdio.write_byte (self.stream) c)
@@ -100,12 +91,9 @@ let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) s encod
 let ocamlstdiooutput_flush__impl = fun (self : ocamlstdiooutput_t) () -> ignore (HxStdio.flush (self.stream))
 
 let ocamlstdiooutput_create = fun stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Output.set_bigEndian__impl (Obj.magic o) a0); writeByte = (fun o a0 -> ocamlstdiooutput_writeByte__impl (Obj.magic o) a0); writeBytes = (fun o a0 a1 a2 -> ocamlstdiooutput_writeBytes__impl (Obj.magic o) a0 a1 a2); flush = (fun o () -> ocamlstdiooutput_flush__impl (Obj.magic o) ()); close = (fun o () -> Haxe_io_Output.close__impl (Obj.magic o) ()); write = (fun o a0 -> Haxe_io_Output.write__impl (Obj.magic o) a0); writeFullBytes = (fun o a0 a1 a2 -> Haxe_io_Output.writeFullBytes__impl (Obj.magic o) a0 a1 a2); prepare = (fun o a0 -> Haxe_io_Output.prepare__impl (Obj.magic o) a0); writeInput = (fun o a0 a1 -> Haxe_io_Output.writeInput__impl (Obj.magic o) a0 a1); writeString = (fun o a0 a1 -> ocamlstdiooutput_writeString__impl (Obj.magic o) a0 a1); writeInt8 = (fun o a0 -> Haxe_io_Output.writeInt8__impl (Obj.magic o) a0); writeUInt8 = (fun o a0 -> Haxe_io_Output.writeUInt8__impl (Obj.magic o) a0); writeInt16 = (fun o a0 -> Haxe_io_Output.writeInt16__impl (Obj.magic o) a0); writeUInt16 = (fun o a0 -> Haxe_io_Output.writeUInt16__impl (Obj.magic o) a0); writeInt24 = (fun o a0 -> Haxe_io_Output.writeInt24__impl (Obj.magic o) a0); writeUInt24 = (fun o a0 -> Haxe_io_Output.writeUInt24__impl (Obj.magic o) a0); writeInt32 = (fun o a0 -> Haxe_io_Output.writeInt32__impl (Obj.magic o) a0); stream = 0 } : ocamlstdiooutput_t) in (
-  ignore ((
-    ignore (Haxe_io_Output.__ctor (Obj.magic self) ());
-    let __assign_1 = stream2 in (
-      self.stream <- __assign_1;
-      __assign_1
-    )
+  ignore (let __assign_1 = stream2 in (
+    self.stream <- __assign_1;
+    __assign_1
   ));
   self
 )

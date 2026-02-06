@@ -6,7 +6,10 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; writeByte : Obj.t -> int -> unit; writeBytes : Obj.t -> HxBytes.t -> int -> int -> int; flush : Obj.t -> unit -> unit; close : Obj.t -> unit -> unit; write : Obj.t -> HxBytes.t -> unit; writeFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; prepare : Obj.t -> int -> unit; writeInput : Obj.t -> Haxe_io_Input.t -> Obj.t -> unit; writeString : Obj.t -> string -> Obj.t -> unit; writeInt8 : Obj.t -> int -> unit; writeUInt8 : Obj.t -> int -> unit; writeInt16 : Obj.t -> int -> unit; writeUInt16 : Obj.t -> int -> unit; writeInt24 : Obj.t -> int -> unit; writeUInt24 : Obj.t -> int -> unit; writeInt32 : Obj.t -> int -> unit }
 
-let __ctor = fun (self : t) () -> ignore (self.set_bigEndian (Obj.magic self) false)
+let __ctor = fun (self : t) () -> ignore ((
+  ignore self;
+  ()
+))
 
 let set_bigEndian__impl = fun (self : t) b -> (
   ignore (let __assign_1 = b in (
@@ -22,7 +25,7 @@ let writeByte__impl = fun (self : t) c -> ignore ((
     ignore (if c = -1 then ignore () else ());
     HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (let __anon_2 = HxAnon.create () in (
       ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "haxe/io/Output.hx"));
-      ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 44));
+      ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 40));
       ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.io.Output"));
       ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "writeByte"));
       __anon_2
@@ -81,7 +84,7 @@ let writeInput__impl = fun (self : t) i bufsize -> ignore ((
     ignore (if bufsize != HxRuntime.hx_null then ignore () else ());
     HxType.hx_throw_typed_rtti (Obj.repr (Haxe_exceptions_NotImplementedException.create (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (let __anon_7 = HxAnon.create () in (
       ignore (HxAnon.set __anon_7 "fileName" (Obj.repr "haxe/io/Output.hx"));
-      ignore (HxAnon.set __anon_7 "lineNumber" (Obj.repr 107));
+      ignore (HxAnon.set __anon_7 "lineNumber" (Obj.repr 103));
       ignore (HxAnon.set __anon_7 "className" (Obj.repr "haxe.io.Output"));
       ignore (HxAnon.set __anon_7 "methodName" (Obj.repr "writeInput"));
       __anon_7
@@ -151,6 +154,9 @@ let writeInt32__impl = fun (self : t) x -> ignore (if self.bigEndian then ignore
 )))
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Output"; bigEndian = false; set_bigEndian = (fun o a0 -> set_bigEndian__impl (Obj.magic o) a0); writeByte = (fun o a0 -> writeByte__impl (Obj.magic o) a0); writeBytes = (fun o a0 a1 a2 -> writeBytes__impl (Obj.magic o) a0 a1 a2); flush = (fun o () -> flush__impl (Obj.magic o) ()); close = (fun o () -> close__impl (Obj.magic o) ()); write = (fun o a0 -> write__impl (Obj.magic o) a0); writeFullBytes = (fun o a0 a1 a2 -> writeFullBytes__impl (Obj.magic o) a0 a1 a2); prepare = (fun o a0 -> prepare__impl (Obj.magic o) a0); writeInput = (fun o a0 a1 -> writeInput__impl (Obj.magic o) a0 a1); writeString = (fun o a0 a1 -> writeString__impl (Obj.magic o) a0 a1); writeInt8 = (fun o a0 -> writeInt8__impl (Obj.magic o) a0); writeUInt8 = (fun o a0 -> writeUInt8__impl (Obj.magic o) a0); writeInt16 = (fun o a0 -> writeInt16__impl (Obj.magic o) a0); writeUInt16 = (fun o a0 -> writeUInt16__impl (Obj.magic o) a0); writeInt24 = (fun o a0 -> writeInt24__impl (Obj.magic o) a0); writeUInt24 = (fun o a0 -> writeUInt24__impl (Obj.magic o) a0); writeInt32 = (fun o a0 -> writeInt32__impl (Obj.magic o) a0) } : t) in (
-  ignore (self.set_bigEndian (Obj.magic self) false);
+  ignore ((
+    ignore self;
+    ()
+  ));
   self
 )
