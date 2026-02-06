@@ -315,13 +315,19 @@ mkdir -p "$tmpfull/src"
 cat >"$tmpfull/src/Main.hx" <<'HX'
 class Main {
   static function main() {
-    trace("HELLO");
+    var x = 1;
+    if (x + 1 == 3) {
+      trace("BAD");
+    } else {
+      trace("OK");
+    }
   }
 }
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^HELLO$"
+echo "$out" | grep -q "^OK$"
+echo "$out" | grep -vq "^BAD$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: type-only checks full graph"

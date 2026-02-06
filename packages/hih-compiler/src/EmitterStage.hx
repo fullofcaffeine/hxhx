@@ -197,16 +197,43 @@ class EmitterStage {
 				} else {
 					c + " " + fullArgs.map(a -> "(" + exprToOcaml(a, arityByIdent) + ")").join(" ");
 				}
-			case EUnop(_op, _e):
-				// Stage 3 bring-up: operator semantics are not implemented yet.
-				// Collapse to a value that typechecks everywhere so we can keep discovering
-				// the next missing feature.
-				"(Obj.magic 0)";
-			case EBinop(_op, _a, _b):
-				// Stage 3 bring-up: operator semantics are not implemented yet.
-				// Collapse to a value that typechecks everywhere so we can keep discovering
-				// the next missing feature.
-				"(Obj.magic 0)";
+			case EUnop(op, expr):
+				// Stage 3 expansion: support a tiny subset of unary ops so simple control-flow
+				// fixtures can become non-trivial.
+				//
+				// Non-goal: correct numeric tower (Int vs Float) or full operator set.
+				// If we can't emit safely, fall back to bring-up poison.
+				switch (op) {
+					case "!":
+						"(not (" + exprToOcaml(expr, arityByIdent) + "))";
+					case "-":
+						"(-(" + exprToOcaml(expr, arityByIdent) + "))";
+					case _:
+						"(Obj.magic 0)";
+				}
+			case EBinop(op, a, b):
+				// Stage 3 expansion: support a small set of binary ops so `if` conditions can
+				// become meaningful (avoid the earlier "everything is true" collapse).
+				//
+				// Important: this emitter does not have reliable type information yet, so we
+				// intentionally only support operators that are unambiguous enough for our
+				// bring-up fixtures (primarily `Int` + boolean comparisons).
+				final la = exprToOcaml(a, arityByIdent);
+				final rb = exprToOcaml(b, arityByIdent);
+				switch (op) {
+					case "+" | "-" | "*" | "/" | "%":
+						"((" + la + ") " + op + " (" + rb + "))";
+					case "==":
+						"((" + la + ") = (" + rb + "))";
+					case "!=":
+						"((" + la + ") <> (" + rb + "))";
+					case "<" | ">" | "<=" | ">=":
+						"((" + la + ") " + op + " (" + rb + "))";
+					case "&&" | "||":
+						"((" + la + ") " + op + " (" + rb + "))";
+					case _:
+						"(Obj.magic 0)";
+				}
 			case EUnsupported(_):
 				// Stage 3 bring-up: avoid aborting emission when partial parsing produces
 				// unsupported nodes inside a larger expression tree. The goal here is to
@@ -235,12 +262,13 @@ class EmitterStage {
 				case ENew(_, _):
 					true;
 				case EUnop(_op, _):
-					// Stage 3: operator typing/lowering is not implemented yet; treat as poison so we
-					// don't attempt partial OCaml emission that might accidentally compile incorrectly.
+					// Stage 3: we only emit a tiny subset of unary ops. Treat all unary expressions as
+					// bring-up poison until the typer can reliably separate Int/Float/Bool cases.
 					true;
 				case EBinop(_op, _, _):
-					// Stage 3: operator typing/lowering is not implemented yet; treat as poison so we
-					// don't attempt partial OCaml emission that might accidentally compile incorrectly.
+					// Stage 3: we only emit a small subset of binops, but the surrounding bring-up
+					// pipeline still can't type these reliably. Keep binops as bring-up poison in
+					// general return positions so we don't accidentally claim correctness.
 					true;
 				case EIdent(name):
 					// Stage 3 only models params and module names. Any other value identifier is
@@ -280,9 +308,17 @@ class EmitterStage {
 
 		function condToOcamlBool(e:HxExpr):String {
 			return switch (e) {
-				case EBool(v): v ? "true" : "false";
-				case _: "true";
-			}
+				case EBool(v):
+					v ? "true" : "false";
+				case EUnop("!", _):
+					exprToOcaml(e, arityByIdent);
+				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
+					exprToOcaml(e, arityByIdent);
+				case _:
+					// Conservative default: we do not have real typing for conditions yet.
+					// Keep bring-up resilient by treating unknown conditions as true.
+					"true";
+			};
 		}
 
 		function stmtToUnit(s:HxStmt):String {
