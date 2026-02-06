@@ -16,17 +16,27 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 echo "== Building hxhx macro host (RPC skeleton)"
-HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+HXHX_MACRO_HOST_EXE="$(HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" HXHX_MACRO_HOST_ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();Macro.init()" "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
 if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
   echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
   exit 1
 fi
 
+# The Stage3 auto-build test rebuilds the macro host in-place (same output path),
+# which can clobber the entrypoint allowlist for subsequent tests. Copy the
+# freshly built host to a stable temp path so the rest of this script remains
+# deterministic.
+macrohost_tmp="$(mktemp -d)"
+trap 'rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
+HXHX_MACRO_HOST_EXE_STABLE="$macrohost_tmp/hxhx-macro-host"
+cp "$HXHX_MACRO_HOST_EXE" "$HXHX_MACRO_HOST_EXE_STABLE"
+chmod +x "$HXHX_MACRO_HOST_EXE_STABLE"
+
 echo "== Stage4 bring-up: macro host autodiscovery (sibling binary)"
 tmpbin="$(mktemp -d)"
 cp "$HXHX_BIN" "$tmpbin/hxhx"
 chmod +x "$tmpbin/hxhx"
-cp "$HXHX_MACRO_HOST_EXE" "$tmpbin/hxhx-macro-host"
+cp "$HXHX_MACRO_HOST_EXE_STABLE" "$tmpbin/hxhx-macro-host"
 chmod +x "$tmpbin/hxhx-macro-host"
 out="$(
   HXHX_MACRO_HOST_EXE="" "$tmpbin/hxhx" --hxhx-macro-selftest
@@ -41,7 +51,6 @@ echo "$targets" | grep -qx "ocaml"
 
 echo "== Preset injects missing flags (compile smoke)"
 tmpdir="$(mktemp -d)"
-trap 'rm -rf "$tmpdir"' EXIT
 
 mkdir -p "$tmpdir/src"
 mkdir -p "$tmpdir/fake_std/haxe/io"
@@ -308,7 +317,7 @@ test ! -f "$type_only_out/out.exe"
 
 echo "== Stage3 bring-up: runs --macro via macro host (allowlist)"
 stage3_out2="$tmpdir/out_stage3_macro"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'BuiltinMacros.readFlag()' --macro 'BuiltinMacros.smoke()' --macro 'BuiltinMacros.genModule()' --macro 'BuiltinMacros.dumpDefines()' --macro 'BuiltinMacros.registerHooks()' --hxhx-out "$stage3_out2")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'BuiltinMacros.readFlag()' --macro 'BuiltinMacros.smoke()' --macro 'BuiltinMacros.genModule()' --macro 'BuiltinMacros.dumpDefines()' --macro 'BuiltinMacros.registerHooks()' --hxhx-out "$stage3_out2")"
 echo "$out" | grep -q "^macro_run\\[0\\]=flag=ok$"
 echo "$out" | grep -q "^macro_run\\[1\\]=smoke:type=builtin:String;define=yes$"
 echo "$out" | grep -q "^macro_run\\[2\\]=genModule=ok$"
@@ -326,7 +335,7 @@ test -f "$stage3_out2/HxHxHook.ml"
 
 echo "== Stage3 bring-up: runs a non-builtin macro module compiled into the macro host"
 stage3_out3="$tmpdir/out_stage3_external"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'hxhxmacros.ExternalMacros.external()' --hxhx-out "$stage3_out3")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A -D HXHX_FLAG=ok --macro 'hxhxmacros.ExternalMacros.external()' --hxhx-out "$stage3_out3")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_EXTERNAL\\]=1$"
 echo "$out" | grep -q "^stage3=ok$"
@@ -379,7 +388,7 @@ if [ "$code" -eq 0 ]; then
 fi
 echo "$out" | grep -q "import_missing Extra"
 
-out="$(HXHX_ADD_CP="$tmpcp/extra" HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpcp/src" -main Main --macro 'BuiltinMacros.addCpFromEnv()' --hxhx-out "$tmpcp/out_with_cp")"
+out="$(HXHX_ADD_CP="$tmpcp/extra" HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpcp/src" -main Main --macro 'BuiltinMacros.addCpFromEnv()' --hxhx-out "$tmpcp/out_with_cp")"
 echo "$out" | grep -q "^macro_run\\[0\\]=addCp=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 
@@ -408,14 +417,33 @@ if [ "$code" -eq 0 ]; then
 fi
 echo "$out" | grep -q "import_missing Gen"
 
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpgen/src" -main Main --macro 'BuiltinMacros.genHxModule()' --hxhx-out "$tmpgen/out_with_macro")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$tmpgen/src" -main Main --macro 'BuiltinMacros.genHxModule()' --hxhx-out "$tmpgen/out_with_macro")"
 echo "$out" | grep -q "^macro_run\\[0\\]=genHx=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_HXGEN\\]=1$"
 echo "$out" | grep -q "^stage3=ok$"
 test -f "$tmpgen/out_with_macro/_gen_hx/Gen.hx"
 
+echo "== Stage3 bring-up: @:build emits a field into the typed program"
+tmpbuild="$tmpdir/build_fields_test"
+mkdir -p "$tmpbuild/src"
+cat >"$tmpbuild/src/Main.hx" <<'HX'
+@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())
+class Main {
+  static function main() {
+    generated();
+  }
+}
+HX
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild/out")"
+echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$"
+echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
+echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
+echo "$out" | grep -q "^from_hxhx_build_macro$"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage4 bring-up: macro host RPC handshake + stub Context/Compiler calls"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-selftest)"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-macro-selftest)"
 echo "$out" | grep -q "^macro_host=ok$"
 echo "$out" | grep -q "^macro_ping=pong$"
 echo "$out" | grep -q "^macro_define=ok$"
@@ -423,17 +451,17 @@ echo "$out" | grep -q "^macro_defined=yes$"
 echo "$out" | grep -q "^macro_definedValue=bar$"
 
 echo "== Stage4 bring-up: duplex define roundtrip via macro.run"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run 'BuiltinMacros.smoke()')"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-macro-run 'BuiltinMacros.smoke()')"
 echo "$out" | grep -q "^macro_run=smoke:type=builtin:String;define=yes$"
 
 echo "== Stage4 bring-up: macro.run builtin entrypoint"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "hxhxmacrohost.BuiltinMacros.smoke()")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-macro-run "hxhxmacrohost.BuiltinMacros.smoke()")"
 echo "$out" | grep -q "^macro_run=smoke:type=builtin:String;define=yes$"
 echo "$out" | grep -q "^OK hxhx macro run$"
 
 echo "== Stage4 bring-up: macro.run errors include position payload"
 set +e
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-run "hxhxmacrohost.BuiltinMacros.fail()" 2>&1)"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-macro-run "hxhxmacrohost.BuiltinMacros.fail()" 2>&1)"
 code=$?
 set -e
 if [ "$code" -eq 0 ]; then
@@ -443,7 +471,7 @@ fi
 echo "$out" | grep -q "BuiltinMacros.hx:"
 
 echo "== Stage4 bring-up: context.getType stub"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-get-type String)"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-macro-get-type String)"
 echo "$out" | grep -q "^macro_getType=builtin:String$"
 echo "$out" | grep -q "^OK hxhx macro getType$"
 

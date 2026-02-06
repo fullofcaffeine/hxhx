@@ -183,6 +183,101 @@ class Stage3Compiler {
 		return exe;
 	}
 
+	/**
+		Stage4 bring-up: detect `@:build(...)` / `@:autoBuild(...)` metadata expressions in a source file.
+
+		Why
+		- Our bootstrap parser currently tolerates metadata by skipping tokens until it sees `class`,
+		  but it does not store metadata in the AST yet.
+		- For the first `@:build` rung, we only need the raw expression text to call into the macro host.
+
+		What
+		- Scans tokens until the first `class` keyword.
+		- Extracts the text between the parentheses of `@:build(<expr>)` and `@:autoBuild(<expr>)`.
+
+		Gotchas
+		- This is intentionally conservative: it expects parentheses-delimited metadata and does not
+		  attempt to understand complex expressions.
+	**/
+	static function findBuildMacroExprs(source:String):Array<String> {
+		final out = new Array<String>();
+		if (source == null || source.length == 0) return out;
+
+		final lex = new HxLexer(source);
+		var t = lex.next();
+
+		while (true) {
+			switch (t.kind) {
+				case TEof:
+					return out;
+				case TKeyword(KClass):
+					return out;
+				case TOther(code) if (code == "@".code):
+					final t2 = lex.next();
+					final t3 = lex.next();
+					final t4 = lex.next();
+
+					final isMeta = switch ([t2.kind, t3.kind, t4.kind]) {
+						case [TColon, TIdent("build"), TLParen]: true;
+						case [TColon, TIdent("autoBuild"), TLParen]: true;
+						case _: false;
+					}
+					if (!isMeta) {
+						t = lex.next();
+						continue;
+					}
+
+					// Capture raw text between balanced parens.
+					final startIndex = t4.pos.getIndex() + 1; // after '('
+					var depth = 1;
+					var endIndex = startIndex;
+					var inner = lex.next();
+					while (true) {
+						switch (inner.kind) {
+							case TEof:
+								endIndex = source.length;
+								break;
+							case TLParen:
+								depth += 1;
+							case TRParen:
+								depth -= 1;
+								if (depth == 0) {
+									endIndex = inner.pos.getIndex(); // start of ')'
+									break;
+								}
+							case _:
+						}
+						inner = lex.next();
+					}
+
+					final expr = trim(source.substring(startIndex, endIndex));
+					if (expr.length > 0) out.push(expr);
+
+					// Continue scanning after the closing ')'.
+					t = lex.next();
+					continue;
+				case _:
+			}
+
+			t = lex.next();
+		}
+
+		return out;
+	}
+
+	static function parseGeneratedMembers(members:Array<String>):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
+		if (members == null || members.length == 0) return { functions: [], fields: [] };
+		final combined = members.join("\n");
+		final fake = "class __HxHxBuildFields {\n" + combined + "\n}\n";
+		final p = new HxParser(fake);
+		final decl = p.parseModule();
+		final cls = HxModuleDecl.getMainClass(decl);
+		return {
+			functions: HxClassDecl.getFunctions(cls),
+			fields: HxClassDecl.getFields(cls)
+		};
+	}
+
 		public static function run(args:Array<String>):Int {
 			// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 			var outDir = "";
@@ -256,6 +351,11 @@ class Stage3Compiler {
 
 			final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
 
+			// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
+			hxhx.macro.MacroState.reset();
+			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
+			hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
+
 			final macroHostClassPaths = {
 				final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 				final libs = new Array<String>();
@@ -303,10 +403,6 @@ class Stage3Compiler {
 				}
 			}
 
-			hxhx.macro.MacroState.reset();
-			hxhx.macro.MacroState.seedFromCliDefines(parsed.defines);
-			hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
-
 				// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
 				//
 				// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
@@ -347,7 +443,122 @@ class Stage3Compiler {
 			}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
 		Sys.println("resolved_modules=" + resolved.length);
-		final typerIndex = TyperIndex.build(resolved);
+
+		// Stage4 bring-up: apply `@:build(...)` macros by asking the macro host to emit raw
+		// member snippets (reverse RPC) that we merge into the parsed module surface before typing.
+		//
+		// This is a small rung that does *not* implement upstream macro semantics yet.
+		var anyBuildMacros = false;
+		final buildExprsAll = new Array<String>();
+		for (m in resolved) {
+			final pm = ResolvedModule.getParsed(m);
+			final exprs = findBuildMacroExprs(pm.getSource());
+			if (exprs.length > 0) {
+				anyBuildMacros = true;
+				for (e in exprs) buildExprsAll.push(e);
+			}
+		}
+
+		var resolvedForTyping = resolved;
+		if (!typeOnly && anyBuildMacros) {
+			// Ensure we have a macro host session.
+			if (macroSession == null) {
+				// Optional convenience: auto-build a macro host that contains the build macro entrypoints.
+				if (MacroHostClient.resolveMacroHostExePath().length == 0 && shouldAutoBuildMacroHost()) {
+					final repoRoot = inferRepoRootForScripts();
+					if (repoRoot.length == 0) return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
+					try {
+						final entrypoints = new Array<String>();
+						for (e in buildExprsAll) if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1) entrypoints.push(e);
+						final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
+						Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
+					} catch (e:Dynamic) {
+						return error("macro host auto-build failed (build macros): " + Std.string(e));
+					}
+				}
+
+				try {
+					macroSession = MacroHostClient.openSession();
+				} catch (e:Dynamic) {
+					closeMacroSession();
+					return error("macro host required for @:build, but could not be started: " + Std.string(e));
+				}
+			}
+
+			final out2 = new Array<ResolvedModule>();
+			for (m in resolved) {
+				final pm = ResolvedModule.getParsed(m);
+				final exprs = findBuildMacroExprs(pm.getSource());
+				if (exprs.length == 0) {
+					out2.push(m);
+					continue;
+				}
+
+				final modulePath = ResolvedModule.getModulePath(m);
+				// Reset any previously-emitted fields for this module for deterministic behavior.
+				hxhx.macro.MacroState.clearBuildFields(modulePath);
+				hxhx.macro.MacroState.setDefine("HXHX_BUILD_MODULE", modulePath);
+				hxhx.macro.MacroState.setDefine("HXHX_BUILD_FILE", ResolvedModule.getFilePath(m));
+
+				for (i in 0...exprs.length) {
+					final expr = exprs[i];
+					Sys.println("build_macro[" + modulePath + "][" + i + "]=" + expr);
+					try {
+						// The macro effect is communicated via reverse RPC `compiler.emitBuildFields`.
+						Sys.println("build_macro_run[" + modulePath + "][" + i + "]=" + macroSession.run(expr));
+					} catch (e:Dynamic) {
+						closeMacroSession();
+						return error("build macro failed: " + modulePath + ": " + Std.string(e));
+					}
+				}
+
+				final snippets = hxhx.macro.MacroState.listBuildFields(modulePath);
+				Sys.println("build_fields[" + modulePath + "]=" + snippets.length);
+				if (snippets.length == 0) {
+					out2.push(m);
+					continue;
+				}
+
+				final gen = try parseGeneratedMembers(snippets) catch (e:Dynamic) {
+					closeMacroSession();
+					return error("build fields parse failed: " + modulePath + ": " + Std.string(e));
+				}
+
+				final oldDecl = pm.getDecl();
+				final oldCls = HxModuleDecl.getMainClass(oldDecl);
+				final mergedFns = HxClassDecl.getFunctions(oldCls).concat(gen.functions);
+				final mergedFields = HxClassDecl.getFields(oldCls).concat(gen.fields);
+				final newCls = new HxClassDecl(
+					HxClassDecl.getName(oldCls),
+					HxClassDecl.getHasStaticMain(oldCls),
+					mergedFns,
+					mergedFields
+				);
+				final newDecl = new HxModuleDecl(
+					HxModuleDecl.getPackagePath(oldDecl),
+					HxModuleDecl.getImports(oldDecl),
+					newCls,
+					HxModuleDecl.getHeaderOnly(oldDecl),
+					HxModuleDecl.getHasToplevelMain(oldDecl)
+				);
+				final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
+				out2.push(new ResolvedModule(modulePath, ResolvedModule.getFilePath(m), newParsed));
+			}
+			resolvedForTyping = out2;
+		} else if (typeOnly && anyBuildMacros) {
+			// Diagnostic mode: surface build macro expressions, but do not attempt to execute them.
+			var i = 0;
+			for (m in resolved) {
+				final pm = ResolvedModule.getParsed(m);
+				final exprs = findBuildMacroExprs(pm.getSource());
+				for (e in exprs) {
+					Sys.println("build_macro_skipped[" + i + "]=" + ResolvedModule.getModulePath(m) + ":" + e);
+					i += 1;
+				}
+			}
+		}
+
+		final typerIndex = TyperIndex.build(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
 		//
@@ -365,7 +576,7 @@ class Stage3Compiler {
 			var parsedMethodsTotal = 0;
 			final rootFilePath = ResolvedModule.getFilePath(resolved[0]);
 			var rootTyped:Null<TypedModule> = null;
-			for (m in resolved) {
+			for (m in resolvedForTyping) {
 				try {
 					final pm = ResolvedModule.getParsed(m);
 					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) {
@@ -442,8 +653,8 @@ class Stage3Compiler {
 
 		// Stage3 "real compiler" rung: type the full resolved graph (best-effort),
 		// then emit/build an executable from the typed program.
-		final typedModules = new Array<TypedModule>();
-		for (m in resolved) {
+			final typedModules = new Array<TypedModule>();
+		for (m in resolvedForTyping) {
 			typedModules.push(TyperStage.typeResolvedModule(m, typerIndex));
 		}
 

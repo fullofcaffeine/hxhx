@@ -112,4 +112,28 @@ class Compiler {
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("s", source == null ? "" : source);
 		HostToCompilerRpc.call("compiler.emitHxModule", tail);
 	}
+
+	/**
+		Stage4 bring-up: emit build fields as raw Haxe class-member source text.
+
+		Why
+		- Real Haxe build macros return `Array<haxe.macro.Expr.Field>` and require a full macro
+		  interpreter + typed AST integration.
+		- Before that exists, we still want a deterministic rung that proves `@:build(...)` can
+		  trigger a macro-host call and produce *new typed members* in the compiled output.
+
+		What
+		- Sends reverse RPC `compiler.emitBuildFields` with:
+		  - `m`: module path (e.g. `demo.Main`)
+		  - `s`: Haxe class-member snippet(s) to merge into that module's main class
+
+		Gotchas
+		- The snippet is parsed by the bootstrap parser, so keep it within the Stage3 subset
+		  (simple `public static function ...` patterns).
+	**/
+	public static function emitBuildFields(modulePath:String, membersSource:String):Void {
+		if (modulePath == null || modulePath.length == 0) return;
+		final tail = Protocol.encodeLen("m", modulePath) + " " + Protocol.encodeLen("s", membersSource == null ? "" : membersSource);
+		HostToCompilerRpc.call("compiler.emitBuildFields", tail);
+	}
 }

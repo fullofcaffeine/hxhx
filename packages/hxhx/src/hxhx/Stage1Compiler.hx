@@ -397,6 +397,23 @@ class Stage1Args {
 
 		return sawHxml ? out : args;
 	}
+
+	/**
+		Non-inline getters for cross-module use.
+
+		Why
+		- `hxhx` is built with dune’s `-opaque` in some configurations, which can hide record labels
+		  across compilation units in the generated OCaml.
+		- Using non-inline getters avoids relying on OCaml record-field label visibility and keeps the
+		  Stage1/Stage3 bring-up code stable as we evolve the backend.
+	**/
+	public static function getClassPaths(a:Stage1Args):Array<String> return a.classPaths;
+	public static function getMain(a:Stage1Args):String return a.main;
+	public static function getNoOutput(a:Stage1Args):Bool return a.noOutput;
+	public static function getDefines(a:Stage1Args):Array<String> return a.defines;
+	public static function getLibs(a:Stage1Args):Array<String> return a.libs;
+	public static function getMacros(a:Stage1Args):Array<String> return a.macros;
+	public static function getCwd(a:Stage1Args):String return a.cwd;
 }
 
 /**

@@ -432,6 +432,14 @@ class EmitterStage {
 					final retTy = ocamlTypeFromTy(tf.getReturnType());
 					final allowed:Map<String, Bool> = new Map();
 					for (a in args) allowed.set(a.getName(), true);
+					// Allow calls between methods in the same emitted module.
+					//
+					// Why
+					// - In Haxe, an unqualified call like `generated()` inside `Main.main` refers to a
+					//   static method on the current class.
+					// - In OCaml emission, those methods become top-level `let` bindings in the same
+					//   compilation unit, so the call is safe and should not be treated as bring-up poison.
+					for (tf2 in typedFns) allowed.set(tf2.getName(), true);
 					// Only allow locals when we're actually emitting statement bodies that bind them.
 					// In the "return-expression-only" rung, referencing locals would produce unbound
 					// identifiers in OCaml, so we treat them as poison and collapse to `Obj.magic`.

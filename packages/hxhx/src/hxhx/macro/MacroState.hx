@@ -32,6 +32,7 @@ class MacroState {
 	static final classPaths:Array<String> = [];
 	static var generatedHxDir:String = "";
 	static final generatedHxModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+	static final buildFieldsByModule:haxe.ds.StringMap<Array<String>> = new haxe.ds.StringMap();
 	static final afterTypingHookIds:Array<Int> = [];
 	static final onGenerateHookIds:Array<Int> = [];
 
@@ -41,6 +42,7 @@ class MacroState {
 		classPaths.resize(0);
 		generatedHxDir = "";
 		generatedHxModules.clear();
+		buildFieldsByModule.clear();
 		afterTypingHookIds.resize(0);
 		onGenerateHookIds.resize(0);
 	}
@@ -281,5 +283,54 @@ class MacroState {
 	public static function hasGeneratedHxModules():Bool {
 		for (_ in generatedHxModules.keys()) return true;
 		return false;
+	}
+
+	/**
+		Stage4 bring-up: allow macros to "emit build fields" as raw Haxe member source strings.
+
+		Why
+		- Real Haxe build macros return `Array<haxe.macro.Expr.Field>` and require a full macro
+		  interpreter + typed AST integration.
+		- Stage 4 bring-up needs an earlier, smaller rung that still validates the pipeline shape:
+		  `@:build(...)` metadata triggers a macro-host call and results in *new members* being
+		  typed and emitted.
+		- Returning structured `Field` values over RPC is future work; today we transport raw Haxe
+		  member snippets (that our bootstrap parser can re-parse).
+
+		What
+		- `emitBuildFields(modulePath, membersSource)` stores a snippet associated with a module.
+		- `listBuildFields(modulePath)` returns snippets in emission order.
+
+		How
+		- The macro host calls a reverse RPC `compiler.emitBuildFields m=<modulePath> s=<source>`.
+		- The Stage3 pipeline reads the collected snippets and merges the parsed members into the
+		  module's main class before typing.
+	**/
+	public static function emitBuildFields(modulePath:String, membersSource:String):Void {
+		if (modulePath == null) return;
+		final m = StringTools.trim(modulePath);
+		if (m.length == 0) return;
+		final src = membersSource == null ? "" : membersSource;
+		var arr = buildFieldsByModule.get(m);
+		if (arr == null) {
+			arr = [];
+			buildFieldsByModule.set(m, arr);
+		}
+		arr.push(src);
+	}
+
+	public static function listBuildFields(modulePath:String):Array<String> {
+		if (modulePath == null) return [];
+		final m = StringTools.trim(modulePath);
+		if (m.length == 0) return [];
+		final arr = buildFieldsByModule.get(m);
+		return arr == null ? [] : arr.copy();
+	}
+
+	public static function clearBuildFields(modulePath:String):Void {
+		if (modulePath == null) return;
+		final m = StringTools.trim(modulePath);
+		if (m.length == 0) return;
+		buildFieldsByModule.remove(m);
 	}
 }

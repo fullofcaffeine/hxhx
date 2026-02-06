@@ -188,6 +188,23 @@ generate *new source code* that affects module resolution and typing.
   - `s`: `.hx` source text
 - response: `res <id> ok v=2:ok`
 
+### `compiler.emitBuildFields` (bring-up rung)
+
+Stage 4 “build macro” rung: a macro can request the compiler to merge **new class members** into a module’s
+main class, as if they were produced by `@:build(...)`.
+
+This is explicitly **not** the long-term implementation of upstream build macros (which return
+`Array<haxe.macro.Expr.Field>` and require a real macro interpreter + typed AST integration). Instead, this rung:
+
+- keeps the ABI boundary explicit (`compiler` ↔ `macro host`)
+- proves that `@:build(...)` can have an observable effect on typing + emission
+- transports raw Haxe member source strings that our bootstrap parser can re-parse
+
+- request: `req <id> compiler.emitBuildFields m=<...> s=<...>`
+  - `m`: module path (e.g. `demo.Main`)
+  - `s`: Haxe class-member snippet(s) to merge into that module’s main class
+- response: `res <id> ok v=2:ok`
+
 ### `context.defined`
 
 Models the shape of `haxe.macro.Context.defined(name)`.
