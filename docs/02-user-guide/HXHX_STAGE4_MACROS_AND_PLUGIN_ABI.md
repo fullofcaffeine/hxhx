@@ -205,6 +205,27 @@ See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1` for the registry semantics. 
 - when macro execution is native, bundled macro backends are loaded by the macro host
 - builtin backends become possible as “linked plugins” with no classpath scan (fast-path)
 
+#### Current Stage3 note: what `--library` means today
+
+In the current Stage3 bring-up implementation, `hxhx --hxhx-stage3` resolves `--library` / `-lib` by calling
+`haxelib path <name>` and adding the returned directories to the classpath.
+
+This is intentionally conservative:
+
+- We treat `--library` as **classpath resolution** (so code can import library modules).
+- We do *not* yet execute arbitrary library-provided `--macro` initializers from `haxe_libraries/*.hxml`.
+
+Why this staging is OK:
+
+- It keeps bring-up deterministic and reduces the macro surface we need to emulate early.
+- It still lets us validate the “plugin plumbing” (hooks, defines, emission) using repo-local macro libraries.
+
+Long-term expectation:
+
+- Stage4 “real plugin loading” will need to honor library-provided macro initializers (or an equivalent
+  native registration mechanism), so Reflaxe targets can be loaded with `--library reflaxe.<target>` the
+  same way they are with upstream `haxe`.
+
 ## Plugin ABI: required interactions (minimum viable)
 
 The macro host must support (minimum viable, for Gate 1):

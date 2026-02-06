@@ -468,6 +468,49 @@ echo "$out" | grep -q "^plugin_cp=ok$"
 echo "$out" | grep -q "^main=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage4 bring-up: fixture plugin works with --library reflaxe.ocaml (haxelib resolution)"
+tmpplugin_lib="$tmpdir/plugin_fixture_lib"
+mkdir -p "$tmpplugin_lib/src"
+mkdir -p "$tmpplugin_lib/plugin_cp"
+cat >"$tmpplugin_lib/src/Main.hx" <<'HX'
+import AddedFromPlugin;
+
+class Main {
+  static function main() {
+    AddedFromPlugin.ping();
+    Sys.println("main=ok");
+  }
+}
+HX
+cat >"$tmpplugin_lib/plugin_cp/AddedFromPlugin.hx" <<'HX'
+class AddedFromPlugin {
+  public static function ping() {
+    Sys.println("plugin_cp=ok");
+  }
+}
+HX
+plugin_out_lib="$tmpplugin_lib/out"
+out="$(
+  HXHX_PLUGIN_FIXTURE_CP="$tmpplugin_lib/plugin_cp" \
+  HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 \
+  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
+    -cp "$tmpplugin_lib/src" \
+    -cp "$ROOT/examples/hxhx-macros/src" \
+    --library reflaxe.ocaml \
+    -main Main \
+    --macro 'hxhxmacros.PluginFixtureMacros.init()' \
+    --hxhx-out "$plugin_out_lib"
+)"
+echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_PLUGIN_FIXTURE\\]=1$"
+echo "$out" | grep -q "^hook_afterTyping\\[0\\]=ok$"
+echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
+echo "$out" | grep -q "^stage3=ok$"
+test -f "$plugin_out_lib/HxHxPluginFixtureGen.ml"
+echo "$out" | grep -q "^plugin_cp=ok$"
+echo "$out" | grep -q "^main=ok$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: expression macro expansion replaces call sites"
 tmpexpr="$tmpdir/expr_macro"
 mkdir -p "$tmpexpr/src"
