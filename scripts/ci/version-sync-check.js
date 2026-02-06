@@ -13,6 +13,7 @@
  */
 
 const fs = require('fs')
+const cp = require('child_process')
 
 function readUtf8(path) {
   return fs.readFileSync(path, 'utf8')
@@ -25,6 +26,16 @@ function readJson(path) {
 function fail(msg) {
   console.error(`[ci:guards] ERROR: ${msg}`)
   process.exitCode = 1
+}
+
+function gitTrackedUnder(path) {
+  try {
+    const out = cp.execFileSync('git', ['ls-files', '-z', '--', path], { encoding: 'utf8' })
+    return out.split('\0').filter(Boolean)
+  } catch (_) {
+    // In the unlikely event git isn't available, don't fail the build — this is a guardrail.
+    return []
+  }
 }
 
 function extractHxmlDefine(path, defineName) {
@@ -80,6 +91,13 @@ function main() {
     if (!license.includes('Permission is hereby granted, free of charge')) {
       fail('LICENSE does not look like MIT (missing permission grant)')
     }
+  }
+
+  // Provenance/licensing guardrails:
+  // - keep upstream Haxe checkouts untracked (we use vendor/haxe as a local oracle only).
+  const trackedUpstream = gitTrackedUnder('vendor/haxe')
+  if (trackedUpstream.length > 0) {
+    fail(`Upstream Haxe checkout must not be committed (tracked files under vendor/haxe):\n- ${trackedUpstream.slice(0, 20).join('\n- ')}${trackedUpstream.length > 20 ? `\n- ... (${trackedUpstream.length} files total)` : ''}`)
   }
 
   if (process.exitCode) return
