@@ -261,15 +261,26 @@ class EmitterStage {
 					true;
 				case ENew(_, _):
 					true;
-				case EUnop(_op, _):
-					// Stage 3: we only emit a tiny subset of unary ops. Treat all unary expressions as
-					// bring-up poison until the typer can reliably separate Int/Float/Bool cases.
-					true;
-				case EBinop(_op, _, _):
-					// Stage 3: we only emit a small subset of binops, but the surrounding bring-up
-					// pipeline still can't type these reliably. Keep binops as bring-up poison in
-					// general return positions so we don't accidentally claim correctness.
-					true;
+				case EUnop(op, inner):
+					// Stage 3: allow a tiny subset of unary operators in return positions so bring-up
+					// programs can become incrementally more semantic.
+					switch (op) {
+						case "!" | "-":
+							hasBringupPoison(inner);
+						case _:
+							true;
+					}
+				case EBinop(op, a, b):
+					// Stage 3: allow a curated subset of operators in return positions.
+					//
+					// Important: we still collapse assignment to bring-up poison (it frequently depends
+					// on side effects + correct lvalue semantics which we don't model yet).
+					switch (op) {
+						case "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||" | "+" | "-" | "*" | "/" | "%":
+							hasBringupPoison(a) || hasBringupPoison(b);
+						case _:
+							true;
+					}
 				case EIdent(name):
 					// Stage 3 only models params and module names. Any other value identifier is
 					// likely a local/field/helper we can't represent correctly yet.
