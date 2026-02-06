@@ -156,10 +156,11 @@ class Stage3Compiler {
 
 	public static function run(args:Array<String>):Int {
 		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
-		var outDir = "";
-		var typeOnly = false;
-		final rest = new Array<String>();
-		var i = 0;
+			var outDir = "";
+			var typeOnly = false;
+			var emitFullBodies = false;
+			final rest = new Array<String>();
+			var i = 0;
 		while (i < args.length) {
 			final a = args[i];
 			switch (a) {
@@ -170,6 +171,10 @@ class Stage3Compiler {
 				case "--hxhx-type-only":
 					// Diagnostic bring-up mode: resolve + type the module graph, but don't emit/build.
 					typeOnly = true;
+					i += 1;
+				case "--hxhx-emit-full-bodies":
+					// Bring-up rung: emit best-effort OCaml for full statement bodies (not just first return).
+					emitFullBodies = true;
 					i += 1;
 				case _:
 					rest.push(a);
@@ -215,13 +220,28 @@ class Stage3Compiler {
 				return error("cwd is not a directory: " + cwd);
 			}
 
-		final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
+			final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));
 
-		final macroHostClassPaths = {
-			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
-			final libs = new Array<String>();
-			for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
-			base.concat(libs);
+			// Stage3 bring-up rung: full-body emission needs the pure-Haxe parser.
+			//
+			// Why
+			// - The native frontend protocol v1 only captures headers/first-return and
+			//   cannot represent full statement bodies.
+			// - `--hxhx-emit-full-bodies` is explicitly about validating statement
+			//   lowering end-to-end, so we must ensure bodies exist.
+			//
+			// How
+			// - Force `ParserStage` to select `HxParser` even when compiled with
+			//   `-D hih_native_parser`.
+			if (emitFullBodies) {
+				Sys.putEnv("HIH_FORCE_HX_PARSER", "1");
+			}
+
+			final macroHostClassPaths = {
+				final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
+				final libs = new Array<String>();
+				for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
+				base.concat(libs);
 		}
 
 		if (!typeOnly && parsed.macros.length > 0) {
@@ -430,7 +450,7 @@ class Stage3Compiler {
 			}
 		}
 
-		final exe = try EmitterStage.emitToDir(expanded, outAbs) catch (e:Dynamic) {
+		final exe = try EmitterStage.emitToDir(expanded, outAbs, emitFullBodies) catch (e:Dynamic) {
 			closeMacroSession();
 			return error("emit failed: " + Std.string(e));
 		}

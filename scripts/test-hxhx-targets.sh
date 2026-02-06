@@ -281,6 +281,21 @@ exe="$(echo "$out" | sed -n 's/^exe=//p' | tail -n 1)"
 test -n "$exe"
 test -f "$exe"
 
+echo "== Stage3 bring-up: emits full bodies (trace prints)"
+tmpfull="$tmpdir/full_body"
+mkdir -p "$tmpfull/src"
+cat >"$tmpfull/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    trace("HELLO");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^HELLO$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: type-only checks full graph"
 type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"

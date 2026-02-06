@@ -20,7 +20,23 @@ class ParserStage {
 
 	public static function parse(source:String, ?filePath:String):ParsedModule {
 		final decl = #if hih_native_parser
-			parseViaNativeHooks(source);
+			// Bring-up escape hatch: allow forcing the pure-Haxe parser even when the
+			// native frontend is compiled in.
+			//
+			// Why
+			// - The native frontend protocol v1 is intentionally "header/return only" and
+			//   cannot represent full statement bodies.
+			// - Some Stage3 bring-up rungs (e.g. `--hxhx-emit-full-bodies`) need bodies so
+			//   we can validate statement lowering end-to-end.
+			//
+			// How
+			// - `HIH_FORCE_HX_PARSER=1` selects the pure-Haxe frontend regardless of the
+			//   compiled-in `hih_native_parser` define.
+			((() -> {
+				final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
+				if (v == "1" || v == "true" || v == "yes") return new HxParser(source).parseModule();
+				return parseViaNativeHooks(source);
+			})());
 		#else
 			new HxParser(source).parseModule();
 		#end

@@ -28,6 +28,18 @@ class EmitterStage {
 		// Stub: eventually write output files / bytecode.
 	}
 
+	static function escapeOcamlIdentPart(s:String):String {
+		if (s == null || s.length == 0) return "_";
+		final out = new StringBuf();
+		for (i in 0...s.length) {
+			final c = s.charCodeAt(i);
+			final isAlphaNum = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+			out.add(isAlphaNum ? String.fromCharCode(c) : "_");
+		}
+		final t = out.toString();
+		return t.length == 0 ? "_" : t;
+	}
+
 	static function ocamlTypeFromTy(t:TyType):String {
 		return switch (t.toString()) {
 			case "Int": "int";
@@ -85,6 +97,16 @@ class EmitterStage {
 		return "\"" + out + "\"";
 	}
 
+	static function exprToOcamlString(e:HxExpr):String {
+		return switch (e) {
+			case EString(v): escapeOcamlString(v);
+			case EInt(v): "string_of_int " + Std.string(v);
+			case EBool(v): "string_of_bool " + (v ? "true" : "false");
+			case EFloat(v): "string_of_float " + Std.string(v);
+			case _: escapeOcamlString("<unsupported>");
+		}
+	}
+
 	static function exprToOcaml(e:HxExpr):String {
 		return switch (e) {
 			// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
@@ -112,6 +134,15 @@ class EmitterStage {
 				"neg_infinity";
 			case EField(EIdent("Math"), "PI"):
 				"(4.0 *. atan 1.0)";
+
+			// Stage 3 "full body" rung: map common output calls to OCaml printing.
+			//
+			// This is *not* a real stdlib/runtime mapping; it's a bootstrap convenience so we can
+			// observe that emitted function bodies are actually executing.
+			case ECall(EIdent("trace"), [arg]):
+				"print_endline (" + exprToOcamlString(arg) + ")";
+			case ECall(EField(EIdent("Sys"), "println"), [arg]):
+				"print_endline (" + exprToOcamlString(arg) + ")";
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
@@ -189,6 +220,10 @@ class EmitterStage {
 					// likely a local/field/helper we can't represent correctly yet.
 					if (isUpperStart(name)) {
 						false;
+					} else if (name == "trace") {
+						// Bootstrap convenience: allow emitting `trace(...)` in full-body mode so we can
+						// observe that generated OCaml actually executes.
+						false;
 					} else if (allowedValueIdents != null && allowedValueIdents.exists(name)) {
 						false;
 					} else {
@@ -213,6 +248,57 @@ class EmitterStage {
 		return exprToOcaml(expr);
 	}
 
+	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String):String {
+		if (stmts == null || stmts.length == 0) return "()";
+
+		function condToOcamlBool(e:HxExpr):String {
+			return switch (e) {
+				case EBool(v): v ? "true" : "false";
+				case _: "true";
+			}
+		}
+
+		function stmtToUnit(s:HxStmt):String {
+			return switch (s) {
+				case SBlock(ss, _pos):
+					stmtListToOcaml(ss, allowedValueIdents, returnExc);
+				case SVar(_name, _typeHint, _init, _pos):
+					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
+					"()";
+				case SIf(cond, thenBranch, elseBranch, _pos):
+					final thenUnit = stmtToUnit(thenBranch);
+					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch);
+					"if " + condToOcamlBool(cond) + " then (" + thenUnit + ") else (" + elseUnit + ")";
+				case SReturnVoid(_pos):
+					"raise (" + returnExc + " (Obj.repr ()))";
+				case SReturn(expr, _pos):
+					"raise (" + returnExc + " (Obj.repr (" + returnExprToOcaml(expr, allowedValueIdents) + ")))";
+				case SExpr(expr, _pos):
+					// Avoid emitting invalid OCaml when we parse Haxe assignment as `EBinop("=")`.
+					switch (expr) {
+						case EBinop("=", _l, _r):
+							"()";
+						case _:
+							"ignore (" + returnExprToOcaml(expr, allowedValueIdents) + ")";
+					}
+			}
+		}
+
+		// Fold right so `var` statements can wrap the rest with `let name = init in ...`.
+		var out = "()";
+		for (i in 0...stmts.length) {
+			final s = stmts[stmts.length - 1 - i];
+			switch (s) {
+				case SVar(name, _typeHint, init, _pos):
+					final rhs = init == null ? "(Obj.magic 0)" : returnExprToOcaml(init, allowedValueIdents);
+					out = "let " + ocamlValueIdent(name) + " = " + rhs + " in (" + out + ")";
+				case _:
+					out = "(" + stmtToUnit(s) + "; " + out + ")";
+			}
+		}
+		return out;
+	}
+
 	/**
 		Emit a minimal OCaml program for the typed module and build it as a native executable.
 
@@ -232,7 +318,7 @@ class EmitterStage {
 		  expressions from the parsed AST (we only support simple return shapes).
 		- Builds using `ocamlopt` (override via `OCAMLOPT` env var).
 	**/
-	public static function emitToDir(p:MacroExpandedProgram, outDir:String):String {
+	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false):String {
 		if (outDir == null || StringTools.trim(outDir).length == 0) throw "stage3 emitter: missing outDir";
 		final outAbs = haxe.io.Path.normalize(outDir);
 		if (!sys.FileSystem.exists(outAbs)) sys.FileSystem.createDirectory(outAbs);
@@ -330,6 +416,7 @@ class EmitterStage {
 			out.push("");
 
 			var sawMain = false;
+			final exceptions = new Array<String>();
 			for (i in 0...typedFns.length) {
 				final tf = typedFns[i];
 				final nameRaw = tf.getName();
@@ -343,14 +430,31 @@ class EmitterStage {
 
 				final parsedFn = parsedByName.get(nameRaw);
 				final retTy = ocamlTypeFromTy(tf.getReturnType());
-				final allowed = new Map<String, Bool>();
+				final allowed:Map<String, Bool> = new Map();
 				for (a in args) allowed.set(a.getName(), true);
-				final body = parsedFn == null ? "()" : returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed);
+				for (l in tf.getLocals()) allowed.set(l.getName(), true);
+
+				final body = if (parsedFn == null) {
+					"()";
+				} else if (!emitFullBodies) {
+					returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed);
+				} else {
+					// OCaml exception constructors must start with an uppercase letter.
+					final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
+					exceptions.push("exception " + exc + " of Obj.t");
+					final stmts = HxFunctionDecl.getBody(parsedFn);
+					"try (" + stmtListToOcaml(stmts, allowed, exc) + ") with " + exc + " v -> (Obj.magic v : " + retTy + ")";
+				};
 
 				// Keep return type annotation to make early typing behavior visible.
 				final kw = i == 0 ? "let rec" : "and";
 				out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 				out.push("");
+			}
+
+			if (emitFullBodies && exceptions.length > 0) {
+				// Prepend exceptions so the `try ... with` clauses can reference them.
+				out.insert(2, exceptions.join("\n") + "\n");
 			}
 
 			if (isRoot && sawMain) {
