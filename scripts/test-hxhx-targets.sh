@@ -414,14 +414,14 @@ grep -q 'external_flag' "$stage3_out3/HxHxExternal.ml"
 
 echo "== Stage3 bring-up: upstream-ish Macro.init() compiles + runs (haxe.macro.Context override)"
 stage3_out4="$tmpdir/out_stage3_upstream_macro"
-out="$(HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Stage3 bring-up: runs a non-builtin macro entrypoint with a String arg"
 stage3_out5="$tmpdir/out_stage3_arg_macro"
-out="$(HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'hxhxmacros.ArgsMacros.setArg("ok")' --hxhx-out "$stage3_out5")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/examples/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'hxhxmacros.ArgsMacros.setArg("ok")' --hxhx-out "$stage3_out5")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
@@ -450,7 +450,7 @@ HX
 plugin_out="$tmpplugin/out"
 out="$(
   HXHX_PLUGIN_FIXTURE_CP="$tmpplugin/plugin_cp" \
-  HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 \
+  HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
   "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
     -cp "$tmpplugin/src" \
     -cp "$ROOT/examples/hxhx-macros/src" \
@@ -492,7 +492,7 @@ HX
 plugin_out_lib="$tmpplugin_lib/out"
 out="$(
   HXHX_PLUGIN_FIXTURE_CP="$tmpplugin_lib/plugin_cp" \
-  HXHX_MACRO_HOST_EXE="" HXHX_MACRO_HOST_AUTO_BUILD=1 \
+  HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
   "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
     -cp "$tmpplugin_lib/src" \
     -cp "$ROOT/examples/hxhx-macros/src" \

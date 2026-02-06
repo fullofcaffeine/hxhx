@@ -11,6 +11,7 @@ let init () : unit =
   ignore (HxType.class_ "haxe.io.FPHelper");
   ignore (HxType.class_ "haxe.io.Input");
   ignore (HxType.class_ "haxe.io.Output");
+  ignore (HxType.class_ "haxe.macro.Compiler");
   ignore (HxType.class_ "haxe.macro.Context");
   ignore (HxType.class_ "hxhxmacrohost.BuildMacroSupport");
   ignore (HxType.class_ "hxhxmacrohost.BuiltinMacros");
@@ -23,17 +24,21 @@ let init () : unit =
   ignore (HxType.class_ "hxhxmacrohost.Protocol");
   ignore (HxType.class_ "hxhxmacrohost.api.Compiler");
   ignore (HxType.class_ "hxhxmacrohost.api.Context");
+  ignore (HxType.class_ "hxhxmacros.ArgsMacros");
   ignore (HxType.class_ "hxhxmacros.BuildFieldMacros");
   ignore (HxType.class_ "hxhxmacros.ExprMacroShim");
   ignore (HxType.class_ "hxhxmacros.ExternalMacros");
   ignore (HxType.class_ "hxhxmacros.FieldPrinterMacros");
+  ignore (HxType.class_ "hxhxmacros.PluginFixtureMacros");
   ignore (HxType.class_ "hxhxmacros.ReturnFieldMacros");
   ignore (HxType.class_ "ocaml._Buffer.Buffer_Impl_");
   ignore (HxType.class_ "sys.io.Stdio");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   ignore (HxType.enum_ "haxe.macro.Message");
+  ignore (HxType.enum_ "haxe.macro.NullSafetyMode");
   HxType.register_enum_ctors "haxe.macro.Message" [ "Info"; "Warning" ];
+  HxType.register_enum_ctors "haxe.macro.NullSafetyMode" [ "Loose"; "Strict"; "StrictThreaded" ];
   HxType.register_enum_ctor "haxe.macro.Message" "Info" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'msg' for haxe.macro.Message.Info" in
@@ -45,6 +50,15 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'msg' for haxe.macro.Message.Warning" in
     let a1 = if len > 1 then (HxArray.get args 1) else failwith "Type.createEnum: missing ctor arg 'pos' for haxe.macro.Message.Warning" in
     Obj.repr (Haxe_macro_Context.Warning (a0, a1))
+  );
+  HxType.register_enum_ctor "haxe.macro.NullSafetyMode" "Loose" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_macro_Compiler.Loose)
+  );
+  HxType.register_enum_ctor "haxe.macro.NullSafetyMode" "Strict" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_macro_Compiler.Strict)
+  );
+  HxType.register_enum_ctor "haxe.macro.NullSafetyMode" "StrictThreaded" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_macro_Compiler.StrictThreaded)
   );
   HxType.register_class_ctor "Macro" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Macro.create ())
@@ -73,6 +87,9 @@ let init () : unit =
   );
   HxType.register_class_ctor "haxe.io.Output" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_Output.create ())
+  );
+  HxType.register_class_ctor "haxe.macro.Compiler" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_macro_Compiler.create ())
   );
   HxType.register_class_ctor "haxe.macro.Context" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_macro_Context.create ())
@@ -110,6 +127,9 @@ let init () : unit =
   HxType.register_class_ctor "hxhxmacrohost.api.Context" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacrohost_api_Context.create ())
   );
+  HxType.register_class_ctor "hxhxmacros.ArgsMacros" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacros_ArgsMacros.create ())
+  );
   HxType.register_class_ctor "hxhxmacros.BuildFieldMacros" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacros_BuildFieldMacros.create ())
   );
@@ -121,6 +141,9 @@ let init () : unit =
   );
   HxType.register_class_ctor "hxhxmacros.FieldPrinterMacros" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacros_FieldPrinterMacros.create ())
+  );
+  HxType.register_class_ctor "hxhxmacros.PluginFixtureMacros" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacros_PluginFixtureMacros.create ())
   );
   HxType.register_class_ctor "hxhxmacros.ReturnFieldMacros" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacros_ReturnFieldMacros.create ())
@@ -146,6 +169,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Input" (fun () -> Obj.repr (Haxe_io_Input.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Output" (fun () -> Obj.repr (Haxe_io_Output.__empty ()));
+  HxType.register_class_empty_ctor "haxe.macro.Compiler" (fun () -> Obj.repr (Haxe_macro_Compiler.__empty ()));
   HxType.register_class_empty_ctor "haxe.macro.Context" (fun () -> Obj.repr (Haxe_macro_Context.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.BuildMacroSupport" (fun () -> Obj.repr (Hxhxmacrohost_BuildMacroSupport.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.BuiltinMacros" (fun () -> Obj.repr (Hxhxmacrohost_BuiltinMacros.__empty ()));
@@ -158,10 +182,12 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhxmacrohost.Protocol" (fun () -> Obj.repr (Hxhxmacrohost_Protocol.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.api.Compiler" (fun () -> Obj.repr (Hxhxmacrohost_api_Compiler.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacrohost.api.Context" (fun () -> Obj.repr (Hxhxmacrohost_api_Context.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacros.ArgsMacros" (fun () -> Obj.repr (Hxhxmacros_ArgsMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.BuildFieldMacros" (fun () -> Obj.repr (Hxhxmacros_BuildFieldMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ExprMacroShim" (fun () -> Obj.repr (Hxhxmacros_ExprMacroShim.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ExternalMacros" (fun () -> Obj.repr (Hxhxmacros_ExternalMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.FieldPrinterMacros" (fun () -> Obj.repr (Hxhxmacros_FieldPrinterMacros.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacros.PluginFixtureMacros" (fun () -> Obj.repr (Hxhxmacros_PluginFixtureMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ReturnFieldMacros" (fun () -> Obj.repr (Hxhxmacros_ReturnFieldMacros.__empty ()));
   HxType.register_class_empty_ctor "sys.io.Stdio" (fun () -> Obj.repr (Sys_io_Stdio.__empty ()));
   HxType.register_class_empty_ctor "sys.io._Stdio.OcamlStdioInput" (fun () -> Obj.repr (Sys_io_Stdio.ocamlstdioinput___empty ()));
@@ -182,6 +208,8 @@ let init () : unit =
   HxType.register_class_static_fields "haxe.io.Input" [];
   HxType.register_class_instance_fields "haxe.io.Output" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "haxe.io.Output" [];
+  HxType.register_class_instance_fields "haxe.macro.Compiler" [];
+  HxType.register_class_static_fields "haxe.macro.Compiler" [ "addClassPath"; "define"; "emitHxModule"; "emitOcamlModule"; "getDefine" ];
   HxType.register_class_instance_fields "haxe.macro.Context" [];
   HxType.register_class_static_fields "haxe.macro.Context" [ "currentPos"; "defined"; "definedValue"; "error"; "fatalError"; "filterMessages"; "getBuildFields"; "getDefines"; "getMessages"; "info"; "onAfterTyping"; "onGenerate"; "warning" ];
   HxType.register_class_instance_fields "hxhxmacrohost.BuildMacroSupport" [];
@@ -206,6 +234,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhxmacrohost.api.Compiler" [ "addClassPath"; "define"; "emitBuildFields"; "emitHxModule"; "emitOcamlModule"; "getDefine"; "includeModule" ];
   HxType.register_class_instance_fields "hxhxmacrohost.api.Context" [];
   HxType.register_class_static_fields "hxhxmacrohost.api.Context" [ "defined"; "definedValue"; "getBuildFields"; "getDefines"; "getType"; "onAfterTyping"; "onGenerate" ];
+  HxType.register_class_instance_fields "hxhxmacros.ArgsMacros" [];
+  HxType.register_class_static_fields "hxhxmacros.ArgsMacros" [ "setArg" ];
   HxType.register_class_instance_fields "hxhxmacros.BuildFieldMacros" [];
   HxType.register_class_static_fields "hxhxmacros.BuildFieldMacros" [ "addGeneratedField" ];
   HxType.register_class_instance_fields "hxhxmacros.ExprMacroShim" [];
@@ -214,6 +244,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhxmacros.ExternalMacros" [ "external" ];
   HxType.register_class_instance_fields "hxhxmacros.FieldPrinterMacros" [];
   HxType.register_class_static_fields "hxhxmacros.FieldPrinterMacros" [ "addArgFunctionAndVar" ];
+  HxType.register_class_instance_fields "hxhxmacros.PluginFixtureMacros" [];
+  HxType.register_class_static_fields "hxhxmacros.PluginFixtureMacros" [ "init" ];
   HxType.register_class_instance_fields "hxhxmacros.ReturnFieldMacros" [];
   HxType.register_class_static_fields "hxhxmacros.ReturnFieldMacros" [ "addGeneratedFieldReturn"; "replaceGeneratedFieldReturn" ];
   HxType.register_class_instance_fields "ocaml._Buffer.Buffer_Impl_" [];
@@ -245,6 +277,41 @@ let init () : unit =
   HxType.register_class_tags "haxe._Int32.Int32_Impl_" [ "haxe._Int32.Int32_Impl_" ];
   HxType.register_class_tags "haxe._Int64.Int64_Impl_" [ "haxe._Int64.Int64_Impl_" ];
   HxType.register_class_tags "haxe._Int64.___Int64" [ "haxe._Int64.___Int64" ];
+  HxType.register_class_tags "haxe.display.DisplayMethods" [ "haxe.display.DisplayMethods" ];
+  HxType.register_class_tags "haxe.display.Methods" [ "haxe.display.Methods" ];
+  HxType.register_class_tags "haxe.display._Diagnostic.DiagnosticKind_Impl_" [ "haxe.display._Diagnostic.DiagnosticKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Diagnostic.DiagnosticSeverity_Impl_" [ "haxe.display._Diagnostic.DiagnosticSeverity_Impl_" ];
+  HxType.register_class_tags "haxe.display._Diagnostic.MissingFieldCauseKind_Impl_" [ "haxe.display._Diagnostic.MissingFieldCauseKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Diagnostic.UnresolvedIdentifierSuggestion_Impl_" [ "haxe.display._Diagnostic.UnresolvedIdentifierSuggestion_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.ClassFieldOriginKind_Impl_" [ "haxe.display._Display.ClassFieldOriginKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.CompletionModeKind_Impl_" [ "haxe.display._Display.CompletionModeKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.DisplayItemKind_Impl_" [ "haxe.display._Display.DisplayItemKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.DisplayModuleTypeKind_Impl_" [ "haxe.display._Display.DisplayModuleTypeKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.EnumFieldOriginKind_Impl_" [ "haxe.display._Display.EnumFieldOriginKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.FindReferencesKind_Impl_" [ "haxe.display._Display.FindReferencesKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.HoverExpectedNameKind_Impl_" [ "haxe.display._Display.HoverExpectedNameKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.KeywordKind_Impl_" [ "haxe.display._Display.KeywordKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.Literal_Impl_" [ "haxe.display._Display.Literal_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.LocalOrigin_Impl_" [ "haxe.display._Display.LocalOrigin_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.MetadataTarget_Impl_" [ "haxe.display._Display.MetadataTarget_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.Platform_Impl_" [ "haxe.display._Display.Platform_Impl_" ];
+  HxType.register_class_tags "haxe.display._Display.SignatureItemKind_Impl_" [ "haxe.display._Display.SignatureItemKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._FsPath.FsPath_Impl_" [ "haxe.display._FsPath.FsPath_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.ImportStatus_Impl_" [ "haxe.display._JsonModuleTypes.ImportStatus_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonAnonStatusKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonAnonStatusKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonBinopKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonBinopKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonClassFieldScope_Impl_" [ "haxe.display._JsonModuleTypes.JsonClassFieldScope_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonClassKindKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonClassKindKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonFieldKindKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonFieldKindKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonMethodKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonMethodKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonModuleTypeKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonModuleTypeKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonTConstantKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonTConstantKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonTypeKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonTypeKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonUnop_Impl_" [ "haxe.display._JsonModuleTypes.JsonUnop_Impl_" ];
+  HxType.register_class_tags "haxe.display._JsonModuleTypes.JsonVarAccessKind_Impl_" [ "haxe.display._JsonModuleTypes.JsonVarAccessKind_Impl_" ];
+  HxType.register_class_tags "haxe.display._Protocol.HaxeNotificationMethod_Impl_" [ "haxe.display._Protocol.HaxeNotificationMethod_Impl_" ];
+  HxType.register_class_tags "haxe.display._Protocol.HaxeRequestMethod_Impl_" [ "haxe.display._Protocol.HaxeRequestMethod_Impl_" ];
+  HxType.register_class_tags "haxe.display._Protocol.HaxeResponseErrorSeverity_Impl_" [ "haxe.display._Protocol.HaxeResponseErrorSeverity_Impl_" ];
   HxType.register_class_tags "haxe.ds.BalancedTree" [ "haxe.IMap"; "haxe.ds.BalancedTree" ];
   HxType.register_class_tags "haxe.ds.EnumValueMap" [ "haxe.IMap"; "haxe.ds.BalancedTree"; "haxe.ds.EnumValueMap" ];
   HxType.register_class_tags "haxe.ds.TreeNode" [ "haxe.ds.TreeNode" ];
@@ -263,6 +330,7 @@ let init () : unit =
   HxType.register_class_tags "haxe.iterators.StringIterator" [ "haxe.iterators.StringIterator" ];
   HxType.register_class_tags "haxe.iterators.StringIteratorUnicode" [ "haxe.iterators.StringIteratorUnicode" ];
   HxType.register_class_tags "haxe.iterators.StringKeyValueIterator" [ "haxe.iterators.StringKeyValueIterator" ];
+  HxType.register_class_tags "haxe.macro.Compiler" [ "haxe.macro.Compiler" ];
   HxType.register_class_tags "haxe.macro.Context" [ "haxe.macro.Context" ];
   HxType.register_class_tags "haxe.macro.Error" [ "haxe.Exception"; "haxe.macro.Error" ];
   HxType.register_class_tags "hxhxmacrohost.BuildMacroSupport" [ "hxhxmacrohost.BuildMacroSupport" ];
@@ -276,10 +344,12 @@ let init () : unit =
   HxType.register_class_tags "hxhxmacrohost.Protocol" [ "hxhxmacrohost.Protocol" ];
   HxType.register_class_tags "hxhxmacrohost.api.Compiler" [ "hxhxmacrohost.api.Compiler" ];
   HxType.register_class_tags "hxhxmacrohost.api.Context" [ "hxhxmacrohost.api.Context" ];
+  HxType.register_class_tags "hxhxmacros.ArgsMacros" [ "hxhxmacros.ArgsMacros" ];
   HxType.register_class_tags "hxhxmacros.BuildFieldMacros" [ "hxhxmacros.BuildFieldMacros" ];
   HxType.register_class_tags "hxhxmacros.ExprMacroShim" [ "hxhxmacros.ExprMacroShim" ];
   HxType.register_class_tags "hxhxmacros.ExternalMacros" [ "hxhxmacros.ExternalMacros" ];
   HxType.register_class_tags "hxhxmacros.FieldPrinterMacros" [ "hxhxmacros.FieldPrinterMacros" ];
+  HxType.register_class_tags "hxhxmacros.PluginFixtureMacros" [ "hxhxmacros.PluginFixtureMacros" ];
   HxType.register_class_tags "hxhxmacros.ReturnFieldMacros" [ "hxhxmacros.ReturnFieldMacros" ];
   HxType.register_class_tags "ocaml._Buffer.Buffer_Impl_" [ "ocaml._Buffer.Buffer_Impl_" ];
   HxType.register_class_tags "sys.io.Stdio" [ "sys.io.Stdio" ];
