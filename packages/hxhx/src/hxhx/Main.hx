@@ -165,6 +165,16 @@ class Main {
 		// Remove upstream `--interp` and emulate it by building + running a native OCaml executable.
 		argv = stripAll(argv, "--interp");
 
+		// Reflaxe targets emit via macros (`onAfterGenerate`) instead of a built-in backend.
+		//
+		// In upstream `--interp` workflows, `.hxml` files may still select a "normal" target
+		// (e.g. `--js`) for convenience. When we emulate `--interp` via OCaml, we want:
+		//   - stage0 to still typecheck under that platform when needed, but
+		//   - NOT to produce any non-OCaml artifacts.
+		//
+		// `--no-output` achieves that while keeping the command line close to upstream.
+		if (argv.indexOf("--no-output") == -1) argv.push("--no-output");
+
 		// Ensure we build to native code.
 		addDefineIfMissing(argv, "ocaml_build=native");
 

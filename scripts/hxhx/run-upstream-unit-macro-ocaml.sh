@@ -78,6 +78,15 @@ fi
 echo "== Gate 1 (ocaml --interp emulation): upstream tests/unit/compile-macro.hxml"
 (
   cd "$UPSTREAM_DIR/tests/unit"
+  # Upstream tests include "static platform" conditionals like:
+  #   #if (flash || cpp || java || cs || hl) ...
+  #
+  # We intentionally do NOT spoof those platform defines here (e.g. by defining `hl`),
+  # because that would pull in platform-specific APIs and test cases (e.g. `TestHL`, `hl.F32`).
+  #
+  # Instead, Gate 1 bring-up runs under the OCaml target’s portable surface, where the
+  # upstream "dynamic branch" remains typecheckable and runnable.
+
   # Use a deterministic output dir inside the upstream test folder to avoid interfering with other runs.
   #
   # IMPORTANT:

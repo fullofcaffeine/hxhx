@@ -130,6 +130,26 @@ Bring-up runner script:
 This runner still uses the stage0 `haxe` binary for compilation today; it exists to validate the
 native build+run harness while the non-delegating compiler pipeline is under construction.
 
+#### Upstream “static platform” checks (Null semantics)
+
+Upstream unit tests sometimes treat “static platforms” as a proxy for “nullable primitives behave differently”.
+
+Example (from `tests/unit/src/unit/TestReflect.hx`):
+
+- On static platforms (`flash`, `cpp`, `java`, `cs`, `hl`) `Type.createEmptyInstance` yields `0` for `Int` fields.
+- On dynamic platforms it yields `null`.
+
+Our strategy (for Gate 1 bring-up) is:
+
+- **Do not spoof** any of the upstream platform defines (`hl`, `cpp`, …). Doing so would pull in a large amount of
+  platform-specific tests and APIs (e.g. `hl.F32`, `TestHL`) that are unrelated to OCaml.
+- Instead, keep the OCaml target’s **portable** surface permissive enough that the upstream “dynamic branch” typechecks
+  and runs under our runtime model.
+
+When we flip the OCaml target’s “native surface” to be stricter about nullable primitives (and avoid boxing where
+possible), we may need a small upstream-compat patch set for those specific tests, or upstream may accept an `ocaml`
+define in the relevant conditionals.
+
 The “real” Gate 1 for replacement readiness is the **non-delegating** path. We track that as a separate runner:
 
 - `npm run test:upstream:unit-macro-native` (bring-up; expected to fail until `hxhx` stops delegating)
