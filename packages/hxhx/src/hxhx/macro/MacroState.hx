@@ -30,6 +30,7 @@ class MacroState {
 	static final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final ocamlModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final classPaths:Array<String> = [];
+	static final includedModules:Array<String> = [];
 	static var generatedHxDir:String = "";
 	static final generatedHxModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final buildFieldsByModule:haxe.ds.StringMap<Array<String>> = new haxe.ds.StringMap();
@@ -40,6 +41,7 @@ class MacroState {
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);
+		includedModules.resize(0);
 		generatedHxDir = "";
 		generatedHxModules.clear();
 		buildFieldsByModule.clear();
@@ -227,6 +229,35 @@ class MacroState {
 
 	public static function listClassPaths():Array<String> {
 		return classPaths.copy();
+	}
+
+	/**
+		Macro-time “include” roots (bring-up rung).
+
+		Why
+		- Upstream `--macro include("pack.Mod")` is used to force modules/types into the compilation
+		  even when nothing imports them directly (important for DCE and some unit fixtures).
+		- Our Stage3 resolver currently computes the module graph from explicit import closure only.
+		  Without an include mechanism, those upstream-style macros have no observable effect.
+
+		What
+		- `includeModule(path)` registers `path` as an additional resolver root for the current
+		  compilation.
+		- Stage3 then treats these included modules as extra roots when building the module graph.
+
+		Gotchas
+		- This is not full upstream semantics (it does not model typed reachability or DCE).
+		  It is a small rung to validate the “macro changes compilation universe” loop.
+	**/
+	public static function includeModule(path:String):Void {
+		if (path == null) return;
+		final p = StringTools.trim(path);
+		if (p.length == 0) return;
+		if (includedModules.indexOf(p) == -1) includedModules.push(p);
+	}
+
+	public static function listIncludedModules():Array<String> {
+		return includedModules.copy();
 	}
 
 	/**

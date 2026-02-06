@@ -316,6 +316,14 @@ private class MacroClient {
 					}
 					MacroState.addClassPath(cp);
 					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "compiler.includeModule":
+					final modulePath = MacroProtocol.kvGet(tail, "m");
+					if (modulePath == null || modulePath.length == 0) {
+						replyErr(id, method + ": missing module path");
+						return;
+					}
+					MacroState.includeModule(modulePath);
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case "compiler.emitHxModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					final source = MacroProtocol.kvGet(tail, "s");

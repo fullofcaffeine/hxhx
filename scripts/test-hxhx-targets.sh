@@ -449,6 +449,24 @@ echo "$out" | grep -q "^macro_define\\[HXHX_HXGEN\\]=1$"
 echo "$out" | grep -q "^stage3=ok$"
 test -f "$tmpgen/out_with_macro/_gen_hx/Gen.hx"
 
+echo "== Stage3 bring-up: include(\"Mod\") adds resolver roots"
+tmpinc="$tmpdir/include_test"
+mkdir -p "$tmpinc/src"
+cat >"$tmpinc/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    return 0;
+  }
+}
+HX
+cat >"$tmpinc/src/Extra.hx" <<'HX'
+class Extra {}
+HX
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit -cp "$tmpinc/src" -main Main --macro 'include("Extra")' --hxhx-out "$tmpinc/out")"
+echo "$out" | grep -q "^macro_run\\[0\\]=include=ok$"
+echo "$out" | grep -q "^resolved_modules=2$"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
+
 echo "== Stage3 bring-up: @:build emits a field into the typed program"
 tmpbuild="$tmpdir/build_fields_test"
 mkdir -p "$tmpbuild/src"

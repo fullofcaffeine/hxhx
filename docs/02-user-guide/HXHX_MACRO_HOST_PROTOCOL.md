@@ -175,6 +175,19 @@ effect: it changes which modules can be resolved.
 - request: `req <id> compiler.addClassPath cp=<...>`
 - response: `res <id> ok v=2:ok`
 
+### `compiler.includeModule` (bring-up rung)
+
+Stage 4 macro-time reachability rung: a macro can force-include a module into the compilation universe.
+
+This models the shape of upstream `--macro include("pack.Mod")` in the smallest possible way:
+
+- the macro host parses `include("...")` as a builtin `macro.run` expression, and
+- issues a reverse RPC that records additional resolver roots in the compiler.
+
+- request: `req <id> compiler.includeModule m=<...>`
+  - `m`: module path (e.g. `unit.TestInt64`)
+- response: `res <id> ok v=2:ok`
+
 ### `compiler.emitHxModule` (bring-up rung)
 
 Stage 4 macro-time codegen rung: a macro can request the compiler to emit a Haxe module into a compiler-managed
@@ -257,8 +270,8 @@ Bring-up limitation (important):
   calls of the shapes:
   - `pack.Class.method()` (no args)
   - `pack.Class.method("...")` (one String literal arg)
-- Expressions like `include("unit.TestInt64")` or `nullSafety("reflaxe")` are not executed yet in the
-  Stage 4 bring-up model. They will become supported once we replace the allowlist with a real
+- Expressions like `nullSafety("reflaxe")` are not executed yet in the Stage 4 bring-up model.
+  They will become supported once we replace the allowlist with a real
   macro-expression evaluation model and/or a richer entrypoint registry.
 
 - request: `req <id> macro.run e=<len>:<expr>`

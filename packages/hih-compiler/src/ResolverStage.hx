@@ -28,6 +28,19 @@ import haxe.io.Path;
 **/
 class ResolverStage {
 	public static function parseProject(classPaths:Array<String>, mainModule:String):Array<ResolvedModule> {
+		return parseProjectRoots(classPaths, [mainModule]);
+	}
+
+	/**
+		Resolve a project from multiple root modules.
+
+		Why
+		- Some macro-time directives (e.g. `--macro include("pack.Mod")`) force additional modules
+		  into the compilation universe even when nothing imports them directly.
+		- Stage3 bring-up models this as "additional resolver roots" so we can validate that
+		  macros can affect the module graph without implementing full DCE/analyzer semantics yet.
+	**/
+	public static function parseProjectRoots(classPaths:Array<String>, roots:Array<String>):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
 
@@ -67,7 +80,14 @@ class ResolverStage {
 			}
 		}
 
-		visit(mainModule);
+		if (roots != null) {
+			for (r in roots) {
+				if (r == null) continue;
+				final m = StringTools.trim(r);
+				if (m.length == 0) continue;
+				visit(m);
+			}
+		}
 		return out;
 	}
 

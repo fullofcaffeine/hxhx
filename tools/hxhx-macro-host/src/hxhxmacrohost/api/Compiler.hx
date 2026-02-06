@@ -94,6 +94,25 @@ class Compiler {
 	}
 
 	/**
+		Force-include a module in the compilation universe (bring-up rung).
+
+		Why
+		- Upstream supports `--macro include(\"pack.Mod\")` as a way to force types/modules
+		  into the compilation even when nothing imports them directly.
+		- This matters for some upstream unit fixtures and for plugin/backends that rely on
+		  include-driven reachability.
+
+		What
+		- Sends reverse RPC `compiler.includeModule` with:
+		  - `m`: module path (e.g. `unit.TestInt64`)
+	**/
+	public static function includeModule(modulePath:String):Void {
+		if (modulePath == null || modulePath.length == 0) return;
+		final tail = Protocol.encodeLen("m", modulePath);
+		HostToCompilerRpc.call("compiler.includeModule", tail);
+	}
+
+	/**
 		Emit a Haxe module (bootstrap rung).
 
 		Why

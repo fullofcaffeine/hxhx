@@ -162,6 +162,23 @@ class Main {
 
 	static function runMacroExpr(expr:String):String {
 		final e = expr == null ? "" : StringTools.trim(expr);
+
+		// Builtin `include("pack.Mod")` support (bring-up rung).
+		//
+		// Upstream allows `--macro include("...")` to force modules/types into the compilation
+		// even when nothing imports them directly. In Stage4 bring-up we model this as a simple
+		// reverse-RPC effect that adds resolver roots.
+		//
+		// This intentionally supports only one String literal argument today.
+		if (StringTools.startsWith(e, "include(") && StringTools.endsWith(e, ")")) {
+			final inside = StringTools.trim(e.substr("include(".length, e.length - "include(".length - 1));
+			final moduleName = parseOneStringLiteralArg(inside);
+			if (moduleName != null && moduleName.length > 0) {
+				Compiler.includeModule(moduleName);
+				return "include=ok";
+			}
+		}
+
 		final builtin = switch (e) {
 			case "hxhxmacrohost.BuiltinMacros.smoke()", "BuiltinMacros.smoke()":
 				BuiltinMacros.smoke();
@@ -188,6 +205,21 @@ class Main {
 		if (ext != null) return ext;
 
 		return "ran:" + e;
+	}
+
+	static function parseOneStringLiteralArg(s:String):Null<String> {
+		if (s == null) return null;
+		final t = StringTools.trim(s);
+		if (t.length < 2) return null;
+		final q = t.charCodeAt(0);
+		if (q != "\"".code && q != "'".code) return null;
+		if (t.charCodeAt(t.length - 1) != q) return null;
+		// Very small unescape set: enough for module paths in upstream-ish tests.
+		var body = t.substr(1, t.length - 2);
+		body = StringTools.replace(body, "\\\\", "\\");
+		body = StringTools.replace(body, "\\\"", "\"");
+		body = StringTools.replace(body, "\\'", "'");
+		return body;
 	}
 
 	static function parseKV(tail:String):Map<String, String> {

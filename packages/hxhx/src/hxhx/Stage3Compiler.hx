@@ -437,7 +437,8 @@ class Stage3Compiler {
 				out;
 			}
 
-		final resolved = try ResolverStage.parseProject(classPaths, parsed.main) catch (e:Dynamic) {
+		final roots = [parsed.main].concat(hxhx.macro.MacroState.listIncludedModules());
+		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots) catch (e:Dynamic) {
 				closeMacroSession();
 				return error("resolve failed: " + formatException(e));
 			}
