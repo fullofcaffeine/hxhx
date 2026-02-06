@@ -66,7 +66,7 @@ class ResolverStage {
 	}
 
 	public static function parseProject(classPaths:Array<String>, mainModule:String):Array<ResolvedModule> {
-		return parseProjectRoots(classPaths, [mainModule]);
+		return parseProjectRoots(classPaths, [mainModule], null);
 	}
 
 	/**
@@ -78,9 +78,10 @@ class ResolverStage {
 		- Stage3 bring-up models this as "additional resolver roots" so we can validate that
 		  macros can affect the module graph without implementing full DCE/analyzer semantics yet.
 	**/
-	public static function parseProjectRoots(classPaths:Array<String>, roots:Array<String>):Array<ResolvedModule> {
+	public static function parseProjectRoots(classPaths:Array<String>, roots:Array<String>, ?defines:haxe.ds.StringMap<String>):Array<ResolvedModule> {
 		final out = new Array<ResolvedModule>();
 		final visited = new Map<String, Bool>();
+		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 
 		final stack = new Array<String>();
 		if (roots != null) {
@@ -106,7 +107,11 @@ class ResolverStage {
 			final source = try sys.io.File.getContent(filePath) catch (_:Dynamic) null;
 			if (source == null) throw "import_unreadable " + filePath;
 
-			final parsed = try ParserStage.parse(source, filePath) catch (e:Dynamic) {
+			// Apply conditional compilation filtering so inactive `#if` branches don't affect
+			// the resolver's module graph during bootstrapping.
+			final filteredSource = HxConditionalCompilation.filterSource(source, definesMap);
+
+			final parsed = try ParserStage.parse(filteredSource, filePath) catch (e:Dynamic) {
 				throw "parse_failed " + filePath + ": " + Std.string(e);
 			}
 			out.push(new ResolvedModule(modulePath, filePath, parsed));

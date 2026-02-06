@@ -69,6 +69,8 @@ These are hard constraints for all contributors and all Codex changes in this re
 - Do **not** copy, translate, or mechanically rewrite any upstream Haxe *compiler* source into this repository
   (including “retyping from memory” after reading it).
 - Do **not** copy upstream Haxe tests/fixtures into this repository (even “small snippets”).
+- Do **not** paste upstream Haxe compiler/test code into repo docs, bead comments, commit messages, or generated
+  “repomix” snapshots that might later get committed. Keep all notes behavior-level.
 - Do **not** add third-party code unless its license is MIT-compatible *and* we retain required notices.
 - Do **not** commit upstream checkouts under `vendor/` (including submodules) unless explicitly approved and reviewed.
 

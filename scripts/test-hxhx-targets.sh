@@ -219,6 +219,21 @@ package;
 typedef Foo = { x:Int };
 HX
 
+echo "== Stage1 bring-up: conditional compilation strips inactive imports"
+cat >"$tmpdir/src/CondMain.hx" <<'HX'
+package;
+
+#if java
+import haxe.test.Base;
+#end
+
+class CondMain {
+  static function main() {}
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 -cp "$tmpdir/src" -main CondMain --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+
 cat >"$tmpdir/src/Main3.hx" <<'HX'
 package;
 

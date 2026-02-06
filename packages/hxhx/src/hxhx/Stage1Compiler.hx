@@ -107,8 +107,15 @@ class Stage1Compiler {
 		final source = try sys.io.File.getContent(resolved.path) catch (_:Dynamic) null;
 		if (source == null) return error("failed to read: " + resolved.path);
 
+		final definesMap = HxDefineMap.fromRawDefines(parsed.defines);
+		// Bootstrap defaults: Stage1 runs for the OCaml native target, which behaves like a sys target.
+		definesMap.set("sys", "1");
+		definesMap.set("ocaml", "1");
+
+		final filteredSource = HxConditionalCompilation.filterSource(source, definesMap);
+
 		final decl = try {
-			ParserStage.parse(source).getDecl();
+			ParserStage.parse(filteredSource).getDecl();
 		} catch (e:Dynamic) {
 			return error("parse failed: " + formatParseError(e));
 		}
@@ -176,7 +183,8 @@ class Stage1Compiler {
 			}
 
 			final impDecl = try {
-				ParserStage.parse(impSrc).getDecl();
+				final filteredImp = HxConditionalCompilation.filterSource(impSrc, definesMap);
+				ParserStage.parse(filteredImp).getDecl();
 			} catch (e:Dynamic) {
 				return error('parse failed for import "' + imp + '": ' + formatParseError(e));
 			}
@@ -253,14 +261,18 @@ class Stage1Args {
 				// Upstream unit suites often use `--interp` as an execution convenience. For Stage 3 bring-up,
 				// we treat it as a no-op because Stage 3 always emits and runs a native OCaml executable.
 				case "--interp" if (permissive):
+					// Still record it as a define so conditional compilation can treat `interp` as active.
+					defines.push("interp=1");
 					i += 1;
 				case "--debug" if (permissive):
+					defines.push("debug=1");
 					i += 1;
 				case "--dce" if (permissive):
 					if (i + 1 >= expanded.length) {
 						Sys.println("hxhx(stage1): missing value after --dce");
 						return null;
 					}
+					defines.push("dce=" + expanded[i + 1]);
 					i += 2;
 				case "--resource" if (permissive):
 					if (i + 1 >= expanded.length) {

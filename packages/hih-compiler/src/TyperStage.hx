@@ -8,6 +8,11 @@
 	  module and return a typed module.
 **/
 class TyperStage {
+	static inline function isStrict():Bool {
+		final v = Sys.getEnv("HXHX_TYPER_STRICT");
+		return v == "1" || v == "true" || v == "yes";
+	}
+
 	static function typeFromHintInContext(hint:String, ctx:TyperContext):TyType {
 		final raw = hint == null ? "" : StringTools.trim(hint);
 		if (raw.length == 0) return TyType.unknown();
@@ -107,7 +112,12 @@ class TyperStage {
 				if (!returnExprTy.isUnknown()) {
 					final unified = TyType.unify(hinted, returnExprTy);
 					if (unified == null) {
-						throw new TyperError(ctx.getFilePath(), HxPos.unknown(), "return type hint " + hinted + " conflicts with inferred return " + returnExprTy);
+						if (isStrict()) {
+							throw new TyperError(ctx.getFilePath(), HxPos.unknown(),
+								"return type hint " + hinted + " conflicts with inferred return " + returnExprTy
+							);
+						}
+						// Bring-up default: trust the explicit hint and continue.
 					}
 				}
 				hinted;
@@ -130,11 +140,16 @@ class TyperStage {
 			}
 			final u = TyType.unify(out, t);
 			if (u == null) {
-				throw new TyperError(
-					ctx.getFilePath(),
-					pos,
-					"incompatible return types: " + out + " vs " + t
-				);
+				if (isStrict()) {
+					throw new TyperError(
+						ctx.getFilePath(),
+						pos,
+						"incompatible return types: " + out + " vs " + t
+					);
+				}
+				// Bring-up default: collapse to Dynamic to keep typing moving.
+				out = TyType.fromHintText("Dynamic");
+				return;
 			}
 			out = u;
 		}
@@ -156,11 +171,16 @@ class TyperStage {
 							final initTy = inferExprType(init, scope, ctx, pos);
 							final u = TyType.unify(sym.getType(), initTy);
 						if (u == null) {
-							throw new TyperError(
-								ctx.getFilePath(),
-								pos,
-								"initializer type " + initTy + " is not compatible with local " + name + ":" + sym.getType()
-							);
+							if (isStrict()) {
+								throw new TyperError(
+									ctx.getFilePath(),
+									pos,
+									"initializer type " + initTy + " is not compatible with local " + name + ":" + sym.getType()
+								);
+							}
+							// Bring-up default: widen locals to Dynamic when inference disagrees.
+							sym.setType(TyType.fromHintText("Dynamic"));
+							return;
 						}
 						sym.setType(u);
 					}

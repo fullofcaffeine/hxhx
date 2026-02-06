@@ -597,8 +597,21 @@ class Stage3Compiler {
 				out;
 			}
 
+		// Defines available for conditional compilation filtering.
+		//
+		// Notes
+		// - CLI `-D` defines were seeded into MacroState at the start of the run.
+		// - Macro-time `Compiler.define(...)` calls (reverse RPC) also populate MacroState.
+		// - ResolverStage will use this map to strip inactive `#if` branches before parsing.
+		final definesMap = HxDefineMap.fromRawDefines(parsed.defines);
+		definesMap.set("sys", "1");
+		definesMap.set("ocaml", "1");
+		for (n in hxhx.macro.MacroState.listDefineNames()) {
+			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
+		}
+
 		final roots = [parsed.main].concat(hxhx.macro.MacroState.listIncludedModules());
-		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots) catch (e:Dynamic) {
+		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots, definesMap) catch (e:Dynamic) {
 				closeMacroSession();
 				return error("resolve failed: " + formatException(e));
 			}
@@ -895,9 +908,14 @@ class Stage3Compiler {
 
 		// Stage3 "real compiler" rung: type the full resolved graph (best-effort),
 		// then emit/build an executable from the typed program.
-			final typedModules = new Array<TypedModule>();
+		final typedModules = new Array<TypedModule>();
 		for (m in resolvedForTyping) {
-			typedModules.push(TyperStage.typeResolvedModule(m, typerIndex));
+			try {
+				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex));
+			} catch (e:Dynamic) {
+				closeMacroSession();
+				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e));
+			}
 		}
 
 		if (macroSession != null) {
