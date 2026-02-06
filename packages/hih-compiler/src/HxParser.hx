@@ -275,10 +275,43 @@ class HxParser {
 				} else if (k == KFalse) {
 					bump();
 					EBool(false);
-				} else if (k == KCast || k == KUntyped) {
-					// Stage 3: these are not supported as expressions yet. Treat them as unsupported so
-					// emitters/typers can apply explicit escape hatches.
-					final raw = Std.string(k);
+				} else if (k == KThis) {
+					bump();
+					EThis;
+				} else if (k == KSuper) {
+					bump();
+					ESuper;
+				} else if (k == KNew) {
+					bump();
+					final typePath = readDottedPath();
+					// `new Foo(...)` always takes parens; keep parsing permissive in case upstream-ish code
+					// contains partially-supported constructs.
+					if (!cur.kind.match(TLParen)) {
+						ENew(typePath, []);
+					} else {
+						bump(); // '('
+						final args = new Array<HxExpr>();
+						if (cur.kind.match(TRParen)) {
+							bump();
+							ENew(typePath, args);
+							} else {
+								while (true) {
+									final arg = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+									args.push(arg);
+									if (cur.kind.match(TComma)) {
+										bump();
+										continue;
+									}
+									expect(TRParen, "')'");
+									break;
+								}
+								ENew(typePath, args);
+							}
+						}
+					} else if (k == KCast || k == KUntyped) {
+						// Stage 3: these are not supported as expressions yet. Treat them as unsupported so
+						// emitters/typers can apply explicit escape hatches.
+						final raw = Std.string(k);
 					bump();
 					EUnsupported(raw);
 				} else {
@@ -567,7 +600,13 @@ class HxParser {
 
 	function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool):HxFunctionDecl {
 		capturedReturnStringLiteral = "";
-		final name = readIdent("function name");
+		final name = switch (cur.kind) {
+			case TKeyword(KNew):
+				bump();
+				"new";
+			case _:
+				readIdent("function name");
+		}
 		expect(TLParen, "'('");
 
 		final args = new Array<HxFunctionArg>();
@@ -623,8 +662,9 @@ class HxParser {
 		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral);
 	}
 
-	function parseClassFunctions():Array<HxFunctionDecl> {
+	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
 		final funcs = new Array<HxFunctionDecl>();
+		final fields = new Array<HxFieldDecl>();
 		while (true) {
 			switch (cur.kind) {
 				case TRBrace:
@@ -657,6 +697,19 @@ class HxParser {
 						continue;
 					}
 
+					if (acceptKeyword(KVar)) {
+						// Class field: `var name[:Type];` (subset; no init/properties yet).
+						final name = readIdent("field name");
+						var typeHint = "";
+						if (cur.kind.match(TColon)) {
+							bump();
+							typeHint = readTypeHintText(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+						}
+						expect(TSemicolon, "';'");
+						fields.push(new HxFieldDecl(name, visibility, isStatic, typeHint));
+						continue;
+					}
+
 					// Skip tokens until the next likely member boundary.
 					switch (cur.kind) {
 						case TLBrace:
@@ -670,7 +723,7 @@ class HxParser {
 					}
 			}
 		}
-		return funcs;
+		return { functions: funcs, fields: fields };
 	}
 
 	public function parseModule():HxModuleDecl {
@@ -728,6 +781,7 @@ class HxParser {
 
 		var className = "Unknown";
 		final functions = new Array<HxFunctionDecl>();
+		final fields = new Array<HxFieldDecl>();
 		var hasStaticMain = false;
 
 		if (sawClass) {
@@ -736,7 +790,9 @@ class HxParser {
 
 			expect(TLBrace, "'{'");
 
-			for (fn in parseClassFunctions()) functions.push(fn);
+			final members = parseClassMembers();
+			for (fn in members.functions) functions.push(fn);
+			for (f in members.fields) fields.push(f);
 			for (fn in functions) {
 				if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main") {
 					hasStaticMain = true;
@@ -757,6 +813,6 @@ class HxParser {
 		}
 
 		expect(TEof, "end of input");
-		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), false, hasToplevelMain);
+		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions, fields), false, hasToplevelMain);
 	}
 }

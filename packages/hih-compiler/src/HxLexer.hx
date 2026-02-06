@@ -137,6 +137,8 @@ class HxLexer {
 			case "var": new HxToken(TKeyword(KVar), startPos);
 			case "final": new HxToken(TKeyword(KFinal), startPos);
 			case "new": new HxToken(TKeyword(KNew), startPos);
+			case "this": new HxToken(TKeyword(KThis), startPos);
+			case "super": new HxToken(TKeyword(KSuper), startPos);
 			case "true": new HxToken(TKeyword(KTrue), startPos);
 			case "false": new HxToken(TKeyword(KFalse), startPos);
 			case "null": new HxToken(TKeyword(KNull), startPos);

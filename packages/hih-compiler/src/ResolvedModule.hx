@@ -48,4 +48,11 @@ class ResolvedModule {
 	public static function getFilePath(m:ResolvedModule):String {
 		return m.filePath;
 	}
+
+	/**
+		See `getParsed` for the bootstrap motivation.
+	**/
+	public static function getModulePath(m:ResolvedModule):String {
+		return m.modulePath;
+	}
 }

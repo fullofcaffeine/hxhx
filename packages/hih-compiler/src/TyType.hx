@@ -95,4 +95,15 @@ class TyType {
 	public function toString():String {
 		return display;
 	}
+
+	/**
+		Non-inline getter for `display`.
+
+		Why
+		- The OCaml backend builds with dune `-opaque`, which can make direct record
+		  field access across compilation units fragile during bootstrap.
+	**/
+	public function getDisplay():String {
+		return display;
+	}
 }

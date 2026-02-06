@@ -275,6 +275,7 @@ class Stage3Compiler {
 			}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
 		Sys.println("resolved_modules=" + resolved.length);
+		final typerIndex = TyperIndex.build(resolved);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.
 		//
@@ -300,7 +301,7 @@ class Stage3Compiler {
 						headerOnlyCount += 1;
 					}
 					parsedMethodsTotal += HxClassDecl.getFunctions(HxModuleDecl.getMainClass(pm.getDecl())).length;
-					final typed = TyperStage.typeModule(pm);
+					final typed = TyperStage.typeResolvedModule(m, typerIndex);
 					if (ResolvedModule.getFilePath(m) == rootFilePath) rootTyped = typed;
 					typedCount += 1;
 				} catch (e:Dynamic) {
@@ -371,8 +372,7 @@ class Stage3Compiler {
 		// then emit/build an executable from the typed program.
 		final typedModules = new Array<TypedModule>();
 		for (m in resolved) {
-			final pm = ResolvedModule.getParsed(m);
-			typedModules.push(TyperStage.typeModule(pm));
+			typedModules.push(TyperStage.typeResolvedModule(m, typerIndex));
 		}
 
 		if (macroSession != null) {

@@ -13,11 +13,13 @@ class HxClassDecl {
 	public final name:String;
 	public final hasStaticMain:Bool;
 	public final functions:Array<HxFunctionDecl>;
+	public final fields:Array<HxFieldDecl>;
 
-	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>) {
+	public function new(name:String, hasStaticMain:Bool, ?functions:Array<HxFunctionDecl>, ?fields:Array<HxFieldDecl>) {
 		this.name = name;
 		this.hasStaticMain = hasStaticMain;
 		this.functions = functions == null ? [] : functions;
+		this.fields = fields == null ? [] : fields;
 	}
 
 	/**
@@ -42,5 +44,12 @@ class HxClassDecl {
 	**/
 	public static function getFunctions(c:HxClassDecl):Array<HxFunctionDecl> {
 		return c.functions;
+	}
+
+	/**
+		Non-inline getter for parsed fields.
+	**/
+	public static function getFields(c:HxClassDecl):Array<HxFieldDecl> {
+		return c.fields;
 	}
 }

@@ -44,6 +44,8 @@ enum HxKeyword {
 	KVar;
 	KFinal;
 	KNew;
+	KThis;
+	KSuper;
 	KTrue;
 	KFalse;
 	KNull;

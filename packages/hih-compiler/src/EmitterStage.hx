@@ -118,8 +118,17 @@ class EmitterStage {
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name): isUpperStart(name) ? name : ocamlValueIdent(name);
+			case EThis:
+				// Stage 3 bring-up: no object semantics yet.
+				"(Obj.magic 0)";
+			case ESuper:
+				// Stage 3 bring-up: no class hierarchy semantics yet.
+				"(Obj.magic 0)";
 			case ENull:
 				// Stage 3 bring-up: null semantics are not modeled yet. Keep compilation moving.
+				"(Obj.magic 0)";
+			case ENew(_typePath, _args):
+				// Stage 3 bring-up: allocation + constructors are not modeled yet.
 				"(Obj.magic 0)";
 			case EField(obj, field):
 				exprToOcaml(obj) + "." + ocamlValueIdent(field);
@@ -157,7 +166,15 @@ class EmitterStage {
 		// - it is *not* semantically correct; it is only for bring-up.
 		function hasBringupPoison(e:HxExpr):Bool {
 			return switch (e) {
-				case EUnsupported(_), ENull:
+				case EUnsupported(_):
+					true;
+				case ENull:
+					true;
+				case EThis:
+					true;
+				case ESuper:
+					true;
+				case ENew(_, _):
 					true;
 				case EUnop(_op, _):
 					// Stage 3: operator typing/lowering is not implemented yet; treat as poison so we

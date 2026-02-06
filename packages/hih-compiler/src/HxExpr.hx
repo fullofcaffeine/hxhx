@@ -24,9 +24,46 @@ enum HxExpr {
 	EInt(value:Int);
 	EFloat(value:Float);
 
+	/**
+		`this` expression.
+
+		Why
+		- Instance field access and method calls (`this.x`, `this.f()`) are core
+		  Haxe semantics and appear early in upstream fixtures.
+	**/
+	EThis;
+
+	/**
+		`super` expression.
+
+		Why
+		- Upstream Haxe code uses `super()` in constructors and `super.method()`
+		  in overrides. Stage 3 parsing must not mis-tokenize this as an
+		  identifier.
+
+		Note
+		- Typing/semantics for `super` require class hierarchy information and is
+		  deferred; for now, we treat it as a distinct expression node.
+	**/
+	ESuper;
+
 	EIdent(name:String);
 	EField(obj:HxExpr, field:String);
 	ECall(callee:HxExpr, args:Array<HxExpr>);
+
+	/**
+		Constructor call: `new TypePath(args...)`.
+
+		Why
+		- Gate 1 fixtures and real programs allocate objects and then access
+		  fields/methods. A Stage 3 typer cannot type instance field access
+		  without being able to type object construction.
+
+		What
+		- Stores a raw dotted type path (e.g. `demo.Point`).
+		- Stores the argument expressions.
+	**/
+	ENew(typePath:String, args:Array<HxExpr>);
 
 	/**
 		Unary operator expression (Stage 3 expansion).

@@ -1,0 +1,124 @@
+/**
+	Program-level type index for Stage 3 bootstrap typing.
+
+	Why
+	- `TyperStage.typeModule` runs per-module, but real typing needs knowledge
+	  of other modules on the classpath (imports, `new`, static calls).
+	- This index is the smallest “shared context” that lets us type common
+	  upstream patterns without implementing the full Haxe module cache.
+
+	What
+	- Maps:
+	  - `fullName` (e.g. `demo.Util`) → `TyClassInfo`
+	  - `shortName` (e.g. `Util`) → one or more `TyClassInfo` candidates
+
+	How
+	- Built from `ResolvedModule` by scanning parsed declarations:
+	  - class name + package
+	  - `var` fields (name + type hint)
+	  - function signatures (arg hints + return hint)
+**/
+class TyperIndex {
+	final byFullName:haxe.ds.StringMap<TyClassInfo>;
+	final byShortName:haxe.ds.StringMap<Array<TyClassInfo>>;
+
+	public function new() {
+		byFullName = new haxe.ds.StringMap();
+		byShortName = new haxe.ds.StringMap();
+	}
+
+	public function getByFullName(fullName:String):Null<TyClassInfo> {
+		return byFullName.exists(fullName) ? byFullName.get(fullName) : null;
+	}
+
+	public function getByShortName(shortName:String):Array<TyClassInfo> {
+		return byShortName.exists(shortName) ? byShortName.get(shortName) : [];
+	}
+
+	public function addClass(info:TyClassInfo):Void {
+		if (info == null) return;
+		final fullName = info.getFullName();
+		byFullName.set(fullName, info);
+		final shortName = info.getShortName();
+		final arr = byShortName.exists(shortName) ? byShortName.get(shortName) : [];
+		arr.push(info);
+		byShortName.set(shortName, arr);
+	}
+
+	static function classFullName(pkg:String, cls:String):String {
+		final p = pkg == null ? "" : StringTools.trim(pkg);
+		return (p.length == 0) ? cls : (p + "." + cls);
+	}
+
+	public static function build(resolved:Array<ResolvedModule>):TyperIndex {
+		final idx = new TyperIndex();
+		if (resolved == null) return idx;
+
+		for (m in resolved) {
+			final pm = ResolvedModule.getParsed(m);
+			final decl = pm.getDecl();
+			final pkg = HxModuleDecl.getPackagePath(decl);
+			final cls = HxModuleDecl.getMainClass(decl);
+			final clsName = HxClassDecl.getName(cls);
+			final full = classFullName(pkg, clsName);
+
+			final fields = new haxe.ds.StringMap<TyType>();
+			for (f in HxClassDecl.getFields(cls)) {
+				fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
+			}
+
+			final statics = new haxe.ds.StringMap<TyFunSig>();
+			final instances = new haxe.ds.StringMap<TyFunSig>();
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final fnName = HxFunctionDecl.getName(fn);
+				final isStatic = HxFunctionDecl.getIsStatic(fn);
+				final args = new Array<TyType>();
+				for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+
+				final retHint = HxFunctionDecl.getReturnTypeHint(fn);
+				final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
+				final sig = new TyFunSig(fnName, isStatic, args, ret);
+				if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
+			}
+
+			idx.addClass(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));
+		}
+
+		return idx;
+	}
+
+	public function resolveTypePath(typePath:String, packagePath:String, imports:Array<String>):Null<TyClassInfo> {
+		if (typePath == null) return null;
+		final raw = StringTools.trim(typePath);
+		if (raw.length == 0) return null;
+
+		// If it looks fully qualified, try it directly first.
+		if (raw.indexOf(".") >= 0) {
+			final direct = getByFullName(raw);
+			if (direct != null) return direct;
+		}
+
+		// Try explicit imports (match by last segment).
+		if (imports != null) {
+			for (imp in imports) {
+				if (imp == null || imp.length == 0) continue;
+				final parts = imp.split(".");
+				final last = parts.length == 0 ? "" : parts[parts.length - 1];
+				if (last == raw) {
+					final hit = getByFullName(imp);
+					if (hit != null) return hit;
+				}
+			}
+		}
+
+		// Try same package.
+		final pkg = packagePath == null ? "" : StringTools.trim(packagePath);
+		final candidate = (pkg.length == 0) ? raw : (pkg + "." + raw);
+		final samePkg = getByFullName(candidate);
+		if (samePkg != null) return samePkg;
+
+		// Fallback: if unique short-name exists in the index, accept it.
+		final alts = getByShortName(raw);
+		return alts.length == 1 ? alts[0] : null;
+	}
+}

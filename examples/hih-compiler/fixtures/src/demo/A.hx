@@ -1,6 +1,7 @@
 package demo;
 
 import demo.Util;
+import demo.Point;
 
 class A {
   static function main() {}
@@ -35,4 +36,13 @@ class A {
   // Acceptance fixture for Stage 3 return expression parsing + emission:
   // - return a simple field/call chain captured from the native frontend protocol
   static function callPing():Void return Util.ping();
+
+  // Stage 3.3 typing fixture:
+  // - imported static call (`Util.makePoint`)
+  // - local var type inference from call return
+  // - instance method call on a typed local (`p.getX()`)
+  static function pointFromUtil():Int {
+    var p = Util.makePoint(3);
+    return p.getX();
+  }
 }
