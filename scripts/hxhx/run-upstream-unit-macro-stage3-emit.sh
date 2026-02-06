@@ -79,3 +79,10 @@ echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
+
+# Keep the bring-up emitter output warning-clean under strict dune setups.
+# These warnings frequently become hard errors under `-warn-error` in real projects.
+if echo "$out" | grep -E -q "Warning 21 \\[nonreturning-statement\\]|Warning 26 \\[unused-var\\]"; then
+  echo "Stage3 emit rung produced OCaml warnings (21/26). Tighten EmitterStage lowering." >&2
+  exit 1
+fi

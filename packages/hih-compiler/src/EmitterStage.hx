@@ -414,6 +414,23 @@ class EmitterStage {
 	):String {
 		if (stmts == null || stmts.length == 0) return "()";
 
+		function stmtAlwaysReturns(s:HxStmt):Bool {
+			return switch (s) {
+				case SReturnVoid(_), SReturn(_, _):
+					true;
+				case SIf(_cond, thenBranch, elseBranch, _):
+					elseBranch != null && stmtAlwaysReturns(thenBranch) && stmtAlwaysReturns(elseBranch);
+				case SBlock(ss, _):
+					if (ss == null || ss.length == 0) {
+						false;
+					} else {
+						stmtAlwaysReturns(ss[ss.length - 1]);
+					}
+				case _:
+					false;
+			}
+		}
+
 		function condToOcamlBool(e:HxExpr):String {
 			inline function boolOrTrue(s:String):String {
 				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
@@ -469,9 +486,16 @@ class EmitterStage {
 			switch (s) {
 				case SVar(name, _typeHint, init, _pos):
 					final rhs = init == null ? "(Obj.magic 0)" : returnExprToOcaml(init, allowedValueIdents, arityByIdent, tyByIdent);
-					out = "let " + ocamlValueIdent(name) + " = " + rhs + " in (" + out + ")";
+					final ident = ocamlValueIdent(name);
+					// Keep OCaml warning discipline resilient: Haxe code (especially upstream-ish tests)
+					// can contain locals that are intentionally unused. In OCaml, that triggers warnings
+					// which can become hard errors under `-warn-error`.
+					out = "let " + ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))";
 				case _:
-					out = "(" + stmtToUnit(s) + "; " + out + ")";
+					// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
+					// (nonreturning-statement). This also naturally drops statements that appear after
+					// a definite `return` in the same block (unreachable in Haxe).
+					out = stmtAlwaysReturns(s) ? stmtToUnit(s) : ("(" + stmtToUnit(s) + "; " + out + ")");
 			}
 		}
 		return out;
@@ -710,11 +734,12 @@ class EmitterStage {
 					//   even if the only "real" return path is the exception handler.
 					//
 					// How
-					// - Append `(Obj.magic 0)` in the no-return path and cast the entire `try` to `retTy`.
+					// - Use `let _ = <stmts> in (Obj.magic 0)` for the no-return path and cast the entire
+					//   `try` to `retTy`.
 					// - This is intentionally non-semantic but avoids OCaml type errors like:
 					//   "This variant expression is expected to have type bool; There is no constructor () within type bool".
 						"((" //
-						+ "try (" + stmtListToOcaml(stmts, allowed, exc, arityByName, tyByIdent) + "; (Obj.magic 0)) "
+						+ "try (let _ = " + stmtListToOcaml(stmts, allowed, exc, arityByName, tyByIdent) + " in (Obj.magic 0)) "
 						+ "with " + exc + " v -> (Obj.magic v)"
 						+ ") : " + retTy + ")";
 					};
