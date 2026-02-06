@@ -257,20 +257,24 @@ class OcamlASTPrinter {
 			return true;
 		}
 
-		return switch (op) {
-			// `not f x` parses as `(not f) x`, so we emit `not (f x)` instead.
-			case Not:
-				"not (" + printExprCtx(expr, PREC_TOP, indentLevel) + ")";
-			case Neg:
-				needsParensAfterPrefix(expr)
-					? "-(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
-					: "-" + printExprCtx(expr, PREC_MUL, indentLevel);
-			case Deref:
-				needsParensAfterPrefix(expr)
-					? "!(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
-					: "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
+			return switch (op) {
+				// `not f x` parses as `(not f) x`, so we emit `not (f x)` instead.
+				case Not:
+					"not (" + printExprCtx(expr, PREC_TOP, indentLevel) + ")";
+				case Neg:
+					needsParensAfterPrefix(expr)
+						? "-(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
+						: "-" + printExprCtx(expr, PREC_MUL, indentLevel);
+				case NegF:
+					needsParensAfterPrefix(expr)
+						? "-.(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
+						: "-." + printExprCtx(expr, PREC_MUL, indentLevel);
+				case Deref:
+					needsParensAfterPrefix(expr)
+						? "!(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
+						: "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
+			}
 		}
-	}
 
 	function printRecord(fields:Array<OcamlRecordField>, indentLevel:Int):String {
 		if (fields.length == 0) return "{}";

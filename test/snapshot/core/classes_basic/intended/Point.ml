@@ -25,7 +25,7 @@ let incX = fun self () -> ignore (let __assign_3 = HxInt.add (self.x) 1 in (
   __assign_3
 ))
 
-let add = fun self dx dy -> ignore ((
+let add = fun self (dx : int) (dy : int) -> ignore ((
   ignore (let __assign_4 = HxInt.add (self.x) dx in (
     self.x <- __assign_4;
     __assign_4

@@ -16,14 +16,14 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.BytesBuf
 
 let get_length = fun self () -> HxArray.length (self.b)
 
-let addByte = fun self byte -> ignore (HxArray.push (self.b) byte)
+let addByte = fun self (byte : int) -> ignore (HxArray.push (self.b) byte)
 
-let add = fun self src -> ignore (let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+let add = fun self (src : HxBytes.t) -> ignore (let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
   ignore (_g := __new_4);
   __old_3
 ) in HxArray.push (self.b) (HxBytes.get src i)) done)
 
-let addString = fun self v encoding -> ignore ((
+let addString = fun self (v : string) (encoding : Obj.t) -> ignore ((
   ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
   let src = HxBytes.ofString v () in let _g = ref 0 in let _g1 = HxBytes.length src in while !_g < _g1 do ignore (let i = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
     ignore (_g := __new_6);
@@ -31,10 +31,35 @@ let addString = fun self v encoding -> ignore ((
   ) in HxArray.push (self.b) (HxBytes.get src i)) done
 ))
 
-let getBytes = fun self () -> let out = HxBytes.alloc (HxArray.length (self.b)) in let _g = ref 0 in let _g1 = HxArray.length (self.b) in (
-  ignore (while !_g < _g1 do ignore (let i = let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
+let addInt32 = fun self (v : int) -> ignore ((
+  ignore (HxArray.push (self.b) (HxInt.logand v 255));
+  ignore (HxArray.push (self.b) (HxInt.logand (HxInt.shr v 8) 255));
+  ignore (HxArray.push (self.b) (HxInt.logand (HxInt.shr v 16) 255));
+  HxArray.push (self.b) (HxInt.ushr v 24)
+))
+
+let addInt64 = fun self (v : Haxe_Int64.___int64_t) -> ignore ((
+  ignore (Haxe_Int64.___int64_create 0 0);
+  ignore (addInt32 self ((Obj.magic v : Haxe_Int64.___int64_t).low));
+  addInt32 self ((Obj.magic v : Haxe_Int64.___int64_t).high)
+))
+
+let addFloat = fun self (v : float) -> ignore (addInt32 self (Haxe_io_FPHelper.floatToI32 v))
+
+let addDouble = fun self (v : float) -> ignore (addInt64 self (Haxe_io_FPHelper.doubleToI64 v))
+
+let addBytes = fun self (src : HxBytes.t) (pos : int) (len : int) -> ignore ((
+  ignore (if pos < 0 || len < 0 || HxInt.add pos len > HxBytes.length src then ignore (HxType.hx_throw_typed_rtti (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr (Haxe_io_Error.OutsideBounds))) ["Dynamic"; "haxe.io.Error"]) else ());
+  let _g = ref pos in let _g1 = HxInt.add pos len in while !_g < _g1 do ignore (let i = let __old_7 = !_g in let __new_8 = HxInt.add __old_7 1 in (
     ignore (_g := __new_8);
     __old_7
+  ) in HxArray.push (self.b) (HxBytes.get src i)) done
+))
+
+let getBytes = fun self () -> let out = HxBytes.alloc (HxArray.length (self.b)) in let _g = ref 0 in let _g1 = HxArray.length (self.b) in (
+  ignore (while !_g < _g1 do ignore (let i = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
+    ignore (_g := __new_10);
+    __old_9
   ) in HxBytes.set out i (HxArray.get (self.b) i)) done);
   out
 )

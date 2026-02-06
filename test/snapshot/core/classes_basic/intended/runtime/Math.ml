@@ -53,6 +53,12 @@ let floor (v : float) : int =
 let ceil (v : float) : int =
   int_of_float (Stdlib.ceil v)
 
+let ffloor (v : float) : float =
+  float_of_int (floor v)
+
+let fceil (v : float) : float =
+  float_of_int (ceil v)
+
 let fround (v : float) : float =
   (* TODO(M11): Implement IEEE-754 float32 rounding.
      OCaml's `float` is a 64-bit double; for now keep as identity. *)

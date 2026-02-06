@@ -38,6 +38,7 @@ enum OcamlBinop {
 enum OcamlUnop {
 	Not;
 	Neg;
+	NegF; // -.
 	Deref; // !x
 }
 

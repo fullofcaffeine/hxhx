@@ -90,6 +90,7 @@ echo "== Gate 1 (ocaml --interp emulation): upstream tests/unit/compile-macro.hx
     -- \
     -cp "$ROOT/src" \
     -cp "$ROOT/std" \
+    -cp "$ROOT/test/upstream_shims" \
     -lib reflaxe \
     --macro 'nullSafety("reflaxe")' \
     --macro 'reflaxe.ReflectCompiler.Start()' \

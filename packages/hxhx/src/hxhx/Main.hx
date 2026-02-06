@@ -260,9 +260,14 @@ class Main {
 
 		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
 		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
-		var forwarded = args;
 		final sep = args.indexOf("--");
-		if (sep != -1) forwarded = args.slice(sep + 1);
+		final shimArgs = sep == -1 ? args : args.slice(0, sep);
+		// Always allocate a fresh array for `forwarded` so subsequent splice/rewrite steps
+		// cannot accidentally mutate `args` (which would break shim-flag parsing).
+		//
+		// This matters in practice because `hxhx` is compiled by our own OCaml backend,
+		// and early bring-up semantics are intentionally conservative about mutability.
+		var forwarded = sep == -1 ? args.copy() : args.slice(sep + 1);
 
 		// Shim-only run mode: emulate `--interp` by compiling to OCaml native and running the produced binary.
 		//
@@ -275,24 +280,17 @@ class Main {
 		var ocamlInterpLike = false;
 		var ocamlInterpOutDir = "";
 		{
-			final shimArgs = sep == -1 ? args : args.slice(0, sep);
 			var i = 0;
 			while (i < shimArgs.length) {
 				switch (shimArgs[i]) {
 					case "--hxhx-ocaml-interp":
 						ocamlInterpLike = true;
-						if (sep == -1) {
-							forwarded = forwarded.copy();
-							forwarded.splice(i, 1);
-						}
+						if (sep == -1) forwarded.splice(i, 1);
 						i += 1;
 					case "--hxhx-ocaml-out":
 						if (i + 1 >= shimArgs.length) fatal("Usage: --hxhx-ocaml-out <dir>");
 						ocamlInterpOutDir = shimArgs[i + 1];
-						if (sep == -1) {
-							forwarded = forwarded.copy();
-							forwarded.splice(i, 2);
-						}
+						if (sep == -1) forwarded.splice(i, 2);
 						i += 2;
 					case _:
 						i += 1;
@@ -342,7 +340,6 @@ class Main {
 		// See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1`.
 		{
 			// Only parse shim flags in the pre-`--` section (so `hxhx -- --target ...` forwards).
-			final shimArgs = sep == -1 ? args : args.slice(0, sep);
 			final idx = shimArgs.indexOf("--target");
 			final idx2 = shimArgs.indexOf("--hxhx-target");
 			final i = idx != -1 ? idx : idx2;

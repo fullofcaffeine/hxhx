@@ -23,14 +23,26 @@ extern class Bytes {
 	public function fill(pos:Int, len:Int, value:Int):Void;
 	public function sub(pos:Int, len:Int):Bytes;
 	public function compare(other:Bytes):Int;
+	public function getDouble(pos:Int):Float;
+	public function getFloat(pos:Int):Float;
+	public function setDouble(pos:Int, v:Float):Void;
+	public function setFloat(pos:Int, v:Float):Void;
+	public function getUInt16(pos:Int):Int;
+	public function setUInt16(pos:Int, v:Int):Void;
+	public function getInt32(pos:Int):Int;
+	public function setInt32(pos:Int, v:Int):Void;
+	public function getInt64(pos:Int):haxe.Int64;
+	public function setInt64(pos:Int, v:haxe.Int64):Void;
 	public function getString(pos:Int, len:Int, ?encoding:Encoding):String;
 	public function toString():String;
+	public function toHex():String;
 
 	public function getData():BytesData;
 
 	public static function alloc(length:Int):Bytes;
 	public static function ofString(s:String, ?encoding:Encoding):Bytes;
 	public static function ofData(b:BytesData):Bytes;
+	public static function ofHex(s:String):Bytes;
 
 	/**
 		Fast byte access helper used by upstream stdlib (e.g. `haxe.crypto.Crc32`).

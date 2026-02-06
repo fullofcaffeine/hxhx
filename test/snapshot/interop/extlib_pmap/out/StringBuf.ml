@@ -16,11 +16,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "StringBuf"; buf 
 
 let get_length = fun self () -> let b = self.buf in let tempResult = Stdlib.Buffer.length b in tempResult
 
-let add = fun self x -> ignore (let b = self.buf in let s = HxRuntime.dynamic_toStdString (Obj.repr x) in Stdlib.Buffer.add_string b s)
+let add = fun self (x : Obj.t) -> ignore (let b = self.buf in let s = HxRuntime.dynamic_toStdString (Obj.repr x) in Stdlib.Buffer.add_string b s)
 
-let addChar = fun self c -> ignore (let b = self.buf in let s = HxString.fromCharCode c in Stdlib.Buffer.add_string b s)
+let addChar = fun self (c : int) -> ignore (let b = self.buf in let s = HxString.fromCharCode c in Stdlib.Buffer.add_string b s)
 
-let addSub = fun self s pos len -> ignore (let b = self.buf in let tempString = ref "" in (
+let addSub = fun self (s : string) (pos : int) (len : Obj.t) -> ignore (let b = self.buf in let tempString = ref "" in (
   ignore (if len == HxRuntime.hx_null then let __assign_2 = HxString.substr s pos (-1) in (
     tempString := __assign_2;
     __assign_2

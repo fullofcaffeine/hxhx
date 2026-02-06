@@ -38,6 +38,16 @@ extern class Date {
 	/** Creates a date from a millisecond timestamp (Unix epoch). */
 	static function fromTime(t:Float):Date;
 
+	/**
+		Creates a Date from the formatted string `s`.
+
+		Accepted formats match upstream Haxe:
+		- `"YYYY-MM-DD hh:mm:ss"`
+		- `"YYYY-MM-DD"`
+		- `"hh:mm:ss"`
+	**/
+	static function fromString(s:String):Date;
+
 	/** Returns the millisecond timestamp (Unix epoch). */
 	function getTime():Float;
 

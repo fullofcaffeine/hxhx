@@ -4,6 +4,7 @@ import haxe.io.Bytes;
 import haxe.io.BytesBuffer;
 import haxe.io.Eof;
 import haxe.io.Error;
+import haxe.io.FPHelper;
 
 /**
 	OCaml target override for `haxe.io.Input`.
@@ -68,7 +69,7 @@ class Input {
 		while (true) {
 			final len = readBytes(buf, 0, size);
 			if (len == 0) break;
-			total.add(buf.sub(0, len));
+			total.addBytes(buf, 0, len);
 		}
 		return total.getBytes();
 	}
@@ -76,30 +77,111 @@ class Input {
 	public function readFullBytes(s:Bytes, pos:Int, len:Int):Void {
 		while (len > 0) {
 			final k = readBytes(s, pos, len);
-			if (k == 0) throw new Eof();
+			if (k == 0) throw Error.Blocked;
 			pos += k;
 			len -= k;
 		}
 	}
 
-	public function readLine():String {
-		final out = new StringBuf();
-		while (true) {
-			final c = readByte();
-			if (c == "\n".code) break;
-			if (c == "\r".code) {
-				// Handle CRLF: if next is LF, consume it.
-				try {
-					final n = readByte();
-					if (n != "\n".code) {
-						// Best-effort: put it back is not supported; keep it.
-						out.addChar(n);
-					}
-				} catch (_:Eof) {}
-				break;
-			}
-			out.addChar(c);
+	public function read(nbytes:Int):Bytes {
+		final s = Bytes.alloc(nbytes);
+		var p = 0;
+		while (nbytes > 0) {
+			final k = readBytes(s, p, nbytes);
+			if (k == 0) throw Error.Blocked;
+			p += k;
+			nbytes -= k;
 		}
-		return out.toString();
+		return s;
+	}
+
+	public function readUntil(end:Int):String {
+		final buf = new BytesBuffer();
+		var last:Int;
+		while ((last = readByte()) != end) {
+			buf.addByte(last);
+		}
+		return buf.getBytes().toString();
+	}
+
+	public function readLine():String {
+		final buf = new BytesBuffer();
+		var last:Int;
+		var s:String;
+		try {
+			while ((last = readByte()) != "\n".code) {
+				buf.addByte(last);
+			}
+			s = buf.getBytes().toString();
+			if (s.length > 0 && s.charCodeAt(s.length - 1) == "\r".code) {
+				s = s.substr(0, -1);
+			}
+		} catch (e:Eof) {
+			s = buf.getBytes().toString();
+			if (s.length == 0) throw e;
+		}
+		return s;
+	}
+
+	public function readFloat():Float {
+		return FPHelper.i32ToFloat(readInt32());
+	}
+
+	public function readDouble():Float {
+		final i1 = readInt32();
+		final i2 = readInt32();
+		return bigEndian ? FPHelper.i64ToDouble(i2, i1) : FPHelper.i64ToDouble(i1, i2);
+	}
+
+	public function readInt8():Int {
+		final n = readByte();
+		return n >= 128 ? (n - 256) : n;
+	}
+
+	public function readInt16():Int {
+		final ch1 = readByte();
+		final ch2 = readByte();
+		final n = bigEndian ? (ch2 | (ch1 << 8)) : (ch1 | (ch2 << 8));
+		return (n & 0x8000) != 0 ? (n - 0x10000) : n;
+	}
+
+	public function readUInt16():Int {
+		final ch1 = readByte();
+		final ch2 = readByte();
+		return bigEndian ? (ch2 | (ch1 << 8)) : (ch1 | (ch2 << 8));
+	}
+
+	public function readInt24():Int {
+		final ch1 = readByte();
+		final ch2 = readByte();
+		final ch3 = readByte();
+		final n = bigEndian ? (ch3 | (ch2 << 8) | (ch1 << 16)) : (ch1 | (ch2 << 8) | (ch3 << 16));
+		return (n & 0x800000) != 0 ? (n - 0x1000000) : n;
+	}
+
+	public function readUInt24():Int {
+		final ch1 = readByte();
+		final ch2 = readByte();
+		final ch3 = readByte();
+		return bigEndian ? (ch3 | (ch2 << 8) | (ch1 << 16)) : (ch1 | (ch2 << 8) | (ch3 << 16));
+	}
+
+	public function readInt32():Int {
+		final ch1 = readByte();
+		final ch2 = readByte();
+		final ch3 = readByte();
+		final ch4 = readByte();
+		return bigEndian
+			? (ch4 | (ch3 << 8) | (ch2 << 16) | (ch1 << 24))
+			: (ch1 | (ch2 << 8) | (ch3 << 16) | (ch4 << 24));
+	}
+
+	public function readString(len:Int, ?encoding:Encoding):String {
+		// OCaml target (M6): only default encoding is supported for now.
+		// Ignore the encoding parameter to keep the portable API usable.
+		if (encoding != null) {}
+		final b = Bytes.alloc(len);
+		readFullBytes(b, 0, len);
+		return b.getString(0, len);
 	}
 }

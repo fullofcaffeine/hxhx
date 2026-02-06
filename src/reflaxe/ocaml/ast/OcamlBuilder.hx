@@ -382,7 +382,8 @@ class OcamlBuilder {
 		return switch (followNoAbstracts(t)) {
 			case TAbstract(aRef, _):
 				final a = aRef.get();
-				a.pack != null && a.pack.length == 0 && a.name == "Int";
+				(a.pack != null && a.pack.length == 0 && a.name == "Int")
+					|| (a.pack != null && a.pack.length == 1 && a.pack[0] == "haxe" && a.name == "Int32");
 			case _:
 				false;
 		}
@@ -1128,7 +1129,7 @@ class OcamlBuilder {
 										if (i >= expectedArgs.length) break;
 										final ea = expectedArgs[i];
 										final label = labelsByArgName.get(ea.name);
-										final coerced = coerceForAssignment(ea.t, args[i]);
+										final coerced = isTypeParameterType(ea.t) ? buildExpr(args[i]) : coerceForAssignment(ea.t, args[i]);
 										if (label != null) {
 											if (ea.opt) {
 												applyArgs.push({
@@ -1378,10 +1379,10 @@ class OcamlBuilder {
 							final a0 = args[0];
 							final coerced = nullablePrimitiveKind(a0.t) == "int" ? safeUnboxNullableInt(buildExpr(a0)) : buildExpr(a0);
 							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "fromCharCode"), [coerced]);
-						} else if (isStdBytesClass(cls)) {
-							switch (cf.name) {
-								case "alloc" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "alloc"), [buildExpr(args[0])]);
+							} else if (isStdBytesClass(cls)) {
+								switch (cf.name) {
+									case "alloc" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "alloc"), [buildExpr(args[0])]);
 								case "ofString":
 									final encodingExpr = args.length > 1 ? unwrap(args[1]) : null;
 									final okDefaultEncoding = encodingExpr == null || switch (encodingExpr.expr) {
@@ -1399,12 +1400,14 @@ class OcamlBuilder {
 										#end
 										OcamlExpr.EConst(OcamlConst.CUnit);
 									}
-								case "ofData" if (args.length == 1):
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofData"), [buildExpr(args[0]), OcamlExpr.EConst(OcamlConst.CUnit)]);
-								case "fastGet" if (args.length == 2):
-									// Upstream stdlib uses Bytes.fastGet(BytesData, pos) for performance.
-									// Map to bounds-checked runtime read for now.
-									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [buildExpr(args[0]), buildExpr(args[1])]);
+									case "ofData" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofData"), [buildExpr(args[0]), OcamlExpr.EConst(OcamlConst.CUnit)]);
+									case "ofHex" if (args.length == 1):
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofHex"), [buildExpr(args[0])]);
+									case "fastGet" if (args.length == 2):
+										// Upstream stdlib uses Bytes.fastGet(BytesData, pos) for performance.
+										// Map to bounds-checked runtime read for now.
+										OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [buildExpr(args[0]), buildExpr(args[1])]);
 								case _:
 									#if macro
 									guardrailError(
@@ -1463,8 +1466,15 @@ class OcamlBuilder {
 									}
 									final builtArgs:Array<OcamlExpr> = [];
 									if (expectedArgs != null) {
+										final externCall = cls.isExtern;
 										for (i in 0...args.length) {
-											builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+											final argExpr = if (i < expectedArgs.length) {
+												final expectedType = expectedArgs[i].t;
+												(externCall && isTypeParameterType(expectedType)) ? buildExpr(args[i]) : coerceForAssignment(expectedType, args[i]);
+											} else {
+												buildExpr(args[i]);
+											}
+											builtArgs.push(argExpr);
 										}
 										if (args.length < expectedArgs.length) {
 											for (i in args.length...expectedArgs.length) {
@@ -1760,24 +1770,127 @@ class OcamlBuilder {
 											#end
 											OcamlExpr.EConst(OcamlConst.CUnit);
 									}
-								} else if (isStdBytesClass(cls)) {
-									final self = buildExpr(objExpr);
-									switch (cf.name) {
-										case "get" if (args.length == 1):
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
-												[self, buildExpr(args[0])]
-											);
-										case "set" if (args.length == 2):
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
-												[self, buildExpr(args[0]), coerceNullableIntToInt(args[1])]
-											);
-										case "blit" if (args.length == 4):
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "blit"),
-												[self, buildExpr(args[0]), buildExpr(args[1]), buildExpr(args[2]), buildExpr(args[3])]
-											);
+									} else if (isStdBytesClass(cls)) {
+										final self = buildExpr(objExpr);
+										switch (cf.name) {
+											case "get" if (args.length == 1):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
+													[self, buildExpr(args[0])]
+												);
+											case "getDouble" if (args.length == 1):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getDouble"),
+													[self, buildExpr(args[0])]
+												);
+											case "getFloat" if (args.length == 1):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getFloat"),
+													[self, buildExpr(args[0])]
+												);
+											case "getUInt16" if (args.length == 1):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getUInt16"),
+													[self, buildExpr(args[0])]
+												);
+											case "getInt32" if (args.length == 1):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getInt32"),
+													[self, buildExpr(args[0])]
+												);
+											case "getInt64" if (args.length == 1):
+												final posName = freshTmp("pos");
+												OcamlExpr.ELet(
+													posName,
+													buildExpr(args[0]),
+													OcamlExpr.EApp(
+														OcamlExpr.EField(OcamlExpr.EIdent("Haxe_Int64"), "___int64_create"),
+														[
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getInt32"),
+																[
+																	self,
+																	OcamlExpr.EBinop(
+																		OcamlBinop.Add,
+																		OcamlExpr.EIdent(posName),
+																		OcamlExpr.EConst(OcamlConst.CInt(4))
+																	)
+																]
+															),
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getInt32"),
+																[self, OcamlExpr.EIdent(posName)]
+															)
+														]
+													),
+													false
+												);
+											case "set" if (args.length == 2):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
+													[self, buildExpr(args[0]), coerceNullableIntToInt(args[1])]
+												);
+											case "setDouble" if (args.length == 2):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setDouble"),
+													[self, buildExpr(args[0]), buildExpr(args[1])]
+												);
+											case "setFloat" if (args.length == 2):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setFloat"),
+													[self, buildExpr(args[0]), buildExpr(args[1])]
+												);
+											case "setUInt16" if (args.length == 2):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setUInt16"),
+													[self, buildExpr(args[0]), coerceNullableIntToInt(args[1])]
+												);
+											case "setInt32" if (args.length == 2):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setInt32"),
+													[self, buildExpr(args[0]), coerceNullableIntToInt(args[1])]
+												);
+											case "setInt64" if (args.length == 2):
+												final posName = freshTmp("pos");
+												final vName = freshTmp("i64");
+												final vTyped = OcamlExpr.EAnnot(
+													OcamlExpr.EIdent(vName),
+													OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t")
+												);
+												OcamlExpr.ELet(
+													posName,
+													buildExpr(args[0]),
+													OcamlExpr.ELet(
+														vName,
+														buildExpr(args[1]),
+														OcamlExpr.ESeq([
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setInt32"),
+																[self, OcamlExpr.EIdent(posName), OcamlExpr.EField(vTyped, "low")]
+															),
+															OcamlExpr.EApp(
+																OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "setInt32"),
+																[
+																	self,
+																	OcamlExpr.EBinop(
+																		OcamlBinop.Add,
+																		OcamlExpr.EIdent(posName),
+																		OcamlExpr.EConst(OcamlConst.CInt(4))
+																	),
+																	OcamlExpr.EField(vTyped, "high")
+																]
+															),
+															OcamlExpr.EConst(OcamlConst.CUnit)
+														]),
+														false
+													),
+													false
+												);
+											case "blit" if (args.length == 4):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "blit"),
+													[self, buildExpr(args[0]), buildExpr(args[1]), buildExpr(args[2]), buildExpr(args[3])]
+												);
 										case "fill" if (args.length == 3):
 											OcamlExpr.EApp(
 												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "fill"),
@@ -1813,16 +1926,21 @@ class OcamlBuilder {
 												#end
 												OcamlExpr.EConst(OcamlConst.CUnit);
 											}
-										case "toString" if (args.length == 0):
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "toString"),
-												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
-											);
-										case "getData" if (args.length == 0):
-											OcamlExpr.EApp(
-												OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getData"),
-												[self, OcamlExpr.EConst(OcamlConst.CUnit)]
-											);
+											case "toString" if (args.length == 0):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "toString"),
+													[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+												);
+											case "toHex" if (args.length == 0):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "toHex"),
+													[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+												);
+											case "getData" if (args.length == 0):
+												OcamlExpr.EApp(
+													OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getData"),
+													[self, OcamlExpr.EConst(OcamlConst.CUnit)]
+												);
 										case _:
 											#if macro
 											guardrailError(
@@ -1892,8 +2010,15 @@ class OcamlBuilder {
 										}
 										final coercedArgs:Array<OcamlExpr> = [];
 										if (expectedArgs != null) {
+											final externCall = cls.isExtern;
 											for (i in 0...args.length) {
-												coercedArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t, args[i]) : buildExpr(args[i]));
+												final argExpr = if (i < expectedArgs.length) {
+													final expectedType = expectedArgs[i].t;
+													(externCall && isTypeParameterType(expectedType)) ? buildExpr(args[i]) : coerceForAssignment(expectedType, args[i]);
+												} else {
+													buildExpr(args[i]);
+												}
+												coercedArgs.push(argExpr);
 											}
 											if (args.length < expectedArgs.length) {
 												for (i in args.length...expectedArgs.length) {
@@ -3608,18 +3733,19 @@ class OcamlBuilder {
 							OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "equals"),
 							[buildExpr(e1), buildExpr(e2)]
 						);
-					} else if (shouldUsePhysicalEq(e1.t) || shouldUsePhysicalEq(e2.t)) {
-						OcamlExpr.EBinop(
-							OcamlBinop.PhysEq,
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]),
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e2)])
-						);
-					} else {
-						OcamlExpr.EBinop(OcamlBinop.Eq, buildExpr(e1), buildExpr(e2));
+						} else if (shouldUsePhysicalEq(e1.t) || shouldUsePhysicalEq(e2.t)) {
+							OcamlExpr.EBinop(
+								OcamlBinop.PhysEq,
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]),
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e2)])
+							);
+						} else {
+							final c = coerceForComparison(e1, e2);
+							OcamlExpr.EBinop(OcamlBinop.Eq, c.l, c.r);
+						}
 					}
-				}
-			case OpNotEq:
-				if (isNullExpr(e1) || isNullExpr(e2)) {
+				case OpNotEq:
+					if (isNullExpr(e1) || isNullExpr(e2)) {
 					OcamlExpr.EBinop(OcamlBinop.PhysNeq, buildExpr(e1), buildExpr(e2));
 				} else {
 					inline function toDynamicObj(e:TypedExpr):OcamlExpr {
@@ -3679,18 +3805,19 @@ class OcamlBuilder {
 								[buildExpr(e1), buildExpr(e2)]
 							)
 						);
-					} else if (shouldUsePhysicalEq(e1.t) || shouldUsePhysicalEq(e2.t)) {
-						OcamlExpr.EBinop(
-							OcamlBinop.PhysNeq,
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]),
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e2)])
-						);
-					} else {
-						OcamlExpr.EBinop(OcamlBinop.Neq, buildExpr(e1), buildExpr(e2));
+						} else if (shouldUsePhysicalEq(e1.t) || shouldUsePhysicalEq(e2.t)) {
+							OcamlExpr.EBinop(
+								OcamlBinop.PhysNeq,
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e1)]),
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e2)])
+							);
+						} else {
+							final c = coerceForComparison(e1, e2);
+							OcamlExpr.EBinop(OcamlBinop.Neq, c.l, c.r);
+						}
 					}
-				}
-			case OpLt:
-				final cmp = buildNullablePrimitiveCompare(OcamlBinop.Lt, e1, e2);
+				case OpLt:
+					final cmp = buildNullablePrimitiveCompare(OcamlBinop.Lt, e1, e2);
 				if (cmp != null) cmp else {
 					final c = coerceForComparison(e1, e2);
 					OcamlExpr.EBinop(OcamlBinop.Lt, c.l, c.r);
@@ -3814,6 +3941,50 @@ class OcamlBuilder {
 					);
 				}
 				// Booleans stored as `Obj.t` must be boxed to avoid int/bool ambiguity.
+				if (isBoolType(rhs.t)) {
+					return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(rhs)]);
+				}
+				switch (followNoAbstracts(unwrapNullType(rhs.t))) {
+					case TDynamic(_):
+						return buildExpr(rhs);
+					case TAbstract(_, _) if (isStdAnyAbstract(rhs.t)):
+						return buildExpr(rhs);
+					case TAnonymous(_) if (shouldAnonUseHxAnon(rhs.t)):
+						return buildExpr(rhs);
+					case _:
+						return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+				}
+			case TInst(cRef, _) if (switch (cRef.get().kind) { case KTypeParameter(_): true; case _: false; }):
+				// Portable mode represents class type parameters as `Obj.t` in OCaml.
+				// This means generic method parameters (e.g. `StringBuf.add<T>(x:T)`) must
+				// box their arguments when crossing from a concrete value type (like `string`)
+				// into that `Obj.t` slot.
+				final rhsUnwrapped = unwrap(rhs);
+				final rhsIsNull = switch (rhsUnwrapped.expr) {
+					case TConst(TNull): true;
+					case _: false;
+				}
+				if (rhsIsNull) {
+					return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				}
+				if (rhsKind != null) {
+					return buildExpr(rhs);
+				}
+				final rhsNullableEnumName = isNullableEnumType(rhs.t);
+				if (rhsNullableEnumName != null) {
+					return OcamlExpr.EApp(
+						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+						[OcamlExpr.EConst(OcamlConst.CString(rhsNullableEnumName)), buildExpr(rhs)]
+					);
+				}
+				final rhsEnumName = fullNameOfTypeEnum(rhs.t);
+				if (rhsEnumName != null) {
+					final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+					return OcamlExpr.EApp(
+						OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
+						[OcamlExpr.EConst(OcamlConst.CString(rhsEnumName)), asObj]
+					);
+				}
 				if (isBoolType(rhs.t)) {
 					return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(rhs)]);
 				}
@@ -4047,6 +4218,18 @@ class OcamlBuilder {
 		return buildExpr(rhs);
 	}
 
+	static inline function isTypeParameterType(t:Type):Bool {
+		return switch (followNoAbstracts(unwrapNullType(t))) {
+			case TInst(cRef, _):
+				switch (cRef.get().kind) {
+					case KTypeParameter(_): true;
+					case _: false;
+				}
+			case _:
+				false;
+		}
+	}
+
 		function buildUnop(op:Unop, postFix:Bool, e:TypedExpr, resultType:Type):OcamlExpr {
 			return switch (op) {
 				case OpNot:
@@ -4055,14 +4238,14 @@ class OcamlBuilder {
 					final kind = nullablePrimitiveKind(e.t);
 					final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
 					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "lognot"), [v]);
-				case OpNeg:
-					if (isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float") {
-						OcamlExpr.EUnop(OcamlUnop.Neg, buildExpr(e));
-					} else {
-						final kind = nullablePrimitiveKind(e.t);
-						final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [v]);
-					}
+					case OpNeg:
+						if (isFloatType(resultType) || nullablePrimitiveKind(resultType) == "float") {
+							OcamlExpr.EUnop(OcamlUnop.NegF, buildExpr(e));
+						} else {
+							final kind = nullablePrimitiveKind(e.t);
+							final v = kind == "int" ? safeUnboxNullableInt(buildExpr(e)) : buildExpr(e);
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "neg"), [v]);
+						}
 				case OpIncrement, OpDecrement:
 				// ++x / x++ / --x / x--:
 				//
@@ -5244,22 +5427,38 @@ class OcamlBuilder {
 						}
 						return isMutableStatic ? OcamlExpr.EUnop(OcamlUnop.Deref, baseExpr) : baseExpr;
 					}
-					case FInstance(clsRef, _, cfRef):
-						final cls = clsRef.get();
-						final cf = cfRef.get();
-						switch (cf.kind) {
-							case FVar(_, _):
-							if (isStdArrayClass(cls) && cf.name == "length") {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
-							} else if (isStdStringClass(cls) && cf.name == "length") {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
-							} else if (isStdBytesClass(cls) && cf.name == "length") {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "length"), [buildExpr(obj)]);
-							} else {
-								OcamlExpr.EField(buildExpr(obj), cf.name);
-							}
-						case FMethod(_):
-							buildBoundMethodClosure(obj, cls, cf, pos);
+						case FInstance(clsRef, _, cfRef):
+							final cls = clsRef.get();
+							final cf = cfRef.get();
+							switch (cf.kind) {
+								case FVar(_, _):
+								if (isStdArrayClass(cls) && cf.name == "length") {
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "length"), [buildExpr(obj)]);
+								} else if (isStdStringClass(cls) && cf.name == "length") {
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "length"), [buildExpr(obj)]);
+								} else if (isStdBytesClass(cls) && cf.name == "length") {
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "length"), [buildExpr(obj)]);
+								} else if (cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "_Int64" && cls.name == "___Int64"
+									&& (cf.name == "low" || cf.name == "high")) {
+									// OCaml record-label resolution gotcha:
+									// - `haxe.Int64` aggressively inlines accessors to direct `this.low/this.high` field reads.
+									// - Without a type annotation, `ocamlc` resolves record labels globally and can fail with
+									//   "Unbound record field low/high" if it cannot infer the record type yet (or if dune
+									//   orders compilation before `Haxe_Int64`).
+									//
+									// Fix: annotate the receiver expression with the concrete record type so `ocamlc` can
+									// resolve the label deterministically.
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
+									final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
+									final coerced = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(obj)]);
+									OcamlExpr.EField(OcamlExpr.EAnnot(coerced, OcamlTypeExpr.TIdent(fullType)), cf.name);
+								} else {
+									OcamlExpr.EField(buildExpr(obj), cf.name);
+								}
+							case FMethod(_):
+								buildBoundMethodClosure(obj, cls, cf, pos);
 							case _:
 								// Methods/properties are handled at callsites; as values, we only support real methods for now.
 								OcamlExpr.EConst(OcamlConst.CUnit);

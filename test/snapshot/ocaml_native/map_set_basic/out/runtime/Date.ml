@@ -100,5 +100,71 @@ let getTimezoneOffset (self : t) () : int =
   int_of_float ((t_utc_as_local -. t_local) /. 60.0)
 
 let toString (self : t) () : string =
-  (* Keep this stable and simple for now. *)
-  Printf.sprintf "<Date %.0f>" self.time_ms
+  let tm = local_tm self in
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+    (tm.tm_year + 1900)
+    (tm.tm_mon + 1)
+    tm.tm_mday
+    tm.tm_hour
+    tm.tm_min
+    tm.tm_sec
+
+let invalid_date_format (s : string) : 'a =
+  HxRuntime.hx_throw
+    (Obj.repr (Printf.sprintf "Invalid date format: %s" s))
+
+let parse_int (s : string) : int option =
+  try Some (int_of_string s) with _ -> None
+
+let parse_hms (s : string) : (int * int * int) option =
+  match String.split_on_char ':' s with
+  | [ hh; mm; ss ] -> (
+      match (parse_int hh, parse_int mm, parse_int ss) with
+      | Some h, Some m, Some sec -> Some (h, m, sec)
+      | _ -> None)
+  | _ -> None
+
+let parse_ymd (s : string) : (int * int * int) option =
+  match String.split_on_char '-' s with
+  | [ yyyy; mm; dd ] -> (
+      match (parse_int yyyy, parse_int mm, parse_int dd) with
+      | Some y, Some mon, Some day -> Some (y, mon, day)
+      | _ -> None)
+  | _ -> None
+
+let fromString (s_raw : string) : t =
+  let s = String.trim s_raw in
+  if String.length s = 0 then invalid_date_format s_raw
+  else if String.contains s '-' then
+    (* Local date, optionally with local time. *)
+    let parts = String.split_on_char ' ' s in
+    let date_part, time_part =
+      match parts with
+      | [ d ] -> (d, None)
+      | [ d; t ] -> (d, Some t)
+      | _ -> invalid_date_format s_raw
+    in
+    let y, mon, day =
+      match parse_ymd date_part with
+      | Some v -> v
+      | None -> invalid_date_format s_raw
+    in
+    let hour, min, sec =
+      match time_part with
+      | None -> (0, 0, 0)
+      | Some t -> (
+          match parse_hms t with
+          | Some v -> v
+          | None -> invalid_date_format s_raw)
+    in
+    (* Month is 1-based in the string, but our `create` expects 0-based. *)
+    create y (mon - 1) day hour min sec
+  else if String.contains s ':' then
+    (* Time relative to UTC epoch. *)
+    match parse_hms s with
+    | None -> invalid_date_format s_raw
+    | Some (h, m, sec) ->
+        let total_seconds = (h * 3600) + (m * 60) + sec in
+        fromTime (float_of_int total_seconds *. 1000.0)
+  else
+    invalid_date_format s_raw

@@ -986,27 +986,62 @@ class OcamlCompiler extends DirectToStringCompiler {
 						});
 					}
 
-			for (f in instanceMethods) {
-				final compiled = {
-					final argInfo = f.args.map(a -> ({
-						id: a.tvar != null ? a.tvar.id : -1,
-						name: a.getName()
-					}));
-							switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
-								case OcamlExpr.EFun(params, b):
-									// Dune/OCaml flags can be warning-as-error; avoid `unused-var-strict` for `self`
-									// by forcing a use when the method body doesn't reference it.
-									final body = (!exprMentionsIdent(b, "self"))
-										? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b])
-										: b;
-									final unitBody = funReturnsVoid(f.field.type)
-										? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [body])
-										: body;
-									OcamlExpr.EFun([OcamlPat.PVar("self")].concat(params), unitBody);
-								case _:
-									OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
-							}
-						};
+				for (f in instanceMethods) {
+					final compiled = {
+						final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(f.field.type)) {
+							case TFun(fargs, _): fargs;
+							case _: null;
+						}
+						final argInfo = f.args.map(a -> ({
+							id: a.tvar != null ? a.tvar.id : -1,
+							name: a.getName()
+						}));
+								switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
+									case OcamlExpr.EFun(params, b):
+										final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
+											final out:Array<OcamlPat> = [];
+											for (i in 0...params.length) {
+												final p = params[i];
+												final t = expectedArgs[i].t;
+												final ocamlT = ocamlTypeExprFromHaxeType(t);
+												out.push(switch (p) {
+													case OcamlPat.PVar(_):
+														// Only annotate when we have a concrete OCaml type.
+														//
+														// Why:
+														// - This helps dune/ocamlc resolve record labels and module dependencies (notably for
+														//   records-of-functions class encodings), which would otherwise fail with
+														//   "Unbound record field ..." during bootstrapping.
+														// - However, our portable type mapper intentionally collapses polymorphic cases
+														//   (type parameters, function types, many abstracts) to `Obj.t`. Annotating those
+														//   would *harm* inference and can break correct code (e.g. generic `StringBuf.add`,
+														//   or function-typed parameters like `stop:Void->Bool`).
+														//
+														// So we only emit annotations when the mapped type is not `Obj.t`.
+														(ocamlT == OcamlTypeExpr.TIdent("Obj.t")) ? p : OcamlPat.PAnnot(p, ocamlT);
+													case OcamlPat.PAnnot(_, _):
+														p;
+													case _:
+														p;
+												});
+											}
+											out;
+										} else {
+											params;
+										}
+										// Dune/OCaml flags can be warning-as-error; avoid `unused-var-strict` for `self`
+										// by forcing a use when the method body doesn't reference it.
+										final body = (!exprMentionsIdent(b, "self"))
+											? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b])
+											: b;
+										final unitBody = funReturnsVoid(f.field.type)
+											? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [body])
+											: body;
+										OcamlExpr.EFun([OcamlPat.PVar("self")].concat(annotatedParams), unitBody);
+									case _:
+										OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
+								}
+							};
 					final methodName = isDispatch
 						? ctx.scopedValueName(classType.module, classType.name, f.field.name + "__impl")
 						: ctx.scopedValueName(classType.module, classType.name, f.field.name);
@@ -1399,9 +1434,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 	function ocamlTypeExprFromHaxeType(t:Type):OcamlTypeExpr {
 		return switch (t) {
-				case TAbstract(aRef, params):
-					final a = aRef.get();
-					final aPack = a.pack ?? [];
+					case TAbstract(aRef, params):
+						final a = aRef.get();
+						final aPack = a.pack ?? [];
 
 					// OCaml-native surface: treat `ocaml.*` abstracts as concrete OCaml types so they can
 					// appear in generated type annotations (records, signatures, future .mli output)
@@ -1448,7 +1483,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 								return OcamlTypeExpr.TApp("Stdlib.Seq.t", [elem]);
 							case _:
 						}
-					} else if (aPack.length == 2 && aPack[0] == "ocaml" && aPack[1] == "extlib" && a.name == "PMap") {
+						} else if (aPack.length == 2 && aPack[0] == "ocaml" && aPack[1] == "extlib" && a.name == "PMap") {
 						final k = (params != null && params.length > 0)
 							? ocamlTypeExprFromHaxeType(params[0])
 							: OcamlTypeExpr.TIdent("Obj.t");
@@ -1456,11 +1491,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 							? ocamlTypeExprFromHaxeType(params[1])
 							: OcamlTypeExpr.TIdent("Obj.t");
 						return OcamlTypeExpr.TApp("PMap.t", [k, v]);
-					}
-					switch (a.name) {
-						case "Int": OcamlTypeExpr.TIdent("int");
-						case "Float": OcamlTypeExpr.TIdent("float");
-						case "Bool": OcamlTypeExpr.TIdent("bool");
+						}
+						// haxe.Int32 is a 32-bit-int abstract over `Int`. Our backend already enforces
+						// 32-bit overflow semantics for `Int` via `HxInt`, so we represent Int32 as
+						// a plain OCaml `int`.
+						if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int32") {
+							return OcamlTypeExpr.TIdent("int");
+						}
+						// haxe.Int64 is an abstract over an internal record class (`haxe._Int64.___Int64`).
+						// Represent it as that concrete record type so consumers can access `high/low`
+						// without falling back to `Obj.t`.
+						if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int64") {
+							return OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t");
+						}
+						switch (a.name) {
+							case "Int": OcamlTypeExpr.TIdent("int");
+							case "Float": OcamlTypeExpr.TIdent("float");
+							case "Bool": OcamlTypeExpr.TIdent("bool");
 						case "Void": OcamlTypeExpr.TIdent("unit");
 						case "CallStack":
 							// `haxe.CallStack` is an abstract over `Array<haxe.StackItem>`.
@@ -1596,10 +1643,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 				OcamlTypeExpr.TIdent("Obj.t");
 			case TDynamic(_), TAnonymous(_), TMono(_), TLazy(_):
 				OcamlTypeExpr.TIdent("Obj.t");
-			case TFun(_, _):
-				OcamlTypeExpr.TIdent("Obj.t");
+				case TFun(args, ret):
+					final retT = isVoidType(ret) ? OcamlTypeExpr.TIdent("unit") : ocamlTypeExprFromHaxeType(ret);
+					final argTs = args.map(a -> ocamlTypeExprFromHaxeType(a.t));
+					// Haxe 0-arg functions still receive a `()` application at many callsites in this backend
+					// (to avoid accidental partial application). Model them as `unit -> ret`.
+					var acc = retT;
+					if (argTs.length == 0) {
+						acc = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), acc);
+					} else {
+						for (i in 0...argTs.length) {
+							final from = argTs[argTs.length - 1 - i];
+							acc = OcamlTypeExpr.TArrow(from, acc);
+						}
+					}
+					acc;
+			}
 		}
-	}
 
 	static inline function fullNameOfClassType(cls:ClassType):String {
 		return (cls.pack ?? []).concat([cls.name]).join(".");

@@ -3,6 +3,7 @@ package haxe.io;
 import haxe.io.Bytes;
 import haxe.io.Eof;
 import haxe.io.Error;
+import haxe.io.FPHelper;
 import haxe.io.Input;
 
 /**
@@ -89,18 +90,15 @@ class Output {
 	public function prepare(_nbytes:Int):Void {}
 
 	public function writeInput(i:Input, ?bufsize:Int):Void {
-		// Mark arguments used to avoid strict unused-var warnings in OCaml builds.
-		if (i == null) {}
-		if (bufsize != null) {}
-
-		// Not implemented yet on the OCaml target.
-		//
-		// Rationale: this helper requires a fully working `Input` + `Bytes` stack.
-		// Stage 0/1/2 bootstrapping does not need it, and Stage 4 uses a line-based
-		// transport implemented via `sys.io.Process`.
-		//
-		// We keep the method so code can typecheck, but throw if called.
-		throw new haxe.exceptions.NotImplementedException();
+		final size = bufsize == null ? 4096 : (cast bufsize);
+		final buf = Bytes.alloc(size);
+		try {
+			while (true) {
+				final len = i.readBytes(buf, 0, size);
+				if (len == 0) throw Error.Blocked;
+				writeFullBytes(buf, 0, len);
+			}
+		} catch (_:Eof) {}
 	}
 
 	public function writeString(s:String, ?encoding:Encoding):Void {
@@ -112,6 +110,21 @@ class Output {
 	}
 
 	// Numeric helpers (kept for compatibility; implemented via writeByte).
+
+	public function writeFloat(x:Float):Void {
+		writeInt32(FPHelper.floatToI32(x));
+	}
+
+	public function writeDouble(x:Float):Void {
+		final i64 = FPHelper.doubleToI64(x);
+		if (bigEndian) {
+			writeInt32(i64.high);
+			writeInt32(i64.low);
+		} else {
+			writeInt32(i64.low);
+			writeInt32(i64.high);
+		}
+	}
 
 	public function writeInt8(x:Int):Void {
 		if (x < -0x80 || x >= 0x80) throw Error.Overflow;
