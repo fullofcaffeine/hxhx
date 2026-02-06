@@ -48,6 +48,10 @@ function gitTrackedAll() {
 }
 
 function shouldScanText(path) {
+  // Skip bd issue-tracker state. This repo treats `.beads/` as development metadata, not distributable
+  // source, and bd can legitimately contain historical discussion that we don't want to gate CI on.
+  if (path.startsWith('.beads/')) return false
+
   // Keep this conservative: scan everything that is likely to be UTF-8 text.
   // Skip obvious binary-ish extensions.
   const lower = path.toLowerCase()
