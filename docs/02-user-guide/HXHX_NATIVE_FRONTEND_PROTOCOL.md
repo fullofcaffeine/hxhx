@@ -21,6 +21,24 @@ This protocol is a **bootstrap seam**, not a long-term public API yet:
 The records below define the wire format. Separately, the native frontend has a couple of **bootstrap-mode**
 configuration knobs that do *not* change the protocol version, but do change behavior.
 
+### `HIH_FORCE_HX_PARSER`
+
+When set to `1`/`true`/`yes`, the **Stage 2/3 pipeline** forces the **pure-Haxe** parser (`HxParser`) even if the
+compiler was built with `-D hih_native_parser`.
+
+Why this exists:
+
+- Protocol v1 is intentionally *summary-only*: even in non-`header_only` mode it does **not** transmit full
+  statement bodies.
+- Some bring-up rungs (notably Stage 3 `--hxhx-emit-full-bodies`) need statement bodies so we can validate
+  lowering end-to-end.
+
+Notes:
+
+- This is a bring-up switch, not a long-term architecture commitment.
+- The “real” long-term options are either (a) evolve the protocol to carry a richer AST, or (b) port the frontend
+  into Haxe fully and remove the native seam.
+
 ### `HXHX_NATIVE_FRONTEND_HEADER_ONLY`
 
 When set to `1`/`true`/`yes`, `HxHxNativeParser.parse_module_decl` enables a **best-effort header-only fallback**:
@@ -112,6 +130,8 @@ Notes:
 
 - `retid`/`argtypes`/`retexpr` are optional fields added in a backward-compatible way: Stage 2 decoders that only
   understand `name|vis|static|args|ret|retstr` will ignore the extra segments.
+- Even when the native side *parses* more syntax, protocol v1 intentionally only transmits a method **summary**
+  (signature + first-return hints). It does **not** currently carry full statement bodies.
 - Because `ast method` uses `|` as its own field separator, `retid` and `argtypes` must not contain `|` characters.
   The same constraint applies to `retexpr`.
 
