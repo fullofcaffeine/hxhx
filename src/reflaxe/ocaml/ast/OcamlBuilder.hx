@@ -1401,6 +1401,10 @@ class OcamlBuilder {
 									}
 								case "ofData" if (args.length == 1):
 									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofData"), [buildExpr(args[0]), OcamlExpr.EConst(OcamlConst.CUnit)]);
+								case "fastGet" if (args.length == 2):
+									// Upstream stdlib uses Bytes.fastGet(BytesData, pos) for performance.
+									// Map to bounds-checked runtime read for now.
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [buildExpr(args[0]), buildExpr(args[1])]);
 								case _:
 									#if macro
 									guardrailError(

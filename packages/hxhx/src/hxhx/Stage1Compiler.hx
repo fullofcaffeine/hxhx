@@ -373,7 +373,7 @@ class Stage1Args {
 		return "";
 	}
 
-	static function expandHxmlArgs(args:Array<String>):Null<Array<String>> {
+	public static function expandHxmlArgs(args:Array<String>):Null<Array<String>> {
 		var sawHxml = false;
 		final out = new Array<String>();
 

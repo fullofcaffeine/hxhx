@@ -12,6 +12,15 @@
 
 type t = { time_ms : float }
 
+let seconds (self : t) : float =
+  self.time_ms /. 1000.0
+
+let local_tm (self : t) : Unix.tm =
+  Unix.localtime (seconds self)
+
+let utc_tm (self : t) : Unix.tm =
+  Unix.gmtime (seconds self)
+
 let create (year : int) (month0 : int) (day : int) (hour : int) (min : int)
     (sec : int) : t =
   let tm : Unix.tm =
@@ -40,6 +49,55 @@ let now () : t =
 
 let getTime (self : t) () : float =
   self.time_ms
+
+let getHours (self : t) () : int =
+  (local_tm self).tm_hour
+
+let getMinutes (self : t) () : int =
+  (local_tm self).tm_min
+
+let getSeconds (self : t) () : int =
+  (local_tm self).tm_sec
+
+let getFullYear (self : t) () : int =
+  (local_tm self).tm_year + 1900
+
+let getMonth (self : t) () : int =
+  (local_tm self).tm_mon
+
+let getDate (self : t) () : int =
+  (local_tm self).tm_mday
+
+let getDay (self : t) () : int =
+  (local_tm self).tm_wday
+
+let getUTCHours (self : t) () : int =
+  (utc_tm self).tm_hour
+
+let getUTCMinutes (self : t) () : int =
+  (utc_tm self).tm_min
+
+let getUTCSeconds (self : t) () : int =
+  (utc_tm self).tm_sec
+
+let getUTCFullYear (self : t) () : int =
+  (utc_tm self).tm_year + 1900
+
+let getUTCMonth (self : t) () : int =
+  (utc_tm self).tm_mon
+
+let getUTCDate (self : t) () : int =
+  (utc_tm self).tm_mday
+
+let getUTCDay (self : t) () : int =
+  (utc_tm self).tm_wday
+
+let getTimezoneOffset (self : t) () : int =
+  (* Similar to JS Date#getTimezoneOffset: UTC - local, in minutes. *)
+  let s = seconds self in
+  let t_local = s in
+  let t_utc_as_local, _ = Unix.mktime (Unix.gmtime s) in
+  int_of_float ((t_utc_as_local -. t_local) /. 60.0)
 
 let toString (self : t) () : string =
   (* Keep this stable and simple for now. *)

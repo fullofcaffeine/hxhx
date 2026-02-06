@@ -41,7 +41,27 @@ extern class Date {
 	/** Returns the millisecond timestamp (Unix epoch). */
 	function getTime():Float;
 
+	function getHours():Int;
+	function getMinutes():Int;
+	function getSeconds():Int;
+	function getFullYear():Int;
+	function getMonth():Int;
+	function getDate():Int;
+	function getDay():Int;
+
+	function getUTCHours():Int;
+	function getUTCMinutes():Int;
+	function getUTCSeconds():Int;
+	function getUTCFullYear():Int;
+	function getUTCMonth():Int;
+	function getUTCDate():Int;
+	function getUTCDay():Int;
+
+	/**
+		Returns the time zone offset of local time relative to UTC, in minutes (UTC - local).
+	**/
+	function getTimezoneOffset():Int;
+
 	/** Basic human-readable representation (primarily for debugging). */
 	function toString():String;
 }
-

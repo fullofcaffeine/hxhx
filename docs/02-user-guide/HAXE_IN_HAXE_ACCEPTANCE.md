@@ -105,6 +105,31 @@ Today, `npm run test:upstream:unit-macro` runs the suite through the **stage0 sh
 (delegating to the system `haxe` binary). That runner is still useful: it validates our upstream harness wiring,
 distribution presets, and CI toolchain expectations.
 
+#### OCaml note: how we emulate upstream `--interp`
+
+Upstream Gate 1 uses `--interp` as “compile + run”.
+
+For OCaml (a native target), we emulate `--interp` as:
+
+- compile to OCaml + generate dune project
+- build native executable (`-D ocaml_build=native`)
+- run the produced binary
+
+Bring-up helper flags (shim-only):
+
+- `--hxhx-ocaml-interp`: enables “interp-like” behavior for the OCaml target
+- `--hxhx-ocaml-out <dir>`: forces `-D ocaml_output=<dir>` (useful for deterministic test runs)
+
+Bring-up runner script:
+
+- `bash scripts/hxhx/run-upstream-unit-macro-ocaml.sh`
+  - Equivalent: `npm run test:upstream:unit-macro-ocaml`
+  - Requires `dune` + `ocamlc` on `PATH`
+  - Requires an upstream checkout at `vendor/haxe` or `HAXE_UPSTREAM_DIR=/path/to/haxe`
+
+This runner still uses the stage0 `haxe` binary for compilation today; it exists to validate the
+native build+run harness while the non-delegating compiler pipeline is under construction.
+
 The “real” Gate 1 for replacement readiness is the **non-delegating** path. We track that as a separate runner:
 
 - `npm run test:upstream:unit-macro-native` (bring-up; expected to fail until `hxhx` stops delegating)

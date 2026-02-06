@@ -2,6 +2,7 @@ package hxhx;
 
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;
+import hxhx.Stage1Compiler.Stage1Args;
 
 /**
 	`hxhx` (Haxe-in-Haxe compiler) driver.
@@ -25,6 +26,169 @@ class Main {
 		Sys.println(msg);
 		Sys.exit(1);
 		return cast null;
+	}
+
+	static function hasDefine(args:Array<String>, name:String):Bool {
+		return getDefineValue(args, name) != null;
+	}
+
+	static function getDefineValue(args:Array<String>, name:String):Null<String> {
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			if (a == "-D" && i + 1 < args.length) {
+				final d = args[i + 1];
+				if (d == name) return "1";
+				if (StringTools.startsWith(d, name + "=")) return d.substr((name + "=").length);
+				i += 2;
+				continue;
+			}
+			i++;
+		}
+		return null;
+	}
+
+	static function addDefineIfMissing(args:Array<String>, define:String):Void {
+		final eq = define.indexOf("=");
+		final name = eq == -1 ? define : define.substr(0, eq);
+		if (hasDefine(args, name)) return;
+		args.push("-D");
+		args.push(define);
+	}
+
+	static function stripAll(args:Array<String>, flag:String):Array<String> {
+		final out = new Array<String>();
+		for (a in args) if (a != flag) out.push(a);
+		return out;
+	}
+
+	static function sanitizeName(name:String):String {
+		final out = new StringBuf();
+		final s = name == null ? "" : name;
+		for (i in 0...s.length) {
+			final c = s.charCodeAt(i);
+			final isAlphaNum = (c >= 97 && c <= 122) // a-z
+				|| (c >= 65 && c <= 90) // A-Z
+				|| (c >= 48 && c <= 57); // 0-9
+			out.add(isAlphaNum ? String.fromCharCode(c) : "_");
+		}
+		var r = out.toString();
+		if (r.length == 0) r = "ocaml_app";
+		if (r.charCodeAt(0) >= 48 && r.charCodeAt(0) <= 57) r = "_" + r;
+		return r;
+	}
+
+	static function defaultExeName(outDir:String):String {
+		final base = haxe.io.Path.withoutDirectory(haxe.io.Path.normalize(outDir));
+		return sanitizeName(base.length > 0 ? base : "ocaml_app").toLowerCase();
+	}
+
+	static function absPath(p:String):String {
+		if (p == null || p.length == 0) return "";
+		try {
+			return sys.FileSystem.fullPath(p);
+		} catch (_:Dynamic) {
+			return p;
+		}
+	}
+
+	static function rmrf(path:String):Void {
+		if (path == null || path.length == 0) return;
+		if (!sys.FileSystem.exists(path)) return;
+		if (!sys.FileSystem.isDirectory(path)) {
+			try sys.FileSystem.deleteFile(path) catch (_:Dynamic) {}
+			return;
+		}
+		final entries = try sys.FileSystem.readDirectory(path) catch (_:Dynamic) [];
+		for (name in entries) {
+			if (name == null || name.length == 0) continue;
+			rmrf(haxe.io.Path.join([path, name]));
+		}
+		try sys.FileSystem.deleteDirectory(path) catch (_:Dynamic) {}
+	}
+
+	/**
+		Emulate upstream `--interp` for the OCaml target by compiling and running a native executable.
+
+		Why
+		- Upstream tests frequently use `--interp` as “compile + run right now”.
+		- For native targets like OCaml there is no interpreter; the closest equivalent is:
+		  `compile → dune build → run produced binary`.
+		- During bring-up we want this workflow *even before* `hxhx` becomes a full compiler:
+		  the stage0 shim can still compile, and we can validate our OCaml build+run harness.
+
+		What
+		- Expands any positional `.hxml` args (including nested `--next` / includes).
+		- Removes all `--interp` occurrences from the expanded argument list.
+		- Forces `-D ocaml_build=native` and (optionally) overrides `-D ocaml_output=...`.
+		- Cleans the output dir best-effort, then invokes stage0 `haxe` to generate the dune project.
+		- Runs `dune build` implicitly via the OCaml target’s post-emit step, then executes the produced `.exe`.
+
+		How
+		- The expected executable name is derived from the output directory name, matching
+		  `reflaxe.ocaml.runtimegen.DuneProjectEmitter.defaultExeName`.
+		- This is intentionally a *shim-only* runner: the stage0 dependency is removed later
+		  when Gate 1 flips to a non-delegating `hxhx` pipeline.
+	**/
+	static function runOcamlInterpLike(haxeBin:String, forwarded:Array<String>, outOverride:String):Void {
+		// Expand positional `.hxml` args so we can safely rewrite flags like `--interp`.
+		final expanded = Stage1Args.expandHxmlArgs(forwarded);
+		if (expanded == null) fatal("hxhx: failed to expand .hxml args for ocaml run mode");
+
+		var argv = expanded;
+
+		// Remove upstream `--interp` and emulate it by building + running a native OCaml executable.
+		argv = stripAll(argv, "--interp");
+
+		// Ensure we build to native code.
+		addDefineIfMissing(argv, "ocaml_build=native");
+
+		// Ensure output dir is deterministic for this run mode.
+		if (outOverride != null && outOverride.length > 0) {
+			// Force override.
+			argv = argv.copy();
+			// Remove any existing ocaml_output define.
+			final out2 = new Array<String>();
+			var i = 0;
+			while (i < argv.length) {
+				if (argv[i] == "-D" && i + 1 < argv.length && StringTools.startsWith(argv[i + 1], "ocaml_output=")) {
+					i += 2;
+					continue;
+				}
+				out2.push(argv[i]);
+				i += 1;
+			}
+			argv = out2;
+			argv.push("-D");
+			argv.push("ocaml_output=" + outOverride);
+		}
+
+		final outDir = getDefineValue(argv, "ocaml_output");
+		if (outDir == null || outDir.length == 0) {
+			fatal("hxhx: ocaml run mode requires -D ocaml_output=<dir> (or use --target ocaml preset)");
+		}
+
+		// Clean output dir to avoid stale dune artifacts.
+		final outAbs = absPath(outDir);
+		try {
+			if (sys.FileSystem.exists(outAbs)) {
+				rmrf(outAbs);
+			}
+		} catch (_:Dynamic) {
+			// Best-effort: target itself can handle reusing the dir; we mainly want deterministic runs.
+		}
+
+		final code = Sys.command(haxeBin, argv);
+		if (code != 0) Sys.exit(code);
+
+		final exeName = defaultExeName(outDir);
+		final exe = haxe.io.Path.join([outDir, "_build", "default", exeName + ".exe"]);
+		if (!sys.FileSystem.exists(exe)) {
+			fatal("hxhx: ocaml run mode built successfully, but expected executable missing: " + exe);
+		}
+
+		final runCode = Sys.command(exe, []);
+		Sys.exit(runCode);
 	}
 
 	static function main() {
@@ -99,6 +263,42 @@ class Main {
 		var forwarded = args;
 		final sep = args.indexOf("--");
 		if (sep != -1) forwarded = args.slice(sep + 1);
+
+		// Shim-only run mode: emulate `--interp` by compiling to OCaml native and running the produced binary.
+		//
+		// Why
+		// - `--interp` is a common upstream test convenience flag (Gate 1 uses it).
+		// - For native targets (like OCaml), "interpretation" is emulated as: compile → build → run.
+		//
+		// Non-goal
+		// - This does not make `hxhx` a real compiler: it is still a stage0 shim path.
+		var ocamlInterpLike = false;
+		var ocamlInterpOutDir = "";
+		{
+			final shimArgs = sep == -1 ? args : args.slice(0, sep);
+			var i = 0;
+			while (i < shimArgs.length) {
+				switch (shimArgs[i]) {
+					case "--hxhx-ocaml-interp":
+						ocamlInterpLike = true;
+						if (sep == -1) {
+							forwarded = forwarded.copy();
+							forwarded.splice(i, 1);
+						}
+						i += 1;
+					case "--hxhx-ocaml-out":
+						if (i + 1 >= shimArgs.length) fatal("Usage: --hxhx-ocaml-out <dir>");
+						ocamlInterpOutDir = shimArgs[i + 1];
+						if (sep == -1) {
+							forwarded = forwarded.copy();
+							forwarded.splice(i, 2);
+						}
+						i += 2;
+					case _:
+						i += 1;
+				}
+			}
+		}
 
 		// Stage 1: internal bring-up flags.
 		//
@@ -192,6 +392,11 @@ class Main {
 		final haxeBin = {
 			final v = Sys.getEnv("HAXE_BIN");
 			(v == null || v.length == 0) ? "haxe" : v;
+		}
+
+		if (ocamlInterpLike) {
+			runOcamlInterpLike(haxeBin, forwarded, ocamlInterpOutDir);
+			return;
 		}
 
 		final code = Sys.command(haxeBin, forwarded);

@@ -31,4 +31,19 @@ extern class Bytes {
 	public static function alloc(length:Int):Bytes;
 	public static function ofString(s:String, ?encoding:Encoding):Bytes;
 	public static function ofData(b:BytesData):Bytes;
+
+	/**
+		Fast byte access helper used by upstream stdlib (e.g. `haxe.crypto.Crc32`).
+
+		Why
+		- Upstream stdlib uses `Bytes.fastGet` for tight loops where bounds checks would be costly.
+		- Even if our backend does not (yet) lower this to an unsafe primitive, we must still
+		  provide the API surface so upstream code types correctly.
+
+		How
+		- The OCaml backend lowers this call to `HxBytes.get` for now (bounds-checked).
+		- Once we have a safe/unsafe split in the runtime, we can map this to an unchecked
+		  read to better match upstream intent.
+	**/
+	public static function fastGet(b:BytesData, pos:Int):Int;
 }
