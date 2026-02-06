@@ -278,6 +278,41 @@ class Stage3Compiler {
 		};
 	}
 
+	static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
+		final decl = pm.getDecl();
+		final cls = HxModuleDecl.getMainClass(decl);
+		final items = new Array<Dynamic>();
+
+		for (fn in HxClassDecl.getFunctions(cls)) {
+			items.push({
+				name: HxFunctionDecl.getName(fn),
+				kind: "fun",
+				isStatic: HxFunctionDecl.getIsStatic(fn),
+				visibility: Std.string(HxFunctionDecl.getVisibility(fn)),
+			});
+		}
+		for (f in HxClassDecl.getFields(cls)) {
+			items.push({
+				name: HxFieldDecl.getName(f),
+				kind: "var",
+				isStatic: HxFieldDecl.getIsStatic(f),
+				visibility: Std.string(HxFieldDecl.getVisibility(f)),
+			});
+		}
+
+		// Encode as a length-prefixed fragment list so the macro host can parse it with `Protocol.kvParse`.
+		final parts = new Array<String>();
+		parts.push(hxhx.macro.MacroProtocol.encodeLen("c", Std.string(items.length)));
+		for (i in 0...items.length) {
+			final it = items[i];
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("n" + i, Std.string(Reflect.field(it, "name"))));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("k" + i, Std.string(Reflect.field(it, "kind"))));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("s" + i, (Reflect.field(it, "isStatic") == true) ? "1" : "0"));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("v" + i, Std.string(Reflect.field(it, "visibility"))));
+		}
+		return parts.join(" ");
+	}
+
 		public static function run(args:Array<String>):Int {
 			// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 			var outDir = "";
@@ -500,6 +535,7 @@ class Stage3Compiler {
 				hxhx.macro.MacroState.clearBuildFields(modulePath);
 				hxhx.macro.MacroState.setDefine("HXHX_BUILD_MODULE", modulePath);
 				hxhx.macro.MacroState.setDefine("HXHX_BUILD_FILE", ResolvedModule.getFilePath(m));
+				hxhx.macro.MacroState.setBuildFieldsPayload(buildFieldsPayloadForParsed(pm));
 
 				for (i in 0...exprs.length) {
 					final expr = exprs[i];

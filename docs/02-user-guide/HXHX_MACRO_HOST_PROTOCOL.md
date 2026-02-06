@@ -218,6 +218,33 @@ This is explicitly **not** the long-term implementation of upstream build macros
   - `s`: Haxe class-member snippet(s) to merge into that module’s main class
 - response: `res <id> ok v=2:ok`
 
+### `context.getBuildFields` (bring-up rung)
+
+Bring-up read-build-fields primitive (corresponds to `haxe.macro.Context.getBuildFields()`).
+
+This exists so upstream-ish build macros that start with `Context.getBuildFields()` can execute without
+immediately throwing "Can't be called outside of macro".
+
+- request: `req <id> context.getBuildFields`
+- response: `res <id> ok v=<len>:<payload>`
+
+`<payload>` is a list of length-prefixed fragments describing the class currently being built:
+
+- `c=<len>:<count>`
+- then for each field index `i` in `0..count-1`:
+  - `n<i>=<...>` (name)
+  - `k<i>=<...>` (`fun` or `var`)
+  - `s<i>=<...>` (`1` if static, else `0`)
+  - `v<i>=<...>` (`Public` or `Private`)
+
+Notes:
+
+- This RPC is implemented on the compiler side, but it is **not wired** to a runtime implementation of
+  `haxe.macro.Context.getBuildFields()` yet because compiling the full `haxe.macro.Expr` AST surface to OCaml
+  currently fails under dune (tracked as a Gate1 blocker).
+- The intended use is to eventually expand this payload into structured field AST values, but Stage4 bring-up
+  still relies on `compiler.emitBuildFields` for deterministic field injection.
+
 ### `context.defined`
 
 Models the shape of `haxe.macro.Context.defined(name)`.
@@ -257,6 +284,7 @@ Invokes a macro entrypoint by opaque expression text.
 
 This is not full user-macro execution yet. It exists to validate the end-to-end request path we will later
 use for `--macro` and build macros.
+
 
 In the current bring-up rung:
 

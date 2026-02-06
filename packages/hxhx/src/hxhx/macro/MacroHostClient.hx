@@ -348,6 +348,13 @@ private class MacroClient {
 				case "context.definedValue":
 					final name = MacroProtocol.kvGet(tail, "n");
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.definedValue(name)));
+				case "context.getBuildFields":
+					// Stage4 bring-up: expose the compiler-side build-field snapshot for the current
+					// `@:build(...)` expansion context.
+					//
+					// Payload is a length-prefixed fragment list stored in `MacroState` (bring-up only).
+					final payload = MacroState.getBuildFieldsPayload();
+					replyOk(id, MacroProtocol.encodeLen("v", payload == null ? "" : payload));
 				case "context.getDefines":
 					final pairs = MacroState.listDefinesPairsSorted();
 					final parts = new Array<String>();

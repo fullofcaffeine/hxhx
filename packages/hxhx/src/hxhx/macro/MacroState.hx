@@ -34,6 +34,7 @@ class MacroState {
 	static var generatedHxDir:String = "";
 	static final generatedHxModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final buildFieldsByModule:haxe.ds.StringMap<Array<String>> = new haxe.ds.StringMap();
+	static var buildFieldsPayload:String = "";
 	static final afterTypingHookIds:Array<Int> = [];
 	static final onGenerateHookIds:Array<Int> = [];
 
@@ -45,6 +46,7 @@ class MacroState {
 		generatedHxDir = "";
 		generatedHxModules.clear();
 		buildFieldsByModule.clear();
+		buildFieldsPayload = "";
 		afterTypingHookIds.resize(0);
 		onGenerateHookIds.resize(0);
 	}
@@ -363,5 +365,37 @@ class MacroState {
 		final m = StringTools.trim(modulePath);
 		if (m.length == 0) return;
 		buildFieldsByModule.remove(m);
+	}
+
+	/**
+		Stage4 bring-up: provide a minimal `Context.getBuildFields()` payload to the macro host.
+
+		Why
+		- Upstream build macros often start with `Context.getBuildFields()` and then either:
+		  - return the same fields (possibly modified), or
+		  - push new fields and return the extended list.
+		- Our earliest Stage4 `@:build(...)` rung transported *only new members* as raw Haxe snippets via
+		  `compiler.emitBuildFields`, which is enough for "add a field" demos but breaks many upstream
+		  macros that expect `getBuildFields` to exist.
+
+		What
+		- This stores a JSON payload describing the fields of the class currently being built.
+		- The macro host retrieves it via reverse RPC `context.getBuildFields`.
+
+		How
+		- Stored as a length-prefixed fragment list (so the macro host can parse it with `Protocol.kvParse`):
+		  - `c=<count>`
+		  - then `n<i>`/`k<i>`/`s<i>`/`v<i>` fragments for each field.
+
+		Gotchas
+		- This payload does **not** include full expression bodies or types yet.
+		  Stage4 currently uses it to support macros that return *new* fields (delta emission).
+	**/
+	public static function setBuildFieldsPayload(payload:String):Void {
+		buildFieldsPayload = payload == null ? "" : payload;
+	}
+
+	public static function getBuildFieldsPayload():String {
+		return buildFieldsPayload == null ? "" : buildFieldsPayload;
 	}
 }
