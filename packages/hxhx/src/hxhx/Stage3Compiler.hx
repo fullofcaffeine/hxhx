@@ -183,28 +183,33 @@ class Stage3Compiler {
 		return exe;
 	}
 
-	public static function run(args:Array<String>):Int {
-		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
+		public static function run(args:Array<String>):Int {
+			// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 			var outDir = "";
 			var typeOnly = false;
 			var emitFullBodies = false;
+			var noEmit = false;
 			final rest = new Array<String>();
 			var i = 0;
-		while (i < args.length) {
-			final a = args[i];
-			switch (a) {
+			while (i < args.length) {
+				final a = args[i];
+				switch (a) {
 				case "--hxhx-out":
 					if (i + 1 >= args.length) return error("missing value after --hxhx-out");
 					outDir = args[i + 1];
 					i += 2;
-				case "--hxhx-type-only":
-					// Diagnostic bring-up mode: resolve + type the module graph, but don't emit/build.
-					typeOnly = true;
-					i += 1;
-				case "--hxhx-emit-full-bodies":
-					// Bring-up rung: emit best-effort OCaml for full statement bodies (not just first return).
-					emitFullBodies = true;
-					i += 1;
+					case "--hxhx-type-only":
+						// Diagnostic bring-up mode: resolve + type the module graph, but don't emit/build.
+						typeOnly = true;
+						i += 1;
+					case "--hxhx-no-emit":
+						// Diagnostic rung: execute macros + type the module graph, but skip OCaml emission/build.
+						noEmit = true;
+						i += 1;
+					case "--hxhx-emit-full-bodies":
+						// Bring-up rung: emit best-effort OCaml for full statement bodies (not just first return).
+						emitFullBodies = true;
+						i += 1;
 				case _:
 					rest.push(a);
 					i += 1;
@@ -255,8 +260,26 @@ class Stage3Compiler {
 				final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
 				final libs = new Array<String>();
 				for (lib in parsed.libs) for (p in resolveHaxelibPaths(lib)) libs.push(absFromCwd(cwd, p));
-				base.concat(libs);
-		}
+				final outAll = base.concat(libs);
+
+				// Avoid passing an explicit std classpath to the macro host build.
+				//
+				// Why
+				// - The macro host is compiled with stage0 `haxe`, which already has its own std.
+				// - Adding `HAXE_STD_PATH` to the classpath can change resolution order and shadow our
+				//   macro-host overrides (e.g. `haxe.macro.Context`), causing compile failures.
+				final stdCp = trim(Sys.getEnv("HAXE_STD_PATH"));
+				if (stdCp.length > 0) {
+					final stdAbs = Path.normalize(stdCp);
+					final filtered = new Array<String>();
+					for (cp in outAll) {
+						if (Path.normalize(cp) != stdAbs) filtered.push(cp);
+					}
+					filtered;
+				} else {
+					outAll;
+				}
+			}
 
 		if (!typeOnly && parsed.macros.length > 0) {
 			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
@@ -457,17 +480,26 @@ class Stage3Compiler {
 		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
 
-		// Bring-up diagnostics: dump HXHX_* defines again after hooks.
-		for (name in hxhx.macro.MacroState.listDefineNames()) {
-			if (StringTools.startsWith(name, "HXHX_")) {
-				Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
+			for (name in hxhx.macro.MacroState.listDefineNames()) {
+				if (StringTools.startsWith(name, "HXHX_")) {
+					Sys.println("macro_define2[" + name + "]=" + hxhx.macro.MacroState.definedValue(name));
+				}
 			}
-		}
 
-		final exe = try EmitterStage.emitToDir(expanded, outAbs, emitFullBodies) catch (e:Dynamic) {
-			closeMacroSession();
-			return error("emit failed: " + Std.string(e));
-		}
+			// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
+			// coverage without being blocked by the bootstrap emitter/codegen.
+			if (noEmit) {
+				closeMacroSession();
+				Sys.println("typed_modules=" + typedModules.length);
+				Sys.println("stage3=no_emit_ok");
+				return 0;
+			}
+
+			final exe = try EmitterStage.emitToDir(expanded, outAbs, emitFullBodies) catch (e:Dynamic) {
+				closeMacroSession();
+				return error("emit failed: " + Std.string(e));
+			}
 
 		Sys.println("stage3=ok");
 		Sys.println("outDir=" + outAbs);
