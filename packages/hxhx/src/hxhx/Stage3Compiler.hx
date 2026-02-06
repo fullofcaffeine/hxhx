@@ -44,10 +44,39 @@ class Stage3Compiler {
 		return 2;
 	}
 
-	static function formatException(e:Dynamic):String {
-		if (Std.isOfType(e, String)) return cast e;
-		return Std.string(e);
-	}
+		static function formatException(e:Dynamic):String {
+			if (Std.isOfType(e, String)) return cast e;
+
+			try {
+				// Special-case structured errors we throw from the bootstrap pipeline.
+				// On the OCaml target, `Std.string(object)` can degrade to `<object>`,
+				// so we format these explicitly.
+				if (Std.isOfType(e, TyperError)) {
+					final te:TyperError = cast e;
+					// Use accessors to avoid OCaml `-opaque` record-label issues.
+					final p = te.getPos();
+					final line = p == null ? 0 : p.getLine();
+					final col = p == null ? 0 : p.getColumn();
+					return te.getFilePath() + ":" + line + ":" + col + ": " + te.getMessage();
+				}
+
+				final msg = Std.string(e);
+				final debug = Sys.getEnv("HXHX_DEBUG_EXN");
+				if (debug == "1" || debug == "true" || debug == "yes") {
+					// Avoid `haxe.CallStack` on OCaml (it can create dune dependency cycles).
+					var details = "typeof=" + Std.string(Type.typeof(e));
+					final cls = Type.getClass(e);
+					if (cls != null) details += ";class=" + Type.getClassName(cls);
+					final fields = Reflect.fields(e);
+					if (fields != null && fields.length > 0) details += ";fields=" + fields.join(",");
+					if (Reflect.hasField(e, "message")) details += ";message=" + Std.string(Reflect.field(e, "message"));
+					return msg + " :: " + details;
+				}
+				return msg;
+			} catch (_:Dynamic) {
+				return Std.string(e);
+			}
+		}
 
 	static function haxelibBin():String {
 		final v = Sys.getEnv("HAXELIB_BIN");

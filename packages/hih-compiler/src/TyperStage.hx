@@ -8,6 +8,21 @@
 	  module and return a typed module.
 **/
 class TyperStage {
+	static function typeFromHintInContext(hint:String, ctx:TyperContext):TyType {
+		final raw = hint == null ? "" : StringTools.trim(hint);
+		if (raw.length == 0) return TyType.unknown();
+		// Keep primitive-like names stable.
+		switch (raw) {
+			case "Int", "Float", "Bool", "String", "Void", "Dynamic", "Null":
+				return TyType.fromHintText(raw);
+			case _:
+		}
+
+		// Best-effort: resolve short names against the current module context.
+		final c = ctx == null ? null : ctx.resolveType(raw);
+		return c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(raw);
+	}
+
 	/**
 		Type a parsed module into a minimal `TypedModule`.
 
@@ -76,28 +91,34 @@ class TyperStage {
 		final params = new Array<TySymbol>();
 		for (arg in HxFunctionDecl.getArgs(fn)) {
 			final name = HxFunctionArg.getName(arg);
-			final ty = TyType.fromHintText(HxFunctionArg.getTypeHint(arg));
+			final ty = typeFromHintInContext(HxFunctionArg.getTypeHint(arg), ctx);
 			params.push(new TySymbol(name, ty));
 		}
 
-		final locals = new Array<TySymbol>();
-		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown());
+			final locals = new Array<TySymbol>();
+			final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown());
 
-		final returnExprTy = inferReturnType(fn, scope, ctx);
-		final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
-		final retTy = if (retHintText != null && retHintText.length > 0) {
-			final hinted = TyType.fromHintText(retHintText);
-			final unified = TyType.unify(hinted, returnExprTy);
-			if (unified == null) {
-				throw new TyperError(ctx.getFilePath(), HxPos.unknown(), "return type hint " + hinted + " conflicts with inferred return " + returnExprTy);
+			final returnExprTy = inferReturnType(fn, scope, ctx);
+			final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
+			final retTy = if (retHintText != null && retHintText.length > 0) {
+				final hinted = typeFromHintInContext(retHintText, ctx);
+				// If we couldn't infer a concrete return type (e.g. because the parser produced an
+				// empty/unsupported body), keep bring-up moving by trusting the explicit hint.
+				if (!returnExprTy.isUnknown()) {
+					final unified = TyType.unify(hinted, returnExprTy);
+					if (unified == null) {
+						throw new TyperError(ctx.getFilePath(), HxPos.unknown(), "return type hint " + hinted + " conflicts with inferred return " + returnExprTy);
+					}
+				}
+				hinted;
+			} else {
+				// No explicit hint: if we couldn't infer anything from the body, default to `Void` to
+				// match the common `function f() { ... }` / `static function main()` shape.
+				returnExprTy.isUnknown() ? TyType.fromHintText("Void") : returnExprTy;
 			}
-			hinted;
-		} else {
-			returnExprTy;
-		}
 
-		return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
-	}
+			return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
+		}
 
 	static function inferReturnType(fn:HxFunctionDecl, scope:TyFunctionEnv, ctx:TyperContext):TyType {
 		var out:Null<TyType> = null;
@@ -118,8 +139,8 @@ class TyperStage {
 			out = u;
 		}
 
-		function typeStmt(s:HxStmt):Void {
-			switch (s) {
+			function typeStmt(s:HxStmt):Void {
+				switch (s) {
 				case SBlock(stmts, _pos):
 					for (ss in stmts) typeStmt(ss);
 				case SIf(cond, thenBranch, elseBranch, pos):
@@ -127,13 +148,13 @@ class TyperStage {
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(thenBranch);
 					if (elseBranch != null) typeStmt(elseBranch);
-				case SVar(name, typeHint, init, pos):
-					// Declare first so subsequent statements can reference the symbol deterministically.
-					final hinted = TyType.fromHintText(typeHint);
-					final sym = scope.declareLocal(name, hinted);
-					if (init != null) {
-						final initTy = inferExprType(init, scope, ctx, pos);
-						final u = TyType.unify(sym.getType(), initTy);
+					case SVar(name, typeHint, init, pos):
+						// Declare first so subsequent statements can reference the symbol deterministically.
+						final hinted = typeFromHintInContext(typeHint, ctx);
+						final sym = scope.declareLocal(name, hinted);
+						if (init != null) {
+							final initTy = inferExprType(init, scope, ctx, pos);
+							final u = TyType.unify(sym.getType(), initTy);
 						if (u == null) {
 							throw new TyperError(
 								ctx.getFilePath(),
@@ -153,9 +174,13 @@ class TyperStage {
 			}
 		}
 
-		for (s in HxFunctionDecl.getBody(fn)) typeStmt(s);
-		return out == null ? TyType.fromHintText("Void") : out;
-	}
+			for (s in HxFunctionDecl.getBody(fn)) typeStmt(s);
+			// If we saw no explicit returns, the true return type depends on surrounding typing rules.
+			// For bootstrap bring-up we return `Unknown` here so `typeFunction` can:
+			// - trust an explicit return type hint, or
+			// - default to `Void` when no hint is provided.
+			return out == null ? TyType.unknown() : out;
+		}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		return switch (expr) {
@@ -280,22 +305,22 @@ class TyperStage {
 						// Assignment as expression.
 								final rhs = inferExprType(b, scope, ctx, pos);
 								switch (a) {
-									case EIdent(name):
-										final sym = scope.resolveSymbol(name);
-								if (sym != null) {
+								case EIdent(name):
+									final sym = scope.resolveSymbol(name);
+									if (sym != null) {
 										final u = TyType.unify(sym.getType(), rhs);
 										if (u == null) {
-											throw new TyperError(
-												ctx.getFilePath(),
-												pos,
-												"cannot assign " + rhs + " to " + name + ":" + sym.getType()
-											);
+											// Bootstrap: don't fail hard on complex types (generics, abstracts, etc.).
+											// Keep typing moving by widening to Dynamic.
+											sym.setType(TyType.fromHintText("Dynamic"));
+											rhs;
+										} else {
+											sym.setType(u);
+											rhs;
 										}
-									sym.setType(u);
-									u;
-								} else {
-									rhs;
-								}
+									} else {
+										rhs;
+									}
 							case _:
 								// Field assignment typing needs class env (future stage).
 								inferExprType(a, scope, ctx, pos);

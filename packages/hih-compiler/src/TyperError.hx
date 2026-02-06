@@ -33,5 +33,17 @@ class TyperError {
 		// `file:line:col: message`
 		return filePath + ":" + pos.line + ":" + pos.column + ": " + message;
 	}
-}
 
+	/**
+		Accessors for cross-module error formatting.
+
+		Why
+		- The OCaml build uses dune's `-opaque`, which can make direct field access
+		  across compilation units fragile during bootstrap.
+		- `hxhx` (the Stage 3 runner) wants to detect and format `TyperError`
+		  instances without depending on record labels.
+	**/
+	public function getFilePath():String return filePath;
+	public function getPos():HxPos return pos;
+	public function getMessage():String return message;
+}
