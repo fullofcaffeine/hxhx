@@ -327,6 +327,10 @@ class TyperStage {
 					final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
 					inferExprType(body, nested, ctx, pos);
 					TyType.fromHintText("Dynamic");
+				case ETryCatchRaw(_raw):
+					// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
+					// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.
+					TyType.fromHintText("Dynamic");
 				case ENew(_typePath, args):
 					for (a in args) inferExprType(a, scope, ctx, pos);
 					final c = ctx.resolveType(_typePath);

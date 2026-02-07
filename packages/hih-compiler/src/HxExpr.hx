@@ -76,6 +76,30 @@
 	ELambda(args:Array<String>, body:HxExpr);
 
 	/**
+		Try/catch expression (Stage 3 expansion): `try { ... } catch(e:Dynamic) { ... }`.
+
+		Why
+		- Upstream Haxe code and tests often use `try` as an *expression* (not only as a statement),
+		  typically to parse/validate something and fall back to a default value.
+		- Gate2 diagnostics currently hit this in the upstream sourcemaps fixture where a `try` is
+		  used as a variable initializer.
+
+		What
+		- Stores a canonical, token-rendered string of the entire expression.
+
+		Why store raw text (bootstrap constraint)
+		- A fully-structured try/catch expression would naturally contain statement lists
+		  (`HxStmt`), but `HxStmt` already references `HxExpr`. Making `HxExpr` reference
+		  `HxStmt` creates an OCaml module dependency cycle in the Stage3 bootstrap output.
+
+		How (bring-up semantics)
+		- Stage 3 typer treats this expression as `Dynamic`.
+		- Stage 3 emitter lowers it to a conservative placeholder (`Obj.magic`) for now.
+		- Correct semantics (exception mapping + block-expression values) are Stage 4+ work.
+	**/
+	ETryCatchRaw(raw:String);
+
+	/**
 		Constructor call: `new TypePath(args...)`.
 
 		Why

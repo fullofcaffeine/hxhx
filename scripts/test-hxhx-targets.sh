@@ -348,6 +348,26 @@ echo "$out" | grep -q "^OK$"
 echo "$out" | grep -vq "^BAD$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: parses try/catch expression initializer"
+tmptry="$tmpdir/try_expr"
+mkdir -p "$tmptry/src"
+cat >"$tmptry/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    // Gate2 regression: `try` is commonly used as an *expression* in variable initializers.
+    // Stage3 should parse this shape without producing `EUnsupported("try")`.
+    var x = try {
+      1;
+    } catch (e:Dynamic) {
+      2;
+    };
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --std "$tmpdir/fake_std" -cp "$tmptry/src" -main Main --hxhx-out "$tmptry/out")"
+echo "$out" | grep -q "^unsupported_exprs_total=0$"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
+
 echo "== Stage3 bring-up: lazy type-driven module loading (same-package type)"
 tmplazy="$tmpdir/lazy_module_loading"
 mkdir -p "$tmplazy/src/p"

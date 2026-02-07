@@ -112,6 +112,8 @@ class Stage3Compiler {
 					c;
 				case ELambda(_args, body):
 					countUnsupportedExprsInExpr(body);
+				case ETryCatchRaw(_raw):
+					0;
 				case ENew(_typePath, args):
 					var c = 0;
 					for (a in args) c += countUnsupportedExprsInExpr(a);
@@ -152,6 +154,7 @@ class Stage3Compiler {
 					for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
 				case ELambda(_args, body):
 					collectUnsupportedExprRawInExpr(body, out, max);
+				case ETryCatchRaw(_raw):
 				case ENew(_typePath, args):
 					for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
 				case EUnop(_op, expr):

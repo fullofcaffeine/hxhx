@@ -315,6 +315,16 @@ class EmitterStage {
 						//   is sugar for nested single-arg functions.
 						final ocamlArgs = args.map(ocamlValueIdent).join(" ");
 						"(fun " + (ocamlArgs.length == 0 ? "_" : ocamlArgs) + " -> " + exprToOcaml(body, arityByIdent, tyByIdent) + ")";
+					case ETryCatchRaw(_raw):
+						// Stage 3 bring-up: avoid committing to an exception model yet.
+						//
+						// Correct semantics depend on:
+						// - which exceptions are thrown by the runtime and user code,
+						// - how we map Haxe `catch(e:Dynamic)` to OCaml exceptions,
+						// - and how block-expression values are represented.
+						//
+						// For now, keep the emitted OCaml type-correct by returning a polymorphic placeholder.
+						"(Obj.magic 0)";
 					case EField(EIdent("Math"), "NaN"):
 						"nan";
 				case EField(EIdent("Math"), "POSITIVE_INFINITY"):

@@ -735,6 +735,21 @@
 				}
 			}
 
+			// Stage 3 expansion: `try { ... } catch(...) { ... }` as an *expression*.
+			//
+			// Why
+			// - Upstream code uses `try` in expression position (e.g. `var x = try { ... } catch ...;`).
+			// - Treating `try` as unsupported causes the parser to drift early in otherwise parseable
+			//   bodies, which then shows up as noisy `unsupported_exprs_total` in Gate2 diagnostics.
+			//
+			// Bring-up scope
+			// - Only supports block-form try bodies and catch bodies:
+			//     `try { <stmts> } catch(e:Dynamic) { <stmts> }`
+			// - Does not yet support `try expr catch ...` or multiple catches with advanced patterns.
+			if (!stop() && cur.kind.match(TKeyword(KTry))) {
+				return parseTryCatchExpr(stop);
+			}
+
 			var e = parseBinaryExpr(1, stop);
 			// Ternary conditional: `cond ? thenExpr : elseExpr`
 			if (!stop() && acceptOtherChar("?")) {
@@ -751,8 +766,130 @@
 					ETernary(e, thenExpr, elseExpr);
 			}
 		}
-		return e;
-	}
+			return e;
+		}
+
+		function parseTryCatchExpr(stop:()->Bool):HxExpr {
+			// `try { ... } catch(name[:Type]) { ... } ...`
+			//
+			// IMPORTANT (OCaml bootstrap constraints)
+			// - We intentionally do **not** parse try/catch blocks into `HxStmt` lists yet.
+			// - Having `HxExpr` reference `HxStmt` creates an OCaml module dependency cycle
+			//   in the Stage3 bootstrap snapshot (`HxStmt` already references `HxExpr`).
+			//
+			// Instead, we capture a canonical, token-based rendering of the entire expression.
+			// This keeps Stage3 parsing deterministic and avoids `EUnsupported("try")` drift in Gate2
+			// diagnostics, while deferring real semantics to later stages.
+
+			if (!cur.kind.match(TKeyword(KTry))) return EUnsupported("try");
+
+			final raw = new StringBuf();
+
+			inline function tokText():String {
+				return switch (cur.kind) {
+					case TIdent(name):
+						name;
+					case TKeyword(k):
+						keywordText(k);
+					case TString(s):
+						"\"" + s + "\"";
+					case TInt(v):
+						Std.string(v);
+					case TFloat(v):
+						Std.string(v);
+					case TLParen:
+						"(";
+					case TRParen:
+						")";
+					case TLBrace:
+						"{";
+					case TRBrace:
+						"}";
+					case TSemicolon:
+						";";
+					case TColon:
+						":";
+					case TDot:
+						".";
+					case TComma:
+						",";
+					case TOther(c):
+						String.fromCharCode(c);
+					case TEof:
+						"";
+				};
+			}
+
+			function consumeBalancedBraces():Void {
+				expect(TLBrace, "'{'");
+				raw.add("{");
+				bump();
+				var depth = 1;
+				while (depth > 0 && !stop()) {
+					switch (cur.kind) {
+						case TEof:
+							break;
+						case TLBrace:
+							raw.add("{");
+							bump();
+							depth++;
+						case TRBrace:
+							raw.add("}");
+							bump();
+							depth--;
+						case _:
+							raw.add(tokText());
+							bump();
+					}
+				}
+			}
+
+			function consumeBalancedParens():Void {
+				expect(TLParen, "'('");
+				raw.add("(");
+				bump();
+				var depth = 1;
+				while (depth > 0 && !stop()) {
+					switch (cur.kind) {
+						case TEof:
+							break;
+						case TLParen:
+							raw.add("(");
+							bump();
+							depth++;
+						case TRParen:
+							raw.add(")");
+							bump();
+							depth--;
+						case _:
+							raw.add(tokText());
+							bump();
+					}
+				}
+			}
+
+			// `try`
+			raw.add("try");
+			bump();
+
+			// `{ ... }`
+			if (!cur.kind.match(TLBrace)) return EUnsupported("try_missing_block");
+			consumeBalancedBraces();
+
+			// One or more `catch (...) { ... }`.
+			while (!stop() && cur.kind.match(TKeyword(KCatch))) {
+				raw.add("catch");
+				bump();
+				consumeBalancedParens();
+				if (!cur.kind.match(TLBrace)) {
+					// Bring-up: malformed catch; stop consuming so outer parsing can recover.
+					break;
+				}
+				consumeBalancedBraces();
+			}
+
+			return ETryCatchRaw(raw.toString());
+		}
 
 	function parseReturnStmt(pos:HxPos):HxStmt {
 		// `return;` or `return <expr>;`

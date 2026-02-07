@@ -261,16 +261,21 @@ class ExprMacroExpander {
 				final rl = rewriteExpr(left, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final rr = rewriteExpr(right, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				(rl != left || rr != right) ? EBinop(op, rl, rr) : e;
-			case ETernary(cond, thenExpr, elseExpr):
-				final rc = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final rt = rewriteExpr(thenExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				final re = rewriteExpr(elseExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-				(rc != cond || rt != thenExpr || re != elseExpr) ? ETernary(rc, rt, re) : e;
-				case EAnon(fieldNames, fieldValues):
-					var changed = false;
-					final outNames = new Array<String>();
-					final outValues = new Array<HxExpr>();
-					for (i in 0...fieldValues.length) {
+				case ETernary(cond, thenExpr, elseExpr):
+					final rc = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final rt = rewriteExpr(thenExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final re = rewriteExpr(elseExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					(rc != cond || rt != thenExpr || re != elseExpr) ? ETernary(rc, rt, re) : e;
+				case ETryCatchRaw(_raw):
+					// Bring-up: expression macro expansion currently only rewrites `HxExpr` nodes.
+					// `ETryCatchRaw` is a token-rendered placeholder; keep it unchanged for now.
+					// Keep this node unchanged for now.
+					e;
+					case EAnon(fieldNames, fieldValues):
+						var changed = false;
+						final outNames = new Array<String>();
+						final outValues = new Array<HxExpr>();
+						for (i in 0...fieldValues.length) {
 					final v = fieldValues[i];
 					final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 					if (rv != v) changed = true;
@@ -309,6 +314,7 @@ class ExprMacroExpander {
 				case EFloat(_): "Float";
 				case EString(_): "String";
 				case ELambda(_, _): "Lambda";
+				case ETryCatchRaw(_): "TryCatch";
 				case EIdent(_): "Ident";
 				case EThis: "This";
 				case ESuper: "Super";
