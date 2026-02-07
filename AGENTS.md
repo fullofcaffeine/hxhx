@@ -141,6 +141,7 @@ from our own Haxe sources as **bootstrap snapshots**.
 Current bootstrap snapshot locations:
 
 - `tools/hxhx-macro-host/bootstrap_out/` — generated OCaml sources + dune files for `hxhx-macro-host`.
+- `packages/hxhx/bootstrap_out/` — generated OCaml sources + dune files for `hxhx` (stage0-free build by default).
 
 Rules:
 
