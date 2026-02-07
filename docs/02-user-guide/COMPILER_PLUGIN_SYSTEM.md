@@ -147,3 +147,28 @@ Tests
 - `scripts/test-hxhx-targets.sh` exercises:
   - handshake + stub APIs (`--hxhx-macro-selftest`)
   - fixture macro libraries that behave like compiler plugins (hooks + defines + classpath injection + emission)
+
+## `--library` and `--target` in `hxhx` (native mode)
+
+`hxhx` currently has **two** relevant “surfaces”:
+
+1) **Stage0 shim surface** (`hxhx --target ocaml ...`)
+   - `hxhx` forwards most flags to a stage0 `haxe` compiler (via `HAXE_BIN`) and relies on upstream for:
+     - typing
+     - macro execution
+   - `--library <lib>` is resolved by the stage0 toolchain (haxelib/lix), and any library-provided macros run in
+     the upstream macro runtime.
+   - This surface exists for compatibility while the native stages mature.
+
+2) **Bring-up native surface** (`hxhx --hxhx-stage3 ...` / later Stage4)
+   - `hxhx` resolves and types the program itself (bootstrap typer) and executes macros via the Stage4 macro host.
+   - `--library <lib>` is resolved by:
+     - preferring `haxe_libraries/<lib>.hxml` (lix-style), walking up from the current working directory, else
+     - falling back to `haxelib path <lib>`.
+   - Library-provided `--macro ...` initializers are **opt-in** in bring-up (`HXHX_RUN_HAXELIB_MACROS=1`) so we
+     can keep early CI deterministic and avoid surprising macro side effects.
+
+Practical implication for “plugin system” work:
+
+- When we say “plugin loader”, we mean the **bring-up native surface**: macro libraries register hooks and the
+  compiler invokes them over the macro-host ABI (no stage0 delegation).

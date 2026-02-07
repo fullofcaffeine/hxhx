@@ -1,0 +1,5 @@
+-cp src
+-main Main
+--library reflaxe.ocaml
+--macro hxhxmacros.PluginFixtureMacros.init()
+--no-output

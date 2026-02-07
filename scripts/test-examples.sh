@@ -37,7 +37,11 @@ check_findlib_packages() {
 
 build_hxhx_if_needed() {
   # If any example declares it needs hxhx, build it once and export HXHX_EXE.
-  if ! find examples -maxdepth 2 -type f -name "USE_HXHX" -print -quit | grep -q .; then
+  #
+  # Markers:
+  # - USE_HXHX: run the example via `hxhx --target ocaml` (stage0 shim path).
+  # - USE_HXHX_STAGE3: run the example via `hxhx --hxhx-stage3` (bring-up path).
+  if ! find examples -maxdepth 2 -type f \( -name "USE_HXHX" -o -name "USE_HXHX_STAGE3" \) -print -quit | grep -q .; then
     return 0
   fi
 
@@ -52,9 +56,52 @@ build_hxhx_if_needed() {
     exit 1
   fi
   export HXHX_EXE
+
+  # If any example needs Stage3, also build the macro host once (stage0-free via bootstrap snapshot)
+  # and export HXHX_MACRO_HOST_EXE so `--macro ...` can run.
+  if find examples -maxdepth 2 -type f -name "USE_HXHX_STAGE3" -print -quit | grep -q .; then
+    if ! command -v ocamlopt >/dev/null 2>&1; then
+      echo "Skipping Stage3 examples: ocamlopt not found on PATH."
+      return 0
+    fi
+
+    echo "== Building hxhx macro host (for USE_HXHX_STAGE3 examples)"
+    HXHX_MACRO_HOST_EXE="$(bash scripts/hxhx/build-hxhx-macro-host.sh | tail -n 1)"
+    if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then
+      echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
+      exit 1
+    fi
+    export HXHX_MACRO_HOST_EXE
+  fi
 }
 
 build_hxhx_if_needed
+
+apply_example_env() {
+  local env_file="EXAMPLE_ENV"
+  [ -f "$env_file" ] || return 0
+
+  # Parse `KEY=value` lines.
+  #
+  # Notes
+  # - Keep this minimal and deterministic (do not `source` arbitrary shell).
+  # - Values are interpreted relative to the example directory to keep paths portable.
+  while IFS= read -r line; do
+    line="${line%%#*}"
+    line="$(echo "$line" | xargs || true)"
+    [ -n "$line" ] || continue
+    case "$line" in
+      *=*)
+        local k="${line%%=*}"
+        local v="${line#*=}"
+        export "${k}=${v}"
+        ;;
+      *)
+        echo "Ignoring malformed EXAMPLE_ENV line in $(pwd): ${line}" >&2
+        ;;
+    esac
+  done < "$env_file"
+}
 
 for dir in examples/*/; do
   [ -f "${dir}build.hxml" ] || continue
@@ -83,21 +130,36 @@ for dir in examples/*/; do
     cd "$dir"
     rm -rf out
     mkdir -p out
-    if [ -f "USE_HXHX" ]; then
+
+    apply_example_env
+
+    exe=""
+    if [ -f "USE_HXHX_STAGE3" ]; then
+      if ! command -v ocamlopt >/dev/null 2>&1; then
+        echo "Skipping Stage3 example (missing ocamlopt): ${dir}"
+        exit 0
+      fi
+      # Stage3 emits `out/out.exe` directly (no dune project).
+      #
+      # Use `--hxhx-no-run` so we can capture runtime output deterministically below.
+      HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out build.hxml -D ocaml_build=native
+      exe="out/out.exe"
+    elif [ -f "USE_HXHX" ]; then
       HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml build.hxml -D ocaml_build=native
+      exe="out/_build/default/out.exe"
     else
       "$HAXE_BIN" build.hxml -D ocaml_build=native
+      exe="out/_build/default/out.exe"
     fi
+
+    if [ ! -f "$exe" ]; then
+      echo "Missing built executable: ${dir}${exe}" >&2
+      exit 1
+    fi
+
+    tmp="$(mktemp)"
+    HX_TEST_ENV=ok "./$exe" > "$tmp"
+    diff -u "expected.stdout" "$tmp"
+    rm -f "$tmp"
   )
-
-  exe="${dir}out/_build/default/out.exe"
-  if [ ! -f "$exe" ]; then
-    echo "Missing built executable: $exe" >&2
-    exit 1
-  fi
-
-  tmp="$(mktemp)"
-  HX_TEST_ENV=ok "$exe" > "$tmp"
-  diff -u "${dir}expected.stdout" "$tmp"
-  rm -f "$tmp"
 done

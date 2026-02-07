@@ -1,0 +1,3 @@
+# Environment variables applied during build+run for this example.
+# Values are interpreted relative to the example directory.
+HXHX_PLUGIN_FIXTURE_CP=plugin_cp
