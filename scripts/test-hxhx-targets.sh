@@ -30,7 +30,7 @@ fi
 # freshly built host to a stable temp path so the rest of this script remains
 # deterministic.
 macrohost_tmp="$(mktemp -d)"
-trap 'rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
+trap 'rm -f "${mini_hxml:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
 HXHX_MACRO_HOST_EXE_STABLE="$macrohost_tmp/hxhx-macro-host"
 cp "$HXHX_MACRO_HOST_EXE" "$HXHX_MACRO_HOST_EXE_STABLE"
 chmod +x "$HXHX_MACRO_HOST_EXE_STABLE"
@@ -510,6 +510,44 @@ test -f "$plugin_out_lib/HxHxPluginFixtureGen.ml"
 echo "$out" | grep -q "^plugin_cp=ok$"
 echo "$out" | grep -q "^main=ok$"
 echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: ingests haxelib -D defines (haxe_libraries/*.hxml)"
+tmpmini="$tmpdir/haxelib_define_fixture"
+mini_src="$tmpmini/src"
+mkdir -p "$mini_src"
+
+# Lix-managed projects encode `haxelib path` output under `haxe_libraries/<lib>.hxml`.
+# Stage3 resolves that file directly (no process spawn) when present.
+mini_hxml="$ROOT/haxe_libraries/hxhx_mini_lib.hxml"
+cat >"$mini_hxml" <<'HXML'
+# Internal test fixture for Stage3 `--library` resolution.
+-D hxhx_mini=1
+HXML
+
+cat >"$mini_src/Ok.hx" <<'HX'
+class Ok {}
+HX
+cat >"$mini_src/Main.hx" <<'HX'
+#if hxhx_mini
+import Ok;
+#else
+import DoesNotExist;
+#end
+
+class Main {
+  static function main() {}
+}
+HX
+mini_out="$tmpmini/out"
+out="$(
+  HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
+  "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit \
+    -cp "$mini_src" \
+    --library hxhx_mini_lib \
+    -main Main \
+    --hxhx-out "$mini_out"
+)"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage3 bring-up: expression macro expansion replaces call sites"
 tmpexpr="$tmpdir/expr_macro"

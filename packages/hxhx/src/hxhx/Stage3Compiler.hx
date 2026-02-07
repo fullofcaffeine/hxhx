@@ -254,7 +254,25 @@ class Stage3Compiler {
 		return (v == null || v.length == 0) ? "haxelib" : v;
 	}
 
-	static function resolveHaxelibSpec(lib:String):HaxelibSpec {
+	static function resolveHaxelibSpec(lib:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
+		if (depth > 25) {
+			return throw "haxelib resolution depth exceeded while resolving: " + lib;
+		}
+		if (seen.exists(lib)) {
+			// Dependency cycles can exist in dev setups; treat them as already-merged.
+			return { classPaths: [], defines: [], macros: [], unknownArgs: [] };
+		}
+		seen.set(lib, true);
+
+		final hxmlPath = findHaxeLibrariesHxml(lib, cwd);
+		if (hxmlPath.length > 0) {
+			return resolveHaxelibSpecFromHxml(hxmlPath, cwd, seen, depth);
+		}
+
+		return resolveHaxelibSpecViaProcess(lib);
+	}
+
+	static function resolveHaxelibSpecViaProcess(lib:String):HaxelibSpec {
 		final classPaths = new Array<String>();
 		final defines = new Array<String>();
 		final macros = new Array<String>();
@@ -303,6 +321,70 @@ class Stage3Compiler {
 			return throw "haxelib path " + lib + " failed with exit code " + code;
 		}
 		return { classPaths: classPaths, defines: defines, macros: macros, unknownArgs: unknownArgs };
+	}
+
+	static function resolveHaxelibSpecFromHxml(hxmlPath:String, cwd:String, seen:Map<String, Bool>, depth:Int):HaxelibSpec {
+		final args = Hxml.parseFile(hxmlPath);
+		if (args == null) return throw "failed to parse haxelib hxml: " + hxmlPath;
+
+		final classPaths = new Array<String>();
+		final defines = new Array<String>();
+		final macros = new Array<String>();
+		final unknownArgs = new Array<String>();
+
+		inline function pushUnique(a:Array<String>, v:String):Void {
+			if (v == null || v.length == 0) return;
+			if (a.indexOf(v) == -1) a.push(v);
+		}
+
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			switch (a) {
+				case "-cp" | "-p" | "--class-path":
+					if (i + 1 < args.length) pushUnique(classPaths, args[i + 1]);
+					i += 2;
+				case "-D":
+					if (i + 1 < args.length) pushUnique(defines, args[i + 1]);
+					i += 2;
+				case "--macro":
+					if (i + 1 < args.length) pushUnique(macros, args[i + 1]);
+					i += 2;
+				case "-lib" | "--library":
+					if (i + 1 >= args.length) return throw "malformed haxelib hxml (missing value after " + a + "): " + hxmlPath;
+					final dep = args[i + 1];
+					final depSpec = resolveHaxelibSpec(dep, cwd, seen, depth + 1);
+					for (cp in depSpec.classPaths) pushUnique(classPaths, cp);
+					for (d in depSpec.defines) pushUnique(defines, d);
+					for (m in depSpec.macros) pushUnique(macros, m);
+					for (u in depSpec.unknownArgs) pushUnique(unknownArgs, u);
+					i += 2;
+				case _:
+					// Keep unknown flags so bring-up runners can introspect what's left to implement.
+					if (a != null && a.length > 0 && StringTools.startsWith(a, "-")) pushUnique(unknownArgs, a);
+					i += 1;
+			}
+		}
+
+		return { classPaths: classPaths, defines: defines, macros: macros, unknownArgs: unknownArgs };
+	}
+
+	static function findHaxeLibrariesHxml(lib:String, cwd:String):String {
+		// Lix-managed projects store resolved haxelib specs under `haxe_libraries/<lib>.hxml`.
+		//
+		// Why do this first
+		// - In a lix repo, `haxelib path <lib>` may be a wrapper that fails unless the `.hxml`
+		//   file exists. Parsing the `.hxml` directly keeps Stage3 non-delegating and avoids
+		//   toolchain variance.
+		var dir = (cwd == null || cwd.length == 0) ? "." : cwd;
+		for (_ in 0...10) {
+			final candidate = Path.normalize(Path.join([dir, "haxe_libraries", lib + ".hxml"]));
+			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) return candidate;
+			final parent = Path.normalize(Path.join([dir, ".."]));
+			if (parent == dir) break;
+			dir = parent;
+		}
+		return "";
 	}
 
 	static function absFromCwd(cwd:String, path:String):String {
@@ -612,8 +694,9 @@ class Stage3Compiler {
 			// Macro state exists even in non-macro runs; it is a no-op unless the macro host calls back.
 			hxhx.macro.MacroState.reset();
 			final libsResolved = {
+				final seen = new Map<String, Bool>();
 				final out = new Array<HaxelibSpec>();
-				for (lib in parsed.libs) out.push(resolveHaxelibSpec(lib));
+				for (lib in parsed.libs) out.push(resolveHaxelibSpec(lib, cwd, seen, 0));
 				out;
 			}
 			final libDefines = {

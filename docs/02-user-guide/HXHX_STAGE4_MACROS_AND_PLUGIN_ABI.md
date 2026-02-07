@@ -210,6 +210,9 @@ See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1` for the registry semantics. 
 In the current Stage3 bring-up implementation, `hxhx --hxhx-stage3` resolves `--library` / `-lib` by calling
 `haxelib path <name>` and adding the returned directories to the classpath.
 
+In lix-managed repos, we also support resolving via `haxe_libraries/<name>.hxml` directly (preferred when present),
+so Stage3 stays non-delegating and does not depend on the behavior of a `haxelib` wrapper.
+
 This is intentionally conservative:
 
 - We treat `--library` as **classpath + define resolution** (so code can import library modules and `#if` sees library `-D` flags).
