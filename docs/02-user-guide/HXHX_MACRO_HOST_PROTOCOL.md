@@ -27,7 +27,7 @@ There are currently **two** macro-host entrypoints, depending on how the host is
   - Implements the broader bring-up method set documented below (including reverse-RPC).
 - Stage 3 host (`hxhxmacrohost.Stage3Main`)
   - Built by `hxhx --hxhx-stage3` (stage0-free) and used specifically to make dynamic macro-host builds possible
-    without a stage0 toolchain.
+    without a stage0 toolchain (or when explicitly forced).
   - **Protocol-correct** for the handshake and the `--hxhx-macro-selftest` probe, but intentionally minimal:
     - `ping`
     - `compiler.define`

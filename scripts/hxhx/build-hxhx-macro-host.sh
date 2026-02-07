@@ -60,11 +60,16 @@ fi
 
 # Prefer stage0-free Stage3 builds for dynamic macro host compilation.
 #
-# Why
-# - Gate bring-up must not rely on a stage0 `haxe` binary.
-# - Stage3 now has a protocol-correct macro host entrypoint (`hxhxmacrohost.Stage3Main`),
-#   so we can make stage3 the default for dynamic builds while retaining a stage0 fallback.
-PREFER_HXHX="${HXHX_MACRO_HOST_PREFER_HXHX:-1}"
+# IMPORTANT
+# - The Stage3-built macro host (`hxhxmacrohost.Stage3Main`) is only protocol-correct for
+#   `hxhx --hxhx-macro-selftest` today. It intentionally does **not** implement `macro.run`.
+# - When stage0 `haxe` is available, dynamic macro host builds should default to stage0 so the
+#   Stage4 host (`hxhxmacrohost.Main`) can serve `macro.run` and entrypoints.
+#
+# Use Stage3 in dynamic mode when:
+# - `HXHX_MACRO_HOST_PREFER_HXHX=1` is set explicitly, or
+# - stage0 `haxe` is missing/disabled (stage0-free gating).
+PREFER_HXHX="${HXHX_MACRO_HOST_PREFER_HXHX:-0}"
 has_hxhx() {
   # `build-hxhx.sh` is stage0-free by default (uses packages/hxhx/bootstrap_out when available).
   "$ROOT/scripts/hxhx/build-hxhx.sh" >/dev/null 2>&1
