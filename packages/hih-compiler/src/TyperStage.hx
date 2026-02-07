@@ -350,10 +350,17 @@ class TyperStage {
 						inferExprType(a, scope, ctx, pos);
 						inferExprType(b, scope, ctx, pos);
 						TyType.fromHintText("Bool");
-					case "&&" | "||" | "&" | "|":
+					case "&&" | "||":
 						inferExprType(a, scope, ctx, pos);
 						inferExprType(b, scope, ctx, pos);
 						TyType.fromHintText("Bool");
+					case "&" | "|" | "^" | "<<" | ">>" | ">>>":
+						final ta = inferExprType(a, scope, ctx, pos);
+						final tb = inferExprType(b, scope, ctx, pos);
+						// Best-effort: treat as Bool if both operands are Bool; otherwise Int.
+						(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool")
+							? TyType.fromHintText("Bool")
+							: TyType.fromHintText("Int");
 					case "+":
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
@@ -373,8 +380,32 @@ class TyperStage {
 						inferExprType(b, scope, ctx, pos);
 						TyType.unknown();
 				}
-			case EUnsupported(_):
-				TyType.unknown();
+				case ETernary(cond, thenExpr, elseExpr):
+					inferExprType(cond, scope, ctx, pos);
+					final t1 = inferExprType(thenExpr, scope, ctx, pos);
+					final t2 = inferExprType(elseExpr, scope, ctx, pos);
+					final u = TyType.unify(t1, t2);
+					u == null ? TyType.fromHintText("Dynamic") : u;
+				case EAnon(_names, values):
+					for (v in values) inferExprType(v, scope, ctx, pos);
+					TyType.fromHintText("Dynamic");
+				case EArrayDecl(values):
+					for (v in values) inferExprType(v, scope, ctx, pos);
+					TyType.fromHintText("Array<Dynamic>");
+				case EArrayAccess(array, index):
+					inferExprType(array, scope, ctx, pos);
+					inferExprType(index, scope, ctx, pos);
+					// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
+					TyType.fromHintText("Dynamic");
+				case ECast(expr, typeHint):
+					final inner = inferExprType(expr, scope, ctx, pos);
+					final hinted = typeFromHintInContext(typeHint, ctx);
+					hinted.isUnknown() ? inner : hinted;
+				case EUntyped(expr):
+					inferExprType(expr, scope, ctx, pos);
+					TyType.fromHintText("Dynamic");
+				case EUnsupported(_):
+					TyType.unknown();
+			}
 		}
 	}
-}

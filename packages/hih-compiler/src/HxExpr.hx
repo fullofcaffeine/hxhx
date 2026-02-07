@@ -17,7 +17,7 @@
 	- This is *not* the upstream Haxe AST. It is a bootstrap representation
 	  designed to keep the example runnable in CI while we expand coverage.
 **/
-enum HxExpr {
+	enum HxExpr {
 	ENull;
 	EBool(value:Bool);
 	EString(value:String);
@@ -104,9 +104,100 @@ enum HxExpr {
 	EBinop(op:String, left:HxExpr, right:HxExpr);
 
 	/**
-		Best-effort placeholder for expressions we don't parse yet.
+		Ternary conditional expression: `cond ? thenExpr : elseExpr`.
 
-		We prefer to keep the parser permissive during early bootstrapping, while
+		Why
+		- Common in upstream code and libraries (including unit-test frameworks).
+		- Parsing it prevents the "expression parser stops at '?'" drift that can cascade into
+		  statement-level parse failures.
+
+		What
+		- Stores:
+		  - condition expression
+		  - then/else branch expressions
+
+		How
+		- Stage 3 typer performs best-effort unification of branch types.
+		- Stage 3 emitters may lower it directly to an OCaml `if ... then ... else ...`.
+	**/
+	ETernary(cond:HxExpr, thenExpr:HxExpr, elseExpr:HxExpr);
+
+	/**
+		Anonymous-structure literal: `{ field: expr, ... }`.
+
+		Why
+		- Anonymous structures are pervasive in real Haxe code (status objects, options, etc.).
+		- If we don't parse them, balanced braces inside expressions can accidentally terminate
+		  function-body parsing early.
+
+		What
+		- Stores a stable ordered field list.
+
+		How
+		- Stage 3 typer currently treats the resulting value as `Dynamic`, but still types each
+		  field initializer for basic checking/local inference.
+	**/
+		EAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>);
+
+		/**
+			Array literal: `[e1, e2, ...]`.
+
+			Why
+			- Core Haxe code and common libraries use `[]` frequently (temporary arrays, buffers, etc.).
+			- Stage3 needs to parse this shape to avoid generating `EUnsupported("[")` in std code (e.g. `Bytes.toHex`).
+
+			How
+			- We keep this representation minimal: just the ordered element list.
+			- Stage3 typer treats this as `Array<Dynamic>` for now.
+		**/
+		EArrayDecl(values:Array<HxExpr>);
+
+		/**
+			Array access: `arr[index]`.
+
+			Why
+			- Indexing is used pervasively in stdlib code (`b[i]`, `chars[c >> 4]`).
+			- Even before we model the full `ArrayAccess` semantics, parsing avoids
+			  token drift and enables a real typer later.
+		**/
+		EArrayAccess(array:HxExpr, index:HxExpr);
+
+		/**
+			Cast expression: `cast expr` or `cast(expr, Type)`.
+
+			Why
+			- Gate1 inputs (e.g. utest) use `cast` to coerce `Dynamic` to concrete types.
+			- Treating `cast` as unsupported makes upstream-shaped code look "unparseable",
+			  even though the semantics are intentionally permissive.
+
+			What
+			- Stores the expression being cast.
+			- Stores the optional raw type-hint text (when present).
+
+			How
+			- Stage3 typer:
+			  - if a type hint is provided, trusts it as the resulting type (best-effort),
+			  - otherwise, returns the inferred type of the inner expression.
+		**/
+		ECast(expr:HxExpr, typeHint:String);
+
+		/**
+			`untyped` escape hatch: `untyped expr`.
+
+			Why
+			- Upstream std code uses `untyped` to access target-specific primitives.
+			- Stage3 bring-up should preserve the shape (so later stages can decide how
+			  to lower it) without failing parsing/typing.
+
+			How
+			- Stage3 typer returns `Dynamic` (after typing the inner expression for locals).
+		**/
+		EUntyped(expr:HxExpr);
+
+		/**
+			Best-effort placeholder for expressions we don't parse yet.
+
+			We prefer to keep the parser permissive during early bootstrapping, while
 		still allowing downstream stages to detect “unknown” shapes explicitly.
 	**/
 	EUnsupported(raw:String);

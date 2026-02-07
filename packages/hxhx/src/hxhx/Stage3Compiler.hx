@@ -116,6 +116,22 @@ class Stage3Compiler {
 				c;
 			case EUnop(_op, expr): countUnsupportedExprsInExpr(expr);
 			case EBinop(_op, left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
+			case ETernary(cond, thenExpr, elseExpr):
+				countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInExpr(thenExpr) + countUnsupportedExprsInExpr(elseExpr);
+			case EAnon(_names, values):
+				var c = 0;
+				for (v in values) c += countUnsupportedExprsInExpr(v);
+				c;
+			case EArrayDecl(values):
+				var c = 0;
+				for (v in values) c += countUnsupportedExprsInExpr(v);
+				c;
+			case EArrayAccess(arr, idx):
+				countUnsupportedExprsInExpr(arr) + countUnsupportedExprsInExpr(idx);
+			case ECast(expr, _hint):
+				countUnsupportedExprsInExpr(expr);
+			case EUntyped(expr):
+				countUnsupportedExprsInExpr(expr);
 			case _:
 				0;
 		}
@@ -139,6 +155,21 @@ class Stage3Compiler {
 			case EBinop(_op, left, right):
 				collectUnsupportedExprRawInExpr(left, out, max);
 				collectUnsupportedExprRawInExpr(right, out, max);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectUnsupportedExprRawInExpr(cond, out, max);
+				collectUnsupportedExprRawInExpr(thenExpr, out, max);
+				collectUnsupportedExprRawInExpr(elseExpr, out, max);
+			case EAnon(_names, values):
+				for (v in values) collectUnsupportedExprRawInExpr(v, out, max);
+			case EArrayDecl(values):
+				for (v in values) collectUnsupportedExprRawInExpr(v, out, max);
+			case EArrayAccess(arr, idx):
+				collectUnsupportedExprRawInExpr(arr, out, max);
+				collectUnsupportedExprRawInExpr(idx, out, max);
+			case ECast(expr, _hint):
+				collectUnsupportedExprRawInExpr(expr, out, max);
+			case EUntyped(expr):
+				collectUnsupportedExprRawInExpr(expr, out, max);
 			case _:
 		}
 	}

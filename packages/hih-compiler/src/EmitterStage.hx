@@ -344,8 +344,30 @@ class EmitterStage {
 				// unsupported nodes inside a larger expression tree. The goal here is to
 				// progress to the next missing semantic, not to be correct yet.
 				"(Obj.magic 0)";
+			case ETernary(cond, thenExpr, elseExpr):
+				"(if (" + exprToOcaml(cond, arityByIdent, tyByIdent) + ") then ("
+					+ exprToOcaml(thenExpr, arityByIdent, tyByIdent)
+					+ ") else ("
+					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent)
+					+ "))";
+				case EAnon(_names, _values):
+					// Stage 3 bring-up: anonymous structures are represented in the real backend/runtime.
+					// The Stage 3 bootstrap emitter does not model them yet.
+					"(Obj.magic 0)";
+				case EArrayDecl(_values):
+					// Stage 3 bring-up: arrays require a runtime representation.
+					"(Obj.magic 0)";
+				case EArrayAccess(_arr, _idx):
+					// Stage 3 bring-up: indexing semantics depend on the runtime representation.
+					"(Obj.magic 0)";
+				case ECast(expr, _hint):
+					// Bring-up: treat casts as identity.
+					exprToOcaml(expr, arityByIdent, tyByIdent);
+				case EUntyped(expr):
+					// Bring-up: preserve shape by emitting the inner expression.
+					exprToOcaml(expr, arityByIdent, tyByIdent);
+			}
 		}
-	}
 
 	static function returnExprToOcaml(
 		expr:HxExpr,
@@ -411,6 +433,15 @@ class EmitterStage {
 					if (hasBringupPoison(callee)) return true;
 					for (a in args) if (hasBringupPoison(a)) return true;
 					false;
+				case EArrayDecl(values):
+					for (v in values) if (hasBringupPoison(v)) return true;
+					false;
+				case EArrayAccess(arr, idx):
+					hasBringupPoison(arr) || hasBringupPoison(idx);
+				case ECast(expr, _hint):
+					hasBringupPoison(expr);
+				case EUntyped(expr):
+					hasBringupPoison(expr);
 				case _:
 					false;
 			}

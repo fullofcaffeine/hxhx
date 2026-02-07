@@ -149,6 +149,32 @@ class HxLexer {
 	function readNumber(startPos:HxPos):HxToken {
 		final start = index;
 		while (!eof() && isDigit(peek(0))) bump();
+
+		// Hex integer literals (Stage 3 expansion): `0xFF`, `0X7fffff`.
+		//
+		// Why
+		// - The Haxe stdlib uses hex constants heavily (bit masks, float helpers).
+		// - Without hex support we tokenize `0xFF` as `0` + `x` + `FF`, which quickly
+		//   cascades into parse drift inside expressions.
+		if (!eof()
+			&& index == start + 1
+			&& src.charCodeAt(start) == "0".code
+			&& (peek(0) == "x".code || peek(0) == "X".code)) {
+			bump(); // 'x' or 'X'
+			while (!eof()) {
+				final c = peek(0);
+				final isHex =
+					(c >= "0".code && c <= "9".code)
+					|| (c >= "a".code && c <= "f".code)
+					|| (c >= "A".code && c <= "F".code);
+				if (!isHex) break;
+				bump();
+			}
+			final text = src.substring(start, index);
+			final value = Std.parseInt(text);
+			return new HxToken(TInt(value == null ? 0 : value), startPos);
+		}
+
 		var isFloat = false;
 		if (!eof() && peek(0) == ".".code && isDigit(peek(1))) {
 			isFloat = true;
@@ -210,6 +236,33 @@ class HxLexer {
 		throw new HxParseError("Unterminated string literal", startPos);
 	}
 
+	function readSingleQuotedString(startPos:HxPos):HxToken {
+		// Opening quote
+		bump();
+		final buf = new StringBuf();
+		while (!eof()) {
+			final c = bump();
+			if (c == "'".code) {
+				return new HxToken(TString(buf.toString()), startPos);
+			}
+			if (c == 92) { // backslash
+				if (eof()) break;
+				final esc = bump();
+				switch (esc) {
+					case "'".code: buf.addChar("'".code);
+					case 92: buf.addChar(92);
+					case 110: buf.addChar(10); // \n
+					case 114: buf.addChar(13); // \r
+					case 116: buf.addChar(9);  // \t
+					case _: buf.addChar(esc); // best-effort
+				}
+				continue;
+			}
+			buf.addChar(c);
+		}
+		throw new HxParseError("Unterminated string literal", startPos);
+	}
+
 	public function next():HxToken {
 		skipWhitespaceAndComments();
 		final p = pos();
@@ -226,6 +279,7 @@ class HxLexer {
 			case 46:  bump(); new HxToken(TDot, p);         // .
 			case 44:  bump(); new HxToken(TComma, p);       // ,
 			case 34:  readString(p);                        // "
+			case 39:  readSingleQuotedString(p);            // '
 			case _ if (isDigit(c)): readNumber(p);
 			case _ if (isIdentStart(c)): readIdent(p);
 			case _:

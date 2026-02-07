@@ -23,7 +23,8 @@
 class HxParser {
 	final lex:HxLexer;
 	var cur:HxToken;
-	var peeked:Null<HxToken> = null;
+	var peeked1:Null<HxToken> = null;
+	var peeked2:Null<HxToken> = null;
 	var capturedReturnStringLiteral:String = "";
 
 	public function new(source:String) {
@@ -77,25 +78,36 @@ class HxParser {
 		final p = new HxParser(src);
 		if (!p.cur.kind.match(TLBrace)) return [];
 		p.bump(); // consume '{'
-		return p.parseFunctionBodyStatements();
+		return p.parseFunctionBodyStatementsBestEffort();
 	}
 
 	inline function bump():Void {
-		if (peeked != null) {
-			cur = peeked;
-			peeked = null;
+		if (peeked1 != null) {
+			cur = peeked1;
+			peeked1 = peeked2;
+			peeked2 = null;
 		} else {
 			cur = lex.next();
 		}
 	}
 
 	inline function peek():HxToken {
-		if (peeked == null) peeked = lex.next();
-		return peeked;
+		if (peeked1 == null) peeked1 = lex.next();
+		return peeked1;
+	}
+
+	inline function peek2():HxToken {
+		if (peeked1 == null) peeked1 = lex.next();
+		if (peeked2 == null) peeked2 = lex.next();
+		return peeked2;
 	}
 
 	inline function peekKind():HxTokenKind {
 		return peek().kind;
+	}
+
+	inline function peekKind2():HxTokenKind {
+		return peek2().kind;
 	}
 
 	function fail<T>(message:String):T {
@@ -291,6 +303,18 @@ class HxParser {
 
 	function parsePrimaryExpr():HxExpr {
 		return switch (cur.kind) {
+			case TLParen:
+				// Parenthesized expression: `(expr)`.
+				bump(); // '('
+				final inner = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				// Best-effort: resync to the closing `)`.
+				if (!cur.kind.match(TRParen)) {
+					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+				}
+				if (cur.kind.match(TRParen)) bump();
+				inner;
+			case TLBrace:
+				parseAnonExpr();
 			case TKeyword(k):
 				if (k == KNull) {
 					bump();
@@ -307,9 +331,9 @@ class HxParser {
 				} else if (k == KSuper) {
 					bump();
 					ESuper;
-				} else if (k == KNew) {
-					bump();
-					final typePath = readDottedPath();
+					} else if (k == KNew) {
+						bump();
+						final typePath = readDottedPath();
 					// `new Foo(...)` always takes parens; keep parsing permissive in case upstream-ish code
 					// contains partially-supported constructs.
 					if (!cur.kind.match(TLParen)) {
@@ -334,16 +358,10 @@ class HxParser {
 								ENew(typePath, args);
 							}
 						}
-					} else if (k == KCast || k == KUntyped) {
-						// Stage 3: these are not supported as expressions yet. Treat them as unsupported so
-						// emitters/typers can apply explicit escape hatches.
+					} else {
+						// Best-effort: capture the keyword as a string.
 						final raw = Std.string(k);
-					bump();
-					EUnsupported(raw);
-				} else {
-					// Best-effort: capture the keyword as a string.
-					final raw = Std.string(k);
-					bump();
+						bump();
 					EUnsupported(raw);
 				}
 			case TString(s):
@@ -358,6 +376,8 @@ class HxParser {
 			case TIdent(name):
 				bump();
 				EIdent(name);
+			case TOther(c) if (c == "[".code):
+				parseArrayDeclExpr();
 			case TOther(c):
 				final raw = String.fromCharCode(c);
 				bump();
@@ -370,14 +390,100 @@ class HxParser {
 		}
 	}
 
+	function parseArrayDeclExpr():HxExpr {
+		// `[e1, e2, ...]`
+		//
+		// Best-effort: if we don't find the closing `]`, return the partial list.
+		if (!cur.kind.match(TOther("[".code))) return EArrayDecl([]);
+		bump(); // '['
+		final values = new Array<HxExpr>();
+		if (cur.kind.match(TOther("]".code))) {
+			bump();
+			return EArrayDecl(values);
+		}
+		while (!cur.kind.match(TEof)) {
+			if (cur.kind.match(TOther("]".code))) {
+				bump();
+				break;
+			}
+			final value = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+			values.push(value);
+			if (cur.kind.match(TComma)) {
+				bump();
+				continue;
+			}
+			if (cur.kind.match(TOther("]".code))) {
+				bump();
+				break;
+			}
+			// Best-effort: skip to likely separators.
+			while (!cur.kind.match(TComma) && !cur.kind.match(TOther("]".code)) && !cur.kind.match(TEof)) bump();
+			if (cur.kind.match(TComma)) {
+				bump();
+				continue;
+			}
+			if (cur.kind.match(TOther("]".code))) {
+				bump();
+				break;
+			}
+		}
+		return EArrayDecl(values);
+	}
+
+	function parseAnonExpr():HxExpr {
+		// `{ name: expr, ... }`
+		//
+		// Stage 3: parse a conservative subset (identifier keys + expressions).
+		final names = new Array<String>();
+		final values = new Array<HxExpr>();
+		expect(TLBrace, "'{'");
+		if (cur.kind.match(TRBrace)) {
+			bump();
+			return EAnon(names, values);
+		}
+		while (!cur.kind.match(TEof)) {
+			if (cur.kind.match(TRBrace)) {
+				bump();
+				break;
+			}
+			final name = readIdent("field name");
+			expect(TColon, "':'");
+			final value = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+			names.push(name);
+			values.push(value);
+			if (cur.kind.match(TComma)) {
+				bump();
+				continue;
+			}
+			if (cur.kind.match(TRBrace)) {
+				bump();
+				break;
+			}
+			// Best-effort: recover by skipping to a likely separator.
+			while (!cur.kind.match(TComma) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) bump();
+			if (cur.kind.match(TComma)) {
+				bump();
+				continue;
+			}
+			if (cur.kind.match(TRBrace)) {
+				bump();
+				break;
+			}
+		}
+		return EAnon(names, values);
+	}
+
 	static function binopPrec(op:String):Int {
 		return switch (op) {
 			case "=": 1;
+			case "?": 2;
 			case "||": 2;
 			case "|": 2;
 			case "&&": 3;
 			case "&": 3;
+			case "^": 3;
 			case "==" | "!=": 4;
+			case "<<" | ">>" | ">>>": 5;
 			case "<" | "<=" | ">" | ">=": 5;
 			case "+" | "-": 6;
 			case "*" | "/" | "%": 7;
@@ -417,6 +523,16 @@ class HxParser {
 						break;
 					}
 					e = ECall(e, args);
+				case TOther(c) if (c == "[".code):
+					// Array access: `e[index]`.
+					bump(); // '['
+					final index = parseExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+					// Best-effort: resync to closing bracket.
+					if (!cur.kind.match(TOther("]".code))) {
+						while (!cur.kind.match(TOther("]".code)) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TOther("]".code))) bump();
+					e = EArrayAccess(e, index);
 				case _:
 					break;
 			}
@@ -426,6 +542,29 @@ class HxParser {
 
 	function parseUnaryExpr(stop:()->Bool):HxExpr {
 		return switch (cur.kind) {
+			case TKeyword(k) if (k == KCast):
+				bump();
+				// `cast expr` or `cast(expr, Type)`
+				if (cur.kind.match(TLParen)) {
+					bump();
+					final inner = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+					var hint = "";
+					if (cur.kind.match(TComma)) {
+						bump();
+						hint = readTypeHintText(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					}
+					// Best-effort: resync to closing `)`.
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+					ECast(inner, hint);
+				} else {
+					ECast(parseUnaryExpr(stop), "");
+				}
+			case TKeyword(k) if (k == KUntyped):
+				bump();
+				EUntyped(parseUnaryExpr(stop));
 			case TOther(c) if (c == "!".code || c == "-".code || c == "+".code):
 				final op = String.fromCharCode(c);
 				bump();
@@ -445,6 +584,14 @@ class HxParser {
 					false;
 			}
 		}
+		inline function next2IsOther(code:Int):Bool {
+			return switch (peekKind2()) {
+				case TOther(c) if (c == code):
+					true;
+				case _:
+					false;
+			}
+		}
 		return switch (cur.kind) {
 			case TOther(c):
 				switch (c) {
@@ -453,13 +600,23 @@ class HxParser {
 					case "!".code:
 						nextIsOther("=".code) ? {op: "!=", len: 2} : null;
 					case "<".code:
-						nextIsOther("=".code) ? {op: "<=", len: 2} : {op: "<", len: 1};
+						if (nextIsOther("<".code)) {
+							{op: "<<", len: 2};
+						} else {
+							nextIsOther("=".code) ? {op: "<=", len: 2} : {op: "<", len: 1};
+						}
 					case ">".code:
-						nextIsOther("=".code) ? {op: ">=", len: 2} : {op: ">", len: 1};
+						if (nextIsOther(">".code)) {
+							next2IsOther(">".code) ? {op: ">>>", len: 3} : {op: ">>", len: 2};
+						} else {
+							nextIsOther("=".code) ? {op: ">=", len: 2} : {op: ">", len: 1};
+						}
 					case "&".code:
 						nextIsOther("&".code) ? {op: "&&", len: 2} : {op: "&", len: 1};
 					case "|".code:
 						nextIsOther("|".code) ? {op: "||", len: 2} : {op: "|", len: 1};
+					case "^".code:
+						{op: "^", len: 1};
 					case "+".code:
 						{op: "+", len: 1};
 					case "-".code:
@@ -509,7 +666,15 @@ class HxParser {
 	function parseExpr(stop:()->Bool):HxExpr {
 		// Stage 3: small-but-real expression subset.
 		// Includes calls/field access, prefix unary, and basic binary ops with precedence.
-		return parseBinaryExpr(1, stop);
+		var e = parseBinaryExpr(1, stop);
+		// Ternary conditional: `cond ? thenExpr : elseExpr`
+		if (!stop() && acceptOtherChar("?")) {
+			final thenExpr = parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
+			expect(TColon, "':'");
+			final elseExpr = parseExpr(stop);
+			e = ETernary(e, thenExpr, elseExpr);
+		}
+		return e;
 	}
 
 	function parseReturnStmt(pos:HxPos):HxStmt {
@@ -521,6 +686,68 @@ class HxParser {
 		if (cur.kind.match(TRBrace)) {
 			return SReturnVoid(pos);
 		}
+
+		// Stage 3 expansion: lower `return if (cond) { expr } else { expr }` into a statement-level
+		// `if` with explicit returns in each branch.
+		//
+		// Why
+		// - Upstream-ish code (e.g. utest) uses `return if (...) ... else ...` heavily.
+		// - Our expression parser doesn't model `if`-expressions yet, but we can preserve
+		//   semantics at the statement layer for bring-up typing.
+			if (cur.kind.match(TKeyword(KIf))) {
+				bump(); // 'if'
+				expect(TLParen, "'('");
+				final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				// Best-effort: if our expression parser stopped early, resync to the closing `)`.
+				if (!cur.kind.match(TRParen)) {
+					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+				}
+				if (cur.kind.match(TRParen)) bump();
+
+				function ensureBranchReturns(s:HxStmt):HxStmt {
+					return switch (s) {
+					case SReturn(_, _) | SReturnVoid(_):
+						s;
+					case SExpr(e, p):
+						SReturn(e, p);
+					case SBlock(stmts, p):
+						if (stmts.length == 0) {
+							SBlock([SReturnVoid(p)], p);
+						} else {
+							final last = stmts[stmts.length - 1];
+							switch (last) {
+								case SReturn(_, _) | SReturnVoid(_):
+									s;
+								case SExpr(e, lp):
+									final copy = stmts.copy();
+									copy[copy.length - 1] = SReturn(e, lp);
+									SBlock(copy, p);
+								case _:
+									final copy = stmts.copy();
+									copy.push(SReturnVoid(p));
+									SBlock(copy, p);
+							}
+						}
+					case _:
+						SBlock([s, SReturnVoid(pos)], pos);
+				}
+			}
+
+				final thenBranch = ensureBranchReturns(parseStmt(() -> cur.kind.match(TEof)));
+				if (!acceptKeyword(KElse)) {
+					// Be permissive: missing else branch. Treat as a void return.
+					//
+					// Implementation detail:
+					// Our OCaml backend represents `Null<T>` as `Obj.t` for many `T`s (including enums),
+					// which means passing a non-null enum value directly can cause an OCaml type error.
+					// This `true ? v : null` trick forces the value through the nullable path so the
+					// generated OCaml uses `Obj.repr`.
+					final elseBranch:Null<HxStmt> = true ? SReturnVoid(pos) : null;
+					return SIf(cond, thenBranch, elseBranch, pos);
+				}
+				final elseBranch:Null<HxStmt> = true ? ensureBranchReturns(parseStmt(() -> cur.kind.match(TEof))) : null;
+				return SIf(cond, thenBranch, elseBranch, pos);
+			}
 
 		if (capturedReturnStringLiteral.length == 0) {
 			switch (cur.kind) {
@@ -597,7 +824,10 @@ class HxParser {
 				bump();
 				expect(TLParen, "'('");
 				final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				expect(TRParen, "')'");
+				if (!cur.kind.match(TRParen)) {
+					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+				}
+				if (cur.kind.match(TRParen)) bump();
 				final thenBranch = parseStmt(stop);
 				final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
 				SIf(cond, thenBranch, elseBranch, pos);
@@ -620,6 +850,41 @@ class HxParser {
 					return out;
 				case _:
 					out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+			}
+		}
+	}
+
+	function parseFunctionBodyStatementsBestEffort():Array<HxStmt> {
+		// Like `parseFunctionBodyStatements`, but never throws.
+		//
+		// Why
+		// - The native frontend protocol transmits method bodies as raw source slices.
+		// - Our statement/expression grammar is still incomplete; we want to recover as much
+		//   structure as possible without hard-failing the whole module.
+		//
+		// How
+		// - Parse statement-by-statement.
+		// - On parse errors, resynchronize to `;` / `}` / EOF and continue.
+		final out = new Array<HxStmt>();
+		while (true) {
+			switch (cur.kind) {
+				case TEof:
+					return out;
+				case TRBrace:
+					bump();
+					return out;
+				case _:
+					try {
+						out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+						0; // ensure try/catch has a concrete, consistent expression type across targets
+					} catch (_:Dynamic) {
+						// Best-effort resync: advance until a plausible statement boundary.
+						while (!cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+							bump();
+						}
+						if (cur.kind.match(TSemicolon)) bump();
+						0;
+					}
 			}
 		}
 	}

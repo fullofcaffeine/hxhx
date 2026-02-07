@@ -16,4 +16,10 @@ type hxexpr =
 | ENew of string * hxexpr HxArray.t
 | EUnop of string * hxexpr
 | EBinop of string * hxexpr * hxexpr
+| ETernary of hxexpr * hxexpr * hxexpr
+| EAnon of string HxArray.t * hxexpr HxArray.t
+| EArrayDecl of hxexpr HxArray.t
+| EArrayAccess of hxexpr * hxexpr
+| ECast of hxexpr * string
+| EUntyped of hxexpr
 | EUnsupported of string

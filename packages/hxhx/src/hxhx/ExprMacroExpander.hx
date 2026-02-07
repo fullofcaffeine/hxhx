@@ -261,10 +261,46 @@ class ExprMacroExpander {
 				final rl = rewriteExpr(left, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				final rr = rewriteExpr(right, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 				(rl != left || rr != right) ? EBinop(op, rl, rr) : e;
-			case _:
-				e;
+			case ETernary(cond, thenExpr, elseExpr):
+				final rc = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final rt = rewriteExpr(thenExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				final re = rewriteExpr(elseExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+				(rc != cond || rt != thenExpr || re != elseExpr) ? ETernary(rc, rt, re) : e;
+				case EAnon(fieldNames, fieldValues):
+					var changed = false;
+					final outNames = new Array<String>();
+					final outValues = new Array<HxExpr>();
+					for (i in 0...fieldValues.length) {
+					final v = fieldValues[i];
+					final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					if (rv != v) changed = true;
+					outNames.push(fieldNames[i]);
+					outValues.push(rv);
+					}
+					changed ? EAnon(outNames, outValues) : e;
+				case EArrayDecl(values):
+					final out = new Array<HxExpr>();
+					var changed = false;
+					for (v in values) {
+						final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						if (rv != v) changed = true;
+						out.push(rv);
+					}
+					changed ? EArrayDecl(out) : e;
+				case EArrayAccess(arr, idx):
+					final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					(ra != arr || ri != idx) ? EArrayAccess(ra, ri) : e;
+				case ECast(expr, hint):
+					final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					re != expr ? ECast(re, hint) : e;
+				case EUntyped(expr):
+					final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+					re != expr ? EUntyped(re) : e;
+				case _:
+					e;
+			}
 		}
-	}
 
 	static function exprKind(e:HxExpr):String {
 		return switch (e) {
@@ -281,9 +317,15 @@ class ExprMacroExpander {
 			case ECall(_, _): "Call";
 			case EUnop(_, _): "Unop";
 			case EBinop(_, _, _): "Binop";
-			case EUnsupported(_): "Unsupported";
+				case ETernary(_, _, _): "Ternary";
+				case EAnon(_, _): "Anon";
+				case EArrayDecl(_): "ArrayDecl";
+				case EArrayAccess(_, _): "ArrayAccess";
+				case ECast(_, _): "Cast";
+				case EUntyped(_): "Untyped";
+				case EUnsupported(_): "Unsupported";
+			}
 		}
-	}
 
 	static function buildImportMap(imports:Array<String>, modulePkg:String):haxe.ds.StringMap<String> {
 		final map = new haxe.ds.StringMap<String>();

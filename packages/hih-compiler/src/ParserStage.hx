@@ -230,6 +230,11 @@ class ParserStage {
 
 			var outBody = body;
 			if (methodBodySrc != null && methodBodySrc.length > 0) {
+				if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
+					try {
+						Sys.println("body_parse_have=" + name + " len=" + methodBodySrc.length);
+					} catch (_:Dynamic) {}
+				}
 				// Best-effort: recover a structured statement list from the raw source slice.
 				//
 				// Why
@@ -238,7 +243,12 @@ class ParserStage {
 				// - Stage3 bring-up wants bodies so it can validate full-body lowering.
 				try {
 					outBody = HxParser.parseFunctionBodyText(methodBodySrc);
-				} catch (_:Dynamic) {
+				} catch (e:Dynamic) {
+					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
+						try {
+							Sys.println("body_parse_fail=" + name + " err=" + Std.string(e));
+						} catch (_:Dynamic) {}
+					}
 					// Fall back to the summary-only body.
 					outBody = body;
 				}

@@ -118,7 +118,13 @@ let rec inferExprType = fun expr scope ctx pos -> let tempResult = ref (Obj.magi
       | HxExpr.ENew (_, _) -> 10
       | HxExpr.EUnop (_, _) -> 11
       | HxExpr.EBinop (_, _, _) -> 12
-      | HxExpr.EUnsupported _ -> 13) = 5 then let c = TyperContext.currentClass ctx () in if c != Obj.magic (HxRuntime.hx_null) then let ft = TyClassInfo.fieldType c _field in if ft != Obj.magic (HxRuntime.hx_null) then let __assign_46 = ft in (
+      | HxExpr.ETernary (_, _, _) -> 13
+      | HxExpr.EAnon (_, _) -> 14
+      | HxExpr.EArrayDecl _ -> 15
+      | HxExpr.EArrayAccess (_, _) -> 16
+      | HxExpr.ECast (_, _) -> 17
+      | HxExpr.EUntyped _ -> 18
+      | HxExpr.EUnsupported _ -> 19) = 5 then let c = TyperContext.currentClass ctx () in if c != Obj.magic (HxRuntime.hx_null) then let ft = TyClassInfo.fieldType c _field in if ft != Obj.magic (HxRuntime.hx_null) then let __assign_46 = ft in (
       tempResult := __assign_46;
       __assign_46
     ) else let __assign_47 = TyType.unknown () in (
@@ -160,7 +166,13 @@ let rec inferExprType = fun expr scope ctx pos -> let tempResult = ref (Obj.magi
       | HxExpr.ENew (_, _) -> 10
       | HxExpr.EUnop (_, _) -> 11
       | HxExpr.EBinop (_, _, _) -> 12
-      | HxExpr.EUnsupported _ -> 13) = 8 then let _g2 = match callee with
+      | HxExpr.ETernary (_, _, _) -> 13
+      | HxExpr.EAnon (_, _) -> 14
+      | HxExpr.EArrayDecl _ -> 15
+      | HxExpr.EArrayAccess (_, _) -> 16
+      | HxExpr.ECast (_, _) -> 17
+      | HxExpr.EUntyped _ -> 18
+      | HxExpr.EUnsupported _ -> 19) = 8 then let _g2 = match callee with
       | HxExpr.EField (__enum_param_54, _) -> __enum_param_54
       | _ -> failwith "Unexpected enum parameter" in let _g3 = match callee with
       | HxExpr.EField (_, __enum_param_55) -> __enum_param_55
@@ -338,7 +350,13 @@ let rec inferExprType = fun expr scope ctx pos -> let tempResult = ref (Obj.magi
         | HxExpr.ENew (_, _) -> 10
         | HxExpr.EUnop (_, _) -> 11
         | HxExpr.EBinop (_, _, _) -> 12
-        | HxExpr.EUnsupported _ -> 13) = 7 then let _g3 = match a with
+        | HxExpr.ETernary (_, _, _) -> 13
+        | HxExpr.EAnon (_, _) -> 14
+        | HxExpr.EArrayDecl _ -> 15
+        | HxExpr.EArrayAccess (_, _) -> 16
+        | HxExpr.ECast (_, _) -> 17
+        | HxExpr.EUntyped _ -> 18
+        | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match a with
         | HxExpr.EIdent __enum_param_96 -> __enum_param_96
         | _ -> failwith "Unexpected enum parameter" in let name = _g3 in let sym = TyFunctionEnv.resolveSymbol scope name in if sym != Obj.magic (HxRuntime.hx_null) then let u = TyType.unify (TySymbol.getType sym ()) rhs in if u == Obj.magic (HxRuntime.hx_null) then (
         ignore (TySymbol.setType sym (TyType.fromHintText "Dynamic"));
@@ -370,12 +388,19 @@ let rec inferExprType = fun expr scope ctx pos -> let tempResult = ref (Obj.magi
           __assign_101
         )
       )
-      | "&" | "&&" | "|" | "||" -> (
+      | "&" | "<<" | ">>" | ">>>" | "^" | "|" -> let ta = inferExprType a scope ctx pos in let tb = inferExprType b scope ctx pos in if HxString.equals (TyType.getDisplay ta ()) "Bool" && HxString.equals (TyType.getDisplay tb ()) "Bool" then let __assign_102 = TyType.fromHintText "Bool" in (
+        tempResult := __assign_102;
+        __assign_102
+      ) else let __assign_103 = TyType.fromHintText "Int" in (
+        tempResult := __assign_103;
+        __assign_103
+      )
+      | "&&" | "||" -> (
         ignore (inferExprType a scope ctx pos);
         ignore (inferExprType b scope ctx pos);
-        let __assign_102 = TyType.fromHintText "Bool" in (
-          tempResult := __assign_102;
-          __assign_102
+        let __assign_104 = TyType.fromHintText "Bool" in (
+          tempResult := __assign_104;
+          __assign_104
         )
       )
       | _ -> (
@@ -386,11 +411,72 @@ let rec inferExprType = fun expr scope ctx pos -> let tempResult = ref (Obj.magi
           __assign_90
         )
       ))
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let cond = _g in let thenExpr = _g1 in let elseExpr = _g2 in (
+      ignore (inferExprType cond scope ctx pos);
+      let t1 = inferExprType thenExpr scope ctx pos in let t2 = inferExprType elseExpr scope ctx pos in let u = TyType.unify t1 t2 in if u == Obj.magic (HxRuntime.hx_null) then let __assign_105 = TyType.fromHintText "Dynamic" in (
+        tempResult := __assign_105;
+        __assign_105
+      ) else let __assign_106 = u in (
+        tempResult := __assign_106;
+        __assign_106
+      )
+    )
+    | HxExpr.EAnon (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+      ignore _g;
+      let values = _g1 in (
+        ignore (let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let v = HxArray.get values (!_g2) in (
+          ignore (let __old_107 = !_g2 in let __new_108 = HxInt.add __old_107 1 in (
+            ignore (_g2 := __new_108);
+            __new_108
+          ));
+          inferExprType v scope ctx pos
+        )) done);
+        let __assign_109 = TyType.fromHintText "Dynamic" in (
+          tempResult := __assign_109;
+          __assign_109
+        )
+      )
+    )
+    | HxExpr.EArrayDecl _p0 -> let _g = _p0 in let values = _g in (
+      ignore (let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let v = HxArray.get values (!_g2) in (
+        ignore (let __old_110 = !_g2 in let __new_111 = HxInt.add __old_110 1 in (
+          ignore (_g2 := __new_111);
+          __new_111
+        ));
+        inferExprType v scope ctx pos
+      )) done);
+      let __assign_112 = TyType.fromHintText "Array<Dynamic>" in (
+        tempResult := __assign_112;
+        __assign_112
+      )
+    )
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let array = _g in let index = _g1 in (
+      ignore (inferExprType array scope ctx pos);
+      ignore (inferExprType index scope ctx pos);
+      let __assign_113 = TyType.fromHintText "Dynamic" in (
+        tempResult := __assign_113;
+        __assign_113
+      )
+    )
+    | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr2 = _g in let typeHint = _g1 in let inner = inferExprType expr2 scope ctx pos in let hinted = typeFromHintInContext typeHint ctx in if TyType.isUnknown hinted () then let __assign_114 = inner in (
+      tempResult := __assign_114;
+      __assign_114
+    ) else let __assign_115 = hinted in (
+      tempResult := __assign_115;
+      __assign_115
+    )
+    | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr2 = _g in (
+      ignore (inferExprType expr2 scope ctx pos);
+      let __assign_116 = TyType.fromHintText "Dynamic" in (
+        tempResult := __assign_116;
+        __assign_116
+      )
+    )
     | HxExpr.EUnsupported _p0 -> (
       ignore _p0;
-      let __assign_103 = TyType.unknown () in (
-        tempResult := __assign_103;
-        __assign_103
+      let __assign_117 = TyType.unknown () in (
+        tempResult := __assign_117;
+        __assign_117
       )
     ));
   !tempResult
