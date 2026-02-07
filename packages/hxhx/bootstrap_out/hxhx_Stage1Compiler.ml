@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type stage1args_t = { __hx_type : Obj.t; mutable classPaths : string HxArray.t; mutable main : string; mutable noOutput : bool; mutable roots : string HxArray.t; mutable defines : string HxArray.t; mutable libs : string HxArray.t; mutable macros : string HxArray.t; mutable cwd : string }
+type stage1args_t = { __hx_type : Obj.t; mutable classPaths : string HxArray.t; mutable main : string; mutable noOutput : bool; mutable roots : string HxArray.t; mutable defines : string HxArray.t; mutable libs : string HxArray.t; mutable macros : string HxArray.t; mutable cwd : string; mutable hadCmd : bool }
 
-let stage1args_create = fun classPaths2 main2 noOutput2 roots2 defines2 libs2 macros2 cwd2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage1Args"; classPaths = Obj.magic (); main = ""; noOutput = false; roots = Obj.magic (); defines = Obj.magic (); libs = Obj.magic (); macros = Obj.magic (); cwd = "" } : stage1args_t) in (
+let stage1args_create = fun classPaths2 main2 noOutput2 roots2 defines2 libs2 macros2 cwd2 hadCmd2 -> let self = ({ __hx_type = HxType.class_ "hxhx.Stage1Args"; classPaths = Obj.magic (); main = ""; noOutput = false; roots = Obj.magic (); defines = Obj.magic (); libs = Obj.magic (); macros = Obj.magic (); cwd = ""; hadCmd = false } : stage1args_t) in (
   ignore ((
     ignore (let __assign_1 = classPaths2 in (
       self.classPaths <- __assign_1;
@@ -36,51 +36,55 @@ let stage1args_create = fun classPaths2 main2 noOutput2 roots2 defines2 libs2 ma
       self.macros <- __assign_7;
       __assign_7
     ));
-    let __assign_8 = cwd2 in (
+    ignore (let __assign_8 = cwd2 in (
       self.cwd <- __assign_8;
       __assign_8
+    ));
+    let __assign_9 = hadCmd2 in (
+      self.hadCmd <- __assign_9;
+      __assign_9
     )
   ));
   self
 )
 
-let stage1args___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage1Args"; classPaths = Obj.magic (); main = ""; noOutput = false; roots = Obj.magic (); defines = Obj.magic (); libs = Obj.magic (); macros = Obj.magic (); cwd = "" } : stage1args_t)
+let stage1args___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.Stage1Args"; classPaths = Obj.magic (); main = ""; noOutput = false; roots = Obj.magic (); defines = Obj.magic (); libs = Obj.magic (); macros = Obj.magic (); cwd = ""; hadCmd = false } : stage1args_t)
 
 let stage1args_inferStdRoot = fun () -> try (
   ignore (try let direct = HxSys.getEnv "HAXE_STD_PATH" in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) && HxString.length direct > 0 && HxFileSystem.exists direct && HxFileSystem.isDirectory direct then raise (HxRuntime.Hx_return (Obj.repr direct)) else ());
-    let haxePath = HxSys.getEnv "HAXEPATH" in if haxePath != Obj.magic (HxRuntime.hx_null) && HxString.length haxePath > 0 then ignore (let candidate = Haxe_io_Path.normalize (Haxe_io_Path.join (let __arr_18 = HxArray.create () in (
-      ignore (HxArray.push __arr_18 haxePath);
-      ignore (HxArray.push __arr_18 "std");
-      __arr_18
+    let haxePath = HxSys.getEnv "HAXEPATH" in if haxePath != Obj.magic (HxRuntime.hx_null) && HxString.length haxePath > 0 then ignore (let candidate = Haxe_io_Path.normalize (Haxe_io_Path.join (let __arr_21 = HxArray.create () in (
+      ignore (HxArray.push __arr_21 haxePath);
+      ignore (HxArray.push __arr_21 "std");
+      __arr_21
     ))) in if HxFileSystem.exists candidate && HxFileSystem.isDirectory candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()) else ()
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_19 -> raise (HxRuntime.Hx_return __ret_19)
-    | HxRuntime.Hx_exception (__exn_v_20, __exn_tags_21) -> if true then let _hx = (__exn_v_20 : Obj.t) in (
+    | HxRuntime.Hx_return __ret_22 -> raise (HxRuntime.Hx_return __ret_22)
+    | HxRuntime.Hx_exception (__exn_v_23, __exn_tags_24) -> if true then let _hx = (__exn_v_23 : Obj.t) in (
       ignore _hx;
       ()
-    ) else HxRuntime.hx_throw_typed __exn_v_20 __exn_tags_21
-    | __exn_22 -> if true then let _hx = (Obj.repr __exn_22 : Obj.t) in (
+    ) else HxRuntime.hx_throw_typed __exn_v_23 __exn_tags_24
+    | __exn_25 -> if true then let _hx = (Obj.repr __exn_25 : Obj.t) in (
       ignore _hx;
       ()
-    ) else raise (__exn_22));
+    ) else raise (__exn_25));
   ""
 ) with
-  | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
+  | HxRuntime.Hx_return __ret_26 -> Obj.obj __ret_26
 
 let stage1args_expandHxmlArgs = fun args -> try let sawHxml = ref false in let out = HxArray.create () in let _g = ref 0 in (
   ignore (try while !_g < HxArray.length args do try ignore (let a = HxArray.get args (!_g) in (
-    ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
-      ignore (_g := __new_25);
-      __new_25
+    ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
+      ignore (_g := __new_28);
+      __new_28
     ));
     ignore (if a == Obj.magic (HxRuntime.hx_null) || HxString.length a = 0 then raise (HxRuntime.Hx_continue) else ());
     ignore (if not (StringTools.startsWith a "-") && StringTools.endsWith a ".hxml" then ignore ((
-      ignore (let __assign_26 = true in (
-        sawHxml := __assign_26;
-        __assign_26
+      ignore (let __assign_29 = true in (
+        sawHxml := __assign_29;
+        __assign_29
       ));
       ignore (if not (HxFileSystem.exists a) || HxFileSystem.isDirectory a then ignore ((
         ignore (print_endline ("hxhx(stage1): hxml path is not a file: " ^ HxString.toStdString a));
@@ -90,9 +94,9 @@ let stage1args_expandHxmlArgs = fun args -> try let sawHxml = ref false in let o
         ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
         let _g2 = ref 0 in (
           ignore (while !_g2 < HxArray.length expanded do ignore (let t = HxArray.get expanded (!_g2) in (
-            ignore (let __old_27 = !_g2 in let __new_28 = HxInt.add __old_27 1 in (
-              ignore (_g2 := __new_28);
-              __new_28
+            ignore (let __old_30 = !_g2 in let __new_31 = HxInt.add __old_30 1 in (
+              ignore (_g2 := __new_31);
+              __new_31
             ));
             HxArray.push out t
           )) done);
@@ -105,21 +109,21 @@ let stage1args_expandHxmlArgs = fun args -> try let sawHxml = ref false in let o
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   let tempResult = ref (Obj.magic ()) in (
-    ignore (if !sawHxml then let __assign_29 = out in (
-      tempResult := __assign_29;
-      __assign_29
-    ) else let __assign_30 = args in (
-      tempResult := __assign_30;
-      __assign_30
+    ignore (if !sawHxml then let __assign_32 = out in (
+      tempResult := __assign_32;
+      __assign_32
+    ) else let __assign_33 = args in (
+      tempResult := __assign_33;
+      __assign_33
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
+  | HxRuntime.Hx_return __ret_34 -> Obj.obj __ret_34
 
 let stage1args_parse = fun args permissive -> try let expanded = stage1args_expandHxmlArgs args in (
   ignore (if expanded == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let classPaths2 = HxArray.create () in let main2 = ref "" in let noOutput2 = ref false in let roots2 = HxArray.create () in let defines2 = HxArray.create () in let libs2 = HxArray.create () in let macros2 = HxArray.create () in let cwd2 = ref "." in let stdRoot = ref "" in let i = ref 0 in (
+  let classPaths2 = HxArray.create () in let main2 = ref "" in let noOutput2 = ref false in let roots2 = HxArray.create () in let defines2 = HxArray.create () in let libs2 = HxArray.create () in let macros2 = HxArray.create () in let cwd2 = ref "." in let stdRoot = ref "" in let hadCmd2 = ref false in let i = ref 0 in (
     ignore (try while !i < HxArray.length expanded do try ignore (let a = HxArray.get expanded (!i) in match a with
       | "--" -> ignore ((
         ignore (print_endline "hxhx(stage1): unexpected '--' separator");
@@ -138,6 +142,10 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
           ignore (print_endline "hxhx(stage1): missing value after --cmd");
           raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         )) else ());
+        ignore (let __assign_10 = true in (
+          hadCmd2 := __assign_10;
+          __assign_10
+        ));
         i := HxInt.add (!i) 2
       )) else ignore ((
         ignore (if StringTools.startsWith a "-" then ignore ((
@@ -162,9 +170,9 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
           ignore (print_endline ("hxhx(stage1): missing value after " ^ HxString.toStdString a));
           raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         )) else ());
-        ignore (let __assign_9 = HxArray.get expanded (HxInt.add (!i) 1) in (
-          cwd2 := __assign_9;
-          __assign_9
+        ignore (let __assign_11 = HxArray.get expanded (HxInt.add (!i) 1) in (
+          cwd2 := __assign_11;
+          __assign_11
         ));
         i := HxInt.add (!i) 2
       ))
@@ -256,16 +264,16 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
           ignore (print_endline "hxhx(stage1): missing value after -main");
           raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         )) else ());
-        ignore (let __assign_10 = HxArray.get expanded (HxInt.add (!i) 1) in (
-          main2 := __assign_10;
-          __assign_10
+        ignore (let __assign_12 = HxArray.get expanded (HxInt.add (!i) 1) in (
+          main2 := __assign_12;
+          __assign_12
         ));
         i := HxInt.add (!i) 2
       ))
       | "--no-output" -> ignore ((
-        ignore (let __assign_11 = true in (
-          noOutput2 := __assign_11;
-          __assign_11
+        ignore (let __assign_13 = true in (
+          noOutput2 := __assign_13;
+          __assign_13
         ));
         i := HxInt.add (!i) 1
       ))
@@ -298,9 +306,9 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
           ignore (print_endline "hxhx(stage1): missing value after --std");
           raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         )) else ());
-        ignore (let __assign_12 = HxArray.get expanded (HxInt.add (!i) 1) in (
-          stdRoot := __assign_12;
-          __assign_12
+        ignore (let __assign_14 = HxArray.get expanded (HxInt.add (!i) 1) in (
+          stdRoot := __assign_14;
+          __assign_14
         ));
         i := HxInt.add (!i) 2
       ))
@@ -336,6 +344,34 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
         ignore (HxArray.push defines2 (HxArray.get expanded (HxInt.add (!i) 1)));
         i := HxInt.add (!i) 2
       ))
+      | "-cmd" -> ignore (if permissive then ignore ((
+        ignore (if HxInt.add (!i) 1 >= HxArray.length expanded then ignore ((
+          ignore (print_endline "hxhx(stage1): missing value after -cmd");
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
+        ignore (let __assign_15 = true in (
+          hadCmd2 := __assign_15;
+          __assign_15
+        ));
+        i := HxInt.add (!i) 2
+      )) else ignore ((
+        ignore (if StringTools.startsWith a "-" then ignore ((
+          ignore (if permissive then ignore ((
+            ignore (print_endline ("hxhx(stage1): ignoring unsupported flag in permissive mode: " ^ HxString.toStdString a));
+            ignore (i := HxInt.add (!i) 1);
+            raise (HxRuntime.Hx_continue)
+          )) else ());
+          ignore (print_endline ("hxhx(stage1): unsupported flag: " ^ HxString.toStdString a));
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
+        ignore (if permissive then ignore ((
+          ignore (HxArray.push roots2 a);
+          ignore (i := HxInt.add (!i) 1);
+          raise (HxRuntime.Hx_continue)
+        )) else ());
+        ignore (print_endline ("hxhx(stage1): unsupported argument: " ^ HxString.toStdString a));
+        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+      )))
       | "-lib" -> ignore ((
         ignore (if HxInt.add (!i) 1 >= HxArray.length expanded then ignore ((
           ignore (print_endline "hxhx(stage1): missing value after -lib");
@@ -344,19 +380,43 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
         ignore (HxArray.push libs2 (HxArray.get expanded (HxInt.add (!i) 1)));
         i := HxInt.add (!i) 2
       ))
+      | "-swf-lib" -> ignore (if permissive then ignore ((
+        ignore (if HxInt.add (!i) 1 >= HxArray.length expanded then ignore ((
+          ignore (print_endline "hxhx(stage1): missing value after -swf-lib");
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
+        i := HxInt.add (!i) 2
+      )) else ignore ((
+        ignore (if StringTools.startsWith a "-" then ignore ((
+          ignore (if permissive then ignore ((
+            ignore (print_endline ("hxhx(stage1): ignoring unsupported flag in permissive mode: " ^ HxString.toStdString a));
+            ignore (i := HxInt.add (!i) 1);
+            raise (HxRuntime.Hx_continue)
+          )) else ());
+          ignore (print_endline ("hxhx(stage1): unsupported flag: " ^ HxString.toStdString a));
+          raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+        )) else ());
+        ignore (if permissive then ignore ((
+          ignore (HxArray.push roots2 a);
+          ignore (i := HxInt.add (!i) 1);
+          raise (HxRuntime.Hx_continue)
+        )) else ());
+        ignore (print_endline ("hxhx(stage1): unsupported argument: " ^ HxString.toStdString a));
+        raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+      )))
       | "--run" | "-x" -> ignore (if permissive then ignore ((
         ignore (if HxInt.add (!i) 1 >= HxArray.length expanded then ignore ((
           ignore (print_endline ("hxhx(stage1): missing value after " ^ HxString.toStdString a));
           raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         )) else ());
-        ignore (let __assign_13 = HxArray.get expanded (HxInt.add (!i) 1) in (
-          main2 := __assign_13;
-          __assign_13
+        ignore (let __assign_16 = HxArray.get expanded (HxInt.add (!i) 1) in (
+          main2 := __assign_16;
+          __assign_16
         ));
         ignore (i := HxInt.add (!i) 2);
-        while !i < HxArray.length expanded && not (StringTools.startsWith (HxArray.get expanded (!i)) "-") do ignore (let __old_14 = !i in let __new_15 = HxInt.add __old_14 1 in (
-          ignore (i := __new_15);
-          __old_14
+        while !i < HxArray.length expanded && not (StringTools.startsWith (HxArray.get expanded (!i)) "-") do ignore (let __old_17 = !i in let __new_18 = HxInt.add __old_17 1 in (
+          ignore (i := __new_18);
+          __old_17
         )) done
       )) else ignore ((
         ignore (if StringTools.startsWith a "-" then ignore ((
@@ -397,15 +457,15 @@ let stage1args_parse = fun args permissive -> try let expanded = stage1args_expa
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
     ignore (if HxArray.length classPaths2 = 0 then ignore (HxArray.push classPaths2 ".") else ());
-    ignore (if !stdRoot == Obj.magic (HxRuntime.hx_null) || HxString.length (!stdRoot) = 0 then ignore (let __assign_16 = stage1args_inferStdRoot () in (
-      stdRoot := __assign_16;
-      __assign_16
+    ignore (if !stdRoot == Obj.magic (HxRuntime.hx_null) || HxString.length (!stdRoot) = 0 then ignore (let __assign_19 = stage1args_inferStdRoot () in (
+      stdRoot := __assign_19;
+      __assign_19
     )) else ());
     ignore (if !stdRoot != Obj.magic (HxRuntime.hx_null) && HxString.length (!stdRoot) > 0 && HxArray.indexOf classPaths2 (!stdRoot) 0 = -1 then ignore (HxArray.push classPaths2 (!stdRoot)) else ());
-    stage1args_create classPaths2 (!main2) (!noOutput2) roots2 defines2 libs2 macros2 (!cwd2)
+    stage1args_create classPaths2 (!main2) (!noOutput2) roots2 defines2 libs2 macros2 (!cwd2) (!hadCmd2)
   )
 ) with
-  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
 
 let stage1args_getClassPaths = fun a -> a.classPaths
 
@@ -422,6 +482,8 @@ let stage1args_getLibs = fun a -> a.libs
 let stage1args_getMacros = fun a -> a.macros
 
 let stage1args_getCwd = fun a -> a.cwd
+
+let stage1args_getHadCmd = fun a -> a.hadCmd
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: hxhx.Stage1Resolver *)

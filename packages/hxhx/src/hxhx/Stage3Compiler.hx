@@ -736,7 +736,14 @@ class Stage3Compiler {
 			emitFullBodies = emitFullBodies || sawInterp;
 
 			// Respect upstream `--no-output` by treating it as “no emit” in bring-up.
-			noEmit = noEmit || parsed.noOutput;
+			//
+			// Override rule
+			// - If the caller explicitly provides `--hxhx-out <dir>`, treat that as an explicit request
+			//   to emit/build even if the `.hxml` contains `--no-output` (some Stage3 examples share
+			//   `.hxml` files with stage0 paths where `--no-output` is desirable).
+			if (outDir.length == 0) {
+				noEmit = noEmit || parsed.noOutput;
+			}
 
 			function inferMainFromMacroExpr(expr:String):String {
 				if (expr == null) return "";
@@ -767,6 +774,15 @@ class Stage3Compiler {
 				if (inferred.length == 0) return error("missing -main <TypeName>");
 				roots0.push(inferred);
 			} else {
+				// Some upstream `.hxml` units are "command only" (e.g. Flash's `-cmd compc ...`) and do
+				// not invoke the Haxe compiler in a way that produces a `-main`.
+				//
+				// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
+				// diagnostic runners can still traverse the rest of the multi-unit file.
+				if (Stage1Args.getHadCmd(parsed)) {
+					Sys.println("stage3=skipped_cmd_only");
+					return 0;
+				}
 				return error("missing -main <TypeName>");
 			}
 
@@ -1465,9 +1481,48 @@ class Stage3Compiler {
 				}
 				for (a in u) unitArgs.push(a);
 
+				if (Sys.getEnv("HXHX_TRACE_UNITS") == "1") {
+					final main = findFlagValue(u, "-main", "--main");
+					final cp = findManyFlagValues(u, "-cp", "--class-path", "-p");
+					Sys.println("hxhx(stage3): unit_begin idx=" + idx + " main=" + (main == null ? "<none>" : main) + " cp=" + cp.join(",") + " args=" + summarizeArgs(u));
+				}
+
 				final code = runOne(unitArgs);
 				if (code != 0) return code;
 			}
 			return 0;
+		}
+
+		static function findFlagValue(args:Array<String>, a:String, b:String):Null<String> {
+			var i = 0;
+			while (i < args.length) {
+				final t = args[i];
+				if ((t == a || t == b) && i + 1 < args.length) return args[i + 1];
+				i++;
+			}
+			return null;
+		}
+
+		static function findManyFlagValues(args:Array<String>, a:String, b:String, ?c:String):Array<String> {
+			final out = new Array<String>();
+			var i = 0;
+			while (i < args.length) {
+				final t = args[i];
+				final match = (t == a || t == b || (c != null && t == c));
+				if (match && i + 1 < args.length) {
+					out.push(args[i + 1]);
+					i += 2;
+					continue;
+				}
+				i++;
+			}
+			return out;
+		}
+
+		static function summarizeArgs(args:Array<String>):String {
+			final joined = args.join(" ");
+			final maxLen = 160;
+			if (joined.length <= maxLen) return joined;
+			return joined.substr(0, maxLen) + "...";
 		}
 }

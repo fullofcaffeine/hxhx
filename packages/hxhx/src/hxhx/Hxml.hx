@@ -69,7 +69,9 @@ class Hxml {
 		- Non-`.hxml` args are passed through as-is.
 
 		Notes
-		- `--each` is treated like `--next` for now (bootstrap behavior).
+		- `--each` establishes a *common prefix* that is prepended to every following `--next` unit.
+		  This matches upstream usage patterns like `tests/unit/compile-python.hxml` where
+		  `compile-each.hxml` provides shared args (e.g. `-cp src`) and `--each` begins per-target units.
 	**/
 	public static function expandArgsToUnits(args:Array<String>):Null<Array<Array<String>>> {
 		if (args == null) return [[]];
@@ -92,21 +94,36 @@ class Hxml {
 	static function splitIntoUnits(tokens:Array<String>):Array<Array<String>> {
 		final units = new Array<Array<String>>();
 		var cur = new Array<String>();
+		var commonPrefix:Null<Array<String>> = null;
 
-		inline function flush():Void {
-			// Ignore empty units to match upstream’s permissive behavior (multiple `--next` lines, etc.).
-			if (cur.length > 0) units.push(cur);
-			cur = new Array<String>();
+		inline function shouldPushUnit():Bool {
+			if (cur.length == 0) return false;
+			if (commonPrefix == null) return true;
+			return cur.length > commonPrefix.length;
+		}
+
+		inline function flushNext():Void {
+			// Ignore empty/degenerate units to match upstream’s permissive behavior
+			// (`--next` chains, `--each` with no following compile, etc.).
+			if (shouldPushUnit()) units.push(cur);
+			cur = commonPrefix == null ? new Array<String>() : commonPrefix.copy();
 		}
 
 		for (t in tokens) {
-			if (t == "--next" || t == "--each") {
-				flush();
+			if (t == "--each") {
+				// Upstream semantics: everything before the first `--each` is treated as a common
+				// prefix for all following compilation units (split by `--next`).
+				commonPrefix = cur.copy();
+				cur = commonPrefix.copy();
+				continue;
+			}
+			if (t == "--next") {
+				flushNext();
 				continue;
 			}
 			cur.push(t);
 		}
-		flush();
+		if (shouldPushUnit()) units.push(cur);
 		return units.length == 0 ? [ [] ] : units;
 	}
 
@@ -117,6 +134,12 @@ class Hxml {
 		}
 
 		final norm = Path.normalize(path);
+		// `seen` is a recursion-stack guard, not a global "already expanded" cache.
+		//
+		// Why
+		// - Upstream `.hxml` often includes the same file multiple times across different `--next` units
+		//   (e.g. `tests/unit/compile.hxml` uses `compile-each.hxml` in many target units).
+		// - We only want to reject *recursive* includes, not repeated includes.
 		if (seen.exists(norm)) {
 			Sys.println("hxhx(stage1): hxml include cycle: " + norm);
 			return null;
@@ -126,6 +149,7 @@ class Hxml {
 		final content = try sys.io.File.getContent(norm) catch (_:Dynamic) null;
 		if (content == null) {
 			Sys.println("hxhx(stage1): failed to read hxml: " + norm);
+			seen.remove(norm);
 			return null;
 		}
 
@@ -136,7 +160,10 @@ class Hxml {
 		final lines = content.split("\n");
 		for (ln in lines) {
 			final lineTokens = tokenizeLine(ln);
-			if (lineTokens == null) return null;
+			if (lineTokens == null) {
+				seen.remove(norm);
+				return null;
+			}
 			for (t in lineTokens) tokens.push(t);
 		}
 
@@ -162,19 +189,24 @@ class Hxml {
 		for (t in tokens) {
 			if (!allowNext && (t == "--next" || t == "--each")) {
 				Sys.println("hxhx(stage1): unsupported hxml directive: " + t);
+				seen.remove(norm);
 				return null;
 			}
 
 			if (!StringTools.startsWith(t, "-") && StringTools.endsWith(t, ".hxml")) {
 				final included = Path.isAbsolute(t) ? Path.normalize(t) : Path.normalize(Path.join([fileDir, t]));
 				final expanded = parseFileRec(included, seen, depth + 1, allowNext);
-				if (expanded == null) return null;
+				if (expanded == null) {
+					seen.remove(norm);
+					return null;
+				}
 				for (x in expanded) out.push(x);
 				continue;
 			}
 
 			out.push(t);
 		}
+		seen.remove(norm);
 		return out;
 	}
 
@@ -220,6 +252,8 @@ class Hxml {
 		if (macroLine != null) return macroLine;
 		final cmdLine = restOfLineAfter("--cmd");
 		if (cmdLine != null) return cmdLine;
+		final cmdLine2 = restOfLineAfter("-cmd");
+		if (cmdLine2 != null) return cmdLine2;
 
 		final tokens = new Array<String>();
 		var cur = new StringBuf();

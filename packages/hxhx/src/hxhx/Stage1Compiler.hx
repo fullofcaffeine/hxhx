@@ -231,8 +231,9 @@ class Stage1Compiler {
 		public final libs:Array<String>;
 		public final macros:Array<String>;
 		public final cwd:String;
+		public final hadCmd:Bool;
 
-		function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>, cwd:String) {
+		function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>, cwd:String, hadCmd:Bool) {
 			this.classPaths = classPaths;
 			this.main = main;
 			this.noOutput = noOutput;
@@ -241,6 +242,7 @@ class Stage1Compiler {
 			this.libs = libs;
 			this.macros = macros;
 			this.cwd = cwd;
+			this.hadCmd = hadCmd;
 		}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
@@ -256,6 +258,7 @@ class Stage1Compiler {
 			final macros = new Array<String>();
 			var cwd = ".";
 			var stdRoot = "";
+			var hadCmd = false;
 
 		var i = 0;
 		while (i < expanded.length) {
@@ -300,6 +303,23 @@ class Stage1Compiler {
 						// to avoid treating it as a stray positional token (which can break parsing).
 						if (i + 1 >= expanded.length) {
 							Sys.println("hxhx(stage1): missing value after --cmd");
+							return null;
+						}
+						hadCmd = true;
+						i += 2;
+					case "-cmd" if (permissive):
+						// Upstream also supports the short form `-cmd <shell...>` (used by tests/unit/compile-flash.hxml).
+						// Same behavior as `--cmd` for bring-up: consume and ignore.
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after -cmd");
+							return null;
+						}
+						hadCmd = true;
+						i += 2;
+					case "-swf-lib" if (permissive):
+						// Flash-specific support flags: consume the 1-arg payload so it doesn't become a positional root.
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after -swf-lib");
 							return null;
 						}
 						i += 2;
@@ -403,7 +423,7 @@ class Stage1Compiler {
 			if (classPaths.length == 0) classPaths.push(".");
 			if (stdRoot == null || stdRoot.length == 0) stdRoot = inferStdRoot();
 			if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
-			return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, cwd);
+			return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, cwd, hadCmd);
 		}
 
 	static function inferStdRoot():String {
@@ -464,6 +484,7 @@ class Stage1Compiler {
 		public static function getLibs(a:Stage1Args):Array<String> return a.libs;
 		public static function getMacros(a:Stage1Args):Array<String> return a.macros;
 		public static function getCwd(a:Stage1Args):String return a.cwd;
+		public static function getHadCmd(a:Stage1Args):Bool return a.hadCmd;
 	}
 
 /**

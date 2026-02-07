@@ -451,6 +451,48 @@ test "$(echo "$out" | grep -c '^stage3=ok$')" -eq 2
 echo "$out" | grep -q "^A$"
 echo "$out" | grep -q "^B$"
 
+echo "== Stage3 bring-up: multi-unit .hxml via --each (common prefix)"
+tmpeach="$tmpdir/each_unit_hxml"
+mkdir -p "$tmpeach/src"
+cat >"$tmpeach/src/A.hx" <<'HX'
+class A { static function main() {} }
+HX
+cat >"$tmpeach/src/B.hx" <<'HX'
+class B { static function main() {} }
+HX
+cat >"$tmpeach/common.hxml" <<HX
+-cp $tmpeach/src
+HX
+cat >"$tmpeach/build.hxml" <<HX
+$tmpeach/common.hxml
+
+--each
+
+-main A
+
+--next
+
+-main B
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only --hxhx-out "$tmpeach/out" "$tmpeach/build.hxml")"
+test "$(echo "$out" | grep -c '^stage3=type_only_ok$')" -eq 2
+
+echo "== Stage3 bring-up: cmd-only unit is skipped (-cmd)"
+tmpcmd="$tmpdir/cmd_only_unit_hxml"
+mkdir -p "$tmpcmd/src"
+cat >"$tmpcmd/src/Main.hx" <<'HX'
+class Main { static function main() {} }
+HX
+cat >"$tmpcmd/build.hxml" <<HX
+-cmd echo Hello from cmd-only unit
+--next
+-cp $tmpcmd/src
+-main Main
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only "$tmpcmd/build.hxml")"
+test "$(echo "$out" | grep -c '^stage3=skipped_cmd_only$')" -eq 1
+test "$(echo "$out" | grep -c '^stage3=type_only_ok$')" -eq 1
+
 echo "== Stage3 bring-up: lazy type-driven module loading (same-package type)"
 tmplazy="$tmpdir/lazy_module_loading"
 mkdir -p "$tmplazy/src/p"
