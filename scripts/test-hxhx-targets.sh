@@ -522,6 +522,7 @@ mini_hxml="$ROOT/haxe_libraries/hxhx_mini_lib.hxml"
 cat >"$mini_hxml" <<'HXML'
 # Internal test fixture for Stage3 `--library` resolution.
 -D hxhx_mini=1
+--macro hxhxmacros.HaxelibInitMacros.init()
 HXML
 
 cat >"$mini_src/Ok.hx" <<'HX'
@@ -540,6 +541,7 @@ class Main {
 HX
 mini_out="$tmpmini/out"
 out="$(
+  HXHX_RUN_HAXELIB_MACROS=1 \
   HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
   "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit \
     -cp "$mini_src" \
@@ -547,6 +549,8 @@ out="$(
     -main Main \
     --hxhx-out "$mini_out"
 )"
+echo "$out" | grep -q "^lib_macro_run\\[0\\]=ok$"
+echo "$out" | grep -q "^macro_define\\[HXHX_HAXELIB_INIT\\]=1$"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage3 bring-up: expression macro expansion replaces call sites"

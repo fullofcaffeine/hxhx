@@ -4,6 +4,7 @@
 		"ocaml_Buffer.ml",
 		"hxhxmacros_ReturnFieldMacros.ml",
 		"hxhxmacros_PluginFixtureMacros.ml",
+		"hxhxmacros_HaxelibInitMacros.ml",
 		"hxhxmacros_FieldPrinterMacros.ml",
 		"hxhxmacros_ExternalMacros.ml",
 		"hxhxmacros_ExprMacroShim.ml",

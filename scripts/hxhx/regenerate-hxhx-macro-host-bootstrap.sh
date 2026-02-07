@@ -43,7 +43,7 @@ if [ ! -d "$TOOL_DIR" ]; then
   exit 1
 fi
 
-ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn();hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn();hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar();hxhxmacros.ExprMacroShim.hello();hxhxmacros.ArgsMacros.setArg(\"ok\");hxhxmacros.PluginFixtureMacros.init();Macro.init()"
+ENTRYPOINTS="hxhxmacros.ExternalMacros.external();hxhxmacros.BuildFieldMacros.addGeneratedField();hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn();hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn();hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar();hxhxmacros.ExprMacroShim.hello();hxhxmacros.ArgsMacros.setArg(\"ok\");hxhxmacros.HaxelibInitMacros.init();hxhxmacros.PluginFixtureMacros.init();Macro.init()"
 
 echo "== Regenerating macro host via stage0 (this requires Haxe + reflaxe.ocaml)"
 (

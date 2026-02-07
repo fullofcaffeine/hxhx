@@ -5,5 +5,6 @@ module BuildFieldMacros = Hxhxmacros_BuildFieldMacros
 module ExprMacroShim = Hxhxmacros_ExprMacroShim
 module ExternalMacros = Hxhxmacros_ExternalMacros
 module FieldPrinterMacros = Hxhxmacros_FieldPrinterMacros
+module HaxelibInitMacros = Hxhxmacros_HaxelibInitMacros
 module PluginFixtureMacros = Hxhxmacros_PluginFixtureMacros
 module ReturnFieldMacros = Hxhxmacros_ReturnFieldMacros

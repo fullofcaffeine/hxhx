@@ -29,6 +29,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhxmacros.ExprMacroShim");
   ignore (HxType.class_ "hxhxmacros.ExternalMacros");
   ignore (HxType.class_ "hxhxmacros.FieldPrinterMacros");
+  ignore (HxType.class_ "hxhxmacros.HaxelibInitMacros");
   ignore (HxType.class_ "hxhxmacros.PluginFixtureMacros");
   ignore (HxType.class_ "hxhxmacros.ReturnFieldMacros");
   ignore (HxType.class_ "ocaml._Buffer.Buffer_Impl_");
@@ -142,6 +143,9 @@ let init () : unit =
   HxType.register_class_ctor "hxhxmacros.FieldPrinterMacros" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacros_FieldPrinterMacros.create ())
   );
+  HxType.register_class_ctor "hxhxmacros.HaxelibInitMacros" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhxmacros_HaxelibInitMacros.create ())
+  );
   HxType.register_class_ctor "hxhxmacros.PluginFixtureMacros" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhxmacros_PluginFixtureMacros.create ())
   );
@@ -187,6 +191,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhxmacros.ExprMacroShim" (fun () -> Obj.repr (Hxhxmacros_ExprMacroShim.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ExternalMacros" (fun () -> Obj.repr (Hxhxmacros_ExternalMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.FieldPrinterMacros" (fun () -> Obj.repr (Hxhxmacros_FieldPrinterMacros.__empty ()));
+  HxType.register_class_empty_ctor "hxhxmacros.HaxelibInitMacros" (fun () -> Obj.repr (Hxhxmacros_HaxelibInitMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.PluginFixtureMacros" (fun () -> Obj.repr (Hxhxmacros_PluginFixtureMacros.__empty ()));
   HxType.register_class_empty_ctor "hxhxmacros.ReturnFieldMacros" (fun () -> Obj.repr (Hxhxmacros_ReturnFieldMacros.__empty ()));
   HxType.register_class_empty_ctor "sys.io.Stdio" (fun () -> Obj.repr (Sys_io_Stdio.__empty ()));
@@ -244,6 +249,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhxmacros.ExternalMacros" [ "external" ];
   HxType.register_class_instance_fields "hxhxmacros.FieldPrinterMacros" [];
   HxType.register_class_static_fields "hxhxmacros.FieldPrinterMacros" [ "addArgFunctionAndVar" ];
+  HxType.register_class_instance_fields "hxhxmacros.HaxelibInitMacros" [];
+  HxType.register_class_static_fields "hxhxmacros.HaxelibInitMacros" [ "init" ];
   HxType.register_class_instance_fields "hxhxmacros.PluginFixtureMacros" [];
   HxType.register_class_static_fields "hxhxmacros.PluginFixtureMacros" [ "init" ];
   HxType.register_class_instance_fields "hxhxmacros.ReturnFieldMacros" [];
@@ -349,6 +356,7 @@ let init () : unit =
   HxType.register_class_tags "hxhxmacros.ExprMacroShim" [ "hxhxmacros.ExprMacroShim" ];
   HxType.register_class_tags "hxhxmacros.ExternalMacros" [ "hxhxmacros.ExternalMacros" ];
   HxType.register_class_tags "hxhxmacros.FieldPrinterMacros" [ "hxhxmacros.FieldPrinterMacros" ];
+  HxType.register_class_tags "hxhxmacros.HaxelibInitMacros" [ "hxhxmacros.HaxelibInitMacros" ];
   HxType.register_class_tags "hxhxmacros.PluginFixtureMacros" [ "hxhxmacros.PluginFixtureMacros" ];
   HxType.register_class_tags "hxhxmacros.ReturnFieldMacros" [ "hxhxmacros.ReturnFieldMacros" ];
   HxType.register_class_tags "ocaml._Buffer.Buffer_Impl_" [ "ocaml._Buffer.Buffer_Impl_" ];

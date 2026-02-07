@@ -77,7 +77,7 @@ let run = fun expr -> try (
           __assign_13
         )
       )
-      | "hxhxmacros.PluginFixtureMacros.init()" -> let r = Obj.repr (Hxhxmacros_PluginFixtureMacros.init ()) in (
+      | "hxhxmacros.HaxelibInitMacros.init()" -> let r = Obj.repr (Hxhxmacros_HaxelibInitMacros.init ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
         if HxType.isOfType r (HxType.class_ "String") then let __assign_14 = Obj.obj r in (
           tempResult := __assign_14;
@@ -87,7 +87,7 @@ let run = fun expr -> try (
           __assign_15
         )
       )
-      | "hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()" -> let r = Obj.repr (Hxhxmacros_ReturnFieldMacros.addGeneratedFieldReturn ()) in (
+      | "hxhxmacros.PluginFixtureMacros.init()" -> let r = Obj.repr (Hxhxmacros_PluginFixtureMacros.init ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
         if HxType.isOfType r (HxType.class_ "String") then let __assign_16 = Obj.obj r in (
           tempResult := __assign_16;
@@ -97,7 +97,7 @@ let run = fun expr -> try (
           __assign_17
         )
       )
-      | "hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()" -> let r = Obj.repr (Hxhxmacros_ReturnFieldMacros.replaceGeneratedFieldReturn ()) in (
+      | "hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()" -> let r = Obj.repr (Hxhxmacros_ReturnFieldMacros.addGeneratedFieldReturn ()) in (
         ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
         if HxType.isOfType r (HxType.class_ "String") then let __assign_18 = Obj.obj r in (
           tempResult := __assign_18;
@@ -107,6 +107,16 @@ let run = fun expr -> try (
           __assign_19
         )
       )
+      | "hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()" -> let r = Obj.repr (Hxhxmacros_ReturnFieldMacros.replaceGeneratedFieldReturn ()) in (
+        ignore (Hxhxmacrohost_BuildMacroSupport.afterEntrypoint r);
+        if HxType.isOfType r (HxType.class_ "String") then let __assign_20 = Obj.obj r in (
+          tempResult := __assign_20;
+          __assign_20
+        ) else let __assign_21 = "ok" in (
+          tempResult := __assign_21;
+          __assign_21
+        )
+      )
       | _ -> let __assign_1 = Obj.magic (HxRuntime.hx_null) in (
         tempResult := __assign_1;
         __assign_1
@@ -114,4 +124,4 @@ let run = fun expr -> try (
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
+  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
