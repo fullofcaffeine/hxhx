@@ -188,396 +188,267 @@ let exprToOcamlString = fun e tyByIdent -> let tempResult = ref "" in (
   !tempResult
 )
 
-let rec exprToOcaml = fun e arityByIdent tyByIdent -> let isFloatExpr = fun expr -> let tempResult = ref false in (
-  ignore (match expr with
-    | HxExpr.EFloat _p0 -> (
-      ignore _p0;
-      let __assign_61 = true in (
+let rec exprToOcaml = fun e arityByIdent tyByIdent -> let isFloatExpr = ref (Obj.magic (HxRuntime.hx_null)) in (
+  ignore (let __assign_60 = fun expr -> let tempResult = ref false in (
+    ignore (match expr with
+      | HxExpr.EFloat _p0 -> (
+        ignore _p0;
+        let __assign_62 = true in (
+          tempResult := __assign_62;
+          __assign_62
+        )
+      )
+      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString = ref "" in (
+        ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_63 = "" in (
+          tempString := __assign_63;
+          __assign_63
+        ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_64 = "" in (
+          tempString := __assign_64;
+          __assign_64
+        ) else let __assign_65 = TyType.toString t () in (
+          tempString := __assign_65;
+          __assign_65
+        ));
+        let __assign_66 = HxString.equals (!tempString) "Float" in (
+          tempResult := __assign_66;
+          __assign_66
+        )
+      )
+      | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in if HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" then let __assign_67 = (!isFloatExpr) a || (!isFloatExpr) b in (
+        tempResult := __assign_67;
+        __assign_67
+      ) else let __assign_68 = false in (
+        tempResult := __assign_68;
+        __assign_68
+      )
+      | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in (
+        ignore _g;
+        let thenExpr = _g1 in let elseExpr = _g2 in let __assign_69 = (!isFloatExpr) thenExpr && (!isFloatExpr) elseExpr in (
+          tempResult := __assign_69;
+          __assign_69
+        )
+      )
+      | _ -> let __assign_61 = false in (
         tempResult := __assign_61;
         __assign_61
-      )
-    )
-    | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString = ref "" in (
-      ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_62 = "" in (
-        tempString := __assign_62;
-        __assign_62
-      ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_63 = "" in (
-        tempString := __assign_63;
-        __assign_63
-      ) else let __assign_64 = TyType.toString t () in (
-        tempString := __assign_64;
-        __assign_64
       ));
-      let __assign_65 = HxString.equals (!tempString) "Float" in (
-        tempResult := __assign_65;
-        __assign_65
-      )
-    )
-    | _ -> let __assign_60 = false in (
-      tempResult := __assign_60;
-      __assign_60
-    ));
-  !tempResult
-) in let isIntExpr = fun expr -> let tempResult1 = ref false in (
-  ignore (match expr with
-    | HxExpr.EInt _p0 -> (
-      ignore _p0;
-      let __assign_67 = true in (
-        tempResult1 := __assign_67;
-        __assign_67
-      )
-    )
-    | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString1 = ref "" in (
-      ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_68 = "" in (
-        tempString1 := __assign_68;
-        __assign_68
-      ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_69 = "" in (
-        tempString1 := __assign_69;
-        __assign_69
-      ) else let __assign_70 = TyType.toString t () in (
-        tempString1 := __assign_70;
-        __assign_70
-      ));
-      let __assign_71 = HxString.equals (!tempString1) "Int" in (
-        tempResult1 := __assign_71;
-        __assign_71
-      )
-    )
-    | _ -> let __assign_66 = false in (
-      tempResult1 := __assign_66;
-      __assign_66
-    ));
-  !tempResult1
-) in let isStringExpr = fun expr -> let tempResult2 = ref false in (
-  ignore (match expr with
-    | HxExpr.EString _p0 -> (
-      ignore _p0;
-      let __assign_73 = true in (
-        tempResult2 := __assign_73;
-        __assign_73
-      )
-    )
-    | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString2 = ref "" in (
-      ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_74 = "" in (
-        tempString2 := __assign_74;
-        __assign_74
-      ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_75 = "" in (
-        tempString2 := __assign_75;
-        __assign_75
-      ) else let __assign_76 = TyType.toString t () in (
-        tempString2 := __assign_76;
-        __assign_76
-      ));
-      let __assign_77 = HxString.equals (!tempString2) "String" in (
-        tempResult2 := __assign_77;
-        __assign_77
-      )
-    )
-    | _ -> let __assign_72 = false in (
-      tempResult2 := __assign_72;
-      __assign_72
-    ));
-  !tempResult2
-) in let exprToOcamlForConcat = fun expr -> let tempResult3 = ref "" in (
-  ignore (match expr with
-    | HxExpr.EBool _p0 -> (
-      ignore _p0;
-      let __assign_79 = exprToOcamlString expr tyByIdent in (
-        tempResult3 := __assign_79;
-        __assign_79
-      )
-    )
-    | HxExpr.EInt _p0 -> (
-      ignore _p0;
-      let __assign_80 = exprToOcamlString expr tyByIdent in (
-        tempResult3 := __assign_80;
-        __assign_80
-      )
-    )
-    | HxExpr.EFloat _p0 -> (
-      ignore _p0;
-      let __assign_81 = exprToOcamlString expr tyByIdent in (
-        tempResult3 := __assign_81;
-        __assign_81
-      )
-    )
-    | HxExpr.EIdent _p0 -> (
-      ignore _p0;
-      let __assign_82 = exprToOcamlString expr tyByIdent in (
-        tempResult3 := __assign_82;
-        __assign_82
-      )
-    )
-    | _ -> let __assign_78 = exprToOcaml expr arityByIdent tyByIdent in (
-      tempResult3 := __assign_78;
-      __assign_78
-    ));
-  !tempResult3
-) in (
-  ignore (fun expr -> let tempResult4 = ref "" in (
-    ignore (match expr with
-      | HxExpr.EInt _p0 -> let _g = _p0 in let v = _g in let __assign_84 = "float_of_int " ^ HxString.toStdString (string_of_int v) in (
-        tempResult4 := __assign_84;
-        __assign_84
-      )
-      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString3 = ref "" in (
-        ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_85 = "" in (
-          tempString3 := __assign_85;
-          __assign_85
-        ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_86 = "" in (
-          tempString3 := __assign_86;
-          __assign_86
-        ) else let __assign_87 = TyType.toString t () in (
-          tempString3 := __assign_87;
-          __assign_87
-        ));
-        if HxString.equals (!tempString3) "Int" then let __assign_88 = "float_of_int " ^ HxString.toStdString (ocamlValueIdent name) in (
-          tempResult4 := __assign_88;
-          __assign_88
-        ) else let __assign_89 = exprToOcaml expr arityByIdent tyByIdent in (
-          tempResult4 := __assign_89;
-          __assign_89
-        )
-      )
-      | _ -> let __assign_83 = exprToOcaml expr arityByIdent tyByIdent in (
-        tempResult4 := __assign_83;
-        __assign_83
-      ));
-    !tempResult4
+    !tempResult
+  ) in (
+    isFloatExpr := __assign_60;
+    __assign_60
   ));
-  let tempResult5 = ref "" in (
-    ignore (match e with
-      | HxExpr.ENull -> let __assign_90 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_90;
-        __assign_90
-      )
-      | HxExpr.EBool _p0 -> let _g = _p0 in let v = _g in if v then let __assign_91 = "true" in (
-        tempResult5 := __assign_91;
-        __assign_91
-      ) else let __assign_92 = "false" in (
-        tempResult5 := __assign_92;
-        __assign_92
-      )
-      | HxExpr.EString _p0 -> let _g = _p0 in let v = _g in let __assign_93 = escapeOcamlString v in (
-        tempResult5 := __assign_93;
-        __assign_93
-      )
-      | HxExpr.EInt _p0 -> let _g = _p0 in let v = _g in let __assign_94 = string_of_int v in (
-        tempResult5 := __assign_94;
-        __assign_94
-      )
-      | HxExpr.EFloat _p0 -> let _g = _p0 in let v = _g in let __assign_95 = string_of_float v in (
-        tempResult5 := __assign_95;
-        __assign_95
-      )
-      | HxExpr.EThis -> let __assign_96 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_96;
-        __assign_96
-      )
-      | HxExpr.ESuper -> let __assign_97 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_97;
-        __assign_97
-      )
-      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in if isUpperStart name then let __assign_98 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_98;
-        __assign_98
-      ) else if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) then let __assign_99 = ocamlValueIdent name in (
-        tempResult5 := __assign_99;
-        __assign_99
-      ) else if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let __assign_100 = ocamlValueIdent name in (
-        tempResult5 := __assign_100;
-        __assign_100
-      ) else let __assign_101 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_101;
-        __assign_101
-      )
-      | HxExpr.EField (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in if (match _g with
-        | HxExpr.ENull -> 0
-        | HxExpr.EBool _ -> 1
-        | HxExpr.EString _ -> 2
-        | HxExpr.EInt _ -> 3
-        | HxExpr.EFloat _ -> 4
-        | HxExpr.EThis -> 5
-        | HxExpr.ESuper -> 6
-        | HxExpr.EIdent _ -> 7
-        | HxExpr.EField (_, _) -> 8
-        | HxExpr.ECall (_, _) -> 9
-        | HxExpr.ENew (_, _) -> 10
-        | HxExpr.EUnop (_, _) -> 11
-        | HxExpr.EBinop (_, _, _) -> 12
-        | HxExpr.ETernary (_, _, _) -> 13
-        | HxExpr.EAnon (_, _) -> 14
-        | HxExpr.EArrayDecl _ -> 15
-        | HxExpr.EArrayAccess (_, _) -> 16
-        | HxExpr.ECast (_, _) -> 17
-        | HxExpr.EUntyped _ -> 18
-        | HxExpr.EUnsupported _ -> 19) = 7 then let _g2 = match _g with
-        | HxExpr.EIdent __enum_param_102 -> __enum_param_102
-        | _ -> failwith "Unexpected enum parameter" in match _g2 with
-        | "Math" -> (match _g1 with
-          | "NEGATIVE_INFINITY" -> let __assign_111 = "neg_infinity" in (
-            tempResult5 := __assign_111;
-            __assign_111
+  let isIntExpr = ref (Obj.magic (HxRuntime.hx_null)) in (
+    ignore (let __assign_70 = fun expr -> let tempResult1 = ref false in (
+      ignore (match expr with
+        | HxExpr.EInt _p0 -> (
+          ignore _p0;
+          let __assign_72 = true in (
+            tempResult1 := __assign_72;
+            __assign_72
           )
-          | "NaN" -> let __assign_112 = "nan" in (
-            tempResult5 := __assign_112;
-            __assign_112
-          )
-          | "PI" -> let __assign_113 = "(4.0 *. atan 1.0)" in (
-            tempResult5 := __assign_113;
-            __assign_113
-          )
-          | "POSITIVE_INFINITY" -> let __assign_114 = "infinity" in (
-            tempResult5 := __assign_114;
-            __assign_114
-          )
-          | _ -> let obj = _g in let field = _g1 in if (match obj with
-            | HxExpr.ENull -> 0
-            | HxExpr.EBool _ -> 1
-            | HxExpr.EString _ -> 2
-            | HxExpr.EInt _ -> 3
-            | HxExpr.EFloat _ -> 4
-            | HxExpr.EThis -> 5
-            | HxExpr.ESuper -> 6
-            | HxExpr.EIdent _ -> 7
-            | HxExpr.EField (_, _) -> 8
-            | HxExpr.ECall (_, _) -> 9
-            | HxExpr.ENew (_, _) -> 10
-            | HxExpr.EUnop (_, _) -> 11
-            | HxExpr.EBinop (_, _, _) -> 12
-            | HxExpr.ETernary (_, _, _) -> 13
-            | HxExpr.EAnon (_, _) -> 14
-            | HxExpr.EArrayDecl _ -> 15
-            | HxExpr.EArrayAccess (_, _) -> 16
-            | HxExpr.ECast (_, _) -> 17
-            | HxExpr.EUntyped _ -> 18
-            | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match obj with
-            | HxExpr.EIdent __enum_param_107 -> __enum_param_107
-            | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_108 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
-            tempResult5 := __assign_108;
-            __assign_108
-          ) else let __assign_109 = "(Obj.magic 0)" in (
-            tempResult5 := __assign_109;
-            __assign_109
-          ) else let __assign_110 = "(Obj.magic 0)" in (
-            tempResult5 := __assign_110;
-            __assign_110
-          ))
-        | "String" -> if HxString.equals _g1 "fromCharCode" then let __assign_115 = "(fun i -> String.make 1 (Char.chr i))" in (
-          tempResult5 := __assign_115;
-          __assign_115
-        ) else let obj = _g in let field = _g1 in if (match obj with
-          | HxExpr.ENull -> 0
-          | HxExpr.EBool _ -> 1
-          | HxExpr.EString _ -> 2
-          | HxExpr.EInt _ -> 3
-          | HxExpr.EFloat _ -> 4
-          | HxExpr.EThis -> 5
-          | HxExpr.ESuper -> 6
-          | HxExpr.EIdent _ -> 7
-          | HxExpr.EField (_, _) -> 8
-          | HxExpr.ECall (_, _) -> 9
-          | HxExpr.ENew (_, _) -> 10
-          | HxExpr.EUnop (_, _) -> 11
-          | HxExpr.EBinop (_, _, _) -> 12
-          | HxExpr.ETernary (_, _, _) -> 13
-          | HxExpr.EAnon (_, _) -> 14
-          | HxExpr.EArrayDecl _ -> 15
-          | HxExpr.EArrayAccess (_, _) -> 16
-          | HxExpr.ECast (_, _) -> 17
-          | HxExpr.EUntyped _ -> 18
-          | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match obj with
-          | HxExpr.EIdent __enum_param_116 -> __enum_param_116
-          | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_117 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
-          tempResult5 := __assign_117;
-          __assign_117
-        ) else let __assign_118 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_118;
-          __assign_118
-        ) else let __assign_119 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_119;
-          __assign_119
         )
-        | _ -> let obj = _g in let field = _g1 in if (match obj with
-          | HxExpr.ENull -> 0
-          | HxExpr.EBool _ -> 1
-          | HxExpr.EString _ -> 2
-          | HxExpr.EInt _ -> 3
-          | HxExpr.EFloat _ -> 4
-          | HxExpr.EThis -> 5
-          | HxExpr.ESuper -> 6
-          | HxExpr.EIdent _ -> 7
-          | HxExpr.EField (_, _) -> 8
-          | HxExpr.ECall (_, _) -> 9
-          | HxExpr.ENew (_, _) -> 10
-          | HxExpr.EUnop (_, _) -> 11
-          | HxExpr.EBinop (_, _, _) -> 12
-          | HxExpr.ETernary (_, _, _) -> 13
-          | HxExpr.EAnon (_, _) -> 14
-          | HxExpr.EArrayDecl _ -> 15
-          | HxExpr.EArrayAccess (_, _) -> 16
-          | HxExpr.ECast (_, _) -> 17
-          | HxExpr.EUntyped _ -> 18
-          | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match obj with
-          | HxExpr.EIdent __enum_param_103 -> __enum_param_103
-          | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_104 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
-          tempResult5 := __assign_104;
-          __assign_104
-        ) else let __assign_105 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_105;
-          __assign_105
-        ) else let __assign_106 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_106;
-          __assign_106
-        ) else let obj = _g in let field = _g1 in if (match obj with
-        | HxExpr.ENull -> 0
-        | HxExpr.EBool _ -> 1
-        | HxExpr.EString _ -> 2
-        | HxExpr.EInt _ -> 3
-        | HxExpr.EFloat _ -> 4
-        | HxExpr.EThis -> 5
-        | HxExpr.ESuper -> 6
-        | HxExpr.EIdent _ -> 7
-        | HxExpr.EField (_, _) -> 8
-        | HxExpr.ECall (_, _) -> 9
-        | HxExpr.ENew (_, _) -> 10
-        | HxExpr.EUnop (_, _) -> 11
-        | HxExpr.EBinop (_, _, _) -> 12
-        | HxExpr.ETernary (_, _, _) -> 13
-        | HxExpr.EAnon (_, _) -> 14
-        | HxExpr.EArrayDecl _ -> 15
-        | HxExpr.EArrayAccess (_, _) -> 16
-        | HxExpr.ECast (_, _) -> 17
-        | HxExpr.EUntyped _ -> 18
-        | HxExpr.EUnsupported _ -> 19) = 7 then let _g2 = match obj with
-        | HxExpr.EIdent __enum_param_120 -> __enum_param_120
-        | _ -> failwith "Unexpected enum parameter" in let name = _g2 in if isUpperStart name then let __assign_121 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
-        tempResult5 := __assign_121;
-        __assign_121
-      ) else let __assign_122 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_122;
-        __assign_122
-      ) else let __assign_123 = "(Obj.magic 0)" in (
-        tempResult5 := __assign_123;
-        __assign_123
-      )
-      | HxExpr.ECall (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in match _g with
-        | HxExpr.EIdent _p0 -> let _g2 = _p0 in if HxString.equals _g2 "trace" then if HxArray.length _g1 = 1 then let _g3 = HxArray.get _g1 0 in let arg = _g3 in let __assign_146 = ("print_endline (" ^ HxString.toStdString (exprToOcamlString arg tyByIdent)) ^ ")" in (
-          tempResult5 := __assign_146;
-          __assign_146
-        ) else let callee = _g in let args = _g1 in let tempNumber = ref 0 in (
-          ignore (match callee with
-            | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_148 = expected in let __nullable_149 = HxArray.length args in if __nullable_148 == HxRuntime.hx_null then false else Obj.obj __nullable_148 > __nullable_149) then let __assign_150 = HxInt.sub (let __nullable_int_151 = expected in if __nullable_int_151 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_151) (HxArray.length args) in (
-              tempNumber := __assign_150;
-              __assign_150
-            ) else let __assign_152 = 0 in (
-              tempNumber := __assign_152;
-              __assign_152
-            ) else let __assign_153 = 0 in (
-              tempNumber := __assign_153;
-              __assign_153
+        | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString1 = ref "" in (
+          ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_73 = "" in (
+            tempString1 := __assign_73;
+            __assign_73
+          ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_74 = "" in (
+            tempString1 := __assign_74;
+            __assign_74
+          ) else let __assign_75 = TyType.toString t () in (
+            tempString1 := __assign_75;
+            __assign_75
+          ));
+          let __assign_76 = HxString.equals (!tempString1) "Int" in (
+            tempResult1 := __assign_76;
+            __assign_76
+          )
+        )
+        | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in if HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" || HxString.equals op "%" then let __assign_77 = (!isIntExpr) a && (!isIntExpr) b in (
+          tempResult1 := __assign_77;
+          __assign_77
+        ) else let __assign_78 = false in (
+          tempResult1 := __assign_78;
+          __assign_78
+        )
+        | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in (
+          ignore _g;
+          let thenExpr = _g1 in let elseExpr = _g2 in let __assign_79 = (!isIntExpr) thenExpr && (!isIntExpr) elseExpr in (
+            tempResult1 := __assign_79;
+            __assign_79
+          )
+        )
+        | _ -> let __assign_71 = false in (
+          tempResult1 := __assign_71;
+          __assign_71
+        ));
+      !tempResult1
+    ) in (
+      isIntExpr := __assign_70;
+      __assign_70
+    ));
+    let isStringExpr = ref (Obj.magic (HxRuntime.hx_null)) in (
+      ignore (let __assign_80 = fun expr -> let tempResult2 = ref false in (
+        ignore (match expr with
+          | HxExpr.EString _p0 -> (
+            ignore _p0;
+            let __assign_82 = true in (
+              tempResult2 := __assign_82;
+              __assign_82
             )
-            | HxExpr.EField (_p0, _p1) -> let _g3 = _p0 in let _g4 = _p1 in if (match _g3 with
+          )
+          | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString2 = ref "" in (
+            ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_83 = "" in (
+              tempString2 := __assign_83;
+              __assign_83
+            ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_84 = "" in (
+              tempString2 := __assign_84;
+              __assign_84
+            ) else let __assign_85 = TyType.toString t () in (
+              tempString2 := __assign_85;
+              __assign_85
+            ));
+            let __assign_86 = HxString.equals (!tempString2) "String" in (
+              tempResult2 := __assign_86;
+              __assign_86
+            )
+          )
+          | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in if HxString.equals _g "+" then let a = _g1 in let b = _g2 in let __assign_87 = (!isStringExpr) a || (!isStringExpr) b in (
+            tempResult2 := __assign_87;
+            __assign_87
+          ) else let __assign_88 = false in (
+            tempResult2 := __assign_88;
+            __assign_88
+          )
+          | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in (
+            ignore _g;
+            let thenExpr = _g1 in let elseExpr = _g2 in let __assign_89 = (!isStringExpr) thenExpr && (!isStringExpr) elseExpr in (
+              tempResult2 := __assign_89;
+              __assign_89
+            )
+          )
+          | _ -> let __assign_81 = false in (
+            tempResult2 := __assign_81;
+            __assign_81
+          ));
+        !tempResult2
+      ) in (
+        isStringExpr := __assign_80;
+        __assign_80
+      ));
+      let exprToOcamlForConcat = fun expr -> let tempResult3 = ref "" in (
+        ignore (match expr with
+          | HxExpr.EBool _p0 -> (
+            ignore _p0;
+            let __assign_91 = exprToOcamlString expr tyByIdent in (
+              tempResult3 := __assign_91;
+              __assign_91
+            )
+          )
+          | HxExpr.EInt _p0 -> (
+            ignore _p0;
+            let __assign_92 = exprToOcamlString expr tyByIdent in (
+              tempResult3 := __assign_92;
+              __assign_92
+            )
+          )
+          | HxExpr.EFloat _p0 -> (
+            ignore _p0;
+            let __assign_93 = exprToOcamlString expr tyByIdent in (
+              tempResult3 := __assign_93;
+              __assign_93
+            )
+          )
+          | HxExpr.EIdent _p0 -> (
+            ignore _p0;
+            let __assign_94 = exprToOcamlString expr tyByIdent in (
+              tempResult3 := __assign_94;
+              __assign_94
+            )
+          )
+          | _ -> let __assign_90 = exprToOcaml expr arityByIdent tyByIdent in (
+            tempResult3 := __assign_90;
+            __assign_90
+          ));
+        !tempResult3
+      ) in (
+        ignore (fun expr -> let tempResult4 = ref "" in (
+          ignore (match expr with
+            | HxExpr.EInt _p0 -> let _g = _p0 in let v = _g in let __assign_96 = "float_of_int " ^ HxString.toStdString (string_of_int v) in (
+              tempResult4 := __assign_96;
+              __assign_96
+            )
+            | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in let tempString3 = ref "" in (
+              ignore (if tyByIdent == Obj.magic (HxRuntime.hx_null) then let __assign_97 = "" in (
+                tempString3 := __assign_97;
+                __assign_97
+              ) else let t = HxMap.get_string tyByIdent name in if t == Obj.magic (HxRuntime.hx_null) then let __assign_98 = "" in (
+                tempString3 := __assign_98;
+                __assign_98
+              ) else let __assign_99 = TyType.toString t () in (
+                tempString3 := __assign_99;
+                __assign_99
+              ));
+              if HxString.equals (!tempString3) "Int" then let __assign_100 = "float_of_int " ^ HxString.toStdString (ocamlValueIdent name) in (
+                tempResult4 := __assign_100;
+                __assign_100
+              ) else let __assign_101 = exprToOcaml expr arityByIdent tyByIdent in (
+                tempResult4 := __assign_101;
+                __assign_101
+              )
+            )
+            | _ -> let __assign_95 = exprToOcaml expr arityByIdent tyByIdent in (
+              tempResult4 := __assign_95;
+              __assign_95
+            ));
+          !tempResult4
+        ));
+        let tempResult5 = ref "" in (
+          ignore (match e with
+            | HxExpr.ENull -> let __assign_102 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_102;
+              __assign_102
+            )
+            | HxExpr.EBool _p0 -> let _g = _p0 in let v = _g in if v then let __assign_103 = "true" in (
+              tempResult5 := __assign_103;
+              __assign_103
+            ) else let __assign_104 = "false" in (
+              tempResult5 := __assign_104;
+              __assign_104
+            )
+            | HxExpr.EString _p0 -> let _g = _p0 in let v = _g in let __assign_105 = escapeOcamlString v in (
+              tempResult5 := __assign_105;
+              __assign_105
+            )
+            | HxExpr.EInt _p0 -> let _g = _p0 in let v = _g in let __assign_106 = string_of_int v in (
+              tempResult5 := __assign_106;
+              __assign_106
+            )
+            | HxExpr.EFloat _p0 -> let _g = _p0 in let v = _g in let __assign_107 = string_of_float v in (
+              tempResult5 := __assign_107;
+              __assign_107
+            )
+            | HxExpr.EThis -> let __assign_108 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_108;
+              __assign_108
+            )
+            | HxExpr.ESuper -> let __assign_109 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_109;
+              __assign_109
+            )
+            | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in if isUpperStart name then let __assign_110 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_110;
+              __assign_110
+            ) else if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) then let __assign_111 = ocamlValueIdent name in (
+              tempResult5 := __assign_111;
+              __assign_111
+            ) else if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let __assign_112 = ocamlValueIdent name in (
+              tempResult5 := __assign_112;
+              __assign_112
+            ) else let __assign_113 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_113;
+              __assign_113
+            )
+            | HxExpr.EField (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in if (match _g with
               | HxExpr.ENull -> 0
               | HxExpr.EBool _ -> 1
               | HxExpr.EString _ -> 2
@@ -597,187 +468,27 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> let isFloatExpr = fun expr
               | HxExpr.EArrayAccess (_, _) -> 16
               | HxExpr.ECast (_, _) -> 17
               | HxExpr.EUntyped _ -> 18
-              | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_154 = expected in let __nullable_155 = HxArray.length args in if __nullable_154 == HxRuntime.hx_null then false else Obj.obj __nullable_154 > __nullable_155) then let __assign_156 = HxInt.sub (let __nullable_int_157 = expected in if __nullable_int_157 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_157) (HxArray.length args) in (
-              tempNumber := __assign_156;
-              __assign_156
-            ) else let __assign_158 = 0 in (
-              tempNumber := __assign_158;
-              __assign_158
-            ) else let __assign_159 = 0 in (
-              tempNumber := __assign_159;
-              __assign_159
-            ) else let __assign_160 = 0 in (
-              tempNumber := __assign_160;
-              __assign_160
-            )
-            | _ -> let __assign_147 = 0 in (
-              tempNumber := __assign_147;
-              __assign_147
-            ));
-          let missing = !tempNumber in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-            ignore (let _g3 = ref 0 in let _g4 = missing in while !_g3 < _g4 do ignore ((
-              ignore (let __old_161 = !_g3 in let __new_162 = HxInt.add __old_161 1 in (
-                ignore (_g3 := __new_162);
-                __old_161
-              ));
-              HxArray.push fullArgs (HxExpr.ENull)
-            )) done);
-            if HxArray.length fullArgs = 0 then let __assign_163 = HxString.toStdString c ^ " ()" in (
-              tempResult5 := __assign_163;
-              __assign_163
-            ) else let tempArray = ref (Obj.magic ()) in (
-              ignore (let _g3 = let __arr_164 = HxArray.create () in __arr_164 in (
-                ignore (let _g4 = ref 0 in let _g5 = fullArgs in while !_g4 < HxArray.length _g5 do ignore (let v = HxArray.get _g5 (!_g4) in (
-                  ignore (let __old_165 = !_g4 in let __new_166 = HxInt.add __old_165 1 in (
-                    ignore (_g4 := __new_166);
-                    __new_166
-                  ));
-                  HxArray.push _g3 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                )) done);
-                let __assign_167 = _g3 in (
-                  tempArray := __assign_167;
-                  __assign_167
+              | HxExpr.EUnsupported _ -> 19) = 7 then let _g2 = match _g with
+              | HxExpr.EIdent __enum_param_114 -> __enum_param_114
+              | _ -> failwith "Unexpected enum parameter" in match _g2 with
+              | "Math" -> (match _g1 with
+                | "NEGATIVE_INFINITY" -> let __assign_123 = "neg_infinity" in (
+                  tempResult5 := __assign_123;
+                  __assign_123
                 )
-              ));
-              let __assign_168 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray) " " (fun x -> x)) in (
-                tempResult5 := __assign_168;
-                __assign_168
-              )
-            )
-          )
-        ) else let callee = _g in let args = _g1 in let tempNumber1 = ref 0 in (
-          ignore (match callee with
-            | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_170 = expected in let __nullable_171 = HxArray.length args in if __nullable_170 == HxRuntime.hx_null then false else Obj.obj __nullable_170 > __nullable_171) then let __assign_172 = HxInt.sub (let __nullable_int_173 = expected in if __nullable_int_173 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_173) (HxArray.length args) in (
-              tempNumber1 := __assign_172;
-              __assign_172
-            ) else let __assign_174 = 0 in (
-              tempNumber1 := __assign_174;
-              __assign_174
-            ) else let __assign_175 = 0 in (
-              tempNumber1 := __assign_175;
-              __assign_175
-            )
-            | HxExpr.EField (_p0, _p1) -> let _g3 = _p0 in let _g4 = _p1 in if (match _g3 with
-              | HxExpr.ENull -> 0
-              | HxExpr.EBool _ -> 1
-              | HxExpr.EString _ -> 2
-              | HxExpr.EInt _ -> 3
-              | HxExpr.EFloat _ -> 4
-              | HxExpr.EThis -> 5
-              | HxExpr.ESuper -> 6
-              | HxExpr.EIdent _ -> 7
-              | HxExpr.EField (_, _) -> 8
-              | HxExpr.ECall (_, _) -> 9
-              | HxExpr.ENew (_, _) -> 10
-              | HxExpr.EUnop (_, _) -> 11
-              | HxExpr.EBinop (_, _, _) -> 12
-              | HxExpr.ETernary (_, _, _) -> 13
-              | HxExpr.EAnon (_, _) -> 14
-              | HxExpr.EArrayDecl _ -> 15
-              | HxExpr.EArrayAccess (_, _) -> 16
-              | HxExpr.ECast (_, _) -> 17
-              | HxExpr.EUntyped _ -> 18
-              | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_176 = expected in let __nullable_177 = HxArray.length args in if __nullable_176 == HxRuntime.hx_null then false else Obj.obj __nullable_176 > __nullable_177) then let __assign_178 = HxInt.sub (let __nullable_int_179 = expected in if __nullable_int_179 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_179) (HxArray.length args) in (
-              tempNumber1 := __assign_178;
-              __assign_178
-            ) else let __assign_180 = 0 in (
-              tempNumber1 := __assign_180;
-              __assign_180
-            ) else let __assign_181 = 0 in (
-              tempNumber1 := __assign_181;
-              __assign_181
-            ) else let __assign_182 = 0 in (
-              tempNumber1 := __assign_182;
-              __assign_182
-            )
-            | _ -> let __assign_169 = 0 in (
-              tempNumber1 := __assign_169;
-              __assign_169
-            ));
-          let missing = !tempNumber1 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-            ignore (let _g3 = ref 0 in let _g4 = missing in while !_g3 < _g4 do ignore ((
-              ignore (let __old_183 = !_g3 in let __new_184 = HxInt.add __old_183 1 in (
-                ignore (_g3 := __new_184);
-                __old_183
-              ));
-              HxArray.push fullArgs (HxExpr.ENull)
-            )) done);
-            if HxArray.length fullArgs = 0 then let __assign_185 = HxString.toStdString c ^ " ()" in (
-              tempResult5 := __assign_185;
-              __assign_185
-            ) else let tempArray1 = ref (Obj.magic ()) in (
-              ignore (let _g3 = let __arr_186 = HxArray.create () in __arr_186 in (
-                ignore (let _g4 = ref 0 in let _g5 = fullArgs in while !_g4 < HxArray.length _g5 do ignore (let v = HxArray.get _g5 (!_g4) in (
-                  ignore (let __old_187 = !_g4 in let __new_188 = HxInt.add __old_187 1 in (
-                    ignore (_g4 := __new_188);
-                    __new_188
-                  ));
-                  HxArray.push _g3 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                )) done);
-                let __assign_189 = _g3 in (
-                  tempArray1 := __assign_189;
-                  __assign_189
+                | "NaN" -> let __assign_124 = "nan" in (
+                  tempResult5 := __assign_124;
+                  __assign_124
                 )
-              ));
-              let __assign_190 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray1) " " (fun x -> x)) in (
-                tempResult5 := __assign_190;
-                __assign_190
-              )
-            )
-          )
-        )
-        | HxExpr.EField (_p0, _p1) -> (let _g2 = _p0 in let _g3 = _p1 in if (match _g2 with
-          | HxExpr.ENull -> 0
-          | HxExpr.EBool _ -> 1
-          | HxExpr.EString _ -> 2
-          | HxExpr.EInt _ -> 3
-          | HxExpr.EFloat _ -> 4
-          | HxExpr.EThis -> 5
-          | HxExpr.ESuper -> 6
-          | HxExpr.EIdent _ -> 7
-          | HxExpr.EField (_, _) -> 8
-          | HxExpr.ECall (_, _) -> 9
-          | HxExpr.ENew (_, _) -> 10
-          | HxExpr.EUnop (_, _) -> 11
-          | HxExpr.EBinop (_, _, _) -> 12
-          | HxExpr.ETernary (_, _, _) -> 13
-          | HxExpr.EAnon (_, _) -> 14
-          | HxExpr.EArrayDecl _ -> 15
-          | HxExpr.EArrayAccess (_, _) -> 16
-          | HxExpr.ECast (_, _) -> 17
-          | HxExpr.EUntyped _ -> 18
-          | HxExpr.EUnsupported _ -> 19) = 7 then let _g4 = match _g2 with
-          | HxExpr.EIdent __enum_param_191 -> __enum_param_191
-          | _ -> failwith "Unexpected enum parameter" in match _g4 with
-          | "Math" -> (match _g3 with
-            | "abs" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let tempString4 = ref "" in (
-              ignore (if isFloatExpr arg then let __assign_351 = "abs_float " in (
-                tempString4 := __assign_351;
-                __assign_351
-              ) else if isIntExpr arg then let __assign_352 = "abs " in (
-                tempString4 := __assign_352;
-                __assign_352
-              ) else let __assign_353 = "abs_float " in (
-                tempString4 := __assign_353;
-                __assign_353
-              ));
-              let __assign_354 = ((HxString.toStdString (!tempString4) ^ "(") ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ")" in (
-                tempResult5 := __assign_354;
-                __assign_354
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber2 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_356 = expected in let __nullable_357 = HxArray.length args in if __nullable_356 == HxRuntime.hx_null then false else Obj.obj __nullable_356 > __nullable_357) then let __assign_358 = HxInt.sub (let __nullable_int_359 = expected in if __nullable_int_359 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_359) (HxArray.length args) in (
-                  tempNumber2 := __assign_358;
-                  __assign_358
-                ) else let __assign_360 = 0 in (
-                  tempNumber2 := __assign_360;
-                  __assign_360
-                ) else let __assign_361 = 0 in (
-                  tempNumber2 := __assign_361;
-                  __assign_361
+                | "PI" -> let __assign_125 = "(4.0 *. atan 1.0)" in (
+                  tempResult5 := __assign_125;
+                  __assign_125
                 )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                | "POSITIVE_INFINITY" -> let __assign_126 = "infinity" in (
+                  tempResult5 := __assign_126;
+                  __assign_126
+                )
+                | _ -> let obj = _g in let field = _g1 in if (match obj with
                   | HxExpr.ENull -> 0
                   | HxExpr.EBool _ -> 1
                   | HxExpr.EString _ -> 2
@@ -797,6701 +508,7275 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> let isFloatExpr = fun expr
                   | HxExpr.EArrayAccess (_, _) -> 16
                   | HxExpr.ECast (_, _) -> 17
                   | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_362 = expected in let __nullable_363 = HxArray.length args in if __nullable_362 == HxRuntime.hx_null then false else Obj.obj __nullable_362 > __nullable_363) then let __assign_364 = HxInt.sub (let __nullable_int_365 = expected in if __nullable_int_365 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_365) (HxArray.length args) in (
-                  tempNumber2 := __assign_364;
-                  __assign_364
-                ) else let __assign_366 = 0 in (
-                  tempNumber2 := __assign_366;
-                  __assign_366
-                ) else let __assign_367 = 0 in (
-                  tempNumber2 := __assign_367;
-                  __assign_367
-                ) else let __assign_368 = 0 in (
-                  tempNumber2 := __assign_368;
-                  __assign_368
-                )
-                | _ -> let __assign_355 = 0 in (
-                  tempNumber2 := __assign_355;
-                  __assign_355
-                ));
-              let missing = !tempNumber2 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_369 = !_g5 in let __new_370 = HxInt.add __old_369 1 in (
-                    ignore (_g5 := __new_370);
-                    __old_369
+                  | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match obj with
+                  | HxExpr.EIdent __enum_param_119 -> __enum_param_119
+                  | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_120 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
+                  tempResult5 := __assign_120;
+                  __assign_120
+                ) else let __assign_121 = "(Obj.magic 0)" in (
+                  tempResult5 := __assign_121;
+                  __assign_121
+                ) else let __assign_122 = "(Obj.magic 0)" in (
+                  tempResult5 := __assign_122;
+                  __assign_122
+                ))
+              | "String" -> if HxString.equals _g1 "fromCharCode" then let __assign_127 = "(fun i -> String.make 1 (Char.chr i))" in (
+                tempResult5 := __assign_127;
+                __assign_127
+              ) else let obj = _g in let field = _g1 in if (match obj with
+                | HxExpr.ENull -> 0
+                | HxExpr.EBool _ -> 1
+                | HxExpr.EString _ -> 2
+                | HxExpr.EInt _ -> 3
+                | HxExpr.EFloat _ -> 4
+                | HxExpr.EThis -> 5
+                | HxExpr.ESuper -> 6
+                | HxExpr.EIdent _ -> 7
+                | HxExpr.EField (_, _) -> 8
+                | HxExpr.ECall (_, _) -> 9
+                | HxExpr.ENew (_, _) -> 10
+                | HxExpr.EUnop (_, _) -> 11
+                | HxExpr.EBinop (_, _, _) -> 12
+                | HxExpr.ETernary (_, _, _) -> 13
+                | HxExpr.EAnon (_, _) -> 14
+                | HxExpr.EArrayDecl _ -> 15
+                | HxExpr.EArrayAccess (_, _) -> 16
+                | HxExpr.ECast (_, _) -> 17
+                | HxExpr.EUntyped _ -> 18
+                | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match obj with
+                | HxExpr.EIdent __enum_param_128 -> __enum_param_128
+                | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_129 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
+                tempResult5 := __assign_129;
+                __assign_129
+              ) else let __assign_130 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_130;
+                __assign_130
+              ) else let __assign_131 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_131;
+                __assign_131
+              )
+              | _ -> let obj = _g in let field = _g1 in if (match obj with
+                | HxExpr.ENull -> 0
+                | HxExpr.EBool _ -> 1
+                | HxExpr.EString _ -> 2
+                | HxExpr.EInt _ -> 3
+                | HxExpr.EFloat _ -> 4
+                | HxExpr.EThis -> 5
+                | HxExpr.ESuper -> 6
+                | HxExpr.EIdent _ -> 7
+                | HxExpr.EField (_, _) -> 8
+                | HxExpr.ECall (_, _) -> 9
+                | HxExpr.ENew (_, _) -> 10
+                | HxExpr.EUnop (_, _) -> 11
+                | HxExpr.EBinop (_, _, _) -> 12
+                | HxExpr.ETernary (_, _, _) -> 13
+                | HxExpr.EAnon (_, _) -> 14
+                | HxExpr.EArrayDecl _ -> 15
+                | HxExpr.EArrayAccess (_, _) -> 16
+                | HxExpr.ECast (_, _) -> 17
+                | HxExpr.EUntyped _ -> 18
+                | HxExpr.EUnsupported _ -> 19) = 7 then let _g3 = match obj with
+                | HxExpr.EIdent __enum_param_115 -> __enum_param_115
+                | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_116 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
+                tempResult5 := __assign_116;
+                __assign_116
+              ) else let __assign_117 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_117;
+                __assign_117
+              ) else let __assign_118 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_118;
+                __assign_118
+              ) else let obj = _g in let field = _g1 in if (match obj with
+              | HxExpr.ENull -> 0
+              | HxExpr.EBool _ -> 1
+              | HxExpr.EString _ -> 2
+              | HxExpr.EInt _ -> 3
+              | HxExpr.EFloat _ -> 4
+              | HxExpr.EThis -> 5
+              | HxExpr.ESuper -> 6
+              | HxExpr.EIdent _ -> 7
+              | HxExpr.EField (_, _) -> 8
+              | HxExpr.ECall (_, _) -> 9
+              | HxExpr.ENew (_, _) -> 10
+              | HxExpr.EUnop (_, _) -> 11
+              | HxExpr.EBinop (_, _, _) -> 12
+              | HxExpr.ETernary (_, _, _) -> 13
+              | HxExpr.EAnon (_, _) -> 14
+              | HxExpr.EArrayDecl _ -> 15
+              | HxExpr.EArrayAccess (_, _) -> 16
+              | HxExpr.ECast (_, _) -> 17
+              | HxExpr.EUntyped _ -> 18
+              | HxExpr.EUnsupported _ -> 19) = 7 then let _g2 = match obj with
+              | HxExpr.EIdent __enum_param_132 -> __enum_param_132
+              | _ -> failwith "Unexpected enum parameter" in let name = _g2 in if isUpperStart name then let __assign_133 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
+              tempResult5 := __assign_133;
+              __assign_133
+            ) else let __assign_134 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_134;
+              __assign_134
+            ) else let __assign_135 = "(Obj.magic 0)" in (
+              tempResult5 := __assign_135;
+              __assign_135
+            )
+            | HxExpr.ECall (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in match _g with
+              | HxExpr.EIdent _p0 -> let _g2 = _p0 in if HxString.equals _g2 "trace" then if HxArray.length _g1 = 1 then let _g3 = HxArray.get _g1 0 in let arg = _g3 in let __assign_159 = ("print_endline (" ^ HxString.toStdString (exprToOcamlString arg tyByIdent)) ^ ")" in (
+                tempResult5 := __assign_159;
+                __assign_159
+              ) else let callee = _g in let args = _g1 in let tempNumber = ref 0 in (
+                ignore (match callee with
+                  | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_161 = expected in let __nullable_162 = HxArray.length args in if __nullable_161 == HxRuntime.hx_null then false else Obj.obj __nullable_161 > __nullable_162) then let __assign_163 = HxInt.sub (let __nullable_int_164 = expected in if __nullable_int_164 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_164) (HxArray.length args) in (
+                    tempNumber := __assign_163;
+                    __assign_163
+                  ) else let __assign_165 = 0 in (
+                    tempNumber := __assign_165;
+                    __assign_165
+                  ) else let __assign_166 = 0 in (
+                    tempNumber := __assign_166;
+                    __assign_166
+                  )
+                  | HxExpr.EField (_p0, _p1) -> let _g3 = _p0 in let _g4 = _p1 in if (match _g3 with
+                    | HxExpr.ENull -> 0
+                    | HxExpr.EBool _ -> 1
+                    | HxExpr.EString _ -> 2
+                    | HxExpr.EInt _ -> 3
+                    | HxExpr.EFloat _ -> 4
+                    | HxExpr.EThis -> 5
+                    | HxExpr.ESuper -> 6
+                    | HxExpr.EIdent _ -> 7
+                    | HxExpr.EField (_, _) -> 8
+                    | HxExpr.ECall (_, _) -> 9
+                    | HxExpr.ENew (_, _) -> 10
+                    | HxExpr.EUnop (_, _) -> 11
+                    | HxExpr.EBinop (_, _, _) -> 12
+                    | HxExpr.ETernary (_, _, _) -> 13
+                    | HxExpr.EAnon (_, _) -> 14
+                    | HxExpr.EArrayDecl _ -> 15
+                    | HxExpr.EArrayAccess (_, _) -> 16
+                    | HxExpr.ECast (_, _) -> 17
+                    | HxExpr.EUntyped _ -> 18
+                    | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_167 = expected in let __nullable_168 = HxArray.length args in if __nullable_167 == HxRuntime.hx_null then false else Obj.obj __nullable_167 > __nullable_168) then let __assign_169 = HxInt.sub (let __nullable_int_170 = expected in if __nullable_int_170 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_170) (HxArray.length args) in (
+                    tempNumber := __assign_169;
+                    __assign_169
+                  ) else let __assign_171 = 0 in (
+                    tempNumber := __assign_171;
+                    __assign_171
+                  ) else let __assign_172 = 0 in (
+                    tempNumber := __assign_172;
+                    __assign_172
+                  ) else let __assign_173 = 0 in (
+                    tempNumber := __assign_173;
+                    __assign_173
+                  )
+                  | _ -> let __assign_160 = 0 in (
+                    tempNumber := __assign_160;
+                    __assign_160
                   ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_371 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_371;
-                  __assign_371
-                ) else let tempArray2 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_372 = HxArray.create () in __arr_372 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_373 = !_g6 in let __new_374 = HxInt.add __old_373 1 in (
-                        ignore (_g6 := __new_374);
-                        __new_374
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_375 = _g5 in (
-                      tempArray2 := __assign_375;
+                let missing = !tempNumber in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_174 = "(Obj.magic 0)" in (
+                  tempResult5 := __assign_174;
+                  __assign_174
+                ) else let fullArgs = HxArray.copy args in (
+                  ignore (let _g3 = ref 0 in let _g4 = missing in while !_g3 < _g4 do ignore ((
+                    ignore (let __old_175 = !_g3 in let __new_176 = HxInt.add __old_175 1 in (
+                      ignore (_g3 := __new_176);
+                      __old_175
+                    ));
+                    HxArray.push fullArgs (HxExpr.ENull)
+                  )) done);
+                  if HxArray.length fullArgs = 0 then let __assign_177 = HxString.toStdString c ^ " ()" in (
+                    tempResult5 := __assign_177;
+                    __assign_177
+                  ) else let tempArray = ref (Obj.magic ()) in (
+                    ignore (let _g3 = let __arr_178 = HxArray.create () in __arr_178 in (
+                      ignore (let _g4 = ref 0 in let _g5 = fullArgs in while !_g4 < HxArray.length _g5 do ignore (let v = HxArray.get _g5 (!_g4) in (
+                        ignore (let __old_179 = !_g4 in let __new_180 = HxInt.add __old_179 1 in (
+                          ignore (_g4 := __new_180);
+                          __new_180
+                        ));
+                        HxArray.push _g3 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                      )) done);
+                      let __assign_181 = _g3 in (
+                        tempArray := __assign_181;
+                        __assign_181
+                      )
+                    ));
+                    let __assign_182 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray) " " (fun x -> x)) in (
+                      tempResult5 := __assign_182;
+                      __assign_182
+                    )
+                  )
+                )
+              ) else let callee = _g in let args = _g1 in let tempNumber1 = ref 0 in (
+                ignore (match callee with
+                  | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_184 = expected in let __nullable_185 = HxArray.length args in if __nullable_184 == HxRuntime.hx_null then false else Obj.obj __nullable_184 > __nullable_185) then let __assign_186 = HxInt.sub (let __nullable_int_187 = expected in if __nullable_int_187 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_187) (HxArray.length args) in (
+                    tempNumber1 := __assign_186;
+                    __assign_186
+                  ) else let __assign_188 = 0 in (
+                    tempNumber1 := __assign_188;
+                    __assign_188
+                  ) else let __assign_189 = 0 in (
+                    tempNumber1 := __assign_189;
+                    __assign_189
+                  )
+                  | HxExpr.EField (_p0, _p1) -> let _g3 = _p0 in let _g4 = _p1 in if (match _g3 with
+                    | HxExpr.ENull -> 0
+                    | HxExpr.EBool _ -> 1
+                    | HxExpr.EString _ -> 2
+                    | HxExpr.EInt _ -> 3
+                    | HxExpr.EFloat _ -> 4
+                    | HxExpr.EThis -> 5
+                    | HxExpr.ESuper -> 6
+                    | HxExpr.EIdent _ -> 7
+                    | HxExpr.EField (_, _) -> 8
+                    | HxExpr.ECall (_, _) -> 9
+                    | HxExpr.ENew (_, _) -> 10
+                    | HxExpr.EUnop (_, _) -> 11
+                    | HxExpr.EBinop (_, _, _) -> 12
+                    | HxExpr.ETernary (_, _, _) -> 13
+                    | HxExpr.EAnon (_, _) -> 14
+                    | HxExpr.EArrayDecl _ -> 15
+                    | HxExpr.EArrayAccess (_, _) -> 16
+                    | HxExpr.ECast (_, _) -> 17
+                    | HxExpr.EUntyped _ -> 18
+                    | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_190 = expected in let __nullable_191 = HxArray.length args in if __nullable_190 == HxRuntime.hx_null then false else Obj.obj __nullable_190 > __nullable_191) then let __assign_192 = HxInt.sub (let __nullable_int_193 = expected in if __nullable_int_193 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_193) (HxArray.length args) in (
+                    tempNumber1 := __assign_192;
+                    __assign_192
+                  ) else let __assign_194 = 0 in (
+                    tempNumber1 := __assign_194;
+                    __assign_194
+                  ) else let __assign_195 = 0 in (
+                    tempNumber1 := __assign_195;
+                    __assign_195
+                  ) else let __assign_196 = 0 in (
+                    tempNumber1 := __assign_196;
+                    __assign_196
+                  )
+                  | _ -> let __assign_183 = 0 in (
+                    tempNumber1 := __assign_183;
+                    __assign_183
+                  ));
+                let missing = !tempNumber1 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_197 = "(Obj.magic 0)" in (
+                  tempResult5 := __assign_197;
+                  __assign_197
+                ) else let fullArgs = HxArray.copy args in (
+                  ignore (let _g3 = ref 0 in let _g4 = missing in while !_g3 < _g4 do ignore ((
+                    ignore (let __old_198 = !_g3 in let __new_199 = HxInt.add __old_198 1 in (
+                      ignore (_g3 := __new_199);
+                      __old_198
+                    ));
+                    HxArray.push fullArgs (HxExpr.ENull)
+                  )) done);
+                  if HxArray.length fullArgs = 0 then let __assign_200 = HxString.toStdString c ^ " ()" in (
+                    tempResult5 := __assign_200;
+                    __assign_200
+                  ) else let tempArray1 = ref (Obj.magic ()) in (
+                    ignore (let _g3 = let __arr_201 = HxArray.create () in __arr_201 in (
+                      ignore (let _g4 = ref 0 in let _g5 = fullArgs in while !_g4 < HxArray.length _g5 do ignore (let v = HxArray.get _g5 (!_g4) in (
+                        ignore (let __old_202 = !_g4 in let __new_203 = HxInt.add __old_202 1 in (
+                          ignore (_g4 := __new_203);
+                          __new_203
+                        ));
+                        HxArray.push _g3 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                      )) done);
+                      let __assign_204 = _g3 in (
+                        tempArray1 := __assign_204;
+                        __assign_204
+                      )
+                    ));
+                    let __assign_205 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray1) " " (fun x -> x)) in (
+                      tempResult5 := __assign_205;
+                      __assign_205
+                    )
+                  )
+                )
+              )
+              | HxExpr.EField (_p0, _p1) -> (let _g2 = _p0 in let _g3 = _p1 in if (match _g2 with
+                | HxExpr.ENull -> 0
+                | HxExpr.EBool _ -> 1
+                | HxExpr.EString _ -> 2
+                | HxExpr.EInt _ -> 3
+                | HxExpr.EFloat _ -> 4
+                | HxExpr.EThis -> 5
+                | HxExpr.ESuper -> 6
+                | HxExpr.EIdent _ -> 7
+                | HxExpr.EField (_, _) -> 8
+                | HxExpr.ECall (_, _) -> 9
+                | HxExpr.ENew (_, _) -> 10
+                | HxExpr.EUnop (_, _) -> 11
+                | HxExpr.EBinop (_, _, _) -> 12
+                | HxExpr.ETernary (_, _, _) -> 13
+                | HxExpr.EAnon (_, _) -> 14
+                | HxExpr.EArrayDecl _ -> 15
+                | HxExpr.EArrayAccess (_, _) -> 16
+                | HxExpr.ECast (_, _) -> 17
+                | HxExpr.EUntyped _ -> 18
+                | HxExpr.EUnsupported _ -> 19) = 7 then let _g4 = match _g2 with
+                | HxExpr.EIdent __enum_param_206 -> __enum_param_206
+                | _ -> failwith "Unexpected enum parameter" in match _g4 with
+                | "Math" -> (match _g3 with
+                  | "abs" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let tempString4 = ref "" in (
+                    ignore (if (!isFloatExpr) arg then let __assign_373 = "abs_float " in (
+                      tempString4 := __assign_373;
+                      __assign_373
+                    ) else if (!isIntExpr) arg then let __assign_374 = "abs " in (
+                      tempString4 := __assign_374;
+                      __assign_374
+                    ) else let __assign_375 = "abs_float " in (
+                      tempString4 := __assign_375;
                       __assign_375
+                    ));
+                    let __assign_376 = ((HxString.toStdString (!tempString4) ^ "(") ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ")" in (
+                      tempResult5 := __assign_376;
+                      __assign_376
                     )
-                  ));
-                  let __assign_376 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray2) " " (fun x -> x)) in (
-                    tempResult5 := __assign_376;
-                    __assign_376
-                  )
-                )
-              )
-            )
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_377 = "true" in (
-                tempResult5 := __assign_377;
-                __assign_377
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber3 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_379 = expected in let __nullable_380 = HxArray.length args in if __nullable_379 == HxRuntime.hx_null then false else Obj.obj __nullable_379 > __nullable_380) then let __assign_381 = HxInt.sub (let __nullable_int_382 = expected in if __nullable_int_382 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_382) (HxArray.length args) in (
-                  tempNumber3 := __assign_381;
-                  __assign_381
-                ) else let __assign_383 = 0 in (
-                  tempNumber3 := __assign_383;
-                  __assign_383
-                ) else let __assign_384 = 0 in (
-                  tempNumber3 := __assign_384;
-                  __assign_384
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_385 = expected in let __nullable_386 = HxArray.length args in if __nullable_385 == HxRuntime.hx_null then false else Obj.obj __nullable_385 > __nullable_386) then let __assign_387 = HxInt.sub (let __nullable_int_388 = expected in if __nullable_int_388 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_388) (HxArray.length args) in (
-                  tempNumber3 := __assign_387;
-                  __assign_387
-                ) else let __assign_389 = 0 in (
-                  tempNumber3 := __assign_389;
-                  __assign_389
-                ) else let __assign_390 = 0 in (
-                  tempNumber3 := __assign_390;
-                  __assign_390
-                ) else let __assign_391 = 0 in (
-                  tempNumber3 := __assign_391;
-                  __assign_391
-                )
-                | _ -> let __assign_378 = 0 in (
-                  tempNumber3 := __assign_378;
-                  __assign_378
-                ));
-              let missing = !tempNumber3 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_392 = !_g5 in let __new_393 = HxInt.add __old_392 1 in (
-                    ignore (_g5 := __new_393);
-                    __old_392
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_394 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_394;
-                  __assign_394
-                ) else let tempArray3 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_395 = HxArray.create () in __arr_395 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_396 = !_g6 in let __new_397 = HxInt.add __old_396 1 in (
-                        ignore (_g6 := __new_397);
-                        __new_397
+                  ) else let callee = _g in let args = _g1 in let tempNumber2 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_378 = expected in let __nullable_379 = HxArray.length args in if __nullable_378 == HxRuntime.hx_null then false else Obj.obj __nullable_378 > __nullable_379) then let __assign_380 = HxInt.sub (let __nullable_int_381 = expected in if __nullable_int_381 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_381) (HxArray.length args) in (
+                        tempNumber2 := __assign_380;
+                        __assign_380
+                      ) else let __assign_382 = 0 in (
+                        tempNumber2 := __assign_382;
+                        __assign_382
+                      ) else let __assign_383 = 0 in (
+                        tempNumber2 := __assign_383;
+                        __assign_383
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_384 = expected in let __nullable_385 = HxArray.length args in if __nullable_384 == HxRuntime.hx_null then false else Obj.obj __nullable_384 > __nullable_385) then let __assign_386 = HxInt.sub (let __nullable_int_387 = expected in if __nullable_int_387 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_387) (HxArray.length args) in (
+                        tempNumber2 := __assign_386;
+                        __assign_386
+                      ) else let __assign_388 = 0 in (
+                        tempNumber2 := __assign_388;
+                        __assign_388
+                      ) else let __assign_389 = 0 in (
+                        tempNumber2 := __assign_389;
+                        __assign_389
+                      ) else let __assign_390 = 0 in (
+                        tempNumber2 := __assign_390;
+                        __assign_390
+                      )
+                      | _ -> let __assign_377 = 0 in (
+                        tempNumber2 := __assign_377;
+                        __assign_377
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_398 = _g5 in (
-                      tempArray3 := __assign_398;
-                      __assign_398
+                    let missing = !tempNumber2 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_391 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_391;
+                      __assign_391
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_392 = !_g5 in let __new_393 = HxInt.add __old_392 1 in (
+                          ignore (_g5 := __new_393);
+                          __old_392
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_394 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_394;
+                        __assign_394
+                      ) else let tempArray2 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_395 = HxArray.create () in __arr_395 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_396 = !_g6 in let __new_397 = HxInt.add __old_396 1 in (
+                              ignore (_g6 := __new_397);
+                              __new_397
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_398 = _g5 in (
+                            tempArray2 := __assign_398;
+                            __assign_398
+                          )
+                        ));
+                        let __assign_399 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray2) " " (fun x -> x)) in (
+                          tempResult5 := __assign_399;
+                          __assign_399
+                        )
+                      )
                     )
-                  ));
-                  let __assign_399 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray3) " " (fun x -> x)) in (
-                    tempResult5 := __assign_399;
-                    __assign_399
                   )
-                )
-              )
-            )
-            | "floor" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_400 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_400;
-                __assign_400
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber4 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_402 = expected in let __nullable_403 = HxArray.length args in if __nullable_402 == HxRuntime.hx_null then false else Obj.obj __nullable_402 > __nullable_403) then let __assign_404 = HxInt.sub (let __nullable_int_405 = expected in if __nullable_int_405 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_405) (HxArray.length args) in (
-                  tempNumber4 := __assign_404;
-                  __assign_404
-                ) else let __assign_406 = 0 in (
-                  tempNumber4 := __assign_406;
-                  __assign_406
-                ) else let __assign_407 = 0 in (
-                  tempNumber4 := __assign_407;
-                  __assign_407
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_408 = expected in let __nullable_409 = HxArray.length args in if __nullable_408 == HxRuntime.hx_null then false else Obj.obj __nullable_408 > __nullable_409) then let __assign_410 = HxInt.sub (let __nullable_int_411 = expected in if __nullable_int_411 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_411) (HxArray.length args) in (
-                  tempNumber4 := __assign_410;
-                  __assign_410
-                ) else let __assign_412 = 0 in (
-                  tempNumber4 := __assign_412;
-                  __assign_412
-                ) else let __assign_413 = 0 in (
-                  tempNumber4 := __assign_413;
-                  __assign_413
-                ) else let __assign_414 = 0 in (
-                  tempNumber4 := __assign_414;
-                  __assign_414
-                )
-                | _ -> let __assign_401 = 0 in (
-                  tempNumber4 := __assign_401;
-                  __assign_401
-                ));
-              let missing = !tempNumber4 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_415 = !_g5 in let __new_416 = HxInt.add __old_415 1 in (
-                    ignore (_g5 := __new_416);
-                    __old_415
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_417 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_417;
-                  __assign_417
-                ) else let tempArray4 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_418 = HxArray.create () in __arr_418 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_419 = !_g6 in let __new_420 = HxInt.add __old_419 1 in (
-                        ignore (_g6 := __new_420);
-                        __new_420
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_421 = _g5 in (
-                      tempArray4 := __assign_421;
-                      __assign_421
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_400 = "true" in (
+                      tempResult5 := __assign_400;
+                      __assign_400
                     )
-                  ));
-                  let __assign_422 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray4) " " (fun x -> x)) in (
-                    tempResult5 := __assign_422;
-                    __assign_422
-                  )
-                )
-              )
-            )
-            | "fround" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_423 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_423;
-                __assign_423
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber5 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_425 = expected in let __nullable_426 = HxArray.length args in if __nullable_425 == HxRuntime.hx_null then false else Obj.obj __nullable_425 > __nullable_426) then let __assign_427 = HxInt.sub (let __nullable_int_428 = expected in if __nullable_int_428 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_428) (HxArray.length args) in (
-                  tempNumber5 := __assign_427;
-                  __assign_427
-                ) else let __assign_429 = 0 in (
-                  tempNumber5 := __assign_429;
-                  __assign_429
-                ) else let __assign_430 = 0 in (
-                  tempNumber5 := __assign_430;
-                  __assign_430
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_431 = expected in let __nullable_432 = HxArray.length args in if __nullable_431 == HxRuntime.hx_null then false else Obj.obj __nullable_431 > __nullable_432) then let __assign_433 = HxInt.sub (let __nullable_int_434 = expected in if __nullable_int_434 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_434) (HxArray.length args) in (
-                  tempNumber5 := __assign_433;
-                  __assign_433
-                ) else let __assign_435 = 0 in (
-                  tempNumber5 := __assign_435;
-                  __assign_435
-                ) else let __assign_436 = 0 in (
-                  tempNumber5 := __assign_436;
-                  __assign_436
-                ) else let __assign_437 = 0 in (
-                  tempNumber5 := __assign_437;
-                  __assign_437
-                )
-                | _ -> let __assign_424 = 0 in (
-                  tempNumber5 := __assign_424;
-                  __assign_424
-                ));
-              let missing = !tempNumber5 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_438 = !_g5 in let __new_439 = HxInt.add __old_438 1 in (
-                    ignore (_g5 := __new_439);
-                    __old_438
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_440 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_440;
-                  __assign_440
-                ) else let tempArray5 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_441 = HxArray.create () in __arr_441 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_442 = !_g6 in let __new_443 = HxInt.add __old_442 1 in (
-                        ignore (_g6 := __new_443);
-                        __new_443
+                  ) else let callee = _g in let args = _g1 in let tempNumber3 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_402 = expected in let __nullable_403 = HxArray.length args in if __nullable_402 == HxRuntime.hx_null then false else Obj.obj __nullable_402 > __nullable_403) then let __assign_404 = HxInt.sub (let __nullable_int_405 = expected in if __nullable_int_405 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_405) (HxArray.length args) in (
+                        tempNumber3 := __assign_404;
+                        __assign_404
+                      ) else let __assign_406 = 0 in (
+                        tempNumber3 := __assign_406;
+                        __assign_406
+                      ) else let __assign_407 = 0 in (
+                        tempNumber3 := __assign_407;
+                        __assign_407
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_408 = expected in let __nullable_409 = HxArray.length args in if __nullable_408 == HxRuntime.hx_null then false else Obj.obj __nullable_408 > __nullable_409) then let __assign_410 = HxInt.sub (let __nullable_int_411 = expected in if __nullable_int_411 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_411) (HxArray.length args) in (
+                        tempNumber3 := __assign_410;
+                        __assign_410
+                      ) else let __assign_412 = 0 in (
+                        tempNumber3 := __assign_412;
+                        __assign_412
+                      ) else let __assign_413 = 0 in (
+                        tempNumber3 := __assign_413;
+                        __assign_413
+                      ) else let __assign_414 = 0 in (
+                        tempNumber3 := __assign_414;
+                        __assign_414
+                      )
+                      | _ -> let __assign_401 = 0 in (
+                        tempNumber3 := __assign_401;
+                        __assign_401
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_444 = _g5 in (
-                      tempArray5 := __assign_444;
-                      __assign_444
+                    let missing = !tempNumber3 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_415 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_415;
+                      __assign_415
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_416 = !_g5 in let __new_417 = HxInt.add __old_416 1 in (
+                          ignore (_g5 := __new_417);
+                          __old_416
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_418 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_418;
+                        __assign_418
+                      ) else let tempArray3 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_419 = HxArray.create () in __arr_419 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_420 = !_g6 in let __new_421 = HxInt.add __old_420 1 in (
+                              ignore (_g6 := __new_421);
+                              __new_421
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_422 = _g5 in (
+                            tempArray3 := __assign_422;
+                            __assign_422
+                          )
+                        ));
+                        let __assign_423 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray3) " " (fun x -> x)) in (
+                          tempResult5 := __assign_423;
+                          __assign_423
+                        )
+                      )
                     )
-                  ));
-                  let __assign_445 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray5) " " (fun x -> x)) in (
-                    tempResult5 := __assign_445;
-                    __assign_445
                   )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_446 = "false" in (
-                tempResult5 := __assign_446;
-                __assign_446
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber6 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_448 = expected in let __nullable_449 = HxArray.length args in if __nullable_448 == HxRuntime.hx_null then false else Obj.obj __nullable_448 > __nullable_449) then let __assign_450 = HxInt.sub (let __nullable_int_451 = expected in if __nullable_int_451 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_451) (HxArray.length args) in (
-                  tempNumber6 := __assign_450;
-                  __assign_450
-                ) else let __assign_452 = 0 in (
-                  tempNumber6 := __assign_452;
-                  __assign_452
-                ) else let __assign_453 = 0 in (
-                  tempNumber6 := __assign_453;
-                  __assign_453
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_454 = expected in let __nullable_455 = HxArray.length args in if __nullable_454 == HxRuntime.hx_null then false else Obj.obj __nullable_454 > __nullable_455) then let __assign_456 = HxInt.sub (let __nullable_int_457 = expected in if __nullable_int_457 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_457) (HxArray.length args) in (
-                  tempNumber6 := __assign_456;
-                  __assign_456
-                ) else let __assign_458 = 0 in (
-                  tempNumber6 := __assign_458;
-                  __assign_458
-                ) else let __assign_459 = 0 in (
-                  tempNumber6 := __assign_459;
-                  __assign_459
-                ) else let __assign_460 = 0 in (
-                  tempNumber6 := __assign_460;
-                  __assign_460
-                )
-                | _ -> let __assign_447 = 0 in (
-                  tempNumber6 := __assign_447;
-                  __assign_447
-                ));
-              let missing = !tempNumber6 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_461 = !_g5 in let __new_462 = HxInt.add __old_461 1 in (
-                    ignore (_g5 := __new_462);
-                    __old_461
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_463 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_463;
-                  __assign_463
-                ) else let tempArray6 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_464 = HxArray.create () in __arr_464 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_465 = !_g6 in let __new_466 = HxInt.add __old_465 1 in (
-                        ignore (_g6 := __new_466);
-                        __new_466
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_467 = _g5 in (
-                      tempArray6 := __assign_467;
-                      __assign_467
+                  | "floor" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_424 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_424;
+                      __assign_424
                     )
-                  ));
-                  let __assign_468 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray6) " " (fun x -> x)) in (
-                    tempResult5 := __assign_468;
-                    __assign_468
-                  )
-                )
-              )
-            )
-            | "isFinite" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_469 = ("(match classify_float (" ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ") with | FP_nan | FP_infinite -> false | _ -> true)" in (
-              tempResult5 := __assign_469;
-              __assign_469
-            ) else let callee = _g in let args = _g1 in let tempNumber7 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_471 = expected in let __nullable_472 = HxArray.length args in if __nullable_471 == HxRuntime.hx_null then false else Obj.obj __nullable_471 > __nullable_472) then let __assign_473 = HxInt.sub (let __nullable_int_474 = expected in if __nullable_int_474 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_474) (HxArray.length args) in (
-                  tempNumber7 := __assign_473;
-                  __assign_473
-                ) else let __assign_475 = 0 in (
-                  tempNumber7 := __assign_475;
-                  __assign_475
-                ) else let __assign_476 = 0 in (
-                  tempNumber7 := __assign_476;
-                  __assign_476
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_477 = expected in let __nullable_478 = HxArray.length args in if __nullable_477 == HxRuntime.hx_null then false else Obj.obj __nullable_477 > __nullable_478) then let __assign_479 = HxInt.sub (let __nullable_int_480 = expected in if __nullable_int_480 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_480) (HxArray.length args) in (
-                  tempNumber7 := __assign_479;
-                  __assign_479
-                ) else let __assign_481 = 0 in (
-                  tempNumber7 := __assign_481;
-                  __assign_481
-                ) else let __assign_482 = 0 in (
-                  tempNumber7 := __assign_482;
-                  __assign_482
-                ) else let __assign_483 = 0 in (
-                  tempNumber7 := __assign_483;
-                  __assign_483
-                )
-                | _ -> let __assign_470 = 0 in (
-                  tempNumber7 := __assign_470;
-                  __assign_470
-                ));
-              let missing = !tempNumber7 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_484 = !_g5 in let __new_485 = HxInt.add __old_484 1 in (
-                    ignore (_g5 := __new_485);
-                    __old_484
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_486 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_486;
-                  __assign_486
-                ) else let tempArray7 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_487 = HxArray.create () in __arr_487 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_488 = !_g6 in let __new_489 = HxInt.add __old_488 1 in (
-                        ignore (_g6 := __new_489);
-                        __new_489
+                  ) else let callee = _g in let args = _g1 in let tempNumber4 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_426 = expected in let __nullable_427 = HxArray.length args in if __nullable_426 == HxRuntime.hx_null then false else Obj.obj __nullable_426 > __nullable_427) then let __assign_428 = HxInt.sub (let __nullable_int_429 = expected in if __nullable_int_429 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_429) (HxArray.length args) in (
+                        tempNumber4 := __assign_428;
+                        __assign_428
+                      ) else let __assign_430 = 0 in (
+                        tempNumber4 := __assign_430;
+                        __assign_430
+                      ) else let __assign_431 = 0 in (
+                        tempNumber4 := __assign_431;
+                        __assign_431
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_432 = expected in let __nullable_433 = HxArray.length args in if __nullable_432 == HxRuntime.hx_null then false else Obj.obj __nullable_432 > __nullable_433) then let __assign_434 = HxInt.sub (let __nullable_int_435 = expected in if __nullable_int_435 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_435) (HxArray.length args) in (
+                        tempNumber4 := __assign_434;
+                        __assign_434
+                      ) else let __assign_436 = 0 in (
+                        tempNumber4 := __assign_436;
+                        __assign_436
+                      ) else let __assign_437 = 0 in (
+                        tempNumber4 := __assign_437;
+                        __assign_437
+                      ) else let __assign_438 = 0 in (
+                        tempNumber4 := __assign_438;
+                        __assign_438
+                      )
+                      | _ -> let __assign_425 = 0 in (
+                        tempNumber4 := __assign_425;
+                        __assign_425
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_490 = _g5 in (
-                      tempArray7 := __assign_490;
-                      __assign_490
+                    let missing = !tempNumber4 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_439 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_439;
+                      __assign_439
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_440 = !_g5 in let __new_441 = HxInt.add __old_440 1 in (
+                          ignore (_g5 := __new_441);
+                          __old_440
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_442 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_442;
+                        __assign_442
+                      ) else let tempArray4 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_443 = HxArray.create () in __arr_443 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_444 = !_g6 in let __new_445 = HxInt.add __old_444 1 in (
+                              ignore (_g6 := __new_445);
+                              __new_445
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_446 = _g5 in (
+                            tempArray4 := __assign_446;
+                            __assign_446
+                          )
+                        ));
+                        let __assign_447 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray4) " " (fun x -> x)) in (
+                          tempResult5 := __assign_447;
+                          __assign_447
+                        )
+                      )
                     )
-                  ));
-                  let __assign_491 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray7) " " (fun x -> x)) in (
-                    tempResult5 := __assign_491;
-                    __assign_491
                   )
-                )
-              )
-            )
-            | "isInfinite" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_492 = ("(classify_float (" ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ") = FP_infinite)" in (
-              tempResult5 := __assign_492;
-              __assign_492
-            ) else let callee = _g in let args = _g1 in let tempNumber8 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_494 = expected in let __nullable_495 = HxArray.length args in if __nullable_494 == HxRuntime.hx_null then false else Obj.obj __nullable_494 > __nullable_495) then let __assign_496 = HxInt.sub (let __nullable_int_497 = expected in if __nullable_int_497 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_497) (HxArray.length args) in (
-                  tempNumber8 := __assign_496;
-                  __assign_496
-                ) else let __assign_498 = 0 in (
-                  tempNumber8 := __assign_498;
-                  __assign_498
-                ) else let __assign_499 = 0 in (
-                  tempNumber8 := __assign_499;
-                  __assign_499
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_500 = expected in let __nullable_501 = HxArray.length args in if __nullable_500 == HxRuntime.hx_null then false else Obj.obj __nullable_500 > __nullable_501) then let __assign_502 = HxInt.sub (let __nullable_int_503 = expected in if __nullable_int_503 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_503) (HxArray.length args) in (
-                  tempNumber8 := __assign_502;
-                  __assign_502
-                ) else let __assign_504 = 0 in (
-                  tempNumber8 := __assign_504;
-                  __assign_504
-                ) else let __assign_505 = 0 in (
-                  tempNumber8 := __assign_505;
-                  __assign_505
-                ) else let __assign_506 = 0 in (
-                  tempNumber8 := __assign_506;
-                  __assign_506
-                )
-                | _ -> let __assign_493 = 0 in (
-                  tempNumber8 := __assign_493;
-                  __assign_493
-                ));
-              let missing = !tempNumber8 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_507 = !_g5 in let __new_508 = HxInt.add __old_507 1 in (
-                    ignore (_g5 := __new_508);
-                    __old_507
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_509 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_509;
-                  __assign_509
-                ) else let tempArray8 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_510 = HxArray.create () in __arr_510 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_511 = !_g6 in let __new_512 = HxInt.add __old_511 1 in (
-                        ignore (_g6 := __new_512);
-                        __new_512
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_513 = _g5 in (
-                      tempArray8 := __assign_513;
-                      __assign_513
+                  | "fround" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_448 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_448;
+                      __assign_448
                     )
-                  ));
-                  let __assign_514 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray8) " " (fun x -> x)) in (
-                    tempResult5 := __assign_514;
-                    __assign_514
-                  )
-                )
-              )
-            )
-            | "isNaN" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_515 = ("(classify_float (" ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ") = FP_nan)" in (
-              tempResult5 := __assign_515;
-              __assign_515
-            ) else let callee = _g in let args = _g1 in let tempNumber9 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_517 = expected in let __nullable_518 = HxArray.length args in if __nullable_517 == HxRuntime.hx_null then false else Obj.obj __nullable_517 > __nullable_518) then let __assign_519 = HxInt.sub (let __nullable_int_520 = expected in if __nullable_int_520 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_520) (HxArray.length args) in (
-                  tempNumber9 := __assign_519;
-                  __assign_519
-                ) else let __assign_521 = 0 in (
-                  tempNumber9 := __assign_521;
-                  __assign_521
-                ) else let __assign_522 = 0 in (
-                  tempNumber9 := __assign_522;
-                  __assign_522
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_523 = expected in let __nullable_524 = HxArray.length args in if __nullable_523 == HxRuntime.hx_null then false else Obj.obj __nullable_523 > __nullable_524) then let __assign_525 = HxInt.sub (let __nullable_int_526 = expected in if __nullable_int_526 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_526) (HxArray.length args) in (
-                  tempNumber9 := __assign_525;
-                  __assign_525
-                ) else let __assign_527 = 0 in (
-                  tempNumber9 := __assign_527;
-                  __assign_527
-                ) else let __assign_528 = 0 in (
-                  tempNumber9 := __assign_528;
-                  __assign_528
-                ) else let __assign_529 = 0 in (
-                  tempNumber9 := __assign_529;
-                  __assign_529
-                )
-                | _ -> let __assign_516 = 0 in (
-                  tempNumber9 := __assign_516;
-                  __assign_516
-                ));
-              let missing = !tempNumber9 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_530 = !_g5 in let __new_531 = HxInt.add __old_530 1 in (
-                    ignore (_g5 := __new_531);
-                    __old_530
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_532 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_532;
-                  __assign_532
-                ) else let tempArray9 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_533 = HxArray.create () in __arr_533 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_534 = !_g6 in let __new_535 = HxInt.add __old_534 1 in (
-                        ignore (_g6 := __new_535);
-                        __new_535
+                  ) else let callee = _g in let args = _g1 in let tempNumber5 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_450 = expected in let __nullable_451 = HxArray.length args in if __nullable_450 == HxRuntime.hx_null then false else Obj.obj __nullable_450 > __nullable_451) then let __assign_452 = HxInt.sub (let __nullable_int_453 = expected in if __nullable_int_453 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_453) (HxArray.length args) in (
+                        tempNumber5 := __assign_452;
+                        __assign_452
+                      ) else let __assign_454 = 0 in (
+                        tempNumber5 := __assign_454;
+                        __assign_454
+                      ) else let __assign_455 = 0 in (
+                        tempNumber5 := __assign_455;
+                        __assign_455
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_456 = expected in let __nullable_457 = HxArray.length args in if __nullable_456 == HxRuntime.hx_null then false else Obj.obj __nullable_456 > __nullable_457) then let __assign_458 = HxInt.sub (let __nullable_int_459 = expected in if __nullable_int_459 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_459) (HxArray.length args) in (
+                        tempNumber5 := __assign_458;
+                        __assign_458
+                      ) else let __assign_460 = 0 in (
+                        tempNumber5 := __assign_460;
+                        __assign_460
+                      ) else let __assign_461 = 0 in (
+                        tempNumber5 := __assign_461;
+                        __assign_461
+                      ) else let __assign_462 = 0 in (
+                        tempNumber5 := __assign_462;
+                        __assign_462
+                      )
+                      | _ -> let __assign_449 = 0 in (
+                        tempNumber5 := __assign_449;
+                        __assign_449
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_536 = _g5 in (
-                      tempArray9 := __assign_536;
-                      __assign_536
+                    let missing = !tempNumber5 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_463 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_463;
+                      __assign_463
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_464 = !_g5 in let __new_465 = HxInt.add __old_464 1 in (
+                          ignore (_g5 := __new_465);
+                          __old_464
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_466 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_466;
+                        __assign_466
+                      ) else let tempArray5 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_467 = HxArray.create () in __arr_467 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_468 = !_g6 in let __new_469 = HxInt.add __old_468 1 in (
+                              ignore (_g6 := __new_469);
+                              __new_469
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_470 = _g5 in (
+                            tempArray5 := __assign_470;
+                            __assign_470
+                          )
+                        ));
+                        let __assign_471 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray5) " " (fun x -> x)) in (
+                          tempResult5 := __assign_471;
+                          __assign_471
+                        )
+                      )
                     )
-                  ));
-                  let __assign_537 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray9) " " (fun x -> x)) in (
-                    tempResult5 := __assign_537;
-                    __assign_537
                   )
-                )
-              )
-            )
-            | "log" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_538 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_538;
-                __assign_538
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber10 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_540 = expected in let __nullable_541 = HxArray.length args in if __nullable_540 == HxRuntime.hx_null then false else Obj.obj __nullable_540 > __nullable_541) then let __assign_542 = HxInt.sub (let __nullable_int_543 = expected in if __nullable_int_543 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_543) (HxArray.length args) in (
-                  tempNumber10 := __assign_542;
-                  __assign_542
-                ) else let __assign_544 = 0 in (
-                  tempNumber10 := __assign_544;
-                  __assign_544
-                ) else let __assign_545 = 0 in (
-                  tempNumber10 := __assign_545;
-                  __assign_545
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_546 = expected in let __nullable_547 = HxArray.length args in if __nullable_546 == HxRuntime.hx_null then false else Obj.obj __nullable_546 > __nullable_547) then let __assign_548 = HxInt.sub (let __nullable_int_549 = expected in if __nullable_int_549 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_549) (HxArray.length args) in (
-                  tempNumber10 := __assign_548;
-                  __assign_548
-                ) else let __assign_550 = 0 in (
-                  tempNumber10 := __assign_550;
-                  __assign_550
-                ) else let __assign_551 = 0 in (
-                  tempNumber10 := __assign_551;
-                  __assign_551
-                ) else let __assign_552 = 0 in (
-                  tempNumber10 := __assign_552;
-                  __assign_552
-                )
-                | _ -> let __assign_539 = 0 in (
-                  tempNumber10 := __assign_539;
-                  __assign_539
-                ));
-              let missing = !tempNumber10 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_553 = !_g5 in let __new_554 = HxInt.add __old_553 1 in (
-                    ignore (_g5 := __new_554);
-                    __old_553
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_555 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_555;
-                  __assign_555
-                ) else let tempArray10 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_556 = HxArray.create () in __arr_556 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_557 = !_g6 in let __new_558 = HxInt.add __old_557 1 in (
-                        ignore (_g6 := __new_558);
-                        __new_558
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_472 = "false" in (
+                      tempResult5 := __assign_472;
+                      __assign_472
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber6 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_474 = expected in let __nullable_475 = HxArray.length args in if __nullable_474 == HxRuntime.hx_null then false else Obj.obj __nullable_474 > __nullable_475) then let __assign_476 = HxInt.sub (let __nullable_int_477 = expected in if __nullable_int_477 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_477) (HxArray.length args) in (
+                        tempNumber6 := __assign_476;
+                        __assign_476
+                      ) else let __assign_478 = 0 in (
+                        tempNumber6 := __assign_478;
+                        __assign_478
+                      ) else let __assign_479 = 0 in (
+                        tempNumber6 := __assign_479;
+                        __assign_479
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_480 = expected in let __nullable_481 = HxArray.length args in if __nullable_480 == HxRuntime.hx_null then false else Obj.obj __nullable_480 > __nullable_481) then let __assign_482 = HxInt.sub (let __nullable_int_483 = expected in if __nullable_int_483 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_483) (HxArray.length args) in (
+                        tempNumber6 := __assign_482;
+                        __assign_482
+                      ) else let __assign_484 = 0 in (
+                        tempNumber6 := __assign_484;
+                        __assign_484
+                      ) else let __assign_485 = 0 in (
+                        tempNumber6 := __assign_485;
+                        __assign_485
+                      ) else let __assign_486 = 0 in (
+                        tempNumber6 := __assign_486;
+                        __assign_486
+                      )
+                      | _ -> let __assign_473 = 0 in (
+                        tempNumber6 := __assign_473;
+                        __assign_473
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_559 = _g5 in (
-                      tempArray10 := __assign_559;
+                    let missing = !tempNumber6 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_487 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_487;
+                      __assign_487
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_488 = !_g5 in let __new_489 = HxInt.add __old_488 1 in (
+                          ignore (_g5 := __new_489);
+                          __old_488
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_490 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_490;
+                        __assign_490
+                      ) else let tempArray6 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_491 = HxArray.create () in __arr_491 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_492 = !_g6 in let __new_493 = HxInt.add __old_492 1 in (
+                              ignore (_g6 := __new_493);
+                              __new_493
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_494 = _g5 in (
+                            tempArray6 := __assign_494;
+                            __assign_494
+                          )
+                        ));
+                        let __assign_495 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray6) " " (fun x -> x)) in (
+                          tempResult5 := __assign_495;
+                          __assign_495
+                        )
+                      )
+                    )
+                  )
+                  | "isFinite" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_496 = ("(match classify_float (" ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ") with | FP_nan | FP_infinite -> false | _ -> true)" in (
+                    tempResult5 := __assign_496;
+                    __assign_496
+                  ) else let callee = _g in let args = _g1 in let tempNumber7 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_498 = expected in let __nullable_499 = HxArray.length args in if __nullable_498 == HxRuntime.hx_null then false else Obj.obj __nullable_498 > __nullable_499) then let __assign_500 = HxInt.sub (let __nullable_int_501 = expected in if __nullable_int_501 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_501) (HxArray.length args) in (
+                        tempNumber7 := __assign_500;
+                        __assign_500
+                      ) else let __assign_502 = 0 in (
+                        tempNumber7 := __assign_502;
+                        __assign_502
+                      ) else let __assign_503 = 0 in (
+                        tempNumber7 := __assign_503;
+                        __assign_503
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_504 = expected in let __nullable_505 = HxArray.length args in if __nullable_504 == HxRuntime.hx_null then false else Obj.obj __nullable_504 > __nullable_505) then let __assign_506 = HxInt.sub (let __nullable_int_507 = expected in if __nullable_int_507 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_507) (HxArray.length args) in (
+                        tempNumber7 := __assign_506;
+                        __assign_506
+                      ) else let __assign_508 = 0 in (
+                        tempNumber7 := __assign_508;
+                        __assign_508
+                      ) else let __assign_509 = 0 in (
+                        tempNumber7 := __assign_509;
+                        __assign_509
+                      ) else let __assign_510 = 0 in (
+                        tempNumber7 := __assign_510;
+                        __assign_510
+                      )
+                      | _ -> let __assign_497 = 0 in (
+                        tempNumber7 := __assign_497;
+                        __assign_497
+                      ));
+                    let missing = !tempNumber7 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_511 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_511;
+                      __assign_511
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_512 = !_g5 in let __new_513 = HxInt.add __old_512 1 in (
+                          ignore (_g5 := __new_513);
+                          __old_512
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_514 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_514;
+                        __assign_514
+                      ) else let tempArray7 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_515 = HxArray.create () in __arr_515 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_516 = !_g6 in let __new_517 = HxInt.add __old_516 1 in (
+                              ignore (_g6 := __new_517);
+                              __new_517
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_518 = _g5 in (
+                            tempArray7 := __assign_518;
+                            __assign_518
+                          )
+                        ));
+                        let __assign_519 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray7) " " (fun x -> x)) in (
+                          tempResult5 := __assign_519;
+                          __assign_519
+                        )
+                      )
+                    )
+                  )
+                  | "isInfinite" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_520 = ("(classify_float (" ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ") = FP_infinite)" in (
+                    tempResult5 := __assign_520;
+                    __assign_520
+                  ) else let callee = _g in let args = _g1 in let tempNumber8 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_522 = expected in let __nullable_523 = HxArray.length args in if __nullable_522 == HxRuntime.hx_null then false else Obj.obj __nullable_522 > __nullable_523) then let __assign_524 = HxInt.sub (let __nullable_int_525 = expected in if __nullable_int_525 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_525) (HxArray.length args) in (
+                        tempNumber8 := __assign_524;
+                        __assign_524
+                      ) else let __assign_526 = 0 in (
+                        tempNumber8 := __assign_526;
+                        __assign_526
+                      ) else let __assign_527 = 0 in (
+                        tempNumber8 := __assign_527;
+                        __assign_527
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_528 = expected in let __nullable_529 = HxArray.length args in if __nullable_528 == HxRuntime.hx_null then false else Obj.obj __nullable_528 > __nullable_529) then let __assign_530 = HxInt.sub (let __nullable_int_531 = expected in if __nullable_int_531 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_531) (HxArray.length args) in (
+                        tempNumber8 := __assign_530;
+                        __assign_530
+                      ) else let __assign_532 = 0 in (
+                        tempNumber8 := __assign_532;
+                        __assign_532
+                      ) else let __assign_533 = 0 in (
+                        tempNumber8 := __assign_533;
+                        __assign_533
+                      ) else let __assign_534 = 0 in (
+                        tempNumber8 := __assign_534;
+                        __assign_534
+                      )
+                      | _ -> let __assign_521 = 0 in (
+                        tempNumber8 := __assign_521;
+                        __assign_521
+                      ));
+                    let missing = !tempNumber8 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_535 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_535;
+                      __assign_535
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_536 = !_g5 in let __new_537 = HxInt.add __old_536 1 in (
+                          ignore (_g5 := __new_537);
+                          __old_536
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_538 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_538;
+                        __assign_538
+                      ) else let tempArray8 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_539 = HxArray.create () in __arr_539 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_540 = !_g6 in let __new_541 = HxInt.add __old_540 1 in (
+                              ignore (_g6 := __new_541);
+                              __new_541
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_542 = _g5 in (
+                            tempArray8 := __assign_542;
+                            __assign_542
+                          )
+                        ));
+                        let __assign_543 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray8) " " (fun x -> x)) in (
+                          tempResult5 := __assign_543;
+                          __assign_543
+                        )
+                      )
+                    )
+                  )
+                  | "isNaN" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_544 = ("(classify_float (" ^ HxString.toStdString (exprToOcaml arg arityByIdent tyByIdent)) ^ ") = FP_nan)" in (
+                    tempResult5 := __assign_544;
+                    __assign_544
+                  ) else let callee = _g in let args = _g1 in let tempNumber9 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_546 = expected in let __nullable_547 = HxArray.length args in if __nullable_546 == HxRuntime.hx_null then false else Obj.obj __nullable_546 > __nullable_547) then let __assign_548 = HxInt.sub (let __nullable_int_549 = expected in if __nullable_int_549 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_549) (HxArray.length args) in (
+                        tempNumber9 := __assign_548;
+                        __assign_548
+                      ) else let __assign_550 = 0 in (
+                        tempNumber9 := __assign_550;
+                        __assign_550
+                      ) else let __assign_551 = 0 in (
+                        tempNumber9 := __assign_551;
+                        __assign_551
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_552 = expected in let __nullable_553 = HxArray.length args in if __nullable_552 == HxRuntime.hx_null then false else Obj.obj __nullable_552 > __nullable_553) then let __assign_554 = HxInt.sub (let __nullable_int_555 = expected in if __nullable_int_555 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_555) (HxArray.length args) in (
+                        tempNumber9 := __assign_554;
+                        __assign_554
+                      ) else let __assign_556 = 0 in (
+                        tempNumber9 := __assign_556;
+                        __assign_556
+                      ) else let __assign_557 = 0 in (
+                        tempNumber9 := __assign_557;
+                        __assign_557
+                      ) else let __assign_558 = 0 in (
+                        tempNumber9 := __assign_558;
+                        __assign_558
+                      )
+                      | _ -> let __assign_545 = 0 in (
+                        tempNumber9 := __assign_545;
+                        __assign_545
+                      ));
+                    let missing = !tempNumber9 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_559 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_559;
                       __assign_559
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_560 = !_g5 in let __new_561 = HxInt.add __old_560 1 in (
+                          ignore (_g5 := __new_561);
+                          __old_560
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_562 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_562;
+                        __assign_562
+                      ) else let tempArray9 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_563 = HxArray.create () in __arr_563 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_564 = !_g6 in let __new_565 = HxInt.add __old_564 1 in (
+                              ignore (_g6 := __new_565);
+                              __new_565
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_566 = _g5 in (
+                            tempArray9 := __assign_566;
+                            __assign_566
+                          )
+                        ));
+                        let __assign_567 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray9) " " (fun x -> x)) in (
+                          tempResult5 := __assign_567;
+                          __assign_567
+                        )
+                      )
                     )
-                  ));
-                  let __assign_560 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray10) " " (fun x -> x)) in (
-                    tempResult5 := __assign_560;
-                    __assign_560
                   )
-                )
-              )
-            )
-            | "pow" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
-              ignore _g5;
-              ignore _g6;
-              let __assign_561 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_561;
-                __assign_561
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber11 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_563 = expected in let __nullable_564 = HxArray.length args in if __nullable_563 == HxRuntime.hx_null then false else Obj.obj __nullable_563 > __nullable_564) then let __assign_565 = HxInt.sub (let __nullable_int_566 = expected in if __nullable_int_566 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_566) (HxArray.length args) in (
-                  tempNumber11 := __assign_565;
-                  __assign_565
-                ) else let __assign_567 = 0 in (
-                  tempNumber11 := __assign_567;
-                  __assign_567
-                ) else let __assign_568 = 0 in (
-                  tempNumber11 := __assign_568;
-                  __assign_568
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_569 = expected in let __nullable_570 = HxArray.length args in if __nullable_569 == HxRuntime.hx_null then false else Obj.obj __nullable_569 > __nullable_570) then let __assign_571 = HxInt.sub (let __nullable_int_572 = expected in if __nullable_int_572 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_572) (HxArray.length args) in (
-                  tempNumber11 := __assign_571;
-                  __assign_571
-                ) else let __assign_573 = 0 in (
-                  tempNumber11 := __assign_573;
-                  __assign_573
-                ) else let __assign_574 = 0 in (
-                  tempNumber11 := __assign_574;
-                  __assign_574
-                ) else let __assign_575 = 0 in (
-                  tempNumber11 := __assign_575;
-                  __assign_575
-                )
-                | _ -> let __assign_562 = 0 in (
-                  tempNumber11 := __assign_562;
-                  __assign_562
-                ));
-              let missing = !tempNumber11 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_576 = !_g5 in let __new_577 = HxInt.add __old_576 1 in (
-                    ignore (_g5 := __new_577);
-                    __old_576
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_578 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_578;
-                  __assign_578
-                ) else let tempArray11 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_579 = HxArray.create () in __arr_579 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_580 = !_g6 in let __new_581 = HxInt.add __old_580 1 in (
-                        ignore (_g6 := __new_581);
-                        __new_581
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_582 = _g5 in (
-                      tempArray11 := __assign_582;
-                      __assign_582
+                  | "log" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_568 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_568;
+                      __assign_568
                     )
-                  ));
-                  let __assign_583 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray11) " " (fun x -> x)) in (
-                    tempResult5 := __assign_583;
-                    __assign_583
-                  )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_584 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_584;
-                __assign_584
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber12 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_586 = expected in let __nullable_587 = HxArray.length args in if __nullable_586 == HxRuntime.hx_null then false else Obj.obj __nullable_586 > __nullable_587) then let __assign_588 = HxInt.sub (let __nullable_int_589 = expected in if __nullable_int_589 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_589) (HxArray.length args) in (
-                  tempNumber12 := __assign_588;
-                  __assign_588
-                ) else let __assign_590 = 0 in (
-                  tempNumber12 := __assign_590;
-                  __assign_590
-                ) else let __assign_591 = 0 in (
-                  tempNumber12 := __assign_591;
-                  __assign_591
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_592 = expected in let __nullable_593 = HxArray.length args in if __nullable_592 == HxRuntime.hx_null then false else Obj.obj __nullable_592 > __nullable_593) then let __assign_594 = HxInt.sub (let __nullable_int_595 = expected in if __nullable_int_595 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_595) (HxArray.length args) in (
-                  tempNumber12 := __assign_594;
-                  __assign_594
-                ) else let __assign_596 = 0 in (
-                  tempNumber12 := __assign_596;
-                  __assign_596
-                ) else let __assign_597 = 0 in (
-                  tempNumber12 := __assign_597;
-                  __assign_597
-                ) else let __assign_598 = 0 in (
-                  tempNumber12 := __assign_598;
-                  __assign_598
-                )
-                | _ -> let __assign_585 = 0 in (
-                  tempNumber12 := __assign_585;
-                  __assign_585
-                ));
-              let missing = !tempNumber12 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_599 = !_g5 in let __new_600 = HxInt.add __old_599 1 in (
-                    ignore (_g5 := __new_600);
-                    __old_599
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_601 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_601;
-                  __assign_601
-                ) else let tempArray12 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_602 = HxArray.create () in __arr_602 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_603 = !_g6 in let __new_604 = HxInt.add __old_603 1 in (
-                        ignore (_g6 := __new_604);
-                        __new_604
+                  ) else let callee = _g in let args = _g1 in let tempNumber10 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_570 = expected in let __nullable_571 = HxArray.length args in if __nullable_570 == HxRuntime.hx_null then false else Obj.obj __nullable_570 > __nullable_571) then let __assign_572 = HxInt.sub (let __nullable_int_573 = expected in if __nullable_int_573 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_573) (HxArray.length args) in (
+                        tempNumber10 := __assign_572;
+                        __assign_572
+                      ) else let __assign_574 = 0 in (
+                        tempNumber10 := __assign_574;
+                        __assign_574
+                      ) else let __assign_575 = 0 in (
+                        tempNumber10 := __assign_575;
+                        __assign_575
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_576 = expected in let __nullable_577 = HxArray.length args in if __nullable_576 == HxRuntime.hx_null then false else Obj.obj __nullable_576 > __nullable_577) then let __assign_578 = HxInt.sub (let __nullable_int_579 = expected in if __nullable_int_579 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_579) (HxArray.length args) in (
+                        tempNumber10 := __assign_578;
+                        __assign_578
+                      ) else let __assign_580 = 0 in (
+                        tempNumber10 := __assign_580;
+                        __assign_580
+                      ) else let __assign_581 = 0 in (
+                        tempNumber10 := __assign_581;
+                        __assign_581
+                      ) else let __assign_582 = 0 in (
+                        tempNumber10 := __assign_582;
+                        __assign_582
+                      )
+                      | _ -> let __assign_569 = 0 in (
+                        tempNumber10 := __assign_569;
+                        __assign_569
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_605 = _g5 in (
-                      tempArray12 := __assign_605;
-                      __assign_605
+                    let missing = !tempNumber10 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_583 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_583;
+                      __assign_583
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_584 = !_g5 in let __new_585 = HxInt.add __old_584 1 in (
+                          ignore (_g5 := __new_585);
+                          __old_584
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_586 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_586;
+                        __assign_586
+                      ) else let tempArray10 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_587 = HxArray.create () in __arr_587 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_588 = !_g6 in let __new_589 = HxInt.add __old_588 1 in (
+                              ignore (_g6 := __new_589);
+                              __new_589
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_590 = _g5 in (
+                            tempArray10 := __assign_590;
+                            __assign_590
+                          )
+                        ));
+                        let __assign_591 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray10) " " (fun x -> x)) in (
+                          tempResult5 := __assign_591;
+                          __assign_591
+                        )
+                      )
                     )
-                  ));
-                  let __assign_606 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray12) " " (fun x -> x)) in (
-                    tempResult5 := __assign_606;
-                    __assign_606
                   )
-                )
-              )
-            )
-            | "round" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_607 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_607;
-                __assign_607
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber13 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_609 = expected in let __nullable_610 = HxArray.length args in if __nullable_609 == HxRuntime.hx_null then false else Obj.obj __nullable_609 > __nullable_610) then let __assign_611 = HxInt.sub (let __nullable_int_612 = expected in if __nullable_int_612 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_612) (HxArray.length args) in (
-                  tempNumber13 := __assign_611;
-                  __assign_611
-                ) else let __assign_613 = 0 in (
-                  tempNumber13 := __assign_613;
-                  __assign_613
-                ) else let __assign_614 = 0 in (
-                  tempNumber13 := __assign_614;
-                  __assign_614
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_615 = expected in let __nullable_616 = HxArray.length args in if __nullable_615 == HxRuntime.hx_null then false else Obj.obj __nullable_615 > __nullable_616) then let __assign_617 = HxInt.sub (let __nullable_int_618 = expected in if __nullable_int_618 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_618) (HxArray.length args) in (
-                  tempNumber13 := __assign_617;
-                  __assign_617
-                ) else let __assign_619 = 0 in (
-                  tempNumber13 := __assign_619;
-                  __assign_619
-                ) else let __assign_620 = 0 in (
-                  tempNumber13 := __assign_620;
-                  __assign_620
-                ) else let __assign_621 = 0 in (
-                  tempNumber13 := __assign_621;
-                  __assign_621
-                )
-                | _ -> let __assign_608 = 0 in (
-                  tempNumber13 := __assign_608;
-                  __assign_608
-                ));
-              let missing = !tempNumber13 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_622 = !_g5 in let __new_623 = HxInt.add __old_622 1 in (
-                    ignore (_g5 := __new_623);
-                    __old_622
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_624 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_624;
-                  __assign_624
-                ) else let tempArray13 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_625 = HxArray.create () in __arr_625 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_626 = !_g6 in let __new_627 = HxInt.add __old_626 1 in (
-                        ignore (_g6 := __new_627);
-                        __new_627
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_628 = _g5 in (
-                      tempArray13 := __assign_628;
-                      __assign_628
+                  | "pow" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
+                    ignore _g5;
+                    ignore _g6;
+                    let __assign_592 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_592;
+                      __assign_592
                     )
-                  ));
-                  let __assign_629 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray13) " " (fun x -> x)) in (
-                    tempResult5 := __assign_629;
-                    __assign_629
-                  )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_630 = "()" in (
-                tempResult5 := __assign_630;
-                __assign_630
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber14 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_632 = expected in let __nullable_633 = HxArray.length args in if __nullable_632 == HxRuntime.hx_null then false else Obj.obj __nullable_632 > __nullable_633) then let __assign_634 = HxInt.sub (let __nullable_int_635 = expected in if __nullable_int_635 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_635) (HxArray.length args) in (
-                  tempNumber14 := __assign_634;
-                  __assign_634
-                ) else let __assign_636 = 0 in (
-                  tempNumber14 := __assign_636;
-                  __assign_636
-                ) else let __assign_637 = 0 in (
-                  tempNumber14 := __assign_637;
-                  __assign_637
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_638 = expected in let __nullable_639 = HxArray.length args in if __nullable_638 == HxRuntime.hx_null then false else Obj.obj __nullable_638 > __nullable_639) then let __assign_640 = HxInt.sub (let __nullable_int_641 = expected in if __nullable_int_641 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_641) (HxArray.length args) in (
-                  tempNumber14 := __assign_640;
-                  __assign_640
-                ) else let __assign_642 = 0 in (
-                  tempNumber14 := __assign_642;
-                  __assign_642
-                ) else let __assign_643 = 0 in (
-                  tempNumber14 := __assign_643;
-                  __assign_643
-                ) else let __assign_644 = 0 in (
-                  tempNumber14 := __assign_644;
-                  __assign_644
-                )
-                | _ -> let __assign_631 = 0 in (
-                  tempNumber14 := __assign_631;
-                  __assign_631
-                ));
-              let missing = !tempNumber14 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_645 = !_g5 in let __new_646 = HxInt.add __old_645 1 in (
-                    ignore (_g5 := __new_646);
-                    __old_645
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_647 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_647;
-                  __assign_647
-                ) else let tempArray14 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_648 = HxArray.create () in __arr_648 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_649 = !_g6 in let __new_650 = HxInt.add __old_649 1 in (
-                        ignore (_g6 := __new_650);
-                        __new_650
+                  ) else let callee = _g in let args = _g1 in let tempNumber11 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_594 = expected in let __nullable_595 = HxArray.length args in if __nullable_594 == HxRuntime.hx_null then false else Obj.obj __nullable_594 > __nullable_595) then let __assign_596 = HxInt.sub (let __nullable_int_597 = expected in if __nullable_int_597 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_597) (HxArray.length args) in (
+                        tempNumber11 := __assign_596;
+                        __assign_596
+                      ) else let __assign_598 = 0 in (
+                        tempNumber11 := __assign_598;
+                        __assign_598
+                      ) else let __assign_599 = 0 in (
+                        tempNumber11 := __assign_599;
+                        __assign_599
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_600 = expected in let __nullable_601 = HxArray.length args in if __nullable_600 == HxRuntime.hx_null then false else Obj.obj __nullable_600 > __nullable_601) then let __assign_602 = HxInt.sub (let __nullable_int_603 = expected in if __nullable_int_603 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_603) (HxArray.length args) in (
+                        tempNumber11 := __assign_602;
+                        __assign_602
+                      ) else let __assign_604 = 0 in (
+                        tempNumber11 := __assign_604;
+                        __assign_604
+                      ) else let __assign_605 = 0 in (
+                        tempNumber11 := __assign_605;
+                        __assign_605
+                      ) else let __assign_606 = 0 in (
+                        tempNumber11 := __assign_606;
+                        __assign_606
+                      )
+                      | _ -> let __assign_593 = 0 in (
+                        tempNumber11 := __assign_593;
+                        __assign_593
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_651 = _g5 in (
-                      tempArray14 := __assign_651;
-                      __assign_651
+                    let missing = !tempNumber11 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_607 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_607;
+                      __assign_607
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_608 = !_g5 in let __new_609 = HxInt.add __old_608 1 in (
+                          ignore (_g5 := __new_609);
+                          __old_608
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_610 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_610;
+                        __assign_610
+                      ) else let tempArray11 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_611 = HxArray.create () in __arr_611 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_612 = !_g6 in let __new_613 = HxInt.add __old_612 1 in (
+                              ignore (_g6 := __new_613);
+                              __new_613
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_614 = _g5 in (
+                            tempArray11 := __assign_614;
+                            __assign_614
+                          )
+                        ));
+                        let __assign_615 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray11) " " (fun x -> x)) in (
+                          tempResult5 := __assign_615;
+                          __assign_615
+                        )
+                      )
                     )
-                  ));
-                  let __assign_652 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray14) " " (fun x -> x)) in (
-                    tempResult5 := __assign_652;
-                    __assign_652
                   )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_653 = "()" in (
-                tempResult5 := __assign_653;
-                __assign_653
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber15 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_655 = expected in let __nullable_656 = HxArray.length args in if __nullable_655 == HxRuntime.hx_null then false else Obj.obj __nullable_655 > __nullable_656) then let __assign_657 = HxInt.sub (let __nullable_int_658 = expected in if __nullable_int_658 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_658) (HxArray.length args) in (
-                  tempNumber15 := __assign_657;
-                  __assign_657
-                ) else let __assign_659 = 0 in (
-                  tempNumber15 := __assign_659;
-                  __assign_659
-                ) else let __assign_660 = 0 in (
-                  tempNumber15 := __assign_660;
-                  __assign_660
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_661 = expected in let __nullable_662 = HxArray.length args in if __nullable_661 == HxRuntime.hx_null then false else Obj.obj __nullable_661 > __nullable_662) then let __assign_663 = HxInt.sub (let __nullable_int_664 = expected in if __nullable_int_664 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_664) (HxArray.length args) in (
-                  tempNumber15 := __assign_663;
-                  __assign_663
-                ) else let __assign_665 = 0 in (
-                  tempNumber15 := __assign_665;
-                  __assign_665
-                ) else let __assign_666 = 0 in (
-                  tempNumber15 := __assign_666;
-                  __assign_666
-                ) else let __assign_667 = 0 in (
-                  tempNumber15 := __assign_667;
-                  __assign_667
-                )
-                | _ -> let __assign_654 = 0 in (
-                  tempNumber15 := __assign_654;
-                  __assign_654
-                ));
-              let missing = !tempNumber15 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_668 = !_g5 in let __new_669 = HxInt.add __old_668 1 in (
-                    ignore (_g5 := __new_669);
-                    __old_668
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_670 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_670;
-                  __assign_670
-                ) else let tempArray15 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_671 = HxArray.create () in __arr_671 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_672 = !_g6 in let __new_673 = HxInt.add __old_672 1 in (
-                        ignore (_g6 := __new_673);
-                        __new_673
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_674 = _g5 in (
-                      tempArray15 := __assign_674;
-                      __assign_674
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_616 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_616;
+                      __assign_616
                     )
-                  ));
-                  let __assign_675 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray15) " " (fun x -> x)) in (
-                    tempResult5 := __assign_675;
-                    __assign_675
-                  )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber16 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_330 = expected in let __nullable_331 = HxArray.length args in if __nullable_330 == HxRuntime.hx_null then false else Obj.obj __nullable_330 > __nullable_331) then let __assign_332 = HxInt.sub (let __nullable_int_333 = expected in if __nullable_int_333 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_333) (HxArray.length args) in (
-                  tempNumber16 := __assign_332;
-                  __assign_332
-                ) else let __assign_334 = 0 in (
-                  tempNumber16 := __assign_334;
-                  __assign_334
-                ) else let __assign_335 = 0 in (
-                  tempNumber16 := __assign_335;
-                  __assign_335
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_336 = expected in let __nullable_337 = HxArray.length args in if __nullable_336 == HxRuntime.hx_null then false else Obj.obj __nullable_336 > __nullable_337) then let __assign_338 = HxInt.sub (let __nullable_int_339 = expected in if __nullable_int_339 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_339) (HxArray.length args) in (
-                  tempNumber16 := __assign_338;
-                  __assign_338
-                ) else let __assign_340 = 0 in (
-                  tempNumber16 := __assign_340;
-                  __assign_340
-                ) else let __assign_341 = 0 in (
-                  tempNumber16 := __assign_341;
-                  __assign_341
-                ) else let __assign_342 = 0 in (
-                  tempNumber16 := __assign_342;
-                  __assign_342
-                )
-                | _ -> let __assign_329 = 0 in (
-                  tempNumber16 := __assign_329;
-                  __assign_329
-                ));
-              let missing = !tempNumber16 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_343 = !_g5 in let __new_344 = HxInt.add __old_343 1 in (
-                    ignore (_g5 := __new_344);
-                    __old_343
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_345 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_345;
-                  __assign_345
-                ) else let tempArray16 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_346 = HxArray.create () in __arr_346 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_347 = !_g6 in let __new_348 = HxInt.add __old_347 1 in (
-                        ignore (_g6 := __new_348);
-                        __new_348
+                  ) else let callee = _g in let args = _g1 in let tempNumber12 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_618 = expected in let __nullable_619 = HxArray.length args in if __nullable_618 == HxRuntime.hx_null then false else Obj.obj __nullable_618 > __nullable_619) then let __assign_620 = HxInt.sub (let __nullable_int_621 = expected in if __nullable_int_621 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_621) (HxArray.length args) in (
+                        tempNumber12 := __assign_620;
+                        __assign_620
+                      ) else let __assign_622 = 0 in (
+                        tempNumber12 := __assign_622;
+                        __assign_622
+                      ) else let __assign_623 = 0 in (
+                        tempNumber12 := __assign_623;
+                        __assign_623
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_624 = expected in let __nullable_625 = HxArray.length args in if __nullable_624 == HxRuntime.hx_null then false else Obj.obj __nullable_624 > __nullable_625) then let __assign_626 = HxInt.sub (let __nullable_int_627 = expected in if __nullable_int_627 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_627) (HxArray.length args) in (
+                        tempNumber12 := __assign_626;
+                        __assign_626
+                      ) else let __assign_628 = 0 in (
+                        tempNumber12 := __assign_628;
+                        __assign_628
+                      ) else let __assign_629 = 0 in (
+                        tempNumber12 := __assign_629;
+                        __assign_629
+                      ) else let __assign_630 = 0 in (
+                        tempNumber12 := __assign_630;
+                        __assign_630
+                      )
+                      | _ -> let __assign_617 = 0 in (
+                        tempNumber12 := __assign_617;
+                        __assign_617
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_349 = _g5 in (
-                      tempArray16 := __assign_349;
-                      __assign_349
+                    let missing = !tempNumber12 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_631 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_631;
+                      __assign_631
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_632 = !_g5 in let __new_633 = HxInt.add __old_632 1 in (
+                          ignore (_g5 := __new_633);
+                          __old_632
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_634 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_634;
+                        __assign_634
+                      ) else let tempArray12 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_635 = HxArray.create () in __arr_635 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_636 = !_g6 in let __new_637 = HxInt.add __old_636 1 in (
+                              ignore (_g6 := __new_637);
+                              __new_637
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_638 = _g5 in (
+                            tempArray12 := __assign_638;
+                            __assign_638
+                          )
+                        ));
+                        let __assign_639 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray12) " " (fun x -> x)) in (
+                          tempResult5 := __assign_639;
+                          __assign_639
+                        )
+                      )
                     )
-                  ));
-                  let __assign_350 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray16) " " (fun x -> x)) in (
-                    tempResult5 := __assign_350;
-                    __assign_350
                   )
-                )
-              )
-            ))
-          | "Reflect" -> (match _g3 with
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_698 = "true" in (
-                tempResult5 := __assign_698;
-                __assign_698
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber17 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_700 = expected in let __nullable_701 = HxArray.length args in if __nullable_700 == HxRuntime.hx_null then false else Obj.obj __nullable_700 > __nullable_701) then let __assign_702 = HxInt.sub (let __nullable_int_703 = expected in if __nullable_int_703 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_703) (HxArray.length args) in (
-                  tempNumber17 := __assign_702;
-                  __assign_702
-                ) else let __assign_704 = 0 in (
-                  tempNumber17 := __assign_704;
-                  __assign_704
-                ) else let __assign_705 = 0 in (
-                  tempNumber17 := __assign_705;
-                  __assign_705
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_706 = expected in let __nullable_707 = HxArray.length args in if __nullable_706 == HxRuntime.hx_null then false else Obj.obj __nullable_706 > __nullable_707) then let __assign_708 = HxInt.sub (let __nullable_int_709 = expected in if __nullable_int_709 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_709) (HxArray.length args) in (
-                  tempNumber17 := __assign_708;
-                  __assign_708
-                ) else let __assign_710 = 0 in (
-                  tempNumber17 := __assign_710;
-                  __assign_710
-                ) else let __assign_711 = 0 in (
-                  tempNumber17 := __assign_711;
-                  __assign_711
-                ) else let __assign_712 = 0 in (
-                  tempNumber17 := __assign_712;
-                  __assign_712
-                )
-                | _ -> let __assign_699 = 0 in (
-                  tempNumber17 := __assign_699;
-                  __assign_699
-                ));
-              let missing = !tempNumber17 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_713 = !_g5 in let __new_714 = HxInt.add __old_713 1 in (
-                    ignore (_g5 := __new_714);
-                    __old_713
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_715 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_715;
-                  __assign_715
-                ) else let tempArray17 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_716 = HxArray.create () in __arr_716 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_717 = !_g6 in let __new_718 = HxInt.add __old_717 1 in (
-                        ignore (_g6 := __new_718);
-                        __new_718
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_719 = _g5 in (
-                      tempArray17 := __assign_719;
-                      __assign_719
+                  | "round" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_640 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_640;
+                      __assign_640
                     )
-                  ));
-                  let __assign_720 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray17) " " (fun x -> x)) in (
-                    tempResult5 := __assign_720;
-                    __assign_720
-                  )
-                )
-              )
-            )
-            | "field" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
-              ignore _g5;
-              ignore _g6;
-              let __assign_721 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_721;
-                __assign_721
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber18 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_723 = expected in let __nullable_724 = HxArray.length args in if __nullable_723 == HxRuntime.hx_null then false else Obj.obj __nullable_723 > __nullable_724) then let __assign_725 = HxInt.sub (let __nullable_int_726 = expected in if __nullable_int_726 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_726) (HxArray.length args) in (
-                  tempNumber18 := __assign_725;
-                  __assign_725
-                ) else let __assign_727 = 0 in (
-                  tempNumber18 := __assign_727;
-                  __assign_727
-                ) else let __assign_728 = 0 in (
-                  tempNumber18 := __assign_728;
-                  __assign_728
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_729 = expected in let __nullable_730 = HxArray.length args in if __nullable_729 == HxRuntime.hx_null then false else Obj.obj __nullable_729 > __nullable_730) then let __assign_731 = HxInt.sub (let __nullable_int_732 = expected in if __nullable_int_732 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_732) (HxArray.length args) in (
-                  tempNumber18 := __assign_731;
-                  __assign_731
-                ) else let __assign_733 = 0 in (
-                  tempNumber18 := __assign_733;
-                  __assign_733
-                ) else let __assign_734 = 0 in (
-                  tempNumber18 := __assign_734;
-                  __assign_734
-                ) else let __assign_735 = 0 in (
-                  tempNumber18 := __assign_735;
-                  __assign_735
-                )
-                | _ -> let __assign_722 = 0 in (
-                  tempNumber18 := __assign_722;
-                  __assign_722
-                ));
-              let missing = !tempNumber18 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_736 = !_g5 in let __new_737 = HxInt.add __old_736 1 in (
-                    ignore (_g5 := __new_737);
-                    __old_736
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_738 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_738;
-                  __assign_738
-                ) else let tempArray18 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_739 = HxArray.create () in __arr_739 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_740 = !_g6 in let __new_741 = HxInt.add __old_740 1 in (
-                        ignore (_g6 := __new_741);
-                        __new_741
+                  ) else let callee = _g in let args = _g1 in let tempNumber13 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_642 = expected in let __nullable_643 = HxArray.length args in if __nullable_642 == HxRuntime.hx_null then false else Obj.obj __nullable_642 > __nullable_643) then let __assign_644 = HxInt.sub (let __nullable_int_645 = expected in if __nullable_int_645 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_645) (HxArray.length args) in (
+                        tempNumber13 := __assign_644;
+                        __assign_644
+                      ) else let __assign_646 = 0 in (
+                        tempNumber13 := __assign_646;
+                        __assign_646
+                      ) else let __assign_647 = 0 in (
+                        tempNumber13 := __assign_647;
+                        __assign_647
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_648 = expected in let __nullable_649 = HxArray.length args in if __nullable_648 == HxRuntime.hx_null then false else Obj.obj __nullable_648 > __nullable_649) then let __assign_650 = HxInt.sub (let __nullable_int_651 = expected in if __nullable_int_651 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_651) (HxArray.length args) in (
+                        tempNumber13 := __assign_650;
+                        __assign_650
+                      ) else let __assign_652 = 0 in (
+                        tempNumber13 := __assign_652;
+                        __assign_652
+                      ) else let __assign_653 = 0 in (
+                        tempNumber13 := __assign_653;
+                        __assign_653
+                      ) else let __assign_654 = 0 in (
+                        tempNumber13 := __assign_654;
+                        __assign_654
+                      )
+                      | _ -> let __assign_641 = 0 in (
+                        tempNumber13 := __assign_641;
+                        __assign_641
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_742 = _g5 in (
-                      tempArray18 := __assign_742;
-                      __assign_742
+                    let missing = !tempNumber13 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_655 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_655;
+                      __assign_655
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_656 = !_g5 in let __new_657 = HxInt.add __old_656 1 in (
+                          ignore (_g5 := __new_657);
+                          __old_656
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_658 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_658;
+                        __assign_658
+                      ) else let tempArray13 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_659 = HxArray.create () in __arr_659 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_660 = !_g6 in let __new_661 = HxInt.add __old_660 1 in (
+                              ignore (_g6 := __new_661);
+                              __new_661
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_662 = _g5 in (
+                            tempArray13 := __assign_662;
+                            __assign_662
+                          )
+                        ));
+                        let __assign_663 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray13) " " (fun x -> x)) in (
+                          tempResult5 := __assign_663;
+                          __assign_663
+                        )
+                      )
                     )
-                  ));
-                  let __assign_743 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray18) " " (fun x -> x)) in (
-                    tempResult5 := __assign_743;
-                    __assign_743
                   )
-                )
-              )
-            )
-            | "fields" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_744 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_744;
-                __assign_744
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber19 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_746 = expected in let __nullable_747 = HxArray.length args in if __nullable_746 == HxRuntime.hx_null then false else Obj.obj __nullable_746 > __nullable_747) then let __assign_748 = HxInt.sub (let __nullable_int_749 = expected in if __nullable_int_749 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_749) (HxArray.length args) in (
-                  tempNumber19 := __assign_748;
-                  __assign_748
-                ) else let __assign_750 = 0 in (
-                  tempNumber19 := __assign_750;
-                  __assign_750
-                ) else let __assign_751 = 0 in (
-                  tempNumber19 := __assign_751;
-                  __assign_751
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_752 = expected in let __nullable_753 = HxArray.length args in if __nullable_752 == HxRuntime.hx_null then false else Obj.obj __nullable_752 > __nullable_753) then let __assign_754 = HxInt.sub (let __nullable_int_755 = expected in if __nullable_int_755 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_755) (HxArray.length args) in (
-                  tempNumber19 := __assign_754;
-                  __assign_754
-                ) else let __assign_756 = 0 in (
-                  tempNumber19 := __assign_756;
-                  __assign_756
-                ) else let __assign_757 = 0 in (
-                  tempNumber19 := __assign_757;
-                  __assign_757
-                ) else let __assign_758 = 0 in (
-                  tempNumber19 := __assign_758;
-                  __assign_758
-                )
-                | _ -> let __assign_745 = 0 in (
-                  tempNumber19 := __assign_745;
-                  __assign_745
-                ));
-              let missing = !tempNumber19 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_759 = !_g5 in let __new_760 = HxInt.add __old_759 1 in (
-                    ignore (_g5 := __new_760);
-                    __old_759
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_761 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_761;
-                  __assign_761
-                ) else let tempArray19 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_762 = HxArray.create () in __arr_762 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_763 = !_g6 in let __new_764 = HxInt.add __old_763 1 in (
-                        ignore (_g6 := __new_764);
-                        __new_764
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_765 = _g5 in (
-                      tempArray19 := __assign_765;
-                      __assign_765
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_664 = "()" in (
+                      tempResult5 := __assign_664;
+                      __assign_664
                     )
-                  ));
-                  let __assign_766 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray19) " " (fun x -> x)) in (
-                    tempResult5 := __assign_766;
-                    __assign_766
-                  )
-                )
-              )
-            )
-            | "getProperty" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
-              ignore _g5;
-              ignore _g6;
-              let __assign_767 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_767;
-                __assign_767
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber20 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_769 = expected in let __nullable_770 = HxArray.length args in if __nullable_769 == HxRuntime.hx_null then false else Obj.obj __nullable_769 > __nullable_770) then let __assign_771 = HxInt.sub (let __nullable_int_772 = expected in if __nullable_int_772 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_772) (HxArray.length args) in (
-                  tempNumber20 := __assign_771;
-                  __assign_771
-                ) else let __assign_773 = 0 in (
-                  tempNumber20 := __assign_773;
-                  __assign_773
-                ) else let __assign_774 = 0 in (
-                  tempNumber20 := __assign_774;
-                  __assign_774
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_775 = expected in let __nullable_776 = HxArray.length args in if __nullable_775 == HxRuntime.hx_null then false else Obj.obj __nullable_775 > __nullable_776) then let __assign_777 = HxInt.sub (let __nullable_int_778 = expected in if __nullable_int_778 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_778) (HxArray.length args) in (
-                  tempNumber20 := __assign_777;
-                  __assign_777
-                ) else let __assign_779 = 0 in (
-                  tempNumber20 := __assign_779;
-                  __assign_779
-                ) else let __assign_780 = 0 in (
-                  tempNumber20 := __assign_780;
-                  __assign_780
-                ) else let __assign_781 = 0 in (
-                  tempNumber20 := __assign_781;
-                  __assign_781
-                )
-                | _ -> let __assign_768 = 0 in (
-                  tempNumber20 := __assign_768;
-                  __assign_768
-                ));
-              let missing = !tempNumber20 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_782 = !_g5 in let __new_783 = HxInt.add __old_782 1 in (
-                    ignore (_g5 := __new_783);
-                    __old_782
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_784 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_784;
-                  __assign_784
-                ) else let tempArray20 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_785 = HxArray.create () in __arr_785 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_786 = !_g6 in let __new_787 = HxInt.add __old_786 1 in (
-                        ignore (_g6 := __new_787);
-                        __new_787
+                  ) else let callee = _g in let args = _g1 in let tempNumber14 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_666 = expected in let __nullable_667 = HxArray.length args in if __nullable_666 == HxRuntime.hx_null then false else Obj.obj __nullable_666 > __nullable_667) then let __assign_668 = HxInt.sub (let __nullable_int_669 = expected in if __nullable_int_669 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_669) (HxArray.length args) in (
+                        tempNumber14 := __assign_668;
+                        __assign_668
+                      ) else let __assign_670 = 0 in (
+                        tempNumber14 := __assign_670;
+                        __assign_670
+                      ) else let __assign_671 = 0 in (
+                        tempNumber14 := __assign_671;
+                        __assign_671
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_672 = expected in let __nullable_673 = HxArray.length args in if __nullable_672 == HxRuntime.hx_null then false else Obj.obj __nullable_672 > __nullable_673) then let __assign_674 = HxInt.sub (let __nullable_int_675 = expected in if __nullable_int_675 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_675) (HxArray.length args) in (
+                        tempNumber14 := __assign_674;
+                        __assign_674
+                      ) else let __assign_676 = 0 in (
+                        tempNumber14 := __assign_676;
+                        __assign_676
+                      ) else let __assign_677 = 0 in (
+                        tempNumber14 := __assign_677;
+                        __assign_677
+                      ) else let __assign_678 = 0 in (
+                        tempNumber14 := __assign_678;
+                        __assign_678
+                      )
+                      | _ -> let __assign_665 = 0 in (
+                        tempNumber14 := __assign_665;
+                        __assign_665
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_788 = _g5 in (
-                      tempArray20 := __assign_788;
-                      __assign_788
+                    let missing = !tempNumber14 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_679 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_679;
+                      __assign_679
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_680 = !_g5 in let __new_681 = HxInt.add __old_680 1 in (
+                          ignore (_g5 := __new_681);
+                          __old_680
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_682 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_682;
+                        __assign_682
+                      ) else let tempArray14 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_683 = HxArray.create () in __arr_683 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_684 = !_g6 in let __new_685 = HxInt.add __old_684 1 in (
+                              ignore (_g6 := __new_685);
+                              __new_685
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_686 = _g5 in (
+                            tempArray14 := __assign_686;
+                            __assign_686
+                          )
+                        ));
+                        let __assign_687 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray14) " " (fun x -> x)) in (
+                          tempResult5 := __assign_687;
+                          __assign_687
+                        )
+                      )
                     )
-                  ));
-                  let __assign_789 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray20) " " (fun x -> x)) in (
-                    tempResult5 := __assign_789;
-                    __assign_789
                   )
-                )
-              )
-            )
-            | "hasField" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
-              ignore _g5;
-              ignore _g6;
-              let __assign_790 = "false" in (
-                tempResult5 := __assign_790;
-                __assign_790
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber21 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_792 = expected in let __nullable_793 = HxArray.length args in if __nullable_792 == HxRuntime.hx_null then false else Obj.obj __nullable_792 > __nullable_793) then let __assign_794 = HxInt.sub (let __nullable_int_795 = expected in if __nullable_int_795 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_795) (HxArray.length args) in (
-                  tempNumber21 := __assign_794;
-                  __assign_794
-                ) else let __assign_796 = 0 in (
-                  tempNumber21 := __assign_796;
-                  __assign_796
-                ) else let __assign_797 = 0 in (
-                  tempNumber21 := __assign_797;
-                  __assign_797
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_798 = expected in let __nullable_799 = HxArray.length args in if __nullable_798 == HxRuntime.hx_null then false else Obj.obj __nullable_798 > __nullable_799) then let __assign_800 = HxInt.sub (let __nullable_int_801 = expected in if __nullable_int_801 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_801) (HxArray.length args) in (
-                  tempNumber21 := __assign_800;
-                  __assign_800
-                ) else let __assign_802 = 0 in (
-                  tempNumber21 := __assign_802;
-                  __assign_802
-                ) else let __assign_803 = 0 in (
-                  tempNumber21 := __assign_803;
-                  __assign_803
-                ) else let __assign_804 = 0 in (
-                  tempNumber21 := __assign_804;
-                  __assign_804
-                )
-                | _ -> let __assign_791 = 0 in (
-                  tempNumber21 := __assign_791;
-                  __assign_791
-                ));
-              let missing = !tempNumber21 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_805 = !_g5 in let __new_806 = HxInt.add __old_805 1 in (
-                    ignore (_g5 := __new_806);
-                    __old_805
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_807 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_807;
-                  __assign_807
-                ) else let tempArray21 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_808 = HxArray.create () in __arr_808 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_809 = !_g6 in let __new_810 = HxInt.add __old_809 1 in (
-                        ignore (_g6 := __new_810);
-                        __new_810
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_811 = _g5 in (
-                      tempArray21 := __assign_811;
-                      __assign_811
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_688 = "()" in (
+                      tempResult5 := __assign_688;
+                      __assign_688
                     )
-                  ));
-                  let __assign_812 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray21) " " (fun x -> x)) in (
-                    tempResult5 := __assign_812;
-                    __assign_812
-                  )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_813 = "false" in (
-                tempResult5 := __assign_813;
-                __assign_813
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber22 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_815 = expected in let __nullable_816 = HxArray.length args in if __nullable_815 == HxRuntime.hx_null then false else Obj.obj __nullable_815 > __nullable_816) then let __assign_817 = HxInt.sub (let __nullable_int_818 = expected in if __nullable_int_818 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_818) (HxArray.length args) in (
-                  tempNumber22 := __assign_817;
-                  __assign_817
-                ) else let __assign_819 = 0 in (
-                  tempNumber22 := __assign_819;
-                  __assign_819
-                ) else let __assign_820 = 0 in (
-                  tempNumber22 := __assign_820;
-                  __assign_820
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_821 = expected in let __nullable_822 = HxArray.length args in if __nullable_821 == HxRuntime.hx_null then false else Obj.obj __nullable_821 > __nullable_822) then let __assign_823 = HxInt.sub (let __nullable_int_824 = expected in if __nullable_int_824 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_824) (HxArray.length args) in (
-                  tempNumber22 := __assign_823;
-                  __assign_823
-                ) else let __assign_825 = 0 in (
-                  tempNumber22 := __assign_825;
-                  __assign_825
-                ) else let __assign_826 = 0 in (
-                  tempNumber22 := __assign_826;
-                  __assign_826
-                ) else let __assign_827 = 0 in (
-                  tempNumber22 := __assign_827;
-                  __assign_827
-                )
-                | _ -> let __assign_814 = 0 in (
-                  tempNumber22 := __assign_814;
-                  __assign_814
-                ));
-              let missing = !tempNumber22 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_828 = !_g5 in let __new_829 = HxInt.add __old_828 1 in (
-                    ignore (_g5 := __new_829);
-                    __old_828
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_830 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_830;
-                  __assign_830
-                ) else let tempArray22 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_831 = HxArray.create () in __arr_831 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_832 = !_g6 in let __new_833 = HxInt.add __old_832 1 in (
-                        ignore (_g6 := __new_833);
-                        __new_833
+                  ) else let callee = _g in let args = _g1 in let tempNumber15 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_690 = expected in let __nullable_691 = HxArray.length args in if __nullable_690 == HxRuntime.hx_null then false else Obj.obj __nullable_690 > __nullable_691) then let __assign_692 = HxInt.sub (let __nullable_int_693 = expected in if __nullable_int_693 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_693) (HxArray.length args) in (
+                        tempNumber15 := __assign_692;
+                        __assign_692
+                      ) else let __assign_694 = 0 in (
+                        tempNumber15 := __assign_694;
+                        __assign_694
+                      ) else let __assign_695 = 0 in (
+                        tempNumber15 := __assign_695;
+                        __assign_695
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_696 = expected in let __nullable_697 = HxArray.length args in if __nullable_696 == HxRuntime.hx_null then false else Obj.obj __nullable_696 > __nullable_697) then let __assign_698 = HxInt.sub (let __nullable_int_699 = expected in if __nullable_int_699 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_699) (HxArray.length args) in (
+                        tempNumber15 := __assign_698;
+                        __assign_698
+                      ) else let __assign_700 = 0 in (
+                        tempNumber15 := __assign_700;
+                        __assign_700
+                      ) else let __assign_701 = 0 in (
+                        tempNumber15 := __assign_701;
+                        __assign_701
+                      ) else let __assign_702 = 0 in (
+                        tempNumber15 := __assign_702;
+                        __assign_702
+                      )
+                      | _ -> let __assign_689 = 0 in (
+                        tempNumber15 := __assign_689;
+                        __assign_689
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_834 = _g5 in (
-                      tempArray22 := __assign_834;
-                      __assign_834
+                    let missing = !tempNumber15 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_703 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_703;
+                      __assign_703
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_704 = !_g5 in let __new_705 = HxInt.add __old_704 1 in (
+                          ignore (_g5 := __new_705);
+                          __old_704
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_706 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_706;
+                        __assign_706
+                      ) else let tempArray15 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_707 = HxArray.create () in __arr_707 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_708 = !_g6 in let __new_709 = HxInt.add __old_708 1 in (
+                              ignore (_g6 := __new_709);
+                              __new_709
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_710 = _g5 in (
+                            tempArray15 := __assign_710;
+                            __assign_710
+                          )
+                        ));
+                        let __assign_711 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray15) " " (fun x -> x)) in (
+                          tempResult5 := __assign_711;
+                          __assign_711
+                        )
+                      )
                     )
-                  ));
-                  let __assign_835 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray22) " " (fun x -> x)) in (
-                    tempResult5 := __assign_835;
-                    __assign_835
                   )
-                )
-              )
-            )
-            | "isFunction" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_836 = "true" in (
-                tempResult5 := __assign_836;
-                __assign_836
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber23 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_838 = expected in let __nullable_839 = HxArray.length args in if __nullable_838 == HxRuntime.hx_null then false else Obj.obj __nullable_838 > __nullable_839) then let __assign_840 = HxInt.sub (let __nullable_int_841 = expected in if __nullable_int_841 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_841) (HxArray.length args) in (
-                  tempNumber23 := __assign_840;
-                  __assign_840
-                ) else let __assign_842 = 0 in (
-                  tempNumber23 := __assign_842;
-                  __assign_842
-                ) else let __assign_843 = 0 in (
-                  tempNumber23 := __assign_843;
-                  __assign_843
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_844 = expected in let __nullable_845 = HxArray.length args in if __nullable_844 == HxRuntime.hx_null then false else Obj.obj __nullable_844 > __nullable_845) then let __assign_846 = HxInt.sub (let __nullable_int_847 = expected in if __nullable_int_847 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_847) (HxArray.length args) in (
-                  tempNumber23 := __assign_846;
-                  __assign_846
-                ) else let __assign_848 = 0 in (
-                  tempNumber23 := __assign_848;
-                  __assign_848
-                ) else let __assign_849 = 0 in (
-                  tempNumber23 := __assign_849;
-                  __assign_849
-                ) else let __assign_850 = 0 in (
-                  tempNumber23 := __assign_850;
-                  __assign_850
-                )
-                | _ -> let __assign_837 = 0 in (
-                  tempNumber23 := __assign_837;
-                  __assign_837
-                ));
-              let missing = !tempNumber23 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_851 = !_g5 in let __new_852 = HxInt.add __old_851 1 in (
-                    ignore (_g5 := __new_852);
-                    __old_851
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_853 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_853;
-                  __assign_853
-                ) else let tempArray23 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_854 = HxArray.create () in __arr_854 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_855 = !_g6 in let __new_856 = HxInt.add __old_855 1 in (
-                        ignore (_g6 := __new_856);
-                        __new_856
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber16 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_351 = expected in let __nullable_352 = HxArray.length args in if __nullable_351 == HxRuntime.hx_null then false else Obj.obj __nullable_351 > __nullable_352) then let __assign_353 = HxInt.sub (let __nullable_int_354 = expected in if __nullable_int_354 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_354) (HxArray.length args) in (
+                        tempNumber16 := __assign_353;
+                        __assign_353
+                      ) else let __assign_355 = 0 in (
+                        tempNumber16 := __assign_355;
+                        __assign_355
+                      ) else let __assign_356 = 0 in (
+                        tempNumber16 := __assign_356;
+                        __assign_356
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_357 = expected in let __nullable_358 = HxArray.length args in if __nullable_357 == HxRuntime.hx_null then false else Obj.obj __nullable_357 > __nullable_358) then let __assign_359 = HxInt.sub (let __nullable_int_360 = expected in if __nullable_int_360 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_360) (HxArray.length args) in (
+                        tempNumber16 := __assign_359;
+                        __assign_359
+                      ) else let __assign_361 = 0 in (
+                        tempNumber16 := __assign_361;
+                        __assign_361
+                      ) else let __assign_362 = 0 in (
+                        tempNumber16 := __assign_362;
+                        __assign_362
+                      ) else let __assign_363 = 0 in (
+                        tempNumber16 := __assign_363;
+                        __assign_363
+                      )
+                      | _ -> let __assign_350 = 0 in (
+                        tempNumber16 := __assign_350;
+                        __assign_350
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_857 = _g5 in (
-                      tempArray23 := __assign_857;
-                      __assign_857
+                    let missing = !tempNumber16 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_364 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_364;
+                      __assign_364
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_365 = !_g5 in let __new_366 = HxInt.add __old_365 1 in (
+                          ignore (_g5 := __new_366);
+                          __old_365
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_367 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_367;
+                        __assign_367
+                      ) else let tempArray16 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_368 = HxArray.create () in __arr_368 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_369 = !_g6 in let __new_370 = HxInt.add __old_369 1 in (
+                              ignore (_g6 := __new_370);
+                              __new_370
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_371 = _g5 in (
+                            tempArray16 := __assign_371;
+                            __assign_371
+                          )
+                        ));
+                        let __assign_372 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray16) " " (fun x -> x)) in (
+                          tempResult5 := __assign_372;
+                          __assign_372
+                        )
+                      )
                     )
-                  ));
-                  let __assign_858 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray23) " " (fun x -> x)) in (
-                    tempResult5 := __assign_858;
-                    __assign_858
-                  )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_859 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_859;
-                __assign_859
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber24 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_861 = expected in let __nullable_862 = HxArray.length args in if __nullable_861 == HxRuntime.hx_null then false else Obj.obj __nullable_861 > __nullable_862) then let __assign_863 = HxInt.sub (let __nullable_int_864 = expected in if __nullable_int_864 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_864) (HxArray.length args) in (
-                  tempNumber24 := __assign_863;
-                  __assign_863
-                ) else let __assign_865 = 0 in (
-                  tempNumber24 := __assign_865;
-                  __assign_865
-                ) else let __assign_866 = 0 in (
-                  tempNumber24 := __assign_866;
-                  __assign_866
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_867 = expected in let __nullable_868 = HxArray.length args in if __nullable_867 == HxRuntime.hx_null then false else Obj.obj __nullable_867 > __nullable_868) then let __assign_869 = HxInt.sub (let __nullable_int_870 = expected in if __nullable_int_870 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_870) (HxArray.length args) in (
-                  tempNumber24 := __assign_869;
-                  __assign_869
-                ) else let __assign_871 = 0 in (
-                  tempNumber24 := __assign_871;
-                  __assign_871
-                ) else let __assign_872 = 0 in (
-                  tempNumber24 := __assign_872;
-                  __assign_872
-                ) else let __assign_873 = 0 in (
-                  tempNumber24 := __assign_873;
-                  __assign_873
-                )
-                | _ -> let __assign_860 = 0 in (
-                  tempNumber24 := __assign_860;
-                  __assign_860
-                ));
-              let missing = !tempNumber24 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_874 = !_g5 in let __new_875 = HxInt.add __old_874 1 in (
-                    ignore (_g5 := __new_875);
-                    __old_874
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_876 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_876;
-                  __assign_876
-                ) else let tempArray24 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_877 = HxArray.create () in __arr_877 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_878 = !_g6 in let __new_879 = HxInt.add __old_878 1 in (
-                        ignore (_g6 := __new_879);
-                        __new_879
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_880 = _g5 in (
-                      tempArray24 := __assign_880;
-                      __assign_880
+                  ))
+                | "Reflect" -> (match _g3 with
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_735 = "true" in (
+                      tempResult5 := __assign_735;
+                      __assign_735
                     )
-                  ));
-                  let __assign_881 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray24) " " (fun x -> x)) in (
-                    tempResult5 := __assign_881;
-                    __assign_881
-                  )
-                )
-              )
-            )
-            | "setProperty" -> if HxArray.length _g1 = 3 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in let _g7 = HxArray.get _g1 2 in (
-              ignore _g5;
-              ignore _g6;
-              ignore _g7;
-              let __assign_882 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_882;
-                __assign_882
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber25 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_884 = expected in let __nullable_885 = HxArray.length args in if __nullable_884 == HxRuntime.hx_null then false else Obj.obj __nullable_884 > __nullable_885) then let __assign_886 = HxInt.sub (let __nullable_int_887 = expected in if __nullable_int_887 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_887) (HxArray.length args) in (
-                  tempNumber25 := __assign_886;
-                  __assign_886
-                ) else let __assign_888 = 0 in (
-                  tempNumber25 := __assign_888;
-                  __assign_888
-                ) else let __assign_889 = 0 in (
-                  tempNumber25 := __assign_889;
-                  __assign_889
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_890 = expected in let __nullable_891 = HxArray.length args in if __nullable_890 == HxRuntime.hx_null then false else Obj.obj __nullable_890 > __nullable_891) then let __assign_892 = HxInt.sub (let __nullable_int_893 = expected in if __nullable_int_893 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_893) (HxArray.length args) in (
-                  tempNumber25 := __assign_892;
-                  __assign_892
-                ) else let __assign_894 = 0 in (
-                  tempNumber25 := __assign_894;
-                  __assign_894
-                ) else let __assign_895 = 0 in (
-                  tempNumber25 := __assign_895;
-                  __assign_895
-                ) else let __assign_896 = 0 in (
-                  tempNumber25 := __assign_896;
-                  __assign_896
-                )
-                | _ -> let __assign_883 = 0 in (
-                  tempNumber25 := __assign_883;
-                  __assign_883
-                ));
-              let missing = !tempNumber25 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_897 = !_g5 in let __new_898 = HxInt.add __old_897 1 in (
-                    ignore (_g5 := __new_898);
-                    __old_897
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_899 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_899;
-                  __assign_899
-                ) else let tempArray25 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_900 = HxArray.create () in __arr_900 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_901 = !_g6 in let __new_902 = HxInt.add __old_901 1 in (
-                        ignore (_g6 := __new_902);
-                        __new_902
+                  ) else let callee = _g in let args = _g1 in let tempNumber17 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_737 = expected in let __nullable_738 = HxArray.length args in if __nullable_737 == HxRuntime.hx_null then false else Obj.obj __nullable_737 > __nullable_738) then let __assign_739 = HxInt.sub (let __nullable_int_740 = expected in if __nullable_int_740 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_740) (HxArray.length args) in (
+                        tempNumber17 := __assign_739;
+                        __assign_739
+                      ) else let __assign_741 = 0 in (
+                        tempNumber17 := __assign_741;
+                        __assign_741
+                      ) else let __assign_742 = 0 in (
+                        tempNumber17 := __assign_742;
+                        __assign_742
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_743 = expected in let __nullable_744 = HxArray.length args in if __nullable_743 == HxRuntime.hx_null then false else Obj.obj __nullable_743 > __nullable_744) then let __assign_745 = HxInt.sub (let __nullable_int_746 = expected in if __nullable_int_746 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_746) (HxArray.length args) in (
+                        tempNumber17 := __assign_745;
+                        __assign_745
+                      ) else let __assign_747 = 0 in (
+                        tempNumber17 := __assign_747;
+                        __assign_747
+                      ) else let __assign_748 = 0 in (
+                        tempNumber17 := __assign_748;
+                        __assign_748
+                      ) else let __assign_749 = 0 in (
+                        tempNumber17 := __assign_749;
+                        __assign_749
+                      )
+                      | _ -> let __assign_736 = 0 in (
+                        tempNumber17 := __assign_736;
+                        __assign_736
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_903 = _g5 in (
-                      tempArray25 := __assign_903;
+                    let missing = !tempNumber17 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_750 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_750;
+                      __assign_750
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_751 = !_g5 in let __new_752 = HxInt.add __old_751 1 in (
+                          ignore (_g5 := __new_752);
+                          __old_751
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_753 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_753;
+                        __assign_753
+                      ) else let tempArray17 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_754 = HxArray.create () in __arr_754 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_755 = !_g6 in let __new_756 = HxInt.add __old_755 1 in (
+                              ignore (_g6 := __new_756);
+                              __new_756
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_757 = _g5 in (
+                            tempArray17 := __assign_757;
+                            __assign_757
+                          )
+                        ));
+                        let __assign_758 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray17) " " (fun x -> x)) in (
+                          tempResult5 := __assign_758;
+                          __assign_758
+                        )
+                      )
+                    )
+                  )
+                  | "field" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
+                    ignore _g5;
+                    ignore _g6;
+                    let __assign_759 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_759;
+                      __assign_759
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber18 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_761 = expected in let __nullable_762 = HxArray.length args in if __nullable_761 == HxRuntime.hx_null then false else Obj.obj __nullable_761 > __nullable_762) then let __assign_763 = HxInt.sub (let __nullable_int_764 = expected in if __nullable_int_764 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_764) (HxArray.length args) in (
+                        tempNumber18 := __assign_763;
+                        __assign_763
+                      ) else let __assign_765 = 0 in (
+                        tempNumber18 := __assign_765;
+                        __assign_765
+                      ) else let __assign_766 = 0 in (
+                        tempNumber18 := __assign_766;
+                        __assign_766
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_767 = expected in let __nullable_768 = HxArray.length args in if __nullable_767 == HxRuntime.hx_null then false else Obj.obj __nullable_767 > __nullable_768) then let __assign_769 = HxInt.sub (let __nullable_int_770 = expected in if __nullable_int_770 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_770) (HxArray.length args) in (
+                        tempNumber18 := __assign_769;
+                        __assign_769
+                      ) else let __assign_771 = 0 in (
+                        tempNumber18 := __assign_771;
+                        __assign_771
+                      ) else let __assign_772 = 0 in (
+                        tempNumber18 := __assign_772;
+                        __assign_772
+                      ) else let __assign_773 = 0 in (
+                        tempNumber18 := __assign_773;
+                        __assign_773
+                      )
+                      | _ -> let __assign_760 = 0 in (
+                        tempNumber18 := __assign_760;
+                        __assign_760
+                      ));
+                    let missing = !tempNumber18 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_774 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_774;
+                      __assign_774
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_775 = !_g5 in let __new_776 = HxInt.add __old_775 1 in (
+                          ignore (_g5 := __new_776);
+                          __old_775
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_777 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_777;
+                        __assign_777
+                      ) else let tempArray18 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_778 = HxArray.create () in __arr_778 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_779 = !_g6 in let __new_780 = HxInt.add __old_779 1 in (
+                              ignore (_g6 := __new_780);
+                              __new_780
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_781 = _g5 in (
+                            tempArray18 := __assign_781;
+                            __assign_781
+                          )
+                        ));
+                        let __assign_782 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray18) " " (fun x -> x)) in (
+                          tempResult5 := __assign_782;
+                          __assign_782
+                        )
+                      )
+                    )
+                  )
+                  | "fields" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_783 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_783;
+                      __assign_783
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber19 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_785 = expected in let __nullable_786 = HxArray.length args in if __nullable_785 == HxRuntime.hx_null then false else Obj.obj __nullable_785 > __nullable_786) then let __assign_787 = HxInt.sub (let __nullable_int_788 = expected in if __nullable_int_788 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_788) (HxArray.length args) in (
+                        tempNumber19 := __assign_787;
+                        __assign_787
+                      ) else let __assign_789 = 0 in (
+                        tempNumber19 := __assign_789;
+                        __assign_789
+                      ) else let __assign_790 = 0 in (
+                        tempNumber19 := __assign_790;
+                        __assign_790
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_791 = expected in let __nullable_792 = HxArray.length args in if __nullable_791 == HxRuntime.hx_null then false else Obj.obj __nullable_791 > __nullable_792) then let __assign_793 = HxInt.sub (let __nullable_int_794 = expected in if __nullable_int_794 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_794) (HxArray.length args) in (
+                        tempNumber19 := __assign_793;
+                        __assign_793
+                      ) else let __assign_795 = 0 in (
+                        tempNumber19 := __assign_795;
+                        __assign_795
+                      ) else let __assign_796 = 0 in (
+                        tempNumber19 := __assign_796;
+                        __assign_796
+                      ) else let __assign_797 = 0 in (
+                        tempNumber19 := __assign_797;
+                        __assign_797
+                      )
+                      | _ -> let __assign_784 = 0 in (
+                        tempNumber19 := __assign_784;
+                        __assign_784
+                      ));
+                    let missing = !tempNumber19 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_798 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_798;
+                      __assign_798
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_799 = !_g5 in let __new_800 = HxInt.add __old_799 1 in (
+                          ignore (_g5 := __new_800);
+                          __old_799
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_801 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_801;
+                        __assign_801
+                      ) else let tempArray19 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_802 = HxArray.create () in __arr_802 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_803 = !_g6 in let __new_804 = HxInt.add __old_803 1 in (
+                              ignore (_g6 := __new_804);
+                              __new_804
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_805 = _g5 in (
+                            tempArray19 := __assign_805;
+                            __assign_805
+                          )
+                        ));
+                        let __assign_806 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray19) " " (fun x -> x)) in (
+                          tempResult5 := __assign_806;
+                          __assign_806
+                        )
+                      )
+                    )
+                  )
+                  | "getProperty" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
+                    ignore _g5;
+                    ignore _g6;
+                    let __assign_807 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_807;
+                      __assign_807
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber20 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_809 = expected in let __nullable_810 = HxArray.length args in if __nullable_809 == HxRuntime.hx_null then false else Obj.obj __nullable_809 > __nullable_810) then let __assign_811 = HxInt.sub (let __nullable_int_812 = expected in if __nullable_int_812 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_812) (HxArray.length args) in (
+                        tempNumber20 := __assign_811;
+                        __assign_811
+                      ) else let __assign_813 = 0 in (
+                        tempNumber20 := __assign_813;
+                        __assign_813
+                      ) else let __assign_814 = 0 in (
+                        tempNumber20 := __assign_814;
+                        __assign_814
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_815 = expected in let __nullable_816 = HxArray.length args in if __nullable_815 == HxRuntime.hx_null then false else Obj.obj __nullable_815 > __nullable_816) then let __assign_817 = HxInt.sub (let __nullable_int_818 = expected in if __nullable_int_818 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_818) (HxArray.length args) in (
+                        tempNumber20 := __assign_817;
+                        __assign_817
+                      ) else let __assign_819 = 0 in (
+                        tempNumber20 := __assign_819;
+                        __assign_819
+                      ) else let __assign_820 = 0 in (
+                        tempNumber20 := __assign_820;
+                        __assign_820
+                      ) else let __assign_821 = 0 in (
+                        tempNumber20 := __assign_821;
+                        __assign_821
+                      )
+                      | _ -> let __assign_808 = 0 in (
+                        tempNumber20 := __assign_808;
+                        __assign_808
+                      ));
+                    let missing = !tempNumber20 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_822 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_822;
+                      __assign_822
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_823 = !_g5 in let __new_824 = HxInt.add __old_823 1 in (
+                          ignore (_g5 := __new_824);
+                          __old_823
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_825 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_825;
+                        __assign_825
+                      ) else let tempArray20 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_826 = HxArray.create () in __arr_826 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_827 = !_g6 in let __new_828 = HxInt.add __old_827 1 in (
+                              ignore (_g6 := __new_828);
+                              __new_828
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_829 = _g5 in (
+                            tempArray20 := __assign_829;
+                            __assign_829
+                          )
+                        ));
+                        let __assign_830 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray20) " " (fun x -> x)) in (
+                          tempResult5 := __assign_830;
+                          __assign_830
+                        )
+                      )
+                    )
+                  )
+                  | "hasField" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
+                    ignore _g5;
+                    ignore _g6;
+                    let __assign_831 = "false" in (
+                      tempResult5 := __assign_831;
+                      __assign_831
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber21 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_833 = expected in let __nullable_834 = HxArray.length args in if __nullable_833 == HxRuntime.hx_null then false else Obj.obj __nullable_833 > __nullable_834) then let __assign_835 = HxInt.sub (let __nullable_int_836 = expected in if __nullable_int_836 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_836) (HxArray.length args) in (
+                        tempNumber21 := __assign_835;
+                        __assign_835
+                      ) else let __assign_837 = 0 in (
+                        tempNumber21 := __assign_837;
+                        __assign_837
+                      ) else let __assign_838 = 0 in (
+                        tempNumber21 := __assign_838;
+                        __assign_838
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_839 = expected in let __nullable_840 = HxArray.length args in if __nullable_839 == HxRuntime.hx_null then false else Obj.obj __nullable_839 > __nullable_840) then let __assign_841 = HxInt.sub (let __nullable_int_842 = expected in if __nullable_int_842 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_842) (HxArray.length args) in (
+                        tempNumber21 := __assign_841;
+                        __assign_841
+                      ) else let __assign_843 = 0 in (
+                        tempNumber21 := __assign_843;
+                        __assign_843
+                      ) else let __assign_844 = 0 in (
+                        tempNumber21 := __assign_844;
+                        __assign_844
+                      ) else let __assign_845 = 0 in (
+                        tempNumber21 := __assign_845;
+                        __assign_845
+                      )
+                      | _ -> let __assign_832 = 0 in (
+                        tempNumber21 := __assign_832;
+                        __assign_832
+                      ));
+                    let missing = !tempNumber21 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_846 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_846;
+                      __assign_846
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_847 = !_g5 in let __new_848 = HxInt.add __old_847 1 in (
+                          ignore (_g5 := __new_848);
+                          __old_847
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_849 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_849;
+                        __assign_849
+                      ) else let tempArray21 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_850 = HxArray.create () in __arr_850 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_851 = !_g6 in let __new_852 = HxInt.add __old_851 1 in (
+                              ignore (_g6 := __new_852);
+                              __new_852
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_853 = _g5 in (
+                            tempArray21 := __assign_853;
+                            __assign_853
+                          )
+                        ));
+                        let __assign_854 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray21) " " (fun x -> x)) in (
+                          tempResult5 := __assign_854;
+                          __assign_854
+                        )
+                      )
+                    )
+                  )
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_855 = "false" in (
+                      tempResult5 := __assign_855;
+                      __assign_855
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber22 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_857 = expected in let __nullable_858 = HxArray.length args in if __nullable_857 == HxRuntime.hx_null then false else Obj.obj __nullable_857 > __nullable_858) then let __assign_859 = HxInt.sub (let __nullable_int_860 = expected in if __nullable_int_860 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_860) (HxArray.length args) in (
+                        tempNumber22 := __assign_859;
+                        __assign_859
+                      ) else let __assign_861 = 0 in (
+                        tempNumber22 := __assign_861;
+                        __assign_861
+                      ) else let __assign_862 = 0 in (
+                        tempNumber22 := __assign_862;
+                        __assign_862
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_863 = expected in let __nullable_864 = HxArray.length args in if __nullable_863 == HxRuntime.hx_null then false else Obj.obj __nullable_863 > __nullable_864) then let __assign_865 = HxInt.sub (let __nullable_int_866 = expected in if __nullable_int_866 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_866) (HxArray.length args) in (
+                        tempNumber22 := __assign_865;
+                        __assign_865
+                      ) else let __assign_867 = 0 in (
+                        tempNumber22 := __assign_867;
+                        __assign_867
+                      ) else let __assign_868 = 0 in (
+                        tempNumber22 := __assign_868;
+                        __assign_868
+                      ) else let __assign_869 = 0 in (
+                        tempNumber22 := __assign_869;
+                        __assign_869
+                      )
+                      | _ -> let __assign_856 = 0 in (
+                        tempNumber22 := __assign_856;
+                        __assign_856
+                      ));
+                    let missing = !tempNumber22 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_870 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_870;
+                      __assign_870
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_871 = !_g5 in let __new_872 = HxInt.add __old_871 1 in (
+                          ignore (_g5 := __new_872);
+                          __old_871
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_873 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_873;
+                        __assign_873
+                      ) else let tempArray22 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_874 = HxArray.create () in __arr_874 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_875 = !_g6 in let __new_876 = HxInt.add __old_875 1 in (
+                              ignore (_g6 := __new_876);
+                              __new_876
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_877 = _g5 in (
+                            tempArray22 := __assign_877;
+                            __assign_877
+                          )
+                        ));
+                        let __assign_878 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray22) " " (fun x -> x)) in (
+                          tempResult5 := __assign_878;
+                          __assign_878
+                        )
+                      )
+                    )
+                  )
+                  | "isFunction" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_879 = "true" in (
+                      tempResult5 := __assign_879;
+                      __assign_879
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber23 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_881 = expected in let __nullable_882 = HxArray.length args in if __nullable_881 == HxRuntime.hx_null then false else Obj.obj __nullable_881 > __nullable_882) then let __assign_883 = HxInt.sub (let __nullable_int_884 = expected in if __nullable_int_884 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_884) (HxArray.length args) in (
+                        tempNumber23 := __assign_883;
+                        __assign_883
+                      ) else let __assign_885 = 0 in (
+                        tempNumber23 := __assign_885;
+                        __assign_885
+                      ) else let __assign_886 = 0 in (
+                        tempNumber23 := __assign_886;
+                        __assign_886
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_887 = expected in let __nullable_888 = HxArray.length args in if __nullable_887 == HxRuntime.hx_null then false else Obj.obj __nullable_887 > __nullable_888) then let __assign_889 = HxInt.sub (let __nullable_int_890 = expected in if __nullable_int_890 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_890) (HxArray.length args) in (
+                        tempNumber23 := __assign_889;
+                        __assign_889
+                      ) else let __assign_891 = 0 in (
+                        tempNumber23 := __assign_891;
+                        __assign_891
+                      ) else let __assign_892 = 0 in (
+                        tempNumber23 := __assign_892;
+                        __assign_892
+                      ) else let __assign_893 = 0 in (
+                        tempNumber23 := __assign_893;
+                        __assign_893
+                      )
+                      | _ -> let __assign_880 = 0 in (
+                        tempNumber23 := __assign_880;
+                        __assign_880
+                      ));
+                    let missing = !tempNumber23 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_894 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_894;
+                      __assign_894
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_895 = !_g5 in let __new_896 = HxInt.add __old_895 1 in (
+                          ignore (_g5 := __new_896);
+                          __old_895
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_897 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_897;
+                        __assign_897
+                      ) else let tempArray23 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_898 = HxArray.create () in __arr_898 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_899 = !_g6 in let __new_900 = HxInt.add __old_899 1 in (
+                              ignore (_g6 := __new_900);
+                              __new_900
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_901 = _g5 in (
+                            tempArray23 := __assign_901;
+                            __assign_901
+                          )
+                        ));
+                        let __assign_902 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray23) " " (fun x -> x)) in (
+                          tempResult5 := __assign_902;
+                          __assign_902
+                        )
+                      )
+                    )
+                  )
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_903 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_903;
                       __assign_903
                     )
-                  ));
-                  let __assign_904 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray25) " " (fun x -> x)) in (
-                    tempResult5 := __assign_904;
-                    __assign_904
-                  )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_905 = "()" in (
-                tempResult5 := __assign_905;
-                __assign_905
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber26 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_907 = expected in let __nullable_908 = HxArray.length args in if __nullable_907 == HxRuntime.hx_null then false else Obj.obj __nullable_907 > __nullable_908) then let __assign_909 = HxInt.sub (let __nullable_int_910 = expected in if __nullable_int_910 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_910) (HxArray.length args) in (
-                  tempNumber26 := __assign_909;
-                  __assign_909
-                ) else let __assign_911 = 0 in (
-                  tempNumber26 := __assign_911;
-                  __assign_911
-                ) else let __assign_912 = 0 in (
-                  tempNumber26 := __assign_912;
-                  __assign_912
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_913 = expected in let __nullable_914 = HxArray.length args in if __nullable_913 == HxRuntime.hx_null then false else Obj.obj __nullable_913 > __nullable_914) then let __assign_915 = HxInt.sub (let __nullable_int_916 = expected in if __nullable_int_916 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_916) (HxArray.length args) in (
-                  tempNumber26 := __assign_915;
-                  __assign_915
-                ) else let __assign_917 = 0 in (
-                  tempNumber26 := __assign_917;
-                  __assign_917
-                ) else let __assign_918 = 0 in (
-                  tempNumber26 := __assign_918;
-                  __assign_918
-                ) else let __assign_919 = 0 in (
-                  tempNumber26 := __assign_919;
-                  __assign_919
-                )
-                | _ -> let __assign_906 = 0 in (
-                  tempNumber26 := __assign_906;
-                  __assign_906
-                ));
-              let missing = !tempNumber26 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_920 = !_g5 in let __new_921 = HxInt.add __old_920 1 in (
-                    ignore (_g5 := __new_921);
-                    __old_920
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_922 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_922;
-                  __assign_922
-                ) else let tempArray26 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_923 = HxArray.create () in __arr_923 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_924 = !_g6 in let __new_925 = HxInt.add __old_924 1 in (
-                        ignore (_g6 := __new_925);
-                        __new_925
+                  ) else let callee = _g in let args = _g1 in let tempNumber24 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_905 = expected in let __nullable_906 = HxArray.length args in if __nullable_905 == HxRuntime.hx_null then false else Obj.obj __nullable_905 > __nullable_906) then let __assign_907 = HxInt.sub (let __nullable_int_908 = expected in if __nullable_int_908 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_908) (HxArray.length args) in (
+                        tempNumber24 := __assign_907;
+                        __assign_907
+                      ) else let __assign_909 = 0 in (
+                        tempNumber24 := __assign_909;
+                        __assign_909
+                      ) else let __assign_910 = 0 in (
+                        tempNumber24 := __assign_910;
+                        __assign_910
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_911 = expected in let __nullable_912 = HxArray.length args in if __nullable_911 == HxRuntime.hx_null then false else Obj.obj __nullable_911 > __nullable_912) then let __assign_913 = HxInt.sub (let __nullable_int_914 = expected in if __nullable_int_914 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_914) (HxArray.length args) in (
+                        tempNumber24 := __assign_913;
+                        __assign_913
+                      ) else let __assign_915 = 0 in (
+                        tempNumber24 := __assign_915;
+                        __assign_915
+                      ) else let __assign_916 = 0 in (
+                        tempNumber24 := __assign_916;
+                        __assign_916
+                      ) else let __assign_917 = 0 in (
+                        tempNumber24 := __assign_917;
+                        __assign_917
+                      )
+                      | _ -> let __assign_904 = 0 in (
+                        tempNumber24 := __assign_904;
+                        __assign_904
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_926 = _g5 in (
-                      tempArray26 := __assign_926;
-                      __assign_926
+                    let missing = !tempNumber24 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_918 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_918;
+                      __assign_918
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_919 = !_g5 in let __new_920 = HxInt.add __old_919 1 in (
+                          ignore (_g5 := __new_920);
+                          __old_919
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_921 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_921;
+                        __assign_921
+                      ) else let tempArray24 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_922 = HxArray.create () in __arr_922 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_923 = !_g6 in let __new_924 = HxInt.add __old_923 1 in (
+                              ignore (_g6 := __new_924);
+                              __new_924
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_925 = _g5 in (
+                            tempArray24 := __assign_925;
+                            __assign_925
+                          )
+                        ));
+                        let __assign_926 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray24) " " (fun x -> x)) in (
+                          tempResult5 := __assign_926;
+                          __assign_926
+                        )
+                      )
                     )
-                  ));
-                  let __assign_927 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray26) " " (fun x -> x)) in (
-                    tempResult5 := __assign_927;
-                    __assign_927
                   )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_928 = "()" in (
-                tempResult5 := __assign_928;
-                __assign_928
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber27 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_930 = expected in let __nullable_931 = HxArray.length args in if __nullable_930 == HxRuntime.hx_null then false else Obj.obj __nullable_930 > __nullable_931) then let __assign_932 = HxInt.sub (let __nullable_int_933 = expected in if __nullable_int_933 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_933) (HxArray.length args) in (
-                  tempNumber27 := __assign_932;
-                  __assign_932
-                ) else let __assign_934 = 0 in (
-                  tempNumber27 := __assign_934;
-                  __assign_934
-                ) else let __assign_935 = 0 in (
-                  tempNumber27 := __assign_935;
-                  __assign_935
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_936 = expected in let __nullable_937 = HxArray.length args in if __nullable_936 == HxRuntime.hx_null then false else Obj.obj __nullable_936 > __nullable_937) then let __assign_938 = HxInt.sub (let __nullable_int_939 = expected in if __nullable_int_939 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_939) (HxArray.length args) in (
-                  tempNumber27 := __assign_938;
-                  __assign_938
-                ) else let __assign_940 = 0 in (
-                  tempNumber27 := __assign_940;
-                  __assign_940
-                ) else let __assign_941 = 0 in (
-                  tempNumber27 := __assign_941;
-                  __assign_941
-                ) else let __assign_942 = 0 in (
-                  tempNumber27 := __assign_942;
-                  __assign_942
-                )
-                | _ -> let __assign_929 = 0 in (
-                  tempNumber27 := __assign_929;
-                  __assign_929
-                ));
-              let missing = !tempNumber27 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_943 = !_g5 in let __new_944 = HxInt.add __old_943 1 in (
-                    ignore (_g5 := __new_944);
-                    __old_943
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_945 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_945;
-                  __assign_945
-                ) else let tempArray27 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_946 = HxArray.create () in __arr_946 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_947 = !_g6 in let __new_948 = HxInt.add __old_947 1 in (
-                        ignore (_g6 := __new_948);
-                        __new_948
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_949 = _g5 in (
-                      tempArray27 := __assign_949;
-                      __assign_949
+                  | "setProperty" -> if HxArray.length _g1 = 3 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in let _g7 = HxArray.get _g1 2 in (
+                    ignore _g5;
+                    ignore _g6;
+                    ignore _g7;
+                    let __assign_927 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_927;
+                      __assign_927
                     )
-                  ));
-                  let __assign_950 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray27) " " (fun x -> x)) in (
-                    tempResult5 := __assign_950;
-                    __assign_950
-                  )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber28 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_677 = expected in let __nullable_678 = HxArray.length args in if __nullable_677 == HxRuntime.hx_null then false else Obj.obj __nullable_677 > __nullable_678) then let __assign_679 = HxInt.sub (let __nullable_int_680 = expected in if __nullable_int_680 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_680) (HxArray.length args) in (
-                  tempNumber28 := __assign_679;
-                  __assign_679
-                ) else let __assign_681 = 0 in (
-                  tempNumber28 := __assign_681;
-                  __assign_681
-                ) else let __assign_682 = 0 in (
-                  tempNumber28 := __assign_682;
-                  __assign_682
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_683 = expected in let __nullable_684 = HxArray.length args in if __nullable_683 == HxRuntime.hx_null then false else Obj.obj __nullable_683 > __nullable_684) then let __assign_685 = HxInt.sub (let __nullable_int_686 = expected in if __nullable_int_686 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_686) (HxArray.length args) in (
-                  tempNumber28 := __assign_685;
-                  __assign_685
-                ) else let __assign_687 = 0 in (
-                  tempNumber28 := __assign_687;
-                  __assign_687
-                ) else let __assign_688 = 0 in (
-                  tempNumber28 := __assign_688;
-                  __assign_688
-                ) else let __assign_689 = 0 in (
-                  tempNumber28 := __assign_689;
-                  __assign_689
-                )
-                | _ -> let __assign_676 = 0 in (
-                  tempNumber28 := __assign_676;
-                  __assign_676
-                ));
-              let missing = !tempNumber28 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_690 = !_g5 in let __new_691 = HxInt.add __old_690 1 in (
-                    ignore (_g5 := __new_691);
-                    __old_690
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_692 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_692;
-                  __assign_692
-                ) else let tempArray28 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_693 = HxArray.create () in __arr_693 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_694 = !_g6 in let __new_695 = HxInt.add __old_694 1 in (
-                        ignore (_g6 := __new_695);
-                        __new_695
+                  ) else let callee = _g in let args = _g1 in let tempNumber25 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_929 = expected in let __nullable_930 = HxArray.length args in if __nullable_929 == HxRuntime.hx_null then false else Obj.obj __nullable_929 > __nullable_930) then let __assign_931 = HxInt.sub (let __nullable_int_932 = expected in if __nullable_int_932 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_932) (HxArray.length args) in (
+                        tempNumber25 := __assign_931;
+                        __assign_931
+                      ) else let __assign_933 = 0 in (
+                        tempNumber25 := __assign_933;
+                        __assign_933
+                      ) else let __assign_934 = 0 in (
+                        tempNumber25 := __assign_934;
+                        __assign_934
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_935 = expected in let __nullable_936 = HxArray.length args in if __nullable_935 == HxRuntime.hx_null then false else Obj.obj __nullable_935 > __nullable_936) then let __assign_937 = HxInt.sub (let __nullable_int_938 = expected in if __nullable_int_938 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_938) (HxArray.length args) in (
+                        tempNumber25 := __assign_937;
+                        __assign_937
+                      ) else let __assign_939 = 0 in (
+                        tempNumber25 := __assign_939;
+                        __assign_939
+                      ) else let __assign_940 = 0 in (
+                        tempNumber25 := __assign_940;
+                        __assign_940
+                      ) else let __assign_941 = 0 in (
+                        tempNumber25 := __assign_941;
+                        __assign_941
+                      )
+                      | _ -> let __assign_928 = 0 in (
+                        tempNumber25 := __assign_928;
+                        __assign_928
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_696 = _g5 in (
-                      tempArray28 := __assign_696;
-                      __assign_696
+                    let missing = !tempNumber25 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_942 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_942;
+                      __assign_942
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_943 = !_g5 in let __new_944 = HxInt.add __old_943 1 in (
+                          ignore (_g5 := __new_944);
+                          __old_943
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_945 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_945;
+                        __assign_945
+                      ) else let tempArray25 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_946 = HxArray.create () in __arr_946 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_947 = !_g6 in let __new_948 = HxInt.add __old_947 1 in (
+                              ignore (_g6 := __new_948);
+                              __new_948
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_949 = _g5 in (
+                            tempArray25 := __assign_949;
+                            __assign_949
+                          )
+                        ));
+                        let __assign_950 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray25) " " (fun x -> x)) in (
+                          tempResult5 := __assign_950;
+                          __assign_950
+                        )
+                      )
                     )
-                  ));
-                  let __assign_697 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray28) " " (fun x -> x)) in (
-                    tempResult5 := __assign_697;
-                    __assign_697
                   )
-                )
-              )
-            ))
-          | "Std" -> (match _g3 with
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_973 = "true" in (
-                tempResult5 := __assign_973;
-                __assign_973
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber29 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_975 = expected in let __nullable_976 = HxArray.length args in if __nullable_975 == HxRuntime.hx_null then false else Obj.obj __nullable_975 > __nullable_976) then let __assign_977 = HxInt.sub (let __nullable_int_978 = expected in if __nullable_int_978 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_978) (HxArray.length args) in (
-                  tempNumber29 := __assign_977;
-                  __assign_977
-                ) else let __assign_979 = 0 in (
-                  tempNumber29 := __assign_979;
-                  __assign_979
-                ) else let __assign_980 = 0 in (
-                  tempNumber29 := __assign_980;
-                  __assign_980
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_981 = expected in let __nullable_982 = HxArray.length args in if __nullable_981 == HxRuntime.hx_null then false else Obj.obj __nullable_981 > __nullable_982) then let __assign_983 = HxInt.sub (let __nullable_int_984 = expected in if __nullable_int_984 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_984) (HxArray.length args) in (
-                  tempNumber29 := __assign_983;
-                  __assign_983
-                ) else let __assign_985 = 0 in (
-                  tempNumber29 := __assign_985;
-                  __assign_985
-                ) else let __assign_986 = 0 in (
-                  tempNumber29 := __assign_986;
-                  __assign_986
-                ) else let __assign_987 = 0 in (
-                  tempNumber29 := __assign_987;
-                  __assign_987
-                )
-                | _ -> let __assign_974 = 0 in (
-                  tempNumber29 := __assign_974;
-                  __assign_974
-                ));
-              let missing = !tempNumber29 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_988 = !_g5 in let __new_989 = HxInt.add __old_988 1 in (
-                    ignore (_g5 := __new_989);
-                    __old_988
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_990 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_990;
-                  __assign_990
-                ) else let tempArray29 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_991 = HxArray.create () in __arr_991 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_992 = !_g6 in let __new_993 = HxInt.add __old_992 1 in (
-                        ignore (_g6 := __new_993);
-                        __new_993
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_994 = _g5 in (
-                      tempArray29 := __assign_994;
-                      __assign_994
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_951 = "()" in (
+                      tempResult5 := __assign_951;
+                      __assign_951
                     )
-                  ));
-                  let __assign_995 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray29) " " (fun x -> x)) in (
-                    tempResult5 := __assign_995;
-                    __assign_995
-                  )
-                )
-              )
-            )
-            | "is" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
-              ignore _g5;
-              ignore _g6;
-              let __assign_996 = "true" in (
-                tempResult5 := __assign_996;
-                __assign_996
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber30 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_998 = expected in let __nullable_999 = HxArray.length args in if __nullable_998 == HxRuntime.hx_null then false else Obj.obj __nullable_998 > __nullable_999) then let __assign_1000 = HxInt.sub (let __nullable_int_1001 = expected in if __nullable_int_1001 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1001) (HxArray.length args) in (
-                  tempNumber30 := __assign_1000;
-                  __assign_1000
-                ) else let __assign_1002 = 0 in (
-                  tempNumber30 := __assign_1002;
-                  __assign_1002
-                ) else let __assign_1003 = 0 in (
-                  tempNumber30 := __assign_1003;
-                  __assign_1003
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1004 = expected in let __nullable_1005 = HxArray.length args in if __nullable_1004 == HxRuntime.hx_null then false else Obj.obj __nullable_1004 > __nullable_1005) then let __assign_1006 = HxInt.sub (let __nullable_int_1007 = expected in if __nullable_int_1007 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1007) (HxArray.length args) in (
-                  tempNumber30 := __assign_1006;
-                  __assign_1006
-                ) else let __assign_1008 = 0 in (
-                  tempNumber30 := __assign_1008;
-                  __assign_1008
-                ) else let __assign_1009 = 0 in (
-                  tempNumber30 := __assign_1009;
-                  __assign_1009
-                ) else let __assign_1010 = 0 in (
-                  tempNumber30 := __assign_1010;
-                  __assign_1010
-                )
-                | _ -> let __assign_997 = 0 in (
-                  tempNumber30 := __assign_997;
-                  __assign_997
-                ));
-              let missing = !tempNumber30 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1011 = !_g5 in let __new_1012 = HxInt.add __old_1011 1 in (
-                    ignore (_g5 := __new_1012);
-                    __old_1011
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1013 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1013;
-                  __assign_1013
-                ) else let tempArray30 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1014 = HxArray.create () in __arr_1014 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1015 = !_g6 in let __new_1016 = HxInt.add __old_1015 1 in (
-                        ignore (_g6 := __new_1016);
-                        __new_1016
+                  ) else let callee = _g in let args = _g1 in let tempNumber26 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_953 = expected in let __nullable_954 = HxArray.length args in if __nullable_953 == HxRuntime.hx_null then false else Obj.obj __nullable_953 > __nullable_954) then let __assign_955 = HxInt.sub (let __nullable_int_956 = expected in if __nullable_int_956 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_956) (HxArray.length args) in (
+                        tempNumber26 := __assign_955;
+                        __assign_955
+                      ) else let __assign_957 = 0 in (
+                        tempNumber26 := __assign_957;
+                        __assign_957
+                      ) else let __assign_958 = 0 in (
+                        tempNumber26 := __assign_958;
+                        __assign_958
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_959 = expected in let __nullable_960 = HxArray.length args in if __nullable_959 == HxRuntime.hx_null then false else Obj.obj __nullable_959 > __nullable_960) then let __assign_961 = HxInt.sub (let __nullable_int_962 = expected in if __nullable_int_962 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_962) (HxArray.length args) in (
+                        tempNumber26 := __assign_961;
+                        __assign_961
+                      ) else let __assign_963 = 0 in (
+                        tempNumber26 := __assign_963;
+                        __assign_963
+                      ) else let __assign_964 = 0 in (
+                        tempNumber26 := __assign_964;
+                        __assign_964
+                      ) else let __assign_965 = 0 in (
+                        tempNumber26 := __assign_965;
+                        __assign_965
+                      )
+                      | _ -> let __assign_952 = 0 in (
+                        tempNumber26 := __assign_952;
+                        __assign_952
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1017 = _g5 in (
-                      tempArray30 := __assign_1017;
-                      __assign_1017
+                    let missing = !tempNumber26 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_966 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_966;
+                      __assign_966
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_967 = !_g5 in let __new_968 = HxInt.add __old_967 1 in (
+                          ignore (_g5 := __new_968);
+                          __old_967
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_969 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_969;
+                        __assign_969
+                      ) else let tempArray26 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_970 = HxArray.create () in __arr_970 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_971 = !_g6 in let __new_972 = HxInt.add __old_971 1 in (
+                              ignore (_g6 := __new_972);
+                              __new_972
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_973 = _g5 in (
+                            tempArray26 := __assign_973;
+                            __assign_973
+                          )
+                        ));
+                        let __assign_974 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray26) " " (fun x -> x)) in (
+                          tempResult5 := __assign_974;
+                          __assign_974
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1018 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray30) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1018;
-                    __assign_1018
                   )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1019 = "false" in (
-                tempResult5 := __assign_1019;
-                __assign_1019
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber31 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1021 = expected in let __nullable_1022 = HxArray.length args in if __nullable_1021 == HxRuntime.hx_null then false else Obj.obj __nullable_1021 > __nullable_1022) then let __assign_1023 = HxInt.sub (let __nullable_int_1024 = expected in if __nullable_int_1024 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1024) (HxArray.length args) in (
-                  tempNumber31 := __assign_1023;
-                  __assign_1023
-                ) else let __assign_1025 = 0 in (
-                  tempNumber31 := __assign_1025;
-                  __assign_1025
-                ) else let __assign_1026 = 0 in (
-                  tempNumber31 := __assign_1026;
-                  __assign_1026
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1027 = expected in let __nullable_1028 = HxArray.length args in if __nullable_1027 == HxRuntime.hx_null then false else Obj.obj __nullable_1027 > __nullable_1028) then let __assign_1029 = HxInt.sub (let __nullable_int_1030 = expected in if __nullable_int_1030 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1030) (HxArray.length args) in (
-                  tempNumber31 := __assign_1029;
-                  __assign_1029
-                ) else let __assign_1031 = 0 in (
-                  tempNumber31 := __assign_1031;
-                  __assign_1031
-                ) else let __assign_1032 = 0 in (
-                  tempNumber31 := __assign_1032;
-                  __assign_1032
-                ) else let __assign_1033 = 0 in (
-                  tempNumber31 := __assign_1033;
-                  __assign_1033
-                )
-                | _ -> let __assign_1020 = 0 in (
-                  tempNumber31 := __assign_1020;
-                  __assign_1020
-                ));
-              let missing = !tempNumber31 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1034 = !_g5 in let __new_1035 = HxInt.add __old_1034 1 in (
-                    ignore (_g5 := __new_1035);
-                    __old_1034
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1036 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1036;
-                  __assign_1036
-                ) else let tempArray31 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1037 = HxArray.create () in __arr_1037 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1038 = !_g6 in let __new_1039 = HxInt.add __old_1038 1 in (
-                        ignore (_g6 := __new_1039);
-                        __new_1039
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1040 = _g5 in (
-                      tempArray31 := __assign_1040;
-                      __assign_1040
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_975 = "()" in (
+                      tempResult5 := __assign_975;
+                      __assign_975
                     )
-                  ));
-                  let __assign_1041 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray31) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1041;
-                    __assign_1041
-                  )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1042 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1042;
-                __assign_1042
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber32 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1044 = expected in let __nullable_1045 = HxArray.length args in if __nullable_1044 == HxRuntime.hx_null then false else Obj.obj __nullable_1044 > __nullable_1045) then let __assign_1046 = HxInt.sub (let __nullable_int_1047 = expected in if __nullable_int_1047 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1047) (HxArray.length args) in (
-                  tempNumber32 := __assign_1046;
-                  __assign_1046
-                ) else let __assign_1048 = 0 in (
-                  tempNumber32 := __assign_1048;
-                  __assign_1048
-                ) else let __assign_1049 = 0 in (
-                  tempNumber32 := __assign_1049;
-                  __assign_1049
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1050 = expected in let __nullable_1051 = HxArray.length args in if __nullable_1050 == HxRuntime.hx_null then false else Obj.obj __nullable_1050 > __nullable_1051) then let __assign_1052 = HxInt.sub (let __nullable_int_1053 = expected in if __nullable_int_1053 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1053) (HxArray.length args) in (
-                  tempNumber32 := __assign_1052;
-                  __assign_1052
-                ) else let __assign_1054 = 0 in (
-                  tempNumber32 := __assign_1054;
-                  __assign_1054
-                ) else let __assign_1055 = 0 in (
-                  tempNumber32 := __assign_1055;
-                  __assign_1055
-                ) else let __assign_1056 = 0 in (
-                  tempNumber32 := __assign_1056;
-                  __assign_1056
-                )
-                | _ -> let __assign_1043 = 0 in (
-                  tempNumber32 := __assign_1043;
-                  __assign_1043
-                ));
-              let missing = !tempNumber32 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1057 = !_g5 in let __new_1058 = HxInt.add __old_1057 1 in (
-                    ignore (_g5 := __new_1058);
-                    __old_1057
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1059 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1059;
-                  __assign_1059
-                ) else let tempArray32 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1060 = HxArray.create () in __arr_1060 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1061 = !_g6 in let __new_1062 = HxInt.add __old_1061 1 in (
-                        ignore (_g6 := __new_1062);
-                        __new_1062
+                  ) else let callee = _g in let args = _g1 in let tempNumber27 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_977 = expected in let __nullable_978 = HxArray.length args in if __nullable_977 == HxRuntime.hx_null then false else Obj.obj __nullable_977 > __nullable_978) then let __assign_979 = HxInt.sub (let __nullable_int_980 = expected in if __nullable_int_980 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_980) (HxArray.length args) in (
+                        tempNumber27 := __assign_979;
+                        __assign_979
+                      ) else let __assign_981 = 0 in (
+                        tempNumber27 := __assign_981;
+                        __assign_981
+                      ) else let __assign_982 = 0 in (
+                        tempNumber27 := __assign_982;
+                        __assign_982
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_983 = expected in let __nullable_984 = HxArray.length args in if __nullable_983 == HxRuntime.hx_null then false else Obj.obj __nullable_983 > __nullable_984) then let __assign_985 = HxInt.sub (let __nullable_int_986 = expected in if __nullable_int_986 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_986) (HxArray.length args) in (
+                        tempNumber27 := __assign_985;
+                        __assign_985
+                      ) else let __assign_987 = 0 in (
+                        tempNumber27 := __assign_987;
+                        __assign_987
+                      ) else let __assign_988 = 0 in (
+                        tempNumber27 := __assign_988;
+                        __assign_988
+                      ) else let __assign_989 = 0 in (
+                        tempNumber27 := __assign_989;
+                        __assign_989
+                      )
+                      | _ -> let __assign_976 = 0 in (
+                        tempNumber27 := __assign_976;
+                        __assign_976
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1063 = _g5 in (
-                      tempArray32 := __assign_1063;
-                      __assign_1063
+                    let missing = !tempNumber27 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_990 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_990;
+                      __assign_990
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_991 = !_g5 in let __new_992 = HxInt.add __old_991 1 in (
+                          ignore (_g5 := __new_992);
+                          __old_991
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_993 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_993;
+                        __assign_993
+                      ) else let tempArray27 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_994 = HxArray.create () in __arr_994 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_995 = !_g6 in let __new_996 = HxInt.add __old_995 1 in (
+                              ignore (_g6 := __new_996);
+                              __new_996
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_997 = _g5 in (
+                            tempArray27 := __assign_997;
+                            __assign_997
+                          )
+                        ));
+                        let __assign_998 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray27) " " (fun x -> x)) in (
+                          tempResult5 := __assign_998;
+                          __assign_998
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1064 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray32) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1064;
-                    __assign_1064
                   )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1065 = "()" in (
-                tempResult5 := __assign_1065;
-                __assign_1065
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber33 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1067 = expected in let __nullable_1068 = HxArray.length args in if __nullable_1067 == HxRuntime.hx_null then false else Obj.obj __nullable_1067 > __nullable_1068) then let __assign_1069 = HxInt.sub (let __nullable_int_1070 = expected in if __nullable_int_1070 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1070) (HxArray.length args) in (
-                  tempNumber33 := __assign_1069;
-                  __assign_1069
-                ) else let __assign_1071 = 0 in (
-                  tempNumber33 := __assign_1071;
-                  __assign_1071
-                ) else let __assign_1072 = 0 in (
-                  tempNumber33 := __assign_1072;
-                  __assign_1072
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1073 = expected in let __nullable_1074 = HxArray.length args in if __nullable_1073 == HxRuntime.hx_null then false else Obj.obj __nullable_1073 > __nullable_1074) then let __assign_1075 = HxInt.sub (let __nullable_int_1076 = expected in if __nullable_int_1076 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1076) (HxArray.length args) in (
-                  tempNumber33 := __assign_1075;
-                  __assign_1075
-                ) else let __assign_1077 = 0 in (
-                  tempNumber33 := __assign_1077;
-                  __assign_1077
-                ) else let __assign_1078 = 0 in (
-                  tempNumber33 := __assign_1078;
-                  __assign_1078
-                ) else let __assign_1079 = 0 in (
-                  tempNumber33 := __assign_1079;
-                  __assign_1079
-                )
-                | _ -> let __assign_1066 = 0 in (
-                  tempNumber33 := __assign_1066;
-                  __assign_1066
-                ));
-              let missing = !tempNumber33 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1080 = !_g5 in let __new_1081 = HxInt.add __old_1080 1 in (
-                    ignore (_g5 := __new_1081);
-                    __old_1080
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1082 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1082;
-                  __assign_1082
-                ) else let tempArray33 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1083 = HxArray.create () in __arr_1083 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1084 = !_g6 in let __new_1085 = HxInt.add __old_1084 1 in (
-                        ignore (_g6 := __new_1085);
-                        __new_1085
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber28 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_713 = expected in let __nullable_714 = HxArray.length args in if __nullable_713 == HxRuntime.hx_null then false else Obj.obj __nullable_713 > __nullable_714) then let __assign_715 = HxInt.sub (let __nullable_int_716 = expected in if __nullable_int_716 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_716) (HxArray.length args) in (
+                        tempNumber28 := __assign_715;
+                        __assign_715
+                      ) else let __assign_717 = 0 in (
+                        tempNumber28 := __assign_717;
+                        __assign_717
+                      ) else let __assign_718 = 0 in (
+                        tempNumber28 := __assign_718;
+                        __assign_718
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_719 = expected in let __nullable_720 = HxArray.length args in if __nullable_719 == HxRuntime.hx_null then false else Obj.obj __nullable_719 > __nullable_720) then let __assign_721 = HxInt.sub (let __nullable_int_722 = expected in if __nullable_int_722 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_722) (HxArray.length args) in (
+                        tempNumber28 := __assign_721;
+                        __assign_721
+                      ) else let __assign_723 = 0 in (
+                        tempNumber28 := __assign_723;
+                        __assign_723
+                      ) else let __assign_724 = 0 in (
+                        tempNumber28 := __assign_724;
+                        __assign_724
+                      ) else let __assign_725 = 0 in (
+                        tempNumber28 := __assign_725;
+                        __assign_725
+                      )
+                      | _ -> let __assign_712 = 0 in (
+                        tempNumber28 := __assign_712;
+                        __assign_712
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1086 = _g5 in (
-                      tempArray33 := __assign_1086;
-                      __assign_1086
+                    let missing = !tempNumber28 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_726 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_726;
+                      __assign_726
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_727 = !_g5 in let __new_728 = HxInt.add __old_727 1 in (
+                          ignore (_g5 := __new_728);
+                          __old_727
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_729 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_729;
+                        __assign_729
+                      ) else let tempArray28 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_730 = HxArray.create () in __arr_730 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_731 = !_g6 in let __new_732 = HxInt.add __old_731 1 in (
+                              ignore (_g6 := __new_732);
+                              __new_732
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_733 = _g5 in (
+                            tempArray28 := __assign_733;
+                            __assign_733
+                          )
+                        ));
+                        let __assign_734 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray28) " " (fun x -> x)) in (
+                          tempResult5 := __assign_734;
+                          __assign_734
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1087 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray33) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1087;
-                    __assign_1087
-                  )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1088 = "()" in (
-                tempResult5 := __assign_1088;
-                __assign_1088
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber34 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1090 = expected in let __nullable_1091 = HxArray.length args in if __nullable_1090 == HxRuntime.hx_null then false else Obj.obj __nullable_1090 > __nullable_1091) then let __assign_1092 = HxInt.sub (let __nullable_int_1093 = expected in if __nullable_int_1093 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1093) (HxArray.length args) in (
-                  tempNumber34 := __assign_1092;
-                  __assign_1092
-                ) else let __assign_1094 = 0 in (
-                  tempNumber34 := __assign_1094;
-                  __assign_1094
-                ) else let __assign_1095 = 0 in (
-                  tempNumber34 := __assign_1095;
-                  __assign_1095
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1096 = expected in let __nullable_1097 = HxArray.length args in if __nullable_1096 == HxRuntime.hx_null then false else Obj.obj __nullable_1096 > __nullable_1097) then let __assign_1098 = HxInt.sub (let __nullable_int_1099 = expected in if __nullable_int_1099 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1099) (HxArray.length args) in (
-                  tempNumber34 := __assign_1098;
-                  __assign_1098
-                ) else let __assign_1100 = 0 in (
-                  tempNumber34 := __assign_1100;
-                  __assign_1100
-                ) else let __assign_1101 = 0 in (
-                  tempNumber34 := __assign_1101;
-                  __assign_1101
-                ) else let __assign_1102 = 0 in (
-                  tempNumber34 := __assign_1102;
-                  __assign_1102
-                )
-                | _ -> let __assign_1089 = 0 in (
-                  tempNumber34 := __assign_1089;
-                  __assign_1089
-                ));
-              let missing = !tempNumber34 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1103 = !_g5 in let __new_1104 = HxInt.add __old_1103 1 in (
-                    ignore (_g5 := __new_1104);
-                    __old_1103
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1105 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1105;
-                  __assign_1105
-                ) else let tempArray34 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1106 = HxArray.create () in __arr_1106 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1107 = !_g6 in let __new_1108 = HxInt.add __old_1107 1 in (
-                        ignore (_g6 := __new_1108);
-                        __new_1108
+                  ))
+                | "Std" -> (match _g3 with
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1022 = "true" in (
+                      tempResult5 := __assign_1022;
+                      __assign_1022
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber29 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1024 = expected in let __nullable_1025 = HxArray.length args in if __nullable_1024 == HxRuntime.hx_null then false else Obj.obj __nullable_1024 > __nullable_1025) then let __assign_1026 = HxInt.sub (let __nullable_int_1027 = expected in if __nullable_int_1027 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1027) (HxArray.length args) in (
+                        tempNumber29 := __assign_1026;
+                        __assign_1026
+                      ) else let __assign_1028 = 0 in (
+                        tempNumber29 := __assign_1028;
+                        __assign_1028
+                      ) else let __assign_1029 = 0 in (
+                        tempNumber29 := __assign_1029;
+                        __assign_1029
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1030 = expected in let __nullable_1031 = HxArray.length args in if __nullable_1030 == HxRuntime.hx_null then false else Obj.obj __nullable_1030 > __nullable_1031) then let __assign_1032 = HxInt.sub (let __nullable_int_1033 = expected in if __nullable_int_1033 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1033) (HxArray.length args) in (
+                        tempNumber29 := __assign_1032;
+                        __assign_1032
+                      ) else let __assign_1034 = 0 in (
+                        tempNumber29 := __assign_1034;
+                        __assign_1034
+                      ) else let __assign_1035 = 0 in (
+                        tempNumber29 := __assign_1035;
+                        __assign_1035
+                      ) else let __assign_1036 = 0 in (
+                        tempNumber29 := __assign_1036;
+                        __assign_1036
+                      )
+                      | _ -> let __assign_1023 = 0 in (
+                        tempNumber29 := __assign_1023;
+                        __assign_1023
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1109 = _g5 in (
-                      tempArray34 := __assign_1109;
+                    let missing = !tempNumber29 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1037 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1037;
+                      __assign_1037
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1038 = !_g5 in let __new_1039 = HxInt.add __old_1038 1 in (
+                          ignore (_g5 := __new_1039);
+                          __old_1038
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1040 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1040;
+                        __assign_1040
+                      ) else let tempArray29 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1041 = HxArray.create () in __arr_1041 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1042 = !_g6 in let __new_1043 = HxInt.add __old_1042 1 in (
+                              ignore (_g6 := __new_1043);
+                              __new_1043
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1044 = _g5 in (
+                            tempArray29 := __assign_1044;
+                            __assign_1044
+                          )
+                        ));
+                        let __assign_1045 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray29) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1045;
+                          __assign_1045
+                        )
+                      )
+                    )
+                  )
+                  | "is" -> if HxArray.length _g1 = 2 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in (
+                    ignore _g5;
+                    ignore _g6;
+                    let __assign_1046 = "true" in (
+                      tempResult5 := __assign_1046;
+                      __assign_1046
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber30 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1048 = expected in let __nullable_1049 = HxArray.length args in if __nullable_1048 == HxRuntime.hx_null then false else Obj.obj __nullable_1048 > __nullable_1049) then let __assign_1050 = HxInt.sub (let __nullable_int_1051 = expected in if __nullable_int_1051 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1051) (HxArray.length args) in (
+                        tempNumber30 := __assign_1050;
+                        __assign_1050
+                      ) else let __assign_1052 = 0 in (
+                        tempNumber30 := __assign_1052;
+                        __assign_1052
+                      ) else let __assign_1053 = 0 in (
+                        tempNumber30 := __assign_1053;
+                        __assign_1053
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1054 = expected in let __nullable_1055 = HxArray.length args in if __nullable_1054 == HxRuntime.hx_null then false else Obj.obj __nullable_1054 > __nullable_1055) then let __assign_1056 = HxInt.sub (let __nullable_int_1057 = expected in if __nullable_int_1057 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1057) (HxArray.length args) in (
+                        tempNumber30 := __assign_1056;
+                        __assign_1056
+                      ) else let __assign_1058 = 0 in (
+                        tempNumber30 := __assign_1058;
+                        __assign_1058
+                      ) else let __assign_1059 = 0 in (
+                        tempNumber30 := __assign_1059;
+                        __assign_1059
+                      ) else let __assign_1060 = 0 in (
+                        tempNumber30 := __assign_1060;
+                        __assign_1060
+                      )
+                      | _ -> let __assign_1047 = 0 in (
+                        tempNumber30 := __assign_1047;
+                        __assign_1047
+                      ));
+                    let missing = !tempNumber30 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1061 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1061;
+                      __assign_1061
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1062 = !_g5 in let __new_1063 = HxInt.add __old_1062 1 in (
+                          ignore (_g5 := __new_1063);
+                          __old_1062
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1064 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1064;
+                        __assign_1064
+                      ) else let tempArray30 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1065 = HxArray.create () in __arr_1065 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1066 = !_g6 in let __new_1067 = HxInt.add __old_1066 1 in (
+                              ignore (_g6 := __new_1067);
+                              __new_1067
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1068 = _g5 in (
+                            tempArray30 := __assign_1068;
+                            __assign_1068
+                          )
+                        ));
+                        let __assign_1069 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray30) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1069;
+                          __assign_1069
+                        )
+                      )
+                    )
+                  )
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1070 = "false" in (
+                      tempResult5 := __assign_1070;
+                      __assign_1070
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber31 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1072 = expected in let __nullable_1073 = HxArray.length args in if __nullable_1072 == HxRuntime.hx_null then false else Obj.obj __nullable_1072 > __nullable_1073) then let __assign_1074 = HxInt.sub (let __nullable_int_1075 = expected in if __nullable_int_1075 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1075) (HxArray.length args) in (
+                        tempNumber31 := __assign_1074;
+                        __assign_1074
+                      ) else let __assign_1076 = 0 in (
+                        tempNumber31 := __assign_1076;
+                        __assign_1076
+                      ) else let __assign_1077 = 0 in (
+                        tempNumber31 := __assign_1077;
+                        __assign_1077
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1078 = expected in let __nullable_1079 = HxArray.length args in if __nullable_1078 == HxRuntime.hx_null then false else Obj.obj __nullable_1078 > __nullable_1079) then let __assign_1080 = HxInt.sub (let __nullable_int_1081 = expected in if __nullable_int_1081 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1081) (HxArray.length args) in (
+                        tempNumber31 := __assign_1080;
+                        __assign_1080
+                      ) else let __assign_1082 = 0 in (
+                        tempNumber31 := __assign_1082;
+                        __assign_1082
+                      ) else let __assign_1083 = 0 in (
+                        tempNumber31 := __assign_1083;
+                        __assign_1083
+                      ) else let __assign_1084 = 0 in (
+                        tempNumber31 := __assign_1084;
+                        __assign_1084
+                      )
+                      | _ -> let __assign_1071 = 0 in (
+                        tempNumber31 := __assign_1071;
+                        __assign_1071
+                      ));
+                    let missing = !tempNumber31 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1085 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1085;
+                      __assign_1085
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1086 = !_g5 in let __new_1087 = HxInt.add __old_1086 1 in (
+                          ignore (_g5 := __new_1087);
+                          __old_1086
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1088 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1088;
+                        __assign_1088
+                      ) else let tempArray31 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1089 = HxArray.create () in __arr_1089 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1090 = !_g6 in let __new_1091 = HxInt.add __old_1090 1 in (
+                              ignore (_g6 := __new_1091);
+                              __new_1091
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1092 = _g5 in (
+                            tempArray31 := __assign_1092;
+                            __assign_1092
+                          )
+                        ));
+                        let __assign_1093 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray31) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1093;
+                          __assign_1093
+                        )
+                      )
+                    )
+                  )
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1094 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1094;
+                      __assign_1094
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber32 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1096 = expected in let __nullable_1097 = HxArray.length args in if __nullable_1096 == HxRuntime.hx_null then false else Obj.obj __nullable_1096 > __nullable_1097) then let __assign_1098 = HxInt.sub (let __nullable_int_1099 = expected in if __nullable_int_1099 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1099) (HxArray.length args) in (
+                        tempNumber32 := __assign_1098;
+                        __assign_1098
+                      ) else let __assign_1100 = 0 in (
+                        tempNumber32 := __assign_1100;
+                        __assign_1100
+                      ) else let __assign_1101 = 0 in (
+                        tempNumber32 := __assign_1101;
+                        __assign_1101
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1102 = expected in let __nullable_1103 = HxArray.length args in if __nullable_1102 == HxRuntime.hx_null then false else Obj.obj __nullable_1102 > __nullable_1103) then let __assign_1104 = HxInt.sub (let __nullable_int_1105 = expected in if __nullable_int_1105 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1105) (HxArray.length args) in (
+                        tempNumber32 := __assign_1104;
+                        __assign_1104
+                      ) else let __assign_1106 = 0 in (
+                        tempNumber32 := __assign_1106;
+                        __assign_1106
+                      ) else let __assign_1107 = 0 in (
+                        tempNumber32 := __assign_1107;
+                        __assign_1107
+                      ) else let __assign_1108 = 0 in (
+                        tempNumber32 := __assign_1108;
+                        __assign_1108
+                      )
+                      | _ -> let __assign_1095 = 0 in (
+                        tempNumber32 := __assign_1095;
+                        __assign_1095
+                      ));
+                    let missing = !tempNumber32 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1109 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1109;
                       __assign_1109
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1110 = !_g5 in let __new_1111 = HxInt.add __old_1110 1 in (
+                          ignore (_g5 := __new_1111);
+                          __old_1110
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1112 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1112;
+                        __assign_1112
+                      ) else let tempArray32 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1113 = HxArray.create () in __arr_1113 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1114 = !_g6 in let __new_1115 = HxInt.add __old_1114 1 in (
+                              ignore (_g6 := __new_1115);
+                              __new_1115
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1116 = _g5 in (
+                            tempArray32 := __assign_1116;
+                            __assign_1116
+                          )
+                        ));
+                        let __assign_1117 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray32) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1117;
+                          __assign_1117
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1110 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray34) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1110;
-                    __assign_1110
                   )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber35 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_952 = expected in let __nullable_953 = HxArray.length args in if __nullable_952 == HxRuntime.hx_null then false else Obj.obj __nullable_952 > __nullable_953) then let __assign_954 = HxInt.sub (let __nullable_int_955 = expected in if __nullable_int_955 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_955) (HxArray.length args) in (
-                  tempNumber35 := __assign_954;
-                  __assign_954
-                ) else let __assign_956 = 0 in (
-                  tempNumber35 := __assign_956;
-                  __assign_956
-                ) else let __assign_957 = 0 in (
-                  tempNumber35 := __assign_957;
-                  __assign_957
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_958 = expected in let __nullable_959 = HxArray.length args in if __nullable_958 == HxRuntime.hx_null then false else Obj.obj __nullable_958 > __nullable_959) then let __assign_960 = HxInt.sub (let __nullable_int_961 = expected in if __nullable_int_961 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_961) (HxArray.length args) in (
-                  tempNumber35 := __assign_960;
-                  __assign_960
-                ) else let __assign_962 = 0 in (
-                  tempNumber35 := __assign_962;
-                  __assign_962
-                ) else let __assign_963 = 0 in (
-                  tempNumber35 := __assign_963;
-                  __assign_963
-                ) else let __assign_964 = 0 in (
-                  tempNumber35 := __assign_964;
-                  __assign_964
-                )
-                | _ -> let __assign_951 = 0 in (
-                  tempNumber35 := __assign_951;
-                  __assign_951
-                ));
-              let missing = !tempNumber35 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_965 = !_g5 in let __new_966 = HxInt.add __old_965 1 in (
-                    ignore (_g5 := __new_966);
-                    __old_965
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_967 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_967;
-                  __assign_967
-                ) else let tempArray35 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_968 = HxArray.create () in __arr_968 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_969 = !_g6 in let __new_970 = HxInt.add __old_969 1 in (
-                        ignore (_g6 := __new_970);
-                        __new_970
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_971 = _g5 in (
-                      tempArray35 := __assign_971;
-                      __assign_971
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1118 = "()" in (
+                      tempResult5 := __assign_1118;
+                      __assign_1118
                     )
-                  ));
-                  let __assign_972 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray35) " " (fun x -> x)) in (
-                    tempResult5 := __assign_972;
-                    __assign_972
-                  )
-                )
-              )
-            ))
-          | "StringTools" -> (match _g3 with
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1133 = "true" in (
-                tempResult5 := __assign_1133;
-                __assign_1133
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber36 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1135 = expected in let __nullable_1136 = HxArray.length args in if __nullable_1135 == HxRuntime.hx_null then false else Obj.obj __nullable_1135 > __nullable_1136) then let __assign_1137 = HxInt.sub (let __nullable_int_1138 = expected in if __nullable_int_1138 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1138) (HxArray.length args) in (
-                  tempNumber36 := __assign_1137;
-                  __assign_1137
-                ) else let __assign_1139 = 0 in (
-                  tempNumber36 := __assign_1139;
-                  __assign_1139
-                ) else let __assign_1140 = 0 in (
-                  tempNumber36 := __assign_1140;
-                  __assign_1140
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1141 = expected in let __nullable_1142 = HxArray.length args in if __nullable_1141 == HxRuntime.hx_null then false else Obj.obj __nullable_1141 > __nullable_1142) then let __assign_1143 = HxInt.sub (let __nullable_int_1144 = expected in if __nullable_int_1144 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1144) (HxArray.length args) in (
-                  tempNumber36 := __assign_1143;
-                  __assign_1143
-                ) else let __assign_1145 = 0 in (
-                  tempNumber36 := __assign_1145;
-                  __assign_1145
-                ) else let __assign_1146 = 0 in (
-                  tempNumber36 := __assign_1146;
-                  __assign_1146
-                ) else let __assign_1147 = 0 in (
-                  tempNumber36 := __assign_1147;
-                  __assign_1147
-                )
-                | _ -> let __assign_1134 = 0 in (
-                  tempNumber36 := __assign_1134;
-                  __assign_1134
-                ));
-              let missing = !tempNumber36 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1148 = !_g5 in let __new_1149 = HxInt.add __old_1148 1 in (
-                    ignore (_g5 := __new_1149);
-                    __old_1148
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1150 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1150;
-                  __assign_1150
-                ) else let tempArray36 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1151 = HxArray.create () in __arr_1151 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1152 = !_g6 in let __new_1153 = HxInt.add __old_1152 1 in (
-                        ignore (_g6 := __new_1153);
-                        __new_1153
+                  ) else let callee = _g in let args = _g1 in let tempNumber33 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1120 = expected in let __nullable_1121 = HxArray.length args in if __nullable_1120 == HxRuntime.hx_null then false else Obj.obj __nullable_1120 > __nullable_1121) then let __assign_1122 = HxInt.sub (let __nullable_int_1123 = expected in if __nullable_int_1123 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1123) (HxArray.length args) in (
+                        tempNumber33 := __assign_1122;
+                        __assign_1122
+                      ) else let __assign_1124 = 0 in (
+                        tempNumber33 := __assign_1124;
+                        __assign_1124
+                      ) else let __assign_1125 = 0 in (
+                        tempNumber33 := __assign_1125;
+                        __assign_1125
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1126 = expected in let __nullable_1127 = HxArray.length args in if __nullable_1126 == HxRuntime.hx_null then false else Obj.obj __nullable_1126 > __nullable_1127) then let __assign_1128 = HxInt.sub (let __nullable_int_1129 = expected in if __nullable_int_1129 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1129) (HxArray.length args) in (
+                        tempNumber33 := __assign_1128;
+                        __assign_1128
+                      ) else let __assign_1130 = 0 in (
+                        tempNumber33 := __assign_1130;
+                        __assign_1130
+                      ) else let __assign_1131 = 0 in (
+                        tempNumber33 := __assign_1131;
+                        __assign_1131
+                      ) else let __assign_1132 = 0 in (
+                        tempNumber33 := __assign_1132;
+                        __assign_1132
+                      )
+                      | _ -> let __assign_1119 = 0 in (
+                        tempNumber33 := __assign_1119;
+                        __assign_1119
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1154 = _g5 in (
-                      tempArray36 := __assign_1154;
-                      __assign_1154
+                    let missing = !tempNumber33 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1133 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1133;
+                      __assign_1133
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1134 = !_g5 in let __new_1135 = HxInt.add __old_1134 1 in (
+                          ignore (_g5 := __new_1135);
+                          __old_1134
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1136 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1136;
+                        __assign_1136
+                      ) else let tempArray33 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1137 = HxArray.create () in __arr_1137 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1138 = !_g6 in let __new_1139 = HxInt.add __old_1138 1 in (
+                              ignore (_g6 := __new_1139);
+                              __new_1139
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1140 = _g5 in (
+                            tempArray33 := __assign_1140;
+                            __assign_1140
+                          )
+                        ));
+                        let __assign_1141 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray33) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1141;
+                          __assign_1141
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1155 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray36) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1155;
-                    __assign_1155
                   )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1156 = "false" in (
-                tempResult5 := __assign_1156;
-                __assign_1156
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber37 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1158 = expected in let __nullable_1159 = HxArray.length args in if __nullable_1158 == HxRuntime.hx_null then false else Obj.obj __nullable_1158 > __nullable_1159) then let __assign_1160 = HxInt.sub (let __nullable_int_1161 = expected in if __nullable_int_1161 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1161) (HxArray.length args) in (
-                  tempNumber37 := __assign_1160;
-                  __assign_1160
-                ) else let __assign_1162 = 0 in (
-                  tempNumber37 := __assign_1162;
-                  __assign_1162
-                ) else let __assign_1163 = 0 in (
-                  tempNumber37 := __assign_1163;
-                  __assign_1163
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1164 = expected in let __nullable_1165 = HxArray.length args in if __nullable_1164 == HxRuntime.hx_null then false else Obj.obj __nullable_1164 > __nullable_1165) then let __assign_1166 = HxInt.sub (let __nullable_int_1167 = expected in if __nullable_int_1167 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1167) (HxArray.length args) in (
-                  tempNumber37 := __assign_1166;
-                  __assign_1166
-                ) else let __assign_1168 = 0 in (
-                  tempNumber37 := __assign_1168;
-                  __assign_1168
-                ) else let __assign_1169 = 0 in (
-                  tempNumber37 := __assign_1169;
-                  __assign_1169
-                ) else let __assign_1170 = 0 in (
-                  tempNumber37 := __assign_1170;
-                  __assign_1170
-                )
-                | _ -> let __assign_1157 = 0 in (
-                  tempNumber37 := __assign_1157;
-                  __assign_1157
-                ));
-              let missing = !tempNumber37 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1171 = !_g5 in let __new_1172 = HxInt.add __old_1171 1 in (
-                    ignore (_g5 := __new_1172);
-                    __old_1171
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1173 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1173;
-                  __assign_1173
-                ) else let tempArray37 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1174 = HxArray.create () in __arr_1174 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1175 = !_g6 in let __new_1176 = HxInt.add __old_1175 1 in (
-                        ignore (_g6 := __new_1176);
-                        __new_1176
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1177 = _g5 in (
-                      tempArray37 := __assign_1177;
-                      __assign_1177
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1142 = "()" in (
+                      tempResult5 := __assign_1142;
+                      __assign_1142
                     )
-                  ));
-                  let __assign_1178 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray37) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1178;
-                    __assign_1178
-                  )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1179 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1179;
-                __assign_1179
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber38 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1181 = expected in let __nullable_1182 = HxArray.length args in if __nullable_1181 == HxRuntime.hx_null then false else Obj.obj __nullable_1181 > __nullable_1182) then let __assign_1183 = HxInt.sub (let __nullable_int_1184 = expected in if __nullable_int_1184 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1184) (HxArray.length args) in (
-                  tempNumber38 := __assign_1183;
-                  __assign_1183
-                ) else let __assign_1185 = 0 in (
-                  tempNumber38 := __assign_1185;
-                  __assign_1185
-                ) else let __assign_1186 = 0 in (
-                  tempNumber38 := __assign_1186;
-                  __assign_1186
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1187 = expected in let __nullable_1188 = HxArray.length args in if __nullable_1187 == HxRuntime.hx_null then false else Obj.obj __nullable_1187 > __nullable_1188) then let __assign_1189 = HxInt.sub (let __nullable_int_1190 = expected in if __nullable_int_1190 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1190) (HxArray.length args) in (
-                  tempNumber38 := __assign_1189;
-                  __assign_1189
-                ) else let __assign_1191 = 0 in (
-                  tempNumber38 := __assign_1191;
-                  __assign_1191
-                ) else let __assign_1192 = 0 in (
-                  tempNumber38 := __assign_1192;
-                  __assign_1192
-                ) else let __assign_1193 = 0 in (
-                  tempNumber38 := __assign_1193;
-                  __assign_1193
-                )
-                | _ -> let __assign_1180 = 0 in (
-                  tempNumber38 := __assign_1180;
-                  __assign_1180
-                ));
-              let missing = !tempNumber38 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1194 = !_g5 in let __new_1195 = HxInt.add __old_1194 1 in (
-                    ignore (_g5 := __new_1195);
-                    __old_1194
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1196 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1196;
-                  __assign_1196
-                ) else let tempArray38 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1197 = HxArray.create () in __arr_1197 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1198 = !_g6 in let __new_1199 = HxInt.add __old_1198 1 in (
-                        ignore (_g6 := __new_1199);
-                        __new_1199
+                  ) else let callee = _g in let args = _g1 in let tempNumber34 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1144 = expected in let __nullable_1145 = HxArray.length args in if __nullable_1144 == HxRuntime.hx_null then false else Obj.obj __nullable_1144 > __nullable_1145) then let __assign_1146 = HxInt.sub (let __nullable_int_1147 = expected in if __nullable_int_1147 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1147) (HxArray.length args) in (
+                        tempNumber34 := __assign_1146;
+                        __assign_1146
+                      ) else let __assign_1148 = 0 in (
+                        tempNumber34 := __assign_1148;
+                        __assign_1148
+                      ) else let __assign_1149 = 0 in (
+                        tempNumber34 := __assign_1149;
+                        __assign_1149
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1150 = expected in let __nullable_1151 = HxArray.length args in if __nullable_1150 == HxRuntime.hx_null then false else Obj.obj __nullable_1150 > __nullable_1151) then let __assign_1152 = HxInt.sub (let __nullable_int_1153 = expected in if __nullable_int_1153 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1153) (HxArray.length args) in (
+                        tempNumber34 := __assign_1152;
+                        __assign_1152
+                      ) else let __assign_1154 = 0 in (
+                        tempNumber34 := __assign_1154;
+                        __assign_1154
+                      ) else let __assign_1155 = 0 in (
+                        tempNumber34 := __assign_1155;
+                        __assign_1155
+                      ) else let __assign_1156 = 0 in (
+                        tempNumber34 := __assign_1156;
+                        __assign_1156
+                      )
+                      | _ -> let __assign_1143 = 0 in (
+                        tempNumber34 := __assign_1143;
+                        __assign_1143
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1200 = _g5 in (
-                      tempArray38 := __assign_1200;
-                      __assign_1200
+                    let missing = !tempNumber34 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1157 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1157;
+                      __assign_1157
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1158 = !_g5 in let __new_1159 = HxInt.add __old_1158 1 in (
+                          ignore (_g5 := __new_1159);
+                          __old_1158
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1160 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1160;
+                        __assign_1160
+                      ) else let tempArray34 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1161 = HxArray.create () in __arr_1161 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1162 = !_g6 in let __new_1163 = HxInt.add __old_1162 1 in (
+                              ignore (_g6 := __new_1163);
+                              __new_1163
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1164 = _g5 in (
+                            tempArray34 := __assign_1164;
+                            __assign_1164
+                          )
+                        ));
+                        let __assign_1165 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray34) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1165;
+                          __assign_1165
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1201 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray38) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1201;
-                    __assign_1201
                   )
-                )
-              )
-            )
-            | "replace" -> if HxArray.length _g1 = 3 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in let _g7 = HxArray.get _g1 2 in (
-              ignore _g5;
-              ignore _g6;
-              ignore _g7;
-              let __assign_1202 = escapeOcamlString "" in (
-                tempResult5 := __assign_1202;
-                __assign_1202
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber39 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1204 = expected in let __nullable_1205 = HxArray.length args in if __nullable_1204 == HxRuntime.hx_null then false else Obj.obj __nullable_1204 > __nullable_1205) then let __assign_1206 = HxInt.sub (let __nullable_int_1207 = expected in if __nullable_int_1207 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1207) (HxArray.length args) in (
-                  tempNumber39 := __assign_1206;
-                  __assign_1206
-                ) else let __assign_1208 = 0 in (
-                  tempNumber39 := __assign_1208;
-                  __assign_1208
-                ) else let __assign_1209 = 0 in (
-                  tempNumber39 := __assign_1209;
-                  __assign_1209
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1210 = expected in let __nullable_1211 = HxArray.length args in if __nullable_1210 == HxRuntime.hx_null then false else Obj.obj __nullable_1210 > __nullable_1211) then let __assign_1212 = HxInt.sub (let __nullable_int_1213 = expected in if __nullable_int_1213 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1213) (HxArray.length args) in (
-                  tempNumber39 := __assign_1212;
-                  __assign_1212
-                ) else let __assign_1214 = 0 in (
-                  tempNumber39 := __assign_1214;
-                  __assign_1214
-                ) else let __assign_1215 = 0 in (
-                  tempNumber39 := __assign_1215;
-                  __assign_1215
-                ) else let __assign_1216 = 0 in (
-                  tempNumber39 := __assign_1216;
-                  __assign_1216
-                )
-                | _ -> let __assign_1203 = 0 in (
-                  tempNumber39 := __assign_1203;
-                  __assign_1203
-                ));
-              let missing = !tempNumber39 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1217 = !_g5 in let __new_1218 = HxInt.add __old_1217 1 in (
-                    ignore (_g5 := __new_1218);
-                    __old_1217
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1219 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1219;
-                  __assign_1219
-                ) else let tempArray39 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1220 = HxArray.create () in __arr_1220 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1221 = !_g6 in let __new_1222 = HxInt.add __old_1221 1 in (
-                        ignore (_g6 := __new_1222);
-                        __new_1222
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber35 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1000 = expected in let __nullable_1001 = HxArray.length args in if __nullable_1000 == HxRuntime.hx_null then false else Obj.obj __nullable_1000 > __nullable_1001) then let __assign_1002 = HxInt.sub (let __nullable_int_1003 = expected in if __nullable_int_1003 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1003) (HxArray.length args) in (
+                        tempNumber35 := __assign_1002;
+                        __assign_1002
+                      ) else let __assign_1004 = 0 in (
+                        tempNumber35 := __assign_1004;
+                        __assign_1004
+                      ) else let __assign_1005 = 0 in (
+                        tempNumber35 := __assign_1005;
+                        __assign_1005
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1006 = expected in let __nullable_1007 = HxArray.length args in if __nullable_1006 == HxRuntime.hx_null then false else Obj.obj __nullable_1006 > __nullable_1007) then let __assign_1008 = HxInt.sub (let __nullable_int_1009 = expected in if __nullable_int_1009 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1009) (HxArray.length args) in (
+                        tempNumber35 := __assign_1008;
+                        __assign_1008
+                      ) else let __assign_1010 = 0 in (
+                        tempNumber35 := __assign_1010;
+                        __assign_1010
+                      ) else let __assign_1011 = 0 in (
+                        tempNumber35 := __assign_1011;
+                        __assign_1011
+                      ) else let __assign_1012 = 0 in (
+                        tempNumber35 := __assign_1012;
+                        __assign_1012
+                      )
+                      | _ -> let __assign_999 = 0 in (
+                        tempNumber35 := __assign_999;
+                        __assign_999
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1223 = _g5 in (
-                      tempArray39 := __assign_1223;
-                      __assign_1223
+                    let missing = !tempNumber35 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1013 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1013;
+                      __assign_1013
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1014 = !_g5 in let __new_1015 = HxInt.add __old_1014 1 in (
+                          ignore (_g5 := __new_1015);
+                          __old_1014
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1016 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1016;
+                        __assign_1016
+                      ) else let tempArray35 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1017 = HxArray.create () in __arr_1017 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1018 = !_g6 in let __new_1019 = HxInt.add __old_1018 1 in (
+                              ignore (_g6 := __new_1019);
+                              __new_1019
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1020 = _g5 in (
+                            tempArray35 := __assign_1020;
+                            __assign_1020
+                          )
+                        ));
+                        let __assign_1021 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray35) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1021;
+                          __assign_1021
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1224 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray39) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1224;
-                    __assign_1224
-                  )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1225 = "()" in (
-                tempResult5 := __assign_1225;
-                __assign_1225
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber40 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1227 = expected in let __nullable_1228 = HxArray.length args in if __nullable_1227 == HxRuntime.hx_null then false else Obj.obj __nullable_1227 > __nullable_1228) then let __assign_1229 = HxInt.sub (let __nullable_int_1230 = expected in if __nullable_int_1230 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1230) (HxArray.length args) in (
-                  tempNumber40 := __assign_1229;
-                  __assign_1229
-                ) else let __assign_1231 = 0 in (
-                  tempNumber40 := __assign_1231;
-                  __assign_1231
-                ) else let __assign_1232 = 0 in (
-                  tempNumber40 := __assign_1232;
-                  __assign_1232
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1233 = expected in let __nullable_1234 = HxArray.length args in if __nullable_1233 == HxRuntime.hx_null then false else Obj.obj __nullable_1233 > __nullable_1234) then let __assign_1235 = HxInt.sub (let __nullable_int_1236 = expected in if __nullable_int_1236 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1236) (HxArray.length args) in (
-                  tempNumber40 := __assign_1235;
-                  __assign_1235
-                ) else let __assign_1237 = 0 in (
-                  tempNumber40 := __assign_1237;
-                  __assign_1237
-                ) else let __assign_1238 = 0 in (
-                  tempNumber40 := __assign_1238;
-                  __assign_1238
-                ) else let __assign_1239 = 0 in (
-                  tempNumber40 := __assign_1239;
-                  __assign_1239
-                )
-                | _ -> let __assign_1226 = 0 in (
-                  tempNumber40 := __assign_1226;
-                  __assign_1226
-                ));
-              let missing = !tempNumber40 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1240 = !_g5 in let __new_1241 = HxInt.add __old_1240 1 in (
-                    ignore (_g5 := __new_1241);
-                    __old_1240
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1242 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1242;
-                  __assign_1242
-                ) else let tempArray40 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1243 = HxArray.create () in __arr_1243 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1244 = !_g6 in let __new_1245 = HxInt.add __old_1244 1 in (
-                        ignore (_g6 := __new_1245);
-                        __new_1245
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1246 = _g5 in (
-                      tempArray40 := __assign_1246;
-                      __assign_1246
+                  ))
+                | "StringTools" -> (match _g3 with
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1189 = "true" in (
+                      tempResult5 := __assign_1189;
+                      __assign_1189
                     )
-                  ));
-                  let __assign_1247 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray40) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1247;
-                    __assign_1247
-                  )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1248 = "()" in (
-                tempResult5 := __assign_1248;
-                __assign_1248
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber41 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1250 = expected in let __nullable_1251 = HxArray.length args in if __nullable_1250 == HxRuntime.hx_null then false else Obj.obj __nullable_1250 > __nullable_1251) then let __assign_1252 = HxInt.sub (let __nullable_int_1253 = expected in if __nullable_int_1253 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1253) (HxArray.length args) in (
-                  tempNumber41 := __assign_1252;
-                  __assign_1252
-                ) else let __assign_1254 = 0 in (
-                  tempNumber41 := __assign_1254;
-                  __assign_1254
-                ) else let __assign_1255 = 0 in (
-                  tempNumber41 := __assign_1255;
-                  __assign_1255
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1256 = expected in let __nullable_1257 = HxArray.length args in if __nullable_1256 == HxRuntime.hx_null then false else Obj.obj __nullable_1256 > __nullable_1257) then let __assign_1258 = HxInt.sub (let __nullable_int_1259 = expected in if __nullable_int_1259 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1259) (HxArray.length args) in (
-                  tempNumber41 := __assign_1258;
-                  __assign_1258
-                ) else let __assign_1260 = 0 in (
-                  tempNumber41 := __assign_1260;
-                  __assign_1260
-                ) else let __assign_1261 = 0 in (
-                  tempNumber41 := __assign_1261;
-                  __assign_1261
-                ) else let __assign_1262 = 0 in (
-                  tempNumber41 := __assign_1262;
-                  __assign_1262
-                )
-                | _ -> let __assign_1249 = 0 in (
-                  tempNumber41 := __assign_1249;
-                  __assign_1249
-                ));
-              let missing = !tempNumber41 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1263 = !_g5 in let __new_1264 = HxInt.add __old_1263 1 in (
-                    ignore (_g5 := __new_1264);
-                    __old_1263
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1265 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1265;
-                  __assign_1265
-                ) else let tempArray41 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1266 = HxArray.create () in __arr_1266 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1267 = !_g6 in let __new_1268 = HxInt.add __old_1267 1 in (
-                        ignore (_g6 := __new_1268);
-                        __new_1268
+                  ) else let callee = _g in let args = _g1 in let tempNumber36 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1191 = expected in let __nullable_1192 = HxArray.length args in if __nullable_1191 == HxRuntime.hx_null then false else Obj.obj __nullable_1191 > __nullable_1192) then let __assign_1193 = HxInt.sub (let __nullable_int_1194 = expected in if __nullable_int_1194 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1194) (HxArray.length args) in (
+                        tempNumber36 := __assign_1193;
+                        __assign_1193
+                      ) else let __assign_1195 = 0 in (
+                        tempNumber36 := __assign_1195;
+                        __assign_1195
+                      ) else let __assign_1196 = 0 in (
+                        tempNumber36 := __assign_1196;
+                        __assign_1196
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1197 = expected in let __nullable_1198 = HxArray.length args in if __nullable_1197 == HxRuntime.hx_null then false else Obj.obj __nullable_1197 > __nullable_1198) then let __assign_1199 = HxInt.sub (let __nullable_int_1200 = expected in if __nullable_int_1200 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1200) (HxArray.length args) in (
+                        tempNumber36 := __assign_1199;
+                        __assign_1199
+                      ) else let __assign_1201 = 0 in (
+                        tempNumber36 := __assign_1201;
+                        __assign_1201
+                      ) else let __assign_1202 = 0 in (
+                        tempNumber36 := __assign_1202;
+                        __assign_1202
+                      ) else let __assign_1203 = 0 in (
+                        tempNumber36 := __assign_1203;
+                        __assign_1203
+                      )
+                      | _ -> let __assign_1190 = 0 in (
+                        tempNumber36 := __assign_1190;
+                        __assign_1190
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1269 = _g5 in (
-                      tempArray41 := __assign_1269;
-                      __assign_1269
+                    let missing = !tempNumber36 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1204 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1204;
+                      __assign_1204
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1205 = !_g5 in let __new_1206 = HxInt.add __old_1205 1 in (
+                          ignore (_g5 := __new_1206);
+                          __old_1205
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1207 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1207;
+                        __assign_1207
+                      ) else let tempArray36 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1208 = HxArray.create () in __arr_1208 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1209 = !_g6 in let __new_1210 = HxInt.add __old_1209 1 in (
+                              ignore (_g6 := __new_1210);
+                              __new_1210
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1211 = _g5 in (
+                            tempArray36 := __assign_1211;
+                            __assign_1211
+                          )
+                        ));
+                        let __assign_1212 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray36) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1212;
+                          __assign_1212
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1270 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray41) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1270;
-                    __assign_1270
                   )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber42 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1112 = expected in let __nullable_1113 = HxArray.length args in if __nullable_1112 == HxRuntime.hx_null then false else Obj.obj __nullable_1112 > __nullable_1113) then let __assign_1114 = HxInt.sub (let __nullable_int_1115 = expected in if __nullable_int_1115 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1115) (HxArray.length args) in (
-                  tempNumber42 := __assign_1114;
-                  __assign_1114
-                ) else let __assign_1116 = 0 in (
-                  tempNumber42 := __assign_1116;
-                  __assign_1116
-                ) else let __assign_1117 = 0 in (
-                  tempNumber42 := __assign_1117;
-                  __assign_1117
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1118 = expected in let __nullable_1119 = HxArray.length args in if __nullable_1118 == HxRuntime.hx_null then false else Obj.obj __nullable_1118 > __nullable_1119) then let __assign_1120 = HxInt.sub (let __nullable_int_1121 = expected in if __nullable_int_1121 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1121) (HxArray.length args) in (
-                  tempNumber42 := __assign_1120;
-                  __assign_1120
-                ) else let __assign_1122 = 0 in (
-                  tempNumber42 := __assign_1122;
-                  __assign_1122
-                ) else let __assign_1123 = 0 in (
-                  tempNumber42 := __assign_1123;
-                  __assign_1123
-                ) else let __assign_1124 = 0 in (
-                  tempNumber42 := __assign_1124;
-                  __assign_1124
-                )
-                | _ -> let __assign_1111 = 0 in (
-                  tempNumber42 := __assign_1111;
-                  __assign_1111
-                ));
-              let missing = !tempNumber42 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1125 = !_g5 in let __new_1126 = HxInt.add __old_1125 1 in (
-                    ignore (_g5 := __new_1126);
-                    __old_1125
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1127 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1127;
-                  __assign_1127
-                ) else let tempArray42 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1128 = HxArray.create () in __arr_1128 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1129 = !_g6 in let __new_1130 = HxInt.add __old_1129 1 in (
-                        ignore (_g6 := __new_1130);
-                        __new_1130
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1131 = _g5 in (
-                      tempArray42 := __assign_1131;
-                      __assign_1131
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1213 = "false" in (
+                      tempResult5 := __assign_1213;
+                      __assign_1213
                     )
-                  ));
-                  let __assign_1132 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray42) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1132;
-                    __assign_1132
-                  )
-                )
-              )
-            ))
-          | "Sys" -> (match _g3 with
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1293 = "true" in (
-                tempResult5 := __assign_1293;
-                __assign_1293
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber43 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1295 = expected in let __nullable_1296 = HxArray.length args in if __nullable_1295 == HxRuntime.hx_null then false else Obj.obj __nullable_1295 > __nullable_1296) then let __assign_1297 = HxInt.sub (let __nullable_int_1298 = expected in if __nullable_int_1298 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1298) (HxArray.length args) in (
-                  tempNumber43 := __assign_1297;
-                  __assign_1297
-                ) else let __assign_1299 = 0 in (
-                  tempNumber43 := __assign_1299;
-                  __assign_1299
-                ) else let __assign_1300 = 0 in (
-                  tempNumber43 := __assign_1300;
-                  __assign_1300
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1301 = expected in let __nullable_1302 = HxArray.length args in if __nullable_1301 == HxRuntime.hx_null then false else Obj.obj __nullable_1301 > __nullable_1302) then let __assign_1303 = HxInt.sub (let __nullable_int_1304 = expected in if __nullable_int_1304 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1304) (HxArray.length args) in (
-                  tempNumber43 := __assign_1303;
-                  __assign_1303
-                ) else let __assign_1305 = 0 in (
-                  tempNumber43 := __assign_1305;
-                  __assign_1305
-                ) else let __assign_1306 = 0 in (
-                  tempNumber43 := __assign_1306;
-                  __assign_1306
-                ) else let __assign_1307 = 0 in (
-                  tempNumber43 := __assign_1307;
-                  __assign_1307
-                )
-                | _ -> let __assign_1294 = 0 in (
-                  tempNumber43 := __assign_1294;
-                  __assign_1294
-                ));
-              let missing = !tempNumber43 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1308 = !_g5 in let __new_1309 = HxInt.add __old_1308 1 in (
-                    ignore (_g5 := __new_1309);
-                    __old_1308
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1310 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1310;
-                  __assign_1310
-                ) else let tempArray43 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1311 = HxArray.create () in __arr_1311 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1312 = !_g6 in let __new_1313 = HxInt.add __old_1312 1 in (
-                        ignore (_g6 := __new_1313);
-                        __new_1313
+                  ) else let callee = _g in let args = _g1 in let tempNumber37 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1215 = expected in let __nullable_1216 = HxArray.length args in if __nullable_1215 == HxRuntime.hx_null then false else Obj.obj __nullable_1215 > __nullable_1216) then let __assign_1217 = HxInt.sub (let __nullable_int_1218 = expected in if __nullable_int_1218 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1218) (HxArray.length args) in (
+                        tempNumber37 := __assign_1217;
+                        __assign_1217
+                      ) else let __assign_1219 = 0 in (
+                        tempNumber37 := __assign_1219;
+                        __assign_1219
+                      ) else let __assign_1220 = 0 in (
+                        tempNumber37 := __assign_1220;
+                        __assign_1220
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1221 = expected in let __nullable_1222 = HxArray.length args in if __nullable_1221 == HxRuntime.hx_null then false else Obj.obj __nullable_1221 > __nullable_1222) then let __assign_1223 = HxInt.sub (let __nullable_int_1224 = expected in if __nullable_int_1224 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1224) (HxArray.length args) in (
+                        tempNumber37 := __assign_1223;
+                        __assign_1223
+                      ) else let __assign_1225 = 0 in (
+                        tempNumber37 := __assign_1225;
+                        __assign_1225
+                      ) else let __assign_1226 = 0 in (
+                        tempNumber37 := __assign_1226;
+                        __assign_1226
+                      ) else let __assign_1227 = 0 in (
+                        tempNumber37 := __assign_1227;
+                        __assign_1227
+                      )
+                      | _ -> let __assign_1214 = 0 in (
+                        tempNumber37 := __assign_1214;
+                        __assign_1214
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1314 = _g5 in (
-                      tempArray43 := __assign_1314;
-                      __assign_1314
+                    let missing = !tempNumber37 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1228 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1228;
+                      __assign_1228
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1229 = !_g5 in let __new_1230 = HxInt.add __old_1229 1 in (
+                          ignore (_g5 := __new_1230);
+                          __old_1229
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1231 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1231;
+                        __assign_1231
+                      ) else let tempArray37 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1232 = HxArray.create () in __arr_1232 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1233 = !_g6 in let __new_1234 = HxInt.add __old_1233 1 in (
+                              ignore (_g6 := __new_1234);
+                              __new_1234
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1235 = _g5 in (
+                            tempArray37 := __assign_1235;
+                            __assign_1235
+                          )
+                        ));
+                        let __assign_1236 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray37) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1236;
+                          __assign_1236
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1315 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray43) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1315;
-                    __assign_1315
                   )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1316 = "false" in (
-                tempResult5 := __assign_1316;
-                __assign_1316
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber44 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1318 = expected in let __nullable_1319 = HxArray.length args in if __nullable_1318 == HxRuntime.hx_null then false else Obj.obj __nullable_1318 > __nullable_1319) then let __assign_1320 = HxInt.sub (let __nullable_int_1321 = expected in if __nullable_int_1321 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1321) (HxArray.length args) in (
-                  tempNumber44 := __assign_1320;
-                  __assign_1320
-                ) else let __assign_1322 = 0 in (
-                  tempNumber44 := __assign_1322;
-                  __assign_1322
-                ) else let __assign_1323 = 0 in (
-                  tempNumber44 := __assign_1323;
-                  __assign_1323
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1324 = expected in let __nullable_1325 = HxArray.length args in if __nullable_1324 == HxRuntime.hx_null then false else Obj.obj __nullable_1324 > __nullable_1325) then let __assign_1326 = HxInt.sub (let __nullable_int_1327 = expected in if __nullable_int_1327 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1327) (HxArray.length args) in (
-                  tempNumber44 := __assign_1326;
-                  __assign_1326
-                ) else let __assign_1328 = 0 in (
-                  tempNumber44 := __assign_1328;
-                  __assign_1328
-                ) else let __assign_1329 = 0 in (
-                  tempNumber44 := __assign_1329;
-                  __assign_1329
-                ) else let __assign_1330 = 0 in (
-                  tempNumber44 := __assign_1330;
-                  __assign_1330
-                )
-                | _ -> let __assign_1317 = 0 in (
-                  tempNumber44 := __assign_1317;
-                  __assign_1317
-                ));
-              let missing = !tempNumber44 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1331 = !_g5 in let __new_1332 = HxInt.add __old_1331 1 in (
-                    ignore (_g5 := __new_1332);
-                    __old_1331
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1333 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1333;
-                  __assign_1333
-                ) else let tempArray44 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1334 = HxArray.create () in __arr_1334 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1335 = !_g6 in let __new_1336 = HxInt.add __old_1335 1 in (
-                        ignore (_g6 := __new_1336);
-                        __new_1336
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1337 = _g5 in (
-                      tempArray44 := __assign_1337;
-                      __assign_1337
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1237 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1237;
+                      __assign_1237
                     )
-                  ));
-                  let __assign_1338 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray44) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1338;
-                    __assign_1338
-                  )
-                )
-              )
-            )
-            | "print" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_1339 = ("print_string (" ^ HxString.toStdString (exprToOcamlString arg tyByIdent)) ^ ")" in (
-              tempResult5 := __assign_1339;
-              __assign_1339
-            ) else let callee = _g in let args = _g1 in let tempNumber45 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1341 = expected in let __nullable_1342 = HxArray.length args in if __nullable_1341 == HxRuntime.hx_null then false else Obj.obj __nullable_1341 > __nullable_1342) then let __assign_1343 = HxInt.sub (let __nullable_int_1344 = expected in if __nullable_int_1344 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1344) (HxArray.length args) in (
-                  tempNumber45 := __assign_1343;
-                  __assign_1343
-                ) else let __assign_1345 = 0 in (
-                  tempNumber45 := __assign_1345;
-                  __assign_1345
-                ) else let __assign_1346 = 0 in (
-                  tempNumber45 := __assign_1346;
-                  __assign_1346
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1347 = expected in let __nullable_1348 = HxArray.length args in if __nullable_1347 == HxRuntime.hx_null then false else Obj.obj __nullable_1347 > __nullable_1348) then let __assign_1349 = HxInt.sub (let __nullable_int_1350 = expected in if __nullable_int_1350 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1350) (HxArray.length args) in (
-                  tempNumber45 := __assign_1349;
-                  __assign_1349
-                ) else let __assign_1351 = 0 in (
-                  tempNumber45 := __assign_1351;
-                  __assign_1351
-                ) else let __assign_1352 = 0 in (
-                  tempNumber45 := __assign_1352;
-                  __assign_1352
-                ) else let __assign_1353 = 0 in (
-                  tempNumber45 := __assign_1353;
-                  __assign_1353
-                )
-                | _ -> let __assign_1340 = 0 in (
-                  tempNumber45 := __assign_1340;
-                  __assign_1340
-                ));
-              let missing = !tempNumber45 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1354 = !_g5 in let __new_1355 = HxInt.add __old_1354 1 in (
-                    ignore (_g5 := __new_1355);
-                    __old_1354
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1356 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1356;
-                  __assign_1356
-                ) else let tempArray45 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1357 = HxArray.create () in __arr_1357 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1358 = !_g6 in let __new_1359 = HxInt.add __old_1358 1 in (
-                        ignore (_g6 := __new_1359);
-                        __new_1359
+                  ) else let callee = _g in let args = _g1 in let tempNumber38 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1239 = expected in let __nullable_1240 = HxArray.length args in if __nullable_1239 == HxRuntime.hx_null then false else Obj.obj __nullable_1239 > __nullable_1240) then let __assign_1241 = HxInt.sub (let __nullable_int_1242 = expected in if __nullable_int_1242 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1242) (HxArray.length args) in (
+                        tempNumber38 := __assign_1241;
+                        __assign_1241
+                      ) else let __assign_1243 = 0 in (
+                        tempNumber38 := __assign_1243;
+                        __assign_1243
+                      ) else let __assign_1244 = 0 in (
+                        tempNumber38 := __assign_1244;
+                        __assign_1244
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1245 = expected in let __nullable_1246 = HxArray.length args in if __nullable_1245 == HxRuntime.hx_null then false else Obj.obj __nullable_1245 > __nullable_1246) then let __assign_1247 = HxInt.sub (let __nullable_int_1248 = expected in if __nullable_int_1248 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1248) (HxArray.length args) in (
+                        tempNumber38 := __assign_1247;
+                        __assign_1247
+                      ) else let __assign_1249 = 0 in (
+                        tempNumber38 := __assign_1249;
+                        __assign_1249
+                      ) else let __assign_1250 = 0 in (
+                        tempNumber38 := __assign_1250;
+                        __assign_1250
+                      ) else let __assign_1251 = 0 in (
+                        tempNumber38 := __assign_1251;
+                        __assign_1251
+                      )
+                      | _ -> let __assign_1238 = 0 in (
+                        tempNumber38 := __assign_1238;
+                        __assign_1238
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1360 = _g5 in (
-                      tempArray45 := __assign_1360;
-                      __assign_1360
+                    let missing = !tempNumber38 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1252 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1252;
+                      __assign_1252
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1253 = !_g5 in let __new_1254 = HxInt.add __old_1253 1 in (
+                          ignore (_g5 := __new_1254);
+                          __old_1253
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1255 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1255;
+                        __assign_1255
+                      ) else let tempArray38 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1256 = HxArray.create () in __arr_1256 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1257 = !_g6 in let __new_1258 = HxInt.add __old_1257 1 in (
+                              ignore (_g6 := __new_1258);
+                              __new_1258
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1259 = _g5 in (
+                            tempArray38 := __assign_1259;
+                            __assign_1259
+                          )
+                        ));
+                        let __assign_1260 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray38) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1260;
+                          __assign_1260
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1361 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray45) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1361;
-                    __assign_1361
                   )
-                )
-              )
-            )
-            | "println" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_1362 = ("print_endline (" ^ HxString.toStdString (exprToOcamlString arg tyByIdent)) ^ ")" in (
-              tempResult5 := __assign_1362;
-              __assign_1362
-            ) else let callee = _g in let args = _g1 in let tempNumber46 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1364 = expected in let __nullable_1365 = HxArray.length args in if __nullable_1364 == HxRuntime.hx_null then false else Obj.obj __nullable_1364 > __nullable_1365) then let __assign_1366 = HxInt.sub (let __nullable_int_1367 = expected in if __nullable_int_1367 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1367) (HxArray.length args) in (
-                  tempNumber46 := __assign_1366;
-                  __assign_1366
-                ) else let __assign_1368 = 0 in (
-                  tempNumber46 := __assign_1368;
-                  __assign_1368
-                ) else let __assign_1369 = 0 in (
-                  tempNumber46 := __assign_1369;
-                  __assign_1369
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1370 = expected in let __nullable_1371 = HxArray.length args in if __nullable_1370 == HxRuntime.hx_null then false else Obj.obj __nullable_1370 > __nullable_1371) then let __assign_1372 = HxInt.sub (let __nullable_int_1373 = expected in if __nullable_int_1373 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1373) (HxArray.length args) in (
-                  tempNumber46 := __assign_1372;
-                  __assign_1372
-                ) else let __assign_1374 = 0 in (
-                  tempNumber46 := __assign_1374;
-                  __assign_1374
-                ) else let __assign_1375 = 0 in (
-                  tempNumber46 := __assign_1375;
-                  __assign_1375
-                ) else let __assign_1376 = 0 in (
-                  tempNumber46 := __assign_1376;
-                  __assign_1376
-                )
-                | _ -> let __assign_1363 = 0 in (
-                  tempNumber46 := __assign_1363;
-                  __assign_1363
-                ));
-              let missing = !tempNumber46 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1377 = !_g5 in let __new_1378 = HxInt.add __old_1377 1 in (
-                    ignore (_g5 := __new_1378);
-                    __old_1377
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1379 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1379;
-                  __assign_1379
-                ) else let tempArray46 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1380 = HxArray.create () in __arr_1380 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1381 = !_g6 in let __new_1382 = HxInt.add __old_1381 1 in (
-                        ignore (_g6 := __new_1382);
-                        __new_1382
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1383 = _g5 in (
-                      tempArray46 := __assign_1383;
-                      __assign_1383
+                  | "replace" -> if HxArray.length _g1 = 3 then let _g5 = HxArray.get _g1 0 in let _g6 = HxArray.get _g1 1 in let _g7 = HxArray.get _g1 2 in (
+                    ignore _g5;
+                    ignore _g6;
+                    ignore _g7;
+                    let __assign_1261 = escapeOcamlString "" in (
+                      tempResult5 := __assign_1261;
+                      __assign_1261
                     )
-                  ));
-                  let __assign_1384 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray46) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1384;
-                    __assign_1384
-                  )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1385 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1385;
-                __assign_1385
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber47 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1387 = expected in let __nullable_1388 = HxArray.length args in if __nullable_1387 == HxRuntime.hx_null then false else Obj.obj __nullable_1387 > __nullable_1388) then let __assign_1389 = HxInt.sub (let __nullable_int_1390 = expected in if __nullable_int_1390 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1390) (HxArray.length args) in (
-                  tempNumber47 := __assign_1389;
-                  __assign_1389
-                ) else let __assign_1391 = 0 in (
-                  tempNumber47 := __assign_1391;
-                  __assign_1391
-                ) else let __assign_1392 = 0 in (
-                  tempNumber47 := __assign_1392;
-                  __assign_1392
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1393 = expected in let __nullable_1394 = HxArray.length args in if __nullable_1393 == HxRuntime.hx_null then false else Obj.obj __nullable_1393 > __nullable_1394) then let __assign_1395 = HxInt.sub (let __nullable_int_1396 = expected in if __nullable_int_1396 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1396) (HxArray.length args) in (
-                  tempNumber47 := __assign_1395;
-                  __assign_1395
-                ) else let __assign_1397 = 0 in (
-                  tempNumber47 := __assign_1397;
-                  __assign_1397
-                ) else let __assign_1398 = 0 in (
-                  tempNumber47 := __assign_1398;
-                  __assign_1398
-                ) else let __assign_1399 = 0 in (
-                  tempNumber47 := __assign_1399;
-                  __assign_1399
-                )
-                | _ -> let __assign_1386 = 0 in (
-                  tempNumber47 := __assign_1386;
-                  __assign_1386
-                ));
-              let missing = !tempNumber47 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1400 = !_g5 in let __new_1401 = HxInt.add __old_1400 1 in (
-                    ignore (_g5 := __new_1401);
-                    __old_1400
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1402 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1402;
-                  __assign_1402
-                ) else let tempArray47 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1403 = HxArray.create () in __arr_1403 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1404 = !_g6 in let __new_1405 = HxInt.add __old_1404 1 in (
-                        ignore (_g6 := __new_1405);
-                        __new_1405
+                  ) else let callee = _g in let args = _g1 in let tempNumber39 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1263 = expected in let __nullable_1264 = HxArray.length args in if __nullable_1263 == HxRuntime.hx_null then false else Obj.obj __nullable_1263 > __nullable_1264) then let __assign_1265 = HxInt.sub (let __nullable_int_1266 = expected in if __nullable_int_1266 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1266) (HxArray.length args) in (
+                        tempNumber39 := __assign_1265;
+                        __assign_1265
+                      ) else let __assign_1267 = 0 in (
+                        tempNumber39 := __assign_1267;
+                        __assign_1267
+                      ) else let __assign_1268 = 0 in (
+                        tempNumber39 := __assign_1268;
+                        __assign_1268
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1269 = expected in let __nullable_1270 = HxArray.length args in if __nullable_1269 == HxRuntime.hx_null then false else Obj.obj __nullable_1269 > __nullable_1270) then let __assign_1271 = HxInt.sub (let __nullable_int_1272 = expected in if __nullable_int_1272 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1272) (HxArray.length args) in (
+                        tempNumber39 := __assign_1271;
+                        __assign_1271
+                      ) else let __assign_1273 = 0 in (
+                        tempNumber39 := __assign_1273;
+                        __assign_1273
+                      ) else let __assign_1274 = 0 in (
+                        tempNumber39 := __assign_1274;
+                        __assign_1274
+                      ) else let __assign_1275 = 0 in (
+                        tempNumber39 := __assign_1275;
+                        __assign_1275
+                      )
+                      | _ -> let __assign_1262 = 0 in (
+                        tempNumber39 := __assign_1262;
+                        __assign_1262
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1406 = _g5 in (
-                      tempArray47 := __assign_1406;
-                      __assign_1406
+                    let missing = !tempNumber39 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1276 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1276;
+                      __assign_1276
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1277 = !_g5 in let __new_1278 = HxInt.add __old_1277 1 in (
+                          ignore (_g5 := __new_1278);
+                          __old_1277
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1279 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1279;
+                        __assign_1279
+                      ) else let tempArray39 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1280 = HxArray.create () in __arr_1280 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1281 = !_g6 in let __new_1282 = HxInt.add __old_1281 1 in (
+                              ignore (_g6 := __new_1282);
+                              __new_1282
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1283 = _g5 in (
+                            tempArray39 := __assign_1283;
+                            __assign_1283
+                          )
+                        ));
+                        let __assign_1284 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray39) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1284;
+                          __assign_1284
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1407 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray47) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1407;
-                    __assign_1407
                   )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1408 = "()" in (
-                tempResult5 := __assign_1408;
-                __assign_1408
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber48 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1410 = expected in let __nullable_1411 = HxArray.length args in if __nullable_1410 == HxRuntime.hx_null then false else Obj.obj __nullable_1410 > __nullable_1411) then let __assign_1412 = HxInt.sub (let __nullable_int_1413 = expected in if __nullable_int_1413 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1413) (HxArray.length args) in (
-                  tempNumber48 := __assign_1412;
-                  __assign_1412
-                ) else let __assign_1414 = 0 in (
-                  tempNumber48 := __assign_1414;
-                  __assign_1414
-                ) else let __assign_1415 = 0 in (
-                  tempNumber48 := __assign_1415;
-                  __assign_1415
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1416 = expected in let __nullable_1417 = HxArray.length args in if __nullable_1416 == HxRuntime.hx_null then false else Obj.obj __nullable_1416 > __nullable_1417) then let __assign_1418 = HxInt.sub (let __nullable_int_1419 = expected in if __nullable_int_1419 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1419) (HxArray.length args) in (
-                  tempNumber48 := __assign_1418;
-                  __assign_1418
-                ) else let __assign_1420 = 0 in (
-                  tempNumber48 := __assign_1420;
-                  __assign_1420
-                ) else let __assign_1421 = 0 in (
-                  tempNumber48 := __assign_1421;
-                  __assign_1421
-                ) else let __assign_1422 = 0 in (
-                  tempNumber48 := __assign_1422;
-                  __assign_1422
-                )
-                | _ -> let __assign_1409 = 0 in (
-                  tempNumber48 := __assign_1409;
-                  __assign_1409
-                ));
-              let missing = !tempNumber48 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1423 = !_g5 in let __new_1424 = HxInt.add __old_1423 1 in (
-                    ignore (_g5 := __new_1424);
-                    __old_1423
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1425 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1425;
-                  __assign_1425
-                ) else let tempArray48 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1426 = HxArray.create () in __arr_1426 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1427 = !_g6 in let __new_1428 = HxInt.add __old_1427 1 in (
-                        ignore (_g6 := __new_1428);
-                        __new_1428
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1429 = _g5 in (
-                      tempArray48 := __assign_1429;
-                      __assign_1429
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1285 = "()" in (
+                      tempResult5 := __assign_1285;
+                      __assign_1285
                     )
-                  ));
-                  let __assign_1430 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray48) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1430;
-                    __assign_1430
-                  )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1431 = "()" in (
-                tempResult5 := __assign_1431;
-                __assign_1431
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber49 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1433 = expected in let __nullable_1434 = HxArray.length args in if __nullable_1433 == HxRuntime.hx_null then false else Obj.obj __nullable_1433 > __nullable_1434) then let __assign_1435 = HxInt.sub (let __nullable_int_1436 = expected in if __nullable_int_1436 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1436) (HxArray.length args) in (
-                  tempNumber49 := __assign_1435;
-                  __assign_1435
-                ) else let __assign_1437 = 0 in (
-                  tempNumber49 := __assign_1437;
-                  __assign_1437
-                ) else let __assign_1438 = 0 in (
-                  tempNumber49 := __assign_1438;
-                  __assign_1438
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1439 = expected in let __nullable_1440 = HxArray.length args in if __nullable_1439 == HxRuntime.hx_null then false else Obj.obj __nullable_1439 > __nullable_1440) then let __assign_1441 = HxInt.sub (let __nullable_int_1442 = expected in if __nullable_int_1442 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1442) (HxArray.length args) in (
-                  tempNumber49 := __assign_1441;
-                  __assign_1441
-                ) else let __assign_1443 = 0 in (
-                  tempNumber49 := __assign_1443;
-                  __assign_1443
-                ) else let __assign_1444 = 0 in (
-                  tempNumber49 := __assign_1444;
-                  __assign_1444
-                ) else let __assign_1445 = 0 in (
-                  tempNumber49 := __assign_1445;
-                  __assign_1445
-                )
-                | _ -> let __assign_1432 = 0 in (
-                  tempNumber49 := __assign_1432;
-                  __assign_1432
-                ));
-              let missing = !tempNumber49 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1446 = !_g5 in let __new_1447 = HxInt.add __old_1446 1 in (
-                    ignore (_g5 := __new_1447);
-                    __old_1446
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1448 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1448;
-                  __assign_1448
-                ) else let tempArray49 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1449 = HxArray.create () in __arr_1449 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1450 = !_g6 in let __new_1451 = HxInt.add __old_1450 1 in (
-                        ignore (_g6 := __new_1451);
-                        __new_1451
+                  ) else let callee = _g in let args = _g1 in let tempNumber40 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1287 = expected in let __nullable_1288 = HxArray.length args in if __nullable_1287 == HxRuntime.hx_null then false else Obj.obj __nullable_1287 > __nullable_1288) then let __assign_1289 = HxInt.sub (let __nullable_int_1290 = expected in if __nullable_int_1290 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1290) (HxArray.length args) in (
+                        tempNumber40 := __assign_1289;
+                        __assign_1289
+                      ) else let __assign_1291 = 0 in (
+                        tempNumber40 := __assign_1291;
+                        __assign_1291
+                      ) else let __assign_1292 = 0 in (
+                        tempNumber40 := __assign_1292;
+                        __assign_1292
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1293 = expected in let __nullable_1294 = HxArray.length args in if __nullable_1293 == HxRuntime.hx_null then false else Obj.obj __nullable_1293 > __nullable_1294) then let __assign_1295 = HxInt.sub (let __nullable_int_1296 = expected in if __nullable_int_1296 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1296) (HxArray.length args) in (
+                        tempNumber40 := __assign_1295;
+                        __assign_1295
+                      ) else let __assign_1297 = 0 in (
+                        tempNumber40 := __assign_1297;
+                        __assign_1297
+                      ) else let __assign_1298 = 0 in (
+                        tempNumber40 := __assign_1298;
+                        __assign_1298
+                      ) else let __assign_1299 = 0 in (
+                        tempNumber40 := __assign_1299;
+                        __assign_1299
+                      )
+                      | _ -> let __assign_1286 = 0 in (
+                        tempNumber40 := __assign_1286;
+                        __assign_1286
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1452 = _g5 in (
-                      tempArray49 := __assign_1452;
+                    let missing = !tempNumber40 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1300 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1300;
+                      __assign_1300
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1301 = !_g5 in let __new_1302 = HxInt.add __old_1301 1 in (
+                          ignore (_g5 := __new_1302);
+                          __old_1301
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1303 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1303;
+                        __assign_1303
+                      ) else let tempArray40 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1304 = HxArray.create () in __arr_1304 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1305 = !_g6 in let __new_1306 = HxInt.add __old_1305 1 in (
+                              ignore (_g6 := __new_1306);
+                              __new_1306
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1307 = _g5 in (
+                            tempArray40 := __assign_1307;
+                            __assign_1307
+                          )
+                        ));
+                        let __assign_1308 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray40) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1308;
+                          __assign_1308
+                        )
+                      )
+                    )
+                  )
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1309 = "()" in (
+                      tempResult5 := __assign_1309;
+                      __assign_1309
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber41 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1311 = expected in let __nullable_1312 = HxArray.length args in if __nullable_1311 == HxRuntime.hx_null then false else Obj.obj __nullable_1311 > __nullable_1312) then let __assign_1313 = HxInt.sub (let __nullable_int_1314 = expected in if __nullable_int_1314 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1314) (HxArray.length args) in (
+                        tempNumber41 := __assign_1313;
+                        __assign_1313
+                      ) else let __assign_1315 = 0 in (
+                        tempNumber41 := __assign_1315;
+                        __assign_1315
+                      ) else let __assign_1316 = 0 in (
+                        tempNumber41 := __assign_1316;
+                        __assign_1316
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1317 = expected in let __nullable_1318 = HxArray.length args in if __nullable_1317 == HxRuntime.hx_null then false else Obj.obj __nullable_1317 > __nullable_1318) then let __assign_1319 = HxInt.sub (let __nullable_int_1320 = expected in if __nullable_int_1320 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1320) (HxArray.length args) in (
+                        tempNumber41 := __assign_1319;
+                        __assign_1319
+                      ) else let __assign_1321 = 0 in (
+                        tempNumber41 := __assign_1321;
+                        __assign_1321
+                      ) else let __assign_1322 = 0 in (
+                        tempNumber41 := __assign_1322;
+                        __assign_1322
+                      ) else let __assign_1323 = 0 in (
+                        tempNumber41 := __assign_1323;
+                        __assign_1323
+                      )
+                      | _ -> let __assign_1310 = 0 in (
+                        tempNumber41 := __assign_1310;
+                        __assign_1310
+                      ));
+                    let missing = !tempNumber41 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1324 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1324;
+                      __assign_1324
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1325 = !_g5 in let __new_1326 = HxInt.add __old_1325 1 in (
+                          ignore (_g5 := __new_1326);
+                          __old_1325
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1327 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1327;
+                        __assign_1327
+                      ) else let tempArray41 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1328 = HxArray.create () in __arr_1328 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1329 = !_g6 in let __new_1330 = HxInt.add __old_1329 1 in (
+                              ignore (_g6 := __new_1330);
+                              __new_1330
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1331 = _g5 in (
+                            tempArray41 := __assign_1331;
+                            __assign_1331
+                          )
+                        ));
+                        let __assign_1332 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray41) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1332;
+                          __assign_1332
+                        )
+                      )
+                    )
+                  )
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber42 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1167 = expected in let __nullable_1168 = HxArray.length args in if __nullable_1167 == HxRuntime.hx_null then false else Obj.obj __nullable_1167 > __nullable_1168) then let __assign_1169 = HxInt.sub (let __nullable_int_1170 = expected in if __nullable_int_1170 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1170) (HxArray.length args) in (
+                        tempNumber42 := __assign_1169;
+                        __assign_1169
+                      ) else let __assign_1171 = 0 in (
+                        tempNumber42 := __assign_1171;
+                        __assign_1171
+                      ) else let __assign_1172 = 0 in (
+                        tempNumber42 := __assign_1172;
+                        __assign_1172
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1173 = expected in let __nullable_1174 = HxArray.length args in if __nullable_1173 == HxRuntime.hx_null then false else Obj.obj __nullable_1173 > __nullable_1174) then let __assign_1175 = HxInt.sub (let __nullable_int_1176 = expected in if __nullable_int_1176 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1176) (HxArray.length args) in (
+                        tempNumber42 := __assign_1175;
+                        __assign_1175
+                      ) else let __assign_1177 = 0 in (
+                        tempNumber42 := __assign_1177;
+                        __assign_1177
+                      ) else let __assign_1178 = 0 in (
+                        tempNumber42 := __assign_1178;
+                        __assign_1178
+                      ) else let __assign_1179 = 0 in (
+                        tempNumber42 := __assign_1179;
+                        __assign_1179
+                      )
+                      | _ -> let __assign_1166 = 0 in (
+                        tempNumber42 := __assign_1166;
+                        __assign_1166
+                      ));
+                    let missing = !tempNumber42 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1180 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1180;
+                      __assign_1180
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1181 = !_g5 in let __new_1182 = HxInt.add __old_1181 1 in (
+                          ignore (_g5 := __new_1182);
+                          __old_1181
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1183 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1183;
+                        __assign_1183
+                      ) else let tempArray42 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1184 = HxArray.create () in __arr_1184 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1185 = !_g6 in let __new_1186 = HxInt.add __old_1185 1 in (
+                              ignore (_g6 := __new_1186);
+                              __new_1186
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1187 = _g5 in (
+                            tempArray42 := __assign_1187;
+                            __assign_1187
+                          )
+                        ));
+                        let __assign_1188 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray42) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1188;
+                          __assign_1188
+                        )
+                      )
+                    )
+                  ))
+                | "Sys" -> (match _g3 with
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1356 = "true" in (
+                      tempResult5 := __assign_1356;
+                      __assign_1356
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber43 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1358 = expected in let __nullable_1359 = HxArray.length args in if __nullable_1358 == HxRuntime.hx_null then false else Obj.obj __nullable_1358 > __nullable_1359) then let __assign_1360 = HxInt.sub (let __nullable_int_1361 = expected in if __nullable_int_1361 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1361) (HxArray.length args) in (
+                        tempNumber43 := __assign_1360;
+                        __assign_1360
+                      ) else let __assign_1362 = 0 in (
+                        tempNumber43 := __assign_1362;
+                        __assign_1362
+                      ) else let __assign_1363 = 0 in (
+                        tempNumber43 := __assign_1363;
+                        __assign_1363
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1364 = expected in let __nullable_1365 = HxArray.length args in if __nullable_1364 == HxRuntime.hx_null then false else Obj.obj __nullable_1364 > __nullable_1365) then let __assign_1366 = HxInt.sub (let __nullable_int_1367 = expected in if __nullable_int_1367 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1367) (HxArray.length args) in (
+                        tempNumber43 := __assign_1366;
+                        __assign_1366
+                      ) else let __assign_1368 = 0 in (
+                        tempNumber43 := __assign_1368;
+                        __assign_1368
+                      ) else let __assign_1369 = 0 in (
+                        tempNumber43 := __assign_1369;
+                        __assign_1369
+                      ) else let __assign_1370 = 0 in (
+                        tempNumber43 := __assign_1370;
+                        __assign_1370
+                      )
+                      | _ -> let __assign_1357 = 0 in (
+                        tempNumber43 := __assign_1357;
+                        __assign_1357
+                      ));
+                    let missing = !tempNumber43 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1371 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1371;
+                      __assign_1371
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1372 = !_g5 in let __new_1373 = HxInt.add __old_1372 1 in (
+                          ignore (_g5 := __new_1373);
+                          __old_1372
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1374 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1374;
+                        __assign_1374
+                      ) else let tempArray43 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1375 = HxArray.create () in __arr_1375 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1376 = !_g6 in let __new_1377 = HxInt.add __old_1376 1 in (
+                              ignore (_g6 := __new_1377);
+                              __new_1377
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1378 = _g5 in (
+                            tempArray43 := __assign_1378;
+                            __assign_1378
+                          )
+                        ));
+                        let __assign_1379 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray43) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1379;
+                          __assign_1379
+                        )
+                      )
+                    )
+                  )
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1380 = "false" in (
+                      tempResult5 := __assign_1380;
+                      __assign_1380
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber44 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1382 = expected in let __nullable_1383 = HxArray.length args in if __nullable_1382 == HxRuntime.hx_null then false else Obj.obj __nullable_1382 > __nullable_1383) then let __assign_1384 = HxInt.sub (let __nullable_int_1385 = expected in if __nullable_int_1385 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1385) (HxArray.length args) in (
+                        tempNumber44 := __assign_1384;
+                        __assign_1384
+                      ) else let __assign_1386 = 0 in (
+                        tempNumber44 := __assign_1386;
+                        __assign_1386
+                      ) else let __assign_1387 = 0 in (
+                        tempNumber44 := __assign_1387;
+                        __assign_1387
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1388 = expected in let __nullable_1389 = HxArray.length args in if __nullable_1388 == HxRuntime.hx_null then false else Obj.obj __nullable_1388 > __nullable_1389) then let __assign_1390 = HxInt.sub (let __nullable_int_1391 = expected in if __nullable_int_1391 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1391) (HxArray.length args) in (
+                        tempNumber44 := __assign_1390;
+                        __assign_1390
+                      ) else let __assign_1392 = 0 in (
+                        tempNumber44 := __assign_1392;
+                        __assign_1392
+                      ) else let __assign_1393 = 0 in (
+                        tempNumber44 := __assign_1393;
+                        __assign_1393
+                      ) else let __assign_1394 = 0 in (
+                        tempNumber44 := __assign_1394;
+                        __assign_1394
+                      )
+                      | _ -> let __assign_1381 = 0 in (
+                        tempNumber44 := __assign_1381;
+                        __assign_1381
+                      ));
+                    let missing = !tempNumber44 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1395 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1395;
+                      __assign_1395
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1396 = !_g5 in let __new_1397 = HxInt.add __old_1396 1 in (
+                          ignore (_g5 := __new_1397);
+                          __old_1396
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1398 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1398;
+                        __assign_1398
+                      ) else let tempArray44 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1399 = HxArray.create () in __arr_1399 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1400 = !_g6 in let __new_1401 = HxInt.add __old_1400 1 in (
+                              ignore (_g6 := __new_1401);
+                              __new_1401
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1402 = _g5 in (
+                            tempArray44 := __assign_1402;
+                            __assign_1402
+                          )
+                        ));
+                        let __assign_1403 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray44) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1403;
+                          __assign_1403
+                        )
+                      )
+                    )
+                  )
+                  | "print" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_1404 = ("print_string (" ^ HxString.toStdString (exprToOcamlString arg tyByIdent)) ^ ")" in (
+                    tempResult5 := __assign_1404;
+                    __assign_1404
+                  ) else let callee = _g in let args = _g1 in let tempNumber45 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1406 = expected in let __nullable_1407 = HxArray.length args in if __nullable_1406 == HxRuntime.hx_null then false else Obj.obj __nullable_1406 > __nullable_1407) then let __assign_1408 = HxInt.sub (let __nullable_int_1409 = expected in if __nullable_int_1409 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1409) (HxArray.length args) in (
+                        tempNumber45 := __assign_1408;
+                        __assign_1408
+                      ) else let __assign_1410 = 0 in (
+                        tempNumber45 := __assign_1410;
+                        __assign_1410
+                      ) else let __assign_1411 = 0 in (
+                        tempNumber45 := __assign_1411;
+                        __assign_1411
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1412 = expected in let __nullable_1413 = HxArray.length args in if __nullable_1412 == HxRuntime.hx_null then false else Obj.obj __nullable_1412 > __nullable_1413) then let __assign_1414 = HxInt.sub (let __nullable_int_1415 = expected in if __nullable_int_1415 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1415) (HxArray.length args) in (
+                        tempNumber45 := __assign_1414;
+                        __assign_1414
+                      ) else let __assign_1416 = 0 in (
+                        tempNumber45 := __assign_1416;
+                        __assign_1416
+                      ) else let __assign_1417 = 0 in (
+                        tempNumber45 := __assign_1417;
+                        __assign_1417
+                      ) else let __assign_1418 = 0 in (
+                        tempNumber45 := __assign_1418;
+                        __assign_1418
+                      )
+                      | _ -> let __assign_1405 = 0 in (
+                        tempNumber45 := __assign_1405;
+                        __assign_1405
+                      ));
+                    let missing = !tempNumber45 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1419 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1419;
+                      __assign_1419
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1420 = !_g5 in let __new_1421 = HxInt.add __old_1420 1 in (
+                          ignore (_g5 := __new_1421);
+                          __old_1420
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1422 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1422;
+                        __assign_1422
+                      ) else let tempArray45 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1423 = HxArray.create () in __arr_1423 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1424 = !_g6 in let __new_1425 = HxInt.add __old_1424 1 in (
+                              ignore (_g6 := __new_1425);
+                              __new_1425
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1426 = _g5 in (
+                            tempArray45 := __assign_1426;
+                            __assign_1426
+                          )
+                        ));
+                        let __assign_1427 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray45) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1427;
+                          __assign_1427
+                        )
+                      )
+                    )
+                  )
+                  | "println" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in let arg = _g5 in let __assign_1428 = ("print_endline (" ^ HxString.toStdString (exprToOcamlString arg tyByIdent)) ^ ")" in (
+                    tempResult5 := __assign_1428;
+                    __assign_1428
+                  ) else let callee = _g in let args = _g1 in let tempNumber46 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1430 = expected in let __nullable_1431 = HxArray.length args in if __nullable_1430 == HxRuntime.hx_null then false else Obj.obj __nullable_1430 > __nullable_1431) then let __assign_1432 = HxInt.sub (let __nullable_int_1433 = expected in if __nullable_int_1433 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1433) (HxArray.length args) in (
+                        tempNumber46 := __assign_1432;
+                        __assign_1432
+                      ) else let __assign_1434 = 0 in (
+                        tempNumber46 := __assign_1434;
+                        __assign_1434
+                      ) else let __assign_1435 = 0 in (
+                        tempNumber46 := __assign_1435;
+                        __assign_1435
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1436 = expected in let __nullable_1437 = HxArray.length args in if __nullable_1436 == HxRuntime.hx_null then false else Obj.obj __nullable_1436 > __nullable_1437) then let __assign_1438 = HxInt.sub (let __nullable_int_1439 = expected in if __nullable_int_1439 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1439) (HxArray.length args) in (
+                        tempNumber46 := __assign_1438;
+                        __assign_1438
+                      ) else let __assign_1440 = 0 in (
+                        tempNumber46 := __assign_1440;
+                        __assign_1440
+                      ) else let __assign_1441 = 0 in (
+                        tempNumber46 := __assign_1441;
+                        __assign_1441
+                      ) else let __assign_1442 = 0 in (
+                        tempNumber46 := __assign_1442;
+                        __assign_1442
+                      )
+                      | _ -> let __assign_1429 = 0 in (
+                        tempNumber46 := __assign_1429;
+                        __assign_1429
+                      ));
+                    let missing = !tempNumber46 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1443 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1443;
+                      __assign_1443
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1444 = !_g5 in let __new_1445 = HxInt.add __old_1444 1 in (
+                          ignore (_g5 := __new_1445);
+                          __old_1444
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1446 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1446;
+                        __assign_1446
+                      ) else let tempArray46 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1447 = HxArray.create () in __arr_1447 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1448 = !_g6 in let __new_1449 = HxInt.add __old_1448 1 in (
+                              ignore (_g6 := __new_1449);
+                              __new_1449
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1450 = _g5 in (
+                            tempArray46 := __assign_1450;
+                            __assign_1450
+                          )
+                        ));
+                        let __assign_1451 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray46) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1451;
+                          __assign_1451
+                        )
+                      )
+                    )
+                  )
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1452 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1452;
                       __assign_1452
                     )
-                  ));
-                  let __assign_1453 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray49) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1453;
-                    __assign_1453
-                  )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber50 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1272 = expected in let __nullable_1273 = HxArray.length args in if __nullable_1272 == HxRuntime.hx_null then false else Obj.obj __nullable_1272 > __nullable_1273) then let __assign_1274 = HxInt.sub (let __nullable_int_1275 = expected in if __nullable_int_1275 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1275) (HxArray.length args) in (
-                  tempNumber50 := __assign_1274;
-                  __assign_1274
-                ) else let __assign_1276 = 0 in (
-                  tempNumber50 := __assign_1276;
-                  __assign_1276
-                ) else let __assign_1277 = 0 in (
-                  tempNumber50 := __assign_1277;
-                  __assign_1277
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1278 = expected in let __nullable_1279 = HxArray.length args in if __nullable_1278 == HxRuntime.hx_null then false else Obj.obj __nullable_1278 > __nullable_1279) then let __assign_1280 = HxInt.sub (let __nullable_int_1281 = expected in if __nullable_int_1281 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1281) (HxArray.length args) in (
-                  tempNumber50 := __assign_1280;
-                  __assign_1280
-                ) else let __assign_1282 = 0 in (
-                  tempNumber50 := __assign_1282;
-                  __assign_1282
-                ) else let __assign_1283 = 0 in (
-                  tempNumber50 := __assign_1283;
-                  __assign_1283
-                ) else let __assign_1284 = 0 in (
-                  tempNumber50 := __assign_1284;
-                  __assign_1284
-                )
-                | _ -> let __assign_1271 = 0 in (
-                  tempNumber50 := __assign_1271;
-                  __assign_1271
-                ));
-              let missing = !tempNumber50 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1285 = !_g5 in let __new_1286 = HxInt.add __old_1285 1 in (
-                    ignore (_g5 := __new_1286);
-                    __old_1285
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1287 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1287;
-                  __assign_1287
-                ) else let tempArray50 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1288 = HxArray.create () in __arr_1288 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1289 = !_g6 in let __new_1290 = HxInt.add __old_1289 1 in (
-                        ignore (_g6 := __new_1290);
-                        __new_1290
+                  ) else let callee = _g in let args = _g1 in let tempNumber47 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1454 = expected in let __nullable_1455 = HxArray.length args in if __nullable_1454 == HxRuntime.hx_null then false else Obj.obj __nullable_1454 > __nullable_1455) then let __assign_1456 = HxInt.sub (let __nullable_int_1457 = expected in if __nullable_int_1457 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1457) (HxArray.length args) in (
+                        tempNumber47 := __assign_1456;
+                        __assign_1456
+                      ) else let __assign_1458 = 0 in (
+                        tempNumber47 := __assign_1458;
+                        __assign_1458
+                      ) else let __assign_1459 = 0 in (
+                        tempNumber47 := __assign_1459;
+                        __assign_1459
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1460 = expected in let __nullable_1461 = HxArray.length args in if __nullable_1460 == HxRuntime.hx_null then false else Obj.obj __nullable_1460 > __nullable_1461) then let __assign_1462 = HxInt.sub (let __nullable_int_1463 = expected in if __nullable_int_1463 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1463) (HxArray.length args) in (
+                        tempNumber47 := __assign_1462;
+                        __assign_1462
+                      ) else let __assign_1464 = 0 in (
+                        tempNumber47 := __assign_1464;
+                        __assign_1464
+                      ) else let __assign_1465 = 0 in (
+                        tempNumber47 := __assign_1465;
+                        __assign_1465
+                      ) else let __assign_1466 = 0 in (
+                        tempNumber47 := __assign_1466;
+                        __assign_1466
+                      )
+                      | _ -> let __assign_1453 = 0 in (
+                        tempNumber47 := __assign_1453;
+                        __assign_1453
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1291 = _g5 in (
-                      tempArray50 := __assign_1291;
-                      __assign_1291
+                    let missing = !tempNumber47 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1467 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1467;
+                      __assign_1467
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1468 = !_g5 in let __new_1469 = HxInt.add __old_1468 1 in (
+                          ignore (_g5 := __new_1469);
+                          __old_1468
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1470 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1470;
+                        __assign_1470
+                      ) else let tempArray47 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1471 = HxArray.create () in __arr_1471 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1472 = !_g6 in let __new_1473 = HxInt.add __old_1472 1 in (
+                              ignore (_g6 := __new_1473);
+                              __new_1473
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1474 = _g5 in (
+                            tempArray47 := __assign_1474;
+                            __assign_1474
+                          )
+                        ));
+                        let __assign_1475 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray47) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1475;
+                          __assign_1475
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1292 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray50) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1292;
-                    __assign_1292
                   )
-                )
-              )
-            ))
-          | "Type" -> (match _g3 with
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1476 = "true" in (
-                tempResult5 := __assign_1476;
-                __assign_1476
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber51 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1478 = expected in let __nullable_1479 = HxArray.length args in if __nullable_1478 == HxRuntime.hx_null then false else Obj.obj __nullable_1478 > __nullable_1479) then let __assign_1480 = HxInt.sub (let __nullable_int_1481 = expected in if __nullable_int_1481 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1481) (HxArray.length args) in (
-                  tempNumber51 := __assign_1480;
-                  __assign_1480
-                ) else let __assign_1482 = 0 in (
-                  tempNumber51 := __assign_1482;
-                  __assign_1482
-                ) else let __assign_1483 = 0 in (
-                  tempNumber51 := __assign_1483;
-                  __assign_1483
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1484 = expected in let __nullable_1485 = HxArray.length args in if __nullable_1484 == HxRuntime.hx_null then false else Obj.obj __nullable_1484 > __nullable_1485) then let __assign_1486 = HxInt.sub (let __nullable_int_1487 = expected in if __nullable_int_1487 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1487) (HxArray.length args) in (
-                  tempNumber51 := __assign_1486;
-                  __assign_1486
-                ) else let __assign_1488 = 0 in (
-                  tempNumber51 := __assign_1488;
-                  __assign_1488
-                ) else let __assign_1489 = 0 in (
-                  tempNumber51 := __assign_1489;
-                  __assign_1489
-                ) else let __assign_1490 = 0 in (
-                  tempNumber51 := __assign_1490;
-                  __assign_1490
-                )
-                | _ -> let __assign_1477 = 0 in (
-                  tempNumber51 := __assign_1477;
-                  __assign_1477
-                ));
-              let missing = !tempNumber51 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1491 = !_g5 in let __new_1492 = HxInt.add __old_1491 1 in (
-                    ignore (_g5 := __new_1492);
-                    __old_1491
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1493 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1493;
-                  __assign_1493
-                ) else let tempArray51 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1494 = HxArray.create () in __arr_1494 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1495 = !_g6 in let __new_1496 = HxInt.add __old_1495 1 in (
-                        ignore (_g6 := __new_1496);
-                        __new_1496
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1497 = _g5 in (
-                      tempArray51 := __assign_1497;
-                      __assign_1497
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1476 = "()" in (
+                      tempResult5 := __assign_1476;
+                      __assign_1476
                     )
-                  ));
-                  let __assign_1498 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray51) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1498;
-                    __assign_1498
-                  )
-                )
-              )
-            )
-            | "getClass" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_1499 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1499;
-                __assign_1499
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber52 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1501 = expected in let __nullable_1502 = HxArray.length args in if __nullable_1501 == HxRuntime.hx_null then false else Obj.obj __nullable_1501 > __nullable_1502) then let __assign_1503 = HxInt.sub (let __nullable_int_1504 = expected in if __nullable_int_1504 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1504) (HxArray.length args) in (
-                  tempNumber52 := __assign_1503;
-                  __assign_1503
-                ) else let __assign_1505 = 0 in (
-                  tempNumber52 := __assign_1505;
-                  __assign_1505
-                ) else let __assign_1506 = 0 in (
-                  tempNumber52 := __assign_1506;
-                  __assign_1506
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1507 = expected in let __nullable_1508 = HxArray.length args in if __nullable_1507 == HxRuntime.hx_null then false else Obj.obj __nullable_1507 > __nullable_1508) then let __assign_1509 = HxInt.sub (let __nullable_int_1510 = expected in if __nullable_int_1510 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1510) (HxArray.length args) in (
-                  tempNumber52 := __assign_1509;
-                  __assign_1509
-                ) else let __assign_1511 = 0 in (
-                  tempNumber52 := __assign_1511;
-                  __assign_1511
-                ) else let __assign_1512 = 0 in (
-                  tempNumber52 := __assign_1512;
-                  __assign_1512
-                ) else let __assign_1513 = 0 in (
-                  tempNumber52 := __assign_1513;
-                  __assign_1513
-                )
-                | _ -> let __assign_1500 = 0 in (
-                  tempNumber52 := __assign_1500;
-                  __assign_1500
-                ));
-              let missing = !tempNumber52 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1514 = !_g5 in let __new_1515 = HxInt.add __old_1514 1 in (
-                    ignore (_g5 := __new_1515);
-                    __old_1514
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1516 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1516;
-                  __assign_1516
-                ) else let tempArray52 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1517 = HxArray.create () in __arr_1517 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1518 = !_g6 in let __new_1519 = HxInt.add __old_1518 1 in (
-                        ignore (_g6 := __new_1519);
-                        __new_1519
+                  ) else let callee = _g in let args = _g1 in let tempNumber48 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1478 = expected in let __nullable_1479 = HxArray.length args in if __nullable_1478 == HxRuntime.hx_null then false else Obj.obj __nullable_1478 > __nullable_1479) then let __assign_1480 = HxInt.sub (let __nullable_int_1481 = expected in if __nullable_int_1481 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1481) (HxArray.length args) in (
+                        tempNumber48 := __assign_1480;
+                        __assign_1480
+                      ) else let __assign_1482 = 0 in (
+                        tempNumber48 := __assign_1482;
+                        __assign_1482
+                      ) else let __assign_1483 = 0 in (
+                        tempNumber48 := __assign_1483;
+                        __assign_1483
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1484 = expected in let __nullable_1485 = HxArray.length args in if __nullable_1484 == HxRuntime.hx_null then false else Obj.obj __nullable_1484 > __nullable_1485) then let __assign_1486 = HxInt.sub (let __nullable_int_1487 = expected in if __nullable_int_1487 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1487) (HxArray.length args) in (
+                        tempNumber48 := __assign_1486;
+                        __assign_1486
+                      ) else let __assign_1488 = 0 in (
+                        tempNumber48 := __assign_1488;
+                        __assign_1488
+                      ) else let __assign_1489 = 0 in (
+                        tempNumber48 := __assign_1489;
+                        __assign_1489
+                      ) else let __assign_1490 = 0 in (
+                        tempNumber48 := __assign_1490;
+                        __assign_1490
+                      )
+                      | _ -> let __assign_1477 = 0 in (
+                        tempNumber48 := __assign_1477;
+                        __assign_1477
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1520 = _g5 in (
-                      tempArray52 := __assign_1520;
-                      __assign_1520
+                    let missing = !tempNumber48 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1491 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1491;
+                      __assign_1491
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1492 = !_g5 in let __new_1493 = HxInt.add __old_1492 1 in (
+                          ignore (_g5 := __new_1493);
+                          __old_1492
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1494 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1494;
+                        __assign_1494
+                      ) else let tempArray48 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1495 = HxArray.create () in __arr_1495 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1496 = !_g6 in let __new_1497 = HxInt.add __old_1496 1 in (
+                              ignore (_g6 := __new_1497);
+                              __new_1497
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1498 = _g5 in (
+                            tempArray48 := __assign_1498;
+                            __assign_1498
+                          )
+                        ));
+                        let __assign_1499 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray48) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1499;
+                          __assign_1499
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1521 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray52) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1521;
-                    __assign_1521
                   )
-                )
-              )
-            )
-            | "getClassName" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_1522 = escapeOcamlString "" in (
-                tempResult5 := __assign_1522;
-                __assign_1522
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber53 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1524 = expected in let __nullable_1525 = HxArray.length args in if __nullable_1524 == HxRuntime.hx_null then false else Obj.obj __nullable_1524 > __nullable_1525) then let __assign_1526 = HxInt.sub (let __nullable_int_1527 = expected in if __nullable_int_1527 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1527) (HxArray.length args) in (
-                  tempNumber53 := __assign_1526;
-                  __assign_1526
-                ) else let __assign_1528 = 0 in (
-                  tempNumber53 := __assign_1528;
-                  __assign_1528
-                ) else let __assign_1529 = 0 in (
-                  tempNumber53 := __assign_1529;
-                  __assign_1529
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1530 = expected in let __nullable_1531 = HxArray.length args in if __nullable_1530 == HxRuntime.hx_null then false else Obj.obj __nullable_1530 > __nullable_1531) then let __assign_1532 = HxInt.sub (let __nullable_int_1533 = expected in if __nullable_int_1533 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1533) (HxArray.length args) in (
-                  tempNumber53 := __assign_1532;
-                  __assign_1532
-                ) else let __assign_1534 = 0 in (
-                  tempNumber53 := __assign_1534;
-                  __assign_1534
-                ) else let __assign_1535 = 0 in (
-                  tempNumber53 := __assign_1535;
-                  __assign_1535
-                ) else let __assign_1536 = 0 in (
-                  tempNumber53 := __assign_1536;
-                  __assign_1536
-                )
-                | _ -> let __assign_1523 = 0 in (
-                  tempNumber53 := __assign_1523;
-                  __assign_1523
-                ));
-              let missing = !tempNumber53 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1537 = !_g5 in let __new_1538 = HxInt.add __old_1537 1 in (
-                    ignore (_g5 := __new_1538);
-                    __old_1537
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1539 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1539;
-                  __assign_1539
-                ) else let tempArray53 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1540 = HxArray.create () in __arr_1540 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1541 = !_g6 in let __new_1542 = HxInt.add __old_1541 1 in (
-                        ignore (_g6 := __new_1542);
-                        __new_1542
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1543 = _g5 in (
-                      tempArray53 := __assign_1543;
-                      __assign_1543
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1500 = "()" in (
+                      tempResult5 := __assign_1500;
+                      __assign_1500
                     )
-                  ));
-                  let __assign_1544 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray53) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1544;
-                    __assign_1544
-                  )
-                )
-              )
-            )
-            | "getEnumName" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_1545 = escapeOcamlString "" in (
-                tempResult5 := __assign_1545;
-                __assign_1545
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber54 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1547 = expected in let __nullable_1548 = HxArray.length args in if __nullable_1547 == HxRuntime.hx_null then false else Obj.obj __nullable_1547 > __nullable_1548) then let __assign_1549 = HxInt.sub (let __nullable_int_1550 = expected in if __nullable_int_1550 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1550) (HxArray.length args) in (
-                  tempNumber54 := __assign_1549;
-                  __assign_1549
-                ) else let __assign_1551 = 0 in (
-                  tempNumber54 := __assign_1551;
-                  __assign_1551
-                ) else let __assign_1552 = 0 in (
-                  tempNumber54 := __assign_1552;
-                  __assign_1552
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1553 = expected in let __nullable_1554 = HxArray.length args in if __nullable_1553 == HxRuntime.hx_null then false else Obj.obj __nullable_1553 > __nullable_1554) then let __assign_1555 = HxInt.sub (let __nullable_int_1556 = expected in if __nullable_int_1556 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1556) (HxArray.length args) in (
-                  tempNumber54 := __assign_1555;
-                  __assign_1555
-                ) else let __assign_1557 = 0 in (
-                  tempNumber54 := __assign_1557;
-                  __assign_1557
-                ) else let __assign_1558 = 0 in (
-                  tempNumber54 := __assign_1558;
-                  __assign_1558
-                ) else let __assign_1559 = 0 in (
-                  tempNumber54 := __assign_1559;
-                  __assign_1559
-                )
-                | _ -> let __assign_1546 = 0 in (
-                  tempNumber54 := __assign_1546;
-                  __assign_1546
-                ));
-              let missing = !tempNumber54 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1560 = !_g5 in let __new_1561 = HxInt.add __old_1560 1 in (
-                    ignore (_g5 := __new_1561);
-                    __old_1560
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1562 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1562;
-                  __assign_1562
-                ) else let tempArray54 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1563 = HxArray.create () in __arr_1563 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1564 = !_g6 in let __new_1565 = HxInt.add __old_1564 1 in (
-                        ignore (_g6 := __new_1565);
-                        __new_1565
+                  ) else let callee = _g in let args = _g1 in let tempNumber49 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1502 = expected in let __nullable_1503 = HxArray.length args in if __nullable_1502 == HxRuntime.hx_null then false else Obj.obj __nullable_1502 > __nullable_1503) then let __assign_1504 = HxInt.sub (let __nullable_int_1505 = expected in if __nullable_int_1505 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1505) (HxArray.length args) in (
+                        tempNumber49 := __assign_1504;
+                        __assign_1504
+                      ) else let __assign_1506 = 0 in (
+                        tempNumber49 := __assign_1506;
+                        __assign_1506
+                      ) else let __assign_1507 = 0 in (
+                        tempNumber49 := __assign_1507;
+                        __assign_1507
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1508 = expected in let __nullable_1509 = HxArray.length args in if __nullable_1508 == HxRuntime.hx_null then false else Obj.obj __nullable_1508 > __nullable_1509) then let __assign_1510 = HxInt.sub (let __nullable_int_1511 = expected in if __nullable_int_1511 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1511) (HxArray.length args) in (
+                        tempNumber49 := __assign_1510;
+                        __assign_1510
+                      ) else let __assign_1512 = 0 in (
+                        tempNumber49 := __assign_1512;
+                        __assign_1512
+                      ) else let __assign_1513 = 0 in (
+                        tempNumber49 := __assign_1513;
+                        __assign_1513
+                      ) else let __assign_1514 = 0 in (
+                        tempNumber49 := __assign_1514;
+                        __assign_1514
+                      )
+                      | _ -> let __assign_1501 = 0 in (
+                        tempNumber49 := __assign_1501;
+                        __assign_1501
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1566 = _g5 in (
-                      tempArray54 := __assign_1566;
-                      __assign_1566
+                    let missing = !tempNumber49 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1515 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1515;
+                      __assign_1515
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1516 = !_g5 in let __new_1517 = HxInt.add __old_1516 1 in (
+                          ignore (_g5 := __new_1517);
+                          __old_1516
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1518 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1518;
+                        __assign_1518
+                      ) else let tempArray49 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1519 = HxArray.create () in __arr_1519 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1520 = !_g6 in let __new_1521 = HxInt.add __old_1520 1 in (
+                              ignore (_g6 := __new_1521);
+                              __new_1521
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1522 = _g5 in (
+                            tempArray49 := __assign_1522;
+                            __assign_1522
+                          )
+                        ));
+                        let __assign_1523 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray49) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1523;
+                          __assign_1523
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1567 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray54) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1567;
-                    __assign_1567
                   )
-                )
-              )
-            )
-            | "getInstanceFields" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_1568 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1568;
-                __assign_1568
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber55 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1570 = expected in let __nullable_1571 = HxArray.length args in if __nullable_1570 == HxRuntime.hx_null then false else Obj.obj __nullable_1570 > __nullable_1571) then let __assign_1572 = HxInt.sub (let __nullable_int_1573 = expected in if __nullable_int_1573 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1573) (HxArray.length args) in (
-                  tempNumber55 := __assign_1572;
-                  __assign_1572
-                ) else let __assign_1574 = 0 in (
-                  tempNumber55 := __assign_1574;
-                  __assign_1574
-                ) else let __assign_1575 = 0 in (
-                  tempNumber55 := __assign_1575;
-                  __assign_1575
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1576 = expected in let __nullable_1577 = HxArray.length args in if __nullable_1576 == HxRuntime.hx_null then false else Obj.obj __nullable_1576 > __nullable_1577) then let __assign_1578 = HxInt.sub (let __nullable_int_1579 = expected in if __nullable_int_1579 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1579) (HxArray.length args) in (
-                  tempNumber55 := __assign_1578;
-                  __assign_1578
-                ) else let __assign_1580 = 0 in (
-                  tempNumber55 := __assign_1580;
-                  __assign_1580
-                ) else let __assign_1581 = 0 in (
-                  tempNumber55 := __assign_1581;
-                  __assign_1581
-                ) else let __assign_1582 = 0 in (
-                  tempNumber55 := __assign_1582;
-                  __assign_1582
-                )
-                | _ -> let __assign_1569 = 0 in (
-                  tempNumber55 := __assign_1569;
-                  __assign_1569
-                ));
-              let missing = !tempNumber55 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1583 = !_g5 in let __new_1584 = HxInt.add __old_1583 1 in (
-                    ignore (_g5 := __new_1584);
-                    __old_1583
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1585 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1585;
-                  __assign_1585
-                ) else let tempArray55 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1586 = HxArray.create () in __arr_1586 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1587 = !_g6 in let __new_1588 = HxInt.add __old_1587 1 in (
-                        ignore (_g6 := __new_1588);
-                        __new_1588
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber50 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1334 = expected in let __nullable_1335 = HxArray.length args in if __nullable_1334 == HxRuntime.hx_null then false else Obj.obj __nullable_1334 > __nullable_1335) then let __assign_1336 = HxInt.sub (let __nullable_int_1337 = expected in if __nullable_int_1337 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1337) (HxArray.length args) in (
+                        tempNumber50 := __assign_1336;
+                        __assign_1336
+                      ) else let __assign_1338 = 0 in (
+                        tempNumber50 := __assign_1338;
+                        __assign_1338
+                      ) else let __assign_1339 = 0 in (
+                        tempNumber50 := __assign_1339;
+                        __assign_1339
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1340 = expected in let __nullable_1341 = HxArray.length args in if __nullable_1340 == HxRuntime.hx_null then false else Obj.obj __nullable_1340 > __nullable_1341) then let __assign_1342 = HxInt.sub (let __nullable_int_1343 = expected in if __nullable_int_1343 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1343) (HxArray.length args) in (
+                        tempNumber50 := __assign_1342;
+                        __assign_1342
+                      ) else let __assign_1344 = 0 in (
+                        tempNumber50 := __assign_1344;
+                        __assign_1344
+                      ) else let __assign_1345 = 0 in (
+                        tempNumber50 := __assign_1345;
+                        __assign_1345
+                      ) else let __assign_1346 = 0 in (
+                        tempNumber50 := __assign_1346;
+                        __assign_1346
+                      )
+                      | _ -> let __assign_1333 = 0 in (
+                        tempNumber50 := __assign_1333;
+                        __assign_1333
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1589 = _g5 in (
-                      tempArray55 := __assign_1589;
-                      __assign_1589
+                    let missing = !tempNumber50 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1347 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1347;
+                      __assign_1347
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1348 = !_g5 in let __new_1349 = HxInt.add __old_1348 1 in (
+                          ignore (_g5 := __new_1349);
+                          __old_1348
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1350 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1350;
+                        __assign_1350
+                      ) else let tempArray50 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1351 = HxArray.create () in __arr_1351 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1352 = !_g6 in let __new_1353 = HxInt.add __old_1352 1 in (
+                              ignore (_g6 := __new_1353);
+                              __new_1353
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1354 = _g5 in (
+                            tempArray50 := __assign_1354;
+                            __assign_1354
+                          )
+                        ));
+                        let __assign_1355 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray50) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1355;
+                          __assign_1355
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1590 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray55) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1590;
-                    __assign_1590
-                  )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1591 = "false" in (
-                tempResult5 := __assign_1591;
-                __assign_1591
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber56 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1593 = expected in let __nullable_1594 = HxArray.length args in if __nullable_1593 == HxRuntime.hx_null then false else Obj.obj __nullable_1593 > __nullable_1594) then let __assign_1595 = HxInt.sub (let __nullable_int_1596 = expected in if __nullable_int_1596 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1596) (HxArray.length args) in (
-                  tempNumber56 := __assign_1595;
-                  __assign_1595
-                ) else let __assign_1597 = 0 in (
-                  tempNumber56 := __assign_1597;
-                  __assign_1597
-                ) else let __assign_1598 = 0 in (
-                  tempNumber56 := __assign_1598;
-                  __assign_1598
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1599 = expected in let __nullable_1600 = HxArray.length args in if __nullable_1599 == HxRuntime.hx_null then false else Obj.obj __nullable_1599 > __nullable_1600) then let __assign_1601 = HxInt.sub (let __nullable_int_1602 = expected in if __nullable_int_1602 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1602) (HxArray.length args) in (
-                  tempNumber56 := __assign_1601;
-                  __assign_1601
-                ) else let __assign_1603 = 0 in (
-                  tempNumber56 := __assign_1603;
-                  __assign_1603
-                ) else let __assign_1604 = 0 in (
-                  tempNumber56 := __assign_1604;
-                  __assign_1604
-                ) else let __assign_1605 = 0 in (
-                  tempNumber56 := __assign_1605;
-                  __assign_1605
-                )
-                | _ -> let __assign_1592 = 0 in (
-                  tempNumber56 := __assign_1592;
-                  __assign_1592
-                ));
-              let missing = !tempNumber56 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1606 = !_g5 in let __new_1607 = HxInt.add __old_1606 1 in (
-                    ignore (_g5 := __new_1607);
-                    __old_1606
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1608 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1608;
-                  __assign_1608
-                ) else let tempArray56 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1609 = HxArray.create () in __arr_1609 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1610 = !_g6 in let __new_1611 = HxInt.add __old_1610 1 in (
-                        ignore (_g6 := __new_1611);
-                        __new_1611
-                      ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1612 = _g5 in (
-                      tempArray56 := __assign_1612;
-                      __assign_1612
+                  ))
+                | "Type" -> (match _g3 with
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1547 = "true" in (
+                      tempResult5 := __assign_1547;
+                      __assign_1547
                     )
-                  ));
-                  let __assign_1613 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray56) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1613;
-                    __assign_1613
-                  )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_1614 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1614;
-                __assign_1614
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber57 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1616 = expected in let __nullable_1617 = HxArray.length args in if __nullable_1616 == HxRuntime.hx_null then false else Obj.obj __nullable_1616 > __nullable_1617) then let __assign_1618 = HxInt.sub (let __nullable_int_1619 = expected in if __nullable_int_1619 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1619) (HxArray.length args) in (
-                  tempNumber57 := __assign_1618;
-                  __assign_1618
-                ) else let __assign_1620 = 0 in (
-                  tempNumber57 := __assign_1620;
-                  __assign_1620
-                ) else let __assign_1621 = 0 in (
-                  tempNumber57 := __assign_1621;
-                  __assign_1621
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1622 = expected in let __nullable_1623 = HxArray.length args in if __nullable_1622 == HxRuntime.hx_null then false else Obj.obj __nullable_1622 > __nullable_1623) then let __assign_1624 = HxInt.sub (let __nullable_int_1625 = expected in if __nullable_int_1625 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1625) (HxArray.length args) in (
-                  tempNumber57 := __assign_1624;
-                  __assign_1624
-                ) else let __assign_1626 = 0 in (
-                  tempNumber57 := __assign_1626;
-                  __assign_1626
-                ) else let __assign_1627 = 0 in (
-                  tempNumber57 := __assign_1627;
-                  __assign_1627
-                ) else let __assign_1628 = 0 in (
-                  tempNumber57 := __assign_1628;
-                  __assign_1628
-                )
-                | _ -> let __assign_1615 = 0 in (
-                  tempNumber57 := __assign_1615;
-                  __assign_1615
-                ));
-              let missing = !tempNumber57 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1629 = !_g5 in let __new_1630 = HxInt.add __old_1629 1 in (
-                    ignore (_g5 := __new_1630);
-                    __old_1629
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1631 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1631;
-                  __assign_1631
-                ) else let tempArray57 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1632 = HxArray.create () in __arr_1632 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1633 = !_g6 in let __new_1634 = HxInt.add __old_1633 1 in (
-                        ignore (_g6 := __new_1634);
-                        __new_1634
+                  ) else let callee = _g in let args = _g1 in let tempNumber51 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1549 = expected in let __nullable_1550 = HxArray.length args in if __nullable_1549 == HxRuntime.hx_null then false else Obj.obj __nullable_1549 > __nullable_1550) then let __assign_1551 = HxInt.sub (let __nullable_int_1552 = expected in if __nullable_int_1552 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1552) (HxArray.length args) in (
+                        tempNumber51 := __assign_1551;
+                        __assign_1551
+                      ) else let __assign_1553 = 0 in (
+                        tempNumber51 := __assign_1553;
+                        __assign_1553
+                      ) else let __assign_1554 = 0 in (
+                        tempNumber51 := __assign_1554;
+                        __assign_1554
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1555 = expected in let __nullable_1556 = HxArray.length args in if __nullable_1555 == HxRuntime.hx_null then false else Obj.obj __nullable_1555 > __nullable_1556) then let __assign_1557 = HxInt.sub (let __nullable_int_1558 = expected in if __nullable_int_1558 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1558) (HxArray.length args) in (
+                        tempNumber51 := __assign_1557;
+                        __assign_1557
+                      ) else let __assign_1559 = 0 in (
+                        tempNumber51 := __assign_1559;
+                        __assign_1559
+                      ) else let __assign_1560 = 0 in (
+                        tempNumber51 := __assign_1560;
+                        __assign_1560
+                      ) else let __assign_1561 = 0 in (
+                        tempNumber51 := __assign_1561;
+                        __assign_1561
+                      )
+                      | _ -> let __assign_1548 = 0 in (
+                        tempNumber51 := __assign_1548;
+                        __assign_1548
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1635 = _g5 in (
-                      tempArray57 := __assign_1635;
-                      __assign_1635
+                    let missing = !tempNumber51 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1562 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1562;
+                      __assign_1562
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1563 = !_g5 in let __new_1564 = HxInt.add __old_1563 1 in (
+                          ignore (_g5 := __new_1564);
+                          __old_1563
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1565 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1565;
+                        __assign_1565
+                      ) else let tempArray51 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1566 = HxArray.create () in __arr_1566 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1567 = !_g6 in let __new_1568 = HxInt.add __old_1567 1 in (
+                              ignore (_g6 := __new_1568);
+                              __new_1568
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1569 = _g5 in (
+                            tempArray51 := __assign_1569;
+                            __assign_1569
+                          )
+                        ));
+                        let __assign_1570 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray51) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1570;
+                          __assign_1570
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1636 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray57) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1636;
-                    __assign_1636
                   )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1637 = "()" in (
-                tempResult5 := __assign_1637;
-                __assign_1637
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber58 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1639 = expected in let __nullable_1640 = HxArray.length args in if __nullable_1639 == HxRuntime.hx_null then false else Obj.obj __nullable_1639 > __nullable_1640) then let __assign_1641 = HxInt.sub (let __nullable_int_1642 = expected in if __nullable_int_1642 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1642) (HxArray.length args) in (
-                  tempNumber58 := __assign_1641;
-                  __assign_1641
-                ) else let __assign_1643 = 0 in (
-                  tempNumber58 := __assign_1643;
-                  __assign_1643
-                ) else let __assign_1644 = 0 in (
-                  tempNumber58 := __assign_1644;
-                  __assign_1644
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1645 = expected in let __nullable_1646 = HxArray.length args in if __nullable_1645 == HxRuntime.hx_null then false else Obj.obj __nullable_1645 > __nullable_1646) then let __assign_1647 = HxInt.sub (let __nullable_int_1648 = expected in if __nullable_int_1648 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1648) (HxArray.length args) in (
-                  tempNumber58 := __assign_1647;
-                  __assign_1647
-                ) else let __assign_1649 = 0 in (
-                  tempNumber58 := __assign_1649;
-                  __assign_1649
-                ) else let __assign_1650 = 0 in (
-                  tempNumber58 := __assign_1650;
-                  __assign_1650
-                ) else let __assign_1651 = 0 in (
-                  tempNumber58 := __assign_1651;
-                  __assign_1651
-                )
-                | _ -> let __assign_1638 = 0 in (
-                  tempNumber58 := __assign_1638;
-                  __assign_1638
-                ));
-              let missing = !tempNumber58 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1652 = !_g5 in let __new_1653 = HxInt.add __old_1652 1 in (
-                    ignore (_g5 := __new_1653);
-                    __old_1652
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1654 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1654;
-                  __assign_1654
-                ) else let tempArray58 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1655 = HxArray.create () in __arr_1655 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1656 = !_g6 in let __new_1657 = HxInt.add __old_1656 1 in (
-                        ignore (_g6 := __new_1657);
-                        __new_1657
+                  | "getClass" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_1571 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1571;
+                      __assign_1571
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber52 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1573 = expected in let __nullable_1574 = HxArray.length args in if __nullable_1573 == HxRuntime.hx_null then false else Obj.obj __nullable_1573 > __nullable_1574) then let __assign_1575 = HxInt.sub (let __nullable_int_1576 = expected in if __nullable_int_1576 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1576) (HxArray.length args) in (
+                        tempNumber52 := __assign_1575;
+                        __assign_1575
+                      ) else let __assign_1577 = 0 in (
+                        tempNumber52 := __assign_1577;
+                        __assign_1577
+                      ) else let __assign_1578 = 0 in (
+                        tempNumber52 := __assign_1578;
+                        __assign_1578
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1579 = expected in let __nullable_1580 = HxArray.length args in if __nullable_1579 == HxRuntime.hx_null then false else Obj.obj __nullable_1579 > __nullable_1580) then let __assign_1581 = HxInt.sub (let __nullable_int_1582 = expected in if __nullable_int_1582 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1582) (HxArray.length args) in (
+                        tempNumber52 := __assign_1581;
+                        __assign_1581
+                      ) else let __assign_1583 = 0 in (
+                        tempNumber52 := __assign_1583;
+                        __assign_1583
+                      ) else let __assign_1584 = 0 in (
+                        tempNumber52 := __assign_1584;
+                        __assign_1584
+                      ) else let __assign_1585 = 0 in (
+                        tempNumber52 := __assign_1585;
+                        __assign_1585
+                      )
+                      | _ -> let __assign_1572 = 0 in (
+                        tempNumber52 := __assign_1572;
+                        __assign_1572
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1658 = _g5 in (
-                      tempArray58 := __assign_1658;
+                    let missing = !tempNumber52 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1586 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1586;
+                      __assign_1586
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1587 = !_g5 in let __new_1588 = HxInt.add __old_1587 1 in (
+                          ignore (_g5 := __new_1588);
+                          __old_1587
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1589 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1589;
+                        __assign_1589
+                      ) else let tempArray52 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1590 = HxArray.create () in __arr_1590 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1591 = !_g6 in let __new_1592 = HxInt.add __old_1591 1 in (
+                              ignore (_g6 := __new_1592);
+                              __new_1592
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1593 = _g5 in (
+                            tempArray52 := __assign_1593;
+                            __assign_1593
+                          )
+                        ));
+                        let __assign_1594 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray52) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1594;
+                          __assign_1594
+                        )
+                      )
+                    )
+                  )
+                  | "getClassName" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_1595 = escapeOcamlString "" in (
+                      tempResult5 := __assign_1595;
+                      __assign_1595
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber53 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1597 = expected in let __nullable_1598 = HxArray.length args in if __nullable_1597 == HxRuntime.hx_null then false else Obj.obj __nullable_1597 > __nullable_1598) then let __assign_1599 = HxInt.sub (let __nullable_int_1600 = expected in if __nullable_int_1600 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1600) (HxArray.length args) in (
+                        tempNumber53 := __assign_1599;
+                        __assign_1599
+                      ) else let __assign_1601 = 0 in (
+                        tempNumber53 := __assign_1601;
+                        __assign_1601
+                      ) else let __assign_1602 = 0 in (
+                        tempNumber53 := __assign_1602;
+                        __assign_1602
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1603 = expected in let __nullable_1604 = HxArray.length args in if __nullable_1603 == HxRuntime.hx_null then false else Obj.obj __nullable_1603 > __nullable_1604) then let __assign_1605 = HxInt.sub (let __nullable_int_1606 = expected in if __nullable_int_1606 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1606) (HxArray.length args) in (
+                        tempNumber53 := __assign_1605;
+                        __assign_1605
+                      ) else let __assign_1607 = 0 in (
+                        tempNumber53 := __assign_1607;
+                        __assign_1607
+                      ) else let __assign_1608 = 0 in (
+                        tempNumber53 := __assign_1608;
+                        __assign_1608
+                      ) else let __assign_1609 = 0 in (
+                        tempNumber53 := __assign_1609;
+                        __assign_1609
+                      )
+                      | _ -> let __assign_1596 = 0 in (
+                        tempNumber53 := __assign_1596;
+                        __assign_1596
+                      ));
+                    let missing = !tempNumber53 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1610 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1610;
+                      __assign_1610
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1611 = !_g5 in let __new_1612 = HxInt.add __old_1611 1 in (
+                          ignore (_g5 := __new_1612);
+                          __old_1611
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1613 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1613;
+                        __assign_1613
+                      ) else let tempArray53 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1614 = HxArray.create () in __arr_1614 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1615 = !_g6 in let __new_1616 = HxInt.add __old_1615 1 in (
+                              ignore (_g6 := __new_1616);
+                              __new_1616
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1617 = _g5 in (
+                            tempArray53 := __assign_1617;
+                            __assign_1617
+                          )
+                        ));
+                        let __assign_1618 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray53) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1618;
+                          __assign_1618
+                        )
+                      )
+                    )
+                  )
+                  | "getEnumName" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_1619 = escapeOcamlString "" in (
+                      tempResult5 := __assign_1619;
+                      __assign_1619
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber54 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1621 = expected in let __nullable_1622 = HxArray.length args in if __nullable_1621 == HxRuntime.hx_null then false else Obj.obj __nullable_1621 > __nullable_1622) then let __assign_1623 = HxInt.sub (let __nullable_int_1624 = expected in if __nullable_int_1624 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1624) (HxArray.length args) in (
+                        tempNumber54 := __assign_1623;
+                        __assign_1623
+                      ) else let __assign_1625 = 0 in (
+                        tempNumber54 := __assign_1625;
+                        __assign_1625
+                      ) else let __assign_1626 = 0 in (
+                        tempNumber54 := __assign_1626;
+                        __assign_1626
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1627 = expected in let __nullable_1628 = HxArray.length args in if __nullable_1627 == HxRuntime.hx_null then false else Obj.obj __nullable_1627 > __nullable_1628) then let __assign_1629 = HxInt.sub (let __nullable_int_1630 = expected in if __nullable_int_1630 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1630) (HxArray.length args) in (
+                        tempNumber54 := __assign_1629;
+                        __assign_1629
+                      ) else let __assign_1631 = 0 in (
+                        tempNumber54 := __assign_1631;
+                        __assign_1631
+                      ) else let __assign_1632 = 0 in (
+                        tempNumber54 := __assign_1632;
+                        __assign_1632
+                      ) else let __assign_1633 = 0 in (
+                        tempNumber54 := __assign_1633;
+                        __assign_1633
+                      )
+                      | _ -> let __assign_1620 = 0 in (
+                        tempNumber54 := __assign_1620;
+                        __assign_1620
+                      ));
+                    let missing = !tempNumber54 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1634 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1634;
+                      __assign_1634
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1635 = !_g5 in let __new_1636 = HxInt.add __old_1635 1 in (
+                          ignore (_g5 := __new_1636);
+                          __old_1635
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1637 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1637;
+                        __assign_1637
+                      ) else let tempArray54 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1638 = HxArray.create () in __arr_1638 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1639 = !_g6 in let __new_1640 = HxInt.add __old_1639 1 in (
+                              ignore (_g6 := __new_1640);
+                              __new_1640
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1641 = _g5 in (
+                            tempArray54 := __assign_1641;
+                            __assign_1641
+                          )
+                        ));
+                        let __assign_1642 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray54) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1642;
+                          __assign_1642
+                        )
+                      )
+                    )
+                  )
+                  | "getInstanceFields" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_1643 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1643;
+                      __assign_1643
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber55 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1645 = expected in let __nullable_1646 = HxArray.length args in if __nullable_1645 == HxRuntime.hx_null then false else Obj.obj __nullable_1645 > __nullable_1646) then let __assign_1647 = HxInt.sub (let __nullable_int_1648 = expected in if __nullable_int_1648 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1648) (HxArray.length args) in (
+                        tempNumber55 := __assign_1647;
+                        __assign_1647
+                      ) else let __assign_1649 = 0 in (
+                        tempNumber55 := __assign_1649;
+                        __assign_1649
+                      ) else let __assign_1650 = 0 in (
+                        tempNumber55 := __assign_1650;
+                        __assign_1650
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1651 = expected in let __nullable_1652 = HxArray.length args in if __nullable_1651 == HxRuntime.hx_null then false else Obj.obj __nullable_1651 > __nullable_1652) then let __assign_1653 = HxInt.sub (let __nullable_int_1654 = expected in if __nullable_int_1654 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1654) (HxArray.length args) in (
+                        tempNumber55 := __assign_1653;
+                        __assign_1653
+                      ) else let __assign_1655 = 0 in (
+                        tempNumber55 := __assign_1655;
+                        __assign_1655
+                      ) else let __assign_1656 = 0 in (
+                        tempNumber55 := __assign_1656;
+                        __assign_1656
+                      ) else let __assign_1657 = 0 in (
+                        tempNumber55 := __assign_1657;
+                        __assign_1657
+                      )
+                      | _ -> let __assign_1644 = 0 in (
+                        tempNumber55 := __assign_1644;
+                        __assign_1644
+                      ));
+                    let missing = !tempNumber55 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1658 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1658;
                       __assign_1658
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1659 = !_g5 in let __new_1660 = HxInt.add __old_1659 1 in (
+                          ignore (_g5 := __new_1660);
+                          __old_1659
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1661 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1661;
+                        __assign_1661
+                      ) else let tempArray55 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1662 = HxArray.create () in __arr_1662 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1663 = !_g6 in let __new_1664 = HxInt.add __old_1663 1 in (
+                              ignore (_g6 := __new_1664);
+                              __new_1664
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1665 = _g5 in (
+                            tempArray55 := __assign_1665;
+                            __assign_1665
+                          )
+                        ));
+                        let __assign_1666 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray55) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1666;
+                          __assign_1666
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1659 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray58) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1659;
-                    __assign_1659
                   )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_1660 = "()" in (
-                tempResult5 := __assign_1660;
-                __assign_1660
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber59 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1662 = expected in let __nullable_1663 = HxArray.length args in if __nullable_1662 == HxRuntime.hx_null then false else Obj.obj __nullable_1662 > __nullable_1663) then let __assign_1664 = HxInt.sub (let __nullable_int_1665 = expected in if __nullable_int_1665 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1665) (HxArray.length args) in (
-                  tempNumber59 := __assign_1664;
-                  __assign_1664
-                ) else let __assign_1666 = 0 in (
-                  tempNumber59 := __assign_1666;
-                  __assign_1666
-                ) else let __assign_1667 = 0 in (
-                  tempNumber59 := __assign_1667;
-                  __assign_1667
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1668 = expected in let __nullable_1669 = HxArray.length args in if __nullable_1668 == HxRuntime.hx_null then false else Obj.obj __nullable_1668 > __nullable_1669) then let __assign_1670 = HxInt.sub (let __nullable_int_1671 = expected in if __nullable_int_1671 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1671) (HxArray.length args) in (
-                  tempNumber59 := __assign_1670;
-                  __assign_1670
-                ) else let __assign_1672 = 0 in (
-                  tempNumber59 := __assign_1672;
-                  __assign_1672
-                ) else let __assign_1673 = 0 in (
-                  tempNumber59 := __assign_1673;
-                  __assign_1673
-                ) else let __assign_1674 = 0 in (
-                  tempNumber59 := __assign_1674;
-                  __assign_1674
-                )
-                | _ -> let __assign_1661 = 0 in (
-                  tempNumber59 := __assign_1661;
-                  __assign_1661
-                ));
-              let missing = !tempNumber59 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1675 = !_g5 in let __new_1676 = HxInt.add __old_1675 1 in (
-                    ignore (_g5 := __new_1676);
-                    __old_1675
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1677 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1677;
-                  __assign_1677
-                ) else let tempArray59 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1678 = HxArray.create () in __arr_1678 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1679 = !_g6 in let __new_1680 = HxInt.add __old_1679 1 in (
-                        ignore (_g6 := __new_1680);
-                        __new_1680
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1667 = "false" in (
+                      tempResult5 := __assign_1667;
+                      __assign_1667
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber56 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1669 = expected in let __nullable_1670 = HxArray.length args in if __nullable_1669 == HxRuntime.hx_null then false else Obj.obj __nullable_1669 > __nullable_1670) then let __assign_1671 = HxInt.sub (let __nullable_int_1672 = expected in if __nullable_int_1672 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1672) (HxArray.length args) in (
+                        tempNumber56 := __assign_1671;
+                        __assign_1671
+                      ) else let __assign_1673 = 0 in (
+                        tempNumber56 := __assign_1673;
+                        __assign_1673
+                      ) else let __assign_1674 = 0 in (
+                        tempNumber56 := __assign_1674;
+                        __assign_1674
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1675 = expected in let __nullable_1676 = HxArray.length args in if __nullable_1675 == HxRuntime.hx_null then false else Obj.obj __nullable_1675 > __nullable_1676) then let __assign_1677 = HxInt.sub (let __nullable_int_1678 = expected in if __nullable_int_1678 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1678) (HxArray.length args) in (
+                        tempNumber56 := __assign_1677;
+                        __assign_1677
+                      ) else let __assign_1679 = 0 in (
+                        tempNumber56 := __assign_1679;
+                        __assign_1679
+                      ) else let __assign_1680 = 0 in (
+                        tempNumber56 := __assign_1680;
+                        __assign_1680
+                      ) else let __assign_1681 = 0 in (
+                        tempNumber56 := __assign_1681;
+                        __assign_1681
+                      )
+                      | _ -> let __assign_1668 = 0 in (
+                        tempNumber56 := __assign_1668;
+                        __assign_1668
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1681 = _g5 in (
-                      tempArray59 := __assign_1681;
-                      __assign_1681
+                    let missing = !tempNumber56 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1682 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1682;
+                      __assign_1682
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1683 = !_g5 in let __new_1684 = HxInt.add __old_1683 1 in (
+                          ignore (_g5 := __new_1684);
+                          __old_1683
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1685 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1685;
+                        __assign_1685
+                      ) else let tempArray56 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1686 = HxArray.create () in __arr_1686 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1687 = !_g6 in let __new_1688 = HxInt.add __old_1687 1 in (
+                              ignore (_g6 := __new_1688);
+                              __new_1688
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1689 = _g5 in (
+                            tempArray56 := __assign_1689;
+                            __assign_1689
+                          )
+                        ));
+                        let __assign_1690 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray56) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1690;
+                          __assign_1690
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1682 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray59) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1682;
-                    __assign_1682
                   )
-                )
-              )
-            )
-            | "typeof" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g5;
-              let __assign_1683 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_1683;
-                __assign_1683
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber60 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1685 = expected in let __nullable_1686 = HxArray.length args in if __nullable_1685 == HxRuntime.hx_null then false else Obj.obj __nullable_1685 > __nullable_1686) then let __assign_1687 = HxInt.sub (let __nullable_int_1688 = expected in if __nullable_int_1688 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1688) (HxArray.length args) in (
-                  tempNumber60 := __assign_1687;
-                  __assign_1687
-                ) else let __assign_1689 = 0 in (
-                  tempNumber60 := __assign_1689;
-                  __assign_1689
-                ) else let __assign_1690 = 0 in (
-                  tempNumber60 := __assign_1690;
-                  __assign_1690
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1691 = expected in let __nullable_1692 = HxArray.length args in if __nullable_1691 == HxRuntime.hx_null then false else Obj.obj __nullable_1691 > __nullable_1692) then let __assign_1693 = HxInt.sub (let __nullable_int_1694 = expected in if __nullable_int_1694 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1694) (HxArray.length args) in (
-                  tempNumber60 := __assign_1693;
-                  __assign_1693
-                ) else let __assign_1695 = 0 in (
-                  tempNumber60 := __assign_1695;
-                  __assign_1695
-                ) else let __assign_1696 = 0 in (
-                  tempNumber60 := __assign_1696;
-                  __assign_1696
-                ) else let __assign_1697 = 0 in (
-                  tempNumber60 := __assign_1697;
-                  __assign_1697
-                )
-                | _ -> let __assign_1684 = 0 in (
-                  tempNumber60 := __assign_1684;
-                  __assign_1684
-                ));
-              let missing = !tempNumber60 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1698 = !_g5 in let __new_1699 = HxInt.add __old_1698 1 in (
-                    ignore (_g5 := __new_1699);
-                    __old_1698
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1700 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1700;
-                  __assign_1700
-                ) else let tempArray60 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1701 = HxArray.create () in __arr_1701 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1702 = !_g6 in let __new_1703 = HxInt.add __old_1702 1 in (
-                        ignore (_g6 := __new_1703);
-                        __new_1703
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_1691 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1691;
+                      __assign_1691
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber57 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1693 = expected in let __nullable_1694 = HxArray.length args in if __nullable_1693 == HxRuntime.hx_null then false else Obj.obj __nullable_1693 > __nullable_1694) then let __assign_1695 = HxInt.sub (let __nullable_int_1696 = expected in if __nullable_int_1696 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1696) (HxArray.length args) in (
+                        tempNumber57 := __assign_1695;
+                        __assign_1695
+                      ) else let __assign_1697 = 0 in (
+                        tempNumber57 := __assign_1697;
+                        __assign_1697
+                      ) else let __assign_1698 = 0 in (
+                        tempNumber57 := __assign_1698;
+                        __assign_1698
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1699 = expected in let __nullable_1700 = HxArray.length args in if __nullable_1699 == HxRuntime.hx_null then false else Obj.obj __nullable_1699 > __nullable_1700) then let __assign_1701 = HxInt.sub (let __nullable_int_1702 = expected in if __nullable_int_1702 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1702) (HxArray.length args) in (
+                        tempNumber57 := __assign_1701;
+                        __assign_1701
+                      ) else let __assign_1703 = 0 in (
+                        tempNumber57 := __assign_1703;
+                        __assign_1703
+                      ) else let __assign_1704 = 0 in (
+                        tempNumber57 := __assign_1704;
+                        __assign_1704
+                      ) else let __assign_1705 = 0 in (
+                        tempNumber57 := __assign_1705;
+                        __assign_1705
+                      )
+                      | _ -> let __assign_1692 = 0 in (
+                        tempNumber57 := __assign_1692;
+                        __assign_1692
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1704 = _g5 in (
-                      tempArray60 := __assign_1704;
-                      __assign_1704
+                    let missing = !tempNumber57 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1706 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1706;
+                      __assign_1706
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1707 = !_g5 in let __new_1708 = HxInt.add __old_1707 1 in (
+                          ignore (_g5 := __new_1708);
+                          __old_1707
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1709 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1709;
+                        __assign_1709
+                      ) else let tempArray57 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1710 = HxArray.create () in __arr_1710 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1711 = !_g6 in let __new_1712 = HxInt.add __old_1711 1 in (
+                              ignore (_g6 := __new_1712);
+                              __new_1712
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1713 = _g5 in (
+                            tempArray57 := __assign_1713;
+                            __assign_1713
+                          )
+                        ));
+                        let __assign_1714 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray57) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1714;
+                          __assign_1714
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1705 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray60) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1705;
-                    __assign_1705
                   )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber61 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1455 = expected in let __nullable_1456 = HxArray.length args in if __nullable_1455 == HxRuntime.hx_null then false else Obj.obj __nullable_1455 > __nullable_1456) then let __assign_1457 = HxInt.sub (let __nullable_int_1458 = expected in if __nullable_int_1458 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1458) (HxArray.length args) in (
-                  tempNumber61 := __assign_1457;
-                  __assign_1457
-                ) else let __assign_1459 = 0 in (
-                  tempNumber61 := __assign_1459;
-                  __assign_1459
-                ) else let __assign_1460 = 0 in (
-                  tempNumber61 := __assign_1460;
-                  __assign_1460
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1461 = expected in let __nullable_1462 = HxArray.length args in if __nullable_1461 == HxRuntime.hx_null then false else Obj.obj __nullable_1461 > __nullable_1462) then let __assign_1463 = HxInt.sub (let __nullable_int_1464 = expected in if __nullable_int_1464 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1464) (HxArray.length args) in (
-                  tempNumber61 := __assign_1463;
-                  __assign_1463
-                ) else let __assign_1465 = 0 in (
-                  tempNumber61 := __assign_1465;
-                  __assign_1465
-                ) else let __assign_1466 = 0 in (
-                  tempNumber61 := __assign_1466;
-                  __assign_1466
-                ) else let __assign_1467 = 0 in (
-                  tempNumber61 := __assign_1467;
-                  __assign_1467
-                )
-                | _ -> let __assign_1454 = 0 in (
-                  tempNumber61 := __assign_1454;
-                  __assign_1454
-                ));
-              let missing = !tempNumber61 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_1468 = !_g5 in let __new_1469 = HxInt.add __old_1468 1 in (
-                    ignore (_g5 := __new_1469);
-                    __old_1468
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_1470 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_1470;
-                  __assign_1470
-                ) else let tempArray61 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_1471 = HxArray.create () in __arr_1471 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_1472 = !_g6 in let __new_1473 = HxInt.add __old_1472 1 in (
-                        ignore (_g6 := __new_1473);
-                        __new_1473
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1715 = "()" in (
+                      tempResult5 := __assign_1715;
+                      __assign_1715
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber58 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1717 = expected in let __nullable_1718 = HxArray.length args in if __nullable_1717 == HxRuntime.hx_null then false else Obj.obj __nullable_1717 > __nullable_1718) then let __assign_1719 = HxInt.sub (let __nullable_int_1720 = expected in if __nullable_int_1720 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1720) (HxArray.length args) in (
+                        tempNumber58 := __assign_1719;
+                        __assign_1719
+                      ) else let __assign_1721 = 0 in (
+                        tempNumber58 := __assign_1721;
+                        __assign_1721
+                      ) else let __assign_1722 = 0 in (
+                        tempNumber58 := __assign_1722;
+                        __assign_1722
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1723 = expected in let __nullable_1724 = HxArray.length args in if __nullable_1723 == HxRuntime.hx_null then false else Obj.obj __nullable_1723 > __nullable_1724) then let __assign_1725 = HxInt.sub (let __nullable_int_1726 = expected in if __nullable_int_1726 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1726) (HxArray.length args) in (
+                        tempNumber58 := __assign_1725;
+                        __assign_1725
+                      ) else let __assign_1727 = 0 in (
+                        tempNumber58 := __assign_1727;
+                        __assign_1727
+                      ) else let __assign_1728 = 0 in (
+                        tempNumber58 := __assign_1728;
+                        __assign_1728
+                      ) else let __assign_1729 = 0 in (
+                        tempNumber58 := __assign_1729;
+                        __assign_1729
+                      )
+                      | _ -> let __assign_1716 = 0 in (
+                        tempNumber58 := __assign_1716;
+                        __assign_1716
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_1474 = _g5 in (
-                      tempArray61 := __assign_1474;
-                      __assign_1474
+                    let missing = !tempNumber58 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1730 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1730;
+                      __assign_1730
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1731 = !_g5 in let __new_1732 = HxInt.add __old_1731 1 in (
+                          ignore (_g5 := __new_1732);
+                          __old_1731
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1733 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1733;
+                        __assign_1733
+                      ) else let tempArray58 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1734 = HxArray.create () in __arr_1734 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1735 = !_g6 in let __new_1736 = HxInt.add __old_1735 1 in (
+                              ignore (_g6 := __new_1736);
+                              __new_1736
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1737 = _g5 in (
+                            tempArray58 := __assign_1737;
+                            __assign_1737
+                          )
+                        ));
+                        let __assign_1738 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray58) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1738;
+                          __assign_1738
+                        )
+                      )
                     )
-                  ));
-                  let __assign_1475 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray61) " " (fun x -> x)) in (
-                    tempResult5 := __assign_1475;
-                    __assign_1475
                   )
-                )
-              )
-            ))
-          | _ -> (match _g3 with
-            | "exists" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_214 = "true" in (
-                tempResult5 := __assign_214;
-                __assign_214
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber62 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_216 = expected in let __nullable_217 = HxArray.length args in if __nullable_216 == HxRuntime.hx_null then false else Obj.obj __nullable_216 > __nullable_217) then let __assign_218 = HxInt.sub (let __nullable_int_219 = expected in if __nullable_int_219 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_219) (HxArray.length args) in (
-                  tempNumber62 := __assign_218;
-                  __assign_218
-                ) else let __assign_220 = 0 in (
-                  tempNumber62 := __assign_220;
-                  __assign_220
-                ) else let __assign_221 = 0 in (
-                  tempNumber62 := __assign_221;
-                  __assign_221
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_222 = expected in let __nullable_223 = HxArray.length args in if __nullable_222 == HxRuntime.hx_null then false else Obj.obj __nullable_222 > __nullable_223) then let __assign_224 = HxInt.sub (let __nullable_int_225 = expected in if __nullable_int_225 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_225) (HxArray.length args) in (
-                  tempNumber62 := __assign_224;
-                  __assign_224
-                ) else let __assign_226 = 0 in (
-                  tempNumber62 := __assign_226;
-                  __assign_226
-                ) else let __assign_227 = 0 in (
-                  tempNumber62 := __assign_227;
-                  __assign_227
-                ) else let __assign_228 = 0 in (
-                  tempNumber62 := __assign_228;
-                  __assign_228
-                )
-                | _ -> let __assign_215 = 0 in (
-                  tempNumber62 := __assign_215;
-                  __assign_215
-                ));
-              let missing = !tempNumber62 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_229 = !_g5 in let __new_230 = HxInt.add __old_229 1 in (
-                    ignore (_g5 := __new_230);
-                    __old_229
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_231 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_231;
-                  __assign_231
-                ) else let tempArray62 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_232 = HxArray.create () in __arr_232 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_233 = !_g6 in let __new_234 = HxInt.add __old_233 1 in (
-                        ignore (_g6 := __new_234);
-                        __new_234
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_1739 = "()" in (
+                      tempResult5 := __assign_1739;
+                      __assign_1739
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber59 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1741 = expected in let __nullable_1742 = HxArray.length args in if __nullable_1741 == HxRuntime.hx_null then false else Obj.obj __nullable_1741 > __nullable_1742) then let __assign_1743 = HxInt.sub (let __nullable_int_1744 = expected in if __nullable_int_1744 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1744) (HxArray.length args) in (
+                        tempNumber59 := __assign_1743;
+                        __assign_1743
+                      ) else let __assign_1745 = 0 in (
+                        tempNumber59 := __assign_1745;
+                        __assign_1745
+                      ) else let __assign_1746 = 0 in (
+                        tempNumber59 := __assign_1746;
+                        __assign_1746
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1747 = expected in let __nullable_1748 = HxArray.length args in if __nullable_1747 == HxRuntime.hx_null then false else Obj.obj __nullable_1747 > __nullable_1748) then let __assign_1749 = HxInt.sub (let __nullable_int_1750 = expected in if __nullable_int_1750 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1750) (HxArray.length args) in (
+                        tempNumber59 := __assign_1749;
+                        __assign_1749
+                      ) else let __assign_1751 = 0 in (
+                        tempNumber59 := __assign_1751;
+                        __assign_1751
+                      ) else let __assign_1752 = 0 in (
+                        tempNumber59 := __assign_1752;
+                        __assign_1752
+                      ) else let __assign_1753 = 0 in (
+                        tempNumber59 := __assign_1753;
+                        __assign_1753
+                      )
+                      | _ -> let __assign_1740 = 0 in (
+                        tempNumber59 := __assign_1740;
+                        __assign_1740
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_235 = _g5 in (
-                      tempArray62 := __assign_235;
-                      __assign_235
+                    let missing = !tempNumber59 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1754 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1754;
+                      __assign_1754
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1755 = !_g5 in let __new_1756 = HxInt.add __old_1755 1 in (
+                          ignore (_g5 := __new_1756);
+                          __old_1755
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1757 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1757;
+                        __assign_1757
+                      ) else let tempArray59 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1758 = HxArray.create () in __arr_1758 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1759 = !_g6 in let __new_1760 = HxInt.add __old_1759 1 in (
+                              ignore (_g6 := __new_1760);
+                              __new_1760
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1761 = _g5 in (
+                            tempArray59 := __assign_1761;
+                            __assign_1761
+                          )
+                        ));
+                        let __assign_1762 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray59) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1762;
+                          __assign_1762
+                        )
+                      )
                     )
-                  ));
-                  let __assign_236 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray62) " " (fun x -> x)) in (
-                    tempResult5 := __assign_236;
-                    __assign_236
                   )
-                )
-              )
-            )
-            | "isDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_237 = "false" in (
-                tempResult5 := __assign_237;
-                __assign_237
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber63 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_239 = expected in let __nullable_240 = HxArray.length args in if __nullable_239 == HxRuntime.hx_null then false else Obj.obj __nullable_239 > __nullable_240) then let __assign_241 = HxInt.sub (let __nullable_int_242 = expected in if __nullable_int_242 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_242) (HxArray.length args) in (
-                  tempNumber63 := __assign_241;
-                  __assign_241
-                ) else let __assign_243 = 0 in (
-                  tempNumber63 := __assign_243;
-                  __assign_243
-                ) else let __assign_244 = 0 in (
-                  tempNumber63 := __assign_244;
-                  __assign_244
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_245 = expected in let __nullable_246 = HxArray.length args in if __nullable_245 == HxRuntime.hx_null then false else Obj.obj __nullable_245 > __nullable_246) then let __assign_247 = HxInt.sub (let __nullable_int_248 = expected in if __nullable_int_248 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_248) (HxArray.length args) in (
-                  tempNumber63 := __assign_247;
-                  __assign_247
-                ) else let __assign_249 = 0 in (
-                  tempNumber63 := __assign_249;
-                  __assign_249
-                ) else let __assign_250 = 0 in (
-                  tempNumber63 := __assign_250;
-                  __assign_250
-                ) else let __assign_251 = 0 in (
-                  tempNumber63 := __assign_251;
-                  __assign_251
-                )
-                | _ -> let __assign_238 = 0 in (
-                  tempNumber63 := __assign_238;
-                  __assign_238
-                ));
-              let missing = !tempNumber63 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_252 = !_g5 in let __new_253 = HxInt.add __old_252 1 in (
-                    ignore (_g5 := __new_253);
-                    __old_252
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_254 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_254;
-                  __assign_254
-                ) else let tempArray63 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_255 = HxArray.create () in __arr_255 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_256 = !_g6 in let __new_257 = HxInt.add __old_256 1 in (
-                        ignore (_g6 := __new_257);
-                        __new_257
+                  | "typeof" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g5;
+                    let __assign_1763 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1763;
+                      __assign_1763
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber60 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1765 = expected in let __nullable_1766 = HxArray.length args in if __nullable_1765 == HxRuntime.hx_null then false else Obj.obj __nullable_1765 > __nullable_1766) then let __assign_1767 = HxInt.sub (let __nullable_int_1768 = expected in if __nullable_int_1768 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1768) (HxArray.length args) in (
+                        tempNumber60 := __assign_1767;
+                        __assign_1767
+                      ) else let __assign_1769 = 0 in (
+                        tempNumber60 := __assign_1769;
+                        __assign_1769
+                      ) else let __assign_1770 = 0 in (
+                        tempNumber60 := __assign_1770;
+                        __assign_1770
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1771 = expected in let __nullable_1772 = HxArray.length args in if __nullable_1771 == HxRuntime.hx_null then false else Obj.obj __nullable_1771 > __nullable_1772) then let __assign_1773 = HxInt.sub (let __nullable_int_1774 = expected in if __nullable_int_1774 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1774) (HxArray.length args) in (
+                        tempNumber60 := __assign_1773;
+                        __assign_1773
+                      ) else let __assign_1775 = 0 in (
+                        tempNumber60 := __assign_1775;
+                        __assign_1775
+                      ) else let __assign_1776 = 0 in (
+                        tempNumber60 := __assign_1776;
+                        __assign_1776
+                      ) else let __assign_1777 = 0 in (
+                        tempNumber60 := __assign_1777;
+                        __assign_1777
+                      )
+                      | _ -> let __assign_1764 = 0 in (
+                        tempNumber60 := __assign_1764;
+                        __assign_1764
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_258 = _g5 in (
-                      tempArray63 := __assign_258;
-                      __assign_258
+                    let missing = !tempNumber60 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1778 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1778;
+                      __assign_1778
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1779 = !_g5 in let __new_1780 = HxInt.add __old_1779 1 in (
+                          ignore (_g5 := __new_1780);
+                          __old_1779
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1781 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1781;
+                        __assign_1781
+                      ) else let tempArray60 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1782 = HxArray.create () in __arr_1782 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1783 = !_g6 in let __new_1784 = HxInt.add __old_1783 1 in (
+                              ignore (_g6 := __new_1784);
+                              __new_1784
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1785 = _g5 in (
+                            tempArray60 := __assign_1785;
+                            __assign_1785
+                          )
+                        ));
+                        let __assign_1786 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray60) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1786;
+                          __assign_1786
+                        )
+                      )
                     )
-                  ));
-                  let __assign_259 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray63) " " (fun x -> x)) in (
-                    tempResult5 := __assign_259;
-                    __assign_259
                   )
-                )
-              )
-            )
-            | "readDirectory" -> if HxArray.length _g1 = 0 then (
-              ignore _g2;
-              let __assign_260 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_260;
-                __assign_260
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber64 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_262 = expected in let __nullable_263 = HxArray.length args in if __nullable_262 == HxRuntime.hx_null then false else Obj.obj __nullable_262 > __nullable_263) then let __assign_264 = HxInt.sub (let __nullable_int_265 = expected in if __nullable_int_265 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_265) (HxArray.length args) in (
-                  tempNumber64 := __assign_264;
-                  __assign_264
-                ) else let __assign_266 = 0 in (
-                  tempNumber64 := __assign_266;
-                  __assign_266
-                ) else let __assign_267 = 0 in (
-                  tempNumber64 := __assign_267;
-                  __assign_267
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_268 = expected in let __nullable_269 = HxArray.length args in if __nullable_268 == HxRuntime.hx_null then false else Obj.obj __nullable_268 > __nullable_269) then let __assign_270 = HxInt.sub (let __nullable_int_271 = expected in if __nullable_int_271 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_271) (HxArray.length args) in (
-                  tempNumber64 := __assign_270;
-                  __assign_270
-                ) else let __assign_272 = 0 in (
-                  tempNumber64 := __assign_272;
-                  __assign_272
-                ) else let __assign_273 = 0 in (
-                  tempNumber64 := __assign_273;
-                  __assign_273
-                ) else let __assign_274 = 0 in (
-                  tempNumber64 := __assign_274;
-                  __assign_274
-                )
-                | _ -> let __assign_261 = 0 in (
-                  tempNumber64 := __assign_261;
-                  __assign_261
-                ));
-              let missing = !tempNumber64 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_275 = !_g5 in let __new_276 = HxInt.add __old_275 1 in (
-                    ignore (_g5 := __new_276);
-                    __old_275
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_277 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_277;
-                  __assign_277
-                ) else let tempArray64 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_278 = HxArray.create () in __arr_278 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_279 = !_g6 in let __new_280 = HxInt.add __old_279 1 in (
-                        ignore (_g6 := __new_280);
-                        __new_280
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber61 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1525 = expected in let __nullable_1526 = HxArray.length args in if __nullable_1525 == HxRuntime.hx_null then false else Obj.obj __nullable_1525 > __nullable_1526) then let __assign_1527 = HxInt.sub (let __nullable_int_1528 = expected in if __nullable_int_1528 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1528) (HxArray.length args) in (
+                        tempNumber61 := __assign_1527;
+                        __assign_1527
+                      ) else let __assign_1529 = 0 in (
+                        tempNumber61 := __assign_1529;
+                        __assign_1529
+                      ) else let __assign_1530 = 0 in (
+                        tempNumber61 := __assign_1530;
+                        __assign_1530
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1531 = expected in let __nullable_1532 = HxArray.length args in if __nullable_1531 == HxRuntime.hx_null then false else Obj.obj __nullable_1531 > __nullable_1532) then let __assign_1533 = HxInt.sub (let __nullable_int_1534 = expected in if __nullable_int_1534 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1534) (HxArray.length args) in (
+                        tempNumber61 := __assign_1533;
+                        __assign_1533
+                      ) else let __assign_1535 = 0 in (
+                        tempNumber61 := __assign_1535;
+                        __assign_1535
+                      ) else let __assign_1536 = 0 in (
+                        tempNumber61 := __assign_1536;
+                        __assign_1536
+                      ) else let __assign_1537 = 0 in (
+                        tempNumber61 := __assign_1537;
+                        __assign_1537
+                      )
+                      | _ -> let __assign_1524 = 0 in (
+                        tempNumber61 := __assign_1524;
+                        __assign_1524
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_281 = _g5 in (
-                      tempArray64 := __assign_281;
-                      __assign_281
+                    let missing = !tempNumber61 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1538 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_1538;
+                      __assign_1538
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_1539 = !_g5 in let __new_1540 = HxInt.add __old_1539 1 in (
+                          ignore (_g5 := __new_1540);
+                          __old_1539
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_1541 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_1541;
+                        __assign_1541
+                      ) else let tempArray61 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_1542 = HxArray.create () in __arr_1542 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_1543 = !_g6 in let __new_1544 = HxInt.add __old_1543 1 in (
+                              ignore (_g6 := __new_1544);
+                              __new_1544
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_1545 = _g5 in (
+                            tempArray61 := __assign_1545;
+                            __assign_1545
+                          )
+                        ));
+                        let __assign_1546 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray61) " " (fun x -> x)) in (
+                          tempResult5 := __assign_1546;
+                          __assign_1546
+                        )
+                      )
                     )
-                  ));
-                  let __assign_282 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray64) " " (fun x -> x)) in (
-                    tempResult5 := __assign_282;
-                    __assign_282
-                  )
-                )
-              )
-            )
-            | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_283 = "()" in (
-                tempResult5 := __assign_283;
-                __assign_283
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber65 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_285 = expected in let __nullable_286 = HxArray.length args in if __nullable_285 == HxRuntime.hx_null then false else Obj.obj __nullable_285 > __nullable_286) then let __assign_287 = HxInt.sub (let __nullable_int_288 = expected in if __nullable_int_288 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_288) (HxArray.length args) in (
-                  tempNumber65 := __assign_287;
-                  __assign_287
-                ) else let __assign_289 = 0 in (
-                  tempNumber65 := __assign_289;
-                  __assign_289
-                ) else let __assign_290 = 0 in (
-                  tempNumber65 := __assign_290;
-                  __assign_290
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_291 = expected in let __nullable_292 = HxArray.length args in if __nullable_291 == HxRuntime.hx_null then false else Obj.obj __nullable_291 > __nullable_292) then let __assign_293 = HxInt.sub (let __nullable_int_294 = expected in if __nullable_int_294 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_294) (HxArray.length args) in (
-                  tempNumber65 := __assign_293;
-                  __assign_293
-                ) else let __assign_295 = 0 in (
-                  tempNumber65 := __assign_295;
-                  __assign_295
-                ) else let __assign_296 = 0 in (
-                  tempNumber65 := __assign_296;
-                  __assign_296
-                ) else let __assign_297 = 0 in (
-                  tempNumber65 := __assign_297;
-                  __assign_297
-                )
-                | _ -> let __assign_284 = 0 in (
-                  tempNumber65 := __assign_284;
-                  __assign_284
-                ));
-              let missing = !tempNumber65 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_298 = !_g5 in let __new_299 = HxInt.add __old_298 1 in (
-                    ignore (_g5 := __new_299);
-                    __old_298
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_300 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_300;
-                  __assign_300
-                ) else let tempArray65 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_301 = HxArray.create () in __arr_301 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_302 = !_g6 in let __new_303 = HxInt.add __old_302 1 in (
-                        ignore (_g6 := __new_303);
-                        __new_303
+                  ))
+                | _ -> (match _g3 with
+                  | "exists" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_230 = "true" in (
+                      tempResult5 := __assign_230;
+                      __assign_230
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber62 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_232 = expected in let __nullable_233 = HxArray.length args in if __nullable_232 == HxRuntime.hx_null then false else Obj.obj __nullable_232 > __nullable_233) then let __assign_234 = HxInt.sub (let __nullable_int_235 = expected in if __nullable_int_235 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_235) (HxArray.length args) in (
+                        tempNumber62 := __assign_234;
+                        __assign_234
+                      ) else let __assign_236 = 0 in (
+                        tempNumber62 := __assign_236;
+                        __assign_236
+                      ) else let __assign_237 = 0 in (
+                        tempNumber62 := __assign_237;
+                        __assign_237
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_238 = expected in let __nullable_239 = HxArray.length args in if __nullable_238 == HxRuntime.hx_null then false else Obj.obj __nullable_238 > __nullable_239) then let __assign_240 = HxInt.sub (let __nullable_int_241 = expected in if __nullable_int_241 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_241) (HxArray.length args) in (
+                        tempNumber62 := __assign_240;
+                        __assign_240
+                      ) else let __assign_242 = 0 in (
+                        tempNumber62 := __assign_242;
+                        __assign_242
+                      ) else let __assign_243 = 0 in (
+                        tempNumber62 := __assign_243;
+                        __assign_243
+                      ) else let __assign_244 = 0 in (
+                        tempNumber62 := __assign_244;
+                        __assign_244
+                      )
+                      | _ -> let __assign_231 = 0 in (
+                        tempNumber62 := __assign_231;
+                        __assign_231
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_304 = _g5 in (
-                      tempArray65 := __assign_304;
-                      __assign_304
+                    let missing = !tempNumber62 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_245 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_245;
+                      __assign_245
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_246 = !_g5 in let __new_247 = HxInt.add __old_246 1 in (
+                          ignore (_g5 := __new_247);
+                          __old_246
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_248 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_248;
+                        __assign_248
+                      ) else let tempArray62 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_249 = HxArray.create () in __arr_249 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_250 = !_g6 in let __new_251 = HxInt.add __old_250 1 in (
+                              ignore (_g6 := __new_251);
+                              __new_251
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_252 = _g5 in (
+                            tempArray62 := __assign_252;
+                            __assign_252
+                          )
+                        ));
+                        let __assign_253 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray62) " " (fun x -> x)) in (
+                          tempResult5 := __assign_253;
+                          __assign_253
+                        )
+                      )
                     )
-                  ));
-                  let __assign_305 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray65) " " (fun x -> x)) in (
-                    tempResult5 := __assign_305;
-                    __assign_305
                   )
-                )
-              )
-            )
-            | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
-              ignore _g2;
-              ignore _g5;
-              let __assign_306 = "()" in (
-                tempResult5 := __assign_306;
-                __assign_306
-              )
-            ) else let callee = _g in let args = _g1 in let tempNumber66 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_308 = expected in let __nullable_309 = HxArray.length args in if __nullable_308 == HxRuntime.hx_null then false else Obj.obj __nullable_308 > __nullable_309) then let __assign_310 = HxInt.sub (let __nullable_int_311 = expected in if __nullable_int_311 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_311) (HxArray.length args) in (
-                  tempNumber66 := __assign_310;
-                  __assign_310
-                ) else let __assign_312 = 0 in (
-                  tempNumber66 := __assign_312;
-                  __assign_312
-                ) else let __assign_313 = 0 in (
-                  tempNumber66 := __assign_313;
-                  __assign_313
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_314 = expected in let __nullable_315 = HxArray.length args in if __nullable_314 == HxRuntime.hx_null then false else Obj.obj __nullable_314 > __nullable_315) then let __assign_316 = HxInt.sub (let __nullable_int_317 = expected in if __nullable_int_317 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_317) (HxArray.length args) in (
-                  tempNumber66 := __assign_316;
-                  __assign_316
-                ) else let __assign_318 = 0 in (
-                  tempNumber66 := __assign_318;
-                  __assign_318
-                ) else let __assign_319 = 0 in (
-                  tempNumber66 := __assign_319;
-                  __assign_319
-                ) else let __assign_320 = 0 in (
-                  tempNumber66 := __assign_320;
-                  __assign_320
-                )
-                | _ -> let __assign_307 = 0 in (
-                  tempNumber66 := __assign_307;
-                  __assign_307
-                ));
-              let missing = !tempNumber66 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_321 = !_g5 in let __new_322 = HxInt.add __old_321 1 in (
-                    ignore (_g5 := __new_322);
-                    __old_321
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_323 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_323;
-                  __assign_323
-                ) else let tempArray66 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_324 = HxArray.create () in __arr_324 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_325 = !_g6 in let __new_326 = HxInt.add __old_325 1 in (
-                        ignore (_g6 := __new_326);
-                        __new_326
+                  | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_254 = "false" in (
+                      tempResult5 := __assign_254;
+                      __assign_254
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber63 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_256 = expected in let __nullable_257 = HxArray.length args in if __nullable_256 == HxRuntime.hx_null then false else Obj.obj __nullable_256 > __nullable_257) then let __assign_258 = HxInt.sub (let __nullable_int_259 = expected in if __nullable_int_259 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_259) (HxArray.length args) in (
+                        tempNumber63 := __assign_258;
+                        __assign_258
+                      ) else let __assign_260 = 0 in (
+                        tempNumber63 := __assign_260;
+                        __assign_260
+                      ) else let __assign_261 = 0 in (
+                        tempNumber63 := __assign_261;
+                        __assign_261
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_262 = expected in let __nullable_263 = HxArray.length args in if __nullable_262 == HxRuntime.hx_null then false else Obj.obj __nullable_262 > __nullable_263) then let __assign_264 = HxInt.sub (let __nullable_int_265 = expected in if __nullable_int_265 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_265) (HxArray.length args) in (
+                        tempNumber63 := __assign_264;
+                        __assign_264
+                      ) else let __assign_266 = 0 in (
+                        tempNumber63 := __assign_266;
+                        __assign_266
+                      ) else let __assign_267 = 0 in (
+                        tempNumber63 := __assign_267;
+                        __assign_267
+                      ) else let __assign_268 = 0 in (
+                        tempNumber63 := __assign_268;
+                        __assign_268
+                      )
+                      | _ -> let __assign_255 = 0 in (
+                        tempNumber63 := __assign_255;
+                        __assign_255
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_327 = _g5 in (
-                      tempArray66 := __assign_327;
-                      __assign_327
+                    let missing = !tempNumber63 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_269 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_269;
+                      __assign_269
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_270 = !_g5 in let __new_271 = HxInt.add __old_270 1 in (
+                          ignore (_g5 := __new_271);
+                          __old_270
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_272 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_272;
+                        __assign_272
+                      ) else let tempArray63 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_273 = HxArray.create () in __arr_273 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_274 = !_g6 in let __new_275 = HxInt.add __old_274 1 in (
+                              ignore (_g6 := __new_275);
+                              __new_275
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_276 = _g5 in (
+                            tempArray63 := __assign_276;
+                            __assign_276
+                          )
+                        ));
+                        let __assign_277 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray63) " " (fun x -> x)) in (
+                          tempResult5 := __assign_277;
+                          __assign_277
+                        )
+                      )
                     )
-                  ));
-                  let __assign_328 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray66) " " (fun x -> x)) in (
-                    tempResult5 := __assign_328;
-                    __assign_328
                   )
-                )
-              )
-            )
-            | _ -> let callee = _g in let args = _g1 in let tempNumber67 = ref 0 in (
-              ignore (match callee with
-                | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_193 = expected in let __nullable_194 = HxArray.length args in if __nullable_193 == HxRuntime.hx_null then false else Obj.obj __nullable_193 > __nullable_194) then let __assign_195 = HxInt.sub (let __nullable_int_196 = expected in if __nullable_int_196 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_196) (HxArray.length args) in (
-                  tempNumber67 := __assign_195;
-                  __assign_195
-                ) else let __assign_197 = 0 in (
-                  tempNumber67 := __assign_197;
-                  __assign_197
-                ) else let __assign_198 = 0 in (
-                  tempNumber67 := __assign_198;
-                  __assign_198
-                )
-                | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
-                  | HxExpr.ENull -> 0
-                  | HxExpr.EBool _ -> 1
-                  | HxExpr.EString _ -> 2
-                  | HxExpr.EInt _ -> 3
-                  | HxExpr.EFloat _ -> 4
-                  | HxExpr.EThis -> 5
-                  | HxExpr.ESuper -> 6
-                  | HxExpr.EIdent _ -> 7
-                  | HxExpr.EField (_, _) -> 8
-                  | HxExpr.ECall (_, _) -> 9
-                  | HxExpr.ENew (_, _) -> 10
-                  | HxExpr.EUnop (_, _) -> 11
-                  | HxExpr.EBinop (_, _, _) -> 12
-                  | HxExpr.ETernary (_, _, _) -> 13
-                  | HxExpr.EAnon (_, _) -> 14
-                  | HxExpr.EArrayDecl _ -> 15
-                  | HxExpr.EArrayAccess (_, _) -> 16
-                  | HxExpr.ECast (_, _) -> 17
-                  | HxExpr.EUntyped _ -> 18
-                  | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_199 = expected in let __nullable_200 = HxArray.length args in if __nullable_199 == HxRuntime.hx_null then false else Obj.obj __nullable_199 > __nullable_200) then let __assign_201 = HxInt.sub (let __nullable_int_202 = expected in if __nullable_int_202 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_202) (HxArray.length args) in (
-                  tempNumber67 := __assign_201;
-                  __assign_201
-                ) else let __assign_203 = 0 in (
-                  tempNumber67 := __assign_203;
-                  __assign_203
-                ) else let __assign_204 = 0 in (
-                  tempNumber67 := __assign_204;
-                  __assign_204
-                ) else let __assign_205 = 0 in (
-                  tempNumber67 := __assign_205;
-                  __assign_205
-                )
-                | _ -> let __assign_192 = 0 in (
-                  tempNumber67 := __assign_192;
-                  __assign_192
-                ));
-              let missing = !tempNumber67 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-                ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
-                  ignore (let __old_206 = !_g5 in let __new_207 = HxInt.add __old_206 1 in (
-                    ignore (_g5 := __new_207);
-                    __old_206
-                  ));
-                  HxArray.push fullArgs (HxExpr.ENull)
-                )) done);
-                if HxArray.length fullArgs = 0 then let __assign_208 = HxString.toStdString c ^ " ()" in (
-                  tempResult5 := __assign_208;
-                  __assign_208
-                ) else let tempArray67 = ref (Obj.magic ()) in (
-                  ignore (let _g5 = let __arr_209 = HxArray.create () in __arr_209 in (
-                    ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
-                      ignore (let __old_210 = !_g6 in let __new_211 = HxInt.add __old_210 1 in (
-                        ignore (_g6 := __new_211);
-                        __new_211
+                  | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                    ignore _g2;
+                    let __assign_278 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_278;
+                      __assign_278
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber64 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_280 = expected in let __nullable_281 = HxArray.length args in if __nullable_280 == HxRuntime.hx_null then false else Obj.obj __nullable_280 > __nullable_281) then let __assign_282 = HxInt.sub (let __nullable_int_283 = expected in if __nullable_int_283 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_283) (HxArray.length args) in (
+                        tempNumber64 := __assign_282;
+                        __assign_282
+                      ) else let __assign_284 = 0 in (
+                        tempNumber64 := __assign_284;
+                        __assign_284
+                      ) else let __assign_285 = 0 in (
+                        tempNumber64 := __assign_285;
+                        __assign_285
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_286 = expected in let __nullable_287 = HxArray.length args in if __nullable_286 == HxRuntime.hx_null then false else Obj.obj __nullable_286 > __nullable_287) then let __assign_288 = HxInt.sub (let __nullable_int_289 = expected in if __nullable_int_289 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_289) (HxArray.length args) in (
+                        tempNumber64 := __assign_288;
+                        __assign_288
+                      ) else let __assign_290 = 0 in (
+                        tempNumber64 := __assign_290;
+                        __assign_290
+                      ) else let __assign_291 = 0 in (
+                        tempNumber64 := __assign_291;
+                        __assign_291
+                      ) else let __assign_292 = 0 in (
+                        tempNumber64 := __assign_292;
+                        __assign_292
+                      )
+                      | _ -> let __assign_279 = 0 in (
+                        tempNumber64 := __assign_279;
+                        __assign_279
                       ));
-                      HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                    )) done);
-                    let __assign_212 = _g5 in (
-                      tempArray67 := __assign_212;
-                      __assign_212
+                    let missing = !tempNumber64 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_293 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_293;
+                      __assign_293
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_294 = !_g5 in let __new_295 = HxInt.add __old_294 1 in (
+                          ignore (_g5 := __new_295);
+                          __old_294
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_296 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_296;
+                        __assign_296
+                      ) else let tempArray64 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_297 = HxArray.create () in __arr_297 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_298 = !_g6 in let __new_299 = HxInt.add __old_298 1 in (
+                              ignore (_g6 := __new_299);
+                              __new_299
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_300 = _g5 in (
+                            tempArray64 := __assign_300;
+                            __assign_300
+                          )
+                        ));
+                        let __assign_301 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray64) " " (fun x -> x)) in (
+                          tempResult5 := __assign_301;
+                          __assign_301
+                        )
+                      )
                     )
-                  ));
-                  let __assign_213 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray67) " " (fun x -> x)) in (
-                    tempResult5 := __assign_213;
-                    __assign_213
                   )
-                )
-              )
-            )) else match _g3 with
-          | "exists" -> if HxArray.length _g1 = 0 then (
-            ignore _g2;
-            let __assign_1728 = "true" in (
-              tempResult5 := __assign_1728;
-              __assign_1728
-            )
-          ) else let callee = _g in let args = _g1 in let tempNumber68 = ref 0 in (
-            ignore (match callee with
-              | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1730 = expected in let __nullable_1731 = HxArray.length args in if __nullable_1730 == HxRuntime.hx_null then false else Obj.obj __nullable_1730 > __nullable_1731) then let __assign_1732 = HxInt.sub (let __nullable_int_1733 = expected in if __nullable_int_1733 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1733) (HxArray.length args) in (
-                tempNumber68 := __assign_1732;
-                __assign_1732
-              ) else let __assign_1734 = 0 in (
-                tempNumber68 := __assign_1734;
-                __assign_1734
-              ) else let __assign_1735 = 0 in (
-                tempNumber68 := __assign_1735;
-                __assign_1735
-              )
-              | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EThis -> 5
-                | HxExpr.ESuper -> 6
-                | HxExpr.EIdent _ -> 7
-                | HxExpr.EField (_, _) -> 8
-                | HxExpr.ECall (_, _) -> 9
-                | HxExpr.ENew (_, _) -> 10
-                | HxExpr.EUnop (_, _) -> 11
-                | HxExpr.EBinop (_, _, _) -> 12
-                | HxExpr.ETernary (_, _, _) -> 13
-                | HxExpr.EAnon (_, _) -> 14
-                | HxExpr.EArrayDecl _ -> 15
-                | HxExpr.EArrayAccess (_, _) -> 16
-                | HxExpr.ECast (_, _) -> 17
-                | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1736 = expected in let __nullable_1737 = HxArray.length args in if __nullable_1736 == HxRuntime.hx_null then false else Obj.obj __nullable_1736 > __nullable_1737) then let __assign_1738 = HxInt.sub (let __nullable_int_1739 = expected in if __nullable_int_1739 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1739) (HxArray.length args) in (
-                tempNumber68 := __assign_1738;
-                __assign_1738
-              ) else let __assign_1740 = 0 in (
-                tempNumber68 := __assign_1740;
-                __assign_1740
-              ) else let __assign_1741 = 0 in (
-                tempNumber68 := __assign_1741;
-                __assign_1741
-              ) else let __assign_1742 = 0 in (
-                tempNumber68 := __assign_1742;
-                __assign_1742
-              )
-              | _ -> let __assign_1729 = 0 in (
-                tempNumber68 := __assign_1729;
-                __assign_1729
-              ));
-            let missing = !tempNumber68 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-              ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
-                ignore (let __old_1743 = !_g4 in let __new_1744 = HxInt.add __old_1743 1 in (
-                  ignore (_g4 := __new_1744);
-                  __old_1743
-                ));
-                HxArray.push fullArgs (HxExpr.ENull)
-              )) done);
-              if HxArray.length fullArgs = 0 then let __assign_1745 = HxString.toStdString c ^ " ()" in (
-                tempResult5 := __assign_1745;
-                __assign_1745
-              ) else let tempArray68 = ref (Obj.magic ()) in (
-                ignore (let _g4 = let __arr_1746 = HxArray.create () in __arr_1746 in (
-                  ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
-                    ignore (let __old_1747 = !_g5 in let __new_1748 = HxInt.add __old_1747 1 in (
-                      ignore (_g5 := __new_1748);
-                      __new_1748
+                  | "set_high" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_302 = "()" in (
+                      tempResult5 := __assign_302;
+                      __assign_302
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber65 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_304 = expected in let __nullable_305 = HxArray.length args in if __nullable_304 == HxRuntime.hx_null then false else Obj.obj __nullable_304 > __nullable_305) then let __assign_306 = HxInt.sub (let __nullable_int_307 = expected in if __nullable_int_307 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_307) (HxArray.length args) in (
+                        tempNumber65 := __assign_306;
+                        __assign_306
+                      ) else let __assign_308 = 0 in (
+                        tempNumber65 := __assign_308;
+                        __assign_308
+                      ) else let __assign_309 = 0 in (
+                        tempNumber65 := __assign_309;
+                        __assign_309
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_310 = expected in let __nullable_311 = HxArray.length args in if __nullable_310 == HxRuntime.hx_null then false else Obj.obj __nullable_310 > __nullable_311) then let __assign_312 = HxInt.sub (let __nullable_int_313 = expected in if __nullable_int_313 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_313) (HxArray.length args) in (
+                        tempNumber65 := __assign_312;
+                        __assign_312
+                      ) else let __assign_314 = 0 in (
+                        tempNumber65 := __assign_314;
+                        __assign_314
+                      ) else let __assign_315 = 0 in (
+                        tempNumber65 := __assign_315;
+                        __assign_315
+                      ) else let __assign_316 = 0 in (
+                        tempNumber65 := __assign_316;
+                        __assign_316
+                      )
+                      | _ -> let __assign_303 = 0 in (
+                        tempNumber65 := __assign_303;
+                        __assign_303
+                      ));
+                    let missing = !tempNumber65 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_317 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_317;
+                      __assign_317
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_318 = !_g5 in let __new_319 = HxInt.add __old_318 1 in (
+                          ignore (_g5 := __new_319);
+                          __old_318
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_320 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_320;
+                        __assign_320
+                      ) else let tempArray65 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_321 = HxArray.create () in __arr_321 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_322 = !_g6 in let __new_323 = HxInt.add __old_322 1 in (
+                              ignore (_g6 := __new_323);
+                              __new_323
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_324 = _g5 in (
+                            tempArray65 := __assign_324;
+                            __assign_324
+                          )
+                        ));
+                        let __assign_325 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray65) " " (fun x -> x)) in (
+                          tempResult5 := __assign_325;
+                          __assign_325
+                        )
+                      )
+                    )
+                  )
+                  | "set_low" -> if HxArray.length _g1 = 1 then let _g5 = HxArray.get _g1 0 in (
+                    ignore _g2;
+                    ignore _g5;
+                    let __assign_326 = "()" in (
+                      tempResult5 := __assign_326;
+                      __assign_326
+                    )
+                  ) else let callee = _g in let args = _g1 in let tempNumber66 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_328 = expected in let __nullable_329 = HxArray.length args in if __nullable_328 == HxRuntime.hx_null then false else Obj.obj __nullable_328 > __nullable_329) then let __assign_330 = HxInt.sub (let __nullable_int_331 = expected in if __nullable_int_331 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_331) (HxArray.length args) in (
+                        tempNumber66 := __assign_330;
+                        __assign_330
+                      ) else let __assign_332 = 0 in (
+                        tempNumber66 := __assign_332;
+                        __assign_332
+                      ) else let __assign_333 = 0 in (
+                        tempNumber66 := __assign_333;
+                        __assign_333
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_334 = expected in let __nullable_335 = HxArray.length args in if __nullable_334 == HxRuntime.hx_null then false else Obj.obj __nullable_334 > __nullable_335) then let __assign_336 = HxInt.sub (let __nullable_int_337 = expected in if __nullable_int_337 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_337) (HxArray.length args) in (
+                        tempNumber66 := __assign_336;
+                        __assign_336
+                      ) else let __assign_338 = 0 in (
+                        tempNumber66 := __assign_338;
+                        __assign_338
+                      ) else let __assign_339 = 0 in (
+                        tempNumber66 := __assign_339;
+                        __assign_339
+                      ) else let __assign_340 = 0 in (
+                        tempNumber66 := __assign_340;
+                        __assign_340
+                      )
+                      | _ -> let __assign_327 = 0 in (
+                        tempNumber66 := __assign_327;
+                        __assign_327
+                      ));
+                    let missing = !tempNumber66 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_341 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_341;
+                      __assign_341
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_342 = !_g5 in let __new_343 = HxInt.add __old_342 1 in (
+                          ignore (_g5 := __new_343);
+                          __old_342
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_344 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_344;
+                        __assign_344
+                      ) else let tempArray66 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_345 = HxArray.create () in __arr_345 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_346 = !_g6 in let __new_347 = HxInt.add __old_346 1 in (
+                              ignore (_g6 := __new_347);
+                              __new_347
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_348 = _g5 in (
+                            tempArray66 := __assign_348;
+                            __assign_348
+                          )
+                        ));
+                        let __assign_349 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray66) " " (fun x -> x)) in (
+                          tempResult5 := __assign_349;
+                          __assign_349
+                        )
+                      )
+                    )
+                  )
+                  | _ -> let callee = _g in let args = _g1 in let tempNumber67 = ref 0 in (
+                    ignore (match callee with
+                      | HxExpr.EIdent _p0 -> let _g5 = _p0 in let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_208 = expected in let __nullable_209 = HxArray.length args in if __nullable_208 == HxRuntime.hx_null then false else Obj.obj __nullable_208 > __nullable_209) then let __assign_210 = HxInt.sub (let __nullable_int_211 = expected in if __nullable_int_211 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_211) (HxArray.length args) in (
+                        tempNumber67 := __assign_210;
+                        __assign_210
+                      ) else let __assign_212 = 0 in (
+                        tempNumber67 := __assign_212;
+                        __assign_212
+                      ) else let __assign_213 = 0 in (
+                        tempNumber67 := __assign_213;
+                        __assign_213
+                      )
+                      | HxExpr.EField (_p0, _p1) -> let _g5 = _p0 in let _g6 = _p1 in if (match _g5 with
+                        | HxExpr.ENull -> 0
+                        | HxExpr.EBool _ -> 1
+                        | HxExpr.EString _ -> 2
+                        | HxExpr.EInt _ -> 3
+                        | HxExpr.EFloat _ -> 4
+                        | HxExpr.EThis -> 5
+                        | HxExpr.ESuper -> 6
+                        | HxExpr.EIdent _ -> 7
+                        | HxExpr.EField (_, _) -> 8
+                        | HxExpr.ECall (_, _) -> 9
+                        | HxExpr.ENew (_, _) -> 10
+                        | HxExpr.EUnop (_, _) -> 11
+                        | HxExpr.EBinop (_, _, _) -> 12
+                        | HxExpr.ETernary (_, _, _) -> 13
+                        | HxExpr.EAnon (_, _) -> 14
+                        | HxExpr.EArrayDecl _ -> 15
+                        | HxExpr.EArrayAccess (_, _) -> 16
+                        | HxExpr.ECast (_, _) -> 17
+                        | HxExpr.EUntyped _ -> 18
+                        | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_214 = expected in let __nullable_215 = HxArray.length args in if __nullable_214 == HxRuntime.hx_null then false else Obj.obj __nullable_214 > __nullable_215) then let __assign_216 = HxInt.sub (let __nullable_int_217 = expected in if __nullable_int_217 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_217) (HxArray.length args) in (
+                        tempNumber67 := __assign_216;
+                        __assign_216
+                      ) else let __assign_218 = 0 in (
+                        tempNumber67 := __assign_218;
+                        __assign_218
+                      ) else let __assign_219 = 0 in (
+                        tempNumber67 := __assign_219;
+                        __assign_219
+                      ) else let __assign_220 = 0 in (
+                        tempNumber67 := __assign_220;
+                        __assign_220
+                      )
+                      | _ -> let __assign_207 = 0 in (
+                        tempNumber67 := __assign_207;
+                        __assign_207
+                      ));
+                    let missing = !tempNumber67 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_221 = "(Obj.magic 0)" in (
+                      tempResult5 := __assign_221;
+                      __assign_221
+                    ) else let fullArgs = HxArray.copy args in (
+                      ignore (let _g5 = ref 0 in let _g6 = missing in while !_g5 < _g6 do ignore ((
+                        ignore (let __old_222 = !_g5 in let __new_223 = HxInt.add __old_222 1 in (
+                          ignore (_g5 := __new_223);
+                          __old_222
+                        ));
+                        HxArray.push fullArgs (HxExpr.ENull)
+                      )) done);
+                      if HxArray.length fullArgs = 0 then let __assign_224 = HxString.toStdString c ^ " ()" in (
+                        tempResult5 := __assign_224;
+                        __assign_224
+                      ) else let tempArray67 = ref (Obj.magic ()) in (
+                        ignore (let _g5 = let __arr_225 = HxArray.create () in __arr_225 in (
+                          ignore (let _g6 = ref 0 in let _g7 = fullArgs in while !_g6 < HxArray.length _g7 do ignore (let v = HxArray.get _g7 (!_g6) in (
+                            ignore (let __old_226 = !_g6 in let __new_227 = HxInt.add __old_226 1 in (
+                              ignore (_g6 := __new_227);
+                              __new_227
+                            ));
+                            HxArray.push _g5 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                          )) done);
+                          let __assign_228 = _g5 in (
+                            tempArray67 := __assign_228;
+                            __assign_228
+                          )
+                        ));
+                        let __assign_229 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray67) " " (fun x -> x)) in (
+                          tempResult5 := __assign_229;
+                          __assign_229
+                        )
+                      )
+                    )
+                  )) else match _g3 with
+                | "exists" -> if HxArray.length _g1 = 0 then (
+                  ignore _g2;
+                  let __assign_1810 = "true" in (
+                    tempResult5 := __assign_1810;
+                    __assign_1810
+                  )
+                ) else let callee = _g in let args = _g1 in let tempNumber68 = ref 0 in (
+                  ignore (match callee with
+                    | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1812 = expected in let __nullable_1813 = HxArray.length args in if __nullable_1812 == HxRuntime.hx_null then false else Obj.obj __nullable_1812 > __nullable_1813) then let __assign_1814 = HxInt.sub (let __nullable_int_1815 = expected in if __nullable_int_1815 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1815) (HxArray.length args) in (
+                      tempNumber68 := __assign_1814;
+                      __assign_1814
+                    ) else let __assign_1816 = 0 in (
+                      tempNumber68 := __assign_1816;
+                      __assign_1816
+                    ) else let __assign_1817 = 0 in (
+                      tempNumber68 := __assign_1817;
+                      __assign_1817
+                    )
+                    | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
+                      | HxExpr.ENull -> 0
+                      | HxExpr.EBool _ -> 1
+                      | HxExpr.EString _ -> 2
+                      | HxExpr.EInt _ -> 3
+                      | HxExpr.EFloat _ -> 4
+                      | HxExpr.EThis -> 5
+                      | HxExpr.ESuper -> 6
+                      | HxExpr.EIdent _ -> 7
+                      | HxExpr.EField (_, _) -> 8
+                      | HxExpr.ECall (_, _) -> 9
+                      | HxExpr.ENew (_, _) -> 10
+                      | HxExpr.EUnop (_, _) -> 11
+                      | HxExpr.EBinop (_, _, _) -> 12
+                      | HxExpr.ETernary (_, _, _) -> 13
+                      | HxExpr.EAnon (_, _) -> 14
+                      | HxExpr.EArrayDecl _ -> 15
+                      | HxExpr.EArrayAccess (_, _) -> 16
+                      | HxExpr.ECast (_, _) -> 17
+                      | HxExpr.EUntyped _ -> 18
+                      | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1818 = expected in let __nullable_1819 = HxArray.length args in if __nullable_1818 == HxRuntime.hx_null then false else Obj.obj __nullable_1818 > __nullable_1819) then let __assign_1820 = HxInt.sub (let __nullable_int_1821 = expected in if __nullable_int_1821 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1821) (HxArray.length args) in (
+                      tempNumber68 := __assign_1820;
+                      __assign_1820
+                    ) else let __assign_1822 = 0 in (
+                      tempNumber68 := __assign_1822;
+                      __assign_1822
+                    ) else let __assign_1823 = 0 in (
+                      tempNumber68 := __assign_1823;
+                      __assign_1823
+                    ) else let __assign_1824 = 0 in (
+                      tempNumber68 := __assign_1824;
+                      __assign_1824
+                    )
+                    | _ -> let __assign_1811 = 0 in (
+                      tempNumber68 := __assign_1811;
+                      __assign_1811
                     ));
-                    HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                  )) done);
-                  let __assign_1749 = _g4 in (
-                    tempArray68 := __assign_1749;
-                    __assign_1749
+                  let missing = !tempNumber68 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1825 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1825;
+                    __assign_1825
+                  ) else let fullArgs = HxArray.copy args in (
+                    ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
+                      ignore (let __old_1826 = !_g4 in let __new_1827 = HxInt.add __old_1826 1 in (
+                        ignore (_g4 := __new_1827);
+                        __old_1826
+                      ));
+                      HxArray.push fullArgs (HxExpr.ENull)
+                    )) done);
+                    if HxArray.length fullArgs = 0 then let __assign_1828 = HxString.toStdString c ^ " ()" in (
+                      tempResult5 := __assign_1828;
+                      __assign_1828
+                    ) else let tempArray68 = ref (Obj.magic ()) in (
+                      ignore (let _g4 = let __arr_1829 = HxArray.create () in __arr_1829 in (
+                        ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
+                          ignore (let __old_1830 = !_g5 in let __new_1831 = HxInt.add __old_1830 1 in (
+                            ignore (_g5 := __new_1831);
+                            __new_1831
+                          ));
+                          HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                        )) done);
+                        let __assign_1832 = _g4 in (
+                          tempArray68 := __assign_1832;
+                          __assign_1832
+                        )
+                      ));
+                      let __assign_1833 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray68) " " (fun x -> x)) in (
+                        tempResult5 := __assign_1833;
+                        __assign_1833
+                      )
+                    )
                   )
-                ));
-                let __assign_1750 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray68) " " (fun x -> x)) in (
-                  tempResult5 := __assign_1750;
-                  __assign_1750
                 )
-              )
-            )
-          )
-          | "isDirectory" -> if HxArray.length _g1 = 0 then (
-            ignore _g2;
-            let __assign_1751 = "false" in (
-              tempResult5 := __assign_1751;
-              __assign_1751
-            )
-          ) else let callee = _g in let args = _g1 in let tempNumber69 = ref 0 in (
-            ignore (match callee with
-              | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1753 = expected in let __nullable_1754 = HxArray.length args in if __nullable_1753 == HxRuntime.hx_null then false else Obj.obj __nullable_1753 > __nullable_1754) then let __assign_1755 = HxInt.sub (let __nullable_int_1756 = expected in if __nullable_int_1756 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1756) (HxArray.length args) in (
-                tempNumber69 := __assign_1755;
-                __assign_1755
-              ) else let __assign_1757 = 0 in (
-                tempNumber69 := __assign_1757;
-                __assign_1757
-              ) else let __assign_1758 = 0 in (
-                tempNumber69 := __assign_1758;
-                __assign_1758
-              )
-              | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EThis -> 5
-                | HxExpr.ESuper -> 6
-                | HxExpr.EIdent _ -> 7
-                | HxExpr.EField (_, _) -> 8
-                | HxExpr.ECall (_, _) -> 9
-                | HxExpr.ENew (_, _) -> 10
-                | HxExpr.EUnop (_, _) -> 11
-                | HxExpr.EBinop (_, _, _) -> 12
-                | HxExpr.ETernary (_, _, _) -> 13
-                | HxExpr.EAnon (_, _) -> 14
-                | HxExpr.EArrayDecl _ -> 15
-                | HxExpr.EArrayAccess (_, _) -> 16
-                | HxExpr.ECast (_, _) -> 17
-                | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1759 = expected in let __nullable_1760 = HxArray.length args in if __nullable_1759 == HxRuntime.hx_null then false else Obj.obj __nullable_1759 > __nullable_1760) then let __assign_1761 = HxInt.sub (let __nullable_int_1762 = expected in if __nullable_int_1762 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1762) (HxArray.length args) in (
-                tempNumber69 := __assign_1761;
-                __assign_1761
-              ) else let __assign_1763 = 0 in (
-                tempNumber69 := __assign_1763;
-                __assign_1763
-              ) else let __assign_1764 = 0 in (
-                tempNumber69 := __assign_1764;
-                __assign_1764
-              ) else let __assign_1765 = 0 in (
-                tempNumber69 := __assign_1765;
-                __assign_1765
-              )
-              | _ -> let __assign_1752 = 0 in (
-                tempNumber69 := __assign_1752;
-                __assign_1752
-              ));
-            let missing = !tempNumber69 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-              ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
-                ignore (let __old_1766 = !_g4 in let __new_1767 = HxInt.add __old_1766 1 in (
-                  ignore (_g4 := __new_1767);
-                  __old_1766
-                ));
-                HxArray.push fullArgs (HxExpr.ENull)
-              )) done);
-              if HxArray.length fullArgs = 0 then let __assign_1768 = HxString.toStdString c ^ " ()" in (
-                tempResult5 := __assign_1768;
-                __assign_1768
-              ) else let tempArray69 = ref (Obj.magic ()) in (
-                ignore (let _g4 = let __arr_1769 = HxArray.create () in __arr_1769 in (
-                  ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
-                    ignore (let __old_1770 = !_g5 in let __new_1771 = HxInt.add __old_1770 1 in (
-                      ignore (_g5 := __new_1771);
-                      __new_1771
+                | "isDirectory" -> if HxArray.length _g1 = 0 then (
+                  ignore _g2;
+                  let __assign_1834 = "false" in (
+                    tempResult5 := __assign_1834;
+                    __assign_1834
+                  )
+                ) else let callee = _g in let args = _g1 in let tempNumber69 = ref 0 in (
+                  ignore (match callee with
+                    | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1836 = expected in let __nullable_1837 = HxArray.length args in if __nullable_1836 == HxRuntime.hx_null then false else Obj.obj __nullable_1836 > __nullable_1837) then let __assign_1838 = HxInt.sub (let __nullable_int_1839 = expected in if __nullable_int_1839 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1839) (HxArray.length args) in (
+                      tempNumber69 := __assign_1838;
+                      __assign_1838
+                    ) else let __assign_1840 = 0 in (
+                      tempNumber69 := __assign_1840;
+                      __assign_1840
+                    ) else let __assign_1841 = 0 in (
+                      tempNumber69 := __assign_1841;
+                      __assign_1841
+                    )
+                    | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
+                      | HxExpr.ENull -> 0
+                      | HxExpr.EBool _ -> 1
+                      | HxExpr.EString _ -> 2
+                      | HxExpr.EInt _ -> 3
+                      | HxExpr.EFloat _ -> 4
+                      | HxExpr.EThis -> 5
+                      | HxExpr.ESuper -> 6
+                      | HxExpr.EIdent _ -> 7
+                      | HxExpr.EField (_, _) -> 8
+                      | HxExpr.ECall (_, _) -> 9
+                      | HxExpr.ENew (_, _) -> 10
+                      | HxExpr.EUnop (_, _) -> 11
+                      | HxExpr.EBinop (_, _, _) -> 12
+                      | HxExpr.ETernary (_, _, _) -> 13
+                      | HxExpr.EAnon (_, _) -> 14
+                      | HxExpr.EArrayDecl _ -> 15
+                      | HxExpr.EArrayAccess (_, _) -> 16
+                      | HxExpr.ECast (_, _) -> 17
+                      | HxExpr.EUntyped _ -> 18
+                      | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1842 = expected in let __nullable_1843 = HxArray.length args in if __nullable_1842 == HxRuntime.hx_null then false else Obj.obj __nullable_1842 > __nullable_1843) then let __assign_1844 = HxInt.sub (let __nullable_int_1845 = expected in if __nullable_int_1845 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1845) (HxArray.length args) in (
+                      tempNumber69 := __assign_1844;
+                      __assign_1844
+                    ) else let __assign_1846 = 0 in (
+                      tempNumber69 := __assign_1846;
+                      __assign_1846
+                    ) else let __assign_1847 = 0 in (
+                      tempNumber69 := __assign_1847;
+                      __assign_1847
+                    ) else let __assign_1848 = 0 in (
+                      tempNumber69 := __assign_1848;
+                      __assign_1848
+                    )
+                    | _ -> let __assign_1835 = 0 in (
+                      tempNumber69 := __assign_1835;
+                      __assign_1835
                     ));
-                    HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                  )) done);
-                  let __assign_1772 = _g4 in (
-                    tempArray69 := __assign_1772;
-                    __assign_1772
+                  let missing = !tempNumber69 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1849 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1849;
+                    __assign_1849
+                  ) else let fullArgs = HxArray.copy args in (
+                    ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
+                      ignore (let __old_1850 = !_g4 in let __new_1851 = HxInt.add __old_1850 1 in (
+                        ignore (_g4 := __new_1851);
+                        __old_1850
+                      ));
+                      HxArray.push fullArgs (HxExpr.ENull)
+                    )) done);
+                    if HxArray.length fullArgs = 0 then let __assign_1852 = HxString.toStdString c ^ " ()" in (
+                      tempResult5 := __assign_1852;
+                      __assign_1852
+                    ) else let tempArray69 = ref (Obj.magic ()) in (
+                      ignore (let _g4 = let __arr_1853 = HxArray.create () in __arr_1853 in (
+                        ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
+                          ignore (let __old_1854 = !_g5 in let __new_1855 = HxInt.add __old_1854 1 in (
+                            ignore (_g5 := __new_1855);
+                            __new_1855
+                          ));
+                          HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                        )) done);
+                        let __assign_1856 = _g4 in (
+                          tempArray69 := __assign_1856;
+                          __assign_1856
+                        )
+                      ));
+                      let __assign_1857 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray69) " " (fun x -> x)) in (
+                        tempResult5 := __assign_1857;
+                        __assign_1857
+                      )
+                    )
                   )
-                ));
-                let __assign_1773 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray69) " " (fun x -> x)) in (
-                  tempResult5 := __assign_1773;
-                  __assign_1773
                 )
-              )
-            )
-          )
-          | "readDirectory" -> if HxArray.length _g1 = 0 then (
-            ignore _g2;
-            let __assign_1774 = "(Obj.magic 0)" in (
-              tempResult5 := __assign_1774;
-              __assign_1774
-            )
-          ) else let callee = _g in let args = _g1 in let tempNumber70 = ref 0 in (
-            ignore (match callee with
-              | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1776 = expected in let __nullable_1777 = HxArray.length args in if __nullable_1776 == HxRuntime.hx_null then false else Obj.obj __nullable_1776 > __nullable_1777) then let __assign_1778 = HxInt.sub (let __nullable_int_1779 = expected in if __nullable_int_1779 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1779) (HxArray.length args) in (
-                tempNumber70 := __assign_1778;
-                __assign_1778
-              ) else let __assign_1780 = 0 in (
-                tempNumber70 := __assign_1780;
-                __assign_1780
-              ) else let __assign_1781 = 0 in (
-                tempNumber70 := __assign_1781;
-                __assign_1781
-              )
-              | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EThis -> 5
-                | HxExpr.ESuper -> 6
-                | HxExpr.EIdent _ -> 7
-                | HxExpr.EField (_, _) -> 8
-                | HxExpr.ECall (_, _) -> 9
-                | HxExpr.ENew (_, _) -> 10
-                | HxExpr.EUnop (_, _) -> 11
-                | HxExpr.EBinop (_, _, _) -> 12
-                | HxExpr.ETernary (_, _, _) -> 13
-                | HxExpr.EAnon (_, _) -> 14
-                | HxExpr.EArrayDecl _ -> 15
-                | HxExpr.EArrayAccess (_, _) -> 16
-                | HxExpr.ECast (_, _) -> 17
-                | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1782 = expected in let __nullable_1783 = HxArray.length args in if __nullable_1782 == HxRuntime.hx_null then false else Obj.obj __nullable_1782 > __nullable_1783) then let __assign_1784 = HxInt.sub (let __nullable_int_1785 = expected in if __nullable_int_1785 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1785) (HxArray.length args) in (
-                tempNumber70 := __assign_1784;
-                __assign_1784
-              ) else let __assign_1786 = 0 in (
-                tempNumber70 := __assign_1786;
-                __assign_1786
-              ) else let __assign_1787 = 0 in (
-                tempNumber70 := __assign_1787;
-                __assign_1787
-              ) else let __assign_1788 = 0 in (
-                tempNumber70 := __assign_1788;
-                __assign_1788
-              )
-              | _ -> let __assign_1775 = 0 in (
-                tempNumber70 := __assign_1775;
-                __assign_1775
-              ));
-            let missing = !tempNumber70 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-              ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
-                ignore (let __old_1789 = !_g4 in let __new_1790 = HxInt.add __old_1789 1 in (
-                  ignore (_g4 := __new_1790);
-                  __old_1789
-                ));
-                HxArray.push fullArgs (HxExpr.ENull)
-              )) done);
-              if HxArray.length fullArgs = 0 then let __assign_1791 = HxString.toStdString c ^ " ()" in (
-                tempResult5 := __assign_1791;
-                __assign_1791
-              ) else let tempArray70 = ref (Obj.magic ()) in (
-                ignore (let _g4 = let __arr_1792 = HxArray.create () in __arr_1792 in (
-                  ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
-                    ignore (let __old_1793 = !_g5 in let __new_1794 = HxInt.add __old_1793 1 in (
-                      ignore (_g5 := __new_1794);
-                      __new_1794
+                | "readDirectory" -> if HxArray.length _g1 = 0 then (
+                  ignore _g2;
+                  let __assign_1858 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1858;
+                    __assign_1858
+                  )
+                ) else let callee = _g in let args = _g1 in let tempNumber70 = ref 0 in (
+                  ignore (match callee with
+                    | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1860 = expected in let __nullable_1861 = HxArray.length args in if __nullable_1860 == HxRuntime.hx_null then false else Obj.obj __nullable_1860 > __nullable_1861) then let __assign_1862 = HxInt.sub (let __nullable_int_1863 = expected in if __nullable_int_1863 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1863) (HxArray.length args) in (
+                      tempNumber70 := __assign_1862;
+                      __assign_1862
+                    ) else let __assign_1864 = 0 in (
+                      tempNumber70 := __assign_1864;
+                      __assign_1864
+                    ) else let __assign_1865 = 0 in (
+                      tempNumber70 := __assign_1865;
+                      __assign_1865
+                    )
+                    | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
+                      | HxExpr.ENull -> 0
+                      | HxExpr.EBool _ -> 1
+                      | HxExpr.EString _ -> 2
+                      | HxExpr.EInt _ -> 3
+                      | HxExpr.EFloat _ -> 4
+                      | HxExpr.EThis -> 5
+                      | HxExpr.ESuper -> 6
+                      | HxExpr.EIdent _ -> 7
+                      | HxExpr.EField (_, _) -> 8
+                      | HxExpr.ECall (_, _) -> 9
+                      | HxExpr.ENew (_, _) -> 10
+                      | HxExpr.EUnop (_, _) -> 11
+                      | HxExpr.EBinop (_, _, _) -> 12
+                      | HxExpr.ETernary (_, _, _) -> 13
+                      | HxExpr.EAnon (_, _) -> 14
+                      | HxExpr.EArrayDecl _ -> 15
+                      | HxExpr.EArrayAccess (_, _) -> 16
+                      | HxExpr.ECast (_, _) -> 17
+                      | HxExpr.EUntyped _ -> 18
+                      | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1866 = expected in let __nullable_1867 = HxArray.length args in if __nullable_1866 == HxRuntime.hx_null then false else Obj.obj __nullable_1866 > __nullable_1867) then let __assign_1868 = HxInt.sub (let __nullable_int_1869 = expected in if __nullable_int_1869 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1869) (HxArray.length args) in (
+                      tempNumber70 := __assign_1868;
+                      __assign_1868
+                    ) else let __assign_1870 = 0 in (
+                      tempNumber70 := __assign_1870;
+                      __assign_1870
+                    ) else let __assign_1871 = 0 in (
+                      tempNumber70 := __assign_1871;
+                      __assign_1871
+                    ) else let __assign_1872 = 0 in (
+                      tempNumber70 := __assign_1872;
+                      __assign_1872
+                    )
+                    | _ -> let __assign_1859 = 0 in (
+                      tempNumber70 := __assign_1859;
+                      __assign_1859
                     ));
-                    HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                  )) done);
-                  let __assign_1795 = _g4 in (
-                    tempArray70 := __assign_1795;
-                    __assign_1795
+                  let missing = !tempNumber70 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1873 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1873;
+                    __assign_1873
+                  ) else let fullArgs = HxArray.copy args in (
+                    ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
+                      ignore (let __old_1874 = !_g4 in let __new_1875 = HxInt.add __old_1874 1 in (
+                        ignore (_g4 := __new_1875);
+                        __old_1874
+                      ));
+                      HxArray.push fullArgs (HxExpr.ENull)
+                    )) done);
+                    if HxArray.length fullArgs = 0 then let __assign_1876 = HxString.toStdString c ^ " ()" in (
+                      tempResult5 := __assign_1876;
+                      __assign_1876
+                    ) else let tempArray70 = ref (Obj.magic ()) in (
+                      ignore (let _g4 = let __arr_1877 = HxArray.create () in __arr_1877 in (
+                        ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
+                          ignore (let __old_1878 = !_g5 in let __new_1879 = HxInt.add __old_1878 1 in (
+                            ignore (_g5 := __new_1879);
+                            __new_1879
+                          ));
+                          HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                        )) done);
+                        let __assign_1880 = _g4 in (
+                          tempArray70 := __assign_1880;
+                          __assign_1880
+                        )
+                      ));
+                      let __assign_1881 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray70) " " (fun x -> x)) in (
+                        tempResult5 := __assign_1881;
+                        __assign_1881
+                      )
+                    )
                   )
-                ));
-                let __assign_1796 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray70) " " (fun x -> x)) in (
-                  tempResult5 := __assign_1796;
-                  __assign_1796
                 )
-              )
-            )
-          )
-          | "set_high" -> if HxArray.length _g1 = 1 then let _g4 = HxArray.get _g1 0 in (
-            ignore _g2;
-            ignore _g4;
-            let __assign_1797 = "()" in (
-              tempResult5 := __assign_1797;
-              __assign_1797
-            )
-          ) else let callee = _g in let args = _g1 in let tempNumber71 = ref 0 in (
-            ignore (match callee with
-              | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1799 = expected in let __nullable_1800 = HxArray.length args in if __nullable_1799 == HxRuntime.hx_null then false else Obj.obj __nullable_1799 > __nullable_1800) then let __assign_1801 = HxInt.sub (let __nullable_int_1802 = expected in if __nullable_int_1802 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1802) (HxArray.length args) in (
-                tempNumber71 := __assign_1801;
-                __assign_1801
-              ) else let __assign_1803 = 0 in (
-                tempNumber71 := __assign_1803;
-                __assign_1803
-              ) else let __assign_1804 = 0 in (
-                tempNumber71 := __assign_1804;
-                __assign_1804
-              )
-              | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EThis -> 5
-                | HxExpr.ESuper -> 6
-                | HxExpr.EIdent _ -> 7
-                | HxExpr.EField (_, _) -> 8
-                | HxExpr.ECall (_, _) -> 9
-                | HxExpr.ENew (_, _) -> 10
-                | HxExpr.EUnop (_, _) -> 11
-                | HxExpr.EBinop (_, _, _) -> 12
-                | HxExpr.ETernary (_, _, _) -> 13
-                | HxExpr.EAnon (_, _) -> 14
-                | HxExpr.EArrayDecl _ -> 15
-                | HxExpr.EArrayAccess (_, _) -> 16
-                | HxExpr.ECast (_, _) -> 17
-                | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1805 = expected in let __nullable_1806 = HxArray.length args in if __nullable_1805 == HxRuntime.hx_null then false else Obj.obj __nullable_1805 > __nullable_1806) then let __assign_1807 = HxInt.sub (let __nullable_int_1808 = expected in if __nullable_int_1808 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1808) (HxArray.length args) in (
-                tempNumber71 := __assign_1807;
-                __assign_1807
-              ) else let __assign_1809 = 0 in (
-                tempNumber71 := __assign_1809;
-                __assign_1809
-              ) else let __assign_1810 = 0 in (
-                tempNumber71 := __assign_1810;
-                __assign_1810
-              ) else let __assign_1811 = 0 in (
-                tempNumber71 := __assign_1811;
-                __assign_1811
-              )
-              | _ -> let __assign_1798 = 0 in (
-                tempNumber71 := __assign_1798;
-                __assign_1798
-              ));
-            let missing = !tempNumber71 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-              ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
-                ignore (let __old_1812 = !_g4 in let __new_1813 = HxInt.add __old_1812 1 in (
-                  ignore (_g4 := __new_1813);
-                  __old_1812
-                ));
-                HxArray.push fullArgs (HxExpr.ENull)
-              )) done);
-              if HxArray.length fullArgs = 0 then let __assign_1814 = HxString.toStdString c ^ " ()" in (
-                tempResult5 := __assign_1814;
-                __assign_1814
-              ) else let tempArray71 = ref (Obj.magic ()) in (
-                ignore (let _g4 = let __arr_1815 = HxArray.create () in __arr_1815 in (
-                  ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
-                    ignore (let __old_1816 = !_g5 in let __new_1817 = HxInt.add __old_1816 1 in (
-                      ignore (_g5 := __new_1817);
-                      __new_1817
+                | "set_high" -> if HxArray.length _g1 = 1 then let _g4 = HxArray.get _g1 0 in (
+                  ignore _g2;
+                  ignore _g4;
+                  let __assign_1882 = "()" in (
+                    tempResult5 := __assign_1882;
+                    __assign_1882
+                  )
+                ) else let callee = _g in let args = _g1 in let tempNumber71 = ref 0 in (
+                  ignore (match callee with
+                    | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1884 = expected in let __nullable_1885 = HxArray.length args in if __nullable_1884 == HxRuntime.hx_null then false else Obj.obj __nullable_1884 > __nullable_1885) then let __assign_1886 = HxInt.sub (let __nullable_int_1887 = expected in if __nullable_int_1887 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1887) (HxArray.length args) in (
+                      tempNumber71 := __assign_1886;
+                      __assign_1886
+                    ) else let __assign_1888 = 0 in (
+                      tempNumber71 := __assign_1888;
+                      __assign_1888
+                    ) else let __assign_1889 = 0 in (
+                      tempNumber71 := __assign_1889;
+                      __assign_1889
+                    )
+                    | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
+                      | HxExpr.ENull -> 0
+                      | HxExpr.EBool _ -> 1
+                      | HxExpr.EString _ -> 2
+                      | HxExpr.EInt _ -> 3
+                      | HxExpr.EFloat _ -> 4
+                      | HxExpr.EThis -> 5
+                      | HxExpr.ESuper -> 6
+                      | HxExpr.EIdent _ -> 7
+                      | HxExpr.EField (_, _) -> 8
+                      | HxExpr.ECall (_, _) -> 9
+                      | HxExpr.ENew (_, _) -> 10
+                      | HxExpr.EUnop (_, _) -> 11
+                      | HxExpr.EBinop (_, _, _) -> 12
+                      | HxExpr.ETernary (_, _, _) -> 13
+                      | HxExpr.EAnon (_, _) -> 14
+                      | HxExpr.EArrayDecl _ -> 15
+                      | HxExpr.EArrayAccess (_, _) -> 16
+                      | HxExpr.ECast (_, _) -> 17
+                      | HxExpr.EUntyped _ -> 18
+                      | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1890 = expected in let __nullable_1891 = HxArray.length args in if __nullable_1890 == HxRuntime.hx_null then false else Obj.obj __nullable_1890 > __nullable_1891) then let __assign_1892 = HxInt.sub (let __nullable_int_1893 = expected in if __nullable_int_1893 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1893) (HxArray.length args) in (
+                      tempNumber71 := __assign_1892;
+                      __assign_1892
+                    ) else let __assign_1894 = 0 in (
+                      tempNumber71 := __assign_1894;
+                      __assign_1894
+                    ) else let __assign_1895 = 0 in (
+                      tempNumber71 := __assign_1895;
+                      __assign_1895
+                    ) else let __assign_1896 = 0 in (
+                      tempNumber71 := __assign_1896;
+                      __assign_1896
+                    )
+                    | _ -> let __assign_1883 = 0 in (
+                      tempNumber71 := __assign_1883;
+                      __assign_1883
                     ));
-                    HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                  )) done);
-                  let __assign_1818 = _g4 in (
-                    tempArray71 := __assign_1818;
-                    __assign_1818
+                  let missing = !tempNumber71 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1897 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1897;
+                    __assign_1897
+                  ) else let fullArgs = HxArray.copy args in (
+                    ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
+                      ignore (let __old_1898 = !_g4 in let __new_1899 = HxInt.add __old_1898 1 in (
+                        ignore (_g4 := __new_1899);
+                        __old_1898
+                      ));
+                      HxArray.push fullArgs (HxExpr.ENull)
+                    )) done);
+                    if HxArray.length fullArgs = 0 then let __assign_1900 = HxString.toStdString c ^ " ()" in (
+                      tempResult5 := __assign_1900;
+                      __assign_1900
+                    ) else let tempArray71 = ref (Obj.magic ()) in (
+                      ignore (let _g4 = let __arr_1901 = HxArray.create () in __arr_1901 in (
+                        ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
+                          ignore (let __old_1902 = !_g5 in let __new_1903 = HxInt.add __old_1902 1 in (
+                            ignore (_g5 := __new_1903);
+                            __new_1903
+                          ));
+                          HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                        )) done);
+                        let __assign_1904 = _g4 in (
+                          tempArray71 := __assign_1904;
+                          __assign_1904
+                        )
+                      ));
+                      let __assign_1905 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray71) " " (fun x -> x)) in (
+                        tempResult5 := __assign_1905;
+                        __assign_1905
+                      )
+                    )
                   )
-                ));
-                let __assign_1819 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray71) " " (fun x -> x)) in (
-                  tempResult5 := __assign_1819;
-                  __assign_1819
                 )
-              )
-            )
-          )
-          | "set_low" -> if HxArray.length _g1 = 1 then let _g4 = HxArray.get _g1 0 in (
-            ignore _g2;
-            ignore _g4;
-            let __assign_1820 = "()" in (
-              tempResult5 := __assign_1820;
-              __assign_1820
-            )
-          ) else let callee = _g in let args = _g1 in let tempNumber72 = ref 0 in (
-            ignore (match callee with
-              | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1822 = expected in let __nullable_1823 = HxArray.length args in if __nullable_1822 == HxRuntime.hx_null then false else Obj.obj __nullable_1822 > __nullable_1823) then let __assign_1824 = HxInt.sub (let __nullable_int_1825 = expected in if __nullable_int_1825 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1825) (HxArray.length args) in (
-                tempNumber72 := __assign_1824;
-                __assign_1824
-              ) else let __assign_1826 = 0 in (
-                tempNumber72 := __assign_1826;
-                __assign_1826
-              ) else let __assign_1827 = 0 in (
-                tempNumber72 := __assign_1827;
-                __assign_1827
-              )
-              | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EThis -> 5
-                | HxExpr.ESuper -> 6
-                | HxExpr.EIdent _ -> 7
-                | HxExpr.EField (_, _) -> 8
-                | HxExpr.ECall (_, _) -> 9
-                | HxExpr.ENew (_, _) -> 10
-                | HxExpr.EUnop (_, _) -> 11
-                | HxExpr.EBinop (_, _, _) -> 12
-                | HxExpr.ETernary (_, _, _) -> 13
-                | HxExpr.EAnon (_, _) -> 14
-                | HxExpr.EArrayDecl _ -> 15
-                | HxExpr.EArrayAccess (_, _) -> 16
-                | HxExpr.ECast (_, _) -> 17
-                | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1828 = expected in let __nullable_1829 = HxArray.length args in if __nullable_1828 == HxRuntime.hx_null then false else Obj.obj __nullable_1828 > __nullable_1829) then let __assign_1830 = HxInt.sub (let __nullable_int_1831 = expected in if __nullable_int_1831 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1831) (HxArray.length args) in (
-                tempNumber72 := __assign_1830;
-                __assign_1830
-              ) else let __assign_1832 = 0 in (
-                tempNumber72 := __assign_1832;
-                __assign_1832
-              ) else let __assign_1833 = 0 in (
-                tempNumber72 := __assign_1833;
-                __assign_1833
-              ) else let __assign_1834 = 0 in (
-                tempNumber72 := __assign_1834;
-                __assign_1834
-              )
-              | _ -> let __assign_1821 = 0 in (
-                tempNumber72 := __assign_1821;
-                __assign_1821
-              ));
-            let missing = !tempNumber72 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-              ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
-                ignore (let __old_1835 = !_g4 in let __new_1836 = HxInt.add __old_1835 1 in (
-                  ignore (_g4 := __new_1836);
-                  __old_1835
-                ));
-                HxArray.push fullArgs (HxExpr.ENull)
-              )) done);
-              if HxArray.length fullArgs = 0 then let __assign_1837 = HxString.toStdString c ^ " ()" in (
-                tempResult5 := __assign_1837;
-                __assign_1837
-              ) else let tempArray72 = ref (Obj.magic ()) in (
-                ignore (let _g4 = let __arr_1838 = HxArray.create () in __arr_1838 in (
-                  ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
-                    ignore (let __old_1839 = !_g5 in let __new_1840 = HxInt.add __old_1839 1 in (
-                      ignore (_g5 := __new_1840);
-                      __new_1840
+                | "set_low" -> if HxArray.length _g1 = 1 then let _g4 = HxArray.get _g1 0 in (
+                  ignore _g2;
+                  ignore _g4;
+                  let __assign_1906 = "()" in (
+                    tempResult5 := __assign_1906;
+                    __assign_1906
+                  )
+                ) else let callee = _g in let args = _g1 in let tempNumber72 = ref 0 in (
+                  ignore (match callee with
+                    | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1908 = expected in let __nullable_1909 = HxArray.length args in if __nullable_1908 == HxRuntime.hx_null then false else Obj.obj __nullable_1908 > __nullable_1909) then let __assign_1910 = HxInt.sub (let __nullable_int_1911 = expected in if __nullable_int_1911 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1911) (HxArray.length args) in (
+                      tempNumber72 := __assign_1910;
+                      __assign_1910
+                    ) else let __assign_1912 = 0 in (
+                      tempNumber72 := __assign_1912;
+                      __assign_1912
+                    ) else let __assign_1913 = 0 in (
+                      tempNumber72 := __assign_1913;
+                      __assign_1913
+                    )
+                    | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
+                      | HxExpr.ENull -> 0
+                      | HxExpr.EBool _ -> 1
+                      | HxExpr.EString _ -> 2
+                      | HxExpr.EInt _ -> 3
+                      | HxExpr.EFloat _ -> 4
+                      | HxExpr.EThis -> 5
+                      | HxExpr.ESuper -> 6
+                      | HxExpr.EIdent _ -> 7
+                      | HxExpr.EField (_, _) -> 8
+                      | HxExpr.ECall (_, _) -> 9
+                      | HxExpr.ENew (_, _) -> 10
+                      | HxExpr.EUnop (_, _) -> 11
+                      | HxExpr.EBinop (_, _, _) -> 12
+                      | HxExpr.ETernary (_, _, _) -> 13
+                      | HxExpr.EAnon (_, _) -> 14
+                      | HxExpr.EArrayDecl _ -> 15
+                      | HxExpr.EArrayAccess (_, _) -> 16
+                      | HxExpr.ECast (_, _) -> 17
+                      | HxExpr.EUntyped _ -> 18
+                      | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1914 = expected in let __nullable_1915 = HxArray.length args in if __nullable_1914 == HxRuntime.hx_null then false else Obj.obj __nullable_1914 > __nullable_1915) then let __assign_1916 = HxInt.sub (let __nullable_int_1917 = expected in if __nullable_int_1917 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1917) (HxArray.length args) in (
+                      tempNumber72 := __assign_1916;
+                      __assign_1916
+                    ) else let __assign_1918 = 0 in (
+                      tempNumber72 := __assign_1918;
+                      __assign_1918
+                    ) else let __assign_1919 = 0 in (
+                      tempNumber72 := __assign_1919;
+                      __assign_1919
+                    ) else let __assign_1920 = 0 in (
+                      tempNumber72 := __assign_1920;
+                      __assign_1920
+                    )
+                    | _ -> let __assign_1907 = 0 in (
+                      tempNumber72 := __assign_1907;
+                      __assign_1907
                     ));
-                    HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                  )) done);
-                  let __assign_1841 = _g4 in (
-                    tempArray72 := __assign_1841;
-                    __assign_1841
+                  let missing = !tempNumber72 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1921 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1921;
+                    __assign_1921
+                  ) else let fullArgs = HxArray.copy args in (
+                    ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
+                      ignore (let __old_1922 = !_g4 in let __new_1923 = HxInt.add __old_1922 1 in (
+                        ignore (_g4 := __new_1923);
+                        __old_1922
+                      ));
+                      HxArray.push fullArgs (HxExpr.ENull)
+                    )) done);
+                    if HxArray.length fullArgs = 0 then let __assign_1924 = HxString.toStdString c ^ " ()" in (
+                      tempResult5 := __assign_1924;
+                      __assign_1924
+                    ) else let tempArray72 = ref (Obj.magic ()) in (
+                      ignore (let _g4 = let __arr_1925 = HxArray.create () in __arr_1925 in (
+                        ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
+                          ignore (let __old_1926 = !_g5 in let __new_1927 = HxInt.add __old_1926 1 in (
+                            ignore (_g5 := __new_1927);
+                            __new_1927
+                          ));
+                          HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                        )) done);
+                        let __assign_1928 = _g4 in (
+                          tempArray72 := __assign_1928;
+                          __assign_1928
+                        )
+                      ));
+                      let __assign_1929 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray72) " " (fun x -> x)) in (
+                        tempResult5 := __assign_1929;
+                        __assign_1929
+                      )
+                    )
                   )
-                ));
-                let __assign_1842 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray72) " " (fun x -> x)) in (
-                  tempResult5 := __assign_1842;
-                  __assign_1842
                 )
-              )
-            )
-          )
-          | _ -> let callee = _g in let args = _g1 in let tempNumber73 = ref 0 in (
-            ignore (match callee with
-              | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1707 = expected in let __nullable_1708 = HxArray.length args in if __nullable_1707 == HxRuntime.hx_null then false else Obj.obj __nullable_1707 > __nullable_1708) then let __assign_1709 = HxInt.sub (let __nullable_int_1710 = expected in if __nullable_int_1710 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1710) (HxArray.length args) in (
-                tempNumber73 := __assign_1709;
-                __assign_1709
-              ) else let __assign_1711 = 0 in (
-                tempNumber73 := __assign_1711;
-                __assign_1711
-              ) else let __assign_1712 = 0 in (
-                tempNumber73 := __assign_1712;
-                __assign_1712
-              )
-              | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
-                | HxExpr.ENull -> 0
-                | HxExpr.EBool _ -> 1
-                | HxExpr.EString _ -> 2
-                | HxExpr.EInt _ -> 3
-                | HxExpr.EFloat _ -> 4
-                | HxExpr.EThis -> 5
-                | HxExpr.ESuper -> 6
-                | HxExpr.EIdent _ -> 7
-                | HxExpr.EField (_, _) -> 8
-                | HxExpr.ECall (_, _) -> 9
-                | HxExpr.ENew (_, _) -> 10
-                | HxExpr.EUnop (_, _) -> 11
-                | HxExpr.EBinop (_, _, _) -> 12
-                | HxExpr.ETernary (_, _, _) -> 13
-                | HxExpr.EAnon (_, _) -> 14
-                | HxExpr.EArrayDecl _ -> 15
-                | HxExpr.EArrayAccess (_, _) -> 16
-                | HxExpr.ECast (_, _) -> 17
-                | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1713 = expected in let __nullable_1714 = HxArray.length args in if __nullable_1713 == HxRuntime.hx_null then false else Obj.obj __nullable_1713 > __nullable_1714) then let __assign_1715 = HxInt.sub (let __nullable_int_1716 = expected in if __nullable_int_1716 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1716) (HxArray.length args) in (
-                tempNumber73 := __assign_1715;
-                __assign_1715
-              ) else let __assign_1717 = 0 in (
-                tempNumber73 := __assign_1717;
-                __assign_1717
-              ) else let __assign_1718 = 0 in (
-                tempNumber73 := __assign_1718;
-                __assign_1718
-              ) else let __assign_1719 = 0 in (
-                tempNumber73 := __assign_1719;
-                __assign_1719
-              )
-              | _ -> let __assign_1706 = 0 in (
-                tempNumber73 := __assign_1706;
-                __assign_1706
-              ));
-            let missing = !tempNumber73 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-              ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
-                ignore (let __old_1720 = !_g4 in let __new_1721 = HxInt.add __old_1720 1 in (
-                  ignore (_g4 := __new_1721);
-                  __old_1720
-                ));
-                HxArray.push fullArgs (HxExpr.ENull)
-              )) done);
-              if HxArray.length fullArgs = 0 then let __assign_1722 = HxString.toStdString c ^ " ()" in (
-                tempResult5 := __assign_1722;
-                __assign_1722
-              ) else let tempArray73 = ref (Obj.magic ()) in (
-                ignore (let _g4 = let __arr_1723 = HxArray.create () in __arr_1723 in (
-                  ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
-                    ignore (let __old_1724 = !_g5 in let __new_1725 = HxInt.add __old_1724 1 in (
-                      ignore (_g5 := __new_1725);
-                      __new_1725
+                | _ -> let callee = _g in let args = _g1 in let tempNumber73 = ref 0 in (
+                  ignore (match callee with
+                    | HxExpr.EIdent _p0 -> let _g4 = _p0 in let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1788 = expected in let __nullable_1789 = HxArray.length args in if __nullable_1788 == HxRuntime.hx_null then false else Obj.obj __nullable_1788 > __nullable_1789) then let __assign_1790 = HxInt.sub (let __nullable_int_1791 = expected in if __nullable_int_1791 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1791) (HxArray.length args) in (
+                      tempNumber73 := __assign_1790;
+                      __assign_1790
+                    ) else let __assign_1792 = 0 in (
+                      tempNumber73 := __assign_1792;
+                      __assign_1792
+                    ) else let __assign_1793 = 0 in (
+                      tempNumber73 := __assign_1793;
+                      __assign_1793
+                    )
+                    | HxExpr.EField (_p0, _p1) -> let _g4 = _p0 in let _g5 = _p1 in if (match _g4 with
+                      | HxExpr.ENull -> 0
+                      | HxExpr.EBool _ -> 1
+                      | HxExpr.EString _ -> 2
+                      | HxExpr.EInt _ -> 3
+                      | HxExpr.EFloat _ -> 4
+                      | HxExpr.EThis -> 5
+                      | HxExpr.ESuper -> 6
+                      | HxExpr.EIdent _ -> 7
+                      | HxExpr.EField (_, _) -> 8
+                      | HxExpr.ECall (_, _) -> 9
+                      | HxExpr.ENew (_, _) -> 10
+                      | HxExpr.EUnop (_, _) -> 11
+                      | HxExpr.EBinop (_, _, _) -> 12
+                      | HxExpr.ETernary (_, _, _) -> 13
+                      | HxExpr.EAnon (_, _) -> 14
+                      | HxExpr.EArrayDecl _ -> 15
+                      | HxExpr.EArrayAccess (_, _) -> 16
+                      | HxExpr.ECast (_, _) -> 17
+                      | HxExpr.EUntyped _ -> 18
+                      | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1794 = expected in let __nullable_1795 = HxArray.length args in if __nullable_1794 == HxRuntime.hx_null then false else Obj.obj __nullable_1794 > __nullable_1795) then let __assign_1796 = HxInt.sub (let __nullable_int_1797 = expected in if __nullable_int_1797 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1797) (HxArray.length args) in (
+                      tempNumber73 := __assign_1796;
+                      __assign_1796
+                    ) else let __assign_1798 = 0 in (
+                      tempNumber73 := __assign_1798;
+                      __assign_1798
+                    ) else let __assign_1799 = 0 in (
+                      tempNumber73 := __assign_1799;
+                      __assign_1799
+                    ) else let __assign_1800 = 0 in (
+                      tempNumber73 := __assign_1800;
+                      __assign_1800
+                    )
+                    | _ -> let __assign_1787 = 0 in (
+                      tempNumber73 := __assign_1787;
+                      __assign_1787
                     ));
-                    HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                  )) done);
-                  let __assign_1726 = _g4 in (
-                    tempArray73 := __assign_1726;
-                    __assign_1726
+                  let missing = !tempNumber73 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_1801 = "(Obj.magic 0)" in (
+                    tempResult5 := __assign_1801;
+                    __assign_1801
+                  ) else let fullArgs = HxArray.copy args in (
+                    ignore (let _g4 = ref 0 in let _g5 = missing in while !_g4 < _g5 do ignore ((
+                      ignore (let __old_1802 = !_g4 in let __new_1803 = HxInt.add __old_1802 1 in (
+                        ignore (_g4 := __new_1803);
+                        __old_1802
+                      ));
+                      HxArray.push fullArgs (HxExpr.ENull)
+                    )) done);
+                    if HxArray.length fullArgs = 0 then let __assign_1804 = HxString.toStdString c ^ " ()" in (
+                      tempResult5 := __assign_1804;
+                      __assign_1804
+                    ) else let tempArray73 = ref (Obj.magic ()) in (
+                      ignore (let _g4 = let __arr_1805 = HxArray.create () in __arr_1805 in (
+                        ignore (let _g5 = ref 0 in let _g6 = fullArgs in while !_g5 < HxArray.length _g6 do ignore (let v = HxArray.get _g6 (!_g5) in (
+                          ignore (let __old_1806 = !_g5 in let __new_1807 = HxInt.add __old_1806 1 in (
+                            ignore (_g5 := __new_1807);
+                            __new_1807
+                          ));
+                          HxArray.push _g4 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                        )) done);
+                        let __assign_1808 = _g4 in (
+                          tempArray73 := __assign_1808;
+                          __assign_1808
+                        )
+                      ));
+                      let __assign_1809 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray73) " " (fun x -> x)) in (
+                        tempResult5 := __assign_1809;
+                        __assign_1809
+                      )
+                    )
                   )
-                ));
-                let __assign_1727 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray73) " " (fun x -> x)) in (
-                  tempResult5 := __assign_1727;
-                  __assign_1727
+                ))
+              | _ -> let callee = _g in let args = _g1 in let tempNumber74 = ref 0 in (
+                ignore (match callee with
+                  | HxExpr.EIdent _p0 -> let _g2 = _p0 in let name = _g2 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_137 = expected in let __nullable_138 = HxArray.length args in if __nullable_137 == HxRuntime.hx_null then false else Obj.obj __nullable_137 > __nullable_138) then let __assign_139 = HxInt.sub (let __nullable_int_140 = expected in if __nullable_int_140 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_140) (HxArray.length args) in (
+                    tempNumber74 := __assign_139;
+                    __assign_139
+                  ) else let __assign_141 = 0 in (
+                    tempNumber74 := __assign_141;
+                    __assign_141
+                  ) else let __assign_142 = 0 in (
+                    tempNumber74 := __assign_142;
+                    __assign_142
+                  )
+                  | HxExpr.EField (_p0, _p1) -> let _g2 = _p0 in let _g3 = _p1 in if (match _g2 with
+                    | HxExpr.ENull -> 0
+                    | HxExpr.EBool _ -> 1
+                    | HxExpr.EString _ -> 2
+                    | HxExpr.EInt _ -> 3
+                    | HxExpr.EFloat _ -> 4
+                    | HxExpr.EThis -> 5
+                    | HxExpr.ESuper -> 6
+                    | HxExpr.EIdent _ -> 7
+                    | HxExpr.EField (_, _) -> 8
+                    | HxExpr.ECall (_, _) -> 9
+                    | HxExpr.ENew (_, _) -> 10
+                    | HxExpr.EUnop (_, _) -> 11
+                    | HxExpr.EBinop (_, _, _) -> 12
+                    | HxExpr.ETernary (_, _, _) -> 13
+                    | HxExpr.EAnon (_, _) -> 14
+                    | HxExpr.EArrayDecl _ -> 15
+                    | HxExpr.EArrayAccess (_, _) -> 16
+                    | HxExpr.ECast (_, _) -> 17
+                    | HxExpr.EUntyped _ -> 18
+                    | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_143 = expected in let __nullable_144 = HxArray.length args in if __nullable_143 == HxRuntime.hx_null then false else Obj.obj __nullable_143 > __nullable_144) then let __assign_145 = HxInt.sub (let __nullable_int_146 = expected in if __nullable_int_146 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_146) (HxArray.length args) in (
+                    tempNumber74 := __assign_145;
+                    __assign_145
+                  ) else let __assign_147 = 0 in (
+                    tempNumber74 := __assign_147;
+                    __assign_147
+                  ) else let __assign_148 = 0 in (
+                    tempNumber74 := __assign_148;
+                    __assign_148
+                  ) else let __assign_149 = 0 in (
+                    tempNumber74 := __assign_149;
+                    __assign_149
+                  )
+                  | _ -> let __assign_136 = 0 in (
+                    tempNumber74 := __assign_136;
+                    __assign_136
+                  ));
+                let missing = !tempNumber74 in let c = exprToOcaml callee arityByIdent tyByIdent in if HxString.equals c "(Obj.magic 0)" then let __assign_150 = "(Obj.magic 0)" in (
+                  tempResult5 := __assign_150;
+                  __assign_150
+                ) else let fullArgs = HxArray.copy args in (
+                  ignore (let _g2 = ref 0 in let _g3 = missing in while !_g2 < _g3 do ignore ((
+                    ignore (let __old_151 = !_g2 in let __new_152 = HxInt.add __old_151 1 in (
+                      ignore (_g2 := __new_152);
+                      __old_151
+                    ));
+                    HxArray.push fullArgs (HxExpr.ENull)
+                  )) done);
+                  if HxArray.length fullArgs = 0 then let __assign_153 = HxString.toStdString c ^ " ()" in (
+                    tempResult5 := __assign_153;
+                    __assign_153
+                  ) else let tempArray74 = ref (Obj.magic ()) in (
+                    ignore (let _g2 = let __arr_154 = HxArray.create () in __arr_154 in (
+                      ignore (let _g3 = ref 0 in let _g4 = fullArgs in while !_g3 < HxArray.length _g4 do ignore (let v = HxArray.get _g4 (!_g3) in (
+                        ignore (let __old_155 = !_g3 in let __new_156 = HxInt.add __old_155 1 in (
+                          ignore (_g3 := __new_156);
+                          __new_156
+                        ));
+                        HxArray.push _g2 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
+                      )) done);
+                      let __assign_157 = _g2 in (
+                        tempArray74 := __assign_157;
+                        __assign_157
+                      )
+                    ));
+                    let __assign_158 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray74) " " (fun x -> x)) in (
+                      tempResult5 := __assign_158;
+                      __assign_158
+                    )
+                  )
                 )
+              ))
+            | HxExpr.ENew (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+              ignore _g;
+              ignore _g1;
+              let __assign_1930 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1930;
+                __assign_1930
               )
             )
-          ))
-        | _ -> let callee = _g in let args = _g1 in let tempNumber74 = ref 0 in (
-          ignore (match callee with
-            | HxExpr.EIdent _p0 -> let _g2 = _p0 in let name = _g2 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_125 = expected in let __nullable_126 = HxArray.length args in if __nullable_125 == HxRuntime.hx_null then false else Obj.obj __nullable_125 > __nullable_126) then let __assign_127 = HxInt.sub (let __nullable_int_128 = expected in if __nullable_int_128 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_128) (HxArray.length args) in (
-              tempNumber74 := __assign_127;
-              __assign_127
-            ) else let __assign_129 = 0 in (
-              tempNumber74 := __assign_129;
-              __assign_129
-            ) else let __assign_130 = 0 in (
-              tempNumber74 := __assign_130;
-              __assign_130
+            | HxExpr.EUnop (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let op = _g in let expr = _g1 in match op with
+              | "!" -> let __assign_1932 = ("(not (" ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
+                tempResult5 := __assign_1932;
+                __assign_1932
+              )
+              | "-" -> let tempString5 = ref "" in (
+                ignore (if (!isFloatExpr) expr then let __assign_1933 = "(-.(" in (
+                  tempString5 := __assign_1933;
+                  __assign_1933
+                ) else let __assign_1934 = "(-(" in (
+                  tempString5 := __assign_1934;
+                  __assign_1934
+                ));
+                let __assign_1935 = (HxString.toStdString (!tempString5) ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
+                  tempResult5 := __assign_1935;
+                  __assign_1935
+                )
+              )
+              | _ -> let __assign_1931 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1931;
+                __assign_1931
+              ))
+            | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in let la = exprToOcaml a arityByIdent tyByIdent in let rb = exprToOcaml b arityByIdent tyByIdent in let exprToOcamlAsFloat = fun e -> let tempResult6 = ref "" in (
+              ignore (match e with
+                | HxExpr.EInt _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_1937 = "float_of_int " ^ HxString.toStdString (string_of_int v) in (
+                  tempResult6 := __assign_1937;
+                  __assign_1937
+                )
+                | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.toString (HxMap.get_string tyByIdent name) ()) "Int" then let __assign_1938 = "float_of_int " ^ HxString.toStdString (ocamlValueIdent name) in (
+                  tempResult6 := __assign_1938;
+                  __assign_1938
+                ) else let __assign_1939 = exprToOcaml e arityByIdent tyByIdent in (
+                  tempResult6 := __assign_1939;
+                  __assign_1939
+                )
+                | _ -> let __assign_1936 = exprToOcaml e arityByIdent tyByIdent in (
+                  tempResult6 := __assign_1936;
+                  __assign_1936
+                ));
+              !tempResult6
+            ) in match op with
+              | "!=" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_1941 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") <> (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
+                tempResult5 := __assign_1941;
+                __assign_1941
+              ) else let __assign_1942 = ((("((" ^ HxString.toStdString la) ^ ") <> (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_1942;
+                __assign_1942
+              )
+              | "%" | "*" | "-" | "/" -> let aIsF = (!isFloatExpr) a in let bIsF = (!isFloatExpr) b in let aIsI = (!isIntExpr) a in let bIsI = (!isIntExpr) b in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if (aIsF || bIsF) && canFloat then let tempString6 = ref "" in (
+                ignore (match op with
+                  | "*" -> let __assign_1944 = "*." in (
+                    tempString6 := __assign_1944;
+                    __assign_1944
+                  )
+                  | "+" -> let __assign_1945 = "+." in (
+                    tempString6 := __assign_1945;
+                    __assign_1945
+                  )
+                  | "-" -> let __assign_1946 = "-." in (
+                    tempString6 := __assign_1946;
+                    __assign_1946
+                  )
+                  | "/" -> let __assign_1947 = "/." in (
+                    tempString6 := __assign_1947;
+                    __assign_1947
+                  )
+                  | _ -> let __assign_1943 = op in (
+                    tempString6 := __assign_1943;
+                    __assign_1943
+                  ));
+                let fop = !tempString6 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_1948 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
+                  tempResult5 := __assign_1948;
+                  __assign_1948
+                )
+              ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_1949 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_1949;
+                __assign_1949
+              ) else let __assign_1950 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1950;
+                __assign_1950
+              )
+              | "+" -> if (!isStringExpr) a || (!isStringExpr) b then let __assign_1951 = ((("((" ^ HxString.toStdString (exprToOcamlForConcat a)) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat b)) ^ "))" in (
+                tempResult5 := __assign_1951;
+                __assign_1951
+              ) else let aIsF = (!isFloatExpr) a in let bIsF = (!isFloatExpr) b in let aIsI = (!isIntExpr) a in let bIsI = (!isIntExpr) b in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if (aIsF || bIsF) && canFloat then let tempString7 = ref "" in (
+                ignore (match op with
+                  | "*" -> let __assign_1953 = "*." in (
+                    tempString7 := __assign_1953;
+                    __assign_1953
+                  )
+                  | "+" -> let __assign_1954 = "+." in (
+                    tempString7 := __assign_1954;
+                    __assign_1954
+                  )
+                  | "-" -> let __assign_1955 = "-." in (
+                    tempString7 := __assign_1955;
+                    __assign_1955
+                  )
+                  | "/" -> let __assign_1956 = "/." in (
+                    tempString7 := __assign_1956;
+                    __assign_1956
+                  )
+                  | _ -> let __assign_1952 = op in (
+                    tempString7 := __assign_1952;
+                    __assign_1952
+                  ));
+                let fop = !tempString7 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_1957 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
+                  tempResult5 := __assign_1957;
+                  __assign_1957
+                )
+              ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_1958 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_1958;
+                __assign_1958
+              ) else let __assign_1959 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1959;
+                __assign_1959
+              )
+              | "==" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_1960 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") = (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
+                tempResult5 := __assign_1960;
+                __assign_1960
+              ) else let __assign_1961 = ((("((" ^ HxString.toStdString la) ^ ") = (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_1961;
+                __assign_1961
+              )
+              | "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_1962 = ((((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
+                tempResult5 := __assign_1962;
+                __assign_1962
+              ) else let __assign_1963 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_1963;
+                __assign_1963
+              )
+              | "&&" | "||" -> let __assign_1964 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_1964;
+                __assign_1964
+              )
+              | _ -> let __assign_1940 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1940;
+                __assign_1940
+              ))
+            | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let cond = _g in let thenExpr = _g1 in let elseExpr = _g2 in let __assign_1965 = ((((("(if (" ^ HxString.toStdString (exprToOcaml cond arityByIdent tyByIdent)) ^ ") then (") ^ HxString.toStdString (exprToOcaml thenExpr arityByIdent tyByIdent)) ^ ") else (") ^ HxString.toStdString (exprToOcaml elseExpr arityByIdent tyByIdent)) ^ "))" in (
+              tempResult5 := __assign_1965;
+              __assign_1965
             )
-            | HxExpr.EField (_p0, _p1) -> let _g2 = _p0 in let _g3 = _p1 in if (match _g2 with
-              | HxExpr.ENull -> 0
-              | HxExpr.EBool _ -> 1
-              | HxExpr.EString _ -> 2
-              | HxExpr.EInt _ -> 3
-              | HxExpr.EFloat _ -> 4
-              | HxExpr.EThis -> 5
-              | HxExpr.ESuper -> 6
-              | HxExpr.EIdent _ -> 7
-              | HxExpr.EField (_, _) -> 8
-              | HxExpr.ECall (_, _) -> 9
-              | HxExpr.ENew (_, _) -> 10
-              | HxExpr.EUnop (_, _) -> 11
-              | HxExpr.EBinop (_, _, _) -> 12
-              | HxExpr.ETernary (_, _, _) -> 13
-              | HxExpr.EAnon (_, _) -> 14
-              | HxExpr.EArrayDecl _ -> 15
-              | HxExpr.EArrayAccess (_, _) -> 16
-              | HxExpr.ECast (_, _) -> 17
-              | HxExpr.EUntyped _ -> 18
-              | HxExpr.EUnsupported _ -> 19) = 5 then let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_131 = expected in let __nullable_132 = HxArray.length args in if __nullable_131 == HxRuntime.hx_null then false else Obj.obj __nullable_131 > __nullable_132) then let __assign_133 = HxInt.sub (let __nullable_int_134 = expected in if __nullable_int_134 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_134) (HxArray.length args) in (
-              tempNumber74 := __assign_133;
-              __assign_133
-            ) else let __assign_135 = 0 in (
-              tempNumber74 := __assign_135;
-              __assign_135
-            ) else let __assign_136 = 0 in (
-              tempNumber74 := __assign_136;
-              __assign_136
-            ) else let __assign_137 = 0 in (
-              tempNumber74 := __assign_137;
-              __assign_137
+            | HxExpr.EAnon (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+              ignore _g;
+              ignore _g1;
+              let __assign_1966 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1966;
+                __assign_1966
+              )
             )
-            | _ -> let __assign_124 = 0 in (
-              tempNumber74 := __assign_124;
-              __assign_124
+            | HxExpr.EArrayDecl _p0 -> let _g = _p0 in (
+              ignore _g;
+              let __assign_1967 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1967;
+                __assign_1967
+              )
+            )
+            | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+              ignore _g;
+              ignore _g1;
+              let __assign_1968 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1968;
+                __assign_1968
+              )
+            )
+            | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
+              ignore _g1;
+              let __assign_1969 = exprToOcaml expr arityByIdent tyByIdent in (
+                tempResult5 := __assign_1969;
+                __assign_1969
+              )
+            )
+            | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr = _g in let __assign_1970 = exprToOcaml expr arityByIdent tyByIdent in (
+              tempResult5 := __assign_1970;
+              __assign_1970
+            )
+            | HxExpr.EUnsupported _p0 -> (
+              ignore _p0;
+              let __assign_1971 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_1971;
+                __assign_1971
+              )
             ));
-          let missing = !tempNumber74 in let c = exprToOcaml callee arityByIdent tyByIdent in let fullArgs = HxArray.copy args in (
-            ignore (let _g2 = ref 0 in let _g3 = missing in while !_g2 < _g3 do ignore ((
-              ignore (let __old_138 = !_g2 in let __new_139 = HxInt.add __old_138 1 in (
-                ignore (_g2 := __new_139);
-                __old_138
-              ));
-              HxArray.push fullArgs (HxExpr.ENull)
-            )) done);
-            if HxArray.length fullArgs = 0 then let __assign_140 = HxString.toStdString c ^ " ()" in (
-              tempResult5 := __assign_140;
-              __assign_140
-            ) else let tempArray74 = ref (Obj.magic ()) in (
-              ignore (let _g2 = let __arr_141 = HxArray.create () in __arr_141 in (
-                ignore (let _g3 = ref 0 in let _g4 = fullArgs in while !_g3 < HxArray.length _g4 do ignore (let v = HxArray.get _g4 (!_g3) in (
-                  ignore (let __old_142 = !_g3 in let __new_143 = HxInt.add __old_142 1 in (
-                    ignore (_g3 := __new_143);
-                    __new_143
-                  ));
-                  HxArray.push _g2 (("(" ^ HxString.toStdString (exprToOcaml v arityByIdent tyByIdent)) ^ ")")
-                )) done);
-                let __assign_144 = _g2 in (
-                  tempArray74 := __assign_144;
-                  __assign_144
-                )
-              ));
-              let __assign_145 = (HxString.toStdString c ^ " ") ^ HxString.toStdString (HxArray.join (!tempArray74) " " (fun x -> x)) in (
-                tempResult5 := __assign_145;
-                __assign_145
-              )
-            )
-          )
-        ))
-      | HxExpr.ENew (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
-        ignore _g;
-        ignore _g1;
-        let __assign_1843 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1843;
-          __assign_1843
+          !tempResult5
         )
       )
-      | HxExpr.EUnop (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let op = _g in let expr = _g1 in match op with
-        | "!" -> let __assign_1845 = ("(not (" ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
-          tempResult5 := __assign_1845;
-          __assign_1845
-        )
-        | "-" -> let tempString5 = ref "" in (
-          ignore (if isFloatExpr expr then let __assign_1846 = "(-.(" in (
-            tempString5 := __assign_1846;
-            __assign_1846
-          ) else let __assign_1847 = "(-(" in (
-            tempString5 := __assign_1847;
-            __assign_1847
-          ));
-          let __assign_1848 = (HxString.toStdString (!tempString5) ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
-            tempResult5 := __assign_1848;
-            __assign_1848
-          )
-        )
-        | _ -> let __assign_1844 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1844;
-          __assign_1844
-        ))
-      | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in let la = exprToOcaml a arityByIdent tyByIdent in let rb = exprToOcaml b arityByIdent tyByIdent in let exprToOcamlAsFloat = fun e -> let tempResult6 = ref "" in (
-        ignore (match e with
-          | HxExpr.EInt _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_1850 = "float_of_int " ^ HxString.toStdString (string_of_int v) in (
-            tempResult6 := __assign_1850;
-            __assign_1850
-          )
-          | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.toString (HxMap.get_string tyByIdent name) ()) "Int" then let __assign_1851 = "float_of_int " ^ HxString.toStdString (ocamlValueIdent name) in (
-            tempResult6 := __assign_1851;
-            __assign_1851
-          ) else let __assign_1852 = exprToOcaml e arityByIdent tyByIdent in (
-            tempResult6 := __assign_1852;
-            __assign_1852
-          )
-          | _ -> let __assign_1849 = exprToOcaml e arityByIdent tyByIdent in (
-            tempResult6 := __assign_1849;
-            __assign_1849
-          ));
-        !tempResult6
-      ) in match op with
-        | "!=" -> if isFloatExpr a || isFloatExpr b then let __assign_1854 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") <> (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
-          tempResult5 := __assign_1854;
-          __assign_1854
-        ) else let __assign_1855 = ((("((" ^ HxString.toStdString la) ^ ") <> (") ^ HxString.toStdString rb) ^ "))" in (
-          tempResult5 := __assign_1855;
-          __assign_1855
-        )
-        | "%" | "*" | "-" | "/" -> let aIsF = isFloatExpr a in let bIsF = isFloatExpr b in let aIsI = isIntExpr a in let bIsI = isIntExpr b in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if (aIsF || bIsF) && canFloat then let tempString6 = ref "" in (
-          ignore (match op with
-            | "*" -> let __assign_1857 = "*." in (
-              tempString6 := __assign_1857;
-              __assign_1857
-            )
-            | "+" -> let __assign_1858 = "+." in (
-              tempString6 := __assign_1858;
-              __assign_1858
-            )
-            | "-" -> let __assign_1859 = "-." in (
-              tempString6 := __assign_1859;
-              __assign_1859
-            )
-            | "/" -> let __assign_1860 = "/." in (
-              tempString6 := __assign_1860;
-              __assign_1860
-            )
-            | _ -> let __assign_1856 = op in (
-              tempString6 := __assign_1856;
-              __assign_1856
-            ));
-          let fop = !tempString6 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_1861 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
-            tempResult5 := __assign_1861;
-            __assign_1861
-          )
-        ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_1862 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
-          tempResult5 := __assign_1862;
-          __assign_1862
-        ) else let __assign_1863 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1863;
-          __assign_1863
-        )
-        | "+" -> if isStringExpr a || isStringExpr b then let __assign_1864 = ((("((" ^ HxString.toStdString (exprToOcamlForConcat a)) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat b)) ^ "))" in (
-          tempResult5 := __assign_1864;
-          __assign_1864
-        ) else let aIsF = isFloatExpr a in let bIsF = isFloatExpr b in let aIsI = isIntExpr a in let bIsI = isIntExpr b in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if (aIsF || bIsF) && canFloat then let tempString7 = ref "" in (
-          ignore (match op with
-            | "*" -> let __assign_1866 = "*." in (
-              tempString7 := __assign_1866;
-              __assign_1866
-            )
-            | "+" -> let __assign_1867 = "+." in (
-              tempString7 := __assign_1867;
-              __assign_1867
-            )
-            | "-" -> let __assign_1868 = "-." in (
-              tempString7 := __assign_1868;
-              __assign_1868
-            )
-            | "/" -> let __assign_1869 = "/." in (
-              tempString7 := __assign_1869;
-              __assign_1869
-            )
-            | _ -> let __assign_1865 = op in (
-              tempString7 := __assign_1865;
-              __assign_1865
-            ));
-          let fop = !tempString7 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_1870 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
-            tempResult5 := __assign_1870;
-            __assign_1870
-          )
-        ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_1871 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
-          tempResult5 := __assign_1871;
-          __assign_1871
-        ) else let __assign_1872 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1872;
-          __assign_1872
-        )
-        | "==" -> if isFloatExpr a || isFloatExpr b then let __assign_1873 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") = (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
-          tempResult5 := __assign_1873;
-          __assign_1873
-        ) else let __assign_1874 = ((("((" ^ HxString.toStdString la) ^ ") = (") ^ HxString.toStdString rb) ^ "))" in (
-          tempResult5 := __assign_1874;
-          __assign_1874
-        )
-        | "<" | "<=" | ">" | ">=" -> if isFloatExpr a || isFloatExpr b then let __assign_1875 = ((((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
-          tempResult5 := __assign_1875;
-          __assign_1875
-        ) else let __assign_1876 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
-          tempResult5 := __assign_1876;
-          __assign_1876
-        )
-        | "&&" | "||" -> let __assign_1877 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
-          tempResult5 := __assign_1877;
-          __assign_1877
-        )
-        | _ -> let __assign_1853 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1853;
-          __assign_1853
-        ))
-      | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let cond = _g in let thenExpr = _g1 in let elseExpr = _g2 in let __assign_1878 = ((((("(if (" ^ HxString.toStdString (exprToOcaml cond arityByIdent tyByIdent)) ^ ") then (") ^ HxString.toStdString (exprToOcaml thenExpr arityByIdent tyByIdent)) ^ ") else (") ^ HxString.toStdString (exprToOcaml elseExpr arityByIdent tyByIdent)) ^ "))" in (
-        tempResult5 := __assign_1878;
-        __assign_1878
-      )
-      | HxExpr.EAnon (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
-        ignore _g;
-        ignore _g1;
-        let __assign_1879 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1879;
-          __assign_1879
-        )
-      )
-      | HxExpr.EArrayDecl _p0 -> let _g = _p0 in (
-        ignore _g;
-        let __assign_1880 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1880;
-          __assign_1880
-        )
-      )
-      | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
-        ignore _g;
-        ignore _g1;
-        let __assign_1881 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1881;
-          __assign_1881
-        )
-      )
-      | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
-        ignore _g1;
-        let __assign_1882 = exprToOcaml expr arityByIdent tyByIdent in (
-          tempResult5 := __assign_1882;
-          __assign_1882
-        )
-      )
-      | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr = _g in let __assign_1883 = exprToOcaml expr arityByIdent tyByIdent in (
-        tempResult5 := __assign_1883;
-        __assign_1883
-      )
-      | HxExpr.EUnsupported _p0 -> (
-        ignore _p0;
-        let __assign_1884 = "(Obj.magic 0)" in (
-          tempResult5 := __assign_1884;
-          __assign_1884
-        )
-      ));
-    !tempResult5
+    )
   )
 )
 
 let returnExprToOcaml = fun expr allowedValueIdents arityByIdent tyByIdent -> try let hasBringupPoison = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (let __assign_1885 = fun e -> try let tempResult = ref false in (
+  ignore (let __assign_1972 = fun e -> try let tempResult = ref false in (
     ignore (match e with
-      | HxExpr.ENull -> let __assign_1887 = true in (
-        tempResult := __assign_1887;
-        __assign_1887
+      | HxExpr.ENull -> let __assign_1974 = true in (
+        tempResult := __assign_1974;
+        __assign_1974
       )
-      | HxExpr.EThis -> let __assign_1888 = true in (
-        tempResult := __assign_1888;
-        __assign_1888
+      | HxExpr.EThis -> let __assign_1975 = true in (
+        tempResult := __assign_1975;
+        __assign_1975
       )
-      | HxExpr.ESuper -> let __assign_1889 = true in (
-        tempResult := __assign_1889;
-        __assign_1889
+      | HxExpr.ESuper -> let __assign_1976 = true in (
+        tempResult := __assign_1976;
+        __assign_1976
       )
-      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in if isUpperStart name then let __assign_1890 = false in (
-        tempResult := __assign_1890;
-        __assign_1890
-      ) else if HxString.equals name "trace" then let __assign_1891 = false in (
-        tempResult := __assign_1891;
-        __assign_1891
-      ) else if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) then let __assign_1892 = false in (
-        tempResult := __assign_1892;
-        __assign_1892
-      ) else if allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_1893 = HxMap.get_string allowedValueIdents name in if __nullable_1893 == HxRuntime.hx_null then false else Obj.obj __nullable_1893 = true) then let __assign_1894 = false in (
-        tempResult := __assign_1894;
-        __assign_1894
-      ) else let __assign_1895 = true in (
-        tempResult := __assign_1895;
-        __assign_1895
+      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in if isUpperStart name then let __assign_1977 = false in (
+        tempResult := __assign_1977;
+        __assign_1977
+      ) else if HxString.equals name "trace" then let __assign_1978 = false in (
+        tempResult := __assign_1978;
+        __assign_1978
+      ) else if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) then let __assign_1979 = false in (
+        tempResult := __assign_1979;
+        __assign_1979
+      ) else if allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_1980 = HxMap.get_string allowedValueIdents name in if __nullable_1980 == HxRuntime.hx_null then false else Obj.obj __nullable_1980 = true) then let __assign_1981 = false in (
+        tempResult := __assign_1981;
+        __assign_1981
+      ) else let __assign_1982 = true in (
+        tempResult := __assign_1982;
+        __assign_1982
       )
       | HxExpr.EField (_p0, _p1) -> let _g = _p0 in (
         ignore _p1;
-        let obj = _g in let __assign_1896 = (!hasBringupPoison) obj in (
-          tempResult := __assign_1896;
-          __assign_1896
+        let obj = _g in let __assign_1983 = (!hasBringupPoison) obj in (
+          tempResult := __assign_1983;
+          __assign_1983
         )
       )
       | HxExpr.ECall (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let callee = _g in let args = _g1 in (
         ignore (if (!hasBringupPoison) callee then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = HxArray.get args (!_g2) in (
-          ignore (let __old_1897 = !_g2 in let __new_1898 = HxInt.add __old_1897 1 in (
-            ignore (_g2 := __new_1898);
-            __new_1898
+          ignore (let __old_1984 = !_g2 in let __new_1985 = HxInt.add __old_1984 1 in (
+            ignore (_g2 := __new_1985);
+            __new_1985
           ));
           if (!hasBringupPoison) a then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         )) done);
-        let __assign_1899 = false in (
-          tempResult := __assign_1899;
-          __assign_1899
+        let __assign_1986 = false in (
+          tempResult := __assign_1986;
+          __assign_1986
         )
       )
       | HxExpr.ENew (_p0, _p1) -> (
         ignore _p0;
         ignore _p1;
-        let __assign_1900 = true in (
-          tempResult := __assign_1900;
-          __assign_1900
+        let __assign_1987 = true in (
+          tempResult := __assign_1987;
+          __assign_1987
         )
       )
       | HxExpr.EUnop (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let op = _g in let inner = _g1 in match op with
-        | "!" | "-" -> let __assign_1902 = (!hasBringupPoison) inner in (
-          tempResult := __assign_1902;
-          __assign_1902
+        | "!" | "-" -> let __assign_1989 = (!hasBringupPoison) inner in (
+          tempResult := __assign_1989;
+          __assign_1989
         )
-        | _ -> let __assign_1901 = true in (
-          tempResult := __assign_1901;
-          __assign_1901
+        | _ -> let __assign_1988 = true in (
+          tempResult := __assign_1988;
+          __assign_1988
         ))
       | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in match op with
-        | "!=" | "%" | "&&" | "*" | "+" | "-" | "/" | "<" | "<=" | "==" | ">" | ">=" | "||" -> let __assign_1904 = (!hasBringupPoison) a || (!hasBringupPoison) b in (
-          tempResult := __assign_1904;
-          __assign_1904
+        | "!=" | "%" | "&&" | "*" | "+" | "-" | "/" | "<" | "<=" | "==" | ">" | ">=" | "||" -> let __assign_1991 = (!hasBringupPoison) a || (!hasBringupPoison) b in (
+          tempResult := __assign_1991;
+          __assign_1991
         )
-        | _ -> let __assign_1903 = true in (
-          tempResult := __assign_1903;
-          __assign_1903
+        | _ -> let __assign_1990 = true in (
+          tempResult := __assign_1990;
+          __assign_1990
         ))
       | HxExpr.EArrayDecl _p0 -> let _g = _p0 in let values = _g in (
         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let v = HxArray.get values (!_g2) in (
-          ignore (let __old_1905 = !_g2 in let __new_1906 = HxInt.add __old_1905 1 in (
-            ignore (_g2 := __new_1906);
-            __new_1906
+          ignore (let __old_1992 = !_g2 in let __new_1993 = HxInt.add __old_1992 1 in (
+            ignore (_g2 := __new_1993);
+            __new_1993
           ));
           if (!hasBringupPoison) v then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         )) done);
-        let __assign_1907 = false in (
-          tempResult := __assign_1907;
-          __assign_1907
+        let __assign_1994 = false in (
+          tempResult := __assign_1994;
+          __assign_1994
         )
       )
-      | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let arr = _g in let idx = _g1 in let __assign_1908 = (!hasBringupPoison) arr || (!hasBringupPoison) idx in (
-        tempResult := __assign_1908;
-        __assign_1908
+      | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let arr = _g in let idx = _g1 in let __assign_1995 = (!hasBringupPoison) arr || (!hasBringupPoison) idx in (
+        tempResult := __assign_1995;
+        __assign_1995
       )
       | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr2 = _g in (
         ignore _g1;
-        let __assign_1909 = (!hasBringupPoison) expr2 in (
-          tempResult := __assign_1909;
-          __assign_1909
+        let __assign_1996 = (!hasBringupPoison) expr2 in (
+          tempResult := __assign_1996;
+          __assign_1996
         )
       )
-      | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr2 = _g in let __assign_1910 = (!hasBringupPoison) expr2 in (
-        tempResult := __assign_1910;
-        __assign_1910
+      | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr2 = _g in let __assign_1997 = (!hasBringupPoison) expr2 in (
+        tempResult := __assign_1997;
+        __assign_1997
       )
       | HxExpr.EUnsupported _p0 -> (
         ignore _p0;
-        let __assign_1911 = true in (
-          tempResult := __assign_1911;
-          __assign_1911
+        let __assign_1998 = true in (
+          tempResult := __assign_1998;
+          __assign_1998
         )
       )
-      | _ -> let __assign_1886 = false in (
-        tempResult := __assign_1886;
-        __assign_1886
+      | _ -> let __assign_1973 = false in (
+        tempResult := __assign_1973;
+        __assign_1973
       ));
     !tempResult
   ) with
-    | HxRuntime.Hx_return __ret_1912 -> Obj.obj __ret_1912 in (
-    hasBringupPoison := __assign_1885;
-    __assign_1885
+    | HxRuntime.Hx_return __ret_1999 -> Obj.obj __ret_1999 in (
+    hasBringupPoison := __assign_1972;
+    __assign_1972
   ));
   ignore (if (!hasBringupPoison) expr then raise (HxRuntime.Hx_return (Obj.repr "(Obj.magic 0)")) else ());
   exprToOcaml expr arityByIdent tyByIdent
 ) with
-  | HxRuntime.Hx_return __ret_1913 -> Obj.obj __ret_1913
+  | HxRuntime.Hx_return __ret_2000 -> Obj.obj __ret_2000
 
 let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent tyByIdent -> try (
   ignore (if stmts == Obj.magic (HxRuntime.hx_null) || HxArray.length stmts = 0 then raise (HxRuntime.Hx_return (Obj.repr "()")) else ());
   let stmtAlwaysReturns = ref (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (let __assign_1914 = fun s -> let tempResult = ref false in (
+    ignore (let __assign_2001 = fun s -> let tempResult = ref false in (
       ignore (match s with
         | HxStmt.SBlock (_p0, _p1) -> let _g = _p0 in (
           ignore _p1;
-          let ss = _g in if ss == Obj.magic (HxRuntime.hx_null) || HxArray.length ss = 0 then let __assign_1916 = false in (
-            tempResult := __assign_1916;
-            __assign_1916
-          ) else let __assign_1917 = (!stmtAlwaysReturns) (HxArray.get ss (HxInt.sub (HxArray.length ss) 1)) in (
-            tempResult := __assign_1917;
-            __assign_1917
+          let ss = _g in if ss == Obj.magic (HxRuntime.hx_null) || HxArray.length ss = 0 then let __assign_2003 = false in (
+            tempResult := __assign_2003;
+            __assign_2003
+          ) else let __assign_2004 = (!stmtAlwaysReturns) (HxArray.get ss (HxInt.sub (HxArray.length ss) 1)) in (
+            tempResult := __assign_2004;
+            __assign_2004
           )
         )
         | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
           ignore _p3;
           ignore _g;
-          let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_1918 = elseBranch != Obj.magic (HxRuntime.hx_null) && (!stmtAlwaysReturns) thenBranch && (!stmtAlwaysReturns) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-            tempResult := __assign_1918;
-            __assign_1918
+          let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_2005 = elseBranch != Obj.magic (HxRuntime.hx_null) && (!stmtAlwaysReturns) thenBranch && (!stmtAlwaysReturns) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+            tempResult := __assign_2005;
+            __assign_2005
           )
         )
         | HxStmt.SReturnVoid _p0 -> (
           ignore _p0;
-          let __assign_1919 = true in (
-            tempResult := __assign_1919;
-            __assign_1919
+          let __assign_2006 = true in (
+            tempResult := __assign_2006;
+            __assign_2006
           )
         )
         | HxStmt.SReturn (_p0, _p1) -> (
           ignore _p0;
           ignore _p1;
-          let __assign_1920 = true in (
-            tempResult := __assign_1920;
-            __assign_1920
+          let __assign_2007 = true in (
+            tempResult := __assign_2007;
+            __assign_2007
           )
         )
-        | _ -> let __assign_1915 = false in (
-          tempResult := __assign_1915;
-          __assign_1915
+        | _ -> let __assign_2002 = false in (
+          tempResult := __assign_2002;
+          __assign_2002
         ));
       !tempResult
     ) in (
-      stmtAlwaysReturns := __assign_1914;
-      __assign_1914
+      stmtAlwaysReturns := __assign_2001;
+      __assign_2001
     ));
     let condToOcamlBool = fun e -> let tempResult1 = ref "" in (
       ignore (match e with
-        | HxExpr.EBool _p0 -> let _g = _p0 in let v = _g in if v then let __assign_1922 = "true" in (
-          tempResult1 := __assign_1922;
-          __assign_1922
-        ) else let __assign_1923 = "false" in (
-          tempResult1 := __assign_1923;
-          __assign_1923
+        | HxExpr.EBool _p0 -> let _g = _p0 in let v = _g in if v then let __assign_2009 = "true" in (
+          tempResult1 := __assign_2009;
+          __assign_2009
+        ) else let __assign_2010 = "false" in (
+          tempResult1 := __assign_2010;
+          __assign_2010
         )
         | HxExpr.EUnop (_p0, _p1) -> let _g = _p0 in (
           ignore _p1;
-          if HxString.equals _g "!" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_1924 = "true" in (
-            tempResult1 := __assign_1924;
-            __assign_1924
-          ) else let __assign_1925 = s in (
-            tempResult1 := __assign_1925;
-            __assign_1925
-          ) else let __assign_1926 = "true" in (
-            tempResult1 := __assign_1926;
-            __assign_1926
+          if HxString.equals _g "!" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_2011 = "true" in (
+            tempResult1 := __assign_2011;
+            __assign_2011
+          ) else let __assign_2012 = s in (
+            tempResult1 := __assign_2012;
+            __assign_2012
+          ) else let __assign_2013 = "true" in (
+            tempResult1 := __assign_2013;
+            __assign_2013
           )
         )
         | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = _p0 in (
           ignore _p1;
           ignore _p2;
-          let op = _g in if HxString.equals op "==" || HxString.equals op "!=" || HxString.equals op "<" || HxString.equals op ">" || HxString.equals op "<=" || HxString.equals op ">=" || HxString.equals op "&&" || HxString.equals op "||" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_1927 = "true" in (
-            tempResult1 := __assign_1927;
-            __assign_1927
-          ) else let __assign_1928 = s in (
-            tempResult1 := __assign_1928;
-            __assign_1928
-          ) else let __assign_1929 = "true" in (
-            tempResult1 := __assign_1929;
-            __assign_1929
+          let op = _g in if HxString.equals op "==" || HxString.equals op "!=" || HxString.equals op "<" || HxString.equals op ">" || HxString.equals op "<=" || HxString.equals op ">=" || HxString.equals op "&&" || HxString.equals op "||" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_2014 = "true" in (
+            tempResult1 := __assign_2014;
+            __assign_2014
+          ) else let __assign_2015 = s in (
+            tempResult1 := __assign_2015;
+            __assign_2015
+          ) else let __assign_2016 = "true" in (
+            tempResult1 := __assign_2016;
+            __assign_2016
           )
         )
-        | _ -> let __assign_1921 = "true" in (
-          tempResult1 := __assign_1921;
-          __assign_1921
+        | _ -> let __assign_2008 = "true" in (
+          tempResult1 := __assign_2008;
+          __assign_2008
         ));
       !tempResult1
     ) in let stmtToUnit = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (let __assign_1930 = fun s -> let tempResult2 = ref "" in (
+      ignore (let __assign_2017 = fun s -> let tempResult2 = ref "" in (
         ignore (match s with
           | HxStmt.SBlock (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let ss = _g in (
             ignore _g1;
-            let __assign_1931 = stmtListToOcaml ss allowedValueIdents returnExc arityByIdent tyByIdent in (
-              tempResult2 := __assign_1931;
-              __assign_1931
+            let __assign_2018 = stmtListToOcaml ss allowedValueIdents returnExc arityByIdent tyByIdent in (
+              tempResult2 := __assign_2018;
+              __assign_2018
             )
           )
           | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = _p3 in (
@@ -7499,39 +7784,39 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
             ignore _g1;
             ignore _g2;
             ignore _g3;
-            let __assign_1932 = "()" in (
-              tempResult2 := __assign_1932;
-              __assign_1932
+            let __assign_2019 = "()" in (
+              tempResult2 := __assign_2019;
+              __assign_2019
             )
           )
           | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = _p3 in let cond = _g in let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in (
             ignore _g3;
             let thenUnit = (!stmtToUnit) thenBranch in let tempString = ref "" in (
-              ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_1933 = "()" in (
-                tempString := __assign_1933;
-                __assign_1933
-              ) else let __assign_1934 = (!stmtToUnit) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-                tempString := __assign_1934;
-                __assign_1934
+              ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_2020 = "()" in (
+                tempString := __assign_2020;
+                __assign_2020
+              ) else let __assign_2021 = (!stmtToUnit) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+                tempString := __assign_2021;
+                __assign_2021
               ));
-              let elseUnit = !tempString in let __assign_1935 = ((((("if " ^ HxString.toStdString (condToOcamlBool cond)) ^ " then (") ^ HxString.toStdString thenUnit) ^ ") else (") ^ HxString.toStdString elseUnit) ^ ")" in (
-                tempResult2 := __assign_1935;
-                __assign_1935
+              let elseUnit = !tempString in let __assign_2022 = ((((("if " ^ HxString.toStdString (condToOcamlBool cond)) ^ " then (") ^ HxString.toStdString thenUnit) ^ ") else (") ^ HxString.toStdString elseUnit) ^ ")" in (
+                tempResult2 := __assign_2022;
+                __assign_2022
               )
             )
           )
           | HxStmt.SReturnVoid _p0 -> let _g = _p0 in (
             ignore _g;
-            let __assign_1936 = ("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr ()))" in (
-              tempResult2 := __assign_1936;
-              __assign_1936
+            let __assign_2023 = ("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr ()))" in (
+              tempResult2 := __assign_2023;
+              __assign_2023
             )
           )
           | HxStmt.SReturn (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
             ignore _g1;
-            let __assign_1937 = ((("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr (") ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")))" in (
-              tempResult2 := __assign_1937;
-              __assign_1937
+            let __assign_2024 = ((("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr (") ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")))" in (
+              tempResult2 := __assign_2024;
+              __assign_2024
             )
           )
           | HxStmt.SExpr (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
@@ -7557,35 +7842,35 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
               | HxExpr.ECast (_, _) -> 17
               | HxExpr.EUntyped _ -> 18
               | HxExpr.EUnsupported _ -> 19) = 12 then let _g2 = match expr with
-              | HxExpr.EBinop (__enum_param_1938, _, _) -> __enum_param_1938
+              | HxExpr.EBinop (__enum_param_2025, _, _) -> __enum_param_2025
               | _ -> failwith "Unexpected enum parameter" in let _g3 = match expr with
-              | HxExpr.EBinop (_, __enum_param_1939, _) -> __enum_param_1939
+              | HxExpr.EBinop (_, __enum_param_2026, _) -> __enum_param_2026
               | _ -> failwith "Unexpected enum parameter" in let _g4 = match expr with
-              | HxExpr.EBinop (_, _, __enum_param_1940) -> __enum_param_1940
+              | HxExpr.EBinop (_, _, __enum_param_2027) -> __enum_param_2027
               | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g2 "=" then (
               ignore _g3;
               ignore _g4;
-              let __assign_1941 = "()" in (
-                tempResult2 := __assign_1941;
-                __assign_1941
+              let __assign_2028 = "()" in (
+                tempResult2 := __assign_2028;
+                __assign_2028
               )
-            ) else let __assign_1942 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
-              tempResult2 := __assign_1942;
-              __assign_1942
-            ) else let __assign_1943 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
-              tempResult2 := __assign_1943;
-              __assign_1943
+            ) else let __assign_2029 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
+              tempResult2 := __assign_2029;
+              __assign_2029
+            ) else let __assign_2030 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
+              tempResult2 := __assign_2030;
+              __assign_2030
             )
           ));
         !tempResult2
       ) in (
-        stmtToUnit := __assign_1930;
-        __assign_1930
+        stmtToUnit := __assign_2017;
+        __assign_2017
       ));
       let out = ref "()" in (
-        ignore (let _g = ref 0 in let _g1 = HxArray.length stmts in while !_g < _g1 do ignore (let i = let __old_1944 = !_g in let __new_1945 = HxInt.add __old_1944 1 in (
-          ignore (_g := __new_1945);
-          __old_1944
+        ignore (let _g = ref 0 in let _g1 = HxArray.length stmts in while !_g < _g1 do ignore (let i = let __old_2031 = !_g in let __new_2032 = HxInt.add __old_2031 1 in (
+          ignore (_g := __new_2032);
+          __old_2031
         ) in let s = HxArray.get stmts (HxInt.sub (HxInt.sub (HxArray.length stmts) 1) i) in if (match s with
           | HxStmt.SBlock (_, _) -> 0
           | HxStmt.SVar (_, _, _, _) -> 1
@@ -7593,25 +7878,25 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
           | HxStmt.SReturnVoid _ -> 3
           | HxStmt.SReturn (_, _) -> 4
           | HxStmt.SExpr (_, _) -> 5) = 1 then ignore (let _g2 = match s with
-          | HxStmt.SVar (__enum_param_1946, _, _, _) -> __enum_param_1946
+          | HxStmt.SVar (__enum_param_2033, _, _, _) -> __enum_param_2033
           | _ -> failwith "Unexpected enum parameter" in let _g3 = match s with
-          | HxStmt.SVar (_, __enum_param_1947, _, _) -> __enum_param_1947
+          | HxStmt.SVar (_, __enum_param_2034, _, _) -> __enum_param_2034
           | _ -> failwith "Unexpected enum parameter" in let _g4 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (match s with
-          | HxStmt.SVar (_, _, __enum_param_1948, _) -> __enum_param_1948
+          | HxStmt.SVar (_, _, __enum_param_2035, _) -> __enum_param_2035
           | _ -> failwith "Unexpected enum parameter")) in let _g5 = match s with
-          | HxStmt.SVar (_, _, _, __enum_param_1949) -> __enum_param_1949
+          | HxStmt.SVar (_, _, _, __enum_param_2036) -> __enum_param_2036
           | _ -> failwith "Unexpected enum parameter" in let name = _g2 in (
           ignore _g3;
           let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g4) in (
             ignore _g5;
             let tempString1 = ref "" in (
-              ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_1950 = "(Obj.magic 0)" in (
-                tempString1 := __assign_1950;
-                __assign_1950
-              ) else if init == Obj.magic (HxRuntime.hx_null) then let __assign_1951 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
-                tempString1 := __assign_1951;
-                __assign_1951
-              ) else if (let __enum_idx_1952 = init in if __enum_idx_1952 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_1952 with
+              ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2037 = "(Obj.magic 0)" in (
+                tempString1 := __assign_2037;
+                __assign_2037
+              ) else if init == Obj.magic (HxRuntime.hx_null) then let __assign_2038 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+                tempString1 := __assign_2038;
+                __assign_2038
+              ) else if (let __enum_idx_2039 = init in if __enum_idx_2039 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_2039 with
                 | HxExpr.ENull -> 0
                 | HxExpr.EBool _ -> 1
                 | HxExpr.EString _ -> 2
@@ -7631,35 +7916,35 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                 | HxExpr.EArrayAccess (_, _) -> 16
                 | HxExpr.ECast (_, _) -> 17
                 | HxExpr.EUntyped _ -> 18
-                | HxExpr.EUnsupported _ -> 19) = 7 then let _g6 = let __enum_param_1954 = init in if __enum_param_1954 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_1954 with
-                | HxExpr.EIdent __enum_param_1953 -> __enum_param_1953
-                | _ -> failwith "Unexpected enum parameter" in let n = _g6 in if HxString.equals n name then let __assign_1955 = "(Obj.magic 0)" in (
-                tempString1 := __assign_1955;
-                __assign_1955
-              ) else let __assign_1956 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
-                tempString1 := __assign_1956;
-                __assign_1956
-              ) else let __assign_1957 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
-                tempString1 := __assign_1957;
-                __assign_1957
+                | HxExpr.EUnsupported _ -> 19) = 7 then let _g6 = let __enum_param_2041 = init in if __enum_param_2041 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2041 with
+                | HxExpr.EIdent __enum_param_2040 -> __enum_param_2040
+                | _ -> failwith "Unexpected enum parameter" in let n = _g6 in if HxString.equals n name then let __assign_2042 = "(Obj.magic 0)" in (
+                tempString1 := __assign_2042;
+                __assign_2042
+              ) else let __assign_2043 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+                tempString1 := __assign_2043;
+                __assign_2043
+              ) else let __assign_2044 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+                tempString1 := __assign_2044;
+                __assign_2044
               ));
-              let rhs = !tempString1 in let ident = ocamlValueIdent name in let __assign_1958 = ((((((("let " ^ HxString.toStdString ident) ^ " = ") ^ HxString.toStdString rhs) ^ " in (ignore ") ^ HxString.toStdString ident) ^ "; (") ^ HxString.toStdString (!out)) ^ "))" in (
-                out := __assign_1958;
-                __assign_1958
+              let rhs = !tempString1 in let ident = ocamlValueIdent name in let __assign_2045 = ((((((("let " ^ HxString.toStdString ident) ^ " = ") ^ HxString.toStdString rhs) ^ " in (ignore ") ^ HxString.toStdString ident) ^ "; (") ^ HxString.toStdString (!out)) ^ "))" in (
+                out := __assign_2045;
+                __assign_2045
               )
             )
           )
         )) else ignore (let tempRight = ref "" in (
-          ignore (if (!stmtAlwaysReturns) s then let __assign_1959 = (!stmtToUnit) s in (
-            tempRight := __assign_1959;
-            __assign_1959
-          ) else let __assign_1960 = ((("(" ^ HxString.toStdString ((!stmtToUnit) s)) ^ "; ") ^ HxString.toStdString (!out)) ^ ")" in (
-            tempRight := __assign_1960;
-            __assign_1960
+          ignore (if (!stmtAlwaysReturns) s then let __assign_2046 = (!stmtToUnit) s in (
+            tempRight := __assign_2046;
+            __assign_2046
+          ) else let __assign_2047 = ((("(" ^ HxString.toStdString ((!stmtToUnit) s)) ^ "; ") ^ HxString.toStdString (!out)) ^ ")" in (
+            tempRight := __assign_2047;
+            __assign_2047
           ));
-          let __assign_1961 = !tempRight in (
-            out := __assign_1961;
-            __assign_1961
+          let __assign_2048 = !tempRight in (
+            out := __assign_2048;
+            __assign_2048
           )
         ))) done);
         !out
@@ -7667,7 +7952,7 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_1962 -> Obj.obj __ret_1962
+  | HxRuntime.Hx_return __ret_2049 -> Obj.obj __ret_2049
 
 let emitToDir = fun p outDir emitFullBodies -> (
   ignore (if outDir == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim outDir) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: missing outDir") ["Dynamic"; "String"]) else ());
@@ -7676,42 +7961,42 @@ let emitToDir = fun p outDir emitFullBodies -> (
     let ocamldepSort = fun mlFiles -> try (
       ignore (if mlFiles == Obj.magic (HxRuntime.hx_null) || HxArray.length mlFiles <= 1 then raise (HxRuntime.Hx_return (Obj.repr mlFiles)) else ());
       let tempString = ref "" in (
-        ignore (let v = HxSys.getEnv "OCAMLDEP" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_1963 = "ocamldep" in (
-          tempString := __assign_1963;
-          __assign_1963
-        ) else let __assign_1964 = v in (
-          tempString := __assign_1964;
-          __assign_1964
+        ignore (let v = HxSys.getEnv "OCAMLDEP" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2050 = "ocamldep" in (
+          tempString := __assign_2050;
+          __assign_2050
+        ) else let __assign_2051 = v in (
+          tempString := __assign_2051;
+          __assign_2051
         ));
-        let ocamldep = !tempString in let p2 = Sys_io_Process.create ocamldep (HxArray.concat (let __arr_1965 = HxArray.create () in (
-          ignore (HxArray.push __arr_1965 "-sort");
-          __arr_1965
+        let ocamldep = !tempString in let p2 = Sys_io_Process.create ocamldep (HxArray.concat (let __arr_2052 = HxArray.create () in (
+          ignore (HxArray.push __arr_2052 "-sort");
+          __arr_2052
         )) mlFiles) (HxRuntime.hx_null) in let chunks = HxArray.create () in (
-          ignore (try while true do ignore (HxArray.push chunks (let __obj_1966 = p2.stdout in __obj_1966.readLine (Obj.magic __obj_1966) ())) done with
+          ignore (try while true do ignore (HxArray.push chunks (let __obj_2053 = p2.stdout in __obj_2053.readLine (Obj.magic __obj_2053) ())) done with
             | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
             | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-            | HxRuntime.Hx_return __ret_1967 -> raise (HxRuntime.Hx_return __ret_1967)
-            | HxRuntime.Hx_exception (__exn_v_1968, __exn_tags_1969) -> if HxRuntime.tags_has __exn_tags_1969 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_1968 : Haxe_io_Eof.t) in (
+            | HxRuntime.Hx_return __ret_2054 -> raise (HxRuntime.Hx_return __ret_2054)
+            | HxRuntime.Hx_exception (__exn_v_2055, __exn_tags_2056) -> if HxRuntime.tags_has __exn_tags_2056 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_2055 : Haxe_io_Eof.t) in (
               ignore _hx;
               ()
-            ) else HxRuntime.hx_throw_typed __exn_v_1968 __exn_tags_1969
-            | __exn_1970 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_1970) : Haxe_io_Eof.t) in (
+            ) else HxRuntime.hx_throw_typed __exn_v_2055 __exn_tags_2056
+            | __exn_2057 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_2057) : Haxe_io_Eof.t) in (
               ignore _hx;
               ()
-            ) else raise (__exn_1970));
+            ) else raise (__exn_2057));
           let code = Sys_io_Process.exitCode p2 () in (
             ignore (Sys_io_Process.close p2 ());
             ignore (if code <> 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("stage3 emitter: ocamldep -sort failed with exit code " ^ string_of_int code)) ["Dynamic"; "String"]) else ());
             let sorted = HxArray.create () in (
               ignore (let _g = ref 0 in while !_g < HxArray.length chunks do ignore (let c = HxArray.get chunks (!_g) in (
-                ignore (let __old_1971 = !_g in let __new_1972 = HxInt.add __old_1971 1 in (
-                  ignore (_g := __new_1972);
-                  __new_1972
+                ignore (let __old_2058 = !_g in let __new_2059 = HxInt.add __old_2058 1 in (
+                  ignore (_g := __new_2059);
+                  __new_2059
                 ));
                 let _g2 = ref 0 in let _g1 = HxString.split c " " in try while !_g2 < HxArray.length _g1 do try ignore (let t = HxArray.get _g1 (!_g2) in (
-                  ignore (let __old_1973 = !_g2 in let __new_1974 = HxInt.add __old_1973 1 in (
-                    ignore (_g2 := __new_1974);
-                    __new_1974
+                  ignore (let __old_2060 = !_g2 in let __new_2061 = HxInt.add __old_2060 1 in (
+                    ignore (_g2 := __new_2061);
+                    __new_2061
                   ));
                   let s = StringTools.trim t in (
                     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_continue) else ());
@@ -7729,35 +8014,35 @@ let emitToDir = fun p outDir emitFullBodies -> (
         )
       )
     ) with
-      | HxRuntime.Hx_return __ret_1975 -> Obj.obj __ret_1975 in let generatedPaths = HxArray.create () in (
+      | HxRuntime.Hx_return __ret_2062 -> Obj.obj __ret_2062 in let generatedPaths = HxArray.create () in (
       ignore (let _g = ref 0 in let _g1 = MacroExpandedProgram.getGeneratedOcamlModules p () in try while !_g < HxArray.length _g1 do try ignore (let gm = HxArray.get _g1 (!_g) in (
-        ignore (let __old_1976 = !_g in let __new_1977 = HxInt.add __old_1976 1 in (
-          ignore (_g := __new_1977);
-          __new_1977
+        ignore (let __old_2063 = !_g in let __new_2064 = HxInt.add __old_2063 1 in (
+          ignore (_g := __new_2064);
+          __new_2064
         ));
         ignore (if gm == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
         let tempString1 = ref "" in (
-          ignore (if Obj.obj (HxAnon.get gm "name") == Obj.magic (HxRuntime.hx_null) then let __assign_1978 = "" in (
-            tempString1 := __assign_1978;
-            __assign_1978
-          ) else let __assign_1979 = StringTools.trim (Obj.obj (HxAnon.get gm "name")) in (
-            tempString1 := __assign_1979;
-            __assign_1979
+          ignore (if Obj.obj (HxAnon.get gm "name") == Obj.magic (HxRuntime.hx_null) then let __assign_2065 = "" in (
+            tempString1 := __assign_2065;
+            __assign_2065
+          ) else let __assign_2066 = StringTools.trim (Obj.obj (HxAnon.get gm "name")) in (
+            tempString1 := __assign_2066;
+            __assign_2066
           ));
           let name = !tempString1 in (
             ignore (if HxString.length name = 0 then raise (HxRuntime.Hx_continue) else ());
-            let path = Haxe_io_Path.join (let __arr_1980 = HxArray.create () in (
-              ignore (HxArray.push __arr_1980 outAbs);
-              ignore (HxArray.push __arr_1980 (HxString.toStdString name ^ ".ml"));
-              __arr_1980
+            let path = Haxe_io_Path.join (let __arr_2067 = HxArray.create () in (
+              ignore (HxArray.push __arr_2067 outAbs);
+              ignore (HxArray.push __arr_2067 (HxString.toStdString name ^ ".ml"));
+              __arr_2067
             )) in (
               ignore (let tempString2 = ref "" in (
-                ignore (if Obj.obj (HxAnon.get gm "source") == Obj.magic (HxRuntime.hx_null) then let __assign_1981 = "" in (
-                  tempString2 := __assign_1981;
-                  __assign_1981
-                ) else let __assign_1982 = Obj.obj (HxAnon.get gm "source") in (
-                  tempString2 := __assign_1982;
-                  __assign_1982
+                ignore (if Obj.obj (HxAnon.get gm "source") == Obj.magic (HxRuntime.hx_null) then let __assign_2068 = "" in (
+                  tempString2 := __assign_2068;
+                  __assign_2068
+                ) else let __assign_2069 = Obj.obj (HxAnon.get gm "source") in (
+                  tempString2 := __assign_2069;
+                  __assign_2069
                 ));
                 let content = !tempString2 in HxFile.saveContent path content
               ));
@@ -7768,50 +8053,50 @@ let emitToDir = fun p outDir emitFullBodies -> (
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      ignore (let shimName = "Std" in let shimPath = Haxe_io_Path.join (let __arr_1983 = HxArray.create () in (
-        ignore (HxArray.push __arr_1983 outAbs);
-        ignore (HxArray.push __arr_1983 (HxString.toStdString shimName ^ ".ml"));
-        __arr_1983
+      ignore (let shimName = "Std" in let shimPath = Haxe_io_Path.join (let __arr_2070 = HxArray.create () in (
+        ignore (HxArray.push __arr_2070 outAbs);
+        ignore (HxArray.push __arr_2070 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2070
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath (("(* hxhx(stage3) bootstrap shim: Std *)\n" ^ "let isOfType _ _ = false\n") ^ "let string _ = \"\"\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "Lambda" in let shimPath = Haxe_io_Path.join (let __arr_1984 = HxArray.create () in (
-        ignore (HxArray.push __arr_1984 outAbs);
-        ignore (HxArray.push __arr_1984 (HxString.toStdString shimName ^ ".ml"));
-        __arr_1984
+      ignore (let shimName = "Lambda" in let shimPath = Haxe_io_Path.join (let __arr_2071 = HxArray.create () in (
+        ignore (HxArray.push __arr_2071 outAbs);
+        ignore (HxArray.push __arr_2071 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2071
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath (((("(* hxhx(stage3) bootstrap shim: Lambda *)\n" ^ "let has _ _ = false\n") ^ "let exists _ _ = false\n") ^ "let iter _ _ = ()\n") ^ "let count _ = 0\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "Reflect" in let shimPath = Haxe_io_Path.join (let __arr_1985 = HxArray.create () in (
-        ignore (HxArray.push __arr_1985 outAbs);
-        ignore (HxArray.push __arr_1985 (HxString.toStdString shimName ^ ".ml"));
-        __arr_1985
+      ignore (let shimName = "Reflect" in let shimPath = Haxe_io_Path.join (let __arr_2072 = HxArray.create () in (
+        ignore (HxArray.push __arr_2072 outAbs);
+        ignore (HxArray.push __arr_2072 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2072
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath (((((((("(* hxhx(stage3) bootstrap shim: Reflect *)\n" ^ "let field _ _ = (Obj.magic 0)\n") ^ "let fields _ = (Obj.magic 0)\n") ^ "let getProperty _ _ = (Obj.magic 0)\n") ^ "let setProperty _ _ _ = ()\n") ^ "let hasField _ _ = false\n") ^ "let isFunction _ = false\n") ^ "let isObject _ = true\n") ^ "let compare _ _ = 0\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "IgnoredFixture" in let shimPath = Haxe_io_Path.join (let __arr_1986 = HxArray.create () in (
-        ignore (HxArray.push __arr_1986 outAbs);
-        ignore (HxArray.push __arr_1986 (HxString.toStdString shimName ^ ".ml"));
-        __arr_1986
+      ignore (let shimName = "IgnoredFixture" in let shimPath = Haxe_io_Path.join (let __arr_2073 = HxArray.create () in (
+        ignore (HxArray.push __arr_2073 outAbs);
+        ignore (HxArray.push __arr_2073 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2073
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath ((("(* hxhx(stage3) bootstrap shim: IgnoredFixture *)\n" ^ "type t = Obj.t\n") ^ "let notIgnored _ = (Obj.magic 0)\n") ^ "let ignored _ = (Obj.magic 0)\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "HxPosInfos" in let shimPath = Haxe_io_Path.join (let __arr_1987 = HxArray.create () in (
-        ignore (HxArray.push __arr_1987 outAbs);
-        ignore (HxArray.push __arr_1987 (HxString.toStdString shimName ^ ".ml"));
-        __arr_1987
+      ignore (let shimName = "HxPosInfos" in let shimPath = Haxe_io_Path.join (let __arr_2074 = HxArray.create () in (
+        ignore (HxArray.push __arr_2074 outAbs);
+        ignore (HxArray.push __arr_2074 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2074
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath ((((((("(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n" ^ "type t = {\n") ^ "  fileName : string;\n") ^ "  lineNumber : int;\n") ^ "  className : string;\n") ^ "  methodName : string;\n") ^ "  customParams : Obj.t;\n") ^ "}\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "HxInt64" in let shimPath = Haxe_io_Path.join (let __arr_1988 = HxArray.create () in (
-        ignore (HxArray.push __arr_1988 outAbs);
-        ignore (HxArray.push __arr_1988 (HxString.toStdString shimName ^ ".ml"));
-        __arr_1988
+      ignore (let shimName = "HxInt64" in let shimPath = Haxe_io_Path.join (let __arr_2075 = HxArray.create () in (
+        ignore (HxArray.push __arr_2075 outAbs);
+        ignore (HxArray.push __arr_2075 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2075
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath (((("(* hxhx(stage3) bootstrap shim: haxe.Int64 (shape-only) *)\n" ^ "type t = {\n") ^ "  low : int;\n") ^ "  high : int;\n") ^ "}\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
@@ -7822,17 +8107,17 @@ let emitToDir = fun p outDir emitFullBodies -> (
           ignore (if className == Obj.magic (HxRuntime.hx_null) || HxString.length className = 0 || HxString.equals className "Unknown" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
           let parsedFns = HxClassDecl.getFunctions mainClass in let parsedByName = HxMap.create_string () in (
             ignore (let _g = ref 0 in while !_g < HxArray.length parsedFns do ignore (let fn = HxArray.get parsedFns (!_g) in (
-              ignore (let __old_1989 = !_g in let __new_1990 = HxInt.add __old_1989 1 in (
-                ignore (_g := __new_1990);
-                __new_1990
+              ignore (let __old_2076 = !_g in let __new_2077 = HxInt.add __old_2076 1 in (
+                ignore (_g := __new_2077);
+                __new_2077
               ));
               let key = HxFunctionDecl.getName fn in HxMap.set_string parsedByName key fn
             )) done);
             let typedFns = TyClassEnv.getFunctions (TyModuleEnv.getMainClass (TypedModule.getEnv tm ()) ()) () in let arityByName = HxMap.create_string () in (
               ignore (let _g = ref 0 in while !_g < HxArray.length typedFns do ignore (let tf = HxArray.get typedFns (!_g) in (
-                ignore (let __old_1991 = !_g in let __new_1992 = HxInt.add __old_1991 1 in (
-                  ignore (_g := __new_1992);
-                  __new_1992
+                ignore (let __old_2078 = !_g in let __new_2079 = HxInt.add __old_2078 1 in (
+                  ignore (_g := __new_2079);
+                  __new_2079
                 ));
                 let key = TyFunctionEnv.getName tf () in let value = HxArray.length (TyFunctionEnv.getParams tf ()) in HxMap.set_string arityByName key value
               )) done);
@@ -7840,67 +8125,67 @@ let emitToDir = fun p outDir emitFullBodies -> (
                 ignore (HxArray.push out "(* Generated by hxhx(stage3) bootstrap emitter *)");
                 ignore (HxArray.push out "");
                 let sawMain = ref false in let exceptions = HxArray.create () in (
-                  ignore (let _g = ref 0 in let _g1 = HxArray.length typedFns in while !_g < _g1 do ignore (let i = let __old_1993 = !_g in let __new_1994 = HxInt.add __old_1993 1 in (
-                    ignore (_g := __new_1994);
-                    __old_1993
+                  ignore (let _g = ref 0 in let _g1 = HxArray.length typedFns in while !_g < _g1 do ignore (let i = let __old_2080 = !_g in let __new_2081 = HxInt.add __old_2080 1 in (
+                    ignore (_g := __new_2081);
+                    __old_2080
                   ) in let tf = HxArray.get typedFns i in let nameRaw = TyFunctionEnv.getName tf () in let name = ocamlValueIdent nameRaw in (
-                    ignore (if HxString.equals name "main" then ignore (let __assign_1995 = true in (
-                      sawMain := __assign_1995;
-                      __assign_1995
+                    ignore (if HxString.equals name "main" then ignore (let __assign_2082 = true in (
+                      sawMain := __assign_2082;
+                      __assign_2082
                     )) else ());
                     let args = TyFunctionEnv.getParams tf () in let tempString3 = ref "" in (
-                      ignore (if HxArray.length args = 0 then let __assign_1996 = "()" in (
-                        tempString3 := __assign_1996;
-                        __assign_1996
+                      ignore (if HxArray.length args = 0 then let __assign_2083 = "()" in (
+                        tempString3 := __assign_2083;
+                        __assign_2083
                       ) else let tempArray = ref (Obj.magic ()) in (
-                        ignore (let _g2 = let __arr_1997 = HxArray.create () in __arr_1997 in (
+                        ignore (let _g2 = let __arr_2084 = HxArray.create () in __arr_2084 in (
                           ignore (let _g3 = ref 0 in let _g4 = args in while !_g3 < HxArray.length _g4 do ignore (let v = HxArray.get _g4 (!_g3) in (
-                            ignore (let __old_1998 = !_g3 in let __new_1999 = HxInt.add __old_1998 1 in (
-                              ignore (_g3 := __new_1999);
-                              __new_1999
+                            ignore (let __old_2085 = !_g3 in let __new_2086 = HxInt.add __old_2085 1 in (
+                              ignore (_g3 := __new_2086);
+                              __new_2086
                             ));
                             HxArray.push _g2 (((("(" ^ HxString.toStdString (ocamlValueIdent (TySymbol.getName v ()))) ^ " : ") ^ HxString.toStdString (ocamlTypeFromTy (TySymbol.getType v ()))) ^ ")")
                           )) done);
-                          let __assign_2000 = _g2 in (
-                            tempArray := __assign_2000;
-                            __assign_2000
+                          let __assign_2087 = _g2 in (
+                            tempArray := __assign_2087;
+                            __assign_2087
                           )
                         ));
-                        let __assign_2001 = HxArray.join (!tempArray) " " (fun x -> x) in (
-                          tempString3 := __assign_2001;
-                          __assign_2001
+                        let __assign_2088 = HxArray.join (!tempArray) " " (fun x -> x) in (
+                          tempString3 := __assign_2088;
+                          __assign_2088
                         )
                       ));
                       let ocamlArgs = !tempString3 in let parsedFn = HxMap.get_string parsedByName nameRaw in let retTy = ocamlTypeFromTy (TyFunctionEnv.getReturnType tf ()) in let allowed = HxMap.create_string () in let tyByIdent = HxMap.create_string () in (
                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = HxArray.get args (!_g2) in (
-                          ignore (let __old_2002 = !_g2 in let __new_2003 = HxInt.add __old_2002 1 in (
-                            ignore (_g2 := __new_2003);
-                            __new_2003
+                          ignore (let __old_2089 = !_g2 in let __new_2090 = HxInt.add __old_2089 1 in (
+                            ignore (_g2 := __new_2090);
+                            __new_2090
                           ));
                           let key = TySymbol.getName a () in HxMap.set_string allowed key true
                         )) done);
                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = HxArray.get args (!_g2) in (
-                          ignore (let __old_2004 = !_g2 in let __new_2005 = HxInt.add __old_2004 1 in (
-                            ignore (_g2 := __new_2005);
-                            __new_2005
+                          ignore (let __old_2091 = !_g2 in let __new_2092 = HxInt.add __old_2091 1 in (
+                            ignore (_g2 := __new_2092);
+                            __new_2092
                           ));
                           let key = TySymbol.getName a () in let value = TySymbol.getType a () in HxMap.set_string tyByIdent key value
                         )) done);
                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length typedFns do ignore (let tf2 = HxArray.get typedFns (!_g2) in (
-                          ignore (let __old_2006 = !_g2 in let __new_2007 = HxInt.add __old_2006 1 in (
-                            ignore (_g2 := __new_2007);
-                            __new_2007
+                          ignore (let __old_2093 = !_g2 in let __new_2094 = HxInt.add __old_2093 1 in (
+                            ignore (_g2 := __new_2094);
+                            __new_2094
                           ));
                           let key = TyFunctionEnv.getName tf2 () in HxMap.set_string allowed key true
                         )) done);
                         let collectLocalNamesInStmt = ref (Obj.magic (HxRuntime.hx_null)) in (
-                          ignore (let __assign_2008 = fun s out -> match s with
+                          ignore (let __assign_2095 = fun s out -> match s with
                             | HxStmt.SBlock (_p0, _p1) -> ignore (let _g2 = _p0 in (
                               ignore _p1;
                               let stmts = _g2 in let _g4 = ref 0 in while !_g4 < HxArray.length stmts do ignore (let ss = HxArray.get stmts (!_g4) in (
-                                ignore (let __old_2009 = !_g4 in let __new_2010 = HxInt.add __old_2009 1 in (
-                                  ignore (_g4 := __new_2010);
-                                  __new_2010
+                                ignore (let __old_2096 = !_g4 in let __new_2097 = HxInt.add __old_2096 1 in (
+                                  ignore (_g4 := __new_2097);
+                                  __new_2097
                                 ));
                                 (!collectLocalNamesInStmt) ss out
                               )) done
@@ -7922,53 +8207,53 @@ let emitToDir = fun p outDir emitFullBodies -> (
                               )
                             ))
                             | _ -> ignore () in (
-                            collectLocalNamesInStmt := __assign_2008;
-                            __assign_2008
+                            collectLocalNamesInStmt := __assign_2095;
+                            __assign_2095
                           ));
                           ignore (if emitFullBodies && parsedFn != Obj.magic (HxRuntime.hx_null) then ignore (let localNames = HxMap.create_string () in (
                             ignore (let _g2 = ref 0 in let _g3 = HxFunctionDecl.getBody parsedFn in while !_g2 < HxArray.length _g3 do ignore (let s = HxArray.get _g3 (!_g2) in (
-                              ignore (let __old_2011 = !_g2 in let __new_2012 = HxInt.add __old_2011 1 in (
-                                ignore (_g2 := __new_2012);
-                                __new_2012
+                              ignore (let __old_2098 = !_g2 in let __new_2099 = HxInt.add __old_2098 1 in (
+                                ignore (_g2 := __new_2099);
+                                __new_2099
                               ));
                               (!collectLocalNamesInStmt) s localNames
                             )) done);
-                            ignore (let name2 = HxIterator.of_array (HxMap.keys_string localNames) in while (let __iter_2013 = name2 in fun () -> HxIterator.hasNext __iter_2013) () do ignore (let name3 = (let __iter_2014 = name2 in fun () -> HxIterator.next __iter_2014) () in HxMap.set_string allowed name3 true) done);
+                            ignore (let name2 = HxIterator.of_array (HxMap.keys_string localNames) in while (let __iter_2100 = name2 in fun () -> HxIterator.hasNext __iter_2100) () do ignore (let name3 = (let __iter_2101 = name2 in fun () -> HxIterator.next __iter_2101) () in HxMap.set_string allowed name3 true) done);
                             let _g2 = ref 0 in let _g3 = TyFunctionEnv.getLocals tf () in while !_g2 < HxArray.length _g3 do ignore (let l = HxArray.get _g3 (!_g2) in (
-                              ignore (let __old_2015 = !_g2 in let __new_2016 = HxInt.add __old_2015 1 in (
-                                ignore (_g2 := __new_2016);
-                                __new_2016
+                              ignore (let __old_2102 = !_g2 in let __new_2103 = HxInt.add __old_2102 1 in (
+                                ignore (_g2 := __new_2103);
+                                __new_2103
                               ));
                               let tempLeft = ref (HxRuntime.hx_null) in (
-                                ignore (let key = TySymbol.getName l () in let __assign_2017 = HxMap.get_string allowed key in (
-                                  tempLeft := __assign_2017;
-                                  __assign_2017
+                                ignore (let key = TySymbol.getName l () in let __assign_2104 = HxMap.get_string allowed key in (
+                                  tempLeft := __assign_2104;
+                                  __assign_2104
                                 ));
-                                if let __nullable_2018 = !tempLeft in if __nullable_2018 == HxRuntime.hx_null then false else Obj.obj __nullable_2018 = true then ignore (let key = TySymbol.getName l () in let value = TySymbol.getType l () in HxMap.set_string tyByIdent key value) else ()
+                                if let __nullable_2105 = !tempLeft in if __nullable_2105 == HxRuntime.hx_null then false else Obj.obj __nullable_2105 = true then ignore (let key = TySymbol.getName l () in let value = TySymbol.getType l () in HxMap.set_string tyByIdent key value) else ()
                               )
                             )) done
                           )) else ());
                           let tempString4 = ref "" in (
-                            ignore (if parsedFn == Obj.magic (HxRuntime.hx_null) then let __assign_2019 = "()" in (
-                              tempString4 := __assign_2019;
-                              __assign_2019
-                            ) else if not (emitFullBodies) then let __assign_2020 = returnExprToOcaml (HxFunctionDecl.getFirstReturnExpr parsedFn ()) allowed arityByName tyByIdent in (
-                              tempString4 := __assign_2020;
-                              __assign_2020
+                            ignore (if parsedFn == Obj.magic (HxRuntime.hx_null) then let __assign_2106 = "()" in (
+                              tempString4 := __assign_2106;
+                              __assign_2106
+                            ) else if not (emitFullBodies) then let __assign_2107 = returnExprToOcaml (HxFunctionDecl.getFirstReturnExpr parsedFn ()) allowed arityByName tyByIdent in (
+                              tempString4 := __assign_2107;
+                              __assign_2107
                             ) else let exc = "HxReturn_" ^ HxString.toStdString (escapeOcamlIdentPart nameRaw) in (
                               ignore (HxArray.push exceptions (("exception " ^ HxString.toStdString exc) ^ " of Obj.t"));
-                              let stmts = HxFunctionDecl.getBody parsedFn in let __assign_2021 = (((((((("((" ^ "try (let _ = ") ^ HxString.toStdString (stmtListToOcaml stmts allowed exc arityByName tyByIdent)) ^ " in (Obj.magic 0)) ") ^ "with ") ^ HxString.toStdString exc) ^ " v -> (Obj.magic v)") ^ ") : ") ^ HxString.toStdString retTy) ^ ")" in (
-                                tempString4 := __assign_2021;
-                                __assign_2021
+                              let stmts = HxFunctionDecl.getBody parsedFn in let __assign_2108 = (((((((("((" ^ "try (let _ = ") ^ HxString.toStdString (stmtListToOcaml stmts allowed exc arityByName tyByIdent)) ^ " in (Obj.magic 0)) ") ^ "with ") ^ HxString.toStdString exc) ^ " v -> (Obj.magic v)") ^ ") : ") ^ HxString.toStdString retTy) ^ ")" in (
+                                tempString4 := __assign_2108;
+                                __assign_2108
                               )
                             ));
                             let body = !tempString4 in let tempString5 = ref "" in (
-                              ignore (if i = 0 then let __assign_2022 = "let rec" in (
-                                tempString5 := __assign_2022;
-                                __assign_2022
-                              ) else let __assign_2023 = "and" in (
-                                tempString5 := __assign_2023;
-                                __assign_2023
+                              ignore (if i = 0 then let __assign_2109 = "let rec" in (
+                                tempString5 := __assign_2109;
+                                __assign_2109
+                              ) else let __assign_2110 = "and" in (
+                                tempString5 := __assign_2110;
+                                __assign_2110
                               ));
                               let kw = !tempString5 in (
                                 ignore (HxArray.push out ((((((((HxString.toStdString kw ^ " ") ^ HxString.toStdString name) ^ " ") ^ HxString.toStdString ocamlArgs) ^ " : ") ^ HxString.toStdString retTy) ^ " = ") ^ HxString.toStdString body));
@@ -7985,10 +8270,10 @@ let emitToDir = fun p outDir emitFullBodies -> (
                     ignore (HxArray.push out "let () = ignore (main ())");
                     HxArray.push out ""
                   )) else ());
-                  let mlPath = Haxe_io_Path.join (let __arr_2024 = HxArray.create () in (
-                    ignore (HxArray.push __arr_2024 outAbs);
-                    ignore (HxArray.push __arr_2024 (HxString.toStdString className ^ ".ml"));
-                    __arr_2024
+                  let mlPath = Haxe_io_Path.join (let __arr_2111 = HxArray.create () in (
+                    ignore (HxArray.push __arr_2111 outAbs);
+                    ignore (HxArray.push __arr_2111 (HxString.toStdString className ^ ".ml"));
+                    __arr_2111
                   )) in (
                     ignore (let content = HxArray.join out "\n" (fun x -> x) in HxFile.saveContent mlPath content);
                     HxString.toStdString className ^ ".ml"
@@ -7998,71 +8283,71 @@ let emitToDir = fun p outDir emitFullBodies -> (
             )
           )
         ) with
-          | HxRuntime.Hx_return __ret_2025 -> Obj.obj __ret_2025 in let emittedModulePaths = HxArray.create () in let deps = HxArray.slice typedModules 1 (HxArray.length typedModules) in (
+          | HxRuntime.Hx_return __ret_2112 -> Obj.obj __ret_2112 in let emittedModulePaths = HxArray.create () in let deps = HxArray.slice typedModules 1 (HxArray.length typedModules) in (
           ignore (let _g = ref 0 in while !_g < HxArray.length deps do ignore (let tm = HxArray.get deps (!_g) in (
-            ignore (let __old_2026 = !_g in let __new_2027 = HxInt.add __old_2026 1 in (
-              ignore (_g := __new_2027);
-              __new_2027
+            ignore (let __old_2113 = !_g in let __new_2114 = HxInt.add __old_2113 1 in (
+              ignore (_g := __new_2114);
+              __new_2114
             ));
             let path = emitModule tm false in if path != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push emittedModulePaths path) else ()
           )) done);
           let rootPath = emitModule (HxArray.get typedModules 0) true in (
             ignore (if rootPath != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push emittedModulePaths rootPath) else ());
-            let exePath = Haxe_io_Path.join (let __arr_2028 = HxArray.create () in (
-              ignore (HxArray.push __arr_2028 outAbs);
-              ignore (HxArray.push __arr_2028 "out.exe");
-              __arr_2028
+            let exePath = Haxe_io_Path.join (let __arr_2115 = HxArray.create () in (
+              ignore (HxArray.push __arr_2115 outAbs);
+              ignore (HxArray.push __arr_2115 "out.exe");
+              __arr_2115
             )) in (
               ignore (try if HxFileSystem.exists exePath then ignore (HxFileSystem.deleteFile exePath) else () with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                 | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                | HxRuntime.Hx_return __ret_2029 -> raise (HxRuntime.Hx_return __ret_2029)
-                | HxRuntime.Hx_exception (__exn_v_2030, __exn_tags_2031) -> if true then let _hx = (__exn_v_2030 : Obj.t) in (
+                | HxRuntime.Hx_return __ret_2116 -> raise (HxRuntime.Hx_return __ret_2116)
+                | HxRuntime.Hx_exception (__exn_v_2117, __exn_tags_2118) -> if true then let _hx = (__exn_v_2117 : Obj.t) in (
                   ignore _hx;
                   ()
-                ) else HxRuntime.hx_throw_typed __exn_v_2030 __exn_tags_2031
-                | __exn_2032 -> if true then let _hx = (Obj.repr __exn_2032 : Obj.t) in (
+                ) else HxRuntime.hx_throw_typed __exn_v_2117 __exn_tags_2118
+                | __exn_2119 -> if true then let _hx = (Obj.repr __exn_2119 : Obj.t) in (
                   ignore _hx;
                   ()
-                ) else raise (__exn_2032));
+                ) else raise (__exn_2119));
               let tempString6 = ref "" in (
-                ignore (let v = HxSys.getEnv "OCAMLOPT" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2033 = "ocamlopt" in (
-                  tempString6 := __assign_2033;
-                  __assign_2033
-                ) else let __assign_2034 = v in (
-                  tempString6 := __assign_2034;
-                  __assign_2034
+                ignore (let v = HxSys.getEnv "OCAMLOPT" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2120 = "ocamlopt" in (
+                  tempString6 := __assign_2120;
+                  __assign_2120
+                ) else let __assign_2121 = v in (
+                  tempString6 := __assign_2121;
+                  __assign_2121
                 ));
                 let tempMaybeString = ref (Obj.magic ()) in (
-                  ignore (try let __assign_2035 = HxSys.getCwd () in (
-                    tempMaybeString := __assign_2035;
-                    __assign_2035
+                  ignore (try let __assign_2122 = HxSys.getCwd () in (
+                    tempMaybeString := __assign_2122;
+                    __assign_2122
                   ) with
                     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                    | HxRuntime.Hx_return __ret_2036 -> raise (HxRuntime.Hx_return __ret_2036)
-                    | HxRuntime.Hx_exception (__exn_v_2037, __exn_tags_2038) -> if true then let _hx = (__exn_v_2037 : Obj.t) in (
+                    | HxRuntime.Hx_return __ret_2123 -> raise (HxRuntime.Hx_return __ret_2123)
+                    | HxRuntime.Hx_exception (__exn_v_2124, __exn_tags_2125) -> if true then let _hx = (__exn_v_2124 : Obj.t) in (
                       ignore _hx;
-                      let __assign_2039 = Obj.magic (HxRuntime.hx_null) in (
-                        tempMaybeString := __assign_2039;
-                        __assign_2039
+                      let __assign_2126 = Obj.magic (HxRuntime.hx_null) in (
+                        tempMaybeString := __assign_2126;
+                        __assign_2126
                       )
-                    ) else HxRuntime.hx_throw_typed __exn_v_2037 __exn_tags_2038
-                    | __exn_2040 -> if true then let _hx = (Obj.repr __exn_2040 : Obj.t) in (
+                    ) else HxRuntime.hx_throw_typed __exn_v_2124 __exn_tags_2125
+                    | __exn_2127 -> if true then let _hx = (Obj.repr __exn_2127 : Obj.t) in (
                       ignore _hx;
-                      let __assign_2041 = Obj.magic (HxRuntime.hx_null) in (
-                        tempMaybeString := __assign_2041;
-                        __assign_2041
+                      let __assign_2128 = Obj.magic (HxRuntime.hx_null) in (
+                        tempMaybeString := __assign_2128;
+                        __assign_2128
                       )
-                    ) else raise (__exn_2040));
+                    ) else raise (__exn_2127));
                   let prevCwd = !tempMaybeString in (
                     ignore (if prevCwd == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: cannot read current working directory") ["Dynamic"; "String"]) else ());
                     ignore (HxSys.setCwd outAbs);
                     let orderedMl = ocamldepSort (HxArray.concat generatedPaths emittedModulePaths) in let orderedNoRoot = HxArray.create () in (
                       ignore (let _g = ref 0 in while !_g < HxArray.length orderedMl do ignore (let f = HxArray.get orderedMl (!_g) in (
-                        ignore (let __old_2042 = !_g in let __new_2043 = HxInt.add __old_2042 1 in (
-                          ignore (_g := __new_2043);
-                          __new_2043
+                        ignore (let __old_2129 = !_g in let __new_2130 = HxInt.add __old_2129 1 in (
+                          ignore (_g := __new_2130);
+                          __new_2130
                         ));
                         if rootPath == Obj.magic (HxRuntime.hx_null) || not (HxString.equals f rootPath) then ignore (HxArray.push orderedNoRoot f) else ()
                       )) done);
@@ -8071,34 +8356,34 @@ let emitToDir = fun p outDir emitFullBodies -> (
                         ignore (HxArray.push args "-o");
                         ignore (HxArray.push args "out.exe");
                         ignore (let _g = ref 0 in while !_g < HxArray.length orderedNoRoot do ignore (let p2 = HxArray.get orderedNoRoot (!_g) in (
-                          ignore (let __old_2044 = !_g in let __new_2045 = HxInt.add __old_2044 1 in (
-                            ignore (_g := __new_2045);
-                            __new_2045
+                          ignore (let __old_2131 = !_g in let __new_2132 = HxInt.add __old_2131 1 in (
+                            ignore (_g := __new_2132);
+                            __new_2132
                           ));
                           HxArray.push args p2
                         )) done);
                         let tempNumber = ref 0 in (
-                          ignore (try let __assign_2046 = HxSys.command (!tempString6) (Some args) in (
-                            tempNumber := __assign_2046;
-                            __assign_2046
+                          ignore (try let __assign_2133 = HxSys.command (!tempString6) (Some args) in (
+                            tempNumber := __assign_2133;
+                            __assign_2133
                           ) with
                             | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                             | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                            | HxRuntime.Hx_return __ret_2047 -> raise (HxRuntime.Hx_return __ret_2047)
-                            | HxRuntime.Hx_exception (__exn_v_2048, __exn_tags_2049) -> if true then let e = (__exn_v_2048 : Obj.t) in (
+                            | HxRuntime.Hx_return __ret_2134 -> raise (HxRuntime.Hx_return __ret_2134)
+                            | HxRuntime.Hx_exception (__exn_v_2135, __exn_tags_2136) -> if true then let e = (__exn_v_2135 : Obj.t) in (
                               ignore e;
                               (
                                 ignore (HxSys.setCwd prevCwd);
                                 HxType.hx_throw_typed_rtti e ["Dynamic"]
                               )
-                            ) else HxRuntime.hx_throw_typed __exn_v_2048 __exn_tags_2049
-                            | __exn_2050 -> if true then let e = (Obj.repr __exn_2050 : Obj.t) in (
+                            ) else HxRuntime.hx_throw_typed __exn_v_2135 __exn_tags_2136
+                            | __exn_2137 -> if true then let e = (Obj.repr __exn_2137 : Obj.t) in (
                               ignore e;
                               (
                                 ignore (HxSys.setCwd prevCwd);
                                 HxType.hx_throw_typed_rtti e ["Dynamic"]
                               )
-                            ) else raise (__exn_2050));
+                            ) else raise (__exn_2137));
                           let code = !tempNumber in (
                             ignore (HxSys.setCwd prevCwd);
                             ignore (if code <> 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("stage3 emitter: ocamlopt failed with exit code " ^ string_of_int code)) ["Dynamic"; "String"]) else ());

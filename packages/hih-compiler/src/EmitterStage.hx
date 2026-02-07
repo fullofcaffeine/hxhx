@@ -168,6 +168,11 @@ class EmitterStage {
 						true;
 					case EIdent(name):
 						tyForIdent(name) == "Float";
+					case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/"):
+						// Best-effort: propagate float-ness through arithmetic.
+						isFloatExpr(a) || isFloatExpr(b);
+					case ETernary(_cond, thenExpr, elseExpr):
+						isFloatExpr(thenExpr) && isFloatExpr(elseExpr);
 					case _:
 						false;
 				}
@@ -179,6 +184,11 @@ class EmitterStage {
 						true;
 					case EIdent(name):
 						tyForIdent(name) == "Int";
+					case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%"):
+						// Best-effort: propagate int-ness through arithmetic when both sides look int-ish.
+						isIntExpr(a) && isIntExpr(b);
+					case ETernary(_cond, thenExpr, elseExpr):
+						isIntExpr(thenExpr) && isIntExpr(elseExpr);
 					case _:
 						false;
 				}
@@ -190,6 +200,12 @@ class EmitterStage {
 						true;
 					case EIdent(name):
 						tyForIdent(name) == "String";
+					case EBinop("+", a, b):
+						// String concatenation is represented as `+` in Haxe, but Stage3 typing info is often
+						// incomplete for nested expressions. Recursing avoids emitting OCaml `+` between strings.
+						isStringExpr(a) || isStringExpr(b);
+					case ETernary(_cond, thenExpr, elseExpr):
+						isStringExpr(thenExpr) && isStringExpr(elseExpr);
 					case _:
 						false;
 				}
@@ -398,13 +414,23 @@ class EmitterStage {
 					}
 
 				final c = exprToOcaml(callee, arityByIdent, tyByIdent);
-				final fullArgs = args.copy();
-				for (_ in 0...missing) fullArgs.push(ENull);
-
-				if (fullArgs.length == 0) {
-					c + " ()";
+				// Safety: if the callee is already "bring-up poison", do not apply arguments.
+				//
+				// Why
+				// - Applying args to a non-function expression produces OCaml warnings/errors
+				//   and can cascade into type mismatches.
+				// - In bring-up we prefer collapsing to poison over producing invalid OCaml.
+				if (c == "(Obj.magic 0)") {
+					"(Obj.magic 0)";
 				} else {
-					c + " " + fullArgs.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent) + ")").join(" ");
+					final fullArgs = args.copy();
+					for (_ in 0...missing) fullArgs.push(ENull);
+
+					if (fullArgs.length == 0) {
+						c + " ()";
+					} else {
+						c + " " + fullArgs.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent) + ")").join(" ");
+					}
 				}
 			case EUnop(op, expr):
 				// Stage 3 expansion: support a tiny subset of unary ops so simple control-flow
