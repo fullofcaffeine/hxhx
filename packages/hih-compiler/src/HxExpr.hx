@@ -52,6 +52,30 @@
 	ECall(callee:HxExpr, args:Array<HxExpr>);
 
 	/**
+		Arrow-function / lambda expression (Stage 3 expansion): `arg -> expr`.
+
+		Why
+		- Upstream Haxe code (and tests) frequently uses the Haxe 4 “short function”
+		  syntax as a lightweight callback, e.g.:
+		  - `arr.iter(x -> trace(x))`
+		  - `xs.map(x -> x + 1)`
+		- Without parsing this shape, our bootstrap parser drifts at the `->` token
+		  and produces `EUnsupported` placeholders in otherwise straight-line code.
+
+		What
+		- Stores the argument names (bring-up: currently only simple identifiers).
+		- Stores the body expression.
+
+		How (bring-up semantics)
+		- Stage 3 typer treats the resulting value as `Dynamic`, but still types the
+		  body with a nested scope that:
+		  - introduces the lambda argument(s),
+		  - and keeps outer locals/params visible for capture.
+		- Stage 3 emitter lowers this to an OCaml `fun ... -> ...` closure.
+	**/
+	ELambda(args:Array<String>, body:HxExpr);
+
+	/**
 		Constructor call: `new TypePath(args...)`.
 
 		Why

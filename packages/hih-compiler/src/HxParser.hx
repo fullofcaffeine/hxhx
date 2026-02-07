@@ -20,17 +20,61 @@
 	- This is intentionally *not* the full Haxe grammar.
 	- We grow coverage rung-by-rung while keeping acceptance fixtures runnable.
 **/
-class HxParser {
-	final lex:HxLexer;
-	var cur:HxToken;
-	var peeked1:Null<HxToken> = null;
-	var peeked2:Null<HxToken> = null;
-	var capturedReturnStringLiteral:String = "";
+	class HxParser {
+		final lex:HxLexer;
+		var cur:HxToken;
+		var peeked1:Null<HxToken> = null;
+		var peeked2:Null<HxToken> = null;
+		var capturedReturnStringLiteral:String = "";
 
-	public function new(source:String) {
-		lex = new HxLexer(source);
-		cur = lex.next();
-	}
+		static function keywordText(k:HxKeyword):String {
+			// IMPORTANT (bootstrap / backend independence)
+			// - Do not use `Std.string(k)` here.
+			// - In early bring-up, `Std.string` can flow through the target runtime's Dynamic
+			//   printing path, which may stringify nullary enums as their OCaml integer tags.
+			// - We need a stable mapping to the original source keyword text so diagnostics and
+			//   placeholder `EUnsupported` payloads remain readable across targets.
+			return switch (k) {
+				case KPackage: "package";
+				case KImport: "import";
+				case KUsing: "using";
+				case KAs: "as";
+				case KClass: "class";
+				case KPublic: "public";
+				case KPrivate: "private";
+				case KStatic: "static";
+				case KFunction: "function";
+				case KReturn: "return";
+				case KIf: "if";
+				case KElse: "else";
+				case KSwitch: "switch";
+				case KCase: "case";
+				case KDefault: "default";
+				case KTry: "try";
+				case KCatch: "catch";
+				case KThrow: "throw";
+				case KWhile: "while";
+				case KDo: "do";
+				case KFor: "for";
+				case KBreak: "break";
+				case KContinue: "continue";
+				case KUntyped: "untyped";
+				case KCast: "cast";
+				case KVar: "var";
+				case KFinal: "final";
+				case KNew: "new";
+				case KThis: "this";
+				case KSuper: "super";
+				case KTrue: "true";
+				case KFalse: "false";
+				case KNull: "null";
+			};
+		}
+
+		public function new(source:String) {
+			lex = new HxLexer(source);
+			cur = lex.next();
+		}
 
 	/**
 		Parse a single expression from standalone source text.
@@ -257,9 +301,9 @@ class HxParser {
 				case TIdent(name):
 					parts.push(name);
 					bump();
-				case TKeyword(k):
-					parts.push(Std.string(k));
-					bump();
+					case TKeyword(k):
+						parts.push(keywordText(k));
+						bump();
 				case TString(s):
 					parts.push('"' + s + '"');
 					bump();
@@ -360,10 +404,10 @@ class HxParser {
 						}
 					} else {
 						// Best-effort: capture the keyword as a string.
-						final raw = Std.string(k);
+						final raw = keywordText(k);
 						bump();
-					EUnsupported(raw);
-				}
+						EUnsupported(raw);
+					}
 			case TString(s):
 				bump();
 				EString(s);
@@ -663,15 +707,40 @@ class HxParser {
 		return left;
 	}
 
-	function parseExpr(stop:()->Bool):HxExpr {
-		// Stage 3: small-but-real expression subset.
-		// Includes calls/field access, prefix unary, and basic binary ops with precedence.
-		var e = parseBinaryExpr(1, stop);
-		// Ternary conditional: `cond ? thenExpr : elseExpr`
-		if (!stop() && acceptOtherChar("?")) {
-			final thenExpr = parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
-			expect(TColon, "':'");
-			final elseExpr = parseExpr(stop);
+		function parseExpr(stop:()->Bool):HxExpr {
+			// Stage 3: small-but-real expression subset.
+			// Includes calls/field access, prefix unary, and basic binary ops with precedence.
+			// Stage 3 expansion: arrow-function expressions (`arg -> expr`).
+			//
+			// Why
+			// - Upstream-ish code uses this pervasively for small callbacks.
+			// - If we don't recognize it, the `-` token is misclassified as a binary op and the
+			//   parser drifts into `EUnsupported("->")` placeholders.
+			//
+			// Bring-up scope
+			// - Only supports the simplest form: a single identifier parameter.
+			// - More complex forms (`(a, b) -> ...`, blocks, pattern args) are future work.
+			if (!stop()) {
+				switch (cur.kind) {
+					case TIdent(name):
+						if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
+							// Consume `name ->`.
+							bump(); // ident
+							bump(); // '-'
+							bump(); // '>'
+							final body = parseExpr(stop);
+							return ELambda([name], body);
+						}
+					case _:
+				}
+			}
+
+			var e = parseBinaryExpr(1, stop);
+			// Ternary conditional: `cond ? thenExpr : elseExpr`
+			if (!stop() && acceptOtherChar("?")) {
+				final thenExpr = parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
+				expect(TColon, "':'");
+				final elseExpr = parseExpr(stop);
 			// Precedence fix (bring-up):
 			// In `a = cond ? x : y`, the ternary binds to the *right-hand side* of the assignment.
 			// Our parser handles `?:` after binary parsing, so we patch up this common shape here.

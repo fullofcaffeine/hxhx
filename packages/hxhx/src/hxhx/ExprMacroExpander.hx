@@ -302,17 +302,18 @@ class ExprMacroExpander {
 			}
 		}
 
-	static function exprKind(e:HxExpr):String {
-		return switch (e) {
-			case EBool(_): "Bool";
-			case EInt(_): "Int";
-			case EFloat(_): "Float";
-			case EString(_): "String";
-			case EIdent(_): "Ident";
-			case EThis: "This";
-			case ESuper: "Super";
-			case ENull: "Null";
-			case ENew(_, _): "New";
+		static function exprKind(e:HxExpr):String {
+			return switch (e) {
+				case EBool(_): "Bool";
+				case EInt(_): "Int";
+				case EFloat(_): "Float";
+				case EString(_): "String";
+				case ELambda(_, _): "Lambda";
+				case EIdent(_): "Ident";
+				case EThis: "This";
+				case ESuper: "Super";
+				case ENull: "Null";
+				case ENew(_, _): "New";
 			case EField(_, _): "Field";
 			case ECall(_, _): "Call";
 			case EUnop(_, _): "Unop";

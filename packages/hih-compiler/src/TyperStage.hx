@@ -263,9 +263,9 @@ class TyperStage {
 							TyType.unknown();
 						}
 				}
-			case ECall(callee, args):
-				// Best-effort: type children for local inference, and use the index when we can.
-				switch (callee) {
+				case ECall(callee, args):
+					// Best-effort: type children for local inference, and use the index when we can.
+					switch (callee) {
 					case EField(obj, field):
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
@@ -313,11 +313,24 @@ class TyperStage {
 						inferExprType(callee, scope, ctx, pos);
 						for (a in args) inferExprType(a, scope, ctx, pos);
 						TyType.unknown();
-				}
-			case ENew(_typePath, args):
-				for (a in args) inferExprType(a, scope, ctx, pos);
-				final c = ctx.resolveType(_typePath);
-				c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(_typePath);
+					}
+				case ELambda(argNames, body):
+					// Stage 3 bring-up: type the body in a nested scope that:
+					// - introduces lambda args (shadowing outer locals/params),
+					// - but preserves visibility of outer locals/params for capture.
+					//
+					// We intentionally return `Dynamic` as the lambda value type for now.
+					final lambdaArgs = new Array<TySymbol>();
+					for (n in argNames) lambdaArgs.push(new TySymbol(n, TyType.fromHintText("Dynamic")));
+					final combinedParams = lambdaArgs.concat(scope.getParams().copy());
+					final combinedLocals = scope.getLocals().copy();
+					final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
+					inferExprType(body, nested, ctx, pos);
+					TyType.fromHintText("Dynamic");
+				case ENew(_typePath, args):
+					for (a in args) inferExprType(a, scope, ctx, pos);
+					final c = ctx.resolveType(_typePath);
+					c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(_typePath);
 			case EUnop(_op, e):
 				switch (_op) {
 					case "!":

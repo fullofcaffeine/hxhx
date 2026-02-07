@@ -147,7 +147,7 @@ class EmitterStage {
 		- Returns `null` if the expression is not a safe constant string.
 	**/
 	static function constFoldString(e:HxExpr):Null<String> {
-		return switch (e) {
+				return switch (e) {
 			case EString(v):
 				v == null ? "" : v;
 			case EBinop("+", a, b):
@@ -302,18 +302,27 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				case ECall(EField(EIdent("Math"), "log"), [_arg]):
 					"(Obj.magic 0)";
-				case ECall(EField(EIdent("Math"), "round"), [_arg]):
-					"(Obj.magic 0)";
-				case ECall(EField(EIdent("Math"), "fround"), [_arg]):
-					"(Obj.magic 0)";
-				case EField(EIdent("Math"), "NaN"):
-					"nan";
-			case EField(EIdent("Math"), "POSITIVE_INFINITY"):
-				"infinity";
-			case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
+					case ECall(EField(EIdent("Math"), "round"), [_arg]):
+						"(Obj.magic 0)";
+					case ECall(EField(EIdent("Math"), "fround"), [_arg]):
+						"(Obj.magic 0)";
+					case ELambda(args, body):
+						// Stage 3 bring-up: emit a direct OCaml closure.
+						//
+						// Notes
+						// - We don't model Haxe function typing yet; this is purely syntactic lowering.
+						// - Multi-arg lambdas are supported syntactically as `fun a b -> ...`, which in OCaml
+						//   is sugar for nested single-arg functions.
+						final ocamlArgs = args.map(ocamlValueIdent).join(" ");
+						"(fun " + (ocamlArgs.length == 0 ? "_" : ocamlArgs) + " -> " + exprToOcaml(body, arityByIdent, tyByIdent) + ")";
+					case EField(EIdent("Math"), "NaN"):
+						"nan";
+				case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+					"infinity";
+				case EField(EIdent("Math"), "NEGATIVE_INFINITY"):
 				"neg_infinity";
-				case EField(EIdent("Math"), "PI"):
-					"(4.0 *. atan 1.0)";
+					case EField(EIdent("Math"), "PI"):
+						"(4.0 *. atan 1.0)";
 
 				// Stage 3 bring-up: avoid emitting unbound `Reflect.*` / `Type.*` calls in the bootstrap
 				// emitter output. Upstream-ish unit code (e.g. utest) uses reflection helpers heavily.

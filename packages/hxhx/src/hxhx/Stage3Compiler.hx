@@ -106,14 +106,16 @@ class Stage3Compiler {
 		return switch (e) {
 			case EUnsupported(_): 1;
 			case EField(obj, _): countUnsupportedExprsInExpr(obj);
-			case ECall(callee, args):
-				var c = countUnsupportedExprsInExpr(callee);
-				for (a in args) c += countUnsupportedExprsInExpr(a);
-				c;
-			case ENew(_typePath, args):
-				var c = 0;
-				for (a in args) c += countUnsupportedExprsInExpr(a);
-				c;
+				case ECall(callee, args):
+					var c = countUnsupportedExprsInExpr(callee);
+					for (a in args) c += countUnsupportedExprsInExpr(a);
+					c;
+				case ELambda(_args, body):
+					countUnsupportedExprsInExpr(body);
+				case ENew(_typePath, args):
+					var c = 0;
+					for (a in args) c += countUnsupportedExprsInExpr(a);
+					c;
 			case EUnop(_op, expr): countUnsupportedExprsInExpr(expr);
 			case EBinop(_op, left, right): countUnsupportedExprsInExpr(left) + countUnsupportedExprsInExpr(right);
 			case ETernary(cond, thenExpr, elseExpr):
@@ -145,13 +147,15 @@ class Stage3Compiler {
 				if (out.length < max) out.push(raw);
 			case EField(obj, _):
 				collectUnsupportedExprRawInExpr(obj, out, max);
-			case ECall(callee, args):
-				collectUnsupportedExprRawInExpr(callee, out, max);
-				for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
-			case ENew(_typePath, args):
-				for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
-			case EUnop(_op, expr):
-				collectUnsupportedExprRawInExpr(expr, out, max);
+				case ECall(callee, args):
+					collectUnsupportedExprRawInExpr(callee, out, max);
+					for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
+				case ELambda(_args, body):
+					collectUnsupportedExprRawInExpr(body, out, max);
+				case ENew(_typePath, args):
+					for (a in args) collectUnsupportedExprRawInExpr(a, out, max);
+				case EUnop(_op, expr):
+					collectUnsupportedExprRawInExpr(expr, out, max);
 			case EBinop(_op, left, right):
 				collectUnsupportedExprRawInExpr(left, out, max);
 				collectUnsupportedExprRawInExpr(right, out, max);
