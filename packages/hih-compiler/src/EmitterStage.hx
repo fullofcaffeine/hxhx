@@ -388,6 +388,20 @@ class EmitterStage {
 						case _:
 							"(Obj.magic 0)";
 					}
+				case ECall(EIdent("__ocaml__"), [EString(code)]):
+					// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
+					//
+					// Why
+					// - Some bring-up binaries (macro host, display server) need small pieces of direct OCaml I/O
+					//   before the Stage3 bootstrap emitter can model the full Haxe runtime.
+					//
+					// What
+					// - We lower `untyped __ocaml__("<ocaml expr>")` to the raw `<ocaml expr>` at the call site.
+					//
+					// Non-goals / safety
+					// - This is intentionally *not* a general feature for user code. It is a controlled escape hatch
+					//   for repo-owned bring-up sources.
+					"(" + (code == null ? "" : code) + ")";
 				case ECall(callee, args):
 					// Stage 3 bring-up: avoid partial applications when Haxe calls a function
 					// with omitted optional/default parameters.
@@ -412,6 +426,16 @@ class EmitterStage {
 						case _:
 							0;
 					}
+
+				// Special-case a tiny slice of `Sys` I/O so bring-up server binaries can function
+				// before the full runtime is modeled.
+				switch (callee) {
+					case EField(EIdent("Sys"), "println") if (args.length == 1):
+						return "print_endline (" + exprToOcamlString(args[0], tyByIdent) + ")";
+					case EField(ECall(EField(EIdent("Sys"), "stdout"), []), "flush") if (args.length == 0):
+						return "(flush stdout)";
+					case _:
+				}
 
 				final c = exprToOcaml(callee, arityByIdent, tyByIdent);
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
