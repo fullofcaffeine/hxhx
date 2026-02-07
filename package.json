@@ -57,6 +57,7 @@
     "test:upstream:runci-macro": "bash scripts/hxhx/run-upstream-runci-macro.sh",
     "test:upstream:runci-macro-stage1": "bash scripts/hxhx/run-upstream-runci-macro-stage1.sh",
     "test:upstream:runci-macro-stage3-typeonly": "bash scripts/hxhx/run-upstream-runci-macro-stage3-typeonly.sh",
+    "test:upstream:runci-macro-stage3-no-emit": "bash scripts/hxhx/run-upstream-runci-macro-stage3-no-emit.sh",
     "test:upstream:stage2": "bash scripts/hxhx/stage2-repro.sh",
     "test:upstream:runci-targets": "bash scripts/hxhx/run-upstream-runci-targets.sh",
     "hxhx:dist": "bash scripts/hxhx/build-dist.sh",
