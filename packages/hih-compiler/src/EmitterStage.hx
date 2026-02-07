@@ -863,16 +863,29 @@ class EmitterStage {
 		  expressions from the parsed AST (we only support simple return shapes).
 		- Builds using `ocamlopt` (override via `OCAMLOPT` env var).
 	**/
-	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false):String {
-		if (outDir == null || StringTools.trim(outDir).length == 0) throw "stage3 emitter: missing outDir";
-		final outAbs = haxe.io.Path.normalize(outDir);
-		if (!sys.FileSystem.exists(outAbs)) sys.FileSystem.createDirectory(outAbs);
+		public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false):String {
+			if (outDir == null || StringTools.trim(outDir).length == 0) throw "stage3 emitter: missing outDir";
+			final outAbs = haxe.io.Path.normalize(outDir);
+			if (!sys.FileSystem.exists(outAbs)) sys.FileSystem.createDirectory(outAbs);
 
-		function ocamldepSort(mlFiles:Array<String>):Array<String> {
-			if (mlFiles == null || mlFiles.length <= 1) return mlFiles;
+			function uniqStrings(xs:Array<String>):Array<String> {
+				if (xs == null || xs.length <= 1) return xs;
+				final seen = new Map<String, Bool>();
+				final out = new Array<String>();
+				for (x in xs) {
+					if (x == null) continue;
+					if (seen.exists(x)) continue;
+					seen.set(x, true);
+					out.push(x);
+				}
+				return out;
+			}
 
-			final ocamldep = {
-				final v = Sys.getEnv("OCAMLDEP");
+			function ocamldepSort(mlFiles:Array<String>):Array<String> {
+				if (mlFiles == null || mlFiles.length <= 1) return mlFiles;
+
+				final ocamldep = {
+					final v = Sys.getEnv("OCAMLDEP");
 				(v == null || v.length == 0) ? "ocamldep" : v;
 			}
 
@@ -1176,22 +1189,23 @@ class EmitterStage {
 		// - Our resolved module order is "Haxe-ish" and does not guarantee OCaml compilation order.
 		//
 		// How
-		// - Use `ocamldep -sort` to topologically sort the emitted `.ml` units.
-		// - Keep the root unit last so `let () = main ()` (when present) runs after linking deps.
-		final orderedMl = ocamldepSort(generatedPaths.concat(emittedModulePaths));
-		final orderedNoRoot = new Array<String>();
-		final rootName = rootPath;
-		for (f in orderedMl) if (rootName == null || f != rootName) orderedNoRoot.push(f);
-		if (rootName != null) orderedNoRoot.push(rootName);
+			// - Use `ocamldep -sort` to topologically sort the emitted `.ml` units.
+			// - Keep the root unit last so `let () = main ()` (when present) runs after linking deps.
+			final orderedMl = uniqStrings(ocamldepSort(uniqStrings(generatedPaths.concat(emittedModulePaths))));
+			final orderedNoRoot = new Array<String>();
+			final rootName = rootPath;
+			for (f in orderedMl) if (rootName == null || f != rootName) orderedNoRoot.push(f);
+			if (rootName != null) orderedNoRoot.push(rootName);
+			final orderedNoRootUniq = uniqStrings(orderedNoRoot);
 
-		final args = new Array<String>();
-		args.push("-o");
-		args.push("out.exe");
-		for (p in orderedNoRoot) args.push(p);
-		final code = try Sys.command(ocamlopt, args) catch (e:Dynamic) {
-			Sys.setCwd(prevCwd);
-			throw e;
-		};
+			final args = new Array<String>();
+			args.push("-o");
+			args.push("out.exe");
+			for (p in orderedNoRootUniq) args.push(p);
+			final code = try Sys.command(ocamlopt, args) catch (e:Dynamic) {
+				Sys.setCwd(prevCwd);
+				throw e;
+			};
 		Sys.setCwd(prevCwd);
 		if (code != 0) throw "stage3 emitter: ocamlopt failed with exit code " + code;
 		if (!sys.FileSystem.exists(exePath)) throw "stage3 emitter: missing built executable: " + exePath;
