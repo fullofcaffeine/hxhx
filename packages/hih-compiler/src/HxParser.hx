@@ -463,6 +463,21 @@
 		final parts = new Array<HxExpr>();
 		var buf = new StringBuf();
 
+		inline function stringifyIdentExpr(name:String):HxExpr {
+			// Avoid emitting `Std.string(...)` in the bootstrap AST.
+			//
+			// Why
+			// - Stage3's bootstrap OCaml emitter does not provide a `Std` runtime module.
+			// - Interpolated strings often flow through non-print contexts (e.g. passed as args),
+			//   so they must lower without relying on a runtime `Std.string`.
+			//
+			// How
+			// - Force a string-concat context via `"" + ident`. Our Stage3 emitter recognizes
+			//   `+` with a string operand and lowers it to OCaml `^`, stringifying primitives
+			//   on the other side as needed.
+			return EBinop("+", EString(""), EIdent(name));
+		}
+
 		function flushBuf():Void {
 			if (buf.length > 0) {
 				parts.push(EString(buf.toString()));
@@ -496,7 +511,7 @@
 				if (j < s.length && s.charCodeAt(j) == "}".code) {
 					final inner = StringTools.trim(s.substr(start, j - start));
 					if (isSimpleIdent(inner)) {
-						parts.push(ECall(EField(EIdent("Std"), "string"), [EIdent(inner)]));
+						parts.push(stringifyIdentExpr(inner));
 						i = j + 1;
 						continue;
 					}
@@ -513,7 +528,7 @@
 				var j = j0 + 1;
 				while (j < s.length && isIdentCont(s.charCodeAt(j))) j++;
 				final name = s.substr(j0, j - j0);
-				parts.push(ECall(EField(EIdent("Std"), "string"), [EIdent(name)]));
+				parts.push(stringifyIdentExpr(name));
 				i = j;
 				continue;
 			}
