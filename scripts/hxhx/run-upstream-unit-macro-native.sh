@@ -3,9 +3,6 @@ set -euo pipefail
 
 # Native Gate1 attempt.
 #
-# This is intentionally separate from `run-upstream-unit-macro.sh`, which runs the upstream
-# suite through the *stage0 shim* path (delegating to the system `haxe` binary).
-#
 # Today, “native Gate1” is still a bring-up target: we route the upstream `compile-macro.hxml`
 # through `hxhx --hxhx-stage3` to discover missing CLI/stdlib/typing gaps early.
 #
@@ -13,9 +10,9 @@ set -euo pipefail
 # (stage4 macro execution + a real typer/analyzer), per:
 #   docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md
 
-HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
 UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
+ALLOW_STAGE0="${HXHX_ALLOW_STAGE0:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
@@ -28,11 +25,6 @@ if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
   exit 0
 fi
 
-if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-  echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-  exit 1
-fi
-
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
   echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
   exit 1
@@ -43,28 +35,26 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
+# Guardrail: this runner is intended to be stage0-free with respect to the Haxe compiler binary.
+#
+# If we accidentally invoke `haxe` (directly or indirectly), we want it to fail loudly.
+if [ -z "$ALLOW_STAGE0" ]; then
+  export HAXE_BIN="__hxhx_stage0_disabled__"
+fi
+
+# Make the runner deterministic and stage0-free even if the user's shell environment has
+# stage0-related knobs set.
+unset HXHX_FORCE_STAGE0 || true
+unset HXHX_MACRO_HOST_FORCE_STAGE0 || true
+unset HXHX_MACRO_HOST_ENTRYPOINTS || true
+unset HXHX_MACRO_HOST_EXTRA_CP || true
+
 # Stage3 bring-up relies on an explicit std root.
 #
 # Prefer upstream's `std/` when available, because `haxe` can be a shim (e.g. lix)
 # that doesn't sit next to a `std` folder on disk.
 if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
-fi
-
-# Otherwise, try inferring it from the stage0 `haxe` binary.
-if [ -z "${HAXE_STD_PATH:-}" ]; then
-  stage0_haxe=""
-  if [ -x "$HOME/haxe/versions/$UPSTREAM_REF/haxe" ]; then
-    stage0_haxe="$HOME/haxe/versions/$UPSTREAM_REF/haxe"
-  else
-    stage0_haxe="$(command -v "$HAXE_BIN" 2>/dev/null || true)"
-  fi
-  if [ -n "$stage0_haxe" ]; then
-    stage0_dir="$(cd "$(dirname "$stage0_haxe")" && pwd)"
-    if [ -d "$stage0_dir/std" ]; then
-      export HAXE_STD_PATH="$stage0_dir/std"
-    fi
-  fi
 fi
 
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
@@ -104,7 +94,7 @@ out="$(
   # Use `--hxhx-no-emit` so we execute `--macro Macro.init()` and the `onGenerate` hook, while
   # still avoiding “false positive” success from the Stage3 bootstrap emitter (the emitted OCaml
   # is still non-semantic and would not prove Gate1 correctness).
-  HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit compile-macro.hxml 2>&1
+  HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit compile-macro.hxml 2>&1
 )"
 echo "$out"
 
