@@ -14,7 +14,6 @@ set -euo pipefail
 #   - OCaml emission/build wiring,
 #   - and that we don't crash on upstream-shaped inputs.
 
-HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXELIB_BIN="${HAXELIB_BIN:-haxelib}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -26,11 +25,6 @@ if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
   echo "Skipping upstream Gate 1 (stage3 emit): missing upstream Haxe repo at '$UPSTREAM_DIR'." >&2
   echo "Set HAXE_UPSTREAM_DIR to your local Haxe checkout." >&2
   exit 0
-fi
-
-if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-  echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-  exit 1
 fi
 
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
@@ -49,6 +43,14 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
 fi
 
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+
+# Stage3 emit rung executes `--macro Macro.init()`, which requires a macro host.
+#
+# Use the repo's committed bootstrap macro host snapshot by default so this rung stays stage0-free.
+if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+  HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+  export HXHX_MACRO_HOST_EXE
+fi
 
 # Gate 1 depends on `-lib utest`. Upstream CI pins utest; match the pin so fixture content stays stable.
 UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"
@@ -69,8 +71,7 @@ echo "== Gate 1 (stage3 emit rung): upstream tests/unit/compile-macro.hxml"
 out="$(
   cd "$UPSTREAM_DIR/tests/unit"
   rm -rf out_hxhx_unit_macro_stage3_emit
-  HXHX_MACRO_HOST_AUTO_BUILD=1 \
-    HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" \
+  HAXELIB_BIN="$HAXELIB_BIN" \
     "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
 )"
 echo "$out"
