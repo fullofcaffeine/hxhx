@@ -30,6 +30,9 @@ export HXHX_GATE2_SKIP_PARTY
 # What
 # - `stage0_shim` (default): RunCi calls `haxe` → wrapper runs `hxhx` as a stage0 shim.
 # - `stage3_no_emit`: RunCi calls `haxe` → wrapper runs `hxhx --hxhx-stage3 --hxhx-no-emit`.
+# - `stage3_no_emit_direct`: RunCi is *not* executed. Instead, this script runs the same sequence
+#   of sub-invocations as `runci.targets.Macro.run(...)`, but routes every `haxe` call through
+#   `hxhx --hxhx-stage3 --hxhx-no-emit`.
 # - `stage3_emit_runner`: RunCi is compiled+run by `hxhx --hxhx-stage3 --hxhx-emit-full-bodies`,
 #   and RunCi sub-invocations (`haxe`) are routed through `hxhx --hxhx-stage3 --hxhx-no-emit`.
 #
@@ -535,6 +538,106 @@ EOF
   fi
 }
 
+run_stage3_no_emit_direct_macro() {
+  # Direct Macro-stage runner that does not execute upstream RunCi.
+  #
+  # Why
+  # - Gate2 acceptance wants a non-delegating compiler in the hot path.
+  # - Today, our stage3_no_emit path can type+macro many upstream fixtures, but we still rely on
+  #   stage0 `haxe` to *execute* upstream `tests/RunCi.hxml`.
+  #
+  # This rung removes that last stage0 dependency by reproducing the Macro target sequence in bash.
+
+  local sys_def="Unknown"
+  case "$(uname -s)" in
+    Darwin) sys_def="Mac" ;;
+    Linux) sys_def="Linux" ;;
+    MINGW*|MSYS*|CYGWIN*) sys_def="Windows" ;;
+  esac
+
+  local args=()
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    args+=("-D" "github")
+  fi
+  args+=("-D" "$sys_def")
+
+  echo "== Gate 2 (direct): Macro stage sequence (stage3 no-emit; no stage0 RunCi harness)"
+
+  (
+    cd "$UPSTREAM_DIR/tests/unit"
+    PATH="$WRAP_DIR:$PATH" haxe compile-macro.hxml "${args[@]}"
+  )
+
+  (
+    cd "$UPSTREAM_DIR/tests/display"
+    PATH="$WRAP_DIR:$PATH" haxelib path haxeserver >/dev/null 2>&1 || true
+    PATH="$WRAP_DIR:$PATH" haxe build.hxml
+  )
+
+  (
+    cd "$UPSTREAM_DIR/tests/sourcemaps"
+    PATH="$WRAP_DIR:$PATH" haxe run.hxml
+  )
+
+  (
+    cd "$UPSTREAM_DIR/tests/nullsafety"
+    echo "No-target null safety:"
+    PATH="$WRAP_DIR:$PATH" haxe test.hxml
+    echo "Js-es6 null safety:"
+    PATH="$WRAP_DIR:$PATH" haxe test-js-es6.hxml
+  )
+
+  (
+    cd "$UPSTREAM_DIR/tests/misc"
+    PATH="$WRAP_DIR:$PATH" haxe compile.hxml
+  )
+
+  (
+    cd "$UPSTREAM_DIR/tests/misc/resolution"
+    PATH="$WRAP_DIR:$PATH" haxe run.hxml
+  )
+
+  if [ "${HXHX_GATE2_FORCE_SYS:-0}" = "1" ] || [ "$(uname -s)" != "Darwin" ]; then
+    (
+      cd "$UPSTREAM_DIR/tests/sys"
+      PATH="$WRAP_DIR:$PATH" haxe compile-macro.hxml "${args[@]}"
+    )
+  else
+    echo "Skipping sys tests on Mac (HXHX Gate2 runner; macOS/APFS unicode filename fixtures unsupported)"
+  fi
+
+  if [ "$(uname -s)" = "Linux" ]; then
+    (
+      cd "$UPSTREAM_DIR/tests/misc/compiler_loops"
+      PATH="$WRAP_DIR:$PATH" haxe run.hxml
+    )
+  fi
+
+  (
+    cd "$UPSTREAM_DIR/tests/threads"
+    PATH="$WRAP_DIR:$PATH" haxe build.hxml --interp
+  )
+
+  if [ "${HXHX_GATE2_SKIP_PARTY}" = "1" ]; then
+    echo "Skipping party stage (HXHX Gate2 runner; set HXHX_GATE2_SKIP_PARTY=0 to enable)"
+    return 0
+  fi
+
+  local party_dir="$UPSTREAM_DIR/tests/party"
+  (
+    cd "$UPSTREAM_DIR/tests"
+    rm -rf "$party_dir" || true
+    mkdir -p "$party_dir"
+    cd "$party_dir"
+    git clone https://github.com/haxetink/tink_core tink_core
+    cd tink_core
+    PATH="$WRAP_DIR:$PATH" haxelib newrepo
+    PATH="$WRAP_DIR:$PATH" haxelib install tests.hxml --always
+    PATH="$WRAP_DIR:$PATH" haxelib dev tink_core .
+    PATH="$WRAP_DIR:$PATH" haxe tests.hxml -w -WDeprecated --interp --macro "addMetadata('@:exclude','Futures','testDelay')"
+  )
+}
+
 apply_misc_filter_if_requested() {
   local filter="${HXHX_GATE2_MISC_FILTER:-}"
   if [ -z "$filter" ]; then
@@ -552,7 +655,7 @@ apply_misc_filter_if_requested() {
 # compiler via HAXE_BIN to avoid recursion.
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
-if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+if { [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; } && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free
   # with respect to macro-host selection/build.
   HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
@@ -568,7 +671,7 @@ fi
 
 WRAP_DIR="$(mktemp -d)"
 
-if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ]; then
+if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; then
   cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -666,6 +769,9 @@ case "$HXHX_GATE2_MODE" in
   stage3_no_emit)
     echo "== Gate 2: upstream tests/runci Macro target (diagnostic: hxhx --hxhx-stage3 --hxhx-no-emit for sub-invocations)"
     ;;
+  stage3_no_emit_direct)
+    echo "== Gate 2: upstream tests/runci Macro target (direct: stage3 no-emit; no stage0 RunCi harness)"
+    ;;
   stage3_emit_runner)
     echo "== Gate 2: upstream tests/runci Macro target (native attempt: hxhx --hxhx-stage3 --hxhx-emit-full-bodies for RunCi; stage3_no_emit for sub-invocations)"
     ;;
@@ -700,7 +806,9 @@ esac
   # RunCi defaults to the Macro target when no args/TEST are provided.
   # We intentionally pass no args here because `hxhx` treats `--` as a separator
   # and would drop everything before it.
-  if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+  if [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; then
+    run_stage3_no_emit_direct_macro
+  elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
     rm -rf out_hxhx_runci_stage3_emit_runner
     PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$HAXELIB_BIN" \
       "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
