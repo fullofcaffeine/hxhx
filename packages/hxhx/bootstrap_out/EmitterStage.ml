@@ -500,16 +500,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
               | HxExpr.EField (_, _) -> 8
               | HxExpr.ECall (_, _) -> 9
               | HxExpr.ELambda (_, _) -> 10
-              | HxExpr.ENew (_, _) -> 11
-              | HxExpr.EUnop (_, _) -> 12
-              | HxExpr.EBinop (_, _, _) -> 13
-              | HxExpr.ETernary (_, _, _) -> 14
-              | HxExpr.EAnon (_, _) -> 15
-              | HxExpr.EArrayDecl _ -> 16
-              | HxExpr.EArrayAccess (_, _) -> 17
-              | HxExpr.ECast (_, _) -> 18
-              | HxExpr.EUntyped _ -> 19
-              | HxExpr.EUnsupported _ -> 20) = 7 then let _g2 = match _g with
+              | HxExpr.ETryCatchRaw _ -> 11
+              | HxExpr.ENew (_, _) -> 12
+              | HxExpr.EUnop (_, _) -> 13
+              | HxExpr.EBinop (_, _, _) -> 14
+              | HxExpr.ETernary (_, _, _) -> 15
+              | HxExpr.EAnon (_, _) -> 16
+              | HxExpr.EArrayDecl _ -> 17
+              | HxExpr.EArrayAccess (_, _) -> 18
+              | HxExpr.ECast (_, _) -> 19
+              | HxExpr.EUntyped _ -> 20
+              | HxExpr.EUnsupported _ -> 21) = 7 then let _g2 = match _g with
               | HxExpr.EIdent __enum_param_123 -> __enum_param_123
               | _ -> failwith "Unexpected enum parameter" in match _g2 with
               | "Math" -> (match _g1 with
@@ -541,16 +542,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                   | HxExpr.EField (_, _) -> 8
                   | HxExpr.ECall (_, _) -> 9
                   | HxExpr.ELambda (_, _) -> 10
-                  | HxExpr.ENew (_, _) -> 11
-                  | HxExpr.EUnop (_, _) -> 12
-                  | HxExpr.EBinop (_, _, _) -> 13
-                  | HxExpr.ETernary (_, _, _) -> 14
-                  | HxExpr.EAnon (_, _) -> 15
-                  | HxExpr.EArrayDecl _ -> 16
-                  | HxExpr.EArrayAccess (_, _) -> 17
-                  | HxExpr.ECast (_, _) -> 18
-                  | HxExpr.EUntyped _ -> 19
-                  | HxExpr.EUnsupported _ -> 20) = 7 then let _g3 = match obj with
+                  | HxExpr.ETryCatchRaw _ -> 11
+                  | HxExpr.ENew (_, _) -> 12
+                  | HxExpr.EUnop (_, _) -> 13
+                  | HxExpr.EBinop (_, _, _) -> 14
+                  | HxExpr.ETernary (_, _, _) -> 15
+                  | HxExpr.EAnon (_, _) -> 16
+                  | HxExpr.EArrayDecl _ -> 17
+                  | HxExpr.EArrayAccess (_, _) -> 18
+                  | HxExpr.ECast (_, _) -> 19
+                  | HxExpr.EUntyped _ -> 20
+                  | HxExpr.EUnsupported _ -> 21) = 7 then let _g3 = match obj with
                   | HxExpr.EIdent __enum_param_128 -> __enum_param_128
                   | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_129 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
                   tempResult5 := __assign_129;
@@ -577,16 +579,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                 | HxExpr.EField (_, _) -> 8
                 | HxExpr.ECall (_, _) -> 9
                 | HxExpr.ELambda (_, _) -> 10
-                | HxExpr.ENew (_, _) -> 11
-                | HxExpr.EUnop (_, _) -> 12
-                | HxExpr.EBinop (_, _, _) -> 13
-                | HxExpr.ETernary (_, _, _) -> 14
-                | HxExpr.EAnon (_, _) -> 15
-                | HxExpr.EArrayDecl _ -> 16
-                | HxExpr.EArrayAccess (_, _) -> 17
-                | HxExpr.ECast (_, _) -> 18
-                | HxExpr.EUntyped _ -> 19
-                | HxExpr.EUnsupported _ -> 20) = 7 then let _g3 = match obj with
+                | HxExpr.ETryCatchRaw _ -> 11
+                | HxExpr.ENew (_, _) -> 12
+                | HxExpr.EUnop (_, _) -> 13
+                | HxExpr.EBinop (_, _, _) -> 14
+                | HxExpr.ETernary (_, _, _) -> 15
+                | HxExpr.EAnon (_, _) -> 16
+                | HxExpr.EArrayDecl _ -> 17
+                | HxExpr.EArrayAccess (_, _) -> 18
+                | HxExpr.ECast (_, _) -> 19
+                | HxExpr.EUntyped _ -> 20
+                | HxExpr.EUnsupported _ -> 21) = 7 then let _g3 = match obj with
                 | HxExpr.EIdent __enum_param_137 -> __enum_param_137
                 | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_138 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
                 tempResult5 := __assign_138;
@@ -610,16 +613,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                 | HxExpr.EField (_, _) -> 8
                 | HxExpr.ECall (_, _) -> 9
                 | HxExpr.ELambda (_, _) -> 10
-                | HxExpr.ENew (_, _) -> 11
-                | HxExpr.EUnop (_, _) -> 12
-                | HxExpr.EBinop (_, _, _) -> 13
-                | HxExpr.ETernary (_, _, _) -> 14
-                | HxExpr.EAnon (_, _) -> 15
-                | HxExpr.EArrayDecl _ -> 16
-                | HxExpr.EArrayAccess (_, _) -> 17
-                | HxExpr.ECast (_, _) -> 18
-                | HxExpr.EUntyped _ -> 19
-                | HxExpr.EUnsupported _ -> 20) = 7 then let _g3 = match obj with
+                | HxExpr.ETryCatchRaw _ -> 11
+                | HxExpr.ENew (_, _) -> 12
+                | HxExpr.EUnop (_, _) -> 13
+                | HxExpr.EBinop (_, _, _) -> 14
+                | HxExpr.ETernary (_, _, _) -> 15
+                | HxExpr.EAnon (_, _) -> 16
+                | HxExpr.EArrayDecl _ -> 17
+                | HxExpr.EArrayAccess (_, _) -> 18
+                | HxExpr.ECast (_, _) -> 19
+                | HxExpr.EUntyped _ -> 20
+                | HxExpr.EUnsupported _ -> 21) = 7 then let _g3 = match obj with
                 | HxExpr.EIdent __enum_param_124 -> __enum_param_124
                 | _ -> failwith "Unexpected enum parameter" in let name = _g3 in if isUpperStart name then let __assign_125 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
                 tempResult5 := __assign_125;
@@ -642,16 +646,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
               | HxExpr.EField (_, _) -> 8
               | HxExpr.ECall (_, _) -> 9
               | HxExpr.ELambda (_, _) -> 10
-              | HxExpr.ENew (_, _) -> 11
-              | HxExpr.EUnop (_, _) -> 12
-              | HxExpr.EBinop (_, _, _) -> 13
-              | HxExpr.ETernary (_, _, _) -> 14
-              | HxExpr.EAnon (_, _) -> 15
-              | HxExpr.EArrayDecl _ -> 16
-              | HxExpr.EArrayAccess (_, _) -> 17
-              | HxExpr.ECast (_, _) -> 18
-              | HxExpr.EUntyped _ -> 19
-              | HxExpr.EUnsupported _ -> 20) = 7 then let _g2 = match obj with
+              | HxExpr.ETryCatchRaw _ -> 11
+              | HxExpr.ENew (_, _) -> 12
+              | HxExpr.EUnop (_, _) -> 13
+              | HxExpr.EBinop (_, _, _) -> 14
+              | HxExpr.ETernary (_, _, _) -> 15
+              | HxExpr.EAnon (_, _) -> 16
+              | HxExpr.EArrayDecl _ -> 17
+              | HxExpr.EArrayAccess (_, _) -> 18
+              | HxExpr.ECast (_, _) -> 19
+              | HxExpr.EUntyped _ -> 20
+              | HxExpr.EUnsupported _ -> 21) = 7 then let _g2 = match obj with
               | HxExpr.EIdent __enum_param_141 -> __enum_param_141
               | _ -> failwith "Unexpected enum parameter" in let name = _g2 in if isUpperStart name then let __assign_142 = (HxString.toStdString name ^ ".") ^ HxString.toStdString (ocamlValueIdent field) in (
               tempResult5 := __assign_142;
@@ -695,16 +700,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_210 = expected in let __nullable_211 = HxArray.length args in if __nullable_210 == HxRuntime.hx_null then false else Obj.obj __nullable_210 > __nullable_211) then let __assign_212 = HxInt.sub (let __nullable_int_213 = expected in if __nullable_int_213 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_213) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_210 = expected in let __nullable_211 = HxArray.length args in if __nullable_210 == HxRuntime.hx_null then false else Obj.obj __nullable_210 > __nullable_211) then let __assign_212 = HxInt.sub (let __nullable_int_213 = expected in if __nullable_int_213 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_213) (HxArray.length args) in (
                       tempNumber := __assign_212;
                       __assign_212
                     ) else let __assign_214 = 0 in (
@@ -734,16 +740,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g3 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g3 = match callee with
                       | HxExpr.EField (__enum_param_217, _) -> __enum_param_217
                       | _ -> failwith "Unexpected enum parameter" in let _g4 = match callee with
                       | HxExpr.EField (_, __enum_param_218) -> __enum_param_218
@@ -761,16 +768,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g7 = match _g5 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g7 = match _g5 with
                         | HxExpr.EField (__enum_param_219, _) -> __enum_param_219
                         | _ -> failwith "Unexpected enum parameter" in let _g8 = match _g5 with
                         | HxExpr.EField (_, __enum_param_220) -> __enum_param_220
@@ -786,16 +794,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g9 = match _g7 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g9 = match _g7 with
                         | HxExpr.EIdent __enum_param_221 -> __enum_param_221
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g9 "Sys" then ignore (if HxString.equals _g8 "stdout" then ignore (if HxArray.length _g6 = 0 then ignore (if HxString.equals _g4 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -862,16 +871,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_239 = expected in let __nullable_240 = HxArray.length args in if __nullable_239 == HxRuntime.hx_null then false else Obj.obj __nullable_239 > __nullable_240) then let __assign_241 = HxInt.sub (let __nullable_int_242 = expected in if __nullable_int_242 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_242) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_239 = expected in let __nullable_240 = HxArray.length args in if __nullable_239 == HxRuntime.hx_null then false else Obj.obj __nullable_239 > __nullable_240) then let __assign_241 = HxInt.sub (let __nullable_int_242 = expected in if __nullable_int_242 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_242) (HxArray.length args) in (
                       tempNumber1 := __assign_241;
                       __assign_241
                     ) else let __assign_243 = 0 in (
@@ -901,16 +911,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g3 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g3 = match callee with
                       | HxExpr.EField (__enum_param_246, _) -> __enum_param_246
                       | _ -> failwith "Unexpected enum parameter" in let _g4 = match callee with
                       | HxExpr.EField (_, __enum_param_247) -> __enum_param_247
@@ -928,16 +939,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g7 = match _g5 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g7 = match _g5 with
                         | HxExpr.EField (__enum_param_248, _) -> __enum_param_248
                         | _ -> failwith "Unexpected enum parameter" in let _g8 = match _g5 with
                         | HxExpr.EField (_, __enum_param_249) -> __enum_param_249
@@ -953,16 +965,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g9 = match _g7 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g9 = match _g7 with
                         | HxExpr.EIdent __enum_param_250 -> __enum_param_250
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g9 "Sys" then ignore (if HxString.equals _g8 "stdout" then ignore (if HxArray.length _g6 = 0 then ignore (if HxString.equals _g4 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -1026,16 +1039,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_180 = expected in let __nullable_181 = HxArray.length args in if __nullable_180 == HxRuntime.hx_null then false else Obj.obj __nullable_180 > __nullable_181) then let __assign_182 = HxInt.sub (let __nullable_int_183 = expected in if __nullable_int_183 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_183) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g4 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_180 = expected in let __nullable_181 = HxArray.length args in if __nullable_180 == HxRuntime.hx_null then false else Obj.obj __nullable_180 > __nullable_181) then let __assign_182 = HxInt.sub (let __nullable_int_183 = expected in if __nullable_int_183 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_183) (HxArray.length args) in (
                       tempNumber2 := __assign_182;
                       __assign_182
                     ) else let __assign_184 = 0 in (
@@ -1065,16 +1079,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g3 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g3 = match callee with
                       | HxExpr.EField (__enum_param_187, _) -> __enum_param_187
                       | _ -> failwith "Unexpected enum parameter" in let _g4 = match callee with
                       | HxExpr.EField (_, __enum_param_188) -> __enum_param_188
@@ -1092,16 +1107,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g7 = match _g5 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g7 = match _g5 with
                         | HxExpr.EField (__enum_param_189, _) -> __enum_param_189
                         | _ -> failwith "Unexpected enum parameter" in let _g8 = match _g5 with
                         | HxExpr.EField (_, __enum_param_190) -> __enum_param_190
@@ -1117,16 +1133,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g9 = match _g7 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g9 = match _g7 with
                         | HxExpr.EIdent __enum_param_191 -> __enum_param_191
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g9 "Sys" then ignore (if HxString.equals _g8 "stdout" then ignore (if HxArray.length _g6 = 0 then ignore (if HxString.equals _g4 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -1178,16 +1195,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                 | HxExpr.EField (_, _) -> 8
                 | HxExpr.ECall (_, _) -> 9
                 | HxExpr.ELambda (_, _) -> 10
-                | HxExpr.ENew (_, _) -> 11
-                | HxExpr.EUnop (_, _) -> 12
-                | HxExpr.EBinop (_, _, _) -> 13
-                | HxExpr.ETernary (_, _, _) -> 14
-                | HxExpr.EAnon (_, _) -> 15
-                | HxExpr.EArrayDecl _ -> 16
-                | HxExpr.EArrayAccess (_, _) -> 17
-                | HxExpr.ECast (_, _) -> 18
-                | HxExpr.EUntyped _ -> 19
-                | HxExpr.EUnsupported _ -> 20) = 7 then let _g4 = match _g2 with
+                | HxExpr.ETryCatchRaw _ -> 11
+                | HxExpr.ENew (_, _) -> 12
+                | HxExpr.EUnop (_, _) -> 13
+                | HxExpr.EBinop (_, _, _) -> 14
+                | HxExpr.ETernary (_, _, _) -> 15
+                | HxExpr.EAnon (_, _) -> 16
+                | HxExpr.EArrayDecl _ -> 17
+                | HxExpr.EArrayAccess (_, _) -> 18
+                | HxExpr.ECast (_, _) -> 19
+                | HxExpr.EUntyped _ -> 20
+                | HxExpr.EUnsupported _ -> 21) = 7 then let _g4 = match _g2 with
                 | HxExpr.EIdent __enum_param_260 -> __enum_param_260
                 | _ -> failwith "Unexpected enum parameter" in match _g4 with
                 | "Math" -> (match _g3 with
@@ -1230,16 +1248,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_471 = expected in let __nullable_472 = HxArray.length args in if __nullable_471 == HxRuntime.hx_null then false else Obj.obj __nullable_471 > __nullable_472) then let __assign_473 = HxInt.sub (let __nullable_int_474 = expected in if __nullable_int_474 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_474) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_471 = expected in let __nullable_472 = HxArray.length args in if __nullable_471 == HxRuntime.hx_null then false else Obj.obj __nullable_471 > __nullable_472) then let __assign_473 = HxInt.sub (let __nullable_int_474 = expected in if __nullable_int_474 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_474) (HxArray.length args) in (
                         tempNumber3 := __assign_473;
                         __assign_473
                       ) else let __assign_475 = 0 in (
@@ -1269,16 +1288,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_478, _) -> __enum_param_478
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_479) -> __enum_param_479
@@ -1296,16 +1316,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_480, _) -> __enum_param_480
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_481) -> __enum_param_481
@@ -1321,16 +1342,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_482 -> __enum_param_482
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -1400,16 +1422,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_500 = expected in let __nullable_501 = HxArray.length args in if __nullable_500 == HxRuntime.hx_null then false else Obj.obj __nullable_500 > __nullable_501) then let __assign_502 = HxInt.sub (let __nullable_int_503 = expected in if __nullable_int_503 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_503) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_500 = expected in let __nullable_501 = HxArray.length args in if __nullable_500 == HxRuntime.hx_null then false else Obj.obj __nullable_500 > __nullable_501) then let __assign_502 = HxInt.sub (let __nullable_int_503 = expected in if __nullable_int_503 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_503) (HxArray.length args) in (
                         tempNumber4 := __assign_502;
                         __assign_502
                       ) else let __assign_504 = 0 in (
@@ -1439,16 +1462,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_507, _) -> __enum_param_507
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_508) -> __enum_param_508
@@ -1466,16 +1490,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_509, _) -> __enum_param_509
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_510) -> __enum_param_510
@@ -1491,16 +1516,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_511 -> __enum_param_511
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -1570,16 +1596,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_529 = expected in let __nullable_530 = HxArray.length args in if __nullable_529 == HxRuntime.hx_null then false else Obj.obj __nullable_529 > __nullable_530) then let __assign_531 = HxInt.sub (let __nullable_int_532 = expected in if __nullable_int_532 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_532) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_529 = expected in let __nullable_530 = HxArray.length args in if __nullable_529 == HxRuntime.hx_null then false else Obj.obj __nullable_529 > __nullable_530) then let __assign_531 = HxInt.sub (let __nullable_int_532 = expected in if __nullable_int_532 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_532) (HxArray.length args) in (
                         tempNumber5 := __assign_531;
                         __assign_531
                       ) else let __assign_533 = 0 in (
@@ -1609,16 +1636,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_536, _) -> __enum_param_536
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_537) -> __enum_param_537
@@ -1636,16 +1664,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_538, _) -> __enum_param_538
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_539) -> __enum_param_539
@@ -1661,16 +1690,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_540 -> __enum_param_540
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -1740,16 +1770,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_558 = expected in let __nullable_559 = HxArray.length args in if __nullable_558 == HxRuntime.hx_null then false else Obj.obj __nullable_558 > __nullable_559) then let __assign_560 = HxInt.sub (let __nullable_int_561 = expected in if __nullable_int_561 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_561) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_558 = expected in let __nullable_559 = HxArray.length args in if __nullable_558 == HxRuntime.hx_null then false else Obj.obj __nullable_558 > __nullable_559) then let __assign_560 = HxInt.sub (let __nullable_int_561 = expected in if __nullable_int_561 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_561) (HxArray.length args) in (
                         tempNumber6 := __assign_560;
                         __assign_560
                       ) else let __assign_562 = 0 in (
@@ -1779,16 +1810,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_565, _) -> __enum_param_565
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_566) -> __enum_param_566
@@ -1806,16 +1838,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_567, _) -> __enum_param_567
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_568) -> __enum_param_568
@@ -1831,16 +1864,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_569 -> __enum_param_569
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -1910,16 +1944,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_587 = expected in let __nullable_588 = HxArray.length args in if __nullable_587 == HxRuntime.hx_null then false else Obj.obj __nullable_587 > __nullable_588) then let __assign_589 = HxInt.sub (let __nullable_int_590 = expected in if __nullable_int_590 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_590) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_587 = expected in let __nullable_588 = HxArray.length args in if __nullable_587 == HxRuntime.hx_null then false else Obj.obj __nullable_587 > __nullable_588) then let __assign_589 = HxInt.sub (let __nullable_int_590 = expected in if __nullable_int_590 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_590) (HxArray.length args) in (
                         tempNumber7 := __assign_589;
                         __assign_589
                       ) else let __assign_591 = 0 in (
@@ -1949,16 +1984,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_594, _) -> __enum_param_594
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_595) -> __enum_param_595
@@ -1976,16 +2012,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_596, _) -> __enum_param_596
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_597) -> __enum_param_597
@@ -2001,16 +2038,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_598 -> __enum_param_598
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -2077,16 +2115,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_616 = expected in let __nullable_617 = HxArray.length args in if __nullable_616 == HxRuntime.hx_null then false else Obj.obj __nullable_616 > __nullable_617) then let __assign_618 = HxInt.sub (let __nullable_int_619 = expected in if __nullable_int_619 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_619) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_616 = expected in let __nullable_617 = HxArray.length args in if __nullable_616 == HxRuntime.hx_null then false else Obj.obj __nullable_616 > __nullable_617) then let __assign_618 = HxInt.sub (let __nullable_int_619 = expected in if __nullable_int_619 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_619) (HxArray.length args) in (
                         tempNumber8 := __assign_618;
                         __assign_618
                       ) else let __assign_620 = 0 in (
@@ -2116,16 +2155,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_623, _) -> __enum_param_623
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_624) -> __enum_param_624
@@ -2143,16 +2183,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_625, _) -> __enum_param_625
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_626) -> __enum_param_626
@@ -2168,16 +2209,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_627 -> __enum_param_627
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -2244,16 +2286,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_645 = expected in let __nullable_646 = HxArray.length args in if __nullable_645 == HxRuntime.hx_null then false else Obj.obj __nullable_645 > __nullable_646) then let __assign_647 = HxInt.sub (let __nullable_int_648 = expected in if __nullable_int_648 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_648) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_645 = expected in let __nullable_646 = HxArray.length args in if __nullable_645 == HxRuntime.hx_null then false else Obj.obj __nullable_645 > __nullable_646) then let __assign_647 = HxInt.sub (let __nullable_int_648 = expected in if __nullable_int_648 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_648) (HxArray.length args) in (
                         tempNumber9 := __assign_647;
                         __assign_647
                       ) else let __assign_649 = 0 in (
@@ -2283,16 +2326,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_652, _) -> __enum_param_652
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_653) -> __enum_param_653
@@ -2310,16 +2354,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_654, _) -> __enum_param_654
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_655) -> __enum_param_655
@@ -2335,16 +2380,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_656 -> __enum_param_656
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -2411,16 +2457,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_674 = expected in let __nullable_675 = HxArray.length args in if __nullable_674 == HxRuntime.hx_null then false else Obj.obj __nullable_674 > __nullable_675) then let __assign_676 = HxInt.sub (let __nullable_int_677 = expected in if __nullable_int_677 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_677) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_674 = expected in let __nullable_675 = HxArray.length args in if __nullable_674 == HxRuntime.hx_null then false else Obj.obj __nullable_674 > __nullable_675) then let __assign_676 = HxInt.sub (let __nullable_int_677 = expected in if __nullable_int_677 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_677) (HxArray.length args) in (
                         tempNumber10 := __assign_676;
                         __assign_676
                       ) else let __assign_678 = 0 in (
@@ -2450,16 +2497,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_681, _) -> __enum_param_681
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_682) -> __enum_param_682
@@ -2477,16 +2525,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_683, _) -> __enum_param_683
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_684) -> __enum_param_684
@@ -2502,16 +2551,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_685 -> __enum_param_685
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -2581,16 +2631,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_703 = expected in let __nullable_704 = HxArray.length args in if __nullable_703 == HxRuntime.hx_null then false else Obj.obj __nullable_703 > __nullable_704) then let __assign_705 = HxInt.sub (let __nullable_int_706 = expected in if __nullable_int_706 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_706) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_703 = expected in let __nullable_704 = HxArray.length args in if __nullable_703 == HxRuntime.hx_null then false else Obj.obj __nullable_703 > __nullable_704) then let __assign_705 = HxInt.sub (let __nullable_int_706 = expected in if __nullable_int_706 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_706) (HxArray.length args) in (
                         tempNumber11 := __assign_705;
                         __assign_705
                       ) else let __assign_707 = 0 in (
@@ -2620,16 +2671,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_710, _) -> __enum_param_710
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_711) -> __enum_param_711
@@ -2647,16 +2699,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_712, _) -> __enum_param_712
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_713) -> __enum_param_713
@@ -2672,16 +2725,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_714 -> __enum_param_714
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -2752,16 +2806,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_732 = expected in let __nullable_733 = HxArray.length args in if __nullable_732 == HxRuntime.hx_null then false else Obj.obj __nullable_732 > __nullable_733) then let __assign_734 = HxInt.sub (let __nullable_int_735 = expected in if __nullable_int_735 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_735) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_732 = expected in let __nullable_733 = HxArray.length args in if __nullable_732 == HxRuntime.hx_null then false else Obj.obj __nullable_732 > __nullable_733) then let __assign_734 = HxInt.sub (let __nullable_int_735 = expected in if __nullable_int_735 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_735) (HxArray.length args) in (
                         tempNumber12 := __assign_734;
                         __assign_734
                       ) else let __assign_736 = 0 in (
@@ -2791,16 +2846,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_739, _) -> __enum_param_739
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_740) -> __enum_param_740
@@ -2818,16 +2874,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_741, _) -> __enum_param_741
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_742) -> __enum_param_742
@@ -2843,16 +2900,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_743 -> __enum_param_743
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -2922,16 +2980,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_761 = expected in let __nullable_762 = HxArray.length args in if __nullable_761 == HxRuntime.hx_null then false else Obj.obj __nullable_761 > __nullable_762) then let __assign_763 = HxInt.sub (let __nullable_int_764 = expected in if __nullable_int_764 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_764) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_761 = expected in let __nullable_762 = HxArray.length args in if __nullable_761 == HxRuntime.hx_null then false else Obj.obj __nullable_761 > __nullable_762) then let __assign_763 = HxInt.sub (let __nullable_int_764 = expected in if __nullable_int_764 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_764) (HxArray.length args) in (
                         tempNumber13 := __assign_763;
                         __assign_763
                       ) else let __assign_765 = 0 in (
@@ -2961,16 +3020,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_768, _) -> __enum_param_768
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_769) -> __enum_param_769
@@ -2988,16 +3048,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_770, _) -> __enum_param_770
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_771) -> __enum_param_771
@@ -3013,16 +3074,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_772 -> __enum_param_772
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -3092,16 +3154,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_790 = expected in let __nullable_791 = HxArray.length args in if __nullable_790 == HxRuntime.hx_null then false else Obj.obj __nullable_790 > __nullable_791) then let __assign_792 = HxInt.sub (let __nullable_int_793 = expected in if __nullable_int_793 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_793) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_790 = expected in let __nullable_791 = HxArray.length args in if __nullable_790 == HxRuntime.hx_null then false else Obj.obj __nullable_790 > __nullable_791) then let __assign_792 = HxInt.sub (let __nullable_int_793 = expected in if __nullable_int_793 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_793) (HxArray.length args) in (
                         tempNumber14 := __assign_792;
                         __assign_792
                       ) else let __assign_794 = 0 in (
@@ -3131,16 +3194,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_797, _) -> __enum_param_797
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_798) -> __enum_param_798
@@ -3158,16 +3222,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_799, _) -> __enum_param_799
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_800) -> __enum_param_800
@@ -3183,16 +3248,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_801 -> __enum_param_801
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -3263,16 +3329,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_819 = expected in let __nullable_820 = HxArray.length args in if __nullable_819 == HxRuntime.hx_null then false else Obj.obj __nullable_819 > __nullable_820) then let __assign_821 = HxInt.sub (let __nullable_int_822 = expected in if __nullable_int_822 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_822) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_819 = expected in let __nullable_820 = HxArray.length args in if __nullable_819 == HxRuntime.hx_null then false else Obj.obj __nullable_819 > __nullable_820) then let __assign_821 = HxInt.sub (let __nullable_int_822 = expected in if __nullable_int_822 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_822) (HxArray.length args) in (
                         tempNumber15 := __assign_821;
                         __assign_821
                       ) else let __assign_823 = 0 in (
@@ -3302,16 +3369,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_826, _) -> __enum_param_826
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_827) -> __enum_param_827
@@ -3329,16 +3397,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_828, _) -> __enum_param_828
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_829) -> __enum_param_829
@@ -3354,16 +3423,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_830 -> __enum_param_830
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -3434,16 +3504,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_848 = expected in let __nullable_849 = HxArray.length args in if __nullable_848 == HxRuntime.hx_null then false else Obj.obj __nullable_848 > __nullable_849) then let __assign_850 = HxInt.sub (let __nullable_int_851 = expected in if __nullable_int_851 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_851) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_848 = expected in let __nullable_849 = HxArray.length args in if __nullable_848 == HxRuntime.hx_null then false else Obj.obj __nullable_848 > __nullable_849) then let __assign_850 = HxInt.sub (let __nullable_int_851 = expected in if __nullable_int_851 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_851) (HxArray.length args) in (
                         tempNumber16 := __assign_850;
                         __assign_850
                       ) else let __assign_852 = 0 in (
@@ -3473,16 +3544,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_855, _) -> __enum_param_855
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_856) -> __enum_param_856
@@ -3500,16 +3572,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_857, _) -> __enum_param_857
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_858) -> __enum_param_858
@@ -3525,16 +3598,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_859 -> __enum_param_859
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -3598,16 +3672,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_439 = expected in let __nullable_440 = HxArray.length args in if __nullable_439 == HxRuntime.hx_null then false else Obj.obj __nullable_439 > __nullable_440) then let __assign_441 = HxInt.sub (let __nullable_int_442 = expected in if __nullable_int_442 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_442) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_439 = expected in let __nullable_440 = HxArray.length args in if __nullable_439 == HxRuntime.hx_null then false else Obj.obj __nullable_439 > __nullable_440) then let __assign_441 = HxInt.sub (let __nullable_int_442 = expected in if __nullable_int_442 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_442) (HxArray.length args) in (
                         tempNumber17 := __assign_441;
                         __assign_441
                       ) else let __assign_443 = 0 in (
@@ -3637,16 +3712,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_446, _) -> __enum_param_446
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_447) -> __enum_param_447
@@ -3664,16 +3740,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_448, _) -> __enum_param_448
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_449) -> __enum_param_449
@@ -3689,16 +3766,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_450 -> __enum_param_450
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -3769,16 +3847,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_905 = expected in let __nullable_906 = HxArray.length args in if __nullable_905 == HxRuntime.hx_null then false else Obj.obj __nullable_905 > __nullable_906) then let __assign_907 = HxInt.sub (let __nullable_int_908 = expected in if __nullable_int_908 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_908) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_905 = expected in let __nullable_906 = HxArray.length args in if __nullable_905 == HxRuntime.hx_null then false else Obj.obj __nullable_905 > __nullable_906) then let __assign_907 = HxInt.sub (let __nullable_int_908 = expected in if __nullable_int_908 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_908) (HxArray.length args) in (
                         tempNumber18 := __assign_907;
                         __assign_907
                       ) else let __assign_909 = 0 in (
@@ -3808,16 +3887,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_912, _) -> __enum_param_912
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_913) -> __enum_param_913
@@ -3835,16 +3915,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_914, _) -> __enum_param_914
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_915) -> __enum_param_915
@@ -3860,16 +3941,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_916 -> __enum_param_916
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -3940,16 +4022,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_934 = expected in let __nullable_935 = HxArray.length args in if __nullable_934 == HxRuntime.hx_null then false else Obj.obj __nullable_934 > __nullable_935) then let __assign_936 = HxInt.sub (let __nullable_int_937 = expected in if __nullable_int_937 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_937) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_934 = expected in let __nullable_935 = HxArray.length args in if __nullable_934 == HxRuntime.hx_null then false else Obj.obj __nullable_934 > __nullable_935) then let __assign_936 = HxInt.sub (let __nullable_int_937 = expected in if __nullable_int_937 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_937) (HxArray.length args) in (
                         tempNumber19 := __assign_936;
                         __assign_936
                       ) else let __assign_938 = 0 in (
@@ -3979,16 +4062,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_941, _) -> __enum_param_941
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_942) -> __enum_param_942
@@ -4006,16 +4090,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_943, _) -> __enum_param_943
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_944) -> __enum_param_944
@@ -4031,16 +4116,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_945 -> __enum_param_945
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -4110,16 +4196,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_963 = expected in let __nullable_964 = HxArray.length args in if __nullable_963 == HxRuntime.hx_null then false else Obj.obj __nullable_963 > __nullable_964) then let __assign_965 = HxInt.sub (let __nullable_int_966 = expected in if __nullable_int_966 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_966) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_963 = expected in let __nullable_964 = HxArray.length args in if __nullable_963 == HxRuntime.hx_null then false else Obj.obj __nullable_963 > __nullable_964) then let __assign_965 = HxInt.sub (let __nullable_int_966 = expected in if __nullable_int_966 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_966) (HxArray.length args) in (
                         tempNumber20 := __assign_965;
                         __assign_965
                       ) else let __assign_967 = 0 in (
@@ -4149,16 +4236,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_970, _) -> __enum_param_970
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_971) -> __enum_param_971
@@ -4176,16 +4264,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_972, _) -> __enum_param_972
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_973) -> __enum_param_973
@@ -4201,16 +4290,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_974 -> __enum_param_974
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -4281,16 +4371,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_992 = expected in let __nullable_993 = HxArray.length args in if __nullable_992 == HxRuntime.hx_null then false else Obj.obj __nullable_992 > __nullable_993) then let __assign_994 = HxInt.sub (let __nullable_int_995 = expected in if __nullable_int_995 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_995) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_992 = expected in let __nullable_993 = HxArray.length args in if __nullable_992 == HxRuntime.hx_null then false else Obj.obj __nullable_992 > __nullable_993) then let __assign_994 = HxInt.sub (let __nullable_int_995 = expected in if __nullable_int_995 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_995) (HxArray.length args) in (
                         tempNumber21 := __assign_994;
                         __assign_994
                       ) else let __assign_996 = 0 in (
@@ -4320,16 +4411,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_999, _) -> __enum_param_999
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1000) -> __enum_param_1000
@@ -4347,16 +4439,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1001, _) -> __enum_param_1001
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1002) -> __enum_param_1002
@@ -4372,16 +4465,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1003 -> __enum_param_1003
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -4452,16 +4546,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1021 = expected in let __nullable_1022 = HxArray.length args in if __nullable_1021 == HxRuntime.hx_null then false else Obj.obj __nullable_1021 > __nullable_1022) then let __assign_1023 = HxInt.sub (let __nullable_int_1024 = expected in if __nullable_int_1024 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1024) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1021 = expected in let __nullable_1022 = HxArray.length args in if __nullable_1021 == HxRuntime.hx_null then false else Obj.obj __nullable_1021 > __nullable_1022) then let __assign_1023 = HxInt.sub (let __nullable_int_1024 = expected in if __nullable_int_1024 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1024) (HxArray.length args) in (
                         tempNumber22 := __assign_1023;
                         __assign_1023
                       ) else let __assign_1025 = 0 in (
@@ -4491,16 +4586,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1028, _) -> __enum_param_1028
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1029) -> __enum_param_1029
@@ -4518,16 +4614,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1030, _) -> __enum_param_1030
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1031) -> __enum_param_1031
@@ -4543,16 +4640,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1032 -> __enum_param_1032
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -4622,16 +4720,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1050 = expected in let __nullable_1051 = HxArray.length args in if __nullable_1050 == HxRuntime.hx_null then false else Obj.obj __nullable_1050 > __nullable_1051) then let __assign_1052 = HxInt.sub (let __nullable_int_1053 = expected in if __nullable_int_1053 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1053) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1050 = expected in let __nullable_1051 = HxArray.length args in if __nullable_1050 == HxRuntime.hx_null then false else Obj.obj __nullable_1050 > __nullable_1051) then let __assign_1052 = HxInt.sub (let __nullable_int_1053 = expected in if __nullable_int_1053 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1053) (HxArray.length args) in (
                         tempNumber23 := __assign_1052;
                         __assign_1052
                       ) else let __assign_1054 = 0 in (
@@ -4661,16 +4760,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1057, _) -> __enum_param_1057
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1058) -> __enum_param_1058
@@ -4688,16 +4788,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1059, _) -> __enum_param_1059
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1060) -> __enum_param_1060
@@ -4713,16 +4814,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1061 -> __enum_param_1061
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -4792,16 +4894,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1079 = expected in let __nullable_1080 = HxArray.length args in if __nullable_1079 == HxRuntime.hx_null then false else Obj.obj __nullable_1079 > __nullable_1080) then let __assign_1081 = HxInt.sub (let __nullable_int_1082 = expected in if __nullable_int_1082 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1082) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1079 = expected in let __nullable_1080 = HxArray.length args in if __nullable_1079 == HxRuntime.hx_null then false else Obj.obj __nullable_1079 > __nullable_1080) then let __assign_1081 = HxInt.sub (let __nullable_int_1082 = expected in if __nullable_int_1082 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1082) (HxArray.length args) in (
                         tempNumber24 := __assign_1081;
                         __assign_1081
                       ) else let __assign_1083 = 0 in (
@@ -4831,16 +4934,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1086, _) -> __enum_param_1086
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1087) -> __enum_param_1087
@@ -4858,16 +4962,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1088, _) -> __enum_param_1088
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1089) -> __enum_param_1089
@@ -4883,16 +4988,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1090 -> __enum_param_1090
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -4962,16 +5068,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1108 = expected in let __nullable_1109 = HxArray.length args in if __nullable_1108 == HxRuntime.hx_null then false else Obj.obj __nullable_1108 > __nullable_1109) then let __assign_1110 = HxInt.sub (let __nullable_int_1111 = expected in if __nullable_int_1111 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1111) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1108 = expected in let __nullable_1109 = HxArray.length args in if __nullable_1108 == HxRuntime.hx_null then false else Obj.obj __nullable_1108 > __nullable_1109) then let __assign_1110 = HxInt.sub (let __nullable_int_1111 = expected in if __nullable_int_1111 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1111) (HxArray.length args) in (
                         tempNumber25 := __assign_1110;
                         __assign_1110
                       ) else let __assign_1112 = 0 in (
@@ -5001,16 +5108,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1115, _) -> __enum_param_1115
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1116) -> __enum_param_1116
@@ -5028,16 +5136,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1117, _) -> __enum_param_1117
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1118) -> __enum_param_1118
@@ -5053,16 +5162,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1119 -> __enum_param_1119
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -5134,16 +5244,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1137 = expected in let __nullable_1138 = HxArray.length args in if __nullable_1137 == HxRuntime.hx_null then false else Obj.obj __nullable_1137 > __nullable_1138) then let __assign_1139 = HxInt.sub (let __nullable_int_1140 = expected in if __nullable_int_1140 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1140) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1137 = expected in let __nullable_1138 = HxArray.length args in if __nullable_1137 == HxRuntime.hx_null then false else Obj.obj __nullable_1137 > __nullable_1138) then let __assign_1139 = HxInt.sub (let __nullable_int_1140 = expected in if __nullable_int_1140 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1140) (HxArray.length args) in (
                         tempNumber26 := __assign_1139;
                         __assign_1139
                       ) else let __assign_1141 = 0 in (
@@ -5173,16 +5284,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1144, _) -> __enum_param_1144
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1145) -> __enum_param_1145
@@ -5200,16 +5312,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1146, _) -> __enum_param_1146
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1147) -> __enum_param_1147
@@ -5225,16 +5338,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1148 -> __enum_param_1148
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -5305,16 +5419,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1166 = expected in let __nullable_1167 = HxArray.length args in if __nullable_1166 == HxRuntime.hx_null then false else Obj.obj __nullable_1166 > __nullable_1167) then let __assign_1168 = HxInt.sub (let __nullable_int_1169 = expected in if __nullable_int_1169 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1169) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1166 = expected in let __nullable_1167 = HxArray.length args in if __nullable_1166 == HxRuntime.hx_null then false else Obj.obj __nullable_1166 > __nullable_1167) then let __assign_1168 = HxInt.sub (let __nullable_int_1169 = expected in if __nullable_int_1169 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1169) (HxArray.length args) in (
                         tempNumber27 := __assign_1168;
                         __assign_1168
                       ) else let __assign_1170 = 0 in (
@@ -5344,16 +5459,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1173, _) -> __enum_param_1173
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1174) -> __enum_param_1174
@@ -5371,16 +5487,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1175, _) -> __enum_param_1175
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1176) -> __enum_param_1176
@@ -5396,16 +5513,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1177 -> __enum_param_1177
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -5476,16 +5594,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1195 = expected in let __nullable_1196 = HxArray.length args in if __nullable_1195 == HxRuntime.hx_null then false else Obj.obj __nullable_1195 > __nullable_1196) then let __assign_1197 = HxInt.sub (let __nullable_int_1198 = expected in if __nullable_int_1198 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1198) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1195 = expected in let __nullable_1196 = HxArray.length args in if __nullable_1195 == HxRuntime.hx_null then false else Obj.obj __nullable_1195 > __nullable_1196) then let __assign_1197 = HxInt.sub (let __nullable_int_1198 = expected in if __nullable_int_1198 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1198) (HxArray.length args) in (
                         tempNumber28 := __assign_1197;
                         __assign_1197
                       ) else let __assign_1199 = 0 in (
@@ -5515,16 +5634,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1202, _) -> __enum_param_1202
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1203) -> __enum_param_1203
@@ -5542,16 +5662,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1204, _) -> __enum_param_1204
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1205) -> __enum_param_1205
@@ -5567,16 +5688,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1206 -> __enum_param_1206
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -5640,16 +5762,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_876 = expected in let __nullable_877 = HxArray.length args in if __nullable_876 == HxRuntime.hx_null then false else Obj.obj __nullable_876 > __nullable_877) then let __assign_878 = HxInt.sub (let __nullable_int_879 = expected in if __nullable_int_879 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_879) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_876 = expected in let __nullable_877 = HxArray.length args in if __nullable_876 == HxRuntime.hx_null then false else Obj.obj __nullable_876 > __nullable_877) then let __assign_878 = HxInt.sub (let __nullable_int_879 = expected in if __nullable_int_879 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_879) (HxArray.length args) in (
                         tempNumber29 := __assign_878;
                         __assign_878
                       ) else let __assign_880 = 0 in (
@@ -5679,16 +5802,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_883, _) -> __enum_param_883
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_884) -> __enum_param_884
@@ -5706,16 +5830,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_885, _) -> __enum_param_885
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_886) -> __enum_param_886
@@ -5731,16 +5856,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_887 -> __enum_param_887
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -5811,16 +5937,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1252 = expected in let __nullable_1253 = HxArray.length args in if __nullable_1252 == HxRuntime.hx_null then false else Obj.obj __nullable_1252 > __nullable_1253) then let __assign_1254 = HxInt.sub (let __nullable_int_1255 = expected in if __nullable_int_1255 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1255) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1252 = expected in let __nullable_1253 = HxArray.length args in if __nullable_1252 == HxRuntime.hx_null then false else Obj.obj __nullable_1252 > __nullable_1253) then let __assign_1254 = HxInt.sub (let __nullable_int_1255 = expected in if __nullable_int_1255 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1255) (HxArray.length args) in (
                         tempNumber30 := __assign_1254;
                         __assign_1254
                       ) else let __assign_1256 = 0 in (
@@ -5850,16 +5977,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1259, _) -> __enum_param_1259
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1260) -> __enum_param_1260
@@ -5877,16 +6005,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1261, _) -> __enum_param_1261
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1262) -> __enum_param_1262
@@ -5902,16 +6031,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1263 -> __enum_param_1263
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -5982,16 +6112,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1281 = expected in let __nullable_1282 = HxArray.length args in if __nullable_1281 == HxRuntime.hx_null then false else Obj.obj __nullable_1281 > __nullable_1282) then let __assign_1283 = HxInt.sub (let __nullable_int_1284 = expected in if __nullable_int_1284 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1284) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1281 = expected in let __nullable_1282 = HxArray.length args in if __nullable_1281 == HxRuntime.hx_null then false else Obj.obj __nullable_1281 > __nullable_1282) then let __assign_1283 = HxInt.sub (let __nullable_int_1284 = expected in if __nullable_int_1284 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1284) (HxArray.length args) in (
                         tempNumber31 := __assign_1283;
                         __assign_1283
                       ) else let __assign_1285 = 0 in (
@@ -6021,16 +6152,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1288, _) -> __enum_param_1288
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1289) -> __enum_param_1289
@@ -6048,16 +6180,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1290, _) -> __enum_param_1290
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1291) -> __enum_param_1291
@@ -6073,16 +6206,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1292 -> __enum_param_1292
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -6152,16 +6286,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1310 = expected in let __nullable_1311 = HxArray.length args in if __nullable_1310 == HxRuntime.hx_null then false else Obj.obj __nullable_1310 > __nullable_1311) then let __assign_1312 = HxInt.sub (let __nullable_int_1313 = expected in if __nullable_int_1313 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1313) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1310 = expected in let __nullable_1311 = HxArray.length args in if __nullable_1310 == HxRuntime.hx_null then false else Obj.obj __nullable_1310 > __nullable_1311) then let __assign_1312 = HxInt.sub (let __nullable_int_1313 = expected in if __nullable_int_1313 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1313) (HxArray.length args) in (
                         tempNumber32 := __assign_1312;
                         __assign_1312
                       ) else let __assign_1314 = 0 in (
@@ -6191,16 +6326,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1317, _) -> __enum_param_1317
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1318) -> __enum_param_1318
@@ -6218,16 +6354,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1319, _) -> __enum_param_1319
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1320) -> __enum_param_1320
@@ -6243,16 +6380,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1321 -> __enum_param_1321
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -6322,16 +6460,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1339 = expected in let __nullable_1340 = HxArray.length args in if __nullable_1339 == HxRuntime.hx_null then false else Obj.obj __nullable_1339 > __nullable_1340) then let __assign_1341 = HxInt.sub (let __nullable_int_1342 = expected in if __nullable_int_1342 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1342) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1339 = expected in let __nullable_1340 = HxArray.length args in if __nullable_1339 == HxRuntime.hx_null then false else Obj.obj __nullable_1339 > __nullable_1340) then let __assign_1341 = HxInt.sub (let __nullable_int_1342 = expected in if __nullable_int_1342 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1342) (HxArray.length args) in (
                         tempNumber33 := __assign_1341;
                         __assign_1341
                       ) else let __assign_1343 = 0 in (
@@ -6361,16 +6500,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1346, _) -> __enum_param_1346
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1347) -> __enum_param_1347
@@ -6388,16 +6528,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1348, _) -> __enum_param_1348
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1349) -> __enum_param_1349
@@ -6413,16 +6554,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1350 -> __enum_param_1350
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -6493,16 +6635,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1368 = expected in let __nullable_1369 = HxArray.length args in if __nullable_1368 == HxRuntime.hx_null then false else Obj.obj __nullable_1368 > __nullable_1369) then let __assign_1370 = HxInt.sub (let __nullable_int_1371 = expected in if __nullable_int_1371 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1371) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1368 = expected in let __nullable_1369 = HxArray.length args in if __nullable_1368 == HxRuntime.hx_null then false else Obj.obj __nullable_1368 > __nullable_1369) then let __assign_1370 = HxInt.sub (let __nullable_int_1371 = expected in if __nullable_int_1371 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1371) (HxArray.length args) in (
                         tempNumber34 := __assign_1370;
                         __assign_1370
                       ) else let __assign_1372 = 0 in (
@@ -6532,16 +6675,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1375, _) -> __enum_param_1375
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1376) -> __enum_param_1376
@@ -6559,16 +6703,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1377, _) -> __enum_param_1377
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1378) -> __enum_param_1378
@@ -6584,16 +6729,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1379 -> __enum_param_1379
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -6664,16 +6810,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1397 = expected in let __nullable_1398 = HxArray.length args in if __nullable_1397 == HxRuntime.hx_null then false else Obj.obj __nullable_1397 > __nullable_1398) then let __assign_1399 = HxInt.sub (let __nullable_int_1400 = expected in if __nullable_int_1400 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1400) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1397 = expected in let __nullable_1398 = HxArray.length args in if __nullable_1397 == HxRuntime.hx_null then false else Obj.obj __nullable_1397 > __nullable_1398) then let __assign_1399 = HxInt.sub (let __nullable_int_1400 = expected in if __nullable_int_1400 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1400) (HxArray.length args) in (
                         tempNumber35 := __assign_1399;
                         __assign_1399
                       ) else let __assign_1401 = 0 in (
@@ -6703,16 +6850,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1404, _) -> __enum_param_1404
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1405) -> __enum_param_1405
@@ -6730,16 +6878,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1406, _) -> __enum_param_1406
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1407) -> __enum_param_1407
@@ -6755,16 +6904,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1408 -> __enum_param_1408
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -6828,16 +6978,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1223 = expected in let __nullable_1224 = HxArray.length args in if __nullable_1223 == HxRuntime.hx_null then false else Obj.obj __nullable_1223 > __nullable_1224) then let __assign_1225 = HxInt.sub (let __nullable_int_1226 = expected in if __nullable_int_1226 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1226) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1223 = expected in let __nullable_1224 = HxArray.length args in if __nullable_1223 == HxRuntime.hx_null then false else Obj.obj __nullable_1223 > __nullable_1224) then let __assign_1225 = HxInt.sub (let __nullable_int_1226 = expected in if __nullable_int_1226 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1226) (HxArray.length args) in (
                         tempNumber36 := __assign_1225;
                         __assign_1225
                       ) else let __assign_1227 = 0 in (
@@ -6867,16 +7018,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1230, _) -> __enum_param_1230
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1231) -> __enum_param_1231
@@ -6894,16 +7046,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1232, _) -> __enum_param_1232
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1233) -> __enum_param_1233
@@ -6919,16 +7072,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1234 -> __enum_param_1234
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -6999,16 +7153,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1454 = expected in let __nullable_1455 = HxArray.length args in if __nullable_1454 == HxRuntime.hx_null then false else Obj.obj __nullable_1454 > __nullable_1455) then let __assign_1456 = HxInt.sub (let __nullable_int_1457 = expected in if __nullable_int_1457 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1457) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1454 = expected in let __nullable_1455 = HxArray.length args in if __nullable_1454 == HxRuntime.hx_null then false else Obj.obj __nullable_1454 > __nullable_1455) then let __assign_1456 = HxInt.sub (let __nullable_int_1457 = expected in if __nullable_int_1457 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1457) (HxArray.length args) in (
                         tempNumber37 := __assign_1456;
                         __assign_1456
                       ) else let __assign_1458 = 0 in (
@@ -7038,16 +7193,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1461, _) -> __enum_param_1461
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1462) -> __enum_param_1462
@@ -7065,16 +7221,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1463, _) -> __enum_param_1463
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1464) -> __enum_param_1464
@@ -7090,16 +7247,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1465 -> __enum_param_1465
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -7169,16 +7327,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1483 = expected in let __nullable_1484 = HxArray.length args in if __nullable_1483 == HxRuntime.hx_null then false else Obj.obj __nullable_1483 > __nullable_1484) then let __assign_1485 = HxInt.sub (let __nullable_int_1486 = expected in if __nullable_int_1486 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1486) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1483 = expected in let __nullable_1484 = HxArray.length args in if __nullable_1483 == HxRuntime.hx_null then false else Obj.obj __nullable_1483 > __nullable_1484) then let __assign_1485 = HxInt.sub (let __nullable_int_1486 = expected in if __nullable_int_1486 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1486) (HxArray.length args) in (
                         tempNumber38 := __assign_1485;
                         __assign_1485
                       ) else let __assign_1487 = 0 in (
@@ -7208,16 +7367,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1490, _) -> __enum_param_1490
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1491) -> __enum_param_1491
@@ -7235,16 +7395,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1492, _) -> __enum_param_1492
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1493) -> __enum_param_1493
@@ -7260,16 +7421,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1494 -> __enum_param_1494
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -7339,16 +7501,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1512 = expected in let __nullable_1513 = HxArray.length args in if __nullable_1512 == HxRuntime.hx_null then false else Obj.obj __nullable_1512 > __nullable_1513) then let __assign_1514 = HxInt.sub (let __nullable_int_1515 = expected in if __nullable_int_1515 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1515) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1512 = expected in let __nullable_1513 = HxArray.length args in if __nullable_1512 == HxRuntime.hx_null then false else Obj.obj __nullable_1512 > __nullable_1513) then let __assign_1514 = HxInt.sub (let __nullable_int_1515 = expected in if __nullable_int_1515 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1515) (HxArray.length args) in (
                         tempNumber39 := __assign_1514;
                         __assign_1514
                       ) else let __assign_1516 = 0 in (
@@ -7378,16 +7541,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1519, _) -> __enum_param_1519
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1520) -> __enum_param_1520
@@ -7405,16 +7569,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1521, _) -> __enum_param_1521
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1522) -> __enum_param_1522
@@ -7430,16 +7595,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1523 -> __enum_param_1523
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -7511,16 +7677,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1541 = expected in let __nullable_1542 = HxArray.length args in if __nullable_1541 == HxRuntime.hx_null then false else Obj.obj __nullable_1541 > __nullable_1542) then let __assign_1543 = HxInt.sub (let __nullable_int_1544 = expected in if __nullable_int_1544 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1544) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1541 = expected in let __nullable_1542 = HxArray.length args in if __nullable_1541 == HxRuntime.hx_null then false else Obj.obj __nullable_1541 > __nullable_1542) then let __assign_1543 = HxInt.sub (let __nullable_int_1544 = expected in if __nullable_int_1544 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1544) (HxArray.length args) in (
                         tempNumber40 := __assign_1543;
                         __assign_1543
                       ) else let __assign_1545 = 0 in (
@@ -7550,16 +7717,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1548, _) -> __enum_param_1548
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1549) -> __enum_param_1549
@@ -7577,16 +7745,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1550, _) -> __enum_param_1550
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1551) -> __enum_param_1551
@@ -7602,16 +7771,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1552 -> __enum_param_1552
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -7682,16 +7852,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1570 = expected in let __nullable_1571 = HxArray.length args in if __nullable_1570 == HxRuntime.hx_null then false else Obj.obj __nullable_1570 > __nullable_1571) then let __assign_1572 = HxInt.sub (let __nullable_int_1573 = expected in if __nullable_int_1573 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1573) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1570 = expected in let __nullable_1571 = HxArray.length args in if __nullable_1570 == HxRuntime.hx_null then false else Obj.obj __nullable_1570 > __nullable_1571) then let __assign_1572 = HxInt.sub (let __nullable_int_1573 = expected in if __nullable_int_1573 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1573) (HxArray.length args) in (
                         tempNumber41 := __assign_1572;
                         __assign_1572
                       ) else let __assign_1574 = 0 in (
@@ -7721,16 +7892,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1577, _) -> __enum_param_1577
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1578) -> __enum_param_1578
@@ -7748,16 +7920,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1579, _) -> __enum_param_1579
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1580) -> __enum_param_1580
@@ -7773,16 +7946,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1581 -> __enum_param_1581
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -7853,16 +8027,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1599 = expected in let __nullable_1600 = HxArray.length args in if __nullable_1599 == HxRuntime.hx_null then false else Obj.obj __nullable_1599 > __nullable_1600) then let __assign_1601 = HxInt.sub (let __nullable_int_1602 = expected in if __nullable_int_1602 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1602) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1599 = expected in let __nullable_1600 = HxArray.length args in if __nullable_1599 == HxRuntime.hx_null then false else Obj.obj __nullable_1599 > __nullable_1600) then let __assign_1601 = HxInt.sub (let __nullable_int_1602 = expected in if __nullable_int_1602 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1602) (HxArray.length args) in (
                         tempNumber42 := __assign_1601;
                         __assign_1601
                       ) else let __assign_1603 = 0 in (
@@ -7892,16 +8067,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1606, _) -> __enum_param_1606
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1607) -> __enum_param_1607
@@ -7919,16 +8095,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1608, _) -> __enum_param_1608
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1609) -> __enum_param_1609
@@ -7944,16 +8121,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1610 -> __enum_param_1610
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -8017,16 +8195,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1425 = expected in let __nullable_1426 = HxArray.length args in if __nullable_1425 == HxRuntime.hx_null then false else Obj.obj __nullable_1425 > __nullable_1426) then let __assign_1427 = HxInt.sub (let __nullable_int_1428 = expected in if __nullable_int_1428 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1428) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1425 = expected in let __nullable_1426 = HxArray.length args in if __nullable_1425 == HxRuntime.hx_null then false else Obj.obj __nullable_1425 > __nullable_1426) then let __assign_1427 = HxInt.sub (let __nullable_int_1428 = expected in if __nullable_int_1428 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1428) (HxArray.length args) in (
                         tempNumber43 := __assign_1427;
                         __assign_1427
                       ) else let __assign_1429 = 0 in (
@@ -8056,16 +8235,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1432, _) -> __enum_param_1432
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1433) -> __enum_param_1433
@@ -8083,16 +8263,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1434, _) -> __enum_param_1434
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1435) -> __enum_param_1435
@@ -8108,16 +8289,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1436 -> __enum_param_1436
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -8188,16 +8370,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1656 = expected in let __nullable_1657 = HxArray.length args in if __nullable_1656 == HxRuntime.hx_null then false else Obj.obj __nullable_1656 > __nullable_1657) then let __assign_1658 = HxInt.sub (let __nullable_int_1659 = expected in if __nullable_int_1659 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1659) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1656 = expected in let __nullable_1657 = HxArray.length args in if __nullable_1656 == HxRuntime.hx_null then false else Obj.obj __nullable_1656 > __nullable_1657) then let __assign_1658 = HxInt.sub (let __nullable_int_1659 = expected in if __nullable_int_1659 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1659) (HxArray.length args) in (
                         tempNumber44 := __assign_1658;
                         __assign_1658
                       ) else let __assign_1660 = 0 in (
@@ -8227,16 +8410,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1663, _) -> __enum_param_1663
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1664) -> __enum_param_1664
@@ -8254,16 +8438,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1665, _) -> __enum_param_1665
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1666) -> __enum_param_1666
@@ -8279,16 +8464,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1667 -> __enum_param_1667
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -8358,16 +8544,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1685 = expected in let __nullable_1686 = HxArray.length args in if __nullable_1685 == HxRuntime.hx_null then false else Obj.obj __nullable_1685 > __nullable_1686) then let __assign_1687 = HxInt.sub (let __nullable_int_1688 = expected in if __nullable_int_1688 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1688) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1685 = expected in let __nullable_1686 = HxArray.length args in if __nullable_1685 == HxRuntime.hx_null then false else Obj.obj __nullable_1685 > __nullable_1686) then let __assign_1687 = HxInt.sub (let __nullable_int_1688 = expected in if __nullable_int_1688 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1688) (HxArray.length args) in (
                         tempNumber45 := __assign_1687;
                         __assign_1687
                       ) else let __assign_1689 = 0 in (
@@ -8397,16 +8584,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1692, _) -> __enum_param_1692
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1693) -> __enum_param_1693
@@ -8424,16 +8612,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1694, _) -> __enum_param_1694
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1695) -> __enum_param_1695
@@ -8449,16 +8638,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1696 -> __enum_param_1696
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -8525,16 +8715,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1714 = expected in let __nullable_1715 = HxArray.length args in if __nullable_1714 == HxRuntime.hx_null then false else Obj.obj __nullable_1714 > __nullable_1715) then let __assign_1716 = HxInt.sub (let __nullable_int_1717 = expected in if __nullable_int_1717 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1717) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1714 = expected in let __nullable_1715 = HxArray.length args in if __nullable_1714 == HxRuntime.hx_null then false else Obj.obj __nullable_1714 > __nullable_1715) then let __assign_1716 = HxInt.sub (let __nullable_int_1717 = expected in if __nullable_int_1717 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1717) (HxArray.length args) in (
                         tempNumber46 := __assign_1716;
                         __assign_1716
                       ) else let __assign_1718 = 0 in (
@@ -8564,16 +8755,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1721, _) -> __enum_param_1721
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1722) -> __enum_param_1722
@@ -8591,16 +8783,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1723, _) -> __enum_param_1723
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1724) -> __enum_param_1724
@@ -8616,16 +8809,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1725 -> __enum_param_1725
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -8692,16 +8886,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1743 = expected in let __nullable_1744 = HxArray.length args in if __nullable_1743 == HxRuntime.hx_null then false else Obj.obj __nullable_1743 > __nullable_1744) then let __assign_1745 = HxInt.sub (let __nullable_int_1746 = expected in if __nullable_int_1746 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1746) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1743 = expected in let __nullable_1744 = HxArray.length args in if __nullable_1743 == HxRuntime.hx_null then false else Obj.obj __nullable_1743 > __nullable_1744) then let __assign_1745 = HxInt.sub (let __nullable_int_1746 = expected in if __nullable_int_1746 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1746) (HxArray.length args) in (
                         tempNumber47 := __assign_1745;
                         __assign_1745
                       ) else let __assign_1747 = 0 in (
@@ -8731,16 +8926,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1750, _) -> __enum_param_1750
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1751) -> __enum_param_1751
@@ -8758,16 +8954,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1752, _) -> __enum_param_1752
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1753) -> __enum_param_1753
@@ -8783,16 +8980,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1754 -> __enum_param_1754
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -8862,16 +9060,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1772 = expected in let __nullable_1773 = HxArray.length args in if __nullable_1772 == HxRuntime.hx_null then false else Obj.obj __nullable_1772 > __nullable_1773) then let __assign_1774 = HxInt.sub (let __nullable_int_1775 = expected in if __nullable_int_1775 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1775) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1772 = expected in let __nullable_1773 = HxArray.length args in if __nullable_1772 == HxRuntime.hx_null then false else Obj.obj __nullable_1772 > __nullable_1773) then let __assign_1774 = HxInt.sub (let __nullable_int_1775 = expected in if __nullable_int_1775 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1775) (HxArray.length args) in (
                         tempNumber48 := __assign_1774;
                         __assign_1774
                       ) else let __assign_1776 = 0 in (
@@ -8901,16 +9100,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1779, _) -> __enum_param_1779
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1780) -> __enum_param_1780
@@ -8928,16 +9128,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1781, _) -> __enum_param_1781
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1782) -> __enum_param_1782
@@ -8953,16 +9154,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1783 -> __enum_param_1783
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -9033,16 +9235,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1801 = expected in let __nullable_1802 = HxArray.length args in if __nullable_1801 == HxRuntime.hx_null then false else Obj.obj __nullable_1801 > __nullable_1802) then let __assign_1803 = HxInt.sub (let __nullable_int_1804 = expected in if __nullable_int_1804 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1804) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1801 = expected in let __nullable_1802 = HxArray.length args in if __nullable_1801 == HxRuntime.hx_null then false else Obj.obj __nullable_1801 > __nullable_1802) then let __assign_1803 = HxInt.sub (let __nullable_int_1804 = expected in if __nullable_int_1804 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1804) (HxArray.length args) in (
                         tempNumber49 := __assign_1803;
                         __assign_1803
                       ) else let __assign_1805 = 0 in (
@@ -9072,16 +9275,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1808, _) -> __enum_param_1808
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1809) -> __enum_param_1809
@@ -9099,16 +9303,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1810, _) -> __enum_param_1810
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1811) -> __enum_param_1811
@@ -9124,16 +9329,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1812 -> __enum_param_1812
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -9204,16 +9410,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1830 = expected in let __nullable_1831 = HxArray.length args in if __nullable_1830 == HxRuntime.hx_null then false else Obj.obj __nullable_1830 > __nullable_1831) then let __assign_1832 = HxInt.sub (let __nullable_int_1833 = expected in if __nullable_int_1833 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1833) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1830 = expected in let __nullable_1831 = HxArray.length args in if __nullable_1830 == HxRuntime.hx_null then false else Obj.obj __nullable_1830 > __nullable_1831) then let __assign_1832 = HxInt.sub (let __nullable_int_1833 = expected in if __nullable_int_1833 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1833) (HxArray.length args) in (
                         tempNumber50 := __assign_1832;
                         __assign_1832
                       ) else let __assign_1834 = 0 in (
@@ -9243,16 +9450,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1837, _) -> __enum_param_1837
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1838) -> __enum_param_1838
@@ -9270,16 +9478,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1839, _) -> __enum_param_1839
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1840) -> __enum_param_1840
@@ -9295,16 +9504,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1841 -> __enum_param_1841
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -9368,16 +9578,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1627 = expected in let __nullable_1628 = HxArray.length args in if __nullable_1627 == HxRuntime.hx_null then false else Obj.obj __nullable_1627 > __nullable_1628) then let __assign_1629 = HxInt.sub (let __nullable_int_1630 = expected in if __nullable_int_1630 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1630) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1627 = expected in let __nullable_1628 = HxArray.length args in if __nullable_1627 == HxRuntime.hx_null then false else Obj.obj __nullable_1627 > __nullable_1628) then let __assign_1629 = HxInt.sub (let __nullable_int_1630 = expected in if __nullable_int_1630 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1630) (HxArray.length args) in (
                         tempNumber51 := __assign_1629;
                         __assign_1629
                       ) else let __assign_1631 = 0 in (
@@ -9407,16 +9618,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1634, _) -> __enum_param_1634
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1635) -> __enum_param_1635
@@ -9434,16 +9646,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1636, _) -> __enum_param_1636
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1637) -> __enum_param_1637
@@ -9459,16 +9672,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1638 -> __enum_param_1638
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -9539,16 +9753,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1887 = expected in let __nullable_1888 = HxArray.length args in if __nullable_1887 == HxRuntime.hx_null then false else Obj.obj __nullable_1887 > __nullable_1888) then let __assign_1889 = HxInt.sub (let __nullable_int_1890 = expected in if __nullable_int_1890 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1890) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1887 = expected in let __nullable_1888 = HxArray.length args in if __nullable_1887 == HxRuntime.hx_null then false else Obj.obj __nullable_1887 > __nullable_1888) then let __assign_1889 = HxInt.sub (let __nullable_int_1890 = expected in if __nullable_int_1890 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1890) (HxArray.length args) in (
                         tempNumber52 := __assign_1889;
                         __assign_1889
                       ) else let __assign_1891 = 0 in (
@@ -9578,16 +9793,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1894, _) -> __enum_param_1894
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1895) -> __enum_param_1895
@@ -9605,16 +9821,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1896, _) -> __enum_param_1896
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1897) -> __enum_param_1897
@@ -9630,16 +9847,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1898 -> __enum_param_1898
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -9709,16 +9927,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1916 = expected in let __nullable_1917 = HxArray.length args in if __nullable_1916 == HxRuntime.hx_null then false else Obj.obj __nullable_1916 > __nullable_1917) then let __assign_1918 = HxInt.sub (let __nullable_int_1919 = expected in if __nullable_int_1919 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1919) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1916 = expected in let __nullable_1917 = HxArray.length args in if __nullable_1916 == HxRuntime.hx_null then false else Obj.obj __nullable_1916 > __nullable_1917) then let __assign_1918 = HxInt.sub (let __nullable_int_1919 = expected in if __nullable_int_1919 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1919) (HxArray.length args) in (
                         tempNumber53 := __assign_1918;
                         __assign_1918
                       ) else let __assign_1920 = 0 in (
@@ -9748,16 +9967,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1923, _) -> __enum_param_1923
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1924) -> __enum_param_1924
@@ -9775,16 +9995,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1925, _) -> __enum_param_1925
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1926) -> __enum_param_1926
@@ -9800,16 +10021,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1927 -> __enum_param_1927
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -9879,16 +10101,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1945 = expected in let __nullable_1946 = HxArray.length args in if __nullable_1945 == HxRuntime.hx_null then false else Obj.obj __nullable_1945 > __nullable_1946) then let __assign_1947 = HxInt.sub (let __nullable_int_1948 = expected in if __nullable_int_1948 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1948) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1945 = expected in let __nullable_1946 = HxArray.length args in if __nullable_1945 == HxRuntime.hx_null then false else Obj.obj __nullable_1945 > __nullable_1946) then let __assign_1947 = HxInt.sub (let __nullable_int_1948 = expected in if __nullable_int_1948 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1948) (HxArray.length args) in (
                         tempNumber54 := __assign_1947;
                         __assign_1947
                       ) else let __assign_1949 = 0 in (
@@ -9918,16 +10141,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1952, _) -> __enum_param_1952
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1953) -> __enum_param_1953
@@ -9945,16 +10169,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1954, _) -> __enum_param_1954
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1955) -> __enum_param_1955
@@ -9970,16 +10195,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1956 -> __enum_param_1956
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -10049,16 +10275,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1974 = expected in let __nullable_1975 = HxArray.length args in if __nullable_1974 == HxRuntime.hx_null then false else Obj.obj __nullable_1974 > __nullable_1975) then let __assign_1976 = HxInt.sub (let __nullable_int_1977 = expected in if __nullable_int_1977 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1977) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1974 = expected in let __nullable_1975 = HxArray.length args in if __nullable_1974 == HxRuntime.hx_null then false else Obj.obj __nullable_1974 > __nullable_1975) then let __assign_1976 = HxInt.sub (let __nullable_int_1977 = expected in if __nullable_int_1977 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1977) (HxArray.length args) in (
                         tempNumber55 := __assign_1976;
                         __assign_1976
                       ) else let __assign_1978 = 0 in (
@@ -10088,16 +10315,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1981, _) -> __enum_param_1981
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1982) -> __enum_param_1982
@@ -10115,16 +10343,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1983, _) -> __enum_param_1983
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1984) -> __enum_param_1984
@@ -10140,16 +10369,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1985 -> __enum_param_1985
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -10219,16 +10449,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2003 = expected in let __nullable_2004 = HxArray.length args in if __nullable_2003 == HxRuntime.hx_null then false else Obj.obj __nullable_2003 > __nullable_2004) then let __assign_2005 = HxInt.sub (let __nullable_int_2006 = expected in if __nullable_int_2006 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2006) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2003 = expected in let __nullable_2004 = HxArray.length args in if __nullable_2003 == HxRuntime.hx_null then false else Obj.obj __nullable_2003 > __nullable_2004) then let __assign_2005 = HxInt.sub (let __nullable_int_2006 = expected in if __nullable_int_2006 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2006) (HxArray.length args) in (
                         tempNumber56 := __assign_2005;
                         __assign_2005
                       ) else let __assign_2007 = 0 in (
@@ -10258,16 +10489,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_2010, _) -> __enum_param_2010
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_2011) -> __enum_param_2011
@@ -10285,16 +10517,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_2012, _) -> __enum_param_2012
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_2013) -> __enum_param_2013
@@ -10310,16 +10543,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_2014 -> __enum_param_2014
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -10389,16 +10623,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2032 = expected in let __nullable_2033 = HxArray.length args in if __nullable_2032 == HxRuntime.hx_null then false else Obj.obj __nullable_2032 > __nullable_2033) then let __assign_2034 = HxInt.sub (let __nullable_int_2035 = expected in if __nullable_int_2035 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2035) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2032 = expected in let __nullable_2033 = HxArray.length args in if __nullable_2032 == HxRuntime.hx_null then false else Obj.obj __nullable_2032 > __nullable_2033) then let __assign_2034 = HxInt.sub (let __nullable_int_2035 = expected in if __nullable_int_2035 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2035) (HxArray.length args) in (
                         tempNumber57 := __assign_2034;
                         __assign_2034
                       ) else let __assign_2036 = 0 in (
@@ -10428,16 +10663,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_2039, _) -> __enum_param_2039
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_2040) -> __enum_param_2040
@@ -10455,16 +10691,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_2041, _) -> __enum_param_2041
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_2042) -> __enum_param_2042
@@ -10480,16 +10717,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_2043 -> __enum_param_2043
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -10559,16 +10797,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2061 = expected in let __nullable_2062 = HxArray.length args in if __nullable_2061 == HxRuntime.hx_null then false else Obj.obj __nullable_2061 > __nullable_2062) then let __assign_2063 = HxInt.sub (let __nullable_int_2064 = expected in if __nullable_int_2064 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2064) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2061 = expected in let __nullable_2062 = HxArray.length args in if __nullable_2061 == HxRuntime.hx_null then false else Obj.obj __nullable_2061 > __nullable_2062) then let __assign_2063 = HxInt.sub (let __nullable_int_2064 = expected in if __nullable_int_2064 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2064) (HxArray.length args) in (
                         tempNumber58 := __assign_2063;
                         __assign_2063
                       ) else let __assign_2065 = 0 in (
@@ -10598,16 +10837,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_2068, _) -> __enum_param_2068
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_2069) -> __enum_param_2069
@@ -10625,16 +10865,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_2070, _) -> __enum_param_2070
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_2071) -> __enum_param_2071
@@ -10650,16 +10891,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_2072 -> __enum_param_2072
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -10730,16 +10972,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2090 = expected in let __nullable_2091 = HxArray.length args in if __nullable_2090 == HxRuntime.hx_null then false else Obj.obj __nullable_2090 > __nullable_2091) then let __assign_2092 = HxInt.sub (let __nullable_int_2093 = expected in if __nullable_int_2093 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2093) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2090 = expected in let __nullable_2091 = HxArray.length args in if __nullable_2090 == HxRuntime.hx_null then false else Obj.obj __nullable_2090 > __nullable_2091) then let __assign_2092 = HxInt.sub (let __nullable_int_2093 = expected in if __nullable_int_2093 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2093) (HxArray.length args) in (
                         tempNumber59 := __assign_2092;
                         __assign_2092
                       ) else let __assign_2094 = 0 in (
@@ -10769,16 +11012,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_2097, _) -> __enum_param_2097
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_2098) -> __enum_param_2098
@@ -10796,16 +11040,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_2099, _) -> __enum_param_2099
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_2100) -> __enum_param_2100
@@ -10821,16 +11066,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_2101 -> __enum_param_2101
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -10901,16 +11147,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2119 = expected in let __nullable_2120 = HxArray.length args in if __nullable_2119 == HxRuntime.hx_null then false else Obj.obj __nullable_2119 > __nullable_2120) then let __assign_2121 = HxInt.sub (let __nullable_int_2122 = expected in if __nullable_int_2122 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2122) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2119 = expected in let __nullable_2120 = HxArray.length args in if __nullable_2119 == HxRuntime.hx_null then false else Obj.obj __nullable_2119 > __nullable_2120) then let __assign_2121 = HxInt.sub (let __nullable_int_2122 = expected in if __nullable_int_2122 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2122) (HxArray.length args) in (
                         tempNumber60 := __assign_2121;
                         __assign_2121
                       ) else let __assign_2123 = 0 in (
@@ -10940,16 +11187,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_2126, _) -> __enum_param_2126
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_2127) -> __enum_param_2127
@@ -10967,16 +11215,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_2128, _) -> __enum_param_2128
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_2129) -> __enum_param_2129
@@ -10992,16 +11241,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_2130 -> __enum_param_2130
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -11071,16 +11321,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2148 = expected in let __nullable_2149 = HxArray.length args in if __nullable_2148 == HxRuntime.hx_null then false else Obj.obj __nullable_2148 > __nullable_2149) then let __assign_2150 = HxInt.sub (let __nullable_int_2151 = expected in if __nullable_int_2151 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2151) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2148 = expected in let __nullable_2149 = HxArray.length args in if __nullable_2148 == HxRuntime.hx_null then false else Obj.obj __nullable_2148 > __nullable_2149) then let __assign_2150 = HxInt.sub (let __nullable_int_2151 = expected in if __nullable_int_2151 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2151) (HxArray.length args) in (
                         tempNumber61 := __assign_2150;
                         __assign_2150
                       ) else let __assign_2152 = 0 in (
@@ -11110,16 +11361,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_2155, _) -> __enum_param_2155
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_2156) -> __enum_param_2156
@@ -11137,16 +11389,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_2157, _) -> __enum_param_2157
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_2158) -> __enum_param_2158
@@ -11162,16 +11415,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_2159 -> __enum_param_2159
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -11235,16 +11489,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1858 = expected in let __nullable_1859 = HxArray.length args in if __nullable_1858 == HxRuntime.hx_null then false else Obj.obj __nullable_1858 > __nullable_1859) then let __assign_1860 = HxInt.sub (let __nullable_int_1861 = expected in if __nullable_int_1861 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1861) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_1858 = expected in let __nullable_1859 = HxArray.length args in if __nullable_1858 == HxRuntime.hx_null then false else Obj.obj __nullable_1858 > __nullable_1859) then let __assign_1860 = HxInt.sub (let __nullable_int_1861 = expected in if __nullable_int_1861 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_1861) (HxArray.length args) in (
                         tempNumber62 := __assign_1860;
                         __assign_1860
                       ) else let __assign_1862 = 0 in (
@@ -11274,16 +11529,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_1865, _) -> __enum_param_1865
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_1866) -> __enum_param_1866
@@ -11301,16 +11557,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_1867, _) -> __enum_param_1867
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_1868) -> __enum_param_1868
@@ -11326,16 +11583,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_1869 -> __enum_param_1869
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -11406,16 +11664,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_295 = expected in let __nullable_296 = HxArray.length args in if __nullable_295 == HxRuntime.hx_null then false else Obj.obj __nullable_295 > __nullable_296) then let __assign_297 = HxInt.sub (let __nullable_int_298 = expected in if __nullable_int_298 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_298) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_295 = expected in let __nullable_296 = HxArray.length args in if __nullable_295 == HxRuntime.hx_null then false else Obj.obj __nullable_295 > __nullable_296) then let __assign_297 = HxInt.sub (let __nullable_int_298 = expected in if __nullable_int_298 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_298) (HxArray.length args) in (
                         tempNumber63 := __assign_297;
                         __assign_297
                       ) else let __assign_299 = 0 in (
@@ -11445,16 +11704,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_302, _) -> __enum_param_302
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_303) -> __enum_param_303
@@ -11472,16 +11732,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_304, _) -> __enum_param_304
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_305) -> __enum_param_305
@@ -11497,16 +11758,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_306 -> __enum_param_306
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -11576,16 +11838,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_324 = expected in let __nullable_325 = HxArray.length args in if __nullable_324 == HxRuntime.hx_null then false else Obj.obj __nullable_324 > __nullable_325) then let __assign_326 = HxInt.sub (let __nullable_int_327 = expected in if __nullable_int_327 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_327) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_324 = expected in let __nullable_325 = HxArray.length args in if __nullable_324 == HxRuntime.hx_null then false else Obj.obj __nullable_324 > __nullable_325) then let __assign_326 = HxInt.sub (let __nullable_int_327 = expected in if __nullable_int_327 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_327) (HxArray.length args) in (
                         tempNumber64 := __assign_326;
                         __assign_326
                       ) else let __assign_328 = 0 in (
@@ -11615,16 +11878,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_331, _) -> __enum_param_331
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_332) -> __enum_param_332
@@ -11642,16 +11906,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_333, _) -> __enum_param_333
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_334) -> __enum_param_334
@@ -11667,16 +11932,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_335 -> __enum_param_335
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -11746,16 +12012,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_353 = expected in let __nullable_354 = HxArray.length args in if __nullable_353 == HxRuntime.hx_null then false else Obj.obj __nullable_353 > __nullable_354) then let __assign_355 = HxInt.sub (let __nullable_int_356 = expected in if __nullable_int_356 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_356) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_353 = expected in let __nullable_354 = HxArray.length args in if __nullable_353 == HxRuntime.hx_null then false else Obj.obj __nullable_353 > __nullable_354) then let __assign_355 = HxInt.sub (let __nullable_int_356 = expected in if __nullable_int_356 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_356) (HxArray.length args) in (
                         tempNumber65 := __assign_355;
                         __assign_355
                       ) else let __assign_357 = 0 in (
@@ -11785,16 +12052,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_360, _) -> __enum_param_360
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_361) -> __enum_param_361
@@ -11812,16 +12080,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_362, _) -> __enum_param_362
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_363) -> __enum_param_363
@@ -11837,16 +12106,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_364 -> __enum_param_364
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -11917,16 +12187,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_382 = expected in let __nullable_383 = HxArray.length args in if __nullable_382 == HxRuntime.hx_null then false else Obj.obj __nullable_382 > __nullable_383) then let __assign_384 = HxInt.sub (let __nullable_int_385 = expected in if __nullable_int_385 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_385) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_382 = expected in let __nullable_383 = HxArray.length args in if __nullable_382 == HxRuntime.hx_null then false else Obj.obj __nullable_382 > __nullable_383) then let __assign_384 = HxInt.sub (let __nullable_int_385 = expected in if __nullable_int_385 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_385) (HxArray.length args) in (
                         tempNumber66 := __assign_384;
                         __assign_384
                       ) else let __assign_386 = 0 in (
@@ -11956,16 +12227,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_389, _) -> __enum_param_389
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_390) -> __enum_param_390
@@ -11983,16 +12255,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_391, _) -> __enum_param_391
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_392) -> __enum_param_392
@@ -12008,16 +12281,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_393 -> __enum_param_393
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -12088,16 +12362,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_411 = expected in let __nullable_412 = HxArray.length args in if __nullable_411 == HxRuntime.hx_null then false else Obj.obj __nullable_411 > __nullable_412) then let __assign_413 = HxInt.sub (let __nullable_int_414 = expected in if __nullable_int_414 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_414) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_411 = expected in let __nullable_412 = HxArray.length args in if __nullable_411 == HxRuntime.hx_null then false else Obj.obj __nullable_411 > __nullable_412) then let __assign_413 = HxInt.sub (let __nullable_int_414 = expected in if __nullable_int_414 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_414) (HxArray.length args) in (
                         tempNumber67 := __assign_413;
                         __assign_413
                       ) else let __assign_415 = 0 in (
@@ -12127,16 +12402,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = match callee with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = match callee with
                         | HxExpr.EField (__enum_param_418, _) -> __enum_param_418
                         | _ -> failwith "Unexpected enum parameter" in let _g6 = match callee with
                         | HxExpr.EField (_, __enum_param_419) -> __enum_param_419
@@ -12154,16 +12430,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_420, _) -> __enum_param_420
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_421) -> __enum_param_421
@@ -12179,16 +12456,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_422 -> __enum_param_422
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -12252,16 +12530,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_268 = expected in let __nullable_269 = HxArray.length args in if __nullable_268 == HxRuntime.hx_null then false else Obj.obj __nullable_268 > __nullable_269) then let __assign_270 = HxInt.sub (let __nullable_int_271 = expected in if __nullable_int_271 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_271) (HxArray.length args) in (
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g6 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_268 = expected in let __nullable_269 = HxArray.length args in if __nullable_268 == HxRuntime.hx_null then false else Obj.obj __nullable_268 > __nullable_269) then let __assign_270 = HxInt.sub (let __nullable_int_271 = expected in if __nullable_int_271 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_271) (HxArray.length args) in (
                         tempNumber68 := __assign_270;
                         __assign_270
                       ) else let __assign_272 = 0 in (
@@ -12291,16 +12570,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g5 = _p0 in let _g6 = _p1 in match _g5 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g5 = _p0 in let _g6 = _p1 in match _g5 with
                         | HxExpr.EIdent _p0 -> ignore (let _g7 = _p0 in if HxString.equals _g7 "Sys" then ignore (if HxString.equals _g6 "println" then ignore (if HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("print_endline (" ^ HxString.toStdString (exprToOcamlString (HxArray.get args 0) tyByIdent)) ^ ")"))) else ignore ()) else ignore ()) else ignore ())
                         | HxExpr.ECall (_p0, _p1) -> ignore (let _g7 = _p0 in let _g8 = _p1 in if (match _g7 with
                           | HxExpr.ENull -> 0
@@ -12314,16 +12594,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g9 = match _g7 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g9 = match _g7 with
                           | HxExpr.EField (__enum_param_275, _) -> __enum_param_275
                           | _ -> failwith "Unexpected enum parameter" in let _g10 = match _g7 with
                           | HxExpr.EField (_, __enum_param_276) -> __enum_param_276
@@ -12339,16 +12620,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                           | HxExpr.EField (_, _) -> 8
                           | HxExpr.ECall (_, _) -> 9
                           | HxExpr.ELambda (_, _) -> 10
-                          | HxExpr.ENew (_, _) -> 11
-                          | HxExpr.EUnop (_, _) -> 12
-                          | HxExpr.EBinop (_, _, _) -> 13
-                          | HxExpr.ETernary (_, _, _) -> 14
-                          | HxExpr.EAnon (_, _) -> 15
-                          | HxExpr.EArrayDecl _ -> 16
-                          | HxExpr.EArrayAccess (_, _) -> 17
-                          | HxExpr.ECast (_, _) -> 18
-                          | HxExpr.EUntyped _ -> 19
-                          | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g11 = match _g9 with
+                          | HxExpr.ETryCatchRaw _ -> 11
+                          | HxExpr.ENew (_, _) -> 12
+                          | HxExpr.EUnop (_, _) -> 13
+                          | HxExpr.EBinop (_, _, _) -> 14
+                          | HxExpr.ETernary (_, _, _) -> 15
+                          | HxExpr.EAnon (_, _) -> 16
+                          | HxExpr.EArrayDecl _ -> 17
+                          | HxExpr.EArrayAccess (_, _) -> 18
+                          | HxExpr.ECast (_, _) -> 19
+                          | HxExpr.EUntyped _ -> 20
+                          | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g11 = match _g9 with
                           | HxExpr.EIdent __enum_param_277 -> __enum_param_277
                           | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g11 "Sys" then ignore (if HxString.equals _g10 "stdout" then ignore (if HxArray.length _g8 = 0 then ignore (if HxString.equals _g6 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                         | _ -> ignore ()) else ignore ());
@@ -12418,16 +12700,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2203 = expected in let __nullable_2204 = HxArray.length args in if __nullable_2203 == HxRuntime.hx_null then false else Obj.obj __nullable_2203 > __nullable_2204) then let __assign_2205 = HxInt.sub (let __nullable_int_2206 = expected in if __nullable_int_2206 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2206) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2203 = expected in let __nullable_2204 = HxArray.length args in if __nullable_2203 == HxRuntime.hx_null then false else Obj.obj __nullable_2203 > __nullable_2204) then let __assign_2205 = HxInt.sub (let __nullable_int_2206 = expected in if __nullable_int_2206 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2206) (HxArray.length args) in (
                       tempNumber69 := __assign_2205;
                       __assign_2205
                     ) else let __assign_2207 = 0 in (
@@ -12457,16 +12740,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g4 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g4 = match callee with
                       | HxExpr.EField (__enum_param_2210, _) -> __enum_param_2210
                       | _ -> failwith "Unexpected enum parameter" in let _g5 = match callee with
                       | HxExpr.EField (_, __enum_param_2211) -> __enum_param_2211
@@ -12484,16 +12768,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g8 = match _g6 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g8 = match _g6 with
                         | HxExpr.EField (__enum_param_2212, _) -> __enum_param_2212
                         | _ -> failwith "Unexpected enum parameter" in let _g9 = match _g6 with
                         | HxExpr.EField (_, __enum_param_2213) -> __enum_param_2213
@@ -12509,16 +12794,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g10 = match _g8 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g10 = match _g8 with
                         | HxExpr.EIdent __enum_param_2214 -> __enum_param_2214
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g10 "Sys" then ignore (if HxString.equals _g9 "stdout" then ignore (if HxArray.length _g7 = 0 then ignore (if HxString.equals _g5 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -12588,16 +12874,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2232 = expected in let __nullable_2233 = HxArray.length args in if __nullable_2232 == HxRuntime.hx_null then false else Obj.obj __nullable_2232 > __nullable_2233) then let __assign_2234 = HxInt.sub (let __nullable_int_2235 = expected in if __nullable_int_2235 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2235) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2232 = expected in let __nullable_2233 = HxArray.length args in if __nullable_2232 == HxRuntime.hx_null then false else Obj.obj __nullable_2232 > __nullable_2233) then let __assign_2234 = HxInt.sub (let __nullable_int_2235 = expected in if __nullable_int_2235 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2235) (HxArray.length args) in (
                       tempNumber70 := __assign_2234;
                       __assign_2234
                     ) else let __assign_2236 = 0 in (
@@ -12627,16 +12914,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g4 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g4 = match callee with
                       | HxExpr.EField (__enum_param_2239, _) -> __enum_param_2239
                       | _ -> failwith "Unexpected enum parameter" in let _g5 = match callee with
                       | HxExpr.EField (_, __enum_param_2240) -> __enum_param_2240
@@ -12654,16 +12942,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g8 = match _g6 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g8 = match _g6 with
                         | HxExpr.EField (__enum_param_2241, _) -> __enum_param_2241
                         | _ -> failwith "Unexpected enum parameter" in let _g9 = match _g6 with
                         | HxExpr.EField (_, __enum_param_2242) -> __enum_param_2242
@@ -12679,16 +12968,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g10 = match _g8 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g10 = match _g8 with
                         | HxExpr.EIdent __enum_param_2243 -> __enum_param_2243
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g10 "Sys" then ignore (if HxString.equals _g9 "stdout" then ignore (if HxArray.length _g7 = 0 then ignore (if HxString.equals _g5 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -12758,16 +13048,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2261 = expected in let __nullable_2262 = HxArray.length args in if __nullable_2261 == HxRuntime.hx_null then false else Obj.obj __nullable_2261 > __nullable_2262) then let __assign_2263 = HxInt.sub (let __nullable_int_2264 = expected in if __nullable_int_2264 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2264) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2261 = expected in let __nullable_2262 = HxArray.length args in if __nullable_2261 == HxRuntime.hx_null then false else Obj.obj __nullable_2261 > __nullable_2262) then let __assign_2263 = HxInt.sub (let __nullable_int_2264 = expected in if __nullable_int_2264 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2264) (HxArray.length args) in (
                       tempNumber71 := __assign_2263;
                       __assign_2263
                     ) else let __assign_2265 = 0 in (
@@ -12797,16 +13088,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g4 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g4 = match callee with
                       | HxExpr.EField (__enum_param_2268, _) -> __enum_param_2268
                       | _ -> failwith "Unexpected enum parameter" in let _g5 = match callee with
                       | HxExpr.EField (_, __enum_param_2269) -> __enum_param_2269
@@ -12824,16 +13116,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g8 = match _g6 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g8 = match _g6 with
                         | HxExpr.EField (__enum_param_2270, _) -> __enum_param_2270
                         | _ -> failwith "Unexpected enum parameter" in let _g9 = match _g6 with
                         | HxExpr.EField (_, __enum_param_2271) -> __enum_param_2271
@@ -12849,16 +13142,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g10 = match _g8 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g10 = match _g8 with
                         | HxExpr.EIdent __enum_param_2272 -> __enum_param_2272
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g10 "Sys" then ignore (if HxString.equals _g9 "stdout" then ignore (if HxArray.length _g7 = 0 then ignore (if HxString.equals _g5 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -12929,16 +13223,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2290 = expected in let __nullable_2291 = HxArray.length args in if __nullable_2290 == HxRuntime.hx_null then false else Obj.obj __nullable_2290 > __nullable_2291) then let __assign_2292 = HxInt.sub (let __nullable_int_2293 = expected in if __nullable_int_2293 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2293) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2290 = expected in let __nullable_2291 = HxArray.length args in if __nullable_2290 == HxRuntime.hx_null then false else Obj.obj __nullable_2290 > __nullable_2291) then let __assign_2292 = HxInt.sub (let __nullable_int_2293 = expected in if __nullable_int_2293 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2293) (HxArray.length args) in (
                       tempNumber72 := __assign_2292;
                       __assign_2292
                     ) else let __assign_2294 = 0 in (
@@ -12968,16 +13263,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g4 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g4 = match callee with
                       | HxExpr.EField (__enum_param_2297, _) -> __enum_param_2297
                       | _ -> failwith "Unexpected enum parameter" in let _g5 = match callee with
                       | HxExpr.EField (_, __enum_param_2298) -> __enum_param_2298
@@ -12995,16 +13291,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g8 = match _g6 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g8 = match _g6 with
                         | HxExpr.EField (__enum_param_2299, _) -> __enum_param_2299
                         | _ -> failwith "Unexpected enum parameter" in let _g9 = match _g6 with
                         | HxExpr.EField (_, __enum_param_2300) -> __enum_param_2300
@@ -13020,16 +13317,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g10 = match _g8 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g10 = match _g8 with
                         | HxExpr.EIdent __enum_param_2301 -> __enum_param_2301
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g10 "Sys" then ignore (if HxString.equals _g9 "stdout" then ignore (if HxArray.length _g7 = 0 then ignore (if HxString.equals _g5 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -13100,16 +13398,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2319 = expected in let __nullable_2320 = HxArray.length args in if __nullable_2319 == HxRuntime.hx_null then false else Obj.obj __nullable_2319 > __nullable_2320) then let __assign_2321 = HxInt.sub (let __nullable_int_2322 = expected in if __nullable_int_2322 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2322) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2319 = expected in let __nullable_2320 = HxArray.length args in if __nullable_2319 == HxRuntime.hx_null then false else Obj.obj __nullable_2319 > __nullable_2320) then let __assign_2321 = HxInt.sub (let __nullable_int_2322 = expected in if __nullable_int_2322 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2322) (HxArray.length args) in (
                       tempNumber73 := __assign_2321;
                       __assign_2321
                     ) else let __assign_2323 = 0 in (
@@ -13139,16 +13438,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g4 = match callee with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g4 = match callee with
                       | HxExpr.EField (__enum_param_2326, _) -> __enum_param_2326
                       | _ -> failwith "Unexpected enum parameter" in let _g5 = match callee with
                       | HxExpr.EField (_, __enum_param_2327) -> __enum_param_2327
@@ -13166,16 +13466,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g8 = match _g6 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g8 = match _g6 with
                         | HxExpr.EField (__enum_param_2328, _) -> __enum_param_2328
                         | _ -> failwith "Unexpected enum parameter" in let _g9 = match _g6 with
                         | HxExpr.EField (_, __enum_param_2329) -> __enum_param_2329
@@ -13191,16 +13492,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g10 = match _g8 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g10 = match _g8 with
                         | HxExpr.EIdent __enum_param_2330 -> __enum_param_2330
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g10 "Sys" then ignore (if HxString.equals _g9 "stdout" then ignore (if HxArray.length _g7 = 0 then ignore (if HxString.equals _g5 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -13264,16 +13566,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2176 = expected in let __nullable_2177 = HxArray.length args in if __nullable_2176 == HxRuntime.hx_null then false else Obj.obj __nullable_2176 > __nullable_2177) then let __assign_2178 = HxInt.sub (let __nullable_int_2179 = expected in if __nullable_int_2179 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2179) (HxArray.length args) in (
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g5 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_2176 = expected in let __nullable_2177 = HxArray.length args in if __nullable_2176 == HxRuntime.hx_null then false else Obj.obj __nullable_2176 > __nullable_2177) then let __assign_2178 = HxInt.sub (let __nullable_int_2179 = expected in if __nullable_int_2179 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_2179) (HxArray.length args) in (
                       tempNumber74 := __assign_2178;
                       __assign_2178
                     ) else let __assign_2180 = 0 in (
@@ -13303,16 +13606,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g4 = _p0 in let _g5 = _p1 in match _g4 with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g4 = _p0 in let _g5 = _p1 in match _g4 with
                       | HxExpr.EIdent _p0 -> ignore (let _g6 = _p0 in if HxString.equals _g6 "Sys" then ignore (if HxString.equals _g5 "println" then ignore (if HxArray.length args = 1 then raise (HxRuntime.Hx_return (Obj.repr (("print_endline (" ^ HxString.toStdString (exprToOcamlString (HxArray.get args 0) tyByIdent)) ^ ")"))) else ignore ()) else ignore ()) else ignore ())
                       | HxExpr.ECall (_p0, _p1) -> ignore (let _g6 = _p0 in let _g7 = _p1 in if (match _g6 with
                         | HxExpr.ENull -> 0
@@ -13326,16 +13630,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g8 = match _g6 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g8 = match _g6 with
                         | HxExpr.EField (__enum_param_2183, _) -> __enum_param_2183
                         | _ -> failwith "Unexpected enum parameter" in let _g9 = match _g6 with
                         | HxExpr.EField (_, __enum_param_2184) -> __enum_param_2184
@@ -13351,16 +13656,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                         | HxExpr.EField (_, _) -> 8
                         | HxExpr.ECall (_, _) -> 9
                         | HxExpr.ELambda (_, _) -> 10
-                        | HxExpr.ENew (_, _) -> 11
-                        | HxExpr.EUnop (_, _) -> 12
-                        | HxExpr.EBinop (_, _, _) -> 13
-                        | HxExpr.ETernary (_, _, _) -> 14
-                        | HxExpr.EAnon (_, _) -> 15
-                        | HxExpr.EArrayDecl _ -> 16
-                        | HxExpr.EArrayAccess (_, _) -> 17
-                        | HxExpr.ECast (_, _) -> 18
-                        | HxExpr.EUntyped _ -> 19
-                        | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g10 = match _g8 with
+                        | HxExpr.ETryCatchRaw _ -> 11
+                        | HxExpr.ENew (_, _) -> 12
+                        | HxExpr.EUnop (_, _) -> 13
+                        | HxExpr.EBinop (_, _, _) -> 14
+                        | HxExpr.ETernary (_, _, _) -> 15
+                        | HxExpr.EAnon (_, _) -> 16
+                        | HxExpr.EArrayDecl _ -> 17
+                        | HxExpr.EArrayAccess (_, _) -> 18
+                        | HxExpr.ECast (_, _) -> 19
+                        | HxExpr.EUntyped _ -> 20
+                        | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g10 = match _g8 with
                         | HxExpr.EIdent __enum_param_2185 -> __enum_param_2185
                         | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g10 "Sys" then ignore (if HxString.equals _g9 "stdout" then ignore (if HxArray.length _g7 = 0 then ignore (if HxString.equals _g5 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                       | _ -> ignore ()) else ignore ());
@@ -13424,16 +13730,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                     | HxExpr.EField (_, _) -> 8
                     | HxExpr.ECall (_, _) -> 9
                     | HxExpr.ELambda (_, _) -> 10
-                    | HxExpr.ENew (_, _) -> 11
-                    | HxExpr.EUnop (_, _) -> 12
-                    | HxExpr.EBinop (_, _, _) -> 13
-                    | HxExpr.ETernary (_, _, _) -> 14
-                    | HxExpr.EAnon (_, _) -> 15
-                    | HxExpr.EArrayDecl _ -> 16
-                    | HxExpr.EArrayAccess (_, _) -> 17
-                    | HxExpr.ECast (_, _) -> 18
-                    | HxExpr.EUntyped _ -> 19
-                    | HxExpr.EUnsupported _ -> 20) = 5 then let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_152 = expected in let __nullable_153 = HxArray.length args in if __nullable_152 == HxRuntime.hx_null then false else Obj.obj __nullable_152 > __nullable_153) then let __assign_154 = HxInt.sub (let __nullable_int_155 = expected in if __nullable_int_155 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_155) (HxArray.length args) in (
+                    | HxExpr.ETryCatchRaw _ -> 11
+                    | HxExpr.ENew (_, _) -> 12
+                    | HxExpr.EUnop (_, _) -> 13
+                    | HxExpr.EBinop (_, _, _) -> 14
+                    | HxExpr.ETernary (_, _, _) -> 15
+                    | HxExpr.EAnon (_, _) -> 16
+                    | HxExpr.EArrayDecl _ -> 17
+                    | HxExpr.EArrayAccess (_, _) -> 18
+                    | HxExpr.ECast (_, _) -> 19
+                    | HxExpr.EUntyped _ -> 20
+                    | HxExpr.EUnsupported _ -> 21) = 5 then let name = _g3 in if arityByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.exists_string arityByIdent name then let expected = HxMap.get_string arityByIdent name in if expected != HxRuntime.hx_null && (let __nullable_152 = expected in let __nullable_153 = HxArray.length args in if __nullable_152 == HxRuntime.hx_null then false else Obj.obj __nullable_152 > __nullable_153) then let __assign_154 = HxInt.sub (let __nullable_int_155 = expected in if __nullable_int_155 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_155) (HxArray.length args) in (
                     tempNumber75 := __assign_154;
                     __assign_154
                   ) else let __assign_156 = 0 in (
@@ -13463,16 +13770,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                     | HxExpr.EField (_, _) -> 8
                     | HxExpr.ECall (_, _) -> 9
                     | HxExpr.ELambda (_, _) -> 10
-                    | HxExpr.ENew (_, _) -> 11
-                    | HxExpr.EUnop (_, _) -> 12
-                    | HxExpr.EBinop (_, _, _) -> 13
-                    | HxExpr.ETernary (_, _, _) -> 14
-                    | HxExpr.EAnon (_, _) -> 15
-                    | HxExpr.EArrayDecl _ -> 16
-                    | HxExpr.EArrayAccess (_, _) -> 17
-                    | HxExpr.ECast (_, _) -> 18
-                    | HxExpr.EUntyped _ -> 19
-                    | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g2 = match callee with
+                    | HxExpr.ETryCatchRaw _ -> 11
+                    | HxExpr.ENew (_, _) -> 12
+                    | HxExpr.EUnop (_, _) -> 13
+                    | HxExpr.EBinop (_, _, _) -> 14
+                    | HxExpr.ETernary (_, _, _) -> 15
+                    | HxExpr.EAnon (_, _) -> 16
+                    | HxExpr.EArrayDecl _ -> 17
+                    | HxExpr.EArrayAccess (_, _) -> 18
+                    | HxExpr.ECast (_, _) -> 19
+                    | HxExpr.EUntyped _ -> 20
+                    | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g2 = match callee with
                     | HxExpr.EField (__enum_param_159, _) -> __enum_param_159
                     | _ -> failwith "Unexpected enum parameter" in let _g3 = match callee with
                     | HxExpr.EField (_, __enum_param_160) -> __enum_param_160
@@ -13490,16 +13798,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 8 then ignore (let _g6 = match _g4 with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 8 then ignore (let _g6 = match _g4 with
                       | HxExpr.EField (__enum_param_161, _) -> __enum_param_161
                       | _ -> failwith "Unexpected enum parameter" in let _g7 = match _g4 with
                       | HxExpr.EField (_, __enum_param_162) -> __enum_param_162
@@ -13515,16 +13824,17 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                       | HxExpr.EField (_, _) -> 8
                       | HxExpr.ECall (_, _) -> 9
                       | HxExpr.ELambda (_, _) -> 10
-                      | HxExpr.ENew (_, _) -> 11
-                      | HxExpr.EUnop (_, _) -> 12
-                      | HxExpr.EBinop (_, _, _) -> 13
-                      | HxExpr.ETernary (_, _, _) -> 14
-                      | HxExpr.EAnon (_, _) -> 15
-                      | HxExpr.EArrayDecl _ -> 16
-                      | HxExpr.EArrayAccess (_, _) -> 17
-                      | HxExpr.ECast (_, _) -> 18
-                      | HxExpr.EUntyped _ -> 19
-                      | HxExpr.EUnsupported _ -> 20) = 7 then ignore (let _g8 = match _g6 with
+                      | HxExpr.ETryCatchRaw _ -> 11
+                      | HxExpr.ENew (_, _) -> 12
+                      | HxExpr.EUnop (_, _) -> 13
+                      | HxExpr.EBinop (_, _, _) -> 14
+                      | HxExpr.ETernary (_, _, _) -> 15
+                      | HxExpr.EAnon (_, _) -> 16
+                      | HxExpr.EArrayDecl _ -> 17
+                      | HxExpr.EArrayAccess (_, _) -> 18
+                      | HxExpr.ECast (_, _) -> 19
+                      | HxExpr.EUntyped _ -> 20
+                      | HxExpr.EUnsupported _ -> 21) = 7 then ignore (let _g8 = match _g6 with
                       | HxExpr.EIdent __enum_param_163 -> __enum_param_163
                       | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g8 "Sys" then ignore (if HxString.equals _g7 "stdout" then ignore (if HxArray.length _g5 = 0 then ignore (if HxString.equals _g3 "flush" then ignore (if HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr "(flush stdout)")) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ()) else ignore ())
                     | _ -> ignore ()) else ignore ());
@@ -13592,196 +13902,203 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
                 )
               )
             )
-            | HxExpr.ENew (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+            | HxExpr.ETryCatchRaw _p0 -> let _g = _p0 in (
               ignore _g;
-              ignore _g1;
               let __assign_2347 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2347;
                 __assign_2347
               )
             )
-            | HxExpr.EUnop (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let op = _g in let expr = _g1 in match op with
-              | "!" -> let __assign_2349 = ("(not (" ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
-                tempResult5 := __assign_2349;
-                __assign_2349
-              )
-              | "-" -> let tempString6 = ref "" in (
-                ignore (if (!isFloatExpr) expr then let __assign_2350 = "(-.(" in (
-                  tempString6 := __assign_2350;
-                  __assign_2350
-                ) else let __assign_2351 = "(-(" in (
-                  tempString6 := __assign_2351;
-                  __assign_2351
-                ));
-                let __assign_2352 = (HxString.toStdString (!tempString6) ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
-                  tempResult5 := __assign_2352;
-                  __assign_2352
-                )
-              )
-              | _ -> let __assign_2348 = "(Obj.magic 0)" in (
+            | HxExpr.ENew (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+              ignore _g;
+              ignore _g1;
+              let __assign_2348 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2348;
                 __assign_2348
+              )
+            )
+            | HxExpr.EUnop (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let op = _g in let expr = _g1 in match op with
+              | "!" -> let __assign_2350 = ("(not (" ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
+                tempResult5 := __assign_2350;
+                __assign_2350
+              )
+              | "-" -> let tempString6 = ref "" in (
+                ignore (if (!isFloatExpr) expr then let __assign_2351 = "(-.(" in (
+                  tempString6 := __assign_2351;
+                  __assign_2351
+                ) else let __assign_2352 = "(-(" in (
+                  tempString6 := __assign_2352;
+                  __assign_2352
+                ));
+                let __assign_2353 = (HxString.toStdString (!tempString6) ^ HxString.toStdString (exprToOcaml expr arityByIdent tyByIdent)) ^ "))" in (
+                  tempResult5 := __assign_2353;
+                  __assign_2353
+                )
+              )
+              | _ -> let __assign_2349 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_2349;
+                __assign_2349
               ))
             | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in let la = exprToOcaml a arityByIdent tyByIdent in let rb = exprToOcaml b arityByIdent tyByIdent in let exprToOcamlAsFloat = fun e -> let tempResult6 = ref "" in (
               ignore (match e with
-                | HxExpr.EInt _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_2354 = "float_of_int " ^ HxString.toStdString (string_of_int v) in (
-                  tempResult6 := __assign_2354;
-                  __assign_2354
-                )
-                | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.toString (HxMap.get_string tyByIdent name) ()) "Int" then let __assign_2355 = "float_of_int " ^ HxString.toStdString (ocamlValueIdent name) in (
+                | HxExpr.EInt _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_2355 = "float_of_int " ^ HxString.toStdString (string_of_int v) in (
                   tempResult6 := __assign_2355;
                   __assign_2355
-                ) else let __assign_2356 = exprToOcaml e arityByIdent tyByIdent in (
+                )
+                | HxExpr.EIdent _p0 -> let _g3 = _p0 in let name = _g3 in if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) && HxString.equals (TyType.toString (HxMap.get_string tyByIdent name) ()) "Int" then let __assign_2356 = "float_of_int " ^ HxString.toStdString (ocamlValueIdent name) in (
                   tempResult6 := __assign_2356;
                   __assign_2356
+                ) else let __assign_2357 = exprToOcaml e arityByIdent tyByIdent in (
+                  tempResult6 := __assign_2357;
+                  __assign_2357
                 )
-                | _ -> let __assign_2353 = exprToOcaml e arityByIdent tyByIdent in (
-                  tempResult6 := __assign_2353;
-                  __assign_2353
+                | _ -> let __assign_2354 = exprToOcaml e arityByIdent tyByIdent in (
+                  tempResult6 := __assign_2354;
+                  __assign_2354
                 ));
               !tempResult6
             ) in match op with
-              | "!=" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_2358 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") <> (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
-                tempResult5 := __assign_2358;
-                __assign_2358
-              ) else let __assign_2359 = ((("((" ^ HxString.toStdString la) ^ ") <> (") ^ HxString.toStdString rb) ^ "))" in (
+              | "!=" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_2359 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") <> (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
                 tempResult5 := __assign_2359;
                 __assign_2359
+              ) else let __assign_2360 = ((("((" ^ HxString.toStdString la) ^ ") <> (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_2360;
+                __assign_2360
               )
               | "%" | "*" | "-" | "/" -> let aIsF = (!isFloatExpr) a in let bIsF = (!isFloatExpr) b in let aIsI = (!isIntExpr) a in let bIsI = (!isIntExpr) b in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if (aIsF || bIsF) && canFloat then let tempString7 = ref "" in (
                 ignore (match op with
-                  | "*" -> let __assign_2361 = "*." in (
-                    tempString7 := __assign_2361;
-                    __assign_2361
-                  )
-                  | "+" -> let __assign_2362 = "+." in (
+                  | "*" -> let __assign_2362 = "*." in (
                     tempString7 := __assign_2362;
                     __assign_2362
                   )
-                  | "-" -> let __assign_2363 = "-." in (
+                  | "+" -> let __assign_2363 = "+." in (
                     tempString7 := __assign_2363;
                     __assign_2363
                   )
-                  | "/" -> let __assign_2364 = "/." in (
+                  | "-" -> let __assign_2364 = "-." in (
                     tempString7 := __assign_2364;
                     __assign_2364
                   )
-                  | _ -> let __assign_2360 = op in (
-                    tempString7 := __assign_2360;
-                    __assign_2360
+                  | "/" -> let __assign_2365 = "/." in (
+                    tempString7 := __assign_2365;
+                    __assign_2365
+                  )
+                  | _ -> let __assign_2361 = op in (
+                    tempString7 := __assign_2361;
+                    __assign_2361
                   ));
-                let fop = !tempString7 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_2365 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
-                  tempResult5 := __assign_2365;
-                  __assign_2365
+                let fop = !tempString7 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_2366 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
+                  tempResult5 := __assign_2366;
+                  __assign_2366
                 )
-              ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_2366 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
-                tempResult5 := __assign_2366;
-                __assign_2366
-              ) else let __assign_2367 = "(Obj.magic 0)" in (
+              ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_2367 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
                 tempResult5 := __assign_2367;
                 __assign_2367
-              )
-              | "+" -> if (!isStringExpr) a || (!isStringExpr) b then let __assign_2368 = ((("((" ^ HxString.toStdString (exprToOcamlForConcat a)) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat b)) ^ "))" in (
+              ) else let __assign_2368 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2368;
                 __assign_2368
+              )
+              | "+" -> if (!isStringExpr) a || (!isStringExpr) b then let __assign_2369 = ((("((" ^ HxString.toStdString (exprToOcamlForConcat a)) ^ ") ^ (") ^ HxString.toStdString (exprToOcamlForConcat b)) ^ "))" in (
+                tempResult5 := __assign_2369;
+                __assign_2369
               ) else let aIsF = (!isFloatExpr) a in let bIsF = (!isFloatExpr) b in let aIsI = (!isIntExpr) a in let bIsI = (!isIntExpr) b in let canFloat = HxString.equals op "+" || HxString.equals op "-" || HxString.equals op "*" || HxString.equals op "/" in if (aIsF || bIsF) && canFloat then let tempString8 = ref "" in (
                 ignore (match op with
-                  | "*" -> let __assign_2370 = "*." in (
-                    tempString8 := __assign_2370;
-                    __assign_2370
-                  )
-                  | "+" -> let __assign_2371 = "+." in (
+                  | "*" -> let __assign_2371 = "*." in (
                     tempString8 := __assign_2371;
                     __assign_2371
                   )
-                  | "-" -> let __assign_2372 = "-." in (
+                  | "+" -> let __assign_2372 = "+." in (
                     tempString8 := __assign_2372;
                     __assign_2372
                   )
-                  | "/" -> let __assign_2373 = "/." in (
+                  | "-" -> let __assign_2373 = "-." in (
                     tempString8 := __assign_2373;
                     __assign_2373
                   )
-                  | _ -> let __assign_2369 = op in (
-                    tempString8 := __assign_2369;
-                    __assign_2369
+                  | "/" -> let __assign_2374 = "/." in (
+                    tempString8 := __assign_2374;
+                    __assign_2374
+                  )
+                  | _ -> let __assign_2370 = op in (
+                    tempString8 := __assign_2370;
+                    __assign_2370
                   ));
-                let fop = !tempString8 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_2374 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
-                  tempResult5 := __assign_2374;
-                  __assign_2374
+                let fop = !tempString8 in let fa = exprToOcamlAsFloat a in let fb = exprToOcamlAsFloat b in let __assign_2375 = ((((("((" ^ HxString.toStdString fa) ^ ") ") ^ HxString.toStdString fop) ^ " (") ^ HxString.toStdString fb) ^ "))" in (
+                  tempResult5 := __assign_2375;
+                  __assign_2375
                 )
-              ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_2375 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
-                tempResult5 := __assign_2375;
-                __assign_2375
-              ) else let __assign_2376 = "(Obj.magic 0)" in (
+              ) else if aIsI && bIsI || not (aIsF) && not (bIsF) then let __assign_2376 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
                 tempResult5 := __assign_2376;
                 __assign_2376
-              )
-              | "==" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_2377 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") = (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
+              ) else let __assign_2377 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2377;
                 __assign_2377
-              ) else let __assign_2378 = ((("((" ^ HxString.toStdString la) ^ ") = (") ^ HxString.toStdString rb) ^ "))" in (
+              )
+              | "==" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_2378 = ((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") = (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
                 tempResult5 := __assign_2378;
                 __assign_2378
-              )
-              | "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_2379 = ((((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
+              ) else let __assign_2379 = ((("((" ^ HxString.toStdString la) ^ ") = (") ^ HxString.toStdString rb) ^ "))" in (
                 tempResult5 := __assign_2379;
                 __assign_2379
-              ) else let __assign_2380 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+              )
+              | "<" | "<=" | ">" | ">=" -> if (!isFloatExpr) a || (!isFloatExpr) b then let __assign_2380 = ((((("((" ^ HxString.toStdString (exprToOcamlAsFloat a)) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString (exprToOcamlAsFloat b)) ^ "))" in (
                 tempResult5 := __assign_2380;
                 __assign_2380
-              )
-              | "&&" | "||" -> let __assign_2381 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+              ) else let __assign_2381 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
                 tempResult5 := __assign_2381;
                 __assign_2381
               )
-              | _ -> let __assign_2357 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_2357;
-                __assign_2357
+              | "&&" | "||" -> let __assign_2382 = ((((("((" ^ HxString.toStdString la) ^ ") ") ^ HxString.toStdString op) ^ " (") ^ HxString.toStdString rb) ^ "))" in (
+                tempResult5 := __assign_2382;
+                __assign_2382
+              )
+              | _ -> let __assign_2358 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_2358;
+                __assign_2358
               ))
-            | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let cond = _g in let thenExpr = _g1 in let elseExpr = _g2 in let __assign_2382 = ((((("(if (" ^ HxString.toStdString (exprToOcaml cond arityByIdent tyByIdent)) ^ ") then (") ^ HxString.toStdString (exprToOcaml thenExpr arityByIdent tyByIdent)) ^ ") else (") ^ HxString.toStdString (exprToOcaml elseExpr arityByIdent tyByIdent)) ^ "))" in (
-              tempResult5 := __assign_2382;
-              __assign_2382
+            | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let cond = _g in let thenExpr = _g1 in let elseExpr = _g2 in let __assign_2383 = ((((("(if (" ^ HxString.toStdString (exprToOcaml cond arityByIdent tyByIdent)) ^ ") then (") ^ HxString.toStdString (exprToOcaml thenExpr arityByIdent tyByIdent)) ^ ") else (") ^ HxString.toStdString (exprToOcaml elseExpr arityByIdent tyByIdent)) ^ "))" in (
+              tempResult5 := __assign_2383;
+              __assign_2383
             )
             | HxExpr.EAnon (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
               ignore _g;
               ignore _g1;
-              let __assign_2383 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_2383;
-                __assign_2383
-              )
-            )
-            | HxExpr.EArrayDecl _p0 -> let _g = _p0 in (
-              ignore _g;
               let __assign_2384 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2384;
                 __assign_2384
               )
             )
-            | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+            | HxExpr.EArrayDecl _p0 -> let _g = _p0 in (
               ignore _g;
-              ignore _g1;
               let __assign_2385 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2385;
                 __assign_2385
               )
             )
-            | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
+            | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in (
+              ignore _g;
               ignore _g1;
-              let __assign_2386 = exprToOcaml expr arityByIdent tyByIdent in (
+              let __assign_2386 = "(Obj.magic 0)" in (
                 tempResult5 := __assign_2386;
                 __assign_2386
               )
             )
-            | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr = _g in let __assign_2387 = exprToOcaml expr arityByIdent tyByIdent in (
-              tempResult5 := __assign_2387;
-              __assign_2387
+            | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
+              ignore _g1;
+              let __assign_2387 = exprToOcaml expr arityByIdent tyByIdent in (
+                tempResult5 := __assign_2387;
+                __assign_2387
+              )
+            )
+            | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr = _g in let __assign_2388 = exprToOcaml expr arityByIdent tyByIdent in (
+              tempResult5 := __assign_2388;
+              __assign_2388
             )
             | HxExpr.EUnsupported _p0 -> (
               ignore _p0;
-              let __assign_2388 = "(Obj.magic 0)" in (
-                tempResult5 := __assign_2388;
-                __assign_2388
+              let __assign_2389 = "(Obj.magic 0)" in (
+                tempResult5 := __assign_2389;
+                __assign_2389
               )
             ));
           !tempResult5
@@ -13790,44 +14107,44 @@ let rec exprToOcaml = fun e arityByIdent tyByIdent -> try let isFloatExpr = ref 
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_2389 -> Obj.obj __ret_2389
+  | HxRuntime.Hx_return __ret_2390 -> Obj.obj __ret_2390
 
 let returnExprToOcaml = fun expr allowedValueIdents arityByIdent tyByIdent -> try let hasBringupPoison = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (let __assign_2390 = fun e -> try let tempResult = ref false in (
+  ignore (let __assign_2391 = fun e -> try let tempResult = ref false in (
     ignore (match e with
-      | HxExpr.ENull -> let __assign_2392 = true in (
-        tempResult := __assign_2392;
-        __assign_2392
-      )
-      | HxExpr.EThis -> let __assign_2393 = true in (
+      | HxExpr.ENull -> let __assign_2393 = true in (
         tempResult := __assign_2393;
         __assign_2393
       )
-      | HxExpr.ESuper -> let __assign_2394 = true in (
+      | HxExpr.EThis -> let __assign_2394 = true in (
         tempResult := __assign_2394;
         __assign_2394
       )
-      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in if isUpperStart name then let __assign_2395 = false in (
+      | HxExpr.ESuper -> let __assign_2395 = true in (
         tempResult := __assign_2395;
         __assign_2395
-      ) else if HxString.equals name "trace" then let __assign_2396 = false in (
+      )
+      | HxExpr.EIdent _p0 -> let _g = _p0 in let name = _g in if isUpperStart name then let __assign_2396 = false in (
         tempResult := __assign_2396;
         __assign_2396
-      ) else if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) then let __assign_2397 = false in (
+      ) else if HxString.equals name "trace" then let __assign_2397 = false in (
         tempResult := __assign_2397;
         __assign_2397
-      ) else if allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_2398 = HxMap.get_string allowedValueIdents name in if __nullable_2398 == HxRuntime.hx_null then false else Obj.obj __nullable_2398 = true) then let __assign_2399 = false in (
-        tempResult := __assign_2399;
-        __assign_2399
-      ) else let __assign_2400 = true in (
+      ) else if tyByIdent != Obj.magic (HxRuntime.hx_null) && HxMap.get_string tyByIdent name != Obj.magic (HxRuntime.hx_null) then let __assign_2398 = false in (
+        tempResult := __assign_2398;
+        __assign_2398
+      ) else if allowedValueIdents != Obj.magic (HxRuntime.hx_null) && (let __nullable_2399 = HxMap.get_string allowedValueIdents name in if __nullable_2399 == HxRuntime.hx_null then false else Obj.obj __nullable_2399 = true) then let __assign_2400 = false in (
         tempResult := __assign_2400;
         __assign_2400
+      ) else let __assign_2401 = true in (
+        tempResult := __assign_2401;
+        __assign_2401
       )
       | HxExpr.EField (_p0, _p1) -> let _g = _p0 in (
         ignore _p1;
-        let obj = _g in let __assign_2401 = (!hasBringupPoison) obj in (
-          tempResult := __assign_2401;
-          __assign_2401
+        let obj = _g in let __assign_2402 = (!hasBringupPoison) obj in (
+          tempResult := __assign_2402;
+          __assign_2402
         )
       )
       | HxExpr.ECall (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in if (match _g with
@@ -13842,247 +14159,248 @@ let returnExprToOcaml = fun expr allowedValueIdents arityByIdent tyByIdent -> tr
         | HxExpr.EField (_, _) -> 8
         | HxExpr.ECall (_, _) -> 9
         | HxExpr.ELambda (_, _) -> 10
-        | HxExpr.ENew (_, _) -> 11
-        | HxExpr.EUnop (_, _) -> 12
-        | HxExpr.EBinop (_, _, _) -> 13
-        | HxExpr.ETernary (_, _, _) -> 14
-        | HxExpr.EAnon (_, _) -> 15
-        | HxExpr.EArrayDecl _ -> 16
-        | HxExpr.EArrayAccess (_, _) -> 17
-        | HxExpr.ECast (_, _) -> 18
-        | HxExpr.EUntyped _ -> 19
-        | HxExpr.EUnsupported _ -> 20) = 7 then let _g2 = match _g with
-        | HxExpr.EIdent __enum_param_2402 -> __enum_param_2402
-        | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g2 "__ocaml__" then if HxArray.length _g1 = 1 then let _g3 = HxArray.get _g1 0 in let arg = _g3 in if constFoldString arg != Obj.magic (HxRuntime.hx_null) then let __assign_2403 = false in (
-        tempResult := __assign_2403;
-        __assign_2403
+        | HxExpr.ETryCatchRaw _ -> 11
+        | HxExpr.ENew (_, _) -> 12
+        | HxExpr.EUnop (_, _) -> 13
+        | HxExpr.EBinop (_, _, _) -> 14
+        | HxExpr.ETernary (_, _, _) -> 15
+        | HxExpr.EAnon (_, _) -> 16
+        | HxExpr.EArrayDecl _ -> 17
+        | HxExpr.EArrayAccess (_, _) -> 18
+        | HxExpr.ECast (_, _) -> 19
+        | HxExpr.EUntyped _ -> 20
+        | HxExpr.EUnsupported _ -> 21) = 7 then let _g2 = match _g with
+        | HxExpr.EIdent __enum_param_2403 -> __enum_param_2403
+        | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g2 "__ocaml__" then if HxArray.length _g1 = 1 then let _g3 = HxArray.get _g1 0 in let arg = _g3 in if constFoldString arg != Obj.magic (HxRuntime.hx_null) then let __assign_2404 = false in (
+        tempResult := __assign_2404;
+        __assign_2404
       ) else let callee = _g in let args = _g1 in (
         ignore (if (!hasBringupPoison) callee then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         let _g4 = ref 0 in (
           ignore (while !_g4 < HxArray.length args do ignore (let a = HxArray.get args (!_g4) in (
-            ignore (let __old_2404 = !_g4 in let __new_2405 = HxInt.add __old_2404 1 in (
-              ignore (_g4 := __new_2405);
-              __new_2405
+            ignore (let __old_2405 = !_g4 in let __new_2406 = HxInt.add __old_2405 1 in (
+              ignore (_g4 := __new_2406);
+              __new_2406
             ));
             if (!hasBringupPoison) a then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
           )) done);
-          let __assign_2406 = false in (
-            tempResult := __assign_2406;
-            __assign_2406
+          let __assign_2407 = false in (
+            tempResult := __assign_2407;
+            __assign_2407
           )
         )
       ) else let callee = _g in let args = _g1 in (
         ignore (if (!hasBringupPoison) callee then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         ignore (let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let a = HxArray.get args (!_g3) in (
-          ignore (let __old_2407 = !_g3 in let __new_2408 = HxInt.add __old_2407 1 in (
-            ignore (_g3 := __new_2408);
-            __new_2408
+          ignore (let __old_2408 = !_g3 in let __new_2409 = HxInt.add __old_2408 1 in (
+            ignore (_g3 := __new_2409);
+            __new_2409
           ));
           if (!hasBringupPoison) a then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         )) done);
-        let __assign_2409 = false in (
-          tempResult := __assign_2409;
-          __assign_2409
+        let __assign_2410 = false in (
+          tempResult := __assign_2410;
+          __assign_2410
         )
       ) else let callee = _g in let args = _g1 in (
         ignore (if (!hasBringupPoison) callee then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         ignore (let _g3 = ref 0 in while !_g3 < HxArray.length args do ignore (let a = HxArray.get args (!_g3) in (
-          ignore (let __old_2410 = !_g3 in let __new_2411 = HxInt.add __old_2410 1 in (
-            ignore (_g3 := __new_2411);
-            __new_2411
+          ignore (let __old_2411 = !_g3 in let __new_2412 = HxInt.add __old_2411 1 in (
+            ignore (_g3 := __new_2412);
+            __new_2412
           ));
           if (!hasBringupPoison) a then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         )) done);
-        let __assign_2412 = false in (
-          tempResult := __assign_2412;
-          __assign_2412
+        let __assign_2413 = false in (
+          tempResult := __assign_2413;
+          __assign_2413
         )
       ) else let callee = _g in let args = _g1 in (
         ignore (if (!hasBringupPoison) callee then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = HxArray.get args (!_g2) in (
-          ignore (let __old_2413 = !_g2 in let __new_2414 = HxInt.add __old_2413 1 in (
-            ignore (_g2 := __new_2414);
-            __new_2414
+          ignore (let __old_2414 = !_g2 in let __new_2415 = HxInt.add __old_2414 1 in (
+            ignore (_g2 := __new_2415);
+            __new_2415
           ));
           if (!hasBringupPoison) a then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         )) done);
-        let __assign_2415 = false in (
-          tempResult := __assign_2415;
-          __assign_2415
+        let __assign_2416 = false in (
+          tempResult := __assign_2416;
+          __assign_2416
         )
       )
       | HxExpr.ENew (_p0, _p1) -> (
         ignore _p0;
         ignore _p1;
-        let __assign_2416 = true in (
-          tempResult := __assign_2416;
-          __assign_2416
+        let __assign_2417 = true in (
+          tempResult := __assign_2417;
+          __assign_2417
         )
       )
       | HxExpr.EUnop (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let op = _g in let inner = _g1 in match op with
-        | "!" | "-" -> let __assign_2418 = (!hasBringupPoison) inner in (
-          tempResult := __assign_2418;
-          __assign_2418
-        )
-        | _ -> let __assign_2417 = true in (
-          tempResult := __assign_2417;
-          __assign_2417
-        ))
-      | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in match op with
-        | "!=" | "%" | "&&" | "*" | "+" | "-" | "/" | "<" | "<=" | "==" | ">" | ">=" | "||" -> let __assign_2420 = (!hasBringupPoison) a || (!hasBringupPoison) b in (
-          tempResult := __assign_2420;
-          __assign_2420
-        )
-        | _ -> let __assign_2419 = true in (
+        | "!" | "-" -> let __assign_2419 = (!hasBringupPoison) inner in (
           tempResult := __assign_2419;
           __assign_2419
+        )
+        | _ -> let __assign_2418 = true in (
+          tempResult := __assign_2418;
+          __assign_2418
+        ))
+      | HxExpr.EBinop (_p0, _p1, _p2) -> (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in let op = _g in let a = _g1 in let b = _g2 in match op with
+        | "!=" | "%" | "&&" | "*" | "+" | "-" | "/" | "<" | "<=" | "==" | ">" | ">=" | "||" -> let __assign_2421 = (!hasBringupPoison) a || (!hasBringupPoison) b in (
+          tempResult := __assign_2421;
+          __assign_2421
+        )
+        | _ -> let __assign_2420 = true in (
+          tempResult := __assign_2420;
+          __assign_2420
         ))
       | HxExpr.EArrayDecl _p0 -> let _g = _p0 in let values = _g in (
         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let v = HxArray.get values (!_g2) in (
-          ignore (let __old_2421 = !_g2 in let __new_2422 = HxInt.add __old_2421 1 in (
-            ignore (_g2 := __new_2422);
-            __new_2422
+          ignore (let __old_2422 = !_g2 in let __new_2423 = HxInt.add __old_2422 1 in (
+            ignore (_g2 := __new_2423);
+            __new_2423
           ));
           if (!hasBringupPoison) v then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
         )) done);
-        let __assign_2423 = false in (
-          tempResult := __assign_2423;
-          __assign_2423
+        let __assign_2424 = false in (
+          tempResult := __assign_2424;
+          __assign_2424
         )
       )
-      | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let arr = _g in let idx = _g1 in let __assign_2424 = (!hasBringupPoison) arr || (!hasBringupPoison) idx in (
-        tempResult := __assign_2424;
-        __assign_2424
+      | HxExpr.EArrayAccess (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let arr = _g in let idx = _g1 in let __assign_2425 = (!hasBringupPoison) arr || (!hasBringupPoison) idx in (
+        tempResult := __assign_2425;
+        __assign_2425
       )
       | HxExpr.ECast (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr2 = _g in (
         ignore _g1;
-        let __assign_2425 = (!hasBringupPoison) expr2 in (
-          tempResult := __assign_2425;
-          __assign_2425
+        let __assign_2426 = (!hasBringupPoison) expr2 in (
+          tempResult := __assign_2426;
+          __assign_2426
         )
       )
-      | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr2 = _g in let __assign_2426 = (!hasBringupPoison) expr2 in (
-        tempResult := __assign_2426;
-        __assign_2426
+      | HxExpr.EUntyped _p0 -> let _g = _p0 in let expr2 = _g in let __assign_2427 = (!hasBringupPoison) expr2 in (
+        tempResult := __assign_2427;
+        __assign_2427
       )
       | HxExpr.EUnsupported _p0 -> (
         ignore _p0;
-        let __assign_2427 = true in (
-          tempResult := __assign_2427;
-          __assign_2427
+        let __assign_2428 = true in (
+          tempResult := __assign_2428;
+          __assign_2428
         )
       )
-      | _ -> let __assign_2391 = false in (
-        tempResult := __assign_2391;
-        __assign_2391
+      | _ -> let __assign_2392 = false in (
+        tempResult := __assign_2392;
+        __assign_2392
       ));
     !tempResult
   ) with
-    | HxRuntime.Hx_return __ret_2428 -> Obj.obj __ret_2428 in (
-    hasBringupPoison := __assign_2390;
-    __assign_2390
+    | HxRuntime.Hx_return __ret_2429 -> Obj.obj __ret_2429 in (
+    hasBringupPoison := __assign_2391;
+    __assign_2391
   ));
   ignore (if (!hasBringupPoison) expr then raise (HxRuntime.Hx_return (Obj.repr "(Obj.magic 0)")) else ());
   exprToOcaml expr arityByIdent tyByIdent
 ) with
-  | HxRuntime.Hx_return __ret_2429 -> Obj.obj __ret_2429
+  | HxRuntime.Hx_return __ret_2430 -> Obj.obj __ret_2430
 
 let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent tyByIdent -> try (
   ignore (if stmts == Obj.magic (HxRuntime.hx_null) || HxArray.length stmts = 0 then raise (HxRuntime.Hx_return (Obj.repr "()")) else ());
   let stmtAlwaysReturns = ref (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (let __assign_2430 = fun s -> let tempResult = ref false in (
+    ignore (let __assign_2431 = fun s -> let tempResult = ref false in (
       ignore (match s with
         | HxStmt.SBlock (_p0, _p1) -> let _g = _p0 in (
           ignore _p1;
-          let ss = _g in if ss == Obj.magic (HxRuntime.hx_null) || HxArray.length ss = 0 then let __assign_2432 = false in (
-            tempResult := __assign_2432;
-            __assign_2432
-          ) else let __assign_2433 = (!stmtAlwaysReturns) (HxArray.get ss (HxInt.sub (HxArray.length ss) 1)) in (
+          let ss = _g in if ss == Obj.magic (HxRuntime.hx_null) || HxArray.length ss = 0 then let __assign_2433 = false in (
             tempResult := __assign_2433;
             __assign_2433
+          ) else let __assign_2434 = (!stmtAlwaysReturns) (HxArray.get ss (HxInt.sub (HxArray.length ss) 1)) in (
+            tempResult := __assign_2434;
+            __assign_2434
           )
         )
         | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
           ignore _p3;
           ignore _g;
-          let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_2434 = elseBranch != Obj.magic (HxRuntime.hx_null) && (!stmtAlwaysReturns) thenBranch && (!stmtAlwaysReturns) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-            tempResult := __assign_2434;
-            __assign_2434
-          )
-        )
-        | HxStmt.SReturnVoid _p0 -> (
-          ignore _p0;
-          let __assign_2435 = true in (
+          let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in let __assign_2435 = elseBranch != Obj.magic (HxRuntime.hx_null) && (!stmtAlwaysReturns) thenBranch && (!stmtAlwaysReturns) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
             tempResult := __assign_2435;
             __assign_2435
           )
         )
-        | HxStmt.SReturn (_p0, _p1) -> (
+        | HxStmt.SReturnVoid _p0 -> (
           ignore _p0;
-          ignore _p1;
           let __assign_2436 = true in (
             tempResult := __assign_2436;
             __assign_2436
           )
         )
-        | _ -> let __assign_2431 = false in (
-          tempResult := __assign_2431;
-          __assign_2431
+        | HxStmt.SReturn (_p0, _p1) -> (
+          ignore _p0;
+          ignore _p1;
+          let __assign_2437 = true in (
+            tempResult := __assign_2437;
+            __assign_2437
+          )
+        )
+        | _ -> let __assign_2432 = false in (
+          tempResult := __assign_2432;
+          __assign_2432
         ));
       !tempResult
     ) in (
-      stmtAlwaysReturns := __assign_2430;
-      __assign_2430
+      stmtAlwaysReturns := __assign_2431;
+      __assign_2431
     ));
     let condToOcamlBool = fun e -> let tempResult1 = ref "" in (
       ignore (match e with
-        | HxExpr.EBool _p0 -> let _g = _p0 in let v = _g in if v then let __assign_2438 = "true" in (
-          tempResult1 := __assign_2438;
-          __assign_2438
-        ) else let __assign_2439 = "false" in (
+        | HxExpr.EBool _p0 -> let _g = _p0 in let v = _g in if v then let __assign_2439 = "true" in (
           tempResult1 := __assign_2439;
           __assign_2439
+        ) else let __assign_2440 = "false" in (
+          tempResult1 := __assign_2440;
+          __assign_2440
         )
         | HxExpr.EUnop (_p0, _p1) -> let _g = _p0 in (
           ignore _p1;
-          if HxString.equals _g "!" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_2440 = "true" in (
-            tempResult1 := __assign_2440;
-            __assign_2440
-          ) else let __assign_2441 = s in (
+          if HxString.equals _g "!" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_2441 = "true" in (
             tempResult1 := __assign_2441;
             __assign_2441
-          ) else let __assign_2442 = "true" in (
+          ) else let __assign_2442 = s in (
             tempResult1 := __assign_2442;
             __assign_2442
+          ) else let __assign_2443 = "true" in (
+            tempResult1 := __assign_2443;
+            __assign_2443
           )
         )
         | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = _p0 in (
           ignore _p1;
           ignore _p2;
-          let op = _g in if HxString.equals op "==" || HxString.equals op "!=" || HxString.equals op "<" || HxString.equals op ">" || HxString.equals op "<=" || HxString.equals op ">=" || HxString.equals op "&&" || HxString.equals op "||" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_2443 = "true" in (
-            tempResult1 := __assign_2443;
-            __assign_2443
-          ) else let __assign_2444 = s in (
+          let op = _g in if HxString.equals op "==" || HxString.equals op "!=" || HxString.equals op "<" || HxString.equals op ">" || HxString.equals op "<=" || HxString.equals op ">=" || HxString.equals op "&&" || HxString.equals op "||" then let s = returnExprToOcaml e allowedValueIdents arityByIdent tyByIdent in if HxString.equals s "(Obj.magic 0)" then let __assign_2444 = "true" in (
             tempResult1 := __assign_2444;
             __assign_2444
-          ) else let __assign_2445 = "true" in (
+          ) else let __assign_2445 = s in (
             tempResult1 := __assign_2445;
             __assign_2445
+          ) else let __assign_2446 = "true" in (
+            tempResult1 := __assign_2446;
+            __assign_2446
           )
         )
-        | _ -> let __assign_2437 = "true" in (
-          tempResult1 := __assign_2437;
-          __assign_2437
+        | _ -> let __assign_2438 = "true" in (
+          tempResult1 := __assign_2438;
+          __assign_2438
         ));
       !tempResult1
     ) in let stmtToUnit = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (let __assign_2446 = fun s -> let tempResult2 = ref "" in (
+      ignore (let __assign_2447 = fun s -> let tempResult2 = ref "" in (
         ignore (match s with
           | HxStmt.SBlock (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let ss = _g in (
             ignore _g1;
-            let __assign_2447 = stmtListToOcaml ss allowedValueIdents returnExc arityByIdent tyByIdent in (
-              tempResult2 := __assign_2447;
-              __assign_2447
+            let __assign_2448 = stmtListToOcaml ss allowedValueIdents returnExc arityByIdent tyByIdent in (
+              tempResult2 := __assign_2448;
+              __assign_2448
             )
           )
           | HxStmt.SVar (_p0, _p1, _p2, _p3) -> let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in let _g3 = _p3 in (
@@ -14090,39 +14408,39 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
             ignore _g1;
             ignore _g2;
             ignore _g3;
-            let __assign_2448 = "()" in (
-              tempResult2 := __assign_2448;
-              __assign_2448
+            let __assign_2449 = "()" in (
+              tempResult2 := __assign_2449;
+              __assign_2449
             )
           )
           | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in let _g3 = _p3 in let cond = _g in let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in (
             ignore _g3;
             let thenUnit = (!stmtToUnit) thenBranch in let tempString = ref "" in (
-              ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_2449 = "()" in (
-                tempString := __assign_2449;
-                __assign_2449
-              ) else let __assign_2450 = (!stmtToUnit) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+              ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_2450 = "()" in (
                 tempString := __assign_2450;
                 __assign_2450
-              ));
-              let elseUnit = !tempString in let __assign_2451 = ((((("if " ^ HxString.toStdString (condToOcamlBool cond)) ^ " then (") ^ HxString.toStdString thenUnit) ^ ") else (") ^ HxString.toStdString elseUnit) ^ ")" in (
-                tempResult2 := __assign_2451;
+              ) else let __assign_2451 = (!stmtToUnit) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+                tempString := __assign_2451;
                 __assign_2451
+              ));
+              let elseUnit = !tempString in let __assign_2452 = ((((("if " ^ HxString.toStdString (condToOcamlBool cond)) ^ " then (") ^ HxString.toStdString thenUnit) ^ ") else (") ^ HxString.toStdString elseUnit) ^ ")" in (
+                tempResult2 := __assign_2452;
+                __assign_2452
               )
             )
           )
           | HxStmt.SReturnVoid _p0 -> let _g = _p0 in (
             ignore _g;
-            let __assign_2452 = ("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr ()))" in (
-              tempResult2 := __assign_2452;
-              __assign_2452
+            let __assign_2453 = ("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr ()))" in (
+              tempResult2 := __assign_2453;
+              __assign_2453
             )
           )
           | HxStmt.SReturn (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
             ignore _g1;
-            let __assign_2453 = ((("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr (") ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")))" in (
-              tempResult2 := __assign_2453;
-              __assign_2453
+            let __assign_2454 = ((("raise (" ^ HxString.toStdString returnExc) ^ " (Obj.repr (") ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")))" in (
+              tempResult2 := __assign_2454;
+              __assign_2454
             )
           )
           | HxStmt.SExpr (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let expr = _g in (
@@ -14139,45 +14457,46 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
               | HxExpr.EField (_, _) -> 8
               | HxExpr.ECall (_, _) -> 9
               | HxExpr.ELambda (_, _) -> 10
-              | HxExpr.ENew (_, _) -> 11
-              | HxExpr.EUnop (_, _) -> 12
-              | HxExpr.EBinop (_, _, _) -> 13
-              | HxExpr.ETernary (_, _, _) -> 14
-              | HxExpr.EAnon (_, _) -> 15
-              | HxExpr.EArrayDecl _ -> 16
-              | HxExpr.EArrayAccess (_, _) -> 17
-              | HxExpr.ECast (_, _) -> 18
-              | HxExpr.EUntyped _ -> 19
-              | HxExpr.EUnsupported _ -> 20) = 13 then let _g2 = match expr with
-              | HxExpr.EBinop (__enum_param_2454, _, _) -> __enum_param_2454
+              | HxExpr.ETryCatchRaw _ -> 11
+              | HxExpr.ENew (_, _) -> 12
+              | HxExpr.EUnop (_, _) -> 13
+              | HxExpr.EBinop (_, _, _) -> 14
+              | HxExpr.ETernary (_, _, _) -> 15
+              | HxExpr.EAnon (_, _) -> 16
+              | HxExpr.EArrayDecl _ -> 17
+              | HxExpr.EArrayAccess (_, _) -> 18
+              | HxExpr.ECast (_, _) -> 19
+              | HxExpr.EUntyped _ -> 20
+              | HxExpr.EUnsupported _ -> 21) = 14 then let _g2 = match expr with
+              | HxExpr.EBinop (__enum_param_2455, _, _) -> __enum_param_2455
               | _ -> failwith "Unexpected enum parameter" in let _g3 = match expr with
-              | HxExpr.EBinop (_, __enum_param_2455, _) -> __enum_param_2455
+              | HxExpr.EBinop (_, __enum_param_2456, _) -> __enum_param_2456
               | _ -> failwith "Unexpected enum parameter" in let _g4 = match expr with
-              | HxExpr.EBinop (_, _, __enum_param_2456) -> __enum_param_2456
+              | HxExpr.EBinop (_, _, __enum_param_2457) -> __enum_param_2457
               | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g2 "=" then (
               ignore _g3;
               ignore _g4;
-              let __assign_2457 = "()" in (
-                tempResult2 := __assign_2457;
-                __assign_2457
+              let __assign_2458 = "()" in (
+                tempResult2 := __assign_2458;
+                __assign_2458
               )
-            ) else let __assign_2458 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
-              tempResult2 := __assign_2458;
-              __assign_2458
             ) else let __assign_2459 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
               tempResult2 := __assign_2459;
               __assign_2459
+            ) else let __assign_2460 = ("ignore (" ^ HxString.toStdString (returnExprToOcaml expr allowedValueIdents arityByIdent tyByIdent)) ^ ")" in (
+              tempResult2 := __assign_2460;
+              __assign_2460
             )
           ));
         !tempResult2
       ) in (
-        stmtToUnit := __assign_2446;
-        __assign_2446
+        stmtToUnit := __assign_2447;
+        __assign_2447
       ));
       let out = ref "()" in (
-        ignore (let _g = ref 0 in let _g1 = HxArray.length stmts in while !_g < _g1 do ignore (let i = let __old_2460 = !_g in let __new_2461 = HxInt.add __old_2460 1 in (
-          ignore (_g := __new_2461);
-          __old_2460
+        ignore (let _g = ref 0 in let _g1 = HxArray.length stmts in while !_g < _g1 do ignore (let i = let __old_2461 = !_g in let __new_2462 = HxInt.add __old_2461 1 in (
+          ignore (_g := __new_2462);
+          __old_2461
         ) in let s = HxArray.get stmts (HxInt.sub (HxInt.sub (HxArray.length stmts) 1) i) in if (match s with
           | HxStmt.SBlock (_, _) -> 0
           | HxStmt.SVar (_, _, _, _) -> 1
@@ -14185,25 +14504,25 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
           | HxStmt.SReturnVoid _ -> 3
           | HxStmt.SReturn (_, _) -> 4
           | HxStmt.SExpr (_, _) -> 5) = 1 then ignore (let _g2 = match s with
-          | HxStmt.SVar (__enum_param_2462, _, _, _) -> __enum_param_2462
+          | HxStmt.SVar (__enum_param_2463, _, _, _) -> __enum_param_2463
           | _ -> failwith "Unexpected enum parameter" in let _g3 = match s with
-          | HxStmt.SVar (_, __enum_param_2463, _, _) -> __enum_param_2463
+          | HxStmt.SVar (_, __enum_param_2464, _, _) -> __enum_param_2464
           | _ -> failwith "Unexpected enum parameter" in let _g4 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" (match s with
-          | HxStmt.SVar (_, _, __enum_param_2464, _) -> __enum_param_2464
+          | HxStmt.SVar (_, _, __enum_param_2465, _) -> __enum_param_2465
           | _ -> failwith "Unexpected enum parameter")) in let _g5 = match s with
-          | HxStmt.SVar (_, _, _, __enum_param_2465) -> __enum_param_2465
+          | HxStmt.SVar (_, _, _, __enum_param_2466) -> __enum_param_2466
           | _ -> failwith "Unexpected enum parameter" in let name = _g2 in (
           ignore _g3;
           let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g4) in (
             ignore _g5;
             let tempString1 = ref "" in (
-              ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2466 = "(Obj.magic 0)" in (
-                tempString1 := __assign_2466;
-                __assign_2466
-              ) else if init == Obj.magic (HxRuntime.hx_null) then let __assign_2467 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+              ignore (if init == Obj.magic (HxRuntime.hx_null) then let __assign_2467 = "(Obj.magic 0)" in (
                 tempString1 := __assign_2467;
                 __assign_2467
-              ) else if (let __enum_idx_2468 = init in if __enum_idx_2468 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_2468 with
+              ) else if init == Obj.magic (HxRuntime.hx_null) then let __assign_2468 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+                tempString1 := __assign_2468;
+                __assign_2468
+              ) else if (let __enum_idx_2469 = init in if __enum_idx_2469 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_2469 with
                 | HxExpr.ENull -> 0
                 | HxExpr.EBool _ -> 1
                 | HxExpr.EString _ -> 2
@@ -14215,44 +14534,45 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
                 | HxExpr.EField (_, _) -> 8
                 | HxExpr.ECall (_, _) -> 9
                 | HxExpr.ELambda (_, _) -> 10
-                | HxExpr.ENew (_, _) -> 11
-                | HxExpr.EUnop (_, _) -> 12
-                | HxExpr.EBinop (_, _, _) -> 13
-                | HxExpr.ETernary (_, _, _) -> 14
-                | HxExpr.EAnon (_, _) -> 15
-                | HxExpr.EArrayDecl _ -> 16
-                | HxExpr.EArrayAccess (_, _) -> 17
-                | HxExpr.ECast (_, _) -> 18
-                | HxExpr.EUntyped _ -> 19
-                | HxExpr.EUnsupported _ -> 20) = 7 then let _g6 = let __enum_param_2470 = init in if __enum_param_2470 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2470 with
-                | HxExpr.EIdent __enum_param_2469 -> __enum_param_2469
-                | _ -> failwith "Unexpected enum parameter" in let n = _g6 in if HxString.equals n name then let __assign_2471 = "(Obj.magic 0)" in (
-                tempString1 := __assign_2471;
-                __assign_2471
-              ) else let __assign_2472 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+                | HxExpr.ETryCatchRaw _ -> 11
+                | HxExpr.ENew (_, _) -> 12
+                | HxExpr.EUnop (_, _) -> 13
+                | HxExpr.EBinop (_, _, _) -> 14
+                | HxExpr.ETernary (_, _, _) -> 15
+                | HxExpr.EAnon (_, _) -> 16
+                | HxExpr.EArrayDecl _ -> 17
+                | HxExpr.EArrayAccess (_, _) -> 18
+                | HxExpr.ECast (_, _) -> 19
+                | HxExpr.EUntyped _ -> 20
+                | HxExpr.EUnsupported _ -> 21) = 7 then let _g6 = let __enum_param_2471 = init in if __enum_param_2471 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_2471 with
+                | HxExpr.EIdent __enum_param_2470 -> __enum_param_2470
+                | _ -> failwith "Unexpected enum parameter" in let n = _g6 in if HxString.equals n name then let __assign_2472 = "(Obj.magic 0)" in (
                 tempString1 := __assign_2472;
                 __assign_2472
               ) else let __assign_2473 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
                 tempString1 := __assign_2473;
                 __assign_2473
-              ));
-              let rhs = !tempString1 in let ident = ocamlValueIdent name in let __assign_2474 = ((((((("let " ^ HxString.toStdString ident) ^ " = ") ^ HxString.toStdString rhs) ^ " in (ignore ") ^ HxString.toStdString ident) ^ "; (") ^ HxString.toStdString (!out)) ^ "))" in (
-                out := __assign_2474;
+              ) else let __assign_2474 = returnExprToOcaml (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) allowedValueIdents arityByIdent tyByIdent in (
+                tempString1 := __assign_2474;
                 __assign_2474
+              ));
+              let rhs = !tempString1 in let ident = ocamlValueIdent name in let __assign_2475 = ((((((("let " ^ HxString.toStdString ident) ^ " = ") ^ HxString.toStdString rhs) ^ " in (ignore ") ^ HxString.toStdString ident) ^ "; (") ^ HxString.toStdString (!out)) ^ "))" in (
+                out := __assign_2475;
+                __assign_2475
               )
             )
           )
         )) else ignore (let tempRight = ref "" in (
-          ignore (if (!stmtAlwaysReturns) s then let __assign_2475 = (!stmtToUnit) s in (
-            tempRight := __assign_2475;
-            __assign_2475
-          ) else let __assign_2476 = ((("(" ^ HxString.toStdString ((!stmtToUnit) s)) ^ "; ") ^ HxString.toStdString (!out)) ^ ")" in (
+          ignore (if (!stmtAlwaysReturns) s then let __assign_2476 = (!stmtToUnit) s in (
             tempRight := __assign_2476;
             __assign_2476
-          ));
-          let __assign_2477 = !tempRight in (
-            out := __assign_2477;
+          ) else let __assign_2477 = ((("(" ^ HxString.toStdString ((!stmtToUnit) s)) ^ "; ") ^ HxString.toStdString (!out)) ^ ")" in (
+            tempRight := __assign_2477;
             __assign_2477
+          ));
+          let __assign_2478 = !tempRight in (
+            out := __assign_2478;
+            __assign_2478
           )
         ))) done);
         !out
@@ -14260,7 +14580,7 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_2478 -> Obj.obj __ret_2478
+  | HxRuntime.Hx_return __ret_2479 -> Obj.obj __ret_2479
 
 let emitToDir = fun p outDir emitFullBodies -> (
   ignore (if outDir == Obj.magic (HxRuntime.hx_null) || HxString.length (StringTools.trim outDir) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: missing outDir") ["Dynamic"; "String"]) else ());
@@ -14269,42 +14589,42 @@ let emitToDir = fun p outDir emitFullBodies -> (
     let ocamldepSort = fun mlFiles -> try (
       ignore (if mlFiles == Obj.magic (HxRuntime.hx_null) || HxArray.length mlFiles <= 1 then raise (HxRuntime.Hx_return (Obj.repr mlFiles)) else ());
       let tempString = ref "" in (
-        ignore (let v = HxSys.getEnv "OCAMLDEP" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2479 = "ocamldep" in (
-          tempString := __assign_2479;
-          __assign_2479
-        ) else let __assign_2480 = v in (
+        ignore (let v = HxSys.getEnv "OCAMLDEP" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2480 = "ocamldep" in (
           tempString := __assign_2480;
           __assign_2480
+        ) else let __assign_2481 = v in (
+          tempString := __assign_2481;
+          __assign_2481
         ));
-        let ocamldep = !tempString in let p2 = Sys_io_Process.create ocamldep (HxArray.concat (let __arr_2481 = HxArray.create () in (
-          ignore (HxArray.push __arr_2481 "-sort");
-          __arr_2481
+        let ocamldep = !tempString in let p2 = Sys_io_Process.create ocamldep (HxArray.concat (let __arr_2482 = HxArray.create () in (
+          ignore (HxArray.push __arr_2482 "-sort");
+          __arr_2482
         )) mlFiles) (HxRuntime.hx_null) in let chunks = HxArray.create () in (
-          ignore (try while true do ignore (HxArray.push chunks (let __obj_2482 = p2.stdout in __obj_2482.readLine (Obj.magic __obj_2482) ())) done with
+          ignore (try while true do ignore (HxArray.push chunks (let __obj_2483 = p2.stdout in __obj_2483.readLine (Obj.magic __obj_2483) ())) done with
             | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
             | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-            | HxRuntime.Hx_return __ret_2483 -> raise (HxRuntime.Hx_return __ret_2483)
-            | HxRuntime.Hx_exception (__exn_v_2484, __exn_tags_2485) -> if HxRuntime.tags_has __exn_tags_2485 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_2484 : Haxe_io_Eof.t) in (
+            | HxRuntime.Hx_return __ret_2484 -> raise (HxRuntime.Hx_return __ret_2484)
+            | HxRuntime.Hx_exception (__exn_v_2485, __exn_tags_2486) -> if HxRuntime.tags_has __exn_tags_2486 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_2485 : Haxe_io_Eof.t) in (
               ignore _hx;
               ()
-            ) else HxRuntime.hx_throw_typed __exn_v_2484 __exn_tags_2485
-            | __exn_2486 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_2486) : Haxe_io_Eof.t) in (
+            ) else HxRuntime.hx_throw_typed __exn_v_2485 __exn_tags_2486
+            | __exn_2487 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_2487) : Haxe_io_Eof.t) in (
               ignore _hx;
               ()
-            ) else raise (__exn_2486));
+            ) else raise (__exn_2487));
           let code = Sys_io_Process.exitCode p2 () in (
             ignore (Sys_io_Process.close p2 ());
             ignore (if code <> 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("stage3 emitter: ocamldep -sort failed with exit code " ^ string_of_int code)) ["Dynamic"; "String"]) else ());
             let sorted = HxArray.create () in (
               ignore (let _g = ref 0 in while !_g < HxArray.length chunks do ignore (let c = HxArray.get chunks (!_g) in (
-                ignore (let __old_2487 = !_g in let __new_2488 = HxInt.add __old_2487 1 in (
-                  ignore (_g := __new_2488);
-                  __new_2488
+                ignore (let __old_2488 = !_g in let __new_2489 = HxInt.add __old_2488 1 in (
+                  ignore (_g := __new_2489);
+                  __new_2489
                 ));
                 let _g2 = ref 0 in let _g1 = HxString.split c " " in try while !_g2 < HxArray.length _g1 do try ignore (let t = HxArray.get _g1 (!_g2) in (
-                  ignore (let __old_2489 = !_g2 in let __new_2490 = HxInt.add __old_2489 1 in (
-                    ignore (_g2 := __new_2490);
-                    __new_2490
+                  ignore (let __old_2490 = !_g2 in let __new_2491 = HxInt.add __old_2490 1 in (
+                    ignore (_g2 := __new_2491);
+                    __new_2491
                   ));
                   let s = StringTools.trim t in (
                     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_continue) else ());
@@ -14322,35 +14642,35 @@ let emitToDir = fun p outDir emitFullBodies -> (
         )
       )
     ) with
-      | HxRuntime.Hx_return __ret_2491 -> Obj.obj __ret_2491 in let generatedPaths = HxArray.create () in (
+      | HxRuntime.Hx_return __ret_2492 -> Obj.obj __ret_2492 in let generatedPaths = HxArray.create () in (
       ignore (let _g = ref 0 in let _g1 = MacroExpandedProgram.getGeneratedOcamlModules p () in try while !_g < HxArray.length _g1 do try ignore (let gm = HxArray.get _g1 (!_g) in (
-        ignore (let __old_2492 = !_g in let __new_2493 = HxInt.add __old_2492 1 in (
-          ignore (_g := __new_2493);
-          __new_2493
+        ignore (let __old_2493 = !_g in let __new_2494 = HxInt.add __old_2493 1 in (
+          ignore (_g := __new_2494);
+          __new_2494
         ));
         ignore (if gm == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
         let tempString1 = ref "" in (
-          ignore (if Obj.obj (HxAnon.get gm "name") == Obj.magic (HxRuntime.hx_null) then let __assign_2494 = "" in (
-            tempString1 := __assign_2494;
-            __assign_2494
-          ) else let __assign_2495 = StringTools.trim (Obj.obj (HxAnon.get gm "name")) in (
+          ignore (if Obj.obj (HxAnon.get gm "name") == Obj.magic (HxRuntime.hx_null) then let __assign_2495 = "" in (
             tempString1 := __assign_2495;
             __assign_2495
+          ) else let __assign_2496 = StringTools.trim (Obj.obj (HxAnon.get gm "name")) in (
+            tempString1 := __assign_2496;
+            __assign_2496
           ));
           let name = !tempString1 in (
             ignore (if HxString.length name = 0 then raise (HxRuntime.Hx_continue) else ());
-            let path = Haxe_io_Path.join (let __arr_2496 = HxArray.create () in (
-              ignore (HxArray.push __arr_2496 outAbs);
-              ignore (HxArray.push __arr_2496 (HxString.toStdString name ^ ".ml"));
-              __arr_2496
+            let path = Haxe_io_Path.join (let __arr_2497 = HxArray.create () in (
+              ignore (HxArray.push __arr_2497 outAbs);
+              ignore (HxArray.push __arr_2497 (HxString.toStdString name ^ ".ml"));
+              __arr_2497
             )) in (
               ignore (let tempString2 = ref "" in (
-                ignore (if Obj.obj (HxAnon.get gm "source") == Obj.magic (HxRuntime.hx_null) then let __assign_2497 = "" in (
-                  tempString2 := __assign_2497;
-                  __assign_2497
-                ) else let __assign_2498 = Obj.obj (HxAnon.get gm "source") in (
+                ignore (if Obj.obj (HxAnon.get gm "source") == Obj.magic (HxRuntime.hx_null) then let __assign_2498 = "" in (
                   tempString2 := __assign_2498;
                   __assign_2498
+                ) else let __assign_2499 = Obj.obj (HxAnon.get gm "source") in (
+                  tempString2 := __assign_2499;
+                  __assign_2499
                 ));
                 let content = !tempString2 in HxFile.saveContent path content
               ));
@@ -14361,50 +14681,50 @@ let emitToDir = fun p outDir emitFullBodies -> (
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      ignore (let shimName = "Std" in let shimPath = Haxe_io_Path.join (let __arr_2499 = HxArray.create () in (
-        ignore (HxArray.push __arr_2499 outAbs);
-        ignore (HxArray.push __arr_2499 (HxString.toStdString shimName ^ ".ml"));
-        __arr_2499
-      )) in if not (HxFileSystem.exists shimPath) then ignore ((
-        ignore (HxFile.saveContent shimPath (("(* hxhx(stage3) bootstrap shim: Std *)\n" ^ "let isOfType _ _ = false\n") ^ "let string _ = \"\"\n"));
-        HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
-      )) else ());
-      ignore (let shimName = "Lambda" in let shimPath = Haxe_io_Path.join (let __arr_2500 = HxArray.create () in (
+      ignore (let shimName = "Std" in let shimPath = Haxe_io_Path.join (let __arr_2500 = HxArray.create () in (
         ignore (HxArray.push __arr_2500 outAbs);
         ignore (HxArray.push __arr_2500 (HxString.toStdString shimName ^ ".ml"));
         __arr_2500
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
-        ignore (HxFile.saveContent shimPath (((("(* hxhx(stage3) bootstrap shim: Lambda *)\n" ^ "let has _ _ = false\n") ^ "let exists _ _ = false\n") ^ "let iter _ _ = ()\n") ^ "let count _ = 0\n"));
+        ignore (HxFile.saveContent shimPath (("(* hxhx(stage3) bootstrap shim: Std *)\n" ^ "let isOfType _ _ = false\n") ^ "let string _ = \"\"\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "Reflect" in let shimPath = Haxe_io_Path.join (let __arr_2501 = HxArray.create () in (
+      ignore (let shimName = "Lambda" in let shimPath = Haxe_io_Path.join (let __arr_2501 = HxArray.create () in (
         ignore (HxArray.push __arr_2501 outAbs);
         ignore (HxArray.push __arr_2501 (HxString.toStdString shimName ^ ".ml"));
         __arr_2501
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
-        ignore (HxFile.saveContent shimPath (((((((("(* hxhx(stage3) bootstrap shim: Reflect *)\n" ^ "let field _ _ = (Obj.magic 0)\n") ^ "let fields _ = (Obj.magic 0)\n") ^ "let getProperty _ _ = (Obj.magic 0)\n") ^ "let setProperty _ _ _ = ()\n") ^ "let hasField _ _ = false\n") ^ "let isFunction _ = false\n") ^ "let isObject _ = true\n") ^ "let compare _ _ = 0\n"));
+        ignore (HxFile.saveContent shimPath (((("(* hxhx(stage3) bootstrap shim: Lambda *)\n" ^ "let has _ _ = false\n") ^ "let exists _ _ = false\n") ^ "let iter _ _ = ()\n") ^ "let count _ = 0\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "IgnoredFixture" in let shimPath = Haxe_io_Path.join (let __arr_2502 = HxArray.create () in (
+      ignore (let shimName = "Reflect" in let shimPath = Haxe_io_Path.join (let __arr_2502 = HxArray.create () in (
         ignore (HxArray.push __arr_2502 outAbs);
         ignore (HxArray.push __arr_2502 (HxString.toStdString shimName ^ ".ml"));
         __arr_2502
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
-        ignore (HxFile.saveContent shimPath ((("(* hxhx(stage3) bootstrap shim: IgnoredFixture *)\n" ^ "type t = Obj.t\n") ^ "let notIgnored _ = (Obj.magic 0)\n") ^ "let ignored _ = (Obj.magic 0)\n"));
+        ignore (HxFile.saveContent shimPath (((((((("(* hxhx(stage3) bootstrap shim: Reflect *)\n" ^ "let field _ _ = (Obj.magic 0)\n") ^ "let fields _ = (Obj.magic 0)\n") ^ "let getProperty _ _ = (Obj.magic 0)\n") ^ "let setProperty _ _ _ = ()\n") ^ "let hasField _ _ = false\n") ^ "let isFunction _ = false\n") ^ "let isObject _ = true\n") ^ "let compare _ _ = 0\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "HxPosInfos" in let shimPath = Haxe_io_Path.join (let __arr_2503 = HxArray.create () in (
+      ignore (let shimName = "IgnoredFixture" in let shimPath = Haxe_io_Path.join (let __arr_2503 = HxArray.create () in (
         ignore (HxArray.push __arr_2503 outAbs);
         ignore (HxArray.push __arr_2503 (HxString.toStdString shimName ^ ".ml"));
         __arr_2503
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
-        ignore (HxFile.saveContent shimPath ((((((("(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n" ^ "type t = {\n") ^ "  fileName : string;\n") ^ "  lineNumber : int;\n") ^ "  className : string;\n") ^ "  methodName : string;\n") ^ "  customParams : Obj.t;\n") ^ "}\n"));
+        ignore (HxFile.saveContent shimPath ((("(* hxhx(stage3) bootstrap shim: IgnoredFixture *)\n" ^ "type t = Obj.t\n") ^ "let notIgnored _ = (Obj.magic 0)\n") ^ "let ignored _ = (Obj.magic 0)\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "HxInt64" in let shimPath = Haxe_io_Path.join (let __arr_2504 = HxArray.create () in (
+      ignore (let shimName = "HxPosInfos" in let shimPath = Haxe_io_Path.join (let __arr_2504 = HxArray.create () in (
         ignore (HxArray.push __arr_2504 outAbs);
         ignore (HxArray.push __arr_2504 (HxString.toStdString shimName ^ ".ml"));
         __arr_2504
+      )) in if not (HxFileSystem.exists shimPath) then ignore ((
+        ignore (HxFile.saveContent shimPath ((((((("(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n" ^ "type t = {\n") ^ "  fileName : string;\n") ^ "  lineNumber : int;\n") ^ "  className : string;\n") ^ "  methodName : string;\n") ^ "  customParams : Obj.t;\n") ^ "}\n"));
+        HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
+      )) else ());
+      ignore (let shimName = "HxInt64" in let shimPath = Haxe_io_Path.join (let __arr_2505 = HxArray.create () in (
+        ignore (HxArray.push __arr_2505 outAbs);
+        ignore (HxArray.push __arr_2505 (HxString.toStdString shimName ^ ".ml"));
+        __arr_2505
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
         ignore (HxFile.saveContent shimPath (((("(* hxhx(stage3) bootstrap shim: haxe.Int64 (shape-only) *)\n" ^ "type t = {\n") ^ "  low : int;\n") ^ "  high : int;\n") ^ "}\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
@@ -14415,17 +14735,17 @@ let emitToDir = fun p outDir emitFullBodies -> (
           ignore (if className == Obj.magic (HxRuntime.hx_null) || HxString.length className = 0 || HxString.equals className "Unknown" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
           let parsedFns = HxClassDecl.getFunctions mainClass in let parsedByName = HxMap.create_string () in (
             ignore (let _g = ref 0 in while !_g < HxArray.length parsedFns do ignore (let fn = HxArray.get parsedFns (!_g) in (
-              ignore (let __old_2505 = !_g in let __new_2506 = HxInt.add __old_2505 1 in (
-                ignore (_g := __new_2506);
-                __new_2506
+              ignore (let __old_2506 = !_g in let __new_2507 = HxInt.add __old_2506 1 in (
+                ignore (_g := __new_2507);
+                __new_2507
               ));
               let key = HxFunctionDecl.getName fn in HxMap.set_string parsedByName key fn
             )) done);
             let typedFns = TyClassEnv.getFunctions (TyModuleEnv.getMainClass (TypedModule.getEnv tm ()) ()) () in let arityByName = HxMap.create_string () in (
               ignore (let _g = ref 0 in while !_g < HxArray.length typedFns do ignore (let tf = HxArray.get typedFns (!_g) in (
-                ignore (let __old_2507 = !_g in let __new_2508 = HxInt.add __old_2507 1 in (
-                  ignore (_g := __new_2508);
-                  __new_2508
+                ignore (let __old_2508 = !_g in let __new_2509 = HxInt.add __old_2508 1 in (
+                  ignore (_g := __new_2509);
+                  __new_2509
                 ));
                 let key = TyFunctionEnv.getName tf () in let value = HxArray.length (TyFunctionEnv.getParams tf ()) in HxMap.set_string arityByName key value
               )) done);
@@ -14433,67 +14753,67 @@ let emitToDir = fun p outDir emitFullBodies -> (
                 ignore (HxArray.push out "(* Generated by hxhx(stage3) bootstrap emitter *)");
                 ignore (HxArray.push out "");
                 let sawMain = ref false in let exceptions = HxArray.create () in (
-                  ignore (let _g = ref 0 in let _g1 = HxArray.length typedFns in while !_g < _g1 do ignore (let i = let __old_2509 = !_g in let __new_2510 = HxInt.add __old_2509 1 in (
-                    ignore (_g := __new_2510);
-                    __old_2509
+                  ignore (let _g = ref 0 in let _g1 = HxArray.length typedFns in while !_g < _g1 do ignore (let i = let __old_2510 = !_g in let __new_2511 = HxInt.add __old_2510 1 in (
+                    ignore (_g := __new_2511);
+                    __old_2510
                   ) in let tf = HxArray.get typedFns i in let nameRaw = TyFunctionEnv.getName tf () in let name = ocamlValueIdent nameRaw in (
-                    ignore (if HxString.equals name "main" then ignore (let __assign_2511 = true in (
-                      sawMain := __assign_2511;
-                      __assign_2511
+                    ignore (if HxString.equals name "main" then ignore (let __assign_2512 = true in (
+                      sawMain := __assign_2512;
+                      __assign_2512
                     )) else ());
                     let args = TyFunctionEnv.getParams tf () in let tempString3 = ref "" in (
-                      ignore (if HxArray.length args = 0 then let __assign_2512 = "()" in (
-                        tempString3 := __assign_2512;
-                        __assign_2512
+                      ignore (if HxArray.length args = 0 then let __assign_2513 = "()" in (
+                        tempString3 := __assign_2513;
+                        __assign_2513
                       ) else let tempArray = ref (Obj.magic ()) in (
-                        ignore (let _g2 = let __arr_2513 = HxArray.create () in __arr_2513 in (
+                        ignore (let _g2 = let __arr_2514 = HxArray.create () in __arr_2514 in (
                           ignore (let _g3 = ref 0 in let _g4 = args in while !_g3 < HxArray.length _g4 do ignore (let v = HxArray.get _g4 (!_g3) in (
-                            ignore (let __old_2514 = !_g3 in let __new_2515 = HxInt.add __old_2514 1 in (
-                              ignore (_g3 := __new_2515);
-                              __new_2515
+                            ignore (let __old_2515 = !_g3 in let __new_2516 = HxInt.add __old_2515 1 in (
+                              ignore (_g3 := __new_2516);
+                              __new_2516
                             ));
                             HxArray.push _g2 (((("(" ^ HxString.toStdString (ocamlValueIdent (TySymbol.getName v ()))) ^ " : ") ^ HxString.toStdString (ocamlTypeFromTy (TySymbol.getType v ()))) ^ ")")
                           )) done);
-                          let __assign_2516 = _g2 in (
-                            tempArray := __assign_2516;
-                            __assign_2516
+                          let __assign_2517 = _g2 in (
+                            tempArray := __assign_2517;
+                            __assign_2517
                           )
                         ));
-                        let __assign_2517 = HxArray.join (!tempArray) " " (fun x -> x) in (
-                          tempString3 := __assign_2517;
-                          __assign_2517
+                        let __assign_2518 = HxArray.join (!tempArray) " " (fun x -> x) in (
+                          tempString3 := __assign_2518;
+                          __assign_2518
                         )
                       ));
                       let ocamlArgs = !tempString3 in let parsedFn = HxMap.get_string parsedByName nameRaw in let retTy = ocamlTypeFromTy (TyFunctionEnv.getReturnType tf ()) in let allowed = HxMap.create_string () in let tyByIdent = HxMap.create_string () in (
                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = HxArray.get args (!_g2) in (
-                          ignore (let __old_2518 = !_g2 in let __new_2519 = HxInt.add __old_2518 1 in (
-                            ignore (_g2 := __new_2519);
-                            __new_2519
+                          ignore (let __old_2519 = !_g2 in let __new_2520 = HxInt.add __old_2519 1 in (
+                            ignore (_g2 := __new_2520);
+                            __new_2520
                           ));
                           let key = TySymbol.getName a () in HxMap.set_string allowed key true
                         )) done);
                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length args do ignore (let a = HxArray.get args (!_g2) in (
-                          ignore (let __old_2520 = !_g2 in let __new_2521 = HxInt.add __old_2520 1 in (
-                            ignore (_g2 := __new_2521);
-                            __new_2521
+                          ignore (let __old_2521 = !_g2 in let __new_2522 = HxInt.add __old_2521 1 in (
+                            ignore (_g2 := __new_2522);
+                            __new_2522
                           ));
                           let key = TySymbol.getName a () in let value = TySymbol.getType a () in HxMap.set_string tyByIdent key value
                         )) done);
                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length typedFns do ignore (let tf2 = HxArray.get typedFns (!_g2) in (
-                          ignore (let __old_2522 = !_g2 in let __new_2523 = HxInt.add __old_2522 1 in (
-                            ignore (_g2 := __new_2523);
-                            __new_2523
+                          ignore (let __old_2523 = !_g2 in let __new_2524 = HxInt.add __old_2523 1 in (
+                            ignore (_g2 := __new_2524);
+                            __new_2524
                           ));
                           let key = TyFunctionEnv.getName tf2 () in HxMap.set_string allowed key true
                         )) done);
                         let collectLocalNamesInStmt = ref (Obj.magic (HxRuntime.hx_null)) in (
-                          ignore (let __assign_2524 = fun s out -> match s with
+                          ignore (let __assign_2525 = fun s out -> match s with
                             | HxStmt.SBlock (_p0, _p1) -> ignore (let _g2 = _p0 in (
                               ignore _p1;
                               let stmts = _g2 in let _g4 = ref 0 in while !_g4 < HxArray.length stmts do ignore (let ss = HxArray.get stmts (!_g4) in (
-                                ignore (let __old_2525 = !_g4 in let __new_2526 = HxInt.add __old_2525 1 in (
-                                  ignore (_g4 := __new_2526);
-                                  __new_2526
+                                ignore (let __old_2526 = !_g4 in let __new_2527 = HxInt.add __old_2526 1 in (
+                                  ignore (_g4 := __new_2527);
+                                  __new_2527
                                 ));
                                 (!collectLocalNamesInStmt) ss out
                               )) done
@@ -14515,53 +14835,53 @@ let emitToDir = fun p outDir emitFullBodies -> (
                               )
                             ))
                             | _ -> ignore () in (
-                            collectLocalNamesInStmt := __assign_2524;
-                            __assign_2524
+                            collectLocalNamesInStmt := __assign_2525;
+                            __assign_2525
                           ));
                           ignore (if emitFullBodies && parsedFn != Obj.magic (HxRuntime.hx_null) then ignore (let localNames = HxMap.create_string () in (
                             ignore (let _g2 = ref 0 in let _g3 = HxFunctionDecl.getBody parsedFn in while !_g2 < HxArray.length _g3 do ignore (let s = HxArray.get _g3 (!_g2) in (
-                              ignore (let __old_2527 = !_g2 in let __new_2528 = HxInt.add __old_2527 1 in (
-                                ignore (_g2 := __new_2528);
-                                __new_2528
+                              ignore (let __old_2528 = !_g2 in let __new_2529 = HxInt.add __old_2528 1 in (
+                                ignore (_g2 := __new_2529);
+                                __new_2529
                               ));
                               (!collectLocalNamesInStmt) s localNames
                             )) done);
-                            ignore (let name2 = HxIterator.of_array (HxMap.keys_string localNames) in while (let __iter_2529 = name2 in fun () -> HxIterator.hasNext __iter_2529) () do ignore (let name3 = (let __iter_2530 = name2 in fun () -> HxIterator.next __iter_2530) () in HxMap.set_string allowed name3 true) done);
+                            ignore (let name2 = HxIterator.of_array (HxMap.keys_string localNames) in while (let __iter_2530 = name2 in fun () -> HxIterator.hasNext __iter_2530) () do ignore (let name3 = (let __iter_2531 = name2 in fun () -> HxIterator.next __iter_2531) () in HxMap.set_string allowed name3 true) done);
                             let _g2 = ref 0 in let _g3 = TyFunctionEnv.getLocals tf () in while !_g2 < HxArray.length _g3 do ignore (let l = HxArray.get _g3 (!_g2) in (
-                              ignore (let __old_2531 = !_g2 in let __new_2532 = HxInt.add __old_2531 1 in (
-                                ignore (_g2 := __new_2532);
-                                __new_2532
+                              ignore (let __old_2532 = !_g2 in let __new_2533 = HxInt.add __old_2532 1 in (
+                                ignore (_g2 := __new_2533);
+                                __new_2533
                               ));
                               let tempLeft = ref (HxRuntime.hx_null) in (
-                                ignore (let key = TySymbol.getName l () in let __assign_2533 = HxMap.get_string allowed key in (
-                                  tempLeft := __assign_2533;
-                                  __assign_2533
+                                ignore (let key = TySymbol.getName l () in let __assign_2534 = HxMap.get_string allowed key in (
+                                  tempLeft := __assign_2534;
+                                  __assign_2534
                                 ));
-                                if let __nullable_2534 = !tempLeft in if __nullable_2534 == HxRuntime.hx_null then false else Obj.obj __nullable_2534 = true then ignore (let key = TySymbol.getName l () in let value = TySymbol.getType l () in HxMap.set_string tyByIdent key value) else ()
+                                if let __nullable_2535 = !tempLeft in if __nullable_2535 == HxRuntime.hx_null then false else Obj.obj __nullable_2535 = true then ignore (let key = TySymbol.getName l () in let value = TySymbol.getType l () in HxMap.set_string tyByIdent key value) else ()
                               )
                             )) done
                           )) else ());
                           let tempString4 = ref "" in (
-                            ignore (if parsedFn == Obj.magic (HxRuntime.hx_null) then let __assign_2535 = "()" in (
-                              tempString4 := __assign_2535;
-                              __assign_2535
-                            ) else if not (emitFullBodies) then let __assign_2536 = returnExprToOcaml (HxFunctionDecl.getFirstReturnExpr parsedFn ()) allowed arityByName tyByIdent in (
+                            ignore (if parsedFn == Obj.magic (HxRuntime.hx_null) then let __assign_2536 = "()" in (
                               tempString4 := __assign_2536;
                               __assign_2536
+                            ) else if not (emitFullBodies) then let __assign_2537 = returnExprToOcaml (HxFunctionDecl.getFirstReturnExpr parsedFn ()) allowed arityByName tyByIdent in (
+                              tempString4 := __assign_2537;
+                              __assign_2537
                             ) else let exc = "HxReturn_" ^ HxString.toStdString (escapeOcamlIdentPart nameRaw) in (
                               ignore (HxArray.push exceptions (("exception " ^ HxString.toStdString exc) ^ " of Obj.t"));
-                              let stmts = HxFunctionDecl.getBody parsedFn in let __assign_2537 = (((((((("((" ^ "try (let _ = ") ^ HxString.toStdString (stmtListToOcaml stmts allowed exc arityByName tyByIdent)) ^ " in (Obj.magic 0)) ") ^ "with ") ^ HxString.toStdString exc) ^ " v -> (Obj.magic v)") ^ ") : ") ^ HxString.toStdString retTy) ^ ")" in (
-                                tempString4 := __assign_2537;
-                                __assign_2537
+                              let stmts = HxFunctionDecl.getBody parsedFn in let __assign_2538 = (((((((("((" ^ "try (let _ = ") ^ HxString.toStdString (stmtListToOcaml stmts allowed exc arityByName tyByIdent)) ^ " in (Obj.magic 0)) ") ^ "with ") ^ HxString.toStdString exc) ^ " v -> (Obj.magic v)") ^ ") : ") ^ HxString.toStdString retTy) ^ ")" in (
+                                tempString4 := __assign_2538;
+                                __assign_2538
                               )
                             ));
                             let body = !tempString4 in let tempString5 = ref "" in (
-                              ignore (if i = 0 then let __assign_2538 = "let rec" in (
-                                tempString5 := __assign_2538;
-                                __assign_2538
-                              ) else let __assign_2539 = "and" in (
+                              ignore (if i = 0 then let __assign_2539 = "let rec" in (
                                 tempString5 := __assign_2539;
                                 __assign_2539
+                              ) else let __assign_2540 = "and" in (
+                                tempString5 := __assign_2540;
+                                __assign_2540
                               ));
                               let kw = !tempString5 in (
                                 ignore (HxArray.push out ((((((((HxString.toStdString kw ^ " ") ^ HxString.toStdString name) ^ " ") ^ HxString.toStdString ocamlArgs) ^ " : ") ^ HxString.toStdString retTy) ^ " = ") ^ HxString.toStdString body));
@@ -14578,10 +14898,10 @@ let emitToDir = fun p outDir emitFullBodies -> (
                     ignore (HxArray.push out "let () = ignore (main ())");
                     HxArray.push out ""
                   )) else ());
-                  let mlPath = Haxe_io_Path.join (let __arr_2540 = HxArray.create () in (
-                    ignore (HxArray.push __arr_2540 outAbs);
-                    ignore (HxArray.push __arr_2540 (HxString.toStdString className ^ ".ml"));
-                    __arr_2540
+                  let mlPath = Haxe_io_Path.join (let __arr_2541 = HxArray.create () in (
+                    ignore (HxArray.push __arr_2541 outAbs);
+                    ignore (HxArray.push __arr_2541 (HxString.toStdString className ^ ".ml"));
+                    __arr_2541
                   )) in (
                     ignore (let content = HxArray.join out "\n" (fun x -> x) in HxFile.saveContent mlPath content);
                     HxString.toStdString className ^ ".ml"
@@ -14591,71 +14911,71 @@ let emitToDir = fun p outDir emitFullBodies -> (
             )
           )
         ) with
-          | HxRuntime.Hx_return __ret_2541 -> Obj.obj __ret_2541 in let emittedModulePaths = HxArray.create () in let deps = HxArray.slice typedModules 1 (HxArray.length typedModules) in (
+          | HxRuntime.Hx_return __ret_2542 -> Obj.obj __ret_2542 in let emittedModulePaths = HxArray.create () in let deps = HxArray.slice typedModules 1 (HxArray.length typedModules) in (
           ignore (let _g = ref 0 in while !_g < HxArray.length deps do ignore (let tm = HxArray.get deps (!_g) in (
-            ignore (let __old_2542 = !_g in let __new_2543 = HxInt.add __old_2542 1 in (
-              ignore (_g := __new_2543);
-              __new_2543
+            ignore (let __old_2543 = !_g in let __new_2544 = HxInt.add __old_2543 1 in (
+              ignore (_g := __new_2544);
+              __new_2544
             ));
             let path = emitModule tm false in if path != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push emittedModulePaths path) else ()
           )) done);
           let rootPath = emitModule (HxArray.get typedModules 0) true in (
             ignore (if rootPath != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push emittedModulePaths rootPath) else ());
-            let exePath = Haxe_io_Path.join (let __arr_2544 = HxArray.create () in (
-              ignore (HxArray.push __arr_2544 outAbs);
-              ignore (HxArray.push __arr_2544 "out.exe");
-              __arr_2544
+            let exePath = Haxe_io_Path.join (let __arr_2545 = HxArray.create () in (
+              ignore (HxArray.push __arr_2545 outAbs);
+              ignore (HxArray.push __arr_2545 "out.exe");
+              __arr_2545
             )) in (
               ignore (try if HxFileSystem.exists exePath then ignore (HxFileSystem.deleteFile exePath) else () with
                 | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                 | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                | HxRuntime.Hx_return __ret_2545 -> raise (HxRuntime.Hx_return __ret_2545)
-                | HxRuntime.Hx_exception (__exn_v_2546, __exn_tags_2547) -> if true then let _hx = (__exn_v_2546 : Obj.t) in (
+                | HxRuntime.Hx_return __ret_2546 -> raise (HxRuntime.Hx_return __ret_2546)
+                | HxRuntime.Hx_exception (__exn_v_2547, __exn_tags_2548) -> if true then let _hx = (__exn_v_2547 : Obj.t) in (
                   ignore _hx;
                   ()
-                ) else HxRuntime.hx_throw_typed __exn_v_2546 __exn_tags_2547
-                | __exn_2548 -> if true then let _hx = (Obj.repr __exn_2548 : Obj.t) in (
+                ) else HxRuntime.hx_throw_typed __exn_v_2547 __exn_tags_2548
+                | __exn_2549 -> if true then let _hx = (Obj.repr __exn_2549 : Obj.t) in (
                   ignore _hx;
                   ()
-                ) else raise (__exn_2548));
+                ) else raise (__exn_2549));
               let tempString6 = ref "" in (
-                ignore (let v = HxSys.getEnv "OCAMLOPT" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2549 = "ocamlopt" in (
-                  tempString6 := __assign_2549;
-                  __assign_2549
-                ) else let __assign_2550 = v in (
+                ignore (let v = HxSys.getEnv "OCAMLOPT" in if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_2550 = "ocamlopt" in (
                   tempString6 := __assign_2550;
                   __assign_2550
+                ) else let __assign_2551 = v in (
+                  tempString6 := __assign_2551;
+                  __assign_2551
                 ));
                 let tempMaybeString = ref (Obj.magic ()) in (
-                  ignore (try let __assign_2551 = HxSys.getCwd () in (
-                    tempMaybeString := __assign_2551;
-                    __assign_2551
+                  ignore (try let __assign_2552 = HxSys.getCwd () in (
+                    tempMaybeString := __assign_2552;
+                    __assign_2552
                   ) with
                     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                    | HxRuntime.Hx_return __ret_2552 -> raise (HxRuntime.Hx_return __ret_2552)
-                    | HxRuntime.Hx_exception (__exn_v_2553, __exn_tags_2554) -> if true then let _hx = (__exn_v_2553 : Obj.t) in (
+                    | HxRuntime.Hx_return __ret_2553 -> raise (HxRuntime.Hx_return __ret_2553)
+                    | HxRuntime.Hx_exception (__exn_v_2554, __exn_tags_2555) -> if true then let _hx = (__exn_v_2554 : Obj.t) in (
                       ignore _hx;
-                      let __assign_2555 = Obj.magic (HxRuntime.hx_null) in (
-                        tempMaybeString := __assign_2555;
-                        __assign_2555
+                      let __assign_2556 = Obj.magic (HxRuntime.hx_null) in (
+                        tempMaybeString := __assign_2556;
+                        __assign_2556
                       )
-                    ) else HxRuntime.hx_throw_typed __exn_v_2553 __exn_tags_2554
-                    | __exn_2556 -> if true then let _hx = (Obj.repr __exn_2556 : Obj.t) in (
+                    ) else HxRuntime.hx_throw_typed __exn_v_2554 __exn_tags_2555
+                    | __exn_2557 -> if true then let _hx = (Obj.repr __exn_2557 : Obj.t) in (
                       ignore _hx;
-                      let __assign_2557 = Obj.magic (HxRuntime.hx_null) in (
-                        tempMaybeString := __assign_2557;
-                        __assign_2557
+                      let __assign_2558 = Obj.magic (HxRuntime.hx_null) in (
+                        tempMaybeString := __assign_2558;
+                        __assign_2558
                       )
-                    ) else raise (__exn_2556));
+                    ) else raise (__exn_2557));
                   let prevCwd = !tempMaybeString in (
                     ignore (if prevCwd == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "stage3 emitter: cannot read current working directory") ["Dynamic"; "String"]) else ());
                     ignore (HxSys.setCwd outAbs);
                     let orderedMl = ocamldepSort (HxArray.concat generatedPaths emittedModulePaths) in let orderedNoRoot = HxArray.create () in (
                       ignore (let _g = ref 0 in while !_g < HxArray.length orderedMl do ignore (let f = HxArray.get orderedMl (!_g) in (
-                        ignore (let __old_2558 = !_g in let __new_2559 = HxInt.add __old_2558 1 in (
-                          ignore (_g := __new_2559);
-                          __new_2559
+                        ignore (let __old_2559 = !_g in let __new_2560 = HxInt.add __old_2559 1 in (
+                          ignore (_g := __new_2560);
+                          __new_2560
                         ));
                         if rootPath == Obj.magic (HxRuntime.hx_null) || not (HxString.equals f rootPath) then ignore (HxArray.push orderedNoRoot f) else ()
                       )) done);
@@ -14664,34 +14984,34 @@ let emitToDir = fun p outDir emitFullBodies -> (
                         ignore (HxArray.push args "-o");
                         ignore (HxArray.push args "out.exe");
                         ignore (let _g = ref 0 in while !_g < HxArray.length orderedNoRoot do ignore (let p2 = HxArray.get orderedNoRoot (!_g) in (
-                          ignore (let __old_2560 = !_g in let __new_2561 = HxInt.add __old_2560 1 in (
-                            ignore (_g := __new_2561);
-                            __new_2561
+                          ignore (let __old_2561 = !_g in let __new_2562 = HxInt.add __old_2561 1 in (
+                            ignore (_g := __new_2562);
+                            __new_2562
                           ));
                           HxArray.push args p2
                         )) done);
                         let tempNumber = ref 0 in (
-                          ignore (try let __assign_2562 = HxSys.command (!tempString6) (Some args) in (
-                            tempNumber := __assign_2562;
-                            __assign_2562
+                          ignore (try let __assign_2563 = HxSys.command (!tempString6) (Some args) in (
+                            tempNumber := __assign_2563;
+                            __assign_2563
                           ) with
                             | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                             | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                            | HxRuntime.Hx_return __ret_2563 -> raise (HxRuntime.Hx_return __ret_2563)
-                            | HxRuntime.Hx_exception (__exn_v_2564, __exn_tags_2565) -> if true then let e = (__exn_v_2564 : Obj.t) in (
+                            | HxRuntime.Hx_return __ret_2564 -> raise (HxRuntime.Hx_return __ret_2564)
+                            | HxRuntime.Hx_exception (__exn_v_2565, __exn_tags_2566) -> if true then let e = (__exn_v_2565 : Obj.t) in (
                               ignore e;
                               (
                                 ignore (HxSys.setCwd prevCwd);
                                 HxType.hx_throw_typed_rtti e ["Dynamic"]
                               )
-                            ) else HxRuntime.hx_throw_typed __exn_v_2564 __exn_tags_2565
-                            | __exn_2566 -> if true then let e = (Obj.repr __exn_2566 : Obj.t) in (
+                            ) else HxRuntime.hx_throw_typed __exn_v_2565 __exn_tags_2566
+                            | __exn_2567 -> if true then let e = (Obj.repr __exn_2567 : Obj.t) in (
                               ignore e;
                               (
                                 ignore (HxSys.setCwd prevCwd);
                                 HxType.hx_throw_typed_rtti e ["Dynamic"]
                               )
-                            ) else raise (__exn_2566));
+                            ) else raise (__exn_2567));
                           let code = !tempNumber in (
                             ignore (HxSys.setCwd prevCwd);
                             ignore (if code <> 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("stage3 emitter: ocamlopt failed with exit code " ^ string_of_int code)) ["Dynamic"; "String"]) else ());

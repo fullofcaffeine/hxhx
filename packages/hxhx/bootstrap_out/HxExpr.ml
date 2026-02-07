@@ -14,6 +14,7 @@ type hxexpr =
 | EField of hxexpr * string
 | ECall of hxexpr * hxexpr HxArray.t
 | ELambda of string HxArray.t * hxexpr
+| ETryCatchRaw of string
 | ENew of string * hxexpr HxArray.t
 | EUnop of string * hxexpr
 | EBinop of string * hxexpr * hxexpr

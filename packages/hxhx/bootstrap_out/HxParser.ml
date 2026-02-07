@@ -1308,12 +1308,12 @@ let syncToStmtEnd = fun self () -> ignore (try (
       | HxTokenKind.TColon -> 11
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
-      | HxTokenKind.TOther _ -> 14) = 10 then let __assign_736 = true in (
-      tempBool := __assign_736;
-      __assign_736
-    ) else let __assign_737 = false in (
-      tempBool := __assign_737;
-      __assign_737
+      | HxTokenKind.TOther _ -> 14) = 10 then let __assign_831 = true in (
+      tempBool := __assign_831;
+      __assign_831
+    ) else let __assign_832 = false in (
+      tempBool := __assign_832;
+      __assign_832
     ));
     let tempBool1 = ref false in (
       ignore (let _g = self.cur.kind in if (match _g with
@@ -1331,12 +1331,12 @@ let syncToStmtEnd = fun self () -> ignore (try (
         | HxTokenKind.TColon -> 11
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 7 then let __assign_738 = true in (
-        tempBool1 := __assign_738;
-        __assign_738
-      ) else let __assign_739 = false in (
-        tempBool1 := __assign_739;
-        __assign_739
+        | HxTokenKind.TOther _ -> 14) = 7 then let __assign_833 = true in (
+        tempBool1 := __assign_833;
+        __assign_833
+      ) else let __assign_834 = false in (
+        tempBool1 := __assign_834;
+        __assign_834
       ));
       let tempBool2 = ref false in (
         ignore (let _g = self.cur.kind in if (match _g with
@@ -1354,52 +1354,52 @@ let syncToStmtEnd = fun self () -> ignore (try (
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_740 = true in (
-          tempBool2 := __assign_740;
-          __assign_740
-        ) else let __assign_741 = false in (
-          tempBool2 := __assign_741;
-          __assign_741
+          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_835 = true in (
+          tempBool2 := __assign_835;
+          __assign_835
+        ) else let __assign_836 = false in (
+          tempBool2 := __assign_836;
+          __assign_836
         ));
         ignore (if not (not (!tempBool) && not (!tempBool1) && not (!tempBool2)) then raise (HxRuntime.Hx_break) else ());
         let _g = self.cur.kind in match _g with
           | HxTokenKind.TLBrace -> raise (HxRuntime.Hx_return (Obj.repr ()))
           | HxTokenKind.TLParen -> ignore ((
             ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_746 = self.peeked1 in (
-                self.cur <- __assign_746;
-                __assign_746
+              ignore (let __assign_841 = self.peeked1 in (
+                self.cur <- __assign_841;
+                __assign_841
               ));
-              ignore (let __assign_747 = self.peeked2 in (
-                self.peeked1 <- __assign_747;
-                __assign_747
+              ignore (let __assign_842 = self.peeked2 in (
+                self.peeked1 <- __assign_842;
+                __assign_842
               ));
-              let __assign_748 = Obj.magic (HxRuntime.hx_null) in (
-                self.peeked2 <- __assign_748;
-                __assign_748
+              let __assign_843 = Obj.magic (HxRuntime.hx_null) in (
+                self.peeked2 <- __assign_843;
+                __assign_843
               )
-            )) else ignore (let __assign_749 = HxLexer.next (self.lex) () in (
-              self.cur <- __assign_749;
-              __assign_749
+            )) else ignore (let __assign_844 = HxLexer.next (self.lex) () in (
+              self.cur <- __assign_844;
+              __assign_844
             )));
             skipBalancedParens self ()
           ))
           | _ -> ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_742 = self.peeked1 in (
-              self.cur <- __assign_742;
-              __assign_742
+            ignore (let __assign_837 = self.peeked1 in (
+              self.cur <- __assign_837;
+              __assign_837
             ));
-            ignore (let __assign_743 = self.peeked2 in (
-              self.peeked1 <- __assign_743;
-              __assign_743
+            ignore (let __assign_838 = self.peeked2 in (
+              self.peeked1 <- __assign_838;
+              __assign_838
             ));
-            let __assign_744 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_744;
-              __assign_744
+            let __assign_839 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_839;
+              __assign_839
             )
-          )) else ignore (let __assign_745 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_745;
-            __assign_745
+          )) else ignore (let __assign_840 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_840;
+            __assign_840
           )))
       )
     )
@@ -1422,167 +1422,167 @@ let syncToStmtEnd = fun self () -> ignore (try (
       | HxTokenKind.TColon -> 11
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
-      | HxTokenKind.TOther _ -> 14) = 10 then let __assign_750 = true in (
-      tempBool3 := __assign_750;
-      __assign_750
-    ) else let __assign_751 = false in (
-      tempBool3 := __assign_751;
-      __assign_751
+      | HxTokenKind.TOther _ -> 14) = 10 then let __assign_845 = true in (
+      tempBool3 := __assign_845;
+      __assign_845
+    ) else let __assign_846 = false in (
+      tempBool3 := __assign_846;
+      __assign_846
     ));
     if !tempBool3 then ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (let __assign_752 = self.peeked1 in (
-        self.cur <- __assign_752;
-        __assign_752
+      ignore (let __assign_847 = self.peeked1 in (
+        self.cur <- __assign_847;
+        __assign_847
       ));
-      ignore (let __assign_753 = self.peeked2 in (
-        self.peeked1 <- __assign_753;
-        __assign_753
+      ignore (let __assign_848 = self.peeked2 in (
+        self.peeked1 <- __assign_848;
+        __assign_848
       ));
-      let __assign_754 = Obj.magic (HxRuntime.hx_null) in (
-        self.peeked2 <- __assign_754;
-        __assign_754
+      let __assign_849 = Obj.magic (HxRuntime.hx_null) in (
+        self.peeked2 <- __assign_849;
+        __assign_849
       )
-    )) else ignore (let __assign_755 = HxLexer.next (self.lex) () in (
-      self.cur <- __assign_755;
-      __assign_755
+    )) else ignore (let __assign_850 = HxLexer.next (self.lex) () in (
+      self.cur <- __assign_850;
+      __assign_850
     ))) else ()
   )
 ) with
-  | HxRuntime.Hx_return __ret_756 -> Obj.obj __ret_756)
+  | HxRuntime.Hx_return __ret_851 -> Obj.obj __ret_851)
 
 let keywordText = fun k -> let tempResult = ref "" in (
   ignore (match k with
-    | HxKeyword.KPackage -> let __assign_1051 = "package" in (
-      tempResult := __assign_1051;
-      __assign_1051
+    | HxKeyword.KPackage -> let __assign_1146 = "package" in (
+      tempResult := __assign_1146;
+      __assign_1146
     )
-    | HxKeyword.KImport -> let __assign_1052 = "import" in (
-      tempResult := __assign_1052;
-      __assign_1052
+    | HxKeyword.KImport -> let __assign_1147 = "import" in (
+      tempResult := __assign_1147;
+      __assign_1147
     )
-    | HxKeyword.KUsing -> let __assign_1053 = "using" in (
-      tempResult := __assign_1053;
-      __assign_1053
+    | HxKeyword.KUsing -> let __assign_1148 = "using" in (
+      tempResult := __assign_1148;
+      __assign_1148
     )
-    | HxKeyword.KAs -> let __assign_1054 = "as" in (
-      tempResult := __assign_1054;
-      __assign_1054
+    | HxKeyword.KAs -> let __assign_1149 = "as" in (
+      tempResult := __assign_1149;
+      __assign_1149
     )
-    | HxKeyword.KClass -> let __assign_1055 = "class" in (
-      tempResult := __assign_1055;
-      __assign_1055
+    | HxKeyword.KClass -> let __assign_1150 = "class" in (
+      tempResult := __assign_1150;
+      __assign_1150
     )
-    | HxKeyword.KPublic -> let __assign_1056 = "public" in (
-      tempResult := __assign_1056;
-      __assign_1056
+    | HxKeyword.KPublic -> let __assign_1151 = "public" in (
+      tempResult := __assign_1151;
+      __assign_1151
     )
-    | HxKeyword.KPrivate -> let __assign_1057 = "private" in (
-      tempResult := __assign_1057;
-      __assign_1057
+    | HxKeyword.KPrivate -> let __assign_1152 = "private" in (
+      tempResult := __assign_1152;
+      __assign_1152
     )
-    | HxKeyword.KStatic -> let __assign_1058 = "static" in (
-      tempResult := __assign_1058;
-      __assign_1058
+    | HxKeyword.KStatic -> let __assign_1153 = "static" in (
+      tempResult := __assign_1153;
+      __assign_1153
     )
-    | HxKeyword.KFunction -> let __assign_1059 = "function" in (
-      tempResult := __assign_1059;
-      __assign_1059
+    | HxKeyword.KFunction -> let __assign_1154 = "function" in (
+      tempResult := __assign_1154;
+      __assign_1154
     )
-    | HxKeyword.KReturn -> let __assign_1060 = "return" in (
-      tempResult := __assign_1060;
-      __assign_1060
+    | HxKeyword.KReturn -> let __assign_1155 = "return" in (
+      tempResult := __assign_1155;
+      __assign_1155
     )
-    | HxKeyword.KIf -> let __assign_1061 = "if" in (
-      tempResult := __assign_1061;
-      __assign_1061
+    | HxKeyword.KIf -> let __assign_1156 = "if" in (
+      tempResult := __assign_1156;
+      __assign_1156
     )
-    | HxKeyword.KElse -> let __assign_1062 = "else" in (
-      tempResult := __assign_1062;
-      __assign_1062
+    | HxKeyword.KElse -> let __assign_1157 = "else" in (
+      tempResult := __assign_1157;
+      __assign_1157
     )
-    | HxKeyword.KSwitch -> let __assign_1063 = "switch" in (
-      tempResult := __assign_1063;
-      __assign_1063
+    | HxKeyword.KSwitch -> let __assign_1158 = "switch" in (
+      tempResult := __assign_1158;
+      __assign_1158
     )
-    | HxKeyword.KCase -> let __assign_1064 = "case" in (
-      tempResult := __assign_1064;
-      __assign_1064
+    | HxKeyword.KCase -> let __assign_1159 = "case" in (
+      tempResult := __assign_1159;
+      __assign_1159
     )
-    | HxKeyword.KDefault -> let __assign_1065 = "default" in (
-      tempResult := __assign_1065;
-      __assign_1065
+    | HxKeyword.KDefault -> let __assign_1160 = "default" in (
+      tempResult := __assign_1160;
+      __assign_1160
     )
-    | HxKeyword.KTry -> let __assign_1066 = "try" in (
-      tempResult := __assign_1066;
-      __assign_1066
+    | HxKeyword.KTry -> let __assign_1161 = "try" in (
+      tempResult := __assign_1161;
+      __assign_1161
     )
-    | HxKeyword.KCatch -> let __assign_1067 = "catch" in (
-      tempResult := __assign_1067;
-      __assign_1067
+    | HxKeyword.KCatch -> let __assign_1162 = "catch" in (
+      tempResult := __assign_1162;
+      __assign_1162
     )
-    | HxKeyword.KThrow -> let __assign_1068 = "throw" in (
-      tempResult := __assign_1068;
-      __assign_1068
+    | HxKeyword.KThrow -> let __assign_1163 = "throw" in (
+      tempResult := __assign_1163;
+      __assign_1163
     )
-    | HxKeyword.KWhile -> let __assign_1069 = "while" in (
-      tempResult := __assign_1069;
-      __assign_1069
+    | HxKeyword.KWhile -> let __assign_1164 = "while" in (
+      tempResult := __assign_1164;
+      __assign_1164
     )
-    | HxKeyword.KDo -> let __assign_1070 = "do" in (
-      tempResult := __assign_1070;
-      __assign_1070
+    | HxKeyword.KDo -> let __assign_1165 = "do" in (
+      tempResult := __assign_1165;
+      __assign_1165
     )
-    | HxKeyword.KFor -> let __assign_1071 = "for" in (
-      tempResult := __assign_1071;
-      __assign_1071
+    | HxKeyword.KFor -> let __assign_1166 = "for" in (
+      tempResult := __assign_1166;
+      __assign_1166
     )
-    | HxKeyword.KBreak -> let __assign_1072 = "break" in (
-      tempResult := __assign_1072;
-      __assign_1072
+    | HxKeyword.KBreak -> let __assign_1167 = "break" in (
+      tempResult := __assign_1167;
+      __assign_1167
     )
-    | HxKeyword.KContinue -> let __assign_1073 = "continue" in (
-      tempResult := __assign_1073;
-      __assign_1073
+    | HxKeyword.KContinue -> let __assign_1168 = "continue" in (
+      tempResult := __assign_1168;
+      __assign_1168
     )
-    | HxKeyword.KUntyped -> let __assign_1074 = "untyped" in (
-      tempResult := __assign_1074;
-      __assign_1074
+    | HxKeyword.KUntyped -> let __assign_1169 = "untyped" in (
+      tempResult := __assign_1169;
+      __assign_1169
     )
-    | HxKeyword.KCast -> let __assign_1075 = "cast" in (
-      tempResult := __assign_1075;
-      __assign_1075
+    | HxKeyword.KCast -> let __assign_1170 = "cast" in (
+      tempResult := __assign_1170;
+      __assign_1170
     )
-    | HxKeyword.KVar -> let __assign_1076 = "var" in (
-      tempResult := __assign_1076;
-      __assign_1076
+    | HxKeyword.KVar -> let __assign_1171 = "var" in (
+      tempResult := __assign_1171;
+      __assign_1171
     )
-    | HxKeyword.KFinal -> let __assign_1077 = "final" in (
-      tempResult := __assign_1077;
-      __assign_1077
+    | HxKeyword.KFinal -> let __assign_1172 = "final" in (
+      tempResult := __assign_1172;
+      __assign_1172
     )
-    | HxKeyword.KNew -> let __assign_1078 = "new" in (
-      tempResult := __assign_1078;
-      __assign_1078
+    | HxKeyword.KNew -> let __assign_1173 = "new" in (
+      tempResult := __assign_1173;
+      __assign_1173
     )
-    | HxKeyword.KThis -> let __assign_1079 = "this" in (
-      tempResult := __assign_1079;
-      __assign_1079
+    | HxKeyword.KThis -> let __assign_1174 = "this" in (
+      tempResult := __assign_1174;
+      __assign_1174
     )
-    | HxKeyword.KSuper -> let __assign_1080 = "super" in (
-      tempResult := __assign_1080;
-      __assign_1080
+    | HxKeyword.KSuper -> let __assign_1175 = "super" in (
+      tempResult := __assign_1175;
+      __assign_1175
     )
-    | HxKeyword.KTrue -> let __assign_1081 = "true" in (
-      tempResult := __assign_1081;
-      __assign_1081
+    | HxKeyword.KTrue -> let __assign_1176 = "true" in (
+      tempResult := __assign_1176;
+      __assign_1176
     )
-    | HxKeyword.KFalse -> let __assign_1082 = "false" in (
-      tempResult := __assign_1082;
-      __assign_1082
+    | HxKeyword.KFalse -> let __assign_1177 = "false" in (
+      tempResult := __assign_1177;
+      __assign_1177
     )
-    | HxKeyword.KNull -> let __assign_1083 = "null" in (
-      tempResult := __assign_1083;
-      __assign_1083
+    | HxKeyword.KNull -> let __assign_1178 = "null" in (
+      tempResult := __assign_1178;
+      __assign_1178
     ));
   !tempResult
 )
@@ -1875,59 +1875,587 @@ let readTypeHintText = fun self (stop : unit -> bool) -> let parts = HxArray.cre
   HxArray.join parts "" (fun x -> x)
 )
 
+let parseTryCatchExpr = fun self (stop : unit -> bool) -> try let _gthis = self in let tempBool = ref false in (
+  ignore (let _g = self.cur.kind in if (match _g with
+    | HxTokenKind.TEof -> 0
+    | HxTokenKind.TIdent _ -> 1
+    | HxTokenKind.TString _ -> 2
+    | HxTokenKind.TInt _ -> 3
+    | HxTokenKind.TFloat _ -> 4
+    | HxTokenKind.TKeyword _ -> 5
+    | HxTokenKind.TLBrace -> 6
+    | HxTokenKind.TRBrace -> 7
+    | HxTokenKind.TLParen -> 8
+    | HxTokenKind.TRParen -> 9
+    | HxTokenKind.TSemicolon -> 10
+    | HxTokenKind.TColon -> 11
+    | HxTokenKind.TDot -> 12
+    | HxTokenKind.TComma -> 13
+    | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
+    | HxTokenKind.TKeyword __enum_param_679 -> __enum_param_679
+    | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
+    | HxKeyword.KPackage -> 0
+    | HxKeyword.KImport -> 1
+    | HxKeyword.KUsing -> 2
+    | HxKeyword.KAs -> 3
+    | HxKeyword.KClass -> 4
+    | HxKeyword.KPublic -> 5
+    | HxKeyword.KPrivate -> 6
+    | HxKeyword.KStatic -> 7
+    | HxKeyword.KFunction -> 8
+    | HxKeyword.KReturn -> 9
+    | HxKeyword.KIf -> 10
+    | HxKeyword.KElse -> 11
+    | HxKeyword.KSwitch -> 12
+    | HxKeyword.KCase -> 13
+    | HxKeyword.KDefault -> 14
+    | HxKeyword.KTry -> 15
+    | HxKeyword.KCatch -> 16
+    | HxKeyword.KThrow -> 17
+    | HxKeyword.KWhile -> 18
+    | HxKeyword.KDo -> 19
+    | HxKeyword.KFor -> 20
+    | HxKeyword.KBreak -> 21
+    | HxKeyword.KContinue -> 22
+    | HxKeyword.KUntyped -> 23
+    | HxKeyword.KCast -> 24
+    | HxKeyword.KVar -> 25
+    | HxKeyword.KFinal -> 26
+    | HxKeyword.KNew -> 27
+    | HxKeyword.KThis -> 28
+    | HxKeyword.KSuper -> 29
+    | HxKeyword.KTrue -> 30
+    | HxKeyword.KFalse -> 31
+    | HxKeyword.KNull -> 32) = 15 then let __assign_680 = true in (
+    tempBool := __assign_680;
+    __assign_680
+  ) else let __assign_681 = false in (
+    tempBool := __assign_681;
+    __assign_681
+  ) else let __assign_682 = false in (
+    tempBool := __assign_682;
+    __assign_682
+  ));
+  ignore (if not (!tempBool) then raise (HxRuntime.Hx_return (Obj.repr (HxExpr.EUnsupported "try"))) else ());
+  let raw = StringBuf.create () in let consumeBalancedBraces = fun () -> (
+    ignore (expect _gthis (HxTokenKind.TLBrace) "'{'");
+    ignore (StringBuf.add raw (Obj.repr "{"));
+    ignore (if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+      ignore (let __assign_683 = _gthis.peeked1 in (
+        _gthis.cur <- __assign_683;
+        __assign_683
+      ));
+      ignore (let __assign_684 = _gthis.peeked2 in (
+        _gthis.peeked1 <- __assign_684;
+        __assign_684
+      ));
+      let __assign_685 = Obj.magic (HxRuntime.hx_null) in (
+        _gthis.peeked2 <- __assign_685;
+        __assign_685
+      )
+    )) else ignore (let __assign_686 = HxLexer.next (_gthis.lex) () in (
+      _gthis.cur <- __assign_686;
+      __assign_686
+    )));
+    let depth = ref 1 in try while !depth > 0 && not (stop ()) do try ignore (let _g = _gthis.cur.kind in match _g with
+      | HxTokenKind.TEof -> raise (HxRuntime.Hx_break)
+      | HxTokenKind.TLBrace -> ignore ((
+        ignore (StringBuf.add raw (Obj.repr "{"));
+        ignore (if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_706 = _gthis.peeked1 in (
+            _gthis.cur <- __assign_706;
+            __assign_706
+          ));
+          ignore (let __assign_707 = _gthis.peeked2 in (
+            _gthis.peeked1 <- __assign_707;
+            __assign_707
+          ));
+          let __assign_708 = Obj.magic (HxRuntime.hx_null) in (
+            _gthis.peeked2 <- __assign_708;
+            __assign_708
+          )
+        )) else ignore (let __assign_709 = HxLexer.next (_gthis.lex) () in (
+          _gthis.cur <- __assign_709;
+          __assign_709
+        )));
+        let __old_710 = !depth in let __new_711 = HxInt.add __old_710 1 in (
+          ignore (depth := __new_711);
+          __old_710
+        )
+      ))
+      | HxTokenKind.TRBrace -> ignore ((
+        ignore (StringBuf.add raw (Obj.repr "}"));
+        ignore (if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_712 = _gthis.peeked1 in (
+            _gthis.cur <- __assign_712;
+            __assign_712
+          ));
+          ignore (let __assign_713 = _gthis.peeked2 in (
+            _gthis.peeked1 <- __assign_713;
+            __assign_713
+          ));
+          let __assign_714 = Obj.magic (HxRuntime.hx_null) in (
+            _gthis.peeked2 <- __assign_714;
+            __assign_714
+          )
+        )) else ignore (let __assign_715 = HxLexer.next (_gthis.lex) () in (
+          _gthis.cur <- __assign_715;
+          __assign_715
+        )));
+        let __old_716 = !depth in let __new_717 = HxInt.add __old_716 (-1) in (
+          ignore (depth := __new_717);
+          __old_716
+        )
+      ))
+      | _ -> ignore (let tempString = ref "" in (
+        ignore (let _g2 = _gthis.cur.kind in match _g2 with
+          | HxTokenKind.TEof -> let __assign_687 = "" in (
+            tempString := __assign_687;
+            __assign_687
+          )
+          | HxTokenKind.TIdent _p0 -> let _g3 = _p0 in let name = _g3 in let __assign_688 = name in (
+            tempString := __assign_688;
+            __assign_688
+          )
+          | HxTokenKind.TString _p0 -> let _g3 = _p0 in let s = _g3 in let __assign_689 = ("\"" ^ HxString.toStdString s) ^ "\"" in (
+            tempString := __assign_689;
+            __assign_689
+          )
+          | HxTokenKind.TInt _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_690 = string_of_int v in (
+            tempString := __assign_690;
+            __assign_690
+          )
+          | HxTokenKind.TFloat _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_691 = string_of_float v in (
+            tempString := __assign_691;
+            __assign_691
+          )
+          | HxTokenKind.TKeyword _p0 -> let _g3 = _p0 in let k = _g3 in let __assign_692 = keywordText k in (
+            tempString := __assign_692;
+            __assign_692
+          )
+          | HxTokenKind.TLBrace -> let __assign_693 = "{" in (
+            tempString := __assign_693;
+            __assign_693
+          )
+          | HxTokenKind.TRBrace -> let __assign_694 = "}" in (
+            tempString := __assign_694;
+            __assign_694
+          )
+          | HxTokenKind.TLParen -> let __assign_695 = "(" in (
+            tempString := __assign_695;
+            __assign_695
+          )
+          | HxTokenKind.TRParen -> let __assign_696 = ")" in (
+            tempString := __assign_696;
+            __assign_696
+          )
+          | HxTokenKind.TSemicolon -> let __assign_697 = ";" in (
+            tempString := __assign_697;
+            __assign_697
+          )
+          | HxTokenKind.TColon -> let __assign_698 = ":" in (
+            tempString := __assign_698;
+            __assign_698
+          )
+          | HxTokenKind.TDot -> let __assign_699 = "." in (
+            tempString := __assign_699;
+            __assign_699
+          )
+          | HxTokenKind.TComma -> let __assign_700 = "," in (
+            tempString := __assign_700;
+            __assign_700
+          )
+          | HxTokenKind.TOther _p0 -> let _g3 = _p0 in let c = _g3 in let __assign_701 = HxString.fromCharCode c in (
+            tempString := __assign_701;
+            __assign_701
+          ));
+        ignore (StringBuf.add raw (Obj.repr (!tempString)));
+        if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_702 = _gthis.peeked1 in (
+            _gthis.cur <- __assign_702;
+            __assign_702
+          ));
+          ignore (let __assign_703 = _gthis.peeked2 in (
+            _gthis.peeked1 <- __assign_703;
+            __assign_703
+          ));
+          let __assign_704 = Obj.magic (HxRuntime.hx_null) in (
+            _gthis.peeked2 <- __assign_704;
+            __assign_704
+          )
+        )) else ignore (let __assign_705 = HxLexer.next (_gthis.lex) () in (
+          _gthis.cur <- __assign_705;
+          __assign_705
+        ))
+      ))) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ()
+  ) in let consumeBalancedParens = fun () -> (
+    ignore (expect _gthis (HxTokenKind.TLParen) "'('");
+    ignore (StringBuf.add raw (Obj.repr "("));
+    ignore (if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+      ignore (let __assign_718 = _gthis.peeked1 in (
+        _gthis.cur <- __assign_718;
+        __assign_718
+      ));
+      ignore (let __assign_719 = _gthis.peeked2 in (
+        _gthis.peeked1 <- __assign_719;
+        __assign_719
+      ));
+      let __assign_720 = Obj.magic (HxRuntime.hx_null) in (
+        _gthis.peeked2 <- __assign_720;
+        __assign_720
+      )
+    )) else ignore (let __assign_721 = HxLexer.next (_gthis.lex) () in (
+      _gthis.cur <- __assign_721;
+      __assign_721
+    )));
+    let depth = ref 1 in try while !depth > 0 && not (stop ()) do try ignore (let _g = _gthis.cur.kind in match _g with
+      | HxTokenKind.TEof -> raise (HxRuntime.Hx_break)
+      | HxTokenKind.TLParen -> ignore ((
+        ignore (StringBuf.add raw (Obj.repr "("));
+        ignore (if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_741 = _gthis.peeked1 in (
+            _gthis.cur <- __assign_741;
+            __assign_741
+          ));
+          ignore (let __assign_742 = _gthis.peeked2 in (
+            _gthis.peeked1 <- __assign_742;
+            __assign_742
+          ));
+          let __assign_743 = Obj.magic (HxRuntime.hx_null) in (
+            _gthis.peeked2 <- __assign_743;
+            __assign_743
+          )
+        )) else ignore (let __assign_744 = HxLexer.next (_gthis.lex) () in (
+          _gthis.cur <- __assign_744;
+          __assign_744
+        )));
+        let __old_745 = !depth in let __new_746 = HxInt.add __old_745 1 in (
+          ignore (depth := __new_746);
+          __old_745
+        )
+      ))
+      | HxTokenKind.TRParen -> ignore ((
+        ignore (StringBuf.add raw (Obj.repr ")"));
+        ignore (if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_747 = _gthis.peeked1 in (
+            _gthis.cur <- __assign_747;
+            __assign_747
+          ));
+          ignore (let __assign_748 = _gthis.peeked2 in (
+            _gthis.peeked1 <- __assign_748;
+            __assign_748
+          ));
+          let __assign_749 = Obj.magic (HxRuntime.hx_null) in (
+            _gthis.peeked2 <- __assign_749;
+            __assign_749
+          )
+        )) else ignore (let __assign_750 = HxLexer.next (_gthis.lex) () in (
+          _gthis.cur <- __assign_750;
+          __assign_750
+        )));
+        let __old_751 = !depth in let __new_752 = HxInt.add __old_751 (-1) in (
+          ignore (depth := __new_752);
+          __old_751
+        )
+      ))
+      | _ -> ignore (let tempString1 = ref "" in (
+        ignore (let _g2 = _gthis.cur.kind in match _g2 with
+          | HxTokenKind.TEof -> let __assign_722 = "" in (
+            tempString1 := __assign_722;
+            __assign_722
+          )
+          | HxTokenKind.TIdent _p0 -> let _g3 = _p0 in let name = _g3 in let __assign_723 = name in (
+            tempString1 := __assign_723;
+            __assign_723
+          )
+          | HxTokenKind.TString _p0 -> let _g3 = _p0 in let s = _g3 in let __assign_724 = ("\"" ^ HxString.toStdString s) ^ "\"" in (
+            tempString1 := __assign_724;
+            __assign_724
+          )
+          | HxTokenKind.TInt _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_725 = string_of_int v in (
+            tempString1 := __assign_725;
+            __assign_725
+          )
+          | HxTokenKind.TFloat _p0 -> let _g3 = _p0 in let v = _g3 in let __assign_726 = string_of_float v in (
+            tempString1 := __assign_726;
+            __assign_726
+          )
+          | HxTokenKind.TKeyword _p0 -> let _g3 = _p0 in let k = _g3 in let __assign_727 = keywordText k in (
+            tempString1 := __assign_727;
+            __assign_727
+          )
+          | HxTokenKind.TLBrace -> let __assign_728 = "{" in (
+            tempString1 := __assign_728;
+            __assign_728
+          )
+          | HxTokenKind.TRBrace -> let __assign_729 = "}" in (
+            tempString1 := __assign_729;
+            __assign_729
+          )
+          | HxTokenKind.TLParen -> let __assign_730 = "(" in (
+            tempString1 := __assign_730;
+            __assign_730
+          )
+          | HxTokenKind.TRParen -> let __assign_731 = ")" in (
+            tempString1 := __assign_731;
+            __assign_731
+          )
+          | HxTokenKind.TSemicolon -> let __assign_732 = ";" in (
+            tempString1 := __assign_732;
+            __assign_732
+          )
+          | HxTokenKind.TColon -> let __assign_733 = ":" in (
+            tempString1 := __assign_733;
+            __assign_733
+          )
+          | HxTokenKind.TDot -> let __assign_734 = "." in (
+            tempString1 := __assign_734;
+            __assign_734
+          )
+          | HxTokenKind.TComma -> let __assign_735 = "," in (
+            tempString1 := __assign_735;
+            __assign_735
+          )
+          | HxTokenKind.TOther _p0 -> let _g3 = _p0 in let c = _g3 in let __assign_736 = HxString.fromCharCode c in (
+            tempString1 := __assign_736;
+            __assign_736
+          ));
+        ignore (StringBuf.add raw (Obj.repr (!tempString1)));
+        if _gthis.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_737 = _gthis.peeked1 in (
+            _gthis.cur <- __assign_737;
+            __assign_737
+          ));
+          ignore (let __assign_738 = _gthis.peeked2 in (
+            _gthis.peeked1 <- __assign_738;
+            __assign_738
+          ));
+          let __assign_739 = Obj.magic (HxRuntime.hx_null) in (
+            _gthis.peeked2 <- __assign_739;
+            __assign_739
+          )
+        )) else ignore (let __assign_740 = HxLexer.next (_gthis.lex) () in (
+          _gthis.cur <- __assign_740;
+          __assign_740
+        ))
+      ))) with
+      | HxRuntime.Hx_continue -> () done with
+      | HxRuntime.Hx_break -> ()
+  ) in (
+    ignore (StringBuf.add raw (Obj.repr "try"));
+    ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+      ignore (let __assign_753 = self.peeked1 in (
+        self.cur <- __assign_753;
+        __assign_753
+      ));
+      ignore (let __assign_754 = self.peeked2 in (
+        self.peeked1 <- __assign_754;
+        __assign_754
+      ));
+      let __assign_755 = Obj.magic (HxRuntime.hx_null) in (
+        self.peeked2 <- __assign_755;
+        __assign_755
+      )
+    )) else ignore (let __assign_756 = HxLexer.next (self.lex) () in (
+      self.cur <- __assign_756;
+      __assign_756
+    )));
+    let tempBool1 = ref false in (
+      ignore (let _g = self.cur.kind in if (match _g with
+        | HxTokenKind.TEof -> 0
+        | HxTokenKind.TIdent _ -> 1
+        | HxTokenKind.TString _ -> 2
+        | HxTokenKind.TInt _ -> 3
+        | HxTokenKind.TFloat _ -> 4
+        | HxTokenKind.TKeyword _ -> 5
+        | HxTokenKind.TLBrace -> 6
+        | HxTokenKind.TRBrace -> 7
+        | HxTokenKind.TLParen -> 8
+        | HxTokenKind.TRParen -> 9
+        | HxTokenKind.TSemicolon -> 10
+        | HxTokenKind.TColon -> 11
+        | HxTokenKind.TDot -> 12
+        | HxTokenKind.TComma -> 13
+        | HxTokenKind.TOther _ -> 14) = 6 then let __assign_757 = true in (
+        tempBool1 := __assign_757;
+        __assign_757
+      ) else let __assign_758 = false in (
+        tempBool1 := __assign_758;
+        __assign_758
+      ));
+      ignore (if not (!tempBool1) then raise (HxRuntime.Hx_return (Obj.repr (HxExpr.EUnsupported "try_missing_block"))) else ());
+      ignore (consumeBalancedBraces ());
+      ignore (try while true do try ignore (let tempRight = ref false in (
+        ignore (let _g = self.cur.kind in if (match _g with
+          | HxTokenKind.TEof -> 0
+          | HxTokenKind.TIdent _ -> 1
+          | HxTokenKind.TString _ -> 2
+          | HxTokenKind.TInt _ -> 3
+          | HxTokenKind.TFloat _ -> 4
+          | HxTokenKind.TKeyword _ -> 5
+          | HxTokenKind.TLBrace -> 6
+          | HxTokenKind.TRBrace -> 7
+          | HxTokenKind.TLParen -> 8
+          | HxTokenKind.TRParen -> 9
+          | HxTokenKind.TSemicolon -> 10
+          | HxTokenKind.TColon -> 11
+          | HxTokenKind.TDot -> 12
+          | HxTokenKind.TComma -> 13
+          | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
+          | HxTokenKind.TKeyword __enum_param_759 -> __enum_param_759
+          | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
+          | HxKeyword.KPackage -> 0
+          | HxKeyword.KImport -> 1
+          | HxKeyword.KUsing -> 2
+          | HxKeyword.KAs -> 3
+          | HxKeyword.KClass -> 4
+          | HxKeyword.KPublic -> 5
+          | HxKeyword.KPrivate -> 6
+          | HxKeyword.KStatic -> 7
+          | HxKeyword.KFunction -> 8
+          | HxKeyword.KReturn -> 9
+          | HxKeyword.KIf -> 10
+          | HxKeyword.KElse -> 11
+          | HxKeyword.KSwitch -> 12
+          | HxKeyword.KCase -> 13
+          | HxKeyword.KDefault -> 14
+          | HxKeyword.KTry -> 15
+          | HxKeyword.KCatch -> 16
+          | HxKeyword.KThrow -> 17
+          | HxKeyword.KWhile -> 18
+          | HxKeyword.KDo -> 19
+          | HxKeyword.KFor -> 20
+          | HxKeyword.KBreak -> 21
+          | HxKeyword.KContinue -> 22
+          | HxKeyword.KUntyped -> 23
+          | HxKeyword.KCast -> 24
+          | HxKeyword.KVar -> 25
+          | HxKeyword.KFinal -> 26
+          | HxKeyword.KNew -> 27
+          | HxKeyword.KThis -> 28
+          | HxKeyword.KSuper -> 29
+          | HxKeyword.KTrue -> 30
+          | HxKeyword.KFalse -> 31
+          | HxKeyword.KNull -> 32) = 16 then let __assign_760 = true in (
+          tempRight := __assign_760;
+          __assign_760
+        ) else let __assign_761 = false in (
+          tempRight := __assign_761;
+          __assign_761
+        ) else let __assign_762 = false in (
+          tempRight := __assign_762;
+          __assign_762
+        ));
+        ignore (if not (not (stop ()) && !tempRight) then raise (HxRuntime.Hx_break) else ());
+        ignore (StringBuf.add raw (Obj.repr "catch"));
+        ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+          ignore (let __assign_763 = self.peeked1 in (
+            self.cur <- __assign_763;
+            __assign_763
+          ));
+          ignore (let __assign_764 = self.peeked2 in (
+            self.peeked1 <- __assign_764;
+            __assign_764
+          ));
+          let __assign_765 = Obj.magic (HxRuntime.hx_null) in (
+            self.peeked2 <- __assign_765;
+            __assign_765
+          )
+        )) else ignore (let __assign_766 = HxLexer.next (self.lex) () in (
+          self.cur <- __assign_766;
+          __assign_766
+        )));
+        ignore (consumeBalancedParens ());
+        let tempBool2 = ref false in (
+          ignore (let _g = self.cur.kind in if (match _g with
+            | HxTokenKind.TEof -> 0
+            | HxTokenKind.TIdent _ -> 1
+            | HxTokenKind.TString _ -> 2
+            | HxTokenKind.TInt _ -> 3
+            | HxTokenKind.TFloat _ -> 4
+            | HxTokenKind.TKeyword _ -> 5
+            | HxTokenKind.TLBrace -> 6
+            | HxTokenKind.TRBrace -> 7
+            | HxTokenKind.TLParen -> 8
+            | HxTokenKind.TRParen -> 9
+            | HxTokenKind.TSemicolon -> 10
+            | HxTokenKind.TColon -> 11
+            | HxTokenKind.TDot -> 12
+            | HxTokenKind.TComma -> 13
+            | HxTokenKind.TOther _ -> 14) = 6 then let __assign_767 = true in (
+            tempBool2 := __assign_767;
+            __assign_767
+          ) else let __assign_768 = false in (
+            tempBool2 := __assign_768;
+            __assign_768
+          ));
+          ignore (if not (!tempBool2) then raise (HxRuntime.Hx_break) else ());
+          consumeBalancedBraces ()
+        )
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      HxExpr.ETryCatchRaw (StringBuf.toString raw ())
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_769 -> Obj.obj __ret_769
+
 let binopPrec = fun op -> let tempResult = ref 0 in (
   ignore (match op with
-    | "!=" | "==" -> let __assign_1097 = 4 in (
-      tempResult := __assign_1097;
-      __assign_1097
+    | "!=" | "==" -> let __assign_1192 = 4 in (
+      tempResult := __assign_1192;
+      __assign_1192
     )
-    | "%" | "*" | "/" -> let __assign_1098 = 7 in (
-      tempResult := __assign_1098;
-      __assign_1098
+    | "%" | "*" | "/" -> let __assign_1193 = 7 in (
+      tempResult := __assign_1193;
+      __assign_1193
     )
-    | "&" -> let __assign_1099 = 3 in (
-      tempResult := __assign_1099;
-      __assign_1099
+    | "&" -> let __assign_1194 = 3 in (
+      tempResult := __assign_1194;
+      __assign_1194
     )
-    | "&&" -> let __assign_1100 = 3 in (
-      tempResult := __assign_1100;
-      __assign_1100
+    | "&&" -> let __assign_1195 = 3 in (
+      tempResult := __assign_1195;
+      __assign_1195
     )
-    | "+" | "-" -> let __assign_1101 = 6 in (
-      tempResult := __assign_1101;
-      __assign_1101
+    | "+" | "-" -> let __assign_1196 = 6 in (
+      tempResult := __assign_1196;
+      __assign_1196
     )
-    | "=" -> let __assign_1102 = 1 in (
-      tempResult := __assign_1102;
-      __assign_1102
+    | "=" -> let __assign_1197 = 1 in (
+      tempResult := __assign_1197;
+      __assign_1197
     )
-    | "<" | "<=" | ">" | ">=" -> let __assign_1103 = 5 in (
-      tempResult := __assign_1103;
-      __assign_1103
+    | "<" | "<=" | ">" | ">=" -> let __assign_1198 = 5 in (
+      tempResult := __assign_1198;
+      __assign_1198
     )
-    | "<<" | ">>" | ">>>" -> let __assign_1104 = 5 in (
-      tempResult := __assign_1104;
-      __assign_1104
+    | "<<" | ">>" | ">>>" -> let __assign_1199 = 5 in (
+      tempResult := __assign_1199;
+      __assign_1199
     )
-    | "?" -> let __assign_1105 = 2 in (
-      tempResult := __assign_1105;
-      __assign_1105
+    | "?" -> let __assign_1200 = 2 in (
+      tempResult := __assign_1200;
+      __assign_1200
     )
-    | "^" -> let __assign_1106 = 3 in (
-      tempResult := __assign_1106;
-      __assign_1106
+    | "^" -> let __assign_1201 = 3 in (
+      tempResult := __assign_1201;
+      __assign_1201
     )
-    | "|" -> let __assign_1107 = 2 in (
-      tempResult := __assign_1107;
-      __assign_1107
+    | "|" -> let __assign_1202 = 2 in (
+      tempResult := __assign_1202;
+      __assign_1202
     )
-    | "||" -> let __assign_1108 = 2 in (
-      tempResult := __assign_1108;
-      __assign_1108
+    | "||" -> let __assign_1203 = 2 in (
+      tempResult := __assign_1203;
+      __assign_1203
     )
-    | _ -> let __assign_1096 = 0 in (
-      tempResult := __assign_1096;
-      __assign_1096
+    | _ -> let __assign_1191 = 0 in (
+      tempResult := __assign_1191;
+      __assign_1191
     ));
   !tempResult
 )
@@ -4720,31 +5248,70 @@ and parseExpr = fun self (stop : unit -> bool) -> try let _gthis = self in (
       )) else ()
     )
   )) else ignore ()) else ());
-  let e = ref (parseBinaryExpr self 1 stop) in (
-    ignore (if not (stop ()) && acceptOtherChar self "?" then ignore (let thenExpr = parseExpr self (fun () -> let tempLeft1 = ref false in (
-      ignore (let _g = _gthis.cur.kind in if (match _g with
-        | HxTokenKind.TEof -> 0
-        | HxTokenKind.TIdent _ -> 1
-        | HxTokenKind.TString _ -> 2
-        | HxTokenKind.TInt _ -> 3
-        | HxTokenKind.TFloat _ -> 4
-        | HxTokenKind.TKeyword _ -> 5
-        | HxTokenKind.TLBrace -> 6
-        | HxTokenKind.TRBrace -> 7
-        | HxTokenKind.TLParen -> 8
-        | HxTokenKind.TRParen -> 9
-        | HxTokenKind.TSemicolon -> 10
-        | HxTokenKind.TColon -> 11
-        | HxTokenKind.TDot -> 12
-        | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 11 then let __assign_663 = true in (
-        tempLeft1 := __assign_663;
-        __assign_663
-      ) else let __assign_664 = false in (
-        tempLeft1 := __assign_664;
-        __assign_664
-      ));
-      let tempRight1 = ref false in (
+  let tempRight1 = ref false in (
+    ignore (let _g = self.cur.kind in if (match _g with
+      | HxTokenKind.TEof -> 0
+      | HxTokenKind.TIdent _ -> 1
+      | HxTokenKind.TString _ -> 2
+      | HxTokenKind.TInt _ -> 3
+      | HxTokenKind.TFloat _ -> 4
+      | HxTokenKind.TKeyword _ -> 5
+      | HxTokenKind.TLBrace -> 6
+      | HxTokenKind.TRBrace -> 7
+      | HxTokenKind.TLParen -> 8
+      | HxTokenKind.TRParen -> 9
+      | HxTokenKind.TSemicolon -> 10
+      | HxTokenKind.TColon -> 11
+      | HxTokenKind.TDot -> 12
+      | HxTokenKind.TComma -> 13
+      | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
+      | HxTokenKind.TKeyword __enum_param_663 -> __enum_param_663
+      | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
+      | HxKeyword.KPackage -> 0
+      | HxKeyword.KImport -> 1
+      | HxKeyword.KUsing -> 2
+      | HxKeyword.KAs -> 3
+      | HxKeyword.KClass -> 4
+      | HxKeyword.KPublic -> 5
+      | HxKeyword.KPrivate -> 6
+      | HxKeyword.KStatic -> 7
+      | HxKeyword.KFunction -> 8
+      | HxKeyword.KReturn -> 9
+      | HxKeyword.KIf -> 10
+      | HxKeyword.KElse -> 11
+      | HxKeyword.KSwitch -> 12
+      | HxKeyword.KCase -> 13
+      | HxKeyword.KDefault -> 14
+      | HxKeyword.KTry -> 15
+      | HxKeyword.KCatch -> 16
+      | HxKeyword.KThrow -> 17
+      | HxKeyword.KWhile -> 18
+      | HxKeyword.KDo -> 19
+      | HxKeyword.KFor -> 20
+      | HxKeyword.KBreak -> 21
+      | HxKeyword.KContinue -> 22
+      | HxKeyword.KUntyped -> 23
+      | HxKeyword.KCast -> 24
+      | HxKeyword.KVar -> 25
+      | HxKeyword.KFinal -> 26
+      | HxKeyword.KNew -> 27
+      | HxKeyword.KThis -> 28
+      | HxKeyword.KSuper -> 29
+      | HxKeyword.KTrue -> 30
+      | HxKeyword.KFalse -> 31
+      | HxKeyword.KNull -> 32) = 15 then let __assign_664 = true in (
+      tempRight1 := __assign_664;
+      __assign_664
+    ) else let __assign_665 = false in (
+      tempRight1 := __assign_665;
+      __assign_665
+    ) else let __assign_666 = false in (
+      tempRight1 := __assign_666;
+      __assign_666
+    ));
+    ignore (if not (stop ()) && !tempRight1 then raise (HxRuntime.Hx_return (Obj.repr (parseTryCatchExpr self stop))) else ());
+    let e = ref (parseBinaryExpr self 1 stop) in (
+      ignore (if not (stop ()) && acceptOtherChar self "?" then ignore (let thenExpr = parseExpr self (fun () -> let tempLeft1 = ref false in (
         ignore (let _g = _gthis.cur.kind in if (match _g with
           | HxTokenKind.TEof -> 0
           | HxTokenKind.TIdent _ -> 1
@@ -4760,206 +5327,12 @@ and parseExpr = fun self (stop : unit -> bool) -> try let _gthis = self in (
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_665 = true in (
-          tempRight1 := __assign_665;
-          __assign_665
-        ) else let __assign_666 = false in (
-          tempRight1 := __assign_666;
-          __assign_666
-        ));
-        !tempLeft1 || !tempRight1
-      )
-    )) in (
-      ignore (expect self (HxTokenKind.TColon) "':'");
-      let elseExpr = parseExpr self stop in let tempRight2 = ref (Obj.magic ()) in (
-        ignore (if (match !e with
-          | HxExpr.ENull -> 0
-          | HxExpr.EBool _ -> 1
-          | HxExpr.EString _ -> 2
-          | HxExpr.EInt _ -> 3
-          | HxExpr.EFloat _ -> 4
-          | HxExpr.EThis -> 5
-          | HxExpr.ESuper -> 6
-          | HxExpr.EIdent _ -> 7
-          | HxExpr.EField (_, _) -> 8
-          | HxExpr.ECall (_, _) -> 9
-          | HxExpr.ELambda (_, _) -> 10
-          | HxExpr.ENew (_, _) -> 11
-          | HxExpr.EUnop (_, _) -> 12
-          | HxExpr.EBinop (_, _, _) -> 13
-          | HxExpr.ETernary (_, _, _) -> 14
-          | HxExpr.EAnon (_, _) -> 15
-          | HxExpr.EArrayDecl _ -> 16
-          | HxExpr.EArrayAccess (_, _) -> 17
-          | HxExpr.ECast (_, _) -> 18
-          | HxExpr.EUntyped _ -> 19
-          | HxExpr.EUnsupported _ -> 20) = 13 then let _g = match !e with
-          | HxExpr.EBinop (__enum_param_667, _, _) -> __enum_param_667
-          | _ -> failwith "Unexpected enum parameter" in let _g1 = match !e with
-          | HxExpr.EBinop (_, __enum_param_668, _) -> __enum_param_668
-          | _ -> failwith "Unexpected enum parameter" in let _g2 = match !e with
-          | HxExpr.EBinop (_, _, __enum_param_669) -> __enum_param_669
-          | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g "=" then let left = _g1 in let right = _g2 in let __assign_670 = HxExpr.EBinop ("=", left, HxExpr.ETernary (right, thenExpr, elseExpr)) in (
-          tempRight2 := __assign_670;
-          __assign_670
-        ) else let __assign_671 = HxExpr.ETernary (!e, thenExpr, elseExpr) in (
-          tempRight2 := __assign_671;
-          __assign_671
-        ) else let __assign_672 = HxExpr.ETernary (!e, thenExpr, elseExpr) in (
-          tempRight2 := __assign_672;
-          __assign_672
-        ));
-        let __assign_673 = !tempRight2 in (
-          e := __assign_673;
-          __assign_673
-        )
-      )
-    )) else ());
-    !e
-  )
-) with
-  | HxRuntime.Hx_return __ret_674 -> Obj.obj __ret_674
-
-let parseVarStmt = fun self (pos : HxPos.t) -> let _gthis = self in let name = readIdent self "variable name" in let typeHint = ref "" in let tempBool = ref false in (
-  ignore (let _g = self.cur.kind in if (match _g with
-    | HxTokenKind.TEof -> 0
-    | HxTokenKind.TIdent _ -> 1
-    | HxTokenKind.TString _ -> 2
-    | HxTokenKind.TInt _ -> 3
-    | HxTokenKind.TFloat _ -> 4
-    | HxTokenKind.TKeyword _ -> 5
-    | HxTokenKind.TLBrace -> 6
-    | HxTokenKind.TRBrace -> 7
-    | HxTokenKind.TLParen -> 8
-    | HxTokenKind.TRParen -> 9
-    | HxTokenKind.TSemicolon -> 10
-    | HxTokenKind.TColon -> 11
-    | HxTokenKind.TDot -> 12
-    | HxTokenKind.TComma -> 13
-    | HxTokenKind.TOther _ -> 14) = 11 then let __assign_757 = true in (
-    tempBool := __assign_757;
-    __assign_757
-  ) else let __assign_758 = false in (
-    tempBool := __assign_758;
-    __assign_758
-  ));
-  ignore (if !tempBool then ignore ((
-    ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (let __assign_759 = self.peeked1 in (
-        self.cur <- __assign_759;
-        __assign_759
-      ));
-      ignore (let __assign_760 = self.peeked2 in (
-        self.peeked1 <- __assign_760;
-        __assign_760
-      ));
-      let __assign_761 = Obj.magic (HxRuntime.hx_null) in (
-        self.peeked2 <- __assign_761;
-        __assign_761
-      )
-    )) else ignore (let __assign_762 = HxLexer.next (self.lex) () in (
-      self.cur <- __assign_762;
-      __assign_762
-    )));
-    let __assign_763 = readTypeHintText self (fun () -> let tempLeft = ref false in (
-      ignore (let _g = _gthis.cur.kind in if (match _g with
-        | HxTokenKind.TEof -> 0
-        | HxTokenKind.TIdent _ -> 1
-        | HxTokenKind.TString _ -> 2
-        | HxTokenKind.TInt _ -> 3
-        | HxTokenKind.TFloat _ -> 4
-        | HxTokenKind.TKeyword _ -> 5
-        | HxTokenKind.TLBrace -> 6
-        | HxTokenKind.TRBrace -> 7
-        | HxTokenKind.TLParen -> 8
-        | HxTokenKind.TRParen -> 9
-        | HxTokenKind.TSemicolon -> 10
-        | HxTokenKind.TColon -> 11
-        | HxTokenKind.TDot -> 12
-        | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 10 then let __assign_764 = true in (
-        tempLeft := __assign_764;
-        __assign_764
-      ) else let __assign_765 = false in (
-        tempLeft := __assign_765;
-        __assign_765
-      ));
-      let tempRight = ref false in (
-        ignore (let _g = _gthis.cur.kind in if (match _g with
-          | HxTokenKind.TEof -> 0
-          | HxTokenKind.TIdent _ -> 1
-          | HxTokenKind.TString _ -> 2
-          | HxTokenKind.TInt _ -> 3
-          | HxTokenKind.TFloat _ -> 4
-          | HxTokenKind.TKeyword _ -> 5
-          | HxTokenKind.TLBrace -> 6
-          | HxTokenKind.TRBrace -> 7
-          | HxTokenKind.TLParen -> 8
-          | HxTokenKind.TRParen -> 9
-          | HxTokenKind.TSemicolon -> 10
-          | HxTokenKind.TColon -> 11
-          | HxTokenKind.TDot -> 12
-          | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_766 = true in (
-          tempRight := __assign_766;
-          __assign_766
-        ) else let __assign_767 = false in (
-          tempRight := __assign_767;
-          __assign_767
-        ));
-        !tempLeft || !tempRight || isOtherChar _gthis "="
-      )
-    )) in (
-      typeHint := __assign_763;
-      __assign_763
-    )
-  )) else ());
-  let init = ref (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))) in (
-    ignore (if acceptOtherChar self "=" then ignore (let __assign_768 = HxEnum.box_if_needed "HxExpr" (Obj.repr (parseExpr self (fun () -> let tempLeft1 = ref false in (
-      ignore (let _g = _gthis.cur.kind in if (match _g with
-        | HxTokenKind.TEof -> 0
-        | HxTokenKind.TIdent _ -> 1
-        | HxTokenKind.TString _ -> 2
-        | HxTokenKind.TInt _ -> 3
-        | HxTokenKind.TFloat _ -> 4
-        | HxTokenKind.TKeyword _ -> 5
-        | HxTokenKind.TLBrace -> 6
-        | HxTokenKind.TRBrace -> 7
-        | HxTokenKind.TLParen -> 8
-        | HxTokenKind.TRParen -> 9
-        | HxTokenKind.TSemicolon -> 10
-        | HxTokenKind.TColon -> 11
-        | HxTokenKind.TDot -> 12
-        | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 10 then let __assign_769 = true in (
-        tempLeft1 := __assign_769;
-        __assign_769
-      ) else let __assign_770 = false in (
-        tempLeft1 := __assign_770;
-        __assign_770
-      ));
-      let tempRight1 = ref false in (
-        ignore (let _g = _gthis.cur.kind in if (match _g with
-          | HxTokenKind.TEof -> 0
-          | HxTokenKind.TIdent _ -> 1
-          | HxTokenKind.TString _ -> 2
-          | HxTokenKind.TInt _ -> 3
-          | HxTokenKind.TFloat _ -> 4
-          | HxTokenKind.TKeyword _ -> 5
-          | HxTokenKind.TLBrace -> 6
-          | HxTokenKind.TRBrace -> 7
-          | HxTokenKind.TLParen -> 8
-          | HxTokenKind.TRParen -> 9
-          | HxTokenKind.TSemicolon -> 10
-          | HxTokenKind.TColon -> 11
-          | HxTokenKind.TDot -> 12
-          | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_771 = true in (
-          tempRight1 := __assign_771;
-          __assign_771
-        ) else let __assign_772 = false in (
-          tempRight1 := __assign_772;
-          __assign_772
+          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_667 = true in (
+          tempLeft1 := __assign_667;
+          __assign_667
+        ) else let __assign_668 = false in (
+          tempLeft1 := __assign_668;
+          __assign_668
         ));
         let tempRight2 = ref false in (
           ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -4977,19 +5350,238 @@ let parseVarStmt = fun self (pos : HxPos.t) -> let _gthis = self in let name = r
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 7 then let __assign_773 = true in (
-            tempRight2 := __assign_773;
-            __assign_773
-          ) else let __assign_774 = false in (
-            tempRight2 := __assign_774;
-            __assign_774
+            | HxTokenKind.TOther _ -> 14) = 0 then let __assign_669 = true in (
+            tempRight2 := __assign_669;
+            __assign_669
+          ) else let __assign_670 = false in (
+            tempRight2 := __assign_670;
+            __assign_670
+          ));
+          !tempLeft1 || !tempRight2
+        )
+      )) in (
+        ignore (expect self (HxTokenKind.TColon) "':'");
+        let elseExpr = parseExpr self stop in let tempRight3 = ref (Obj.magic ()) in (
+          ignore (if (match !e with
+            | HxExpr.ENull -> 0
+            | HxExpr.EBool _ -> 1
+            | HxExpr.EString _ -> 2
+            | HxExpr.EInt _ -> 3
+            | HxExpr.EFloat _ -> 4
+            | HxExpr.EThis -> 5
+            | HxExpr.ESuper -> 6
+            | HxExpr.EIdent _ -> 7
+            | HxExpr.EField (_, _) -> 8
+            | HxExpr.ECall (_, _) -> 9
+            | HxExpr.ELambda (_, _) -> 10
+            | HxExpr.ETryCatchRaw _ -> 11
+            | HxExpr.ENew (_, _) -> 12
+            | HxExpr.EUnop (_, _) -> 13
+            | HxExpr.EBinop (_, _, _) -> 14
+            | HxExpr.ETernary (_, _, _) -> 15
+            | HxExpr.EAnon (_, _) -> 16
+            | HxExpr.EArrayDecl _ -> 17
+            | HxExpr.EArrayAccess (_, _) -> 18
+            | HxExpr.ECast (_, _) -> 19
+            | HxExpr.EUntyped _ -> 20
+            | HxExpr.EUnsupported _ -> 21) = 14 then let _g = match !e with
+            | HxExpr.EBinop (__enum_param_671, _, _) -> __enum_param_671
+            | _ -> failwith "Unexpected enum parameter" in let _g1 = match !e with
+            | HxExpr.EBinop (_, __enum_param_672, _) -> __enum_param_672
+            | _ -> failwith "Unexpected enum parameter" in let _g2 = match !e with
+            | HxExpr.EBinop (_, _, __enum_param_673) -> __enum_param_673
+            | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g "=" then let left = _g1 in let right = _g2 in let __assign_674 = HxExpr.EBinop ("=", left, HxExpr.ETernary (right, thenExpr, elseExpr)) in (
+            tempRight3 := __assign_674;
+            __assign_674
+          ) else let __assign_675 = HxExpr.ETernary (!e, thenExpr, elseExpr) in (
+            tempRight3 := __assign_675;
+            __assign_675
+          ) else let __assign_676 = HxExpr.ETernary (!e, thenExpr, elseExpr) in (
+            tempRight3 := __assign_676;
+            __assign_676
+          ));
+          let __assign_677 = !tempRight3 in (
+            e := __assign_677;
+            __assign_677
+          )
+        )
+      )) else ());
+      !e
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_678 -> Obj.obj __ret_678
+
+let parseVarStmt = fun self (pos : HxPos.t) -> let _gthis = self in let name = readIdent self "variable name" in let typeHint = ref "" in let tempBool = ref false in (
+  ignore (let _g = self.cur.kind in if (match _g with
+    | HxTokenKind.TEof -> 0
+    | HxTokenKind.TIdent _ -> 1
+    | HxTokenKind.TString _ -> 2
+    | HxTokenKind.TInt _ -> 3
+    | HxTokenKind.TFloat _ -> 4
+    | HxTokenKind.TKeyword _ -> 5
+    | HxTokenKind.TLBrace -> 6
+    | HxTokenKind.TRBrace -> 7
+    | HxTokenKind.TLParen -> 8
+    | HxTokenKind.TRParen -> 9
+    | HxTokenKind.TSemicolon -> 10
+    | HxTokenKind.TColon -> 11
+    | HxTokenKind.TDot -> 12
+    | HxTokenKind.TComma -> 13
+    | HxTokenKind.TOther _ -> 14) = 11 then let __assign_852 = true in (
+    tempBool := __assign_852;
+    __assign_852
+  ) else let __assign_853 = false in (
+    tempBool := __assign_853;
+    __assign_853
+  ));
+  ignore (if !tempBool then ignore ((
+    ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
+      ignore (let __assign_854 = self.peeked1 in (
+        self.cur <- __assign_854;
+        __assign_854
+      ));
+      ignore (let __assign_855 = self.peeked2 in (
+        self.peeked1 <- __assign_855;
+        __assign_855
+      ));
+      let __assign_856 = Obj.magic (HxRuntime.hx_null) in (
+        self.peeked2 <- __assign_856;
+        __assign_856
+      )
+    )) else ignore (let __assign_857 = HxLexer.next (self.lex) () in (
+      self.cur <- __assign_857;
+      __assign_857
+    )));
+    let __assign_858 = readTypeHintText self (fun () -> let tempLeft = ref false in (
+      ignore (let _g = _gthis.cur.kind in if (match _g with
+        | HxTokenKind.TEof -> 0
+        | HxTokenKind.TIdent _ -> 1
+        | HxTokenKind.TString _ -> 2
+        | HxTokenKind.TInt _ -> 3
+        | HxTokenKind.TFloat _ -> 4
+        | HxTokenKind.TKeyword _ -> 5
+        | HxTokenKind.TLBrace -> 6
+        | HxTokenKind.TRBrace -> 7
+        | HxTokenKind.TLParen -> 8
+        | HxTokenKind.TRParen -> 9
+        | HxTokenKind.TSemicolon -> 10
+        | HxTokenKind.TColon -> 11
+        | HxTokenKind.TDot -> 12
+        | HxTokenKind.TComma -> 13
+        | HxTokenKind.TOther _ -> 14) = 10 then let __assign_859 = true in (
+        tempLeft := __assign_859;
+        __assign_859
+      ) else let __assign_860 = false in (
+        tempLeft := __assign_860;
+        __assign_860
+      ));
+      let tempRight = ref false in (
+        ignore (let _g = _gthis.cur.kind in if (match _g with
+          | HxTokenKind.TEof -> 0
+          | HxTokenKind.TIdent _ -> 1
+          | HxTokenKind.TString _ -> 2
+          | HxTokenKind.TInt _ -> 3
+          | HxTokenKind.TFloat _ -> 4
+          | HxTokenKind.TKeyword _ -> 5
+          | HxTokenKind.TLBrace -> 6
+          | HxTokenKind.TRBrace -> 7
+          | HxTokenKind.TLParen -> 8
+          | HxTokenKind.TRParen -> 9
+          | HxTokenKind.TSemicolon -> 10
+          | HxTokenKind.TColon -> 11
+          | HxTokenKind.TDot -> 12
+          | HxTokenKind.TComma -> 13
+          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_861 = true in (
+          tempRight := __assign_861;
+          __assign_861
+        ) else let __assign_862 = false in (
+          tempRight := __assign_862;
+          __assign_862
+        ));
+        !tempLeft || !tempRight || isOtherChar _gthis "="
+      )
+    )) in (
+      typeHint := __assign_858;
+      __assign_858
+    )
+  )) else ());
+  let init = ref (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (HxRuntime.hx_null)))) in (
+    ignore (if acceptOtherChar self "=" then ignore (let __assign_863 = HxEnum.box_if_needed "HxExpr" (Obj.repr (parseExpr self (fun () -> let tempLeft1 = ref false in (
+      ignore (let _g = _gthis.cur.kind in if (match _g with
+        | HxTokenKind.TEof -> 0
+        | HxTokenKind.TIdent _ -> 1
+        | HxTokenKind.TString _ -> 2
+        | HxTokenKind.TInt _ -> 3
+        | HxTokenKind.TFloat _ -> 4
+        | HxTokenKind.TKeyword _ -> 5
+        | HxTokenKind.TLBrace -> 6
+        | HxTokenKind.TRBrace -> 7
+        | HxTokenKind.TLParen -> 8
+        | HxTokenKind.TRParen -> 9
+        | HxTokenKind.TSemicolon -> 10
+        | HxTokenKind.TColon -> 11
+        | HxTokenKind.TDot -> 12
+        | HxTokenKind.TComma -> 13
+        | HxTokenKind.TOther _ -> 14) = 10 then let __assign_864 = true in (
+        tempLeft1 := __assign_864;
+        __assign_864
+      ) else let __assign_865 = false in (
+        tempLeft1 := __assign_865;
+        __assign_865
+      ));
+      let tempRight1 = ref false in (
+        ignore (let _g = _gthis.cur.kind in if (match _g with
+          | HxTokenKind.TEof -> 0
+          | HxTokenKind.TIdent _ -> 1
+          | HxTokenKind.TString _ -> 2
+          | HxTokenKind.TInt _ -> 3
+          | HxTokenKind.TFloat _ -> 4
+          | HxTokenKind.TKeyword _ -> 5
+          | HxTokenKind.TLBrace -> 6
+          | HxTokenKind.TRBrace -> 7
+          | HxTokenKind.TLParen -> 8
+          | HxTokenKind.TRParen -> 9
+          | HxTokenKind.TSemicolon -> 10
+          | HxTokenKind.TColon -> 11
+          | HxTokenKind.TDot -> 12
+          | HxTokenKind.TComma -> 13
+          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_866 = true in (
+          tempRight1 := __assign_866;
+          __assign_866
+        ) else let __assign_867 = false in (
+          tempRight1 := __assign_867;
+          __assign_867
+        ));
+        let tempRight2 = ref false in (
+          ignore (let _g = _gthis.cur.kind in if (match _g with
+            | HxTokenKind.TEof -> 0
+            | HxTokenKind.TIdent _ -> 1
+            | HxTokenKind.TString _ -> 2
+            | HxTokenKind.TInt _ -> 3
+            | HxTokenKind.TFloat _ -> 4
+            | HxTokenKind.TKeyword _ -> 5
+            | HxTokenKind.TLBrace -> 6
+            | HxTokenKind.TRBrace -> 7
+            | HxTokenKind.TLParen -> 8
+            | HxTokenKind.TRParen -> 9
+            | HxTokenKind.TSemicolon -> 10
+            | HxTokenKind.TColon -> 11
+            | HxTokenKind.TDot -> 12
+            | HxTokenKind.TComma -> 13
+            | HxTokenKind.TOther _ -> 14) = 7 then let __assign_868 = true in (
+            tempRight2 := __assign_868;
+            __assign_868
+          ) else let __assign_869 = false in (
+            tempRight2 := __assign_869;
+            __assign_869
           ));
           !tempLeft1 || !tempRight1 || !tempRight2
         )
       )
     )))) in (
-      init := __assign_768;
-      __assign_768
+      init := __assign_863;
+      __assign_863
     )) else ());
     ignore (syncToStmtEnd self ());
     HxStmt.SVar (name, !typeHint, !init, pos)
@@ -5012,30 +5604,30 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
     | HxTokenKind.TColon -> 11
     | HxTokenKind.TDot -> 12
     | HxTokenKind.TComma -> 13
-    | HxTokenKind.TOther _ -> 14) = 10 then let __assign_675 = true in (
-    tempBool := __assign_675;
-    __assign_675
-  ) else let __assign_676 = false in (
-    tempBool := __assign_676;
-    __assign_676
+    | HxTokenKind.TOther _ -> 14) = 10 then let __assign_770 = true in (
+    tempBool := __assign_770;
+    __assign_770
+  ) else let __assign_771 = false in (
+    tempBool := __assign_771;
+    __assign_771
   ));
   ignore (if !tempBool then ignore ((
     ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (let __assign_677 = self.peeked1 in (
-        self.cur <- __assign_677;
-        __assign_677
+      ignore (let __assign_772 = self.peeked1 in (
+        self.cur <- __assign_772;
+        __assign_772
       ));
-      ignore (let __assign_678 = self.peeked2 in (
-        self.peeked1 <- __assign_678;
-        __assign_678
+      ignore (let __assign_773 = self.peeked2 in (
+        self.peeked1 <- __assign_773;
+        __assign_773
       ));
-      let __assign_679 = Obj.magic (HxRuntime.hx_null) in (
-        self.peeked2 <- __assign_679;
-        __assign_679
+      let __assign_774 = Obj.magic (HxRuntime.hx_null) in (
+        self.peeked2 <- __assign_774;
+        __assign_774
       )
-    )) else ignore (let __assign_680 = HxLexer.next (self.lex) () in (
-      self.cur <- __assign_680;
-      __assign_680
+    )) else ignore (let __assign_775 = HxLexer.next (self.lex) () in (
+      self.cur <- __assign_775;
+      __assign_775
     )));
     raise (HxRuntime.Hx_return (Obj.repr (HxStmt.SReturnVoid pos)))
   )) else ());
@@ -5055,12 +5647,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
       | HxTokenKind.TColon -> 11
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
-      | HxTokenKind.TOther _ -> 14) = 7 then let __assign_681 = true in (
-      tempBool1 := __assign_681;
-      __assign_681
-    ) else let __assign_682 = false in (
-      tempBool1 := __assign_682;
-      __assign_682
+      | HxTokenKind.TOther _ -> 14) = 7 then let __assign_776 = true in (
+      tempBool1 := __assign_776;
+      __assign_776
+    ) else let __assign_777 = false in (
+      tempBool1 := __assign_777;
+      __assign_777
     ));
     ignore (if !tempBool1 then raise (HxRuntime.Hx_return (Obj.repr (HxStmt.SReturnVoid pos))) else ());
     let tempBool2 = ref false in (
@@ -5080,7 +5672,7 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
         | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
-        | HxTokenKind.TKeyword __enum_param_683 -> __enum_param_683
+        | HxTokenKind.TKeyword __enum_param_778 -> __enum_param_778
         | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
         | HxKeyword.KPackage -> 0
         | HxKeyword.KImport -> 1
@@ -5114,33 +5706,33 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
         | HxKeyword.KSuper -> 29
         | HxKeyword.KTrue -> 30
         | HxKeyword.KFalse -> 31
-        | HxKeyword.KNull -> 32) = 10 then let __assign_684 = true in (
-        tempBool2 := __assign_684;
-        __assign_684
-      ) else let __assign_685 = false in (
-        tempBool2 := __assign_685;
-        __assign_685
-      ) else let __assign_686 = false in (
-        tempBool2 := __assign_686;
-        __assign_686
+        | HxKeyword.KNull -> 32) = 10 then let __assign_779 = true in (
+        tempBool2 := __assign_779;
+        __assign_779
+      ) else let __assign_780 = false in (
+        tempBool2 := __assign_780;
+        __assign_780
+      ) else let __assign_781 = false in (
+        tempBool2 := __assign_781;
+        __assign_781
       ));
       ignore (if !tempBool2 then ignore ((
         ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (let __assign_687 = self.peeked1 in (
-            self.cur <- __assign_687;
-            __assign_687
+          ignore (let __assign_782 = self.peeked1 in (
+            self.cur <- __assign_782;
+            __assign_782
           ));
-          ignore (let __assign_688 = self.peeked2 in (
-            self.peeked1 <- __assign_688;
-            __assign_688
+          ignore (let __assign_783 = self.peeked2 in (
+            self.peeked1 <- __assign_783;
+            __assign_783
           ));
-          let __assign_689 = Obj.magic (HxRuntime.hx_null) in (
-            self.peeked2 <- __assign_689;
-            __assign_689
+          let __assign_784 = Obj.magic (HxRuntime.hx_null) in (
+            self.peeked2 <- __assign_784;
+            __assign_784
           )
-        )) else ignore (let __assign_690 = HxLexer.next (self.lex) () in (
-          self.cur <- __assign_690;
-          __assign_690
+        )) else ignore (let __assign_785 = HxLexer.next (self.lex) () in (
+          self.cur <- __assign_785;
+          __assign_785
         )));
         ignore (expect self (HxTokenKind.TLParen) "'('");
         let cond = parseExpr self (fun () -> let tempLeft = ref false in (
@@ -5159,12 +5751,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 9 then let __assign_691 = true in (
-            tempLeft := __assign_691;
-            __assign_691
-          ) else let __assign_692 = false in (
-            tempLeft := __assign_692;
-            __assign_692
+            | HxTokenKind.TOther _ -> 14) = 9 then let __assign_786 = true in (
+            tempLeft := __assign_786;
+            __assign_786
+          ) else let __assign_787 = false in (
+            tempLeft := __assign_787;
+            __assign_787
           ));
           let tempRight = ref false in (
             ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -5182,12 +5774,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_693 = true in (
-              tempRight := __assign_693;
-              __assign_693
-            ) else let __assign_694 = false in (
-              tempRight := __assign_694;
-              __assign_694
+              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_788 = true in (
+              tempRight := __assign_788;
+              __assign_788
+            ) else let __assign_789 = false in (
+              tempRight := __assign_789;
+              __assign_789
             ));
             !tempLeft || !tempRight
           )
@@ -5207,12 +5799,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 9 then let __assign_695 = true in (
-            tempBool3 := __assign_695;
-            __assign_695
-          ) else let __assign_696 = false in (
-            tempBool3 := __assign_696;
-            __assign_696
+            | HxTokenKind.TOther _ -> 14) = 9 then let __assign_790 = true in (
+            tempBool3 := __assign_790;
+            __assign_790
+          ) else let __assign_791 = false in (
+            tempBool3 := __assign_791;
+            __assign_791
           ));
           ignore (if not (!tempBool3) then ignore (try while true do try ignore (let tempBool4 = ref false in (
             ignore (let _g = self.cur.kind in if (match _g with
@@ -5230,12 +5822,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_697 = true in (
-              tempBool4 := __assign_697;
-              __assign_697
-            ) else let __assign_698 = false in (
-              tempBool4 := __assign_698;
-              __assign_698
+              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_792 = true in (
+              tempBool4 := __assign_792;
+              __assign_792
+            ) else let __assign_793 = false in (
+              tempBool4 := __assign_793;
+              __assign_793
             ));
             let tempBool5 = ref false in (
               ignore (let _g = self.cur.kind in if (match _g with
@@ -5253,30 +5845,30 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_699 = true in (
-                tempBool5 := __assign_699;
-                __assign_699
-              ) else let __assign_700 = false in (
-                tempBool5 := __assign_700;
-                __assign_700
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_794 = true in (
+                tempBool5 := __assign_794;
+                __assign_794
+              ) else let __assign_795 = false in (
+                tempBool5 := __assign_795;
+                __assign_795
               ));
               ignore (if not (not (!tempBool4) && not (!tempBool5)) then raise (HxRuntime.Hx_break) else ());
               if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                ignore (let __assign_701 = self.peeked1 in (
-                  self.cur <- __assign_701;
-                  __assign_701
+                ignore (let __assign_796 = self.peeked1 in (
+                  self.cur <- __assign_796;
+                  __assign_796
                 ));
-                ignore (let __assign_702 = self.peeked2 in (
-                  self.peeked1 <- __assign_702;
-                  __assign_702
+                ignore (let __assign_797 = self.peeked2 in (
+                  self.peeked1 <- __assign_797;
+                  __assign_797
                 ));
-                let __assign_703 = Obj.magic (HxRuntime.hx_null) in (
-                  self.peeked2 <- __assign_703;
-                  __assign_703
+                let __assign_798 = Obj.magic (HxRuntime.hx_null) in (
+                  self.peeked2 <- __assign_798;
+                  __assign_798
                 )
-              )) else ignore (let __assign_704 = HxLexer.next (self.lex) () in (
-                self.cur <- __assign_704;
-                __assign_704
+              )) else ignore (let __assign_799 = HxLexer.next (self.lex) () in (
+                self.cur <- __assign_799;
+                __assign_799
               ))
             )
           )) with
@@ -5298,94 +5890,94 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_705 = true in (
-              tempBool6 := __assign_705;
-              __assign_705
-            ) else let __assign_706 = false in (
-              tempBool6 := __assign_706;
-              __assign_706
+              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_800 = true in (
+              tempBool6 := __assign_800;
+              __assign_800
+            ) else let __assign_801 = false in (
+              tempBool6 := __assign_801;
+              __assign_801
             ));
             ignore (if !tempBool6 then ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_707 = self.peeked1 in (
-                self.cur <- __assign_707;
-                __assign_707
+              ignore (let __assign_802 = self.peeked1 in (
+                self.cur <- __assign_802;
+                __assign_802
               ));
-              ignore (let __assign_708 = self.peeked2 in (
-                self.peeked1 <- __assign_708;
-                __assign_708
+              ignore (let __assign_803 = self.peeked2 in (
+                self.peeked1 <- __assign_803;
+                __assign_803
               ));
-              let __assign_709 = Obj.magic (HxRuntime.hx_null) in (
-                self.peeked2 <- __assign_709;
-                __assign_709
+              let __assign_804 = Obj.magic (HxRuntime.hx_null) in (
+                self.peeked2 <- __assign_804;
+                __assign_804
               )
-            )) else ignore (let __assign_710 = HxLexer.next (self.lex) () in (
-              self.cur <- __assign_710;
-              __assign_710
+            )) else ignore (let __assign_805 = HxLexer.next (self.lex) () in (
+              self.cur <- __assign_805;
+              __assign_805
             ))) else ());
             let ensureBranchReturns = fun s -> let tempResult = ref (Obj.magic ()) in (
               ignore (match s with
-                | HxStmt.SBlock (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let stmts = _g in let p = _g1 in if HxArray.length stmts = 0 then let __assign_713 = HxStmt.SBlock ((let __arr_714 = HxArray.create () in (
-                  ignore (HxArray.push __arr_714 (HxStmt.SReturnVoid p));
-                  __arr_714
+                | HxStmt.SBlock (_p0, _p1) -> (let _g = _p0 in let _g1 = _p1 in let stmts = _g in let p = _g1 in if HxArray.length stmts = 0 then let __assign_808 = HxStmt.SBlock ((let __arr_809 = HxArray.create () in (
+                  ignore (HxArray.push __arr_809 (HxStmt.SReturnVoid p));
+                  __arr_809
                 )), p) in (
-                  tempResult := __assign_713;
-                  __assign_713
+                  tempResult := __assign_808;
+                  __assign_808
                 ) else let last = HxArray.get stmts (HxInt.sub (HxArray.length stmts) 1) in match last with
                   | HxStmt.SReturnVoid _p0 -> (
                     ignore _p0;
-                    let __assign_716 = s in (
-                      tempResult := __assign_716;
-                      __assign_716
+                    let __assign_811 = s in (
+                      tempResult := __assign_811;
+                      __assign_811
                     )
                   )
                   | HxStmt.SReturn (_p0, _p1) -> (
                     ignore _p0;
                     ignore _p1;
-                    let __assign_717 = s in (
-                      tempResult := __assign_717;
-                      __assign_717
+                    let __assign_812 = s in (
+                      tempResult := __assign_812;
+                      __assign_812
                     )
                   )
                   | HxStmt.SExpr (_p0, _p1) -> let _g2 = _p0 in let _g3 = _p1 in let e = _g2 in let lp = _g3 in let copy = HxArray.copy stmts in (
-                    ignore (let __assign_718 = HxStmt.SReturn (e, lp) in HxArray.set copy (HxInt.sub (HxArray.length copy) 1) __assign_718);
-                    let __assign_719 = HxStmt.SBlock (copy, p) in (
-                      tempResult := __assign_719;
-                      __assign_719
+                    ignore (let __assign_813 = HxStmt.SReturn (e, lp) in HxArray.set copy (HxInt.sub (HxArray.length copy) 1) __assign_813);
+                    let __assign_814 = HxStmt.SBlock (copy, p) in (
+                      tempResult := __assign_814;
+                      __assign_814
                     )
                   )
                   | _ -> let copy = HxArray.copy stmts in (
                     ignore (HxArray.push copy (HxStmt.SReturnVoid p));
-                    let __assign_715 = HxStmt.SBlock (copy, p) in (
-                      tempResult := __assign_715;
-                      __assign_715
+                    let __assign_810 = HxStmt.SBlock (copy, p) in (
+                      tempResult := __assign_810;
+                      __assign_810
                     )
                   ))
                 | HxStmt.SReturnVoid _p0 -> (
                   ignore _p0;
-                  let __assign_720 = s in (
-                    tempResult := __assign_720;
-                    __assign_720
+                  let __assign_815 = s in (
+                    tempResult := __assign_815;
+                    __assign_815
                   )
                 )
                 | HxStmt.SReturn (_p0, _p1) -> (
                   ignore _p0;
                   ignore _p1;
-                  let __assign_721 = s in (
-                    tempResult := __assign_721;
-                    __assign_721
+                  let __assign_816 = s in (
+                    tempResult := __assign_816;
+                    __assign_816
                   )
                 )
-                | HxStmt.SExpr (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let e = _g in let p = _g1 in let __assign_722 = HxStmt.SReturn (e, p) in (
-                  tempResult := __assign_722;
-                  __assign_722
+                | HxStmt.SExpr (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let e = _g in let p = _g1 in let __assign_817 = HxStmt.SReturn (e, p) in (
+                  tempResult := __assign_817;
+                  __assign_817
                 )
-                | _ -> let __assign_711 = HxStmt.SBlock ((let __arr_712 = HxArray.create () in (
-                  ignore (HxArray.push __arr_712 s);
-                  ignore (HxArray.push __arr_712 (HxStmt.SReturnVoid pos));
-                  __arr_712
+                | _ -> let __assign_806 = HxStmt.SBlock ((let __arr_807 = HxArray.create () in (
+                  ignore (HxArray.push __arr_807 s);
+                  ignore (HxArray.push __arr_807 (HxStmt.SReturnVoid pos));
+                  __arr_807
                 )), pos) in (
-                  tempResult := __assign_711;
-                  __assign_711
+                  tempResult := __assign_806;
+                  __assign_806
                 ));
               !tempResult
             ) in let thenBranch = ensureBranchReturns (parseStmt self (fun () -> let tempResult1 = ref false in (
@@ -5404,12 +5996,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_723 = true in (
-                tempResult1 := __assign_723;
-                __assign_723
-              ) else let __assign_724 = false in (
-                tempResult1 := __assign_724;
-                __assign_724
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_818 = true in (
+                tempResult1 := __assign_818;
+                __assign_818
+              ) else let __assign_819 = false in (
+                tempResult1 := __assign_819;
+                __assign_819
               ));
               !tempResult1
             ))) in (
@@ -5430,12 +6022,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
                   | HxTokenKind.TColon -> 11
                   | HxTokenKind.TDot -> 12
                   | HxTokenKind.TComma -> 13
-                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_725 = true in (
-                  tempResult2 := __assign_725;
-                  __assign_725
-                ) else let __assign_726 = false in (
-                  tempResult2 := __assign_726;
-                  __assign_726
+                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_820 = true in (
+                  tempResult2 := __assign_820;
+                  __assign_820
+                ) else let __assign_821 = false in (
+                  tempResult2 := __assign_821;
+                  __assign_821
                 ));
                 !tempResult2
               ))))) in raise (HxRuntime.Hx_return (Obj.repr (HxStmt.SIf (cond, thenBranch, elseBranch, pos))))
@@ -5459,10 +6051,10 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
         | HxTokenKind.TOther _ -> 14) = 2 then ignore (let _g2 = match _g with
-        | HxTokenKind.TString __enum_param_727 -> __enum_param_727
-        | _ -> failwith "Unexpected enum parameter" in let s = _g2 in let __assign_728 = s in (
-        self.capturedReturnStringLiteral <- __assign_728;
-        __assign_728
+        | HxTokenKind.TString __enum_param_822 -> __enum_param_822
+        | _ -> failwith "Unexpected enum parameter" in let s = _g2 in let __assign_823 = s in (
+        self.capturedReturnStringLiteral <- __assign_823;
+        __assign_823
       )) else ignore ()) else ());
       let expr = parseExpr self (fun () -> let tempLeft1 = ref false in (
         ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -5480,12 +6072,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 10 then let __assign_729 = true in (
-          tempLeft1 := __assign_729;
-          __assign_729
-        ) else let __assign_730 = false in (
-          tempLeft1 := __assign_730;
-          __assign_730
+          | HxTokenKind.TOther _ -> 14) = 10 then let __assign_824 = true in (
+          tempLeft1 := __assign_824;
+          __assign_824
+        ) else let __assign_825 = false in (
+          tempLeft1 := __assign_825;
+          __assign_825
         ));
         let tempRight1 = ref false in (
           ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -5503,12 +6095,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 7 then let __assign_731 = true in (
-            tempRight1 := __assign_731;
-            __assign_731
-          ) else let __assign_732 = false in (
-            tempRight1 := __assign_732;
-            __assign_732
+            | HxTokenKind.TOther _ -> 14) = 7 then let __assign_826 = true in (
+            tempRight1 := __assign_826;
+            __assign_826
+          ) else let __assign_827 = false in (
+            tempRight1 := __assign_827;
+            __assign_827
           ));
           let tempRight2 = ref false in (
             ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -5526,12 +6118,12 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_733 = true in (
-              tempRight2 := __assign_733;
-              __assign_733
-            ) else let __assign_734 = false in (
-              tempRight2 := __assign_734;
-              __assign_734
+              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_828 = true in (
+              tempRight2 := __assign_828;
+              __assign_828
+            ) else let __assign_829 = false in (
+              tempRight2 := __assign_829;
+              __assign_829
             ));
             !tempLeft1 || !tempRight1 || !tempRight2
           )
@@ -5543,7 +6135,7 @@ let rec parseReturnStmt = fun self (pos : HxPos.t) -> try let _gthis = self in l
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_735 -> Obj.obj __ret_735
+  | HxRuntime.Hx_return __ret_830 -> Obj.obj __ret_830
 and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
   ignore (if stop () then raise (HxRuntime.Hx_return (Obj.repr (HxStmt.SExpr (HxExpr.EUnsupported "<eof-stmt>", HxPos.unknown ())))) else ());
   let pos = self.cur.pos in let tempResult = ref (Obj.magic ()) in (
@@ -5551,44 +6143,44 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
       | HxTokenKind.TKeyword _p0 -> (let _g2 = _p0 in match _g2 with
         | HxKeyword.KReturn -> (
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_789 = self.peeked1 in (
-              self.cur <- __assign_789;
-              __assign_789
+            ignore (let __assign_884 = self.peeked1 in (
+              self.cur <- __assign_884;
+              __assign_884
             ));
-            ignore (let __assign_790 = self.peeked2 in (
-              self.peeked1 <- __assign_790;
-              __assign_790
+            ignore (let __assign_885 = self.peeked2 in (
+              self.peeked1 <- __assign_885;
+              __assign_885
             ));
-            let __assign_791 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_791;
-              __assign_791
+            let __assign_886 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_886;
+              __assign_886
             )
-          )) else ignore (let __assign_792 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_792;
-            __assign_792
+          )) else ignore (let __assign_887 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_887;
+            __assign_887
           )));
-          let __assign_793 = parseReturnStmt self pos in (
-            tempResult := __assign_793;
-            __assign_793
+          let __assign_888 = parseReturnStmt self pos in (
+            tempResult := __assign_888;
+            __assign_888
           )
         )
         | HxKeyword.KIf -> (
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_794 = self.peeked1 in (
-              self.cur <- __assign_794;
-              __assign_794
+            ignore (let __assign_889 = self.peeked1 in (
+              self.cur <- __assign_889;
+              __assign_889
             ));
-            ignore (let __assign_795 = self.peeked2 in (
-              self.peeked1 <- __assign_795;
-              __assign_795
+            ignore (let __assign_890 = self.peeked2 in (
+              self.peeked1 <- __assign_890;
+              __assign_890
             ));
-            let __assign_796 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_796;
-              __assign_796
+            let __assign_891 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_891;
+              __assign_891
             )
-          )) else ignore (let __assign_797 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_797;
-            __assign_797
+          )) else ignore (let __assign_892 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_892;
+            __assign_892
           )));
           ignore (expect self (HxTokenKind.TLParen) "'('");
           let cond = parseExpr self (fun () -> let tempLeft = ref false in (
@@ -5607,12 +6199,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_798 = true in (
-              tempLeft := __assign_798;
-              __assign_798
-            ) else let __assign_799 = false in (
-              tempLeft := __assign_799;
-              __assign_799
+              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_893 = true in (
+              tempLeft := __assign_893;
+              __assign_893
+            ) else let __assign_894 = false in (
+              tempLeft := __assign_894;
+              __assign_894
             ));
             let tempRight = ref false in (
               ignore (let _g3 = _gthis.cur.kind in if (match _g3 with
@@ -5630,12 +6222,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_800 = true in (
-                tempRight := __assign_800;
-                __assign_800
-              ) else let __assign_801 = false in (
-                tempRight := __assign_801;
-                __assign_801
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_895 = true in (
+                tempRight := __assign_895;
+                __assign_895
+              ) else let __assign_896 = false in (
+                tempRight := __assign_896;
+                __assign_896
               ));
               !tempLeft || !tempRight
             )
@@ -5655,12 +6247,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_802 = true in (
-              tempBool := __assign_802;
-              __assign_802
-            ) else let __assign_803 = false in (
-              tempBool := __assign_803;
-              __assign_803
+              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_897 = true in (
+              tempBool := __assign_897;
+              __assign_897
+            ) else let __assign_898 = false in (
+              tempBool := __assign_898;
+              __assign_898
             ));
             ignore (if not (!tempBool) then ignore (try while true do try ignore (let tempBool1 = ref false in (
               ignore (let _g3 = self.cur.kind in if (match _g3 with
@@ -5678,12 +6270,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 9 then let __assign_804 = true in (
-                tempBool1 := __assign_804;
-                __assign_804
-              ) else let __assign_805 = false in (
-                tempBool1 := __assign_805;
-                __assign_805
+                | HxTokenKind.TOther _ -> 14) = 9 then let __assign_899 = true in (
+                tempBool1 := __assign_899;
+                __assign_899
+              ) else let __assign_900 = false in (
+                tempBool1 := __assign_900;
+                __assign_900
               ));
               let tempBool2 = ref false in (
                 ignore (let _g3 = self.cur.kind in if (match _g3 with
@@ -5701,30 +6293,30 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                   | HxTokenKind.TColon -> 11
                   | HxTokenKind.TDot -> 12
                   | HxTokenKind.TComma -> 13
-                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_806 = true in (
-                  tempBool2 := __assign_806;
-                  __assign_806
-                ) else let __assign_807 = false in (
-                  tempBool2 := __assign_807;
-                  __assign_807
+                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_901 = true in (
+                  tempBool2 := __assign_901;
+                  __assign_901
+                ) else let __assign_902 = false in (
+                  tempBool2 := __assign_902;
+                  __assign_902
                 ));
                 ignore (if not (not (!tempBool1) && not (!tempBool2)) then raise (HxRuntime.Hx_break) else ());
                 if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                  ignore (let __assign_808 = self.peeked1 in (
-                    self.cur <- __assign_808;
-                    __assign_808
+                  ignore (let __assign_903 = self.peeked1 in (
+                    self.cur <- __assign_903;
+                    __assign_903
                   ));
-                  ignore (let __assign_809 = self.peeked2 in (
-                    self.peeked1 <- __assign_809;
-                    __assign_809
+                  ignore (let __assign_904 = self.peeked2 in (
+                    self.peeked1 <- __assign_904;
+                    __assign_904
                   ));
-                  let __assign_810 = Obj.magic (HxRuntime.hx_null) in (
-                    self.peeked2 <- __assign_810;
-                    __assign_810
+                  let __assign_905 = Obj.magic (HxRuntime.hx_null) in (
+                    self.peeked2 <- __assign_905;
+                    __assign_905
                   )
-                )) else ignore (let __assign_811 = HxLexer.next (self.lex) () in (
-                  self.cur <- __assign_811;
-                  __assign_811
+                )) else ignore (let __assign_906 = HxLexer.next (self.lex) () in (
+                  self.cur <- __assign_906;
+                  __assign_906
                 ))
               )
             )) with
@@ -5746,41 +6338,41 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 9 then let __assign_812 = true in (
-                tempBool3 := __assign_812;
-                __assign_812
-              ) else let __assign_813 = false in (
-                tempBool3 := __assign_813;
-                __assign_813
+                | HxTokenKind.TOther _ -> 14) = 9 then let __assign_907 = true in (
+                tempBool3 := __assign_907;
+                __assign_907
+              ) else let __assign_908 = false in (
+                tempBool3 := __assign_908;
+                __assign_908
               ));
               ignore (if !tempBool3 then ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                ignore (let __assign_814 = self.peeked1 in (
-                  self.cur <- __assign_814;
-                  __assign_814
+                ignore (let __assign_909 = self.peeked1 in (
+                  self.cur <- __assign_909;
+                  __assign_909
                 ));
-                ignore (let __assign_815 = self.peeked2 in (
-                  self.peeked1 <- __assign_815;
-                  __assign_815
+                ignore (let __assign_910 = self.peeked2 in (
+                  self.peeked1 <- __assign_910;
+                  __assign_910
                 ));
-                let __assign_816 = Obj.magic (HxRuntime.hx_null) in (
-                  self.peeked2 <- __assign_816;
-                  __assign_816
+                let __assign_911 = Obj.magic (HxRuntime.hx_null) in (
+                  self.peeked2 <- __assign_911;
+                  __assign_911
                 )
-              )) else ignore (let __assign_817 = HxLexer.next (self.lex) () in (
-                self.cur <- __assign_817;
-                __assign_817
+              )) else ignore (let __assign_912 = HxLexer.next (self.lex) () in (
+                self.cur <- __assign_912;
+                __assign_912
               ))) else ());
               let thenBranch = parseStmt self stop in let tempMaybeHxStmt = ref (Obj.magic ()) in (
-                ignore (if acceptKeyword self (HxKeyword.KElse) then let __assign_818 = HxEnum.box_if_needed "HxStmt" (Obj.repr (parseStmt self stop)) in (
-                  tempMaybeHxStmt := __assign_818;
-                  __assign_818
-                ) else let __assign_819 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null))) in (
-                  tempMaybeHxStmt := __assign_819;
-                  __assign_819
+                ignore (if acceptKeyword self (HxKeyword.KElse) then let __assign_913 = HxEnum.box_if_needed "HxStmt" (Obj.repr (parseStmt self stop)) in (
+                  tempMaybeHxStmt := __assign_913;
+                  __assign_913
+                ) else let __assign_914 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" (Obj.magic (HxRuntime.hx_null))) in (
+                  tempMaybeHxStmt := __assign_914;
+                  __assign_914
                 ));
-                let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" (!tempMaybeHxStmt)) in let __assign_820 = HxStmt.SIf (cond, thenBranch, elseBranch, pos) in (
-                  tempResult := __assign_820;
-                  __assign_820
+                let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" (!tempMaybeHxStmt)) in let __assign_915 = HxStmt.SIf (cond, thenBranch, elseBranch, pos) in (
+                  tempResult := __assign_915;
+                  __assign_915
                 )
               )
             )
@@ -5788,25 +6380,25 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
         )
         | HxKeyword.KVar -> (
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_821 = self.peeked1 in (
-              self.cur <- __assign_821;
-              __assign_821
+            ignore (let __assign_916 = self.peeked1 in (
+              self.cur <- __assign_916;
+              __assign_916
             ));
-            ignore (let __assign_822 = self.peeked2 in (
-              self.peeked1 <- __assign_822;
-              __assign_822
+            ignore (let __assign_917 = self.peeked2 in (
+              self.peeked1 <- __assign_917;
+              __assign_917
             ));
-            let __assign_823 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_823;
-              __assign_823
+            let __assign_918 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_918;
+              __assign_918
             )
-          )) else ignore (let __assign_824 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_824;
-            __assign_824
+          )) else ignore (let __assign_919 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_919;
+            __assign_919
           )));
-          let __assign_825 = parseVarStmt self pos in (
-            tempResult := __assign_825;
-            __assign_825
+          let __assign_920 = parseVarStmt self pos in (
+            tempResult := __assign_920;
+            __assign_920
           )
         )
         | _ -> let expr = parseExpr self (fun () -> let tempLeft1 = ref false in (
@@ -5825,12 +6417,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_782 = true in (
-            tempLeft1 := __assign_782;
-            __assign_782
-          ) else let __assign_783 = false in (
-            tempLeft1 := __assign_783;
-            __assign_783
+            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_877 = true in (
+            tempLeft1 := __assign_877;
+            __assign_877
+          ) else let __assign_878 = false in (
+            tempLeft1 := __assign_878;
+            __assign_878
           ));
           let tempRight1 = ref false in (
             ignore (let _g3 = _gthis.cur.kind in if (match _g3 with
@@ -5848,12 +6440,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_784 = true in (
-              tempRight1 := __assign_784;
-              __assign_784
-            ) else let __assign_785 = false in (
-              tempRight1 := __assign_785;
-              __assign_785
+              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_879 = true in (
+              tempRight1 := __assign_879;
+              __assign_879
+            ) else let __assign_880 = false in (
+              tempRight1 := __assign_880;
+              __assign_880
             ));
             let tempRight2 = ref false in (
               ignore (let _g3 = _gthis.cur.kind in if (match _g3 with
@@ -5871,40 +6463,40 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_786 = true in (
-                tempRight2 := __assign_786;
-                __assign_786
-              ) else let __assign_787 = false in (
-                tempRight2 := __assign_787;
-                __assign_787
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_881 = true in (
+                tempRight2 := __assign_881;
+                __assign_881
+              ) else let __assign_882 = false in (
+                tempRight2 := __assign_882;
+                __assign_882
               ));
               !tempLeft1 || !tempRight1 || !tempRight2
             )
           )
         )) in (
           ignore (syncToStmtEnd self ());
-          let __assign_788 = HxStmt.SExpr (expr, pos) in (
-            tempResult := __assign_788;
-            __assign_788
+          let __assign_883 = HxStmt.SExpr (expr, pos) in (
+            tempResult := __assign_883;
+            __assign_883
           )
         ))
       | HxTokenKind.TLBrace -> (
         ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (let __assign_826 = self.peeked1 in (
-            self.cur <- __assign_826;
-            __assign_826
+          ignore (let __assign_921 = self.peeked1 in (
+            self.cur <- __assign_921;
+            __assign_921
           ));
-          ignore (let __assign_827 = self.peeked2 in (
-            self.peeked1 <- __assign_827;
-            __assign_827
+          ignore (let __assign_922 = self.peeked2 in (
+            self.peeked1 <- __assign_922;
+            __assign_922
           ));
-          let __assign_828 = Obj.magic (HxRuntime.hx_null) in (
-            self.peeked2 <- __assign_828;
-            __assign_828
+          let __assign_923 = Obj.magic (HxRuntime.hx_null) in (
+            self.peeked2 <- __assign_923;
+            __assign_923
           )
-        )) else ignore (let __assign_829 = HxLexer.next (self.lex) () in (
-          self.cur <- __assign_829;
-          __assign_829
+        )) else ignore (let __assign_924 = HxLexer.next (self.lex) () in (
+          self.cur <- __assign_924;
+          __assign_924
         )));
         let ss = HxArray.create () in (
           ignore (try while true do try ignore (let tempBool4 = ref false in (
@@ -5923,12 +6515,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_830 = true in (
-              tempBool4 := __assign_830;
-              __assign_830
-            ) else let __assign_831 = false in (
-              tempBool4 := __assign_831;
-              __assign_831
+              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_925 = true in (
+              tempBool4 := __assign_925;
+              __assign_925
+            ) else let __assign_926 = false in (
+              tempBool4 := __assign_926;
+              __assign_926
             ));
             let tempBool5 = ref false in (
               ignore (let _g2 = self.cur.kind in if (match _g2 with
@@ -5946,12 +6538,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_832 = true in (
-                tempBool5 := __assign_832;
-                __assign_832
-              ) else let __assign_833 = false in (
-                tempBool5 := __assign_833;
-                __assign_833
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_927 = true in (
+                tempBool5 := __assign_927;
+                __assign_927
+              ) else let __assign_928 = false in (
+                tempBool5 := __assign_928;
+                __assign_928
               ));
               ignore (if not (not (!tempBool4) && not (!tempBool5)) then raise (HxRuntime.Hx_break) else ());
               HxArray.push ss (parseStmt self (fun () -> let tempLeft2 = ref false in (
@@ -5970,12 +6562,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                   | HxTokenKind.TColon -> 11
                   | HxTokenKind.TDot -> 12
                   | HxTokenKind.TComma -> 13
-                  | HxTokenKind.TOther _ -> 14) = 7 then let __assign_834 = true in (
-                  tempLeft2 := __assign_834;
-                  __assign_834
-                ) else let __assign_835 = false in (
-                  tempLeft2 := __assign_835;
-                  __assign_835
+                  | HxTokenKind.TOther _ -> 14) = 7 then let __assign_929 = true in (
+                  tempLeft2 := __assign_929;
+                  __assign_929
+                ) else let __assign_930 = false in (
+                  tempLeft2 := __assign_930;
+                  __assign_930
                 ));
                 let tempRight3 = ref false in (
                   ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -5993,12 +6585,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
                     | HxTokenKind.TColon -> 11
                     | HxTokenKind.TDot -> 12
                     | HxTokenKind.TComma -> 13
-                    | HxTokenKind.TOther _ -> 14) = 0 then let __assign_836 = true in (
-                    tempRight3 := __assign_836;
-                    __assign_836
-                  ) else let __assign_837 = false in (
-                    tempRight3 := __assign_837;
-                    __assign_837
+                    | HxTokenKind.TOther _ -> 14) = 0 then let __assign_931 = true in (
+                    tempRight3 := __assign_931;
+                    __assign_931
+                  ) else let __assign_932 = false in (
+                    tempRight3 := __assign_932;
+                    __assign_932
                   ));
                   !tempLeft2 || !tempRight3
                 )
@@ -6008,9 +6600,9 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
             | HxRuntime.Hx_continue -> () done with
             | HxRuntime.Hx_break -> ());
           ignore (expect self (HxTokenKind.TRBrace) "'}'");
-          let __assign_838 = HxStmt.SBlock (ss, pos) in (
-            tempResult := __assign_838;
-            __assign_838
+          let __assign_933 = HxStmt.SBlock (ss, pos) in (
+            tempResult := __assign_933;
+            __assign_933
           )
         )
       )
@@ -6030,12 +6622,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 10 then let __assign_775 = true in (
-          tempLeft3 := __assign_775;
-          __assign_775
-        ) else let __assign_776 = false in (
-          tempLeft3 := __assign_776;
-          __assign_776
+          | HxTokenKind.TOther _ -> 14) = 10 then let __assign_870 = true in (
+          tempLeft3 := __assign_870;
+          __assign_870
+        ) else let __assign_871 = false in (
+          tempLeft3 := __assign_871;
+          __assign_871
         ));
         let tempRight4 = ref false in (
           ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -6053,12 +6645,12 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 7 then let __assign_777 = true in (
-            tempRight4 := __assign_777;
-            __assign_777
-          ) else let __assign_778 = false in (
-            tempRight4 := __assign_778;
-            __assign_778
+            | HxTokenKind.TOther _ -> 14) = 7 then let __assign_872 = true in (
+            tempRight4 := __assign_872;
+            __assign_872
+          ) else let __assign_873 = false in (
+            tempRight4 := __assign_873;
+            __assign_873
           ));
           let tempRight5 = ref false in (
             ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -6076,47 +6668,47 @@ and parseStmt = fun self (stop : unit -> bool) -> try let _gthis = self in (
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_779 = true in (
-              tempRight5 := __assign_779;
-              __assign_779
-            ) else let __assign_780 = false in (
-              tempRight5 := __assign_780;
-              __assign_780
+              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_874 = true in (
+              tempRight5 := __assign_874;
+              __assign_874
+            ) else let __assign_875 = false in (
+              tempRight5 := __assign_875;
+              __assign_875
             ));
             !tempLeft3 || !tempRight4 || !tempRight5
           )
         )
       )) in (
         ignore (syncToStmtEnd self ());
-        let __assign_781 = HxStmt.SExpr (expr, pos) in (
-          tempResult := __assign_781;
-          __assign_781
+        let __assign_876 = HxStmt.SExpr (expr, pos) in (
+          tempResult := __assign_876;
+          __assign_876
         )
       ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_839 -> Obj.obj __ret_839
+  | HxRuntime.Hx_return __ret_934 -> Obj.obj __ret_934
 
 let parseFunctionBodyStatements = fun self () -> try let _gthis = self in let out = HxArray.create () in while true do ignore (let _g = self.cur.kind in match _g with
   | HxTokenKind.TEof -> ignore (fail self "Unterminated function body")
   | HxTokenKind.TRBrace -> ignore ((
     ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (let __assign_844 = self.peeked1 in (
-        self.cur <- __assign_844;
-        __assign_844
+      ignore (let __assign_939 = self.peeked1 in (
+        self.cur <- __assign_939;
+        __assign_939
       ));
-      ignore (let __assign_845 = self.peeked2 in (
-        self.peeked1 <- __assign_845;
-        __assign_845
+      ignore (let __assign_940 = self.peeked2 in (
+        self.peeked1 <- __assign_940;
+        __assign_940
       ));
-      let __assign_846 = Obj.magic (HxRuntime.hx_null) in (
-        self.peeked2 <- __assign_846;
-        __assign_846
+      let __assign_941 = Obj.magic (HxRuntime.hx_null) in (
+        self.peeked2 <- __assign_941;
+        __assign_941
       )
-    )) else ignore (let __assign_847 = HxLexer.next (self.lex) () in (
-      self.cur <- __assign_847;
-      __assign_847
+    )) else ignore (let __assign_942 = HxLexer.next (self.lex) () in (
+      self.cur <- __assign_942;
+      __assign_942
     )));
     raise (HxRuntime.Hx_return (Obj.repr out))
   ))
@@ -6136,12 +6728,12 @@ let parseFunctionBodyStatements = fun self () -> try let _gthis = self in let ou
       | HxTokenKind.TColon -> 11
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
-      | HxTokenKind.TOther _ -> 14) = 7 then let __assign_840 = true in (
-      tempLeft := __assign_840;
-      __assign_840
-    ) else let __assign_841 = false in (
-      tempLeft := __assign_841;
-      __assign_841
+      | HxTokenKind.TOther _ -> 14) = 7 then let __assign_935 = true in (
+      tempLeft := __assign_935;
+      __assign_935
+    ) else let __assign_936 = false in (
+      tempLeft := __assign_936;
+      __assign_936
     ));
     let tempRight = ref false in (
       ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -6159,37 +6751,37 @@ let parseFunctionBodyStatements = fun self () -> try let _gthis = self in let ou
         | HxTokenKind.TColon -> 11
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 0 then let __assign_842 = true in (
-        tempRight := __assign_842;
-        __assign_842
-      ) else let __assign_843 = false in (
-        tempRight := __assign_843;
-        __assign_843
+        | HxTokenKind.TOther _ -> 14) = 0 then let __assign_937 = true in (
+        tempRight := __assign_937;
+        __assign_937
+      ) else let __assign_938 = false in (
+        tempRight := __assign_938;
+        __assign_938
       ));
       !tempLeft || !tempRight
     )
   ))))) done with
-  | HxRuntime.Hx_return __ret_848 -> Obj.obj __ret_848
+  | HxRuntime.Hx_return __ret_943 -> Obj.obj __ret_943
 
 let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self in let out = HxArray.create () in while true do ignore (let _g = self.cur.kind in match _g with
   | HxTokenKind.TEof -> raise (HxRuntime.Hx_return (Obj.repr out))
   | HxTokenKind.TRBrace -> ignore ((
     ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (let __assign_889 = self.peeked1 in (
-        self.cur <- __assign_889;
-        __assign_889
+      ignore (let __assign_984 = self.peeked1 in (
+        self.cur <- __assign_984;
+        __assign_984
       ));
-      ignore (let __assign_890 = self.peeked2 in (
-        self.peeked1 <- __assign_890;
-        __assign_890
+      ignore (let __assign_985 = self.peeked2 in (
+        self.peeked1 <- __assign_985;
+        __assign_985
       ));
-      let __assign_891 = Obj.magic (HxRuntime.hx_null) in (
-        self.peeked2 <- __assign_891;
-        __assign_891
+      let __assign_986 = Obj.magic (HxRuntime.hx_null) in (
+        self.peeked2 <- __assign_986;
+        __assign_986
       )
-    )) else ignore (let __assign_892 = HxLexer.next (self.lex) () in (
-      self.cur <- __assign_892;
-      __assign_892
+    )) else ignore (let __assign_987 = HxLexer.next (self.lex) () in (
+      self.cur <- __assign_987;
+      __assign_987
     )));
     raise (HxRuntime.Hx_return (Obj.repr out))
   ))
@@ -6210,12 +6802,12 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
         | HxTokenKind.TColon -> 11
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 7 then let __assign_849 = true in (
-        tempLeft := __assign_849;
-        __assign_849
-      ) else let __assign_850 = false in (
-        tempLeft := __assign_850;
-        __assign_850
+        | HxTokenKind.TOther _ -> 14) = 7 then let __assign_944 = true in (
+        tempLeft := __assign_944;
+        __assign_944
+      ) else let __assign_945 = false in (
+        tempLeft := __assign_945;
+        __assign_945
       ));
       let tempRight = ref false in (
         ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -6233,12 +6825,12 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_851 = true in (
-          tempRight := __assign_851;
-          __assign_851
-        ) else let __assign_852 = false in (
-          tempRight := __assign_852;
-          __assign_852
+          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_946 = true in (
+          tempRight := __assign_946;
+          __assign_946
+        ) else let __assign_947 = false in (
+          tempRight := __assign_947;
+          __assign_947
         ));
         !tempLeft || !tempRight
       )
@@ -6247,8 +6839,8 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_853 -> raise (HxRuntime.Hx_return __ret_853)
-    | HxRuntime.Hx_exception (__exn_v_854, __exn_tags_855) -> if true then let _hx = (__exn_v_854 : Obj.t) in (
+    | HxRuntime.Hx_return __ret_948 -> raise (HxRuntime.Hx_return __ret_948)
+    | HxRuntime.Hx_exception (__exn_v_949, __exn_tags_950) -> if true then let _hx = (__exn_v_949 : Obj.t) in (
       ignore _hx;
       (
         ignore (try while true do try ignore (let tempBool = ref false in (
@@ -6267,12 +6859,12 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_856 = true in (
-            tempBool := __assign_856;
-            __assign_856
-          ) else let __assign_857 = false in (
-            tempBool := __assign_857;
-            __assign_857
+            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_951 = true in (
+            tempBool := __assign_951;
+            __assign_951
+          ) else let __assign_952 = false in (
+            tempBool := __assign_952;
+            __assign_952
           ));
           let tempBool1 = ref false in (
             ignore (let _g2 = self.cur.kind in if (match _g2 with
@@ -6290,12 +6882,12 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_858 = true in (
-              tempBool1 := __assign_858;
-              __assign_858
-            ) else let __assign_859 = false in (
-              tempBool1 := __assign_859;
-              __assign_859
+              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_953 = true in (
+              tempBool1 := __assign_953;
+              __assign_953
+            ) else let __assign_954 = false in (
+              tempBool1 := __assign_954;
+              __assign_954
             ));
             let tempBool2 = ref false in (
               ignore (let _g2 = self.cur.kind in if (match _g2 with
@@ -6313,30 +6905,30 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_860 = true in (
-                tempBool2 := __assign_860;
-                __assign_860
-              ) else let __assign_861 = false in (
-                tempBool2 := __assign_861;
-                __assign_861
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_955 = true in (
+                tempBool2 := __assign_955;
+                __assign_955
+              ) else let __assign_956 = false in (
+                tempBool2 := __assign_956;
+                __assign_956
               ));
               ignore (if not (not (!tempBool) && not (!tempBool1) && not (!tempBool2)) then raise (HxRuntime.Hx_break) else ());
               if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                ignore (let __assign_862 = self.peeked1 in (
-                  self.cur <- __assign_862;
-                  __assign_862
+                ignore (let __assign_957 = self.peeked1 in (
+                  self.cur <- __assign_957;
+                  __assign_957
                 ));
-                ignore (let __assign_863 = self.peeked2 in (
-                  self.peeked1 <- __assign_863;
-                  __assign_863
+                ignore (let __assign_958 = self.peeked2 in (
+                  self.peeked1 <- __assign_958;
+                  __assign_958
                 ));
-                let __assign_864 = Obj.magic (HxRuntime.hx_null) in (
-                  self.peeked2 <- __assign_864;
-                  __assign_864
+                let __assign_959 = Obj.magic (HxRuntime.hx_null) in (
+                  self.peeked2 <- __assign_959;
+                  __assign_959
                 )
-              )) else ignore (let __assign_865 = HxLexer.next (self.lex) () in (
-                self.cur <- __assign_865;
-                __assign_865
+              )) else ignore (let __assign_960 = HxLexer.next (self.lex) () in (
+                self.cur <- __assign_960;
+                __assign_960
               ))
             )
           )
@@ -6359,35 +6951,35 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_866 = true in (
-            tempBool3 := __assign_866;
-            __assign_866
-          ) else let __assign_867 = false in (
-            tempBool3 := __assign_867;
-            __assign_867
+            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_961 = true in (
+            tempBool3 := __assign_961;
+            __assign_961
+          ) else let __assign_962 = false in (
+            tempBool3 := __assign_962;
+            __assign_962
           ));
           ignore (if !tempBool3 then ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_868 = self.peeked1 in (
-              self.cur <- __assign_868;
-              __assign_868
+            ignore (let __assign_963 = self.peeked1 in (
+              self.cur <- __assign_963;
+              __assign_963
             ));
-            ignore (let __assign_869 = self.peeked2 in (
-              self.peeked1 <- __assign_869;
-              __assign_869
+            ignore (let __assign_964 = self.peeked2 in (
+              self.peeked1 <- __assign_964;
+              __assign_964
             ));
-            let __assign_870 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_870;
-              __assign_870
+            let __assign_965 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_965;
+              __assign_965
             )
-          )) else ignore (let __assign_871 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_871;
-            __assign_871
+          )) else ignore (let __assign_966 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_966;
+            __assign_966
           ))) else ());
           0
         )
       )
-    ) else HxRuntime.hx_throw_typed __exn_v_854 __exn_tags_855
-    | __exn_872 -> if true then let _hx = (Obj.repr __exn_872 : Obj.t) in (
+    ) else HxRuntime.hx_throw_typed __exn_v_949 __exn_tags_950
+    | __exn_967 -> if true then let _hx = (Obj.repr __exn_967 : Obj.t) in (
       ignore _hx;
       (
         ignore (try while true do try ignore (let tempBool = ref false in (
@@ -6406,12 +6998,12 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_873 = true in (
-            tempBool := __assign_873;
-            __assign_873
-          ) else let __assign_874 = false in (
-            tempBool := __assign_874;
-            __assign_874
+            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_968 = true in (
+            tempBool := __assign_968;
+            __assign_968
+          ) else let __assign_969 = false in (
+            tempBool := __assign_969;
+            __assign_969
           ));
           let tempBool1 = ref false in (
             ignore (let _g2 = self.cur.kind in if (match _g2 with
@@ -6429,12 +7021,12 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_875 = true in (
-              tempBool1 := __assign_875;
-              __assign_875
-            ) else let __assign_876 = false in (
-              tempBool1 := __assign_876;
-              __assign_876
+              | HxTokenKind.TOther _ -> 14) = 7 then let __assign_970 = true in (
+              tempBool1 := __assign_970;
+              __assign_970
+            ) else let __assign_971 = false in (
+              tempBool1 := __assign_971;
+              __assign_971
             ));
             let tempBool2 = ref false in (
               ignore (let _g2 = self.cur.kind in if (match _g2 with
@@ -6452,30 +7044,30 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_877 = true in (
-                tempBool2 := __assign_877;
-                __assign_877
-              ) else let __assign_878 = false in (
-                tempBool2 := __assign_878;
-                __assign_878
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_972 = true in (
+                tempBool2 := __assign_972;
+                __assign_972
+              ) else let __assign_973 = false in (
+                tempBool2 := __assign_973;
+                __assign_973
               ));
               ignore (if not (not (!tempBool) && not (!tempBool1) && not (!tempBool2)) then raise (HxRuntime.Hx_break) else ());
               if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                ignore (let __assign_879 = self.peeked1 in (
-                  self.cur <- __assign_879;
-                  __assign_879
+                ignore (let __assign_974 = self.peeked1 in (
+                  self.cur <- __assign_974;
+                  __assign_974
                 ));
-                ignore (let __assign_880 = self.peeked2 in (
-                  self.peeked1 <- __assign_880;
-                  __assign_880
+                ignore (let __assign_975 = self.peeked2 in (
+                  self.peeked1 <- __assign_975;
+                  __assign_975
                 ));
-                let __assign_881 = Obj.magic (HxRuntime.hx_null) in (
-                  self.peeked2 <- __assign_881;
-                  __assign_881
+                let __assign_976 = Obj.magic (HxRuntime.hx_null) in (
+                  self.peeked2 <- __assign_976;
+                  __assign_976
                 )
-              )) else ignore (let __assign_882 = HxLexer.next (self.lex) () in (
-                self.cur <- __assign_882;
-                __assign_882
+              )) else ignore (let __assign_977 = HxLexer.next (self.lex) () in (
+                self.cur <- __assign_977;
+                __assign_977
               ))
             )
           )
@@ -6498,40 +7090,40 @@ let parseFunctionBodyStatementsBestEffort = fun self () -> try let _gthis = self
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_883 = true in (
-            tempBool3 := __assign_883;
-            __assign_883
-          ) else let __assign_884 = false in (
-            tempBool3 := __assign_884;
-            __assign_884
+            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_978 = true in (
+            tempBool3 := __assign_978;
+            __assign_978
+          ) else let __assign_979 = false in (
+            tempBool3 := __assign_979;
+            __assign_979
           ));
           ignore (if !tempBool3 then ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_885 = self.peeked1 in (
-              self.cur <- __assign_885;
-              __assign_885
+            ignore (let __assign_980 = self.peeked1 in (
+              self.cur <- __assign_980;
+              __assign_980
             ));
-            ignore (let __assign_886 = self.peeked2 in (
-              self.peeked1 <- __assign_886;
-              __assign_886
+            ignore (let __assign_981 = self.peeked2 in (
+              self.peeked1 <- __assign_981;
+              __assign_981
             ));
-            let __assign_887 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_887;
-              __assign_887
+            let __assign_982 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_982;
+              __assign_982
             )
-          )) else ignore (let __assign_888 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_888;
-            __assign_888
+          )) else ignore (let __assign_983 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_983;
+            __assign_983
           ))) else ());
           0
         )
       )
-    ) else raise (__exn_872))) done with
-  | HxRuntime.Hx_return __ret_893 -> Obj.obj __ret_893
+    ) else raise (__exn_967))) done with
+  | HxRuntime.Hx_return __ret_988 -> Obj.obj __ret_988
 
 let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isStatic : bool) -> let _gthis = self in (
-  ignore (let __assign_894 = "" in (
-    self.capturedReturnStringLiteral <- __assign_894;
-    __assign_894
+  ignore (let __assign_989 = "" in (
+    self.capturedReturnStringLiteral <- __assign_989;
+    __assign_989
   ));
   let tempString = ref "" in (
     ignore (let _g = self.cur.kind in if (match _g with
@@ -6550,7 +7142,7 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
       | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
-      | HxTokenKind.TKeyword __enum_param_895 -> __enum_param_895
+      | HxTokenKind.TKeyword __enum_param_990 -> __enum_param_990
       | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
       | HxKeyword.KPackage -> 0
       | HxKeyword.KImport -> 1
@@ -6586,32 +7178,32 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
       | HxKeyword.KFalse -> 31
       | HxKeyword.KNull -> 32) = 27 then (
       ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (let __assign_896 = self.peeked1 in (
-          self.cur <- __assign_896;
-          __assign_896
+        ignore (let __assign_991 = self.peeked1 in (
+          self.cur <- __assign_991;
+          __assign_991
         ));
-        ignore (let __assign_897 = self.peeked2 in (
-          self.peeked1 <- __assign_897;
-          __assign_897
+        ignore (let __assign_992 = self.peeked2 in (
+          self.peeked1 <- __assign_992;
+          __assign_992
         ));
-        let __assign_898 = Obj.magic (HxRuntime.hx_null) in (
-          self.peeked2 <- __assign_898;
-          __assign_898
+        let __assign_993 = Obj.magic (HxRuntime.hx_null) in (
+          self.peeked2 <- __assign_993;
+          __assign_993
         )
-      )) else ignore (let __assign_899 = HxLexer.next (self.lex) () in (
-        self.cur <- __assign_899;
-        __assign_899
+      )) else ignore (let __assign_994 = HxLexer.next (self.lex) () in (
+        self.cur <- __assign_994;
+        __assign_994
       )));
-      let __assign_900 = "new" in (
-        tempString := __assign_900;
-        __assign_900
+      let __assign_995 = "new" in (
+        tempString := __assign_995;
+        __assign_995
       )
-    ) else let __assign_901 = readIdent self "function name" in (
-      tempString := __assign_901;
-      __assign_901
-    ) else let __assign_902 = readIdent self "function name" in (
-      tempString := __assign_902;
-      __assign_902
+    ) else let __assign_996 = readIdent self "function name" in (
+      tempString := __assign_996;
+      __assign_996
+    ) else let __assign_997 = readIdent self "function name" in (
+      tempString := __assign_997;
+      __assign_997
     ));
     ignore (expect self (HxTokenKind.TLParen) "'('");
     let args = HxArray.create () in let tempBool = ref false in (
@@ -6630,12 +7222,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
         | HxTokenKind.TColon -> 11
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
-        | HxTokenKind.TOther _ -> 14) = 9 then let __assign_903 = true in (
-        tempBool := __assign_903;
-        __assign_903
-      ) else let __assign_904 = false in (
-        tempBool := __assign_904;
-        __assign_904
+        | HxTokenKind.TOther _ -> 14) = 9 then let __assign_998 = true in (
+        tempBool := __assign_998;
+        __assign_998
+      ) else let __assign_999 = false in (
+        tempBool := __assign_999;
+        __assign_999
       ));
       ignore (if not (!tempBool) then ignore (try while true do try ignore (let argName = readIdent self "argument name" in let argType = ref "" in let defaultValue = ref (HxDefaultValue.NoDefault) in let tempBool1 = ref false in (
         ignore (let _g = self.cur.kind in if (match _g with
@@ -6653,32 +7245,32 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_905 = true in (
-          tempBool1 := __assign_905;
-          __assign_905
-        ) else let __assign_906 = false in (
-          tempBool1 := __assign_906;
-          __assign_906
+          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_1000 = true in (
+          tempBool1 := __assign_1000;
+          __assign_1000
+        ) else let __assign_1001 = false in (
+          tempBool1 := __assign_1001;
+          __assign_1001
         ));
         ignore (if !tempBool1 then ignore ((
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_907 = self.peeked1 in (
-              self.cur <- __assign_907;
-              __assign_907
+            ignore (let __assign_1002 = self.peeked1 in (
+              self.cur <- __assign_1002;
+              __assign_1002
             ));
-            ignore (let __assign_908 = self.peeked2 in (
-              self.peeked1 <- __assign_908;
-              __assign_908
+            ignore (let __assign_1003 = self.peeked2 in (
+              self.peeked1 <- __assign_1003;
+              __assign_1003
             ));
-            let __assign_909 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_909;
-              __assign_909
+            let __assign_1004 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_1004;
+              __assign_1004
             )
-          )) else ignore (let __assign_910 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_910;
-            __assign_910
+          )) else ignore (let __assign_1005 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_1005;
+            __assign_1005
           )));
-          let __assign_911 = readTypeHintText self (fun () -> let tempLeft = ref false in (
+          let __assign_1006 = readTypeHintText self (fun () -> let tempLeft = ref false in (
             ignore (let _g = _gthis.cur.kind in if (match _g with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
@@ -6694,12 +7286,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 13 then let __assign_912 = true in (
-              tempLeft := __assign_912;
-              __assign_912
-            ) else let __assign_913 = false in (
-              tempLeft := __assign_913;
-              __assign_913
+              | HxTokenKind.TOther _ -> 14) = 13 then let __assign_1007 = true in (
+              tempLeft := __assign_1007;
+              __assign_1007
+            ) else let __assign_1008 = false in (
+              tempLeft := __assign_1008;
+              __assign_1008
             ));
             let tempRight = ref false in (
               ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -6717,12 +7309,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 9 then let __assign_914 = true in (
-                tempRight := __assign_914;
-                __assign_914
-              ) else let __assign_915 = false in (
-                tempRight := __assign_915;
-                __assign_915
+                | HxTokenKind.TOther _ -> 14) = 9 then let __assign_1009 = true in (
+                tempRight := __assign_1009;
+                __assign_1009
+              ) else let __assign_1010 = false in (
+                tempRight := __assign_1010;
+                __assign_1010
               ));
               let tempRight1 = ref false in (
                 ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -6740,22 +7332,22 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                   | HxTokenKind.TColon -> 11
                   | HxTokenKind.TDot -> 12
                   | HxTokenKind.TComma -> 13
-                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_916 = true in (
-                  tempRight1 := __assign_916;
-                  __assign_916
-                ) else let __assign_917 = false in (
-                  tempRight1 := __assign_917;
-                  __assign_917
+                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1011 = true in (
+                  tempRight1 := __assign_1011;
+                  __assign_1011
+                ) else let __assign_1012 = false in (
+                  tempRight1 := __assign_1012;
+                  __assign_1012
                 ));
                 !tempLeft || !tempRight || !tempRight1 || isOtherChar _gthis "="
               )
             )
           )) in (
-            argType := __assign_911;
-            __assign_911
+            argType := __assign_1006;
+            __assign_1006
           )
         )) else ());
-        ignore (if acceptOtherChar self "=" then ignore (let __assign_918 = HxDefaultValue.Default (parseExpr self (fun () -> let tempLeft1 = ref false in (
+        ignore (if acceptOtherChar self "=" then ignore (let __assign_1013 = HxDefaultValue.Default (parseExpr self (fun () -> let tempLeft1 = ref false in (
           ignore (let _g = _gthis.cur.kind in if (match _g with
             | HxTokenKind.TEof -> 0
             | HxTokenKind.TIdent _ -> 1
@@ -6771,12 +7363,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 13 then let __assign_919 = true in (
-            tempLeft1 := __assign_919;
-            __assign_919
-          ) else let __assign_920 = false in (
-            tempLeft1 := __assign_920;
-            __assign_920
+            | HxTokenKind.TOther _ -> 14) = 13 then let __assign_1014 = true in (
+            tempLeft1 := __assign_1014;
+            __assign_1014
+          ) else let __assign_1015 = false in (
+            tempLeft1 := __assign_1015;
+            __assign_1015
           ));
           let tempRight2 = ref false in (
             ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -6794,12 +7386,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_921 = true in (
-              tempRight2 := __assign_921;
-              __assign_921
-            ) else let __assign_922 = false in (
-              tempRight2 := __assign_922;
-              __assign_922
+              | HxTokenKind.TOther _ -> 14) = 9 then let __assign_1016 = true in (
+              tempRight2 := __assign_1016;
+              __assign_1016
+            ) else let __assign_1017 = false in (
+              tempRight2 := __assign_1017;
+              __assign_1017
             ));
             let tempRight3 = ref false in (
               ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -6817,19 +7409,19 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_923 = true in (
-                tempRight3 := __assign_923;
-                __assign_923
-              ) else let __assign_924 = false in (
-                tempRight3 := __assign_924;
-                __assign_924
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1018 = true in (
+                tempRight3 := __assign_1018;
+                __assign_1018
+              ) else let __assign_1019 = false in (
+                tempRight3 := __assign_1019;
+                __assign_1019
               ));
               !tempLeft1 || !tempRight2 || !tempRight3
             )
           )
         ))) in (
-          defaultValue := __assign_918;
-          __assign_918
+          defaultValue := __assign_1013;
+          __assign_1013
         )) else ());
         ignore (HxArray.push args (HxFunctionArg.create argName (!argType) (!defaultValue)));
         let tempBool2 = ref false in (
@@ -6848,30 +7440,30 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 13 then let __assign_925 = true in (
-            tempBool2 := __assign_925;
-            __assign_925
-          ) else let __assign_926 = false in (
-            tempBool2 := __assign_926;
-            __assign_926
+            | HxTokenKind.TOther _ -> 14) = 13 then let __assign_1020 = true in (
+            tempBool2 := __assign_1020;
+            __assign_1020
+          ) else let __assign_1021 = false in (
+            tempBool2 := __assign_1021;
+            __assign_1021
           ));
           ignore (if !tempBool2 then ignore ((
             ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_927 = self.peeked1 in (
-                self.cur <- __assign_927;
-                __assign_927
+              ignore (let __assign_1022 = self.peeked1 in (
+                self.cur <- __assign_1022;
+                __assign_1022
               ));
-              ignore (let __assign_928 = self.peeked2 in (
-                self.peeked1 <- __assign_928;
-                __assign_928
+              ignore (let __assign_1023 = self.peeked2 in (
+                self.peeked1 <- __assign_1023;
+                __assign_1023
               ));
-              let __assign_929 = Obj.magic (HxRuntime.hx_null) in (
-                self.peeked2 <- __assign_929;
-                __assign_929
+              let __assign_1024 = Obj.magic (HxRuntime.hx_null) in (
+                self.peeked2 <- __assign_1024;
+                __assign_1024
               )
-            )) else ignore (let __assign_930 = HxLexer.next (self.lex) () in (
-              self.cur <- __assign_930;
-              __assign_930
+            )) else ignore (let __assign_1025 = HxLexer.next (self.lex) () in (
+              self.cur <- __assign_1025;
+              __assign_1025
             )));
             raise (HxRuntime.Hx_continue)
           )) else ());
@@ -6897,32 +7489,32 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_931 = true in (
-          tempBool3 := __assign_931;
-          __assign_931
-        ) else let __assign_932 = false in (
-          tempBool3 := __assign_932;
-          __assign_932
+          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_1026 = true in (
+          tempBool3 := __assign_1026;
+          __assign_1026
+        ) else let __assign_1027 = false in (
+          tempBool3 := __assign_1027;
+          __assign_1027
         ));
         ignore (if !tempBool3 then ignore ((
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_933 = self.peeked1 in (
-              self.cur <- __assign_933;
-              __assign_933
+            ignore (let __assign_1028 = self.peeked1 in (
+              self.cur <- __assign_1028;
+              __assign_1028
             ));
-            ignore (let __assign_934 = self.peeked2 in (
-              self.peeked1 <- __assign_934;
-              __assign_934
+            ignore (let __assign_1029 = self.peeked2 in (
+              self.peeked1 <- __assign_1029;
+              __assign_1029
             ));
-            let __assign_935 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_935;
-              __assign_935
+            let __assign_1030 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_1030;
+              __assign_1030
             )
-          )) else ignore (let __assign_936 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_936;
-            __assign_936
+          )) else ignore (let __assign_1031 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_1031;
+            __assign_1031
           )));
-          let __assign_937 = readTypeHintText self (fun () -> let tempLeft2 = ref false in (
+          let __assign_1032 = readTypeHintText self (fun () -> let tempLeft2 = ref false in (
             ignore (let _g = _gthis.cur.kind in if (match _g with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
@@ -6938,12 +7530,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 6 then let __assign_938 = true in (
-              tempLeft2 := __assign_938;
-              __assign_938
-            ) else let __assign_939 = false in (
-              tempLeft2 := __assign_939;
-              __assign_939
+              | HxTokenKind.TOther _ -> 14) = 6 then let __assign_1033 = true in (
+              tempLeft2 := __assign_1033;
+              __assign_1033
+            ) else let __assign_1034 = false in (
+              tempLeft2 := __assign_1034;
+              __assign_1034
             ));
             let tempRight4 = ref false in (
               ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -6961,12 +7553,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 10 then let __assign_940 = true in (
-                tempRight4 := __assign_940;
-                __assign_940
-              ) else let __assign_941 = false in (
-                tempRight4 := __assign_941;
-                __assign_941
+                | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1035 = true in (
+                tempRight4 := __assign_1035;
+                __assign_1035
+              ) else let __assign_1036 = false in (
+                tempRight4 := __assign_1036;
+                __assign_1036
               ));
               let tempRight5 = ref false in (
                 ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -6984,12 +7576,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                   | HxTokenKind.TColon -> 11
                   | HxTokenKind.TDot -> 12
                   | HxTokenKind.TComma -> 13
-                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_942 = true in (
-                  tempRight5 := __assign_942;
-                  __assign_942
-                ) else let __assign_943 = false in (
-                  tempRight5 := __assign_943;
-                  __assign_943
+                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1037 = true in (
+                  tempRight5 := __assign_1037;
+                  __assign_1037
+                ) else let __assign_1038 = false in (
+                  tempRight5 := __assign_1038;
+                  __assign_1038
                 ));
                 let tempRight6 = ref false in (
                   ignore (let _g = _gthis.cur.kind in if (match _g with
@@ -7008,7 +7600,7 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                     | HxTokenKind.TDot -> 12
                     | HxTokenKind.TComma -> 13
                     | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
-                    | HxTokenKind.TKeyword __enum_param_944 -> __enum_param_944
+                    | HxTokenKind.TKeyword __enum_param_1039 -> __enum_param_1039
                     | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
                     | HxKeyword.KPackage -> 0
                     | HxKeyword.KImport -> 1
@@ -7042,69 +7634,69 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                     | HxKeyword.KSuper -> 29
                     | HxKeyword.KTrue -> 30
                     | HxKeyword.KFalse -> 31
-                    | HxKeyword.KNull -> 32) = 9 then let __assign_945 = true in (
-                    tempRight6 := __assign_945;
-                    __assign_945
-                  ) else let __assign_946 = false in (
-                    tempRight6 := __assign_946;
-                    __assign_946
-                  ) else let __assign_947 = false in (
-                    tempRight6 := __assign_947;
-                    __assign_947
+                    | HxKeyword.KNull -> 32) = 9 then let __assign_1040 = true in (
+                    tempRight6 := __assign_1040;
+                    __assign_1040
+                  ) else let __assign_1041 = false in (
+                    tempRight6 := __assign_1041;
+                    __assign_1041
+                  ) else let __assign_1042 = false in (
+                    tempRight6 := __assign_1042;
+                    __assign_1042
                   ));
                   !tempLeft2 || !tempRight4 || !tempRight5 || !tempRight6
                 )
               )
             )
           )) in (
-            returnType := __assign_937;
-            __assign_937
+            returnType := __assign_1032;
+            __assign_1032
           )
         )) else ());
         let body = HxArray.create () in (
           ignore (let _g = self.cur.kind in match _g with
             | HxTokenKind.TLBrace -> ignore ((
               ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                ignore (let __assign_958 = self.peeked1 in (
-                  self.cur <- __assign_958;
-                  __assign_958
+                ignore (let __assign_1053 = self.peeked1 in (
+                  self.cur <- __assign_1053;
+                  __assign_1053
                 ));
-                ignore (let __assign_959 = self.peeked2 in (
-                  self.peeked1 <- __assign_959;
-                  __assign_959
+                ignore (let __assign_1054 = self.peeked2 in (
+                  self.peeked1 <- __assign_1054;
+                  __assign_1054
                 ));
-                let __assign_960 = Obj.magic (HxRuntime.hx_null) in (
-                  self.peeked2 <- __assign_960;
-                  __assign_960
+                let __assign_1055 = Obj.magic (HxRuntime.hx_null) in (
+                  self.peeked2 <- __assign_1055;
+                  __assign_1055
                 )
-              )) else ignore (let __assign_961 = HxLexer.next (self.lex) () in (
-                self.cur <- __assign_961;
-                __assign_961
+              )) else ignore (let __assign_1056 = HxLexer.next (self.lex) () in (
+                self.cur <- __assign_1056;
+                __assign_1056
               )));
               let _g2 = ref 0 in let _g1 = parseFunctionBodyStatements self () in while !_g2 < HxArray.length _g1 do ignore (let s = HxArray.get _g1 (!_g2) in (
-                ignore (let __old_962 = !_g2 in let __new_963 = HxInt.add __old_962 1 in (
-                  ignore (_g2 := __new_963);
-                  __new_963
+                ignore (let __old_1057 = !_g2 in let __new_1058 = HxInt.add __old_1057 1 in (
+                  ignore (_g2 := __new_1058);
+                  __new_1058
                 ));
                 HxArray.push body s
               )) done
             ))
             | HxTokenKind.TSemicolon -> ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_964 = self.peeked1 in (
-                self.cur <- __assign_964;
-                __assign_964
+              ignore (let __assign_1059 = self.peeked1 in (
+                self.cur <- __assign_1059;
+                __assign_1059
               ));
-              ignore (let __assign_965 = self.peeked2 in (
-                self.peeked1 <- __assign_965;
-                __assign_965
+              ignore (let __assign_1060 = self.peeked2 in (
+                self.peeked1 <- __assign_1060;
+                __assign_1060
               ));
-              let __assign_966 = Obj.magic (HxRuntime.hx_null) in (
-                self.peeked2 <- __assign_966;
-                __assign_966
+              let __assign_1061 = Obj.magic (HxRuntime.hx_null) in (
+                self.peeked2 <- __assign_1061;
+                __assign_1061
               )
-            )) else ignore (let __assign_967 = HxLexer.next (self.lex) () in (
-              self.cur <- __assign_967;
-              __assign_967
+            )) else ignore (let __assign_1062 = HxLexer.next (self.lex) () in (
+              self.cur <- __assign_1062;
+              __assign_1062
             )))
             | _ -> ignore (if acceptKeyword self (HxKeyword.KReturn) then ignore (HxArray.push body (parseReturnStmt self (HxPos.unknown ()))) else ignore (let expr = parseExpr self (fun () -> let tempLeft3 = ref false in (
               ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -7122,12 +7714,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 10 then let __assign_948 = true in (
-                tempLeft3 := __assign_948;
-                __assign_948
-              ) else let __assign_949 = false in (
-                tempLeft3 := __assign_949;
-                __assign_949
+                | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1043 = true in (
+                tempLeft3 := __assign_1043;
+                __assign_1043
+              ) else let __assign_1044 = false in (
+                tempLeft3 := __assign_1044;
+                __assign_1044
               ));
               let tempRight7 = ref false in (
                 ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -7145,12 +7737,12 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                   | HxTokenKind.TColon -> 11
                   | HxTokenKind.TDot -> 12
                   | HxTokenKind.TComma -> 13
-                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_950 = true in (
-                  tempRight7 := __assign_950;
-                  __assign_950
-                ) else let __assign_951 = false in (
-                  tempRight7 := __assign_951;
-                  __assign_951
+                  | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1045 = true in (
+                  tempRight7 := __assign_1045;
+                  __assign_1045
+                ) else let __assign_1046 = false in (
+                  tempRight7 := __assign_1046;
+                  __assign_1046
                 ));
                 !tempLeft3 || !tempRight7
               )
@@ -7170,29 +7762,29 @@ let parseFunctionDecl = fun self (visibility : HxVisibility.hxvisibility) (isSta
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 10 then let __assign_952 = true in (
-                tempBool4 := __assign_952;
-                __assign_952
-              ) else let __assign_953 = false in (
-                tempBool4 := __assign_953;
-                __assign_953
+                | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1047 = true in (
+                tempBool4 := __assign_1047;
+                __assign_1047
+              ) else let __assign_1048 = false in (
+                tempBool4 := __assign_1048;
+                __assign_1048
               ));
               ignore (if !tempBool4 then ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-                ignore (let __assign_954 = self.peeked1 in (
-                  self.cur <- __assign_954;
-                  __assign_954
+                ignore (let __assign_1049 = self.peeked1 in (
+                  self.cur <- __assign_1049;
+                  __assign_1049
                 ));
-                ignore (let __assign_955 = self.peeked2 in (
-                  self.peeked1 <- __assign_955;
-                  __assign_955
+                ignore (let __assign_1050 = self.peeked2 in (
+                  self.peeked1 <- __assign_1050;
+                  __assign_1050
                 ));
-                let __assign_956 = Obj.magic (HxRuntime.hx_null) in (
-                  self.peeked2 <- __assign_956;
-                  __assign_956
+                let __assign_1051 = Obj.magic (HxRuntime.hx_null) in (
+                  self.peeked2 <- __assign_1051;
+                  __assign_1051
                 )
-              )) else ignore (let __assign_957 = HxLexer.next (self.lex) () in (
-                self.cur <- __assign_957;
-                __assign_957
+              )) else ignore (let __assign_1052 = HxLexer.next (self.lex) () in (
+                self.cur <- __assign_1052;
+                __assign_1052
               ))) else ());
               HxArray.push body (HxStmt.SExpr (expr, HxPos.unknown ()))
             ))));
@@ -7208,56 +7800,56 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
     | HxTokenKind.TEof -> ignore (fail self "Unexpected end of input in class body")
     | HxTokenKind.TRBrace -> ignore ((
       ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (let __assign_1005 = self.peeked1 in (
-          self.cur <- __assign_1005;
-          __assign_1005
+        ignore (let __assign_1100 = self.peeked1 in (
+          self.cur <- __assign_1100;
+          __assign_1100
         ));
-        ignore (let __assign_1006 = self.peeked2 in (
-          self.peeked1 <- __assign_1006;
-          __assign_1006
+        ignore (let __assign_1101 = self.peeked2 in (
+          self.peeked1 <- __assign_1101;
+          __assign_1101
         ));
-        let __assign_1007 = Obj.magic (HxRuntime.hx_null) in (
-          self.peeked2 <- __assign_1007;
-          __assign_1007
+        let __assign_1102 = Obj.magic (HxRuntime.hx_null) in (
+          self.peeked2 <- __assign_1102;
+          __assign_1102
         )
-      )) else ignore (let __assign_1008 = HxLexer.next (self.lex) () in (
-        self.cur <- __assign_1008;
-        __assign_1008
+      )) else ignore (let __assign_1103 = HxLexer.next (self.lex) () in (
+        self.cur <- __assign_1103;
+        __assign_1103
       )));
       raise (HxRuntime.Hx_break)
     ))
     | _ -> ignore (let visibility = ref (HxVisibility.Public) in let isStatic = ref false in let keep = ref true in (
       ignore (while !keep do ignore ((
-        ignore (let __assign_968 = false in (
-          keep := __assign_968;
-          __assign_968
+        ignore (let __assign_1063 = false in (
+          keep := __assign_1063;
+          __assign_1063
         ));
         if acceptKeyword self (HxKeyword.KPublic) then ignore ((
-          ignore (let __assign_969 = HxVisibility.Public in (
-            visibility := __assign_969;
-            __assign_969
+          ignore (let __assign_1064 = HxVisibility.Public in (
+            visibility := __assign_1064;
+            __assign_1064
           ));
-          let __assign_970 = true in (
-            keep := __assign_970;
-            __assign_970
+          let __assign_1065 = true in (
+            keep := __assign_1065;
+            __assign_1065
           )
         )) else ignore (if acceptKeyword self (HxKeyword.KPrivate) then ignore ((
-          ignore (let __assign_971 = HxVisibility.Private in (
-            visibility := __assign_971;
-            __assign_971
+          ignore (let __assign_1066 = HxVisibility.Private in (
+            visibility := __assign_1066;
+            __assign_1066
           ));
-          let __assign_972 = true in (
-            keep := __assign_972;
-            __assign_972
+          let __assign_1067 = true in (
+            keep := __assign_1067;
+            __assign_1067
           )
         )) else ignore (if acceptKeyword self (HxKeyword.KStatic) then ignore ((
-          ignore (let __assign_973 = true in (
-            isStatic := __assign_973;
-            __assign_973
+          ignore (let __assign_1068 = true in (
+            isStatic := __assign_1068;
+            __assign_1068
           ));
-          let __assign_974 = true in (
-            keep := __assign_974;
-            __assign_974
+          let __assign_1069 = true in (
+            keep := __assign_1069;
+            __assign_1069
           )
         )) else ()))
       )) done);
@@ -7281,32 +7873,32 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_975 = true in (
-          tempBool := __assign_975;
-          __assign_975
-        ) else let __assign_976 = false in (
-          tempBool := __assign_976;
-          __assign_976
+          | HxTokenKind.TOther _ -> 14) = 11 then let __assign_1070 = true in (
+          tempBool := __assign_1070;
+          __assign_1070
+        ) else let __assign_1071 = false in (
+          tempBool := __assign_1071;
+          __assign_1071
         ));
         ignore (if !tempBool then ignore ((
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_977 = self.peeked1 in (
-              self.cur <- __assign_977;
-              __assign_977
+            ignore (let __assign_1072 = self.peeked1 in (
+              self.cur <- __assign_1072;
+              __assign_1072
             ));
-            ignore (let __assign_978 = self.peeked2 in (
-              self.peeked1 <- __assign_978;
-              __assign_978
+            ignore (let __assign_1073 = self.peeked2 in (
+              self.peeked1 <- __assign_1073;
+              __assign_1073
             ));
-            let __assign_979 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_979;
-              __assign_979
+            let __assign_1074 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_1074;
+              __assign_1074
             )
-          )) else ignore (let __assign_980 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_980;
-            __assign_980
+          )) else ignore (let __assign_1075 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_1075;
+            __assign_1075
           )));
-          let __assign_981 = readTypeHintText self (fun () -> let tempLeft = ref false in (
+          let __assign_1076 = readTypeHintText self (fun () -> let tempLeft = ref false in (
             ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
               | HxTokenKind.TEof -> 0
               | HxTokenKind.TIdent _ -> 1
@@ -7322,12 +7914,12 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 10 then let __assign_982 = true in (
-              tempLeft := __assign_982;
-              __assign_982
-            ) else let __assign_983 = false in (
-              tempLeft := __assign_983;
-              __assign_983
+              | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1077 = true in (
+              tempLeft := __assign_1077;
+              __assign_1077
+            ) else let __assign_1078 = false in (
+              tempLeft := __assign_1078;
+              __assign_1078
             ));
             let tempRight = ref false in (
               ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -7345,21 +7937,21 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_984 = true in (
-                tempRight := __assign_984;
-                __assign_984
-              ) else let __assign_985 = false in (
-                tempRight := __assign_985;
-                __assign_985
+                | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1079 = true in (
+                tempRight := __assign_1079;
+                __assign_1079
+              ) else let __assign_1080 = false in (
+                tempRight := __assign_1080;
+                __assign_1080
               ));
               !tempLeft || !tempRight || isOtherChar _gthis "="
             )
           )) in (
-            typeHint := __assign_981;
-            __assign_981
+            typeHint := __assign_1076;
+            __assign_1076
           )
         )) else ());
-        ignore (if acceptOtherChar self "=" then ignore (let __assign_986 = HxEnum.box_if_needed "HxExpr" (Obj.repr (parseExpr self (fun () -> let tempLeft1 = ref false in (
+        ignore (if acceptOtherChar self "=" then ignore (let __assign_1081 = HxEnum.box_if_needed "HxExpr" (Obj.repr (parseExpr self (fun () -> let tempLeft1 = ref false in (
           ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
             | HxTokenKind.TEof -> 0
             | HxTokenKind.TIdent _ -> 1
@@ -7375,12 +7967,12 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
             | HxTokenKind.TColon -> 11
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
-            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_987 = true in (
-            tempLeft1 := __assign_987;
-            __assign_987
-          ) else let __assign_988 = false in (
-            tempLeft1 := __assign_988;
-            __assign_988
+            | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1082 = true in (
+            tempLeft1 := __assign_1082;
+            __assign_1082
+          ) else let __assign_1083 = false in (
+            tempLeft1 := __assign_1083;
+            __assign_1083
           ));
           let tempRight1 = ref false in (
             ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -7398,12 +7990,12 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
               | HxTokenKind.TColon -> 11
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
-              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_989 = true in (
-              tempRight1 := __assign_989;
-              __assign_989
-            ) else let __assign_990 = false in (
-              tempRight1 := __assign_990;
-              __assign_990
+              | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1084 = true in (
+              tempRight1 := __assign_1084;
+              __assign_1084
+            ) else let __assign_1085 = false in (
+              tempRight1 := __assign_1085;
+              __assign_1085
             ));
             let tempRight2 = ref false in (
               ignore (let _g2 = _gthis.cur.kind in if (match _g2 with
@@ -7421,19 +8013,19 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
                 | HxTokenKind.TColon -> 11
                 | HxTokenKind.TDot -> 12
                 | HxTokenKind.TComma -> 13
-                | HxTokenKind.TOther _ -> 14) = 7 then let __assign_991 = true in (
-                tempRight2 := __assign_991;
-                __assign_991
-              ) else let __assign_992 = false in (
-                tempRight2 := __assign_992;
-                __assign_992
+                | HxTokenKind.TOther _ -> 14) = 7 then let __assign_1086 = true in (
+                tempRight2 := __assign_1086;
+                __assign_1086
+              ) else let __assign_1087 = false in (
+                tempRight2 := __assign_1087;
+                __assign_1087
               ));
               !tempLeft1 || !tempRight1 || !tempRight2
             )
           )
         )))) in (
-          init := __assign_986;
-          __assign_986
+          init := __assign_1081;
+          __assign_1081
         )) else ());
         ignore (expect self (HxTokenKind.TSemicolon) "';'");
         ignore (HxArray.push fields (HxFieldDecl.create name (!visibility) (!isStatic) (!typeHint) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (!init)))));
@@ -7442,68 +8034,68 @@ let parseClassMembers = fun self () -> let _gthis = self in let funcs = HxArray.
       let _g2 = self.cur.kind in match _g2 with
         | HxTokenKind.TLBrace -> ignore ((
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_997 = self.peeked1 in (
-              self.cur <- __assign_997;
-              __assign_997
+            ignore (let __assign_1092 = self.peeked1 in (
+              self.cur <- __assign_1092;
+              __assign_1092
             ));
-            ignore (let __assign_998 = self.peeked2 in (
-              self.peeked1 <- __assign_998;
-              __assign_998
+            ignore (let __assign_1093 = self.peeked2 in (
+              self.peeked1 <- __assign_1093;
+              __assign_1093
             ));
-            let __assign_999 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_999;
-              __assign_999
+            let __assign_1094 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_1094;
+              __assign_1094
             )
-          )) else ignore (let __assign_1000 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_1000;
-            __assign_1000
+          )) else ignore (let __assign_1095 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_1095;
+            __assign_1095
           )));
           skipBalancedBraces self ()
         ))
         | HxTokenKind.TLParen -> ignore ((
           ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_1001 = self.peeked1 in (
-              self.cur <- __assign_1001;
-              __assign_1001
+            ignore (let __assign_1096 = self.peeked1 in (
+              self.cur <- __assign_1096;
+              __assign_1096
             ));
-            ignore (let __assign_1002 = self.peeked2 in (
-              self.peeked1 <- __assign_1002;
-              __assign_1002
+            ignore (let __assign_1097 = self.peeked2 in (
+              self.peeked1 <- __assign_1097;
+              __assign_1097
             ));
-            let __assign_1003 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_1003;
-              __assign_1003
+            let __assign_1098 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_1098;
+              __assign_1098
             )
-          )) else ignore (let __assign_1004 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_1004;
-            __assign_1004
+          )) else ignore (let __assign_1099 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_1099;
+            __assign_1099
           )));
           skipBalancedParens self ()
         ))
         | _ -> ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (let __assign_993 = self.peeked1 in (
-            self.cur <- __assign_993;
-            __assign_993
+          ignore (let __assign_1088 = self.peeked1 in (
+            self.cur <- __assign_1088;
+            __assign_1088
           ));
-          ignore (let __assign_994 = self.peeked2 in (
-            self.peeked1 <- __assign_994;
-            __assign_994
+          ignore (let __assign_1089 = self.peeked2 in (
+            self.peeked1 <- __assign_1089;
+            __assign_1089
           ));
-          let __assign_995 = Obj.magic (HxRuntime.hx_null) in (
-            self.peeked2 <- __assign_995;
-            __assign_995
+          let __assign_1090 = Obj.magic (HxRuntime.hx_null) in (
+            self.peeked2 <- __assign_1090;
+            __assign_1090
           )
-        )) else ignore (let __assign_996 = HxLexer.next (self.lex) () in (
-          self.cur <- __assign_996;
-          __assign_996
+        )) else ignore (let __assign_1091 = HxLexer.next (self.lex) () in (
+          self.cur <- __assign_1091;
+          __assign_1091
         )))
     ))) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let __anon_1009 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_1009 "functions" (Obj.repr funcs));
-    ignore (HxAnon.set __anon_1009 "fields" (Obj.repr fields));
-    __anon_1009
+  let __anon_1104 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_1104 "functions" (Obj.repr funcs));
+    ignore (HxAnon.set __anon_1104 "fields" (Obj.repr fields));
+    __anon_1104
   )
 )
 
@@ -7524,39 +8116,39 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
       | HxTokenKind.TColon -> 11
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
-      | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1010 = true in (
-      tempBool := __assign_1010;
-      __assign_1010
-    ) else let __assign_1011 = false in (
-      tempBool := __assign_1011;
-      __assign_1011
+      | HxTokenKind.TOther _ -> 14) = 10 then let __assign_1105 = true in (
+      tempBool := __assign_1105;
+      __assign_1105
+    ) else let __assign_1106 = false in (
+      tempBool := __assign_1106;
+      __assign_1106
     ));
     if !tempBool then ignore ((
-      ignore (let __assign_1012 = "" in (
-        packagePath := __assign_1012;
-        __assign_1012
+      ignore (let __assign_1107 = "" in (
+        packagePath := __assign_1107;
+        __assign_1107
       ));
       if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (let __assign_1013 = self.peeked1 in (
-          self.cur <- __assign_1013;
-          __assign_1013
+        ignore (let __assign_1108 = self.peeked1 in (
+          self.cur <- __assign_1108;
+          __assign_1108
         ));
-        ignore (let __assign_1014 = self.peeked2 in (
-          self.peeked1 <- __assign_1014;
-          __assign_1014
+        ignore (let __assign_1109 = self.peeked2 in (
+          self.peeked1 <- __assign_1109;
+          __assign_1109
         ));
-        let __assign_1015 = Obj.magic (HxRuntime.hx_null) in (
-          self.peeked2 <- __assign_1015;
-          __assign_1015
+        let __assign_1110 = Obj.magic (HxRuntime.hx_null) in (
+          self.peeked2 <- __assign_1110;
+          __assign_1110
         )
-      )) else ignore (let __assign_1016 = HxLexer.next (self.lex) () in (
-        self.cur <- __assign_1016;
-        __assign_1016
+      )) else ignore (let __assign_1111 = HxLexer.next (self.lex) () in (
+        self.cur <- __assign_1111;
+        __assign_1111
       ))
     )) else ignore ((
-      ignore (let __assign_1017 = readDottedPath self () in (
-        packagePath := __assign_1017;
-        __assign_1017
+      ignore (let __assign_1112 = readDottedPath self () in (
+        packagePath := __assign_1112;
+        __assign_1112
       ));
       expect self (HxTokenKind.TSemicolon) "';'"
     ))
@@ -7572,29 +8164,29 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
         | HxTokenKind.TEof -> raise (HxRuntime.Hx_break)
         | HxTokenKind.TKeyword _p0 -> ignore (let _g2 = _p0 in match _g2 with
           | HxKeyword.KClass -> ignore ((
-            ignore (let __assign_1026 = true in (
-              sawClass := __assign_1026;
-              __assign_1026
+            ignore (let __assign_1121 = true in (
+              sawClass := __assign_1121;
+              __assign_1121
             ));
             raise (HxRuntime.Hx_break)
           ))
           | HxKeyword.KFunction -> ignore ((
             ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-              ignore (let __assign_1027 = self.peeked1 in (
-                self.cur <- __assign_1027;
-                __assign_1027
+              ignore (let __assign_1122 = self.peeked1 in (
+                self.cur <- __assign_1122;
+                __assign_1122
               ));
-              ignore (let __assign_1028 = self.peeked2 in (
-                self.peeked1 <- __assign_1028;
-                __assign_1028
+              ignore (let __assign_1123 = self.peeked2 in (
+                self.peeked1 <- __assign_1123;
+                __assign_1123
               ));
-              let __assign_1029 = Obj.magic (HxRuntime.hx_null) in (
-                self.peeked2 <- __assign_1029;
-                __assign_1029
+              let __assign_1124 = Obj.magic (HxRuntime.hx_null) in (
+                self.peeked2 <- __assign_1124;
+                __assign_1124
               )
-            )) else ignore (let __assign_1030 = HxLexer.next (self.lex) () in (
-              self.cur <- __assign_1030;
-              __assign_1030
+            )) else ignore (let __assign_1125 = HxLexer.next (self.lex) () in (
+              self.cur <- __assign_1125;
+              __assign_1125
             )));
             let _g3 = self.cur.kind in if (match _g3 with
               | HxTokenKind.TEof -> 0
@@ -7612,45 +8204,45 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
               | HxTokenKind.TDot -> 12
               | HxTokenKind.TComma -> 13
               | HxTokenKind.TOther _ -> 14) = 1 then ignore (let _g4 = match _g3 with
-              | HxTokenKind.TIdent __enum_param_1031 -> __enum_param_1031
-              | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g4 "main" then ignore (let __assign_1032 = true in (
-              hasToplevelMain := __assign_1032;
-              __assign_1032
+              | HxTokenKind.TIdent __enum_param_1126 -> __enum_param_1126
+              | _ -> failwith "Unexpected enum parameter" in if HxString.equals _g4 "main" then ignore (let __assign_1127 = true in (
+              hasToplevelMain := __assign_1127;
+              __assign_1127
             )) else ignore ()) else ignore ()
           ))
           | _ -> ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-            ignore (let __assign_1022 = self.peeked1 in (
-              self.cur <- __assign_1022;
-              __assign_1022
+            ignore (let __assign_1117 = self.peeked1 in (
+              self.cur <- __assign_1117;
+              __assign_1117
             ));
-            ignore (let __assign_1023 = self.peeked2 in (
-              self.peeked1 <- __assign_1023;
-              __assign_1023
+            ignore (let __assign_1118 = self.peeked2 in (
+              self.peeked1 <- __assign_1118;
+              __assign_1118
             ));
-            let __assign_1024 = Obj.magic (HxRuntime.hx_null) in (
-              self.peeked2 <- __assign_1024;
-              __assign_1024
+            let __assign_1119 = Obj.magic (HxRuntime.hx_null) in (
+              self.peeked2 <- __assign_1119;
+              __assign_1119
             )
-          )) else ignore (let __assign_1025 = HxLexer.next (self.lex) () in (
-            self.cur <- __assign_1025;
-            __assign_1025
+          )) else ignore (let __assign_1120 = HxLexer.next (self.lex) () in (
+            self.cur <- __assign_1120;
+            __assign_1120
           ))))
         | _ -> ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-          ignore (let __assign_1018 = self.peeked1 in (
-            self.cur <- __assign_1018;
-            __assign_1018
+          ignore (let __assign_1113 = self.peeked1 in (
+            self.cur <- __assign_1113;
+            __assign_1113
           ));
-          ignore (let __assign_1019 = self.peeked2 in (
-            self.peeked1 <- __assign_1019;
-            __assign_1019
+          ignore (let __assign_1114 = self.peeked2 in (
+            self.peeked1 <- __assign_1114;
+            __assign_1114
           ));
-          let __assign_1020 = Obj.magic (HxRuntime.hx_null) in (
-            self.peeked2 <- __assign_1020;
-            __assign_1020
+          let __assign_1115 = Obj.magic (HxRuntime.hx_null) in (
+            self.peeked2 <- __assign_1115;
+            __assign_1115
           )
-        )) else ignore (let __assign_1021 = HxLexer.next (self.lex) () in (
-          self.cur <- __assign_1021;
-          __assign_1021
+        )) else ignore (let __assign_1116 = HxLexer.next (self.lex) () in (
+          self.cur <- __assign_1116;
+          __assign_1116
         ))));
       let tempLeft = ref false in (
         ignore (let _g = self.cur.kind in if (match _g with
@@ -7668,12 +8260,12 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
           | HxTokenKind.TColon -> 11
           | HxTokenKind.TDot -> 12
           | HxTokenKind.TComma -> 13
-          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1033 = true in (
-          tempLeft := __assign_1033;
-          __assign_1033
-        ) else let __assign_1034 = false in (
-          tempLeft := __assign_1034;
-          __assign_1034
+          | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1128 = true in (
+          tempLeft := __assign_1128;
+          __assign_1128
+        ) else let __assign_1129 = false in (
+          tempLeft := __assign_1129;
+          __assign_1129
         ));
         let tempRight = ref false in (
           ignore (let _g = self.cur.kind in if (match _g with
@@ -7692,7 +8284,7 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
             | HxTokenKind.TDot -> 12
             | HxTokenKind.TComma -> 13
             | HxTokenKind.TOther _ -> 14) = 5 then let _g2 = match _g with
-            | HxTokenKind.TKeyword __enum_param_1035 -> __enum_param_1035
+            | HxTokenKind.TKeyword __enum_param_1130 -> __enum_param_1130
             | _ -> failwith "Unexpected enum parameter" in if (match _g2 with
             | HxKeyword.KPackage -> 0
             | HxKeyword.KImport -> 1
@@ -7726,15 +8318,15 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
             | HxKeyword.KSuper -> 29
             | HxKeyword.KTrue -> 30
             | HxKeyword.KFalse -> 31
-            | HxKeyword.KNull -> 32) = 4 then let __assign_1036 = true in (
-            tempRight := __assign_1036;
-            __assign_1036
-          ) else let __assign_1037 = false in (
-            tempRight := __assign_1037;
-            __assign_1037
-          ) else let __assign_1038 = false in (
-            tempRight := __assign_1038;
-            __assign_1038
+            | HxKeyword.KNull -> 32) = 4 then let __assign_1131 = true in (
+            tempRight := __assign_1131;
+            __assign_1131
+          ) else let __assign_1132 = false in (
+            tempRight := __assign_1132;
+            __assign_1132
+          ) else let __assign_1133 = false in (
+            tempRight := __assign_1133;
+            __assign_1133
           ));
           if !tempLeft || !tempRight then raise (HxRuntime.Hx_break) else ()
         )
@@ -7745,35 +8337,35 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
     let className = ref "Unknown" in let functions = HxArray.create () in let fields = HxArray.create () in let hasStaticMain = ref false in (
       ignore (if !sawClass then ignore ((
         ignore (expect self (HxTokenKind.TKeyword (HxKeyword.KClass)) "'class'");
-        ignore (let __assign_1039 = readIdent self "class name" in (
-          className := __assign_1039;
-          __assign_1039
+        ignore (let __assign_1134 = readIdent self "class name" in (
+          className := __assign_1134;
+          __assign_1134
         ));
         ignore (expect self (HxTokenKind.TLBrace) "'{'");
         let members = parseClassMembers self () in (
           ignore (let _g = ref 0 in let _g1 = Obj.obj (HxAnon.get members "functions") in while !_g < HxArray.length _g1 do ignore (let fn = HxArray.get _g1 (!_g) in (
-            ignore (let __old_1040 = !_g in let __new_1041 = HxInt.add __old_1040 1 in (
-              ignore (_g := __new_1041);
-              __new_1041
+            ignore (let __old_1135 = !_g in let __new_1136 = HxInt.add __old_1135 1 in (
+              ignore (_g := __new_1136);
+              __new_1136
             ));
             HxArray.push functions fn
           )) done);
           ignore (let _g = ref 0 in let _g1 = Obj.obj (HxAnon.get members "fields") in while !_g < HxArray.length _g1 do ignore (let f = HxArray.get _g1 (!_g) in (
-            ignore (let __old_1042 = !_g in let __new_1043 = HxInt.add __old_1042 1 in (
-              ignore (_g := __new_1043);
-              __new_1043
+            ignore (let __old_1137 = !_g in let __new_1138 = HxInt.add __old_1137 1 in (
+              ignore (_g := __new_1138);
+              __new_1138
             ));
             HxArray.push fields f
           )) done);
           let _g = ref 0 in try while !_g < HxArray.length functions do try ignore (let fn = HxArray.get functions (!_g) in (
-            ignore (let __old_1044 = !_g in let __new_1045 = HxInt.add __old_1044 1 in (
-              ignore (_g := __new_1045);
-              __new_1045
+            ignore (let __old_1139 = !_g in let __new_1140 = HxInt.add __old_1139 1 in (
+              ignore (_g := __new_1140);
+              __new_1140
             ));
             if HxFunctionDecl.getIsStatic fn && HxString.equals (HxFunctionDecl.getName fn) "main" then ignore ((
-              ignore (let __assign_1046 = true in (
-                hasStaticMain := __assign_1046;
-                __assign_1046
+              ignore (let __assign_1141 = true in (
+                hasStaticMain := __assign_1141;
+                __assign_1141
               ));
               raise (HxRuntime.Hx_break)
             )) else ()
@@ -7798,21 +8390,21 @@ let parseModule = fun self () -> let packagePath = ref "" in let imports = HxArr
         | HxTokenKind.TDot -> 12
         | HxTokenKind.TComma -> 13
         | HxTokenKind.TOther _ -> 14) = 0 then raise (HxRuntime.Hx_break) else ignore (if self.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-        ignore (let __assign_1047 = self.peeked1 in (
-          self.cur <- __assign_1047;
-          __assign_1047
+        ignore (let __assign_1142 = self.peeked1 in (
+          self.cur <- __assign_1142;
+          __assign_1142
         ));
-        ignore (let __assign_1048 = self.peeked2 in (
-          self.peeked1 <- __assign_1048;
-          __assign_1048
+        ignore (let __assign_1143 = self.peeked2 in (
+          self.peeked1 <- __assign_1143;
+          __assign_1143
         ));
-        let __assign_1049 = Obj.magic (HxRuntime.hx_null) in (
-          self.peeked2 <- __assign_1049;
-          __assign_1049
+        let __assign_1144 = Obj.magic (HxRuntime.hx_null) in (
+          self.peeked2 <- __assign_1144;
+          __assign_1144
         )
-      )) else ignore (let __assign_1050 = HxLexer.next (self.lex) () in (
-        self.cur <- __assign_1050;
-        __assign_1050
+      )) else ignore (let __assign_1145 = HxLexer.next (self.lex) () in (
+        self.cur <- __assign_1145;
+        __assign_1145
       )))) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
@@ -7838,23 +8430,23 @@ let parseExprText = fun source -> let p = create source in let e = parseExpr p (
     | HxTokenKind.TColon -> 11
     | HxTokenKind.TDot -> 12
     | HxTokenKind.TComma -> 13
-    | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1084 = true in (
-    tempResult := __assign_1084;
-    __assign_1084
-  ) else let __assign_1085 = false in (
-    tempResult := __assign_1085;
-    __assign_1085
+    | HxTokenKind.TOther _ -> 14) = 0 then let __assign_1179 = true in (
+    tempResult := __assign_1179;
+    __assign_1179
+  ) else let __assign_1180 = false in (
+    tempResult := __assign_1180;
+    __assign_1180
   ));
   !tempResult
 )) in e
 
 let parseFunctionBodyText = fun bodySource -> try let tempString = ref "" in (
-  ignore (if bodySource == Obj.magic (HxRuntime.hx_null) then let __assign_1086 = "" in (
-    tempString := __assign_1086;
-    __assign_1086
-  ) else let __assign_1087 = bodySource in (
-    tempString := __assign_1087;
-    __assign_1087
+  ignore (if bodySource == Obj.magic (HxRuntime.hx_null) then let __assign_1181 = "" in (
+    tempString := __assign_1181;
+    __assign_1181
+  ) else let __assign_1182 = bodySource in (
+    tempString := __assign_1182;
+    __assign_1182
   ));
   let src = ("{\n" ^ HxString.toStdString (!tempString)) ^ "\n}" in let p = create src in let tempBool = ref false in let _g = p.cur.kind in (
     ignore (if (match _g with
@@ -7872,32 +8464,32 @@ let parseFunctionBodyText = fun bodySource -> try let tempString = ref "" in (
       | HxTokenKind.TColon -> 11
       | HxTokenKind.TDot -> 12
       | HxTokenKind.TComma -> 13
-      | HxTokenKind.TOther _ -> 14) = 6 then let __assign_1088 = true in (
-      tempBool := __assign_1088;
-      __assign_1088
-    ) else let __assign_1089 = false in (
-      tempBool := __assign_1089;
-      __assign_1089
+      | HxTokenKind.TOther _ -> 14) = 6 then let __assign_1183 = true in (
+      tempBool := __assign_1183;
+      __assign_1183
+    ) else let __assign_1184 = false in (
+      tempBool := __assign_1184;
+      __assign_1184
     ));
-    ignore (if not (!tempBool) then raise (HxRuntime.Hx_return (Obj.repr (let __arr_1090 = HxArray.create () in __arr_1090))) else ());
+    ignore (if not (!tempBool) then raise (HxRuntime.Hx_return (Obj.repr (let __arr_1185 = HxArray.create () in __arr_1185))) else ());
     ignore (if p.peeked1 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (let __assign_1091 = p.peeked1 in (
-        p.cur <- __assign_1091;
-        __assign_1091
+      ignore (let __assign_1186 = p.peeked1 in (
+        p.cur <- __assign_1186;
+        __assign_1186
       ));
-      ignore (let __assign_1092 = p.peeked2 in (
-        p.peeked1 <- __assign_1092;
-        __assign_1092
+      ignore (let __assign_1187 = p.peeked2 in (
+        p.peeked1 <- __assign_1187;
+        __assign_1187
       ));
-      let __assign_1093 = Obj.magic (HxRuntime.hx_null) in (
-        p.peeked2 <- __assign_1093;
-        __assign_1093
+      let __assign_1188 = Obj.magic (HxRuntime.hx_null) in (
+        p.peeked2 <- __assign_1188;
+        __assign_1188
       )
-    )) else ignore (let __assign_1094 = HxLexer.next (p.lex) () in (
-      p.cur <- __assign_1094;
-      __assign_1094
+    )) else ignore (let __assign_1189 = HxLexer.next (p.lex) () in (
+      p.cur <- __assign_1189;
+      __assign_1189
     )));
     parseFunctionBodyStatementsBestEffort p ()
   )
 ) with
-  | HxRuntime.Hx_return __ret_1095 -> Obj.obj __ret_1095
+  | HxRuntime.Hx_return __ret_1190 -> Obj.obj __ret_1190
