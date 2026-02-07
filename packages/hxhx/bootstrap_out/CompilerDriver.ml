@@ -153,7 +153,7 @@ let run = fun () -> let classPaths = let __arr_1 = HxArray.create () in (
                     let retStr = HxFunctionDecl.getReturnStringLiteral (HxArray.get found 0) in if not (HxString.equals retStr "pack.ModWithStatic.TheStatic function") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": TheStatic return differs") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()
                   )
                 )) else ());
-                let haxeDecl = HxParser.parseModule (HxParser.create src) () in (
+                let haxeDecl = HxParser.parseModule (HxParser.create src) (Obj.magic (HxRuntime.hx_null)) in (
                   ignore (if not (HxString.equals (HxModuleDecl.getPackagePath haxeDecl) parsedPkg) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
                   let haxeImports = HxModuleDecl.getImports haxeDecl in let parsedImports = HxModuleDecl.getImports parsed in (
                     ignore (if HxArray.length haxeImports <> HxArray.length parsedImports then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": import count differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());

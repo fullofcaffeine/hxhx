@@ -184,7 +184,8 @@ let token_eq_sym (t : token) (c : char) : bool =
   | Sym (cc, _) when cc = c -> true
   | _ -> false
 
-let parse_module_from_tokens (src : string) (toks : token array) :
+let parse_module_from_tokens (src : string) (toks : token array)
+    (expected_main_class : string option) :
     (string * string list * bool * string * bool * method_decl list) =
   let i = ref 0 in
   let cur () : token =
@@ -272,343 +273,380 @@ let parse_module_from_tokens (src : string) (toks : token array) :
     expect_sym ';'
   done;
 
-  (* Bootstrap: scan forward until we find the first `class` declaration.
-     Upstream fixtures often contain metadata, multiple types, or other
-     top-level declarations before the type we care about.
+  (* Bootstrap: parse *all* top-level classes so we can select the one that matches
+     the file name (module basename).
 
-     Some modules contain no classes at all (typedef/enum/abstract-only). For those,
-     we should still succeed (so Stage1 can traverse an import closure). *)
-  let rec seek_class () : bool =
-    (* Detect module-level `function main(...)` before we enter a class body. *)
-    (match cur () with
-    | Kw ("function", _) -> (
-        match peek 1 with Ident ("main", _) -> has_toplevel_main := true | _ -> ())
-    | _ -> ());
-    if token_eq_kw (cur ()) "class" then
-      true
-    else
-      match cur () with
-      | Eof _ -> false
-      | _ ->
-          bump ();
-          seek_class ()
+     Why
+     - Haxe allows multiple types in one module (`CommandFailure` + `System`).
+     - Stage2/Stage3 still model a module as "one main class + methods", so we
+       need a selection rule.
+
+     How
+     - We parse every `class Name ... { ... }` we see at top-level.
+     - `expected_main_class` (when provided) selects the matching class.
+     - Otherwise we use a simple heuristic: pick the *last* class in the file
+       (upstream patterns often declare helper types first, then the main one). *)
+
+  let tok_to_text (t : token) : string =
+    match t with
+    | Kw (s, _) -> s
+    | Ident (s, _) -> s
+    | String (s, _) -> "\"" ^ s ^ "\""
+    | Sym (c, _) -> String.make 1 c
+    | Eof _ -> ""
   in
 
-  let class_name = ref "" in
-  let has_static_main = ref false in
-  let methods : method_decl list ref = ref [] in
+  let parse_param_list () : (string * string option) list =
+    (* Called when current token is '(' already consumed by caller. *)
+    let args = ref [] in
+    let paren = ref 1 in
+    let cur_name : string option ref = ref None in
+    let cur_type_parts : string list ref = ref [] in
+    let reading_type = ref false in
 
-  if seek_class () then (
-    expect_kw "class";
-    class_name := read_ident ();
+    let flush_arg () =
+      match !cur_name with
+      | None ->
+          cur_type_parts := [];
+          reading_type := false
+      | Some name ->
+          let ty = String.concat "" !cur_type_parts |> String.trim in
+          args := !args @ [ (name, if ty = "" then None else Some ty) ];
+          cur_name := None;
+          cur_type_parts := [];
+          reading_type := false
+    in
 
-    (* Some declarations can omit a body; keep this permissive. *)
-    if token_eq_sym (cur ()) '{' then (
-      expect_sym '{';
+    while !paren > 0 do
+      match cur () with
+      | Eof p -> raise (Parse_error (p, "unexpected eof in parameter list"))
+      | Sym ('(', _) ->
+          if !reading_type then cur_type_parts := !cur_type_parts @ [ "(" ];
+          paren := !paren + 1;
+          bump ()
+      | Sym (')', _) ->
+          if !paren = 1 then (
+            flush_arg ();
+            paren := 0;
+            bump ())
+          else (
+            if !reading_type then cur_type_parts := !cur_type_parts @ [ ")" ];
+            paren := !paren - 1;
+            bump ())
+      | Sym (',', _) when !paren = 1 ->
+          flush_arg ();
+          bump ()
+      | Sym (':', _) when !paren = 1 && !cur_name <> None && not !reading_type
+        ->
+          reading_type := true;
+          bump ()
+      | Ident (name, _) when !paren = 1 && !cur_name = None && not !reading_type
+        ->
+          cur_name := Some name;
+          bump ()
+      | tok ->
+          if !reading_type then cur_type_parts := !cur_type_parts @ [ tok_to_text tok ];
+          bump ()
+    done;
+    !args
+  in
 
-      let depth = ref 1 in
-      let cur_visibility : visibility ref = ref Public in
-      let cur_static : bool ref = ref false in
+  let parse_return_type_hint () : string option =
+    if token_eq_sym (cur ()) ':' then (
+      bump ();
+      let parts = ref [] in
+      while
+        match cur () with
+        | Eof _ -> false
+        | Sym ('{', _) -> false
+        | Sym (';', _) -> false
+        | Kw ("return", _) -> false
+        | _ -> true
+      do
+        parts := !parts @ [ tok_to_text (cur ()) ];
+        bump ()
+      done;
+      let txt = String.concat "" !parts |> String.trim in
+      if txt = "" then None else Some txt)
+    else None
+  in
 
-      let reset_mods () =
-        cur_visibility := Public;
-        cur_static := false
-      in
+  let parse_body_and_return_expr (depth : int ref) :
+      (string option * string option * string option * string option) =
+    (* Supports:
+         - `{ ... }` bodies (scan for `return "..."`)
+         - `return "..." ;` expression bodies
+         - `;` (no body)
+    *)
+    let capture_first_atom () : (string option * string option) =
+      (* Peek-only: capture a "simple" atom that we still surface in the protocol
+         as `retstr` / `retid` for cheap early typing. *)
+      match cur () with
+      | String (s, _) -> (Some s, None)
+      | Ident (s, _) -> (None, Some s)
+      | Kw ("new", _) -> (None, Some "new")
+      | _ -> (None, None)
+    in
+    let capture_return_expr_text () : string option =
+      (* Capture the full return expression text until ';' or '}' at the current brace depth.
 
-      let tok_to_text (t : token) : string =
-        match t with
-        | Kw (s, _) -> s
-        | Ident (s, _) -> s
-        | String (s, _) -> "\"" ^ s ^ "\""
-        | Sym (c, _) -> String.make 1 c
-        | Eof _ -> ""
-      in
+         Why
+         - Stage 3 bring-up wants to parse slightly more than literals/idents without
+           implementing a full statement/expression AST in OCaml yet.
+         - The Haxe-side decoder can parse a small chain grammar (`a.b(c)`) from this.
 
-      let parse_param_list () : (string * string option) list =
-        (* Called when current token is '(' already consumed by caller. *)
-        let args = ref [] in
-        let paren = ref 1 in
-        let cur_name : string option ref = ref None in
-        let cur_type_parts : string list ref = ref [] in
-        let reading_type = ref false in
-
-        let flush_arg () =
-          match !cur_name with
-          | None ->
-              cur_type_parts := [];
-              reading_type := false
-          | Some name ->
-              let ty = String.concat "" !cur_type_parts |> String.trim in
-              args := !args @ [ (name, if ty = "" then None else Some ty) ];
-              cur_name := None;
-              cur_type_parts := [];
-              reading_type := false
-        in
-
-        while !paren > 0 do
-          match cur () with
-          | Eof p -> raise (Parse_error (p, "unexpected eof in parameter list"))
-          | Sym ('(', _) ->
-              if !reading_type then cur_type_parts := !cur_type_parts @ [ "(" ];
-              paren := !paren + 1;
-              bump ()
-          | Sym (')', _) ->
-              if !paren = 1 then (
-                flush_arg ();
-                paren := 0;
-                bump ())
-              else (
-                if !reading_type then cur_type_parts := !cur_type_parts @ [ ")" ];
-                paren := !paren - 1;
-                bump ())
-          | Sym (',', _) when !paren = 1 ->
-              flush_arg ();
-              bump ()
-          | Sym (':', _) when !paren = 1 && !cur_name <> None && not !reading_type
-            ->
-              reading_type := true;
-              bump ()
-          | Ident (name, _) when !paren = 1 && !cur_name = None && not !reading_type
-            ->
-              cur_name := Some name;
-              bump ()
-          | tok ->
-              if !reading_type then
-                cur_type_parts := !cur_type_parts @ [ tok_to_text tok ];
-              bump ()
-        done;
-        !args
-      in
-
-      let parse_return_type_hint () : string option =
-        if token_eq_sym (cur ()) ':' then (
-          bump ();
-          let parts = ref [] in
-          while
-            match cur () with
-            | Eof _ -> false
-            | Sym ('{', _) -> false
-            | Sym (';', _) -> false
-            | Kw ("return", _) -> false
-            | _ -> true
-          do
-            parts := !parts @ [ tok_to_text (cur ()) ];
+         What
+         - Consumes tokens that belong to the expression.
+         - Consumes a trailing ';' (when present).
+         - Does NOT consume a terminating '}' (so the class-body parser sees it). *)
+      let parts = Buffer.create 64 in
+      let paren = ref 0 in
+      let done_ = ref false in
+      while not !done_ do
+        match cur () with
+        | Eof _ ->
+            done_ := true
+        | Sym (';', _) when !paren = 0 ->
+            bump ();
+            done_ := true
+        | Sym ('}', _) when !paren = 0 ->
+            done_ := true
+        | Sym ('(', _) ->
+            paren := !paren + 1;
+            Buffer.add_string parts "(";
             bump ()
-          done;
-          let txt = String.concat "" !parts |> String.trim in
-          if txt = "" then None else Some txt)
-        else None
-      in
-
-      let parse_body_and_return_expr () :
-          (string option * string option * string option * string option) =
-        (* Supports:
-             - `{ ... }` bodies (scan for `return "..."`)
-             - `return "..." ;` expression bodies
-             - `;` (no body)
-        *)
-        let capture_first_atom () : (string option * string option) =
-          (* Peek-only: capture a "simple" atom that we still surface in the protocol
-             as `retstr` / `retid` for cheap early typing. *)
-          match cur () with
-          | String (s, _) -> (Some s, None)
-          | Ident (s, _) -> (None, Some s)
-          | Kw ("new", _) -> (None, Some "new")
-          | _ -> (None, None)
-        in
-        let capture_return_expr_text () : string option =
-          (* Capture the full return expression text until ';' or '}' at the current brace depth.
-
-             Why
-             - Stage 3 bring-up wants to parse slightly more than literals/idents without
-               implementing a full statement/expression AST in OCaml yet.
-             - The Haxe-side decoder can parse a small chain grammar (`a.b(c)`) from this.
-
-             What
-             - Consumes tokens that belong to the expression.
-             - Consumes a trailing ';' (when present).
-             - Does NOT consume a terminating '}' (so the class-body parser sees it). *)
-          let parts = Buffer.create 64 in
-          let paren = ref 0 in
-          let done_ = ref false in
-          while not !done_ do
-            match cur () with
-            | Eof _ ->
-                done_ := true
-            | Sym (';', _) when !paren = 0 ->
-                bump ();
-                done_ := true
-            | Sym ('}', _) when !paren = 0 ->
-                done_ := true
-            | Sym ('(', _) ->
-                paren := !paren + 1;
-                Buffer.add_string parts "(";
-                bump ()
-            | Sym (')', _) ->
-                if !paren > 0 then paren := !paren - 1;
-                Buffer.add_string parts ")";
-                bump ()
-            | tok ->
-                Buffer.add_string parts (tok_to_text tok);
-                bump ()
-          done;
-          let s = Buffer.contents parts |> String.trim in
-          if s = "" then None else Some s
-        in
-        match cur () with
-        | Sym (';', _) ->
-            bump ();
-            (None, None, None, None)
-        | Sym ('{', open_p) ->
-            (* Capture the raw body substring from the original source so Haxe-side
-               bring-up code can parse statements without reconstituting token text.
-
-               Indices are character offsets into `src` (0-based). We capture the
-               region strictly between the braces (excluding '{' and '}'). *)
-            let body_start = open_p.index + 1 in
-            let body_end : int option ref = ref None in
-
-            bump ();
-            depth := !depth + 1;
-            let found_str = ref None in
-            let found_ident = ref None in
-            let found_expr = ref None in
-            while !depth > 1 do
-              match cur () with
-              | Eof p -> raise (Parse_error (p, "unexpected eof in function body"))
-              | Sym ('{', _) ->
-                  depth := !depth + 1;
-                  bump ()
-              | Sym ('}', close_p) ->
-                  (* When we are at depth=2, this brace closes the function body. *)
-                  if !depth = 2 && !body_end = None then body_end := Some close_p.index;
-                  depth := !depth - 1;
-                  bump ()
-              | Kw ("return", _) -> (
-                  bump ();
-                  let str_opt, ident_opt = capture_first_atom () in
-                  let expr_opt = capture_return_expr_text () in
-                  (match (str_opt, !found_str) with
-                  | Some s, None -> found_str := Some s
-                  | _ -> ());
-                  (match (ident_opt, !found_ident) with
-                  | Some s, None -> found_ident := Some s
-                  | _ -> ());
-                  (match (expr_opt, !found_expr) with
-                  | Some s, None -> found_expr := Some s
-                  | _ -> ()))
-              | _ -> bump ()
-            done;
-            let body_src =
-              match !body_end with
-              | None -> None
-              | Some end_idx ->
-                  if body_start < 0 || end_idx < body_start then None
-                  else if end_idx > String.length src then None
-                  else Some (String.sub src body_start (end_idx - body_start))
-            in
-            (!found_str, !found_ident, !found_expr, body_src)
-        | Kw ("return", _) -> (
-            bump ();
-            let found_str, found_ident = capture_first_atom () in
-            let found_expr = capture_return_expr_text () in
-            (found_str, found_ident, found_expr, None))
-        | _ ->
-            (* Unknown body shape; consume until ';' or '{' to avoid infinite loops. *)
-            while
-              match cur () with
-              | Eof _ -> false
-              | Sym (';', _) ->
-                  bump ();
-                  false
-              | Sym ('{', _) -> false
-              | _ ->
-                  bump ();
-                  true
-            do
-              ()
-            done;
-            (None, None, None, None)
-      in
-
-      while !depth > 0 do
-        match cur () with
-        | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
+        | Sym (')', _) ->
+            if !paren > 0 then paren := !paren - 1;
+            Buffer.add_string parts ")";
+            bump ()
         | tok ->
-            if !depth = 1 then (
-              match tok with
-              | Kw ("public", _) ->
-                  cur_visibility := Public;
-                  bump ()
-              | Kw ("private", _) ->
-                  cur_visibility := Private;
-                  bump ()
-              | Kw ("static", _) ->
-                  cur_static := true;
-                  bump ()
-              | Kw (("inline" | "override" | "final" | "macro" | "extern" | "dynamic"), _) ->
-                  (* Common Haxe member modifiers we don't model yet. Treat them as no-ops so we can
-                     still detect `function` declarations that follow. *)
-                  bump ()
-              | Kw ("function", _) -> (
-                  bump ();
-                  let name = read_ident () in
-                  if !cur_static && name = "main" then has_static_main := true;
+            Buffer.add_string parts (tok_to_text tok);
+            bump ()
+      done;
+      let s = Buffer.contents parts |> String.trim in
+      if s = "" then None else Some s
+    in
+    match cur () with
+    | Sym (';', _) ->
+        bump ();
+        (None, None, None, None)
+    | Sym ('{', open_p) ->
+        (* Capture the raw body substring from the original source so Haxe-side
+           bring-up code can parse statements without reconstituting token text.
 
-                  let args =
-                    if token_eq_sym (cur ()) '(' then (
-                      bump ();
-                      parse_param_list ())
-                    else []
-                  in
-                  let return_type_hint = parse_return_type_hint () in
-                  let return_string, return_ident, return_expr, body_src =
-                    parse_body_and_return_expr ()
-                  in
-                  methods :=
-                    !methods
-                    @ [
-                        {
-                          name;
-                          visibility = !cur_visibility;
-                          is_static = !cur_static;
-                          args;
-                          return_type_hint;
-                          return_string;
-                          return_ident;
-                          return_expr;
-                          body_src;
-                        };
-                      ];
-                  reset_mods ())
-              | Sym ('{', _) ->
-                  depth := !depth + 1;
-                  bump ();
-                  reset_mods ()
-              | Sym ('}', _) ->
-                  depth := !depth - 1;
-                  bump ();
-                  reset_mods ()
-              | _ -> bump ())
-            else (
-              if token_eq_sym tok '{' then depth := !depth + 1
-              else if token_eq_sym tok '}' then depth := !depth - 1;
-              bump ())
-      done))
-  else (
-    class_name := "";
-    has_static_main := false);
+           Indices are character offsets into `src` (0-based). We capture the
+           region strictly between the braces (excluding '{' and '}'). *)
+        let body_start = open_p.index + 1 in
+        let body_end : int option ref = ref None in
 
-  (* Bootstrap: ignore any trailing declarations after the first class. *)
+        bump ();
+        depth := !depth + 1;
+        let found_str = ref None in
+        let found_ident = ref None in
+        let found_expr = ref None in
+        while !depth > 1 do
+          match cur () with
+          | Eof p -> raise (Parse_error (p, "unexpected eof in function body"))
+          | Sym ('{', _) ->
+              depth := !depth + 1;
+              bump ()
+          | Sym ('}', close_p) ->
+              (* When we are at depth=2, this brace closes the function body. *)
+              if !depth = 2 && !body_end = None then body_end := Some close_p.index;
+              depth := !depth - 1;
+              bump ()
+          | Kw ("return", _) -> (
+              bump ();
+              let str_opt, ident_opt = capture_first_atom () in
+              let expr_opt = capture_return_expr_text () in
+              (match (str_opt, !found_str) with
+              | Some s, None -> found_str := Some s
+              | _ -> ());
+              (match (ident_opt, !found_ident) with
+              | Some s, None -> found_ident := Some s
+              | _ -> ());
+              (match (expr_opt, !found_expr) with
+              | Some s, None -> found_expr := Some s
+              | _ -> ()))
+          | _ -> bump ()
+        done;
+        let body_src =
+          match !body_end with
+          | None -> None
+          | Some end_idx ->
+              if body_start < 0 || end_idx < body_start then None
+              else if end_idx > String.length src then None
+              else Some (String.sub src body_start (end_idx - body_start))
+        in
+        (!found_str, !found_ident, !found_expr, body_src)
+    | Kw ("return", _) -> (
+        bump ();
+        let found_str, found_ident = capture_first_atom () in
+        let found_expr = capture_return_expr_text () in
+        (found_str, found_ident, found_expr, None))
+    | _ ->
+        (* Unknown body shape; consume until ';' or '{' to avoid infinite loops. *)
+        while
+          match cur () with
+          | Eof _ -> false
+          | Sym (';', _) ->
+              bump ();
+              false
+          | Sym ('{', _) -> false
+          | _ ->
+              bump ();
+              true
+        do
+          ()
+        done;
+        (None, None, None, None)
+  in
+
+  let parse_class_body () : (bool * method_decl list) =
+    (* Called when current token is '{'. *)
+    expect_sym '{';
+
+    let depth = ref 1 in
+    let has_static_main = ref false in
+    let methods : method_decl list ref = ref [] in
+    let cur_visibility : visibility ref = ref Public in
+    let cur_static : bool ref = ref false in
+
+    let reset_mods () =
+      cur_visibility := Public;
+      cur_static := false
+    in
+
+    while !depth > 0 do
+      match cur () with
+      | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
+      | tok ->
+          if !depth = 1 then (
+            match tok with
+            | Kw ("public", _) ->
+                cur_visibility := Public;
+                bump ()
+            | Kw ("private", _) ->
+                cur_visibility := Private;
+                bump ()
+            | Kw ("static", _) ->
+                cur_static := true;
+                bump ()
+            | Kw (("inline" | "override" | "final" | "macro" | "extern" | "dynamic"), _) ->
+                (* Common Haxe member modifiers we don't model yet. Treat them as no-ops so we can
+                   still detect `function` declarations that follow. *)
+                bump ()
+            | Kw ("function", _) -> (
+                bump ();
+                let name = read_ident () in
+                if !cur_static && name = "main" then has_static_main := true;
+
+                let args =
+                  if token_eq_sym (cur ()) '(' then (
+                    bump ();
+                    parse_param_list ())
+                  else []
+                in
+                let return_type_hint = parse_return_type_hint () in
+                let return_string, return_ident, return_expr, body_src =
+                  parse_body_and_return_expr depth
+                in
+                methods :=
+                  !methods
+                  @ [
+                      {
+                        name;
+                        visibility = !cur_visibility;
+                        is_static = !cur_static;
+                        args;
+                        return_type_hint;
+                        return_string;
+                        return_ident;
+                        return_expr;
+                        body_src;
+                      };
+                    ];
+                reset_mods ())
+            | Sym ('{', _) ->
+                depth := !depth + 1;
+                bump ();
+                reset_mods ()
+            | Sym ('}', _) ->
+                depth := !depth - 1;
+                bump ();
+                reset_mods ()
+            | _ -> bump ())
+          else (
+            if token_eq_sym tok '{' then depth := !depth + 1
+            else if token_eq_sym tok '}' then depth := !depth - 1;
+            bump ())
+    done;
+    (!has_static_main, !methods)
+  in
+
+  let parse_class_decl () : (string * bool * method_decl list) =
+    expect_kw "class";
+    let name = read_ident () in
+
+    (* Skip `extends`/`implements`/generic params/etc until we reach the body. *)
+    let rec seek_body () : bool =
+      match cur () with
+      | Eof _ -> false
+      | Sym ('{', _) -> true
+      | Sym (';', _) ->
+          bump ();
+          false
+      | _ ->
+          bump ();
+          seek_body ()
+    in
+
+    let has_static_main, methods =
+      if seek_body () then parse_class_body () else (false, [])
+    in
+    (name, has_static_main, methods)
+  in
+
+  let classes : (string * bool * method_decl list) list ref = ref [] in
+
   while
     match cur () with
     | Eof _ -> false
     | _ -> true
   do
-    bump ()
+    (* Detect module-level `function main(...)` outside any class body. *)
+    (match cur () with
+    | Kw ("function", _) -> (
+        match peek 1 with Ident ("main", _) -> has_toplevel_main := true | _ -> ())
+    | _ -> ());
+
+    if token_eq_kw (cur ()) "class" then (
+      let decl = parse_class_decl () in
+      classes := !classes @ [ decl ])
+    else bump ()
   done;
 
-  (!package_path, !imports, !has_toplevel_main, !class_name, !has_static_main, !methods)
+  let pick_last (xs : (string * bool * method_decl list) list) :
+      (string * bool * method_decl list) option =
+    match List.rev xs with [] -> None | x :: _ -> Some x
+  in
+
+  let selected =
+    match (expected_main_class, !classes) with
+    | None, xs -> pick_last xs
+    | Some expected, xs -> (
+        match List.find_opt (fun (n, _, _) -> n = expected) xs with
+        | Some x -> Some x
+        | None -> pick_last xs)
+  in
+
+  let class_name, has_static_main, methods =
+    match selected with
+    | None -> ("", false, [])
+    | Some (n, sm, ms) -> (n, sm, ms)
+  in
+
+  (!package_path, !imports, !has_toplevel_main, class_name, has_static_main, methods)
 
 (* Best-effort header-only parser for upstream-scale modules.
 
@@ -624,7 +662,8 @@ let parse_module_from_tokens (src : string) (toks : token array) :
      - first `class Name` (if any)
    - Ignores everything else.
 *)
-let parse_module_header_only (toks : token array) : (string * string list * bool * string) =
+let parse_module_header_only (toks : token array) (expected_main_class : string option) :
+    (string * string list * bool * string) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
@@ -693,7 +732,6 @@ let parse_module_header_only (toks : token array) : (string * string list * bool
   let package_path = ref "" in
   let imports = ref [] in
   let has_toplevel_main = ref false in
-  let class_name = ref "Unknown" in
 
   if token_eq_kw (cur ()) "package" then (
     bump ();
@@ -726,19 +764,31 @@ let parse_module_header_only (toks : token array) : (string * string list * bool
   in
   seek_toplevel_main ();
 
-  let rec seek_class () =
+  let class_names = ref [] in
+
+  let rec scan_classes () =
     match cur () with
     | Eof _ -> ()
     | _ when token_eq_kw (cur ()) "class" -> (
         bump ();
-        match read_ident_opt () with Some s -> class_name := s | None -> ())
+        (match read_ident_opt () with
+        | Some s -> class_names := !class_names @ [ s ]
+        | None -> ());
+        scan_classes ())
     | _ ->
         bump ();
-        seek_class ()
+        scan_classes ()
   in
-  seek_class ();
+  scan_classes ();
 
-  (!package_path, !imports, !has_toplevel_main, !class_name)
+  let picked =
+    match expected_main_class with
+    | Some expected when List.mem expected !class_names -> expected
+    | _ -> (
+        match List.rev !class_names with [] -> "Unknown" | x :: _ -> x)
+  in
+
+  (!package_path, !imports, !has_toplevel_main, picked)
 
 let encode_ast_lines (package_path : string) (imports : string list)
     (class_name : string) (header_only : bool) (has_toplevel_main : bool)
@@ -827,7 +877,8 @@ let strip_terminal_ok (lex_stream : string) : string =
   in
   String.concat "\n" kept
 
-let parse_module_decl (src : string) : string =
+let parse_module_decl_common (src : string) (expected_main_class : string option) :
+    string =
   try
     let header_only_enabled () : bool =
       try
@@ -852,7 +903,7 @@ let parse_module_decl (src : string) : string =
         let base = strip_terminal_ok lex_stream in
         try
           let package_path, imports, has_toplevel_main, class_name, has_static_main, methods =
-            parse_module_from_tokens src toks
+            parse_module_from_tokens src toks expected_main_class
           in
           String.concat "\n"
             [
@@ -867,7 +918,7 @@ let parse_module_decl (src : string) : string =
               (* Header-only fallback: for bootstrapping, we prefer keeping the resolver moving
                  (package/import/class) over failing on body-level syntax we don't support yet. *)
               let package_path, imports, has_toplevel_main, class_name =
-                parse_module_header_only toks
+                parse_module_header_only toks expected_main_class
               in
               String.concat "\n"
                 [
@@ -881,7 +932,7 @@ let parse_module_decl (src : string) : string =
         | _exn ->
             if header_only_enabled () then
               let package_path, imports, has_toplevel_main, class_name =
-                parse_module_header_only toks
+                parse_module_header_only toks expected_main_class
               in
               String.concat "\n"
                 [
@@ -904,3 +955,13 @@ let parse_module_decl (src : string) : string =
         "hxhx_frontend_v=1";
         encode_err_line { index = 0; line = 0; col = 0 } (Printexc.to_string exn);
       ]
+
+let parse_module_decl (src : string) : string = parse_module_decl_common src None
+
+let parse_module_decl_with_expected (src : string) (expected_main_class : string) :
+    string =
+  let expected =
+    let s = String.trim expected_main_class in
+    if s = "" then None else Some s
+  in
+  parse_module_decl_common src expected

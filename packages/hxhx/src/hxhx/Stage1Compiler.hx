@@ -115,7 +115,7 @@ class Stage1Compiler {
 		final filteredSource = HxConditionalCompilation.filterSource(source, definesMap);
 
 		final decl = try {
-			ParserStage.parse(filteredSource).getDecl();
+			ParserStage.parse(filteredSource, resolved.path).getDecl();
 		} catch (e:Dynamic) {
 			return error("parse failed: " + formatParseError(e));
 		}
@@ -184,7 +184,7 @@ class Stage1Compiler {
 
 			final impDecl = try {
 				final filteredImp = HxConditionalCompilation.filterSource(impSrc, definesMap);
-				ParserStage.parse(filteredImp).getDecl();
+				ParserStage.parse(filteredImp, impResolved.path).getDecl();
 			} catch (e:Dynamic) {
 				return error('parse failed for import "' + imp + '": ' + formatParseError(e));
 			}

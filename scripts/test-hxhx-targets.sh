@@ -108,6 +108,21 @@ echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing haxe.io.Path"
 echo "$out" | grep -vq "stage1=warn import_missing StringTools"
 
+echo "== Stage1 bring-up: multi-class module selects expected class"
+cat >"$tmpdir/src/Multi.hx" <<'HX'
+package;
+
+class Helper extends Base {
+  public function new() {}
+}
+
+class Multi {
+  public static function main() {}
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Multi --no-output)"
+echo "$out" | grep -q "^stage1=ok$"
+
 echo "== Stage1 bring-up: accepts .hxml"
 cat >"$tmpdir/build.hxml" <<HX
 # Minimal Stage1 build file

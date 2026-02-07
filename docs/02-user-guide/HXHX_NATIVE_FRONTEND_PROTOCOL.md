@@ -110,6 +110,9 @@ Notes:
 
 - `ast imports` uses a `|` separator for now (bootstrap convenience).
 - Longer-term we’ll likely replace this with a structured list record.
+- `ast class` reports the **selected “main class”** for the module. Selection is:
+  - deterministic when the caller uses `parse_module_decl_with_expected(src, expectedMainClass)`, and
+  - best-effort heuristic when the caller uses `parse_module_decl(src)` (currently: last `class` in file).
 - `ast header_only` is an optional bootstrap hint:
   - payload is `0` or `1`
   - `1` means the native side fell back to header-only parsing (i.e. method bodies were not parsed)

@@ -690,7 +690,7 @@ let run = fun args -> try let permissive = ref false in let filtered = HxArray.c
               ignore (HxMap.set_string definesMap "sys" "1");
               ignore (HxMap.set_string definesMap "ocaml" "1");
               let filteredSource = HxConditionalCompilation.filterSource source definesMap in let tempHxModuleDecl = ref (Obj.magic ()) in (
-                ignore (try let __assign_28 = ParsedModule.getDecl (ParserStage.parse filteredSource (Obj.magic (HxRuntime.hx_null))) () in (
+                ignore (try let __assign_28 = ParsedModule.getDecl (ParserStage.parse filteredSource (Obj.obj (HxAnon.get resolved "path"))) () in (
                   tempHxModuleDecl := __assign_28;
                   __assign_28
                 ) with
@@ -779,7 +779,7 @@ let run = fun args -> try let permissive = ref false in let filtered = HxArray.c
                               let impSrc = !tempMaybeString1 in (
                                 ignore (if impSrc == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (error ("import_unreadable " ^ HxString.toStdString (Obj.obj (HxAnon.get impResolved "path")))))) else ());
                                 let tempHxModuleDecl1 = ref (Obj.magic ()) in (
-                                  ignore (try let filteredImp = HxConditionalCompilation.filterSource impSrc definesMap in let __assign_48 = ParsedModule.getDecl (ParserStage.parse filteredImp (Obj.magic (HxRuntime.hx_null))) () in (
+                                  ignore (try let filteredImp = HxConditionalCompilation.filterSource impSrc definesMap in let __assign_48 = ParsedModule.getDecl (ParserStage.parse filteredImp (Obj.obj (HxAnon.get impResolved "path"))) () in (
                                     tempHxModuleDecl1 := __assign_48;
                                     __assign_48
                                   ) with

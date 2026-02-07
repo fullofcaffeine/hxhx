@@ -11,7 +11,8 @@
 	- Parses:
 	  - optional 'package <path>;'
 	  - zero or more 'import <path>;' / 'using <path>;'
-	  - a single 'class <Name> { ... }' (first class found; others ignored)
+		- one or more `class <Name> { ... }` declarations
+		  - we select a “main class” for the module (see `parseModule(expectedMainClass)`).
 	  - a small subset of class members:
 	    - function declarations (name, modifiers, args, optional return type)
 	    - `return <expr>;` in function bodies (very small expression subset)
@@ -743,14 +744,29 @@
 			//   bodies, which then shows up as noisy `unsupported_exprs_total` in Gate2 diagnostics.
 			//
 			// Bring-up scope
-			// - Only supports block-form try bodies and catch bodies:
-			//     `try { <stmts> } catch(e:Dynamic) { <stmts> }`
-			// - Does not yet support `try expr catch ...` or multiple catches with advanced patterns.
-			if (!stop() && cur.kind.match(TKeyword(KTry))) {
-				return parseTryCatchExpr(stop);
-			}
+				// - Only supports block-form try bodies and catch bodies:
+				//     `try { <stmts> } catch(e:Dynamic) { <stmts> }`
+				// - Does not yet support `try expr catch ...` or multiple catches with advanced patterns.
+				if (!stop() && cur.kind.match(TKeyword(KTry))) {
+					return parseTryCatchExpr(stop);
+				}
 
-			var e = parseBinaryExpr(1, stop);
+				// Stage 3 expansion: `switch (...) { ... }` as an *expression*.
+				//
+				// Why
+				// - Upstream runci uses `switch` in expression position (e.g. `var tests = switch (...) { ... }`).
+				// - Treating `switch` as a single-token `EUnsupported("switch")` leaves the `{ ... }` block
+				//   unconsumed, which causes statement resynchronization to misinterpret the switch block
+				//   as the end of the surrounding statement/function.
+				//
+				// Bring-up scope
+				// - We do not parse cases yet; we only *consume* the balanced `{ ... }` so the rest of the
+				//   function body can still be parsed.
+				if (!stop() && cur.kind.match(TKeyword(KSwitch))) {
+					return parseSwitchExpr(stop);
+				}
+
+				var e = parseBinaryExpr(1, stop);
 			// Ternary conditional: `cond ? thenExpr : elseExpr`
 			if (!stop() && acceptOtherChar("?")) {
 				final thenExpr = parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
@@ -766,12 +782,62 @@
 					ETernary(e, thenExpr, elseExpr);
 			}
 		}
-			return e;
-		}
+				return e;
+			}
 
-		function parseTryCatchExpr(stop:()->Bool):HxExpr {
-			// `try { ... } catch(name[:Type]) { ... } ...`
-			//
+			function parseSwitchExpr(stop:()->Bool):HxExpr {
+				// `switch (<expr>) { ... }` used in expression position.
+				//
+				// Bring-up semantics: treat as unsupported, but consume the switch body so parsing can continue.
+				if (!cur.kind.match(TKeyword(KSwitch))) return EUnsupported("switch");
+
+				bump(); // 'switch'
+
+				// Consume `( ... )` selector.
+				if (!cur.kind.match(TLParen)) return EUnsupported("switch_missing_parens");
+				bump(); // '('
+				try {
+					skipBalancedParens();
+				} catch (_:Dynamic) {
+					// Best-effort: continue; outer recovery will resync.
+				}
+
+				// Consume `{ ... }` switch body, but leave the *final* closing brace unconsumed so
+				// statement resync (`syncToStmtEnd`) can use it as a boundary.
+				if (!cur.kind.match(TLBrace)) return EUnsupported("switch_missing_block");
+				bump(); // '{'
+				var depth = 1;
+				while (depth > 0) {
+					switch (cur.kind) {
+						case TEof:
+							depth = 0;
+						case TLBrace:
+							depth++;
+							bump();
+						case TRBrace:
+							if (depth == 1) {
+								// Do not consume: leave `}` as a boundary for the enclosing statement parser.
+								depth = 0;
+							} else {
+								depth--;
+								bump();
+							}
+						case _:
+							bump();
+					}
+					if (stop() && depth > 0) {
+						// Bring-up: if the caller wants to stop early (e.g. hit a `;` in an initializer),
+						// respect it to avoid drifting too far on malformed input.
+						break;
+					}
+				}
+
+				return EUnsupported("switch_expr");
+			}
+
+			function parseTryCatchExpr(stop:()->Bool):HxExpr {
+				// `try { ... } catch(name[:Type]) { ... } ...`
+				//
 			// IMPORTANT (OCaml bootstrap constraints)
 			// - We intentionally do **not** parse try/catch blocks into `HxStmt` lists yet.
 			// - Having `HxExpr` reference `HxStmt` creates an OCaml module dependency cycle
@@ -1015,11 +1081,11 @@
 		return SVar(name, typeHint, init, pos);
 	}
 
-	function parseStmt(stop:()->Bool):HxStmt {
-		if (stop()) return SExpr(EUnsupported("<eof-stmt>"), HxPos.unknown());
+		function parseStmt(stop:()->Bool):HxStmt {
+			if (stop()) return SExpr(EUnsupported("<eof-stmt>"), HxPos.unknown());
 
-		final pos = cur.pos;
-		return switch (cur.kind) {
+			final pos = cur.pos;
+			return switch (cur.kind) {
 			case TLBrace:
 				bump();
 				final ss = new Array<HxStmt>();
@@ -1034,23 +1100,126 @@
 			case TKeyword(KVar):
 				bump();
 				parseVarStmt(pos);
-			case TKeyword(KIf):
-				bump();
-				expect(TLParen, "'('");
-				final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				if (!cur.kind.match(TRParen)) {
-					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
-				}
-				if (cur.kind.match(TRParen)) bump();
-				final thenBranch = parseStmt(stop);
-				final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
-				SIf(cond, thenBranch, elseBranch, pos);
-			case _:
-				final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
-				syncToStmtEnd();
-				SExpr(expr, pos);
+				case TKeyword(KIf):
+					bump();
+					expect(TLParen, "'('");
+					final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+					final thenBranch = parseStmt(stop);
+					final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
+					SIf(cond, thenBranch, elseBranch, pos);
+				case TKeyword(KSwitch):
+					// Bring-up: consume `switch (...) { ... }` as an unsupported statement, but
+					// make sure we skip the braces so we don't accidentally terminate the
+					// surrounding function body early.
+					bump();
+					if (cur.kind.match(TLParen)) {
+						bump();
+						try {
+							skipBalancedParens();
+						} catch (_:Dynamic) {
+							// Best-effort: fall through; later recovery will resync.
+						}
+					}
+					if (cur.kind.match(TLBrace)) {
+						bump();
+						try {
+							skipBalancedBraces();
+						} catch (_:Dynamic) {
+							// Best-effort: fall through.
+						}
+					}
+					SExpr(EUnsupported("switch"), pos);
+				case TKeyword(KTry):
+					// Bring-up: consume `try { ... } catch (...) { ... }` as an unsupported statement.
+					// We don't model exception semantics yet, but we must skip its braces to avoid
+					// truncating the remainder of the function body.
+					bump();
+					if (cur.kind.match(TLBrace)) {
+						bump();
+						try skipBalancedBraces() catch (_:Dynamic) {}
+					}
+					while (acceptKeyword(KCatch)) {
+						if (cur.kind.match(TLParen)) {
+							bump();
+							try skipBalancedParens() catch (_:Dynamic) {}
+						}
+						if (cur.kind.match(TLBrace)) {
+							bump();
+							try skipBalancedBraces() catch (_:Dynamic) {}
+						}
+					}
+					SExpr(ETryCatchRaw("try"), pos);
+				case TKeyword(KWhile):
+					// Bring-up: consume `while (...) stmt` as unsupported, but skip its body so we
+					// can keep parsing subsequent statements.
+					bump();
+					if (cur.kind.match(TLParen)) {
+						bump();
+						try skipBalancedParens() catch (_:Dynamic) {}
+					}
+					if (cur.kind.match(TLBrace)) {
+						bump();
+						try skipBalancedBraces() catch (_:Dynamic) {}
+					} else {
+						// Fall back to parsing a single statement to advance the token stream.
+						parseStmt(stop);
+					}
+					SExpr(EUnsupported("while"), pos);
+				case TKeyword(KFor):
+					// Bring-up: consume `for (...) stmt` as unsupported.
+					bump();
+					if (cur.kind.match(TLParen)) {
+						bump();
+						try skipBalancedParens() catch (_:Dynamic) {}
+					}
+					if (cur.kind.match(TLBrace)) {
+						bump();
+						try skipBalancedBraces() catch (_:Dynamic) {}
+					} else {
+						parseStmt(stop);
+					}
+					SExpr(EUnsupported("for"), pos);
+				case TKeyword(KDo):
+					// Bring-up: consume `do stmt while (...);` as unsupported.
+					bump();
+					if (cur.kind.match(TLBrace)) {
+						bump();
+						try skipBalancedBraces() catch (_:Dynamic) {}
+					} else {
+						parseStmt(stop);
+					}
+					if (acceptKeyword(KWhile)) {
+						if (cur.kind.match(TLParen)) {
+							bump();
+							try skipBalancedParens() catch (_:Dynamic) {}
+						}
+						syncToStmtEnd();
+					}
+					SExpr(EUnsupported("do"), pos);
+				case TKeyword(KThrow):
+					// Bring-up: parse and skip `throw <expr>;`.
+					bump();
+					parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+					syncToStmtEnd();
+					SExpr(EUnsupported("throw"), pos);
+				case TKeyword(KBreak):
+					bump();
+					syncToStmtEnd();
+					SExpr(EUnsupported("break"), pos);
+				case TKeyword(KContinue):
+					bump();
+					syncToStmtEnd();
+					SExpr(EUnsupported("continue"), pos);
+				case _:
+					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+					syncToStmtEnd();
+					SExpr(expr, pos);
+			}
 		}
-	}
 
 	function parseFunctionBodyStatements():Array<HxStmt> {
 		// Called after consuming '{' (function body open brace).
@@ -1266,10 +1435,35 @@
 		return { functions: funcs, fields: fields };
 	}
 
-	public function parseModule():HxModuleDecl {
-		var packagePath = "";
-		final imports = new Array<String>();
-		var hasToplevelMain = false;
+		/**
+			Parse a Haxe module.
+
+			Why
+			- Real Haxe modules can contain multiple type declarations (multiple `class` blocks).
+			- During bootstrap, our pipeline assumes each module has a “main class” whose members
+			  represent the module’s surface for import/type resolution.
+			- Upstream runci code relies on this: `tests/runci/System.hx` defines `CommandFailure`
+			  before `System`, but imports refer to the module `runci.System`.
+
+			What
+			- Parses:
+			  - optional `package ...;`
+			  - `import` / `using`
+			  - any number of `class` declarations (subset)
+			- Chooses `mainClass` as:
+			  - the class whose name matches `expectedMainClass` when provided, else
+			  - the first parsed class, else
+			  - `Unknown` placeholder.
+
+			How
+			- This is still not the full grammar: we skip non-class declarations and
+			  tolerate unsupported constructs inside class bodies by skipping to the
+			  next likely boundary.
+		**/
+		public function parseModule(?expectedMainClass:String):HxModuleDecl {
+			var packagePath = "";
+			final imports = new Array<String>();
+			var hasToplevelMain = false;
 
 		if (acceptKeyword(KPackage)) {
 			// Haxe allows an empty package declaration: `package;`
@@ -1292,67 +1486,62 @@
 			expect(TSemicolon, "';'");
 		}
 
-		// Bootstrap: scan forward until we find the first `class` declaration.
-		// This lets us tolerate (for now):
-		// - metadata like `@:build(...)`
-		// - multiple type declarations per module
-		// - top-level functions (only `main` is recognized as an entrypoint hint)
-		var sawClass = false;
-		while (true) {
-			switch (cur.kind) {
-				case TKeyword(KClass):
-					sawClass = true;
-					break;
-				case TKeyword(KFunction):
-					// Detect module-level `function main(...)` entrypoint.
-					bump();
-					switch (cur.kind) {
-						case TIdent("main"):
-							hasToplevelMain = true;
-						case _:
-					}
-				case TEof:
-					break;
-				default:
-					bump();
-			}
-			if (cur.kind.match(TEof) || cur.kind.match(TKeyword(KClass))) break;
-		}
+			// Bootstrap: scan the whole file looking for class declarations.
+			//
+			// Notes
+			// - We still recognize module-level `function main(...)` for upstream unit tests.
+			// - Non-class declarations (typedef/enum/abstract/etc.) are ignored for now.
+			final classes = new Array<HxClassDecl>();
+			while (!cur.kind.match(TEof)) {
+				switch (cur.kind) {
+					case TKeyword(KClass):
+						bump(); // 'class'
+						final className = readIdent("class name");
+						// Skip `extends` / `implements` / generics / metadata until '{'.
+						while (!cur.kind.match(TLBrace) && !cur.kind.match(TEof)) bump();
+						if (cur.kind.match(TEof)) break;
+						expect(TLBrace, "'{'");
 
-		var className = "Unknown";
-		final functions = new Array<HxFunctionDecl>();
-		final fields = new Array<HxFieldDecl>();
-		var hasStaticMain = false;
+						final members = parseClassMembers();
+						final functions = members.functions == null ? [] : members.functions;
+						final fields = members.fields == null ? [] : members.fields;
+						var hasStaticMain = false;
+						for (fn in functions) {
+							if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main") {
+								hasStaticMain = true;
+								break;
+							}
+						}
 
-		if (sawClass) {
-			expect(TKeyword(KClass), "'class'");
-			className = readIdent("class name");
-
-			expect(TLBrace, "'{'");
-
-			final members = parseClassMembers();
-			for (fn in members.functions) functions.push(fn);
-			for (f in members.fields) fields.push(f);
-			for (fn in functions) {
-				if (HxFunctionDecl.getIsStatic(fn) && HxFunctionDecl.getName(fn) == "main") {
-					hasStaticMain = true;
-					break;
+						classes.push(new HxClassDecl(className, hasStaticMain, functions, fields));
+						// `parseClassMembers` consumes the closing `}`.
+					case TKeyword(KFunction):
+						// Detect module-level `function main(...)` entrypoint.
+						bump();
+						switch (cur.kind) {
+							case TIdent("main"):
+								hasToplevelMain = true;
+							case _:
+						}
+					default:
+						bump();
 				}
 			}
-		}
 
-		// Bootstrap: ignore any trailing declarations after the first class.
-		// Upstream code often contains multiple types per module (and metadata).
-		while (true) {
-			switch (cur.kind) {
-				case TEof:
-					break;
-				default:
-					bump();
+			expect(TEof, "end of input");
+
+			final expected = expectedMainClass == null ? "" : StringTools.trim(expectedMainClass);
+			var chosen:Null<HxClassDecl> = null;
+			if (expected.length > 0) {
+				for (c in classes) {
+					if (c != null && HxClassDecl.getName(c) == expected) {
+						chosen = c;
+						break;
+					}
+				}
 			}
+			if (chosen == null && classes.length > 0) chosen = classes[0];
+			final mainClass = chosen == null ? new HxClassDecl("Unknown", false, [], []) : chosen;
+			return new HxModuleDecl(packagePath, imports, mainClass, false, hasToplevelMain);
 		}
-
-		expect(TEof, "end of input");
-		return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions, fields), false, hasToplevelMain);
-	}
 }

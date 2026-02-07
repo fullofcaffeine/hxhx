@@ -1233,7 +1233,7 @@ let parseGeneratedMembers = fun members -> try (
     ignore (HxAnon.set __anon_280 "fields" (Obj.repr (let __arr_282 = HxArray.create () in __arr_282)));
     __anon_280
   )))) else ());
-  let combined = HxArray.join members "\n" (fun x -> x) in let fake = ("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" in let p = HxParser.create fake in let decl = HxParser.parseModule p () in let cls = HxModuleDecl.getMainClass decl in let __anon_283 = HxAnon.create () in (
+  let combined = HxArray.join members "\n" (fun x -> x) in let fake = ("class __HxHxBuildFields {\n" ^ HxString.toStdString combined) ^ "\n}\n" in let p = HxParser.create fake in let decl = HxParser.parseModule p (Obj.magic (HxRuntime.hx_null)) in let cls = HxModuleDecl.getMainClass decl in let __anon_283 = HxAnon.create () in (
     ignore (HxAnon.set __anon_283 "functions" (Obj.repr (HxClassDecl.getFunctions cls)));
     ignore (HxAnon.set __anon_283 "fields" (Obj.repr (HxClassDecl.getFields cls)));
     __anon_283

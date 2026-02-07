@@ -15,13 +15,21 @@
 	  This matches the upstream bootstrap strategy: keep the frontend native
 	  while we reimplement the rest of the compiler pipeline in Haxe.
 **/
-class ParserStage {
-	public function new() {}
+	class ParserStage {
+		public function new() {}
 
-	public static function parse(source:String, ?filePath:String):ParsedModule {
-		final decl = #if hih_native_parser
-			// Bring-up escape hatch: allow forcing the pure-Haxe parser even when the
-			// native frontend is compiled in.
+		static function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
+			if (filePath == null || filePath.length == 0) return null;
+			final name = haxe.io.Path.withoutDirectory(filePath);
+			final dot = name.lastIndexOf(".");
+			return dot <= 0 ? name : name.substr(0, dot);
+		}
+
+		public static function parse(source:String, ?filePath:String):ParsedModule {
+			final expectedMainClass = expectedMainClassFromFile(filePath);
+			final decl = #if hih_native_parser
+				// Bring-up escape hatch: allow forcing the pure-Haxe parser even when the
+				// native frontend is compiled in.
 			//
 			// Why
 			// - The native frontend protocol v1 is intentionally "header/return only" and
@@ -32,38 +40,41 @@ class ParserStage {
 			// How
 			// - `HIH_FORCE_HX_PARSER=1` selects the pure-Haxe frontend regardless of the
 			//   compiled-in `hih_native_parser` define.
-			((() -> {
-				final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
-				if (v == "1" || v == "true" || v == "yes") return new HxParser(source).parseModule();
-				try {
-					return parseViaNativeHooks(source);
-				} catch (eNative:Dynamic) {
+				((() -> {
+					final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
+					if (v == "1" || v == "true" || v == "yes") return new HxParser(source).parseModule(expectedMainClass);
+					try {
+						return parseViaNativeHooks(source, expectedMainClass);
+					} catch (eNative:Dynamic) {
 					final strict = Sys.getEnv("HIH_NATIVE_PARSER_STRICT");
 					if (strict == "1" || strict == "true" || strict == "yes") throw eNative;
 
 					// Fallback: the pure-Haxe frontend is slower, but it can unblock bring-up when the
 					// native lexer/parser cannot yet handle an upstream-shaped input.
 					//
-					// This is especially useful when widening the module graph for upstream suites
-					// (e.g. enabling heuristic same-package type resolution).
-					try {
-						return new HxParser(source).parseModule();
-					} catch (_:Dynamic) {
-						// Prefer the native error (it is usually more specific about the failure mode).
-						throw eNative;
-					}
+						// This is especially useful when widening the module graph for upstream suites
+						// (e.g. enabling heuristic same-package type resolution).
+						try {
+							return new HxParser(source).parseModule(expectedMainClass);
+						} catch (_:Dynamic) {
+							// Prefer the native error (it is usually more specific about the failure mode).
+							throw eNative;
+						}
 				}
-			})());
-		#else
-			new HxParser(source).parseModule();
-		#end
-		final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
-		return new ParsedModule(source, decl, path);
-	}
+				})());
+			#else
+				new HxParser(source).parseModule(expectedMainClass);
+			#end
+			final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
+			return new ParsedModule(source, decl, path);
+		}
 
 	#if hih_native_parser
-	static function parseViaNativeHooks(source:String):HxModuleDecl {
-		final encoded = native.NativeParser.parseModuleDecl(source);
+	static function parseViaNativeHooks(source:String, expectedMainClass:Null<String>):HxModuleDecl {
+		final encoded =
+			expectedMainClass != null && expectedMainClass.length > 0
+				? native.NativeParser.parseModuleDeclWithExpected(source, expectedMainClass)
+				: native.NativeParser.parseModuleDecl(source);
 		return decodeNativeProtocol(encoded);
 	}
 
