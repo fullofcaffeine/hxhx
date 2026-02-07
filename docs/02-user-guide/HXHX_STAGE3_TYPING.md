@@ -206,3 +206,17 @@ Stage 3 typing is the bridge to “real” `hxhx`:
   - reimplement compiler subsystems in Haxe incrementally
   - start validating those subsystems against upstream tests
   - build toward Stage 4 macros/plugin ABI without re-architecting the frontend
+
+## Stage3 CLI flags (bring-up surface)
+
+Stage 3 is invoked explicitly via:
+
+- `hxhx --hxhx-stage3 ...`
+
+Bring-up flags (not part of the long-term `haxe` CLI surface):
+
+- `--hxhx-out <dir>`: output directory for emitted `.ml` files and the built `out.exe`.
+- `--hxhx-type-only`: resolve + type the module graph; skip macro execution and skip emit/build.
+- `--hxhx-no-emit`: resolve + type the module graph and execute Stage4 macro hooks, but skip OCaml emission/build.
+- `--hxhx-emit-full-bodies`: emit best-effort OCaml for full statement bodies (bootstrap/diagnostic rung).
+- `--hxhx-no-run`: emit+build the OCaml executable but do not execute it (needed for long-lived server executables like the macro host).

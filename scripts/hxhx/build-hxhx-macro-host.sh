@@ -20,6 +20,11 @@ BOOTSTRAP_DIR="$TOOL_DIR/bootstrap_out"
 #
 # Escape hatch:
 # - Set `HXHX_MACRO_HOST_FORCE_STAGE0=1` to always use stage0 generation.
+#
+# Stage3 note:
+# - When dynamic entrypoints are requested (`HXHX_MACRO_HOST_ENTRYPOINTS` and/or extra classpaths),
+#   we *prefer* to build the macro host via `hxhx --hxhx-stage3` (stage0-free), falling back to
+#   stage0 `haxe` only if required.
 
 is_true() {
   local v="${1:-}"
@@ -53,12 +58,11 @@ if [ -d "$BOOTSTRAP_DIR" ] \
   exit 0
 fi
 
-if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-  echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-  echo "Tip: if you want a stage0-free macro host, ensure '$BOOTSTRAP_DIR' exists and unset" >&2
-  echo "     HXHX_MACRO_HOST_ENTRYPOINTS/HXHX_MACRO_HOST_EXTRA_CP, or set HXHX_MACRO_HOST_EXE explicitly." >&2
-  exit 1
-fi
+PREFER_HXHX="${HXHX_MACRO_HOST_PREFER_HXHX:-1}"
+has_hxhx() {
+  # `build-hxhx.sh` is stage0-free by default (uses packages/hxhx/bootstrap_out when available).
+  "$ROOT/scripts/hxhx/build-hxhx.sh" >/dev/null 2>&1
+}
 
 normalize_cp() {
   local cp="$1"
@@ -71,6 +75,23 @@ normalize_cp() {
     cp="$ROOT/$cp"
   fi
   echo "$cp"
+}
+
+resolve_std_root() {
+  # Stage3 compilation needs a real Haxe std root (macro host imports `haxe.macro.*`).
+  if [ -n "${HAXE_STD_PATH:-}" ] && [ -d "${HAXE_STD_PATH}" ]; then
+    echo "${HAXE_STD_PATH}"
+    return 0
+  fi
+  if [ -d "$ROOT/vendor/haxe/std" ]; then
+    echo "$ROOT/vendor/haxe/std"
+    return 0
+  fi
+  if [ -n "${HAXE_UPSTREAM_DIR:-}" ] && [ -d "${HAXE_UPSTREAM_DIR}/std" ]; then
+    echo "${HAXE_UPSTREAM_DIR}/std"
+    return 0
+  fi
+  echo ""
 }
 
 escape_hx_string() {
@@ -216,6 +237,63 @@ trim_ws() {
       fi
     done
   fi
+
+  # Prefer stage0-free build via `hxhx --hxhx-stage3` when dynamic entrypoints/classpaths are requested.
+  #
+  # Why
+  # - Gate1/Gate2 acceptance require macro host bring-up to be stage0-free.
+  # - The macro host is just another Haxe program; Stage3 can compile it with the same bootstrap emitter.
+  #
+  # How
+  # - Use `--hxhx-no-run` to avoid hanging (macro host is a long-lived server process).
+  if ! is_true "${HXHX_MACRO_HOST_FORCE_STAGE0:-}" && is_true "$PREFER_HXHX"; then
+    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+    STD_ROOT="$(resolve_std_root)"
+    if [ -z "$STD_ROOT" ]; then
+      echo "hxhx(stage3) macro host build requires a Haxe std root." >&2
+      echo "Set HAXE_STD_PATH=/path/to/haxe/std or provide an untracked checkout at vendor/haxe." >&2
+      # Fall back to stage0 if available.
+    else
+    # NOTE: do not reuse `build.hxml` here.
+    #
+    # Why
+    # - `build.hxml` is for stage0 `haxe` + `reflaxe.ocaml` and includes `-lib reflaxe.ocaml`.
+    # - Stage3 bring-up already *is* an OCaml codegen path; requiring haxelib resolution here would
+    #   reintroduce avoidable stage0-like dependency edges.
+    #
+    # What
+    # - Compile the macro host as a normal Haxe program from its source classpaths.
+    cmd=(
+      "$HXHX_BIN"
+      --hxhx-stage3
+      --hxhx-no-run
+      --hxhx-emit-full-bodies
+      --hxhx-out out
+      --std "$STD_ROOT"
+      -cp src
+      -cp overrides
+      -main hxhxmacrohost.Main
+    )
+    if [ "${#extra[@]}" -gt 0 ]; then
+      cmd+=("${extra[@]}")
+    fi
+    echo "Building macro host via hxhx(stage3)..." >&2
+    if "${cmd[@]}"; then
+      exit 0
+    fi
+    echo "hxhx(stage3) macro host build failed; falling back to stage0 (if available)." >&2
+    # Clean stage3 artifacts before stage0 generation so stale shims don't poison the dune build.
+    rm -rf out
+    mkdir -p out
+    fi
+  fi
+
+  if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
+    echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
+    echo "Tip: set HXHX_MACRO_HOST_PREFER_HXHX=1 (default) to build via hxhx(stage3) when possible." >&2
+    exit 1
+  fi
+
   cmd=("$HAXE_BIN" build.hxml -D ocaml_build=native)
   if [ "${#extra[@]}" -gt 0 ]; then
     cmd+=("${extra[@]}")
@@ -223,10 +301,17 @@ trim_ws() {
   "${cmd[@]}"
 )
 
-BIN="$TOOL_DIR/out/_build/default/out.exe"
-if [ ! -f "$BIN" ]; then
-  echo "Missing built executable: $BIN" >&2
-  exit 1
+BIN_STAGE3="$TOOL_DIR/out/out.exe"
+if [ -f "$BIN_STAGE3" ]; then
+  echo "$BIN_STAGE3"
+  exit 0
 fi
 
-echo "$BIN"
+BIN_STAGE0="$TOOL_DIR/out/_build/default/out.exe"
+if [ -f "$BIN_STAGE0" ]; then
+  echo "$BIN_STAGE0"
+  exit 0
+fi
+
+echo "Missing built executable (expected stage3 '$BIN_STAGE3' or stage0 '$BIN_STAGE0')." >&2
+exit 1

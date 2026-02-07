@@ -663,6 +663,7 @@ class Stage3Compiler {
 			var typeOnly = false;
 			var emitFullBodies = false;
 			var noEmit = false;
+			var noRun = false;
 			final rest = new Array<String>();
 			var i = 0;
 			while (i < args.length) {
@@ -679,6 +680,19 @@ class Stage3Compiler {
 					case "--hxhx-no-emit":
 						// Diagnostic rung: execute macros + type the module graph, but skip OCaml emission/build.
 						noEmit = true;
+						i += 1;
+					case "--hxhx-no-run":
+						// Build-only rung: emit+build the OCaml executable, but do not execute it.
+						//
+						// Why
+						// - Some compiler-shaped artifacts are *servers* (macro host, display server, etc.) and would
+						//   block forever if we tried to run them as a validation step.
+						// - Gate runners and scripts sometimes need an executable path, not its output.
+						//
+						// What
+						// - We still type the full graph and produce `out.exe`, printing `exe=...` like normal.
+						// - We print `run=skipped` instead of `run=ok`.
+						noRun = true;
 						i += 1;
 					case "--hxhx-emit-full-bodies":
 						// Bring-up rung: emit best-effort OCaml for full statement bodies (not just first return).
@@ -1370,6 +1384,11 @@ class Stage3Compiler {
 		Sys.println("exe=" + exe);
 
 		closeMacroSession();
+
+		if (noRun) {
+			Sys.println("run=skipped");
+			return 0;
+		}
 
 		final code = Sys.command(exe, []);
 		if (code != 0) return error("built executable failed with exit code " + code);

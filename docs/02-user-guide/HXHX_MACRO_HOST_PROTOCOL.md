@@ -353,3 +353,22 @@ The macro RPC section specifically runs:
 - `bash scripts/hxhx/build-hxhx.sh`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-selftest`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-run "BuiltinMacros.smoke()"`
+
+### Macro host build modes (bootstrap vs stage0 vs Stage3)
+
+`scripts/hxhx/build-hxhx-macro-host.sh` has three distinct build modes:
+
+- **Bootstrap snapshot (stage0-free, default when possible)**:
+  - If `tools/hxhx-macro-host/bootstrap_out/` exists *and* no dynamic entrypoints/classpaths are requested,
+    the macro host is built via dune from the committed snapshot.
+- **Stage3 build attempt (stage0-free, for dynamic entrypoints)**:
+  - When `HXHX_MACRO_HOST_ENTRYPOINTS` and/or `HXHX_MACRO_HOST_EXTRA_CP` are set, the script *prefers* to
+    build via `hxhx --hxhx-stage3` (controlled by `HXHX_MACRO_HOST_PREFER_HXHX=1`).
+  - This requires a real Haxe std root so the macro host can resolve `haxe.macro.*`:
+    - set `HAXE_STD_PATH=/path/to/haxe/std`, or
+    - have an untracked upstream checkout at `vendor/haxe/std`, or
+    - set `HAXE_UPSTREAM_DIR=/path/to/haxe` (the script uses `<dir>/std`).
+  - Internally, this uses Stage3’s `--hxhx-no-run` so the server executable is *built* but not executed.
+- **Stage0 fallback**:
+  - If the Stage3 build attempt fails and `haxe` is available, the script falls back to stage0 generation.
+  - Gate runners can enforce stage0-free behavior by disabling `haxe` on `PATH` (and ensuring the Stage3 build works).
