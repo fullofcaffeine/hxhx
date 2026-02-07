@@ -315,6 +315,7 @@ class ExprMacroExpander {
 				case EString(_): "String";
 				case ELambda(_, _): "Lambda";
 				case ETryCatchRaw(_): "TryCatch";
+				case ESwitchRaw(_): "Switch";
 				case EIdent(_): "Ident";
 				case EThis: "This";
 				case ESuper: "Super";

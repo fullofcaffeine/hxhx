@@ -331,6 +331,11 @@ class TyperStage {
 					// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
 					// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.
 					TyType.fromHintText("Dynamic");
+				case ESwitchRaw(_raw):
+					// Stage 3 bring-up: we only preserve the shape of `switch` expressions so parsing/typing
+					// can proceed deterministically through upstream-shaped code (notably runci).
+					// Correct semantics (pattern matching + guards + value typing) are Stage 4+ work.
+					TyType.fromHintText("Dynamic");
 				case ENew(_typePath, args):
 					for (a in args) inferExprType(a, scope, ctx, pos);
 					final c = ctx.resolveType(_typePath);

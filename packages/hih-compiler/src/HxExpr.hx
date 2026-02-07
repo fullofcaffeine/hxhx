@@ -100,6 +100,34 @@
 	ETryCatchRaw(raw:String);
 
 	/**
+		Switch expression (Stage 3 expansion): `switch (expr) { case ...: ... }`.
+
+		Why
+		- Upstream Haxe code (including the runci harness) uses `switch` as an *expression*,
+		  e.g.:
+		  - `var tests:Array<TestTarget> = switch (...) { ... }`
+		- If we treat `switch` as a single-token `EUnsupported("switch")`, we risk leaving the
+		  `{ ... }` body unconsumed, which can prematurely terminate function-body parsing and
+		  cascade into many unrelated `unsupported_exprs_total` diagnostics.
+
+		What
+		- Stores a canonical, token-rendered string of the entire switch expression.
+
+		Why store raw text (bootstrap constraint)
+		- A structured switch naturally contains statements/blocks (and might contain `return`,
+		  nested `switch`, etc.). Modeling that precisely would expand the bootstrap AST and
+		  requires more of the typer/emitter than we want for Gate bring-up.
+		- Like `ETryCatchRaw`, this avoids an OCaml bootstrap module-cycle hazard while still
+		  letting the parser *consume* the whole switch expression deterministically.
+
+		How (bring-up semantics)
+		- Stage 3 typer treats this expression as `Dynamic`.
+		- Stage 3 emitter lowers it to a conservative placeholder (`Obj.magic`).
+		- Correct semantics (pattern matching + guards + expression values) are Stage 4+ work.
+	**/
+	ESwitchRaw(raw:String);
+
+	/**
 		Constructor call: `new TypePath(args...)`.
 
 		Why

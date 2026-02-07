@@ -198,6 +198,10 @@ class EmitterStage {
 			// string concatenation and lower it to OCaml's `^`.
 			case EBinop("+", a, b):
 				"(" + exprToOcamlString(a, tyByIdent) + " ^ " + exprToOcamlString(b, tyByIdent) + ")";
+			case ECall(EField(EIdent("Std"), "string"), [arg]):
+				// String interpolation lowering uses `Std.string(...)` to force stringification.
+				// Reuse our OCaml stringification helpers here so prints remain informative.
+				exprToOcamlString(arg, tyByIdent);
 			// Bootstrap: allow string-y ternaries in upstream-ish code (runci/System.hx).
 			case ETernary(cond, thenExpr, elseExpr):
 				"(if " + condToOcamlBoolForString(cond) + " then " + exprToOcamlString(thenExpr, tyByIdent) + " else " + exprToOcamlString(elseExpr, tyByIdent) + ")";
@@ -676,6 +680,10 @@ class EmitterStage {
 					+ ") else ("
 					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent)
 					+ "))";
+			case ESwitchRaw(_raw):
+				// Stage 3 bring-up: preserve switch shape during parsing/typing, but do not attempt to
+				// lower it in the bootstrap emitter yet.
+				"(Obj.magic 0)";
 				case EAnon(_names, _values):
 					// Stage 3 bring-up: anonymous structures are represented in the real backend/runtime.
 					// The Stage 3 bootstrap emitter does not model them yet.

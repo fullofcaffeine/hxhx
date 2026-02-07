@@ -111,16 +111,17 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
       | HxExpr.ECall (_, _) -> 9
       | HxExpr.ELambda (_, _) -> 10
       | HxExpr.ETryCatchRaw _ -> 11
-      | HxExpr.ENew (_, _) -> 12
-      | HxExpr.EUnop (_, _) -> 13
-      | HxExpr.EBinop (_, _, _) -> 14
-      | HxExpr.ETernary (_, _, _) -> 15
-      | HxExpr.EAnon (_, _) -> 16
-      | HxExpr.EArrayDecl _ -> 17
-      | HxExpr.EArrayAccess (_, _) -> 18
-      | HxExpr.ECast (_, _) -> 19
-      | HxExpr.EUntyped _ -> 20
-      | HxExpr.EUnsupported _ -> 21 with
+      | HxExpr.ESwitchRaw _ -> 12
+      | HxExpr.ENew (_, _) -> 13
+      | HxExpr.EUnop (_, _) -> 14
+      | HxExpr.EBinop (_, _, _) -> 15
+      | HxExpr.ETernary (_, _, _) -> 16
+      | HxExpr.EAnon (_, _) -> 17
+      | HxExpr.EArrayDecl _ -> 18
+      | HxExpr.EArrayAccess (_, _) -> 19
+      | HxExpr.ECast (_, _) -> 20
+      | HxExpr.EUntyped _ -> 21
+      | HxExpr.EUnsupported _ -> 22 with
       | 8 -> let _g = let __enum_param_14 = e in if __enum_param_14 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_14 with
         | HxExpr.EField (__enum_param_13, _) -> __enum_param_13
         | _ -> failwith "Unexpected enum parameter" in (
@@ -169,7 +170,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           __assign_32
         )
       )
-      | 12 -> let _g = let __enum_param_34 = e in if __enum_param_34 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_34 with
+      | 13 -> let _g = let __enum_param_34 = e in if __enum_param_34 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_34 with
         | HxExpr.ENew (__enum_param_33, _) -> __enum_param_33
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_36 = e in if __enum_param_36 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_36 with
         | HxExpr.ENew (_, __enum_param_35) -> __enum_param_35
@@ -189,7 +190,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           )
         )
       )
-      | 13 -> let _g = let __enum_param_41 = e in if __enum_param_41 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_41 with
+      | 14 -> let _g = let __enum_param_41 = e in if __enum_param_41 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_41 with
         | HxExpr.EUnop (__enum_param_40, _) -> __enum_param_40
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_43 = e in if __enum_param_43 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_43 with
         | HxExpr.EUnop (_, __enum_param_42) -> __enum_param_42
@@ -200,7 +201,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           __assign_44
         )
       )
-      | 14 -> let _g = let __enum_param_46 = e in if __enum_param_46 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_46 with
+      | 15 -> let _g = let __enum_param_46 = e in if __enum_param_46 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_46 with
         | HxExpr.EBinop (__enum_param_45, _, _) -> __enum_param_45
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_48 = e in if __enum_param_48 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_48 with
         | HxExpr.EBinop (_, __enum_param_47, _) -> __enum_param_47
@@ -213,7 +214,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           __assign_51
         )
       )
-      | 15 -> let _g = let __enum_param_53 = e in if __enum_param_53 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_53 with
+      | 16 -> let _g = let __enum_param_53 = e in if __enum_param_53 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_53 with
         | HxExpr.ETernary (__enum_param_52, _, _) -> __enum_param_52
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_55 = e in if __enum_param_55 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_55 with
         | HxExpr.ETernary (_, __enum_param_54, _) -> __enum_param_54
@@ -223,7 +224,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
         tempResult := __assign_58;
         __assign_58
       )
-      | 16 -> let _g = let __enum_param_60 = e in if __enum_param_60 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_60 with
+      | 17 -> let _g = let __enum_param_60 = e in if __enum_param_60 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_60 with
         | HxExpr.EAnon (__enum_param_59, _) -> __enum_param_59
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_62 = e in if __enum_param_62 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_62 with
         | HxExpr.EAnon (_, __enum_param_61) -> __enum_param_61
@@ -243,7 +244,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           )
         )
       )
-      | 17 -> let _g = let __enum_param_67 = e in if __enum_param_67 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_67 with
+      | 18 -> let _g = let __enum_param_67 = e in if __enum_param_67 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_67 with
         | HxExpr.EArrayDecl __enum_param_66 -> __enum_param_66
         | _ -> failwith "Unexpected enum parameter" in let values = _g in let c = ref 0 in (
         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let v = HxArray.get values (!_g2) in (
@@ -258,7 +259,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           __assign_70
         )
       )
-      | 18 -> let _g = let __enum_param_72 = e in if __enum_param_72 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_72 with
+      | 19 -> let _g = let __enum_param_72 = e in if __enum_param_72 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_72 with
         | HxExpr.EArrayAccess (__enum_param_71, _) -> __enum_param_71
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_74 = e in if __enum_param_74 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_74 with
         | HxExpr.EArrayAccess (_, __enum_param_73) -> __enum_param_73
@@ -266,7 +267,7 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
         tempResult := __assign_75;
         __assign_75
       )
-      | 19 -> let _g = let __enum_param_77 = e in if __enum_param_77 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_77 with
+      | 20 -> let _g = let __enum_param_77 = e in if __enum_param_77 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_77 with
         | HxExpr.ECast (__enum_param_76, _) -> __enum_param_76
         | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_79 = e in if __enum_param_79 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_79 with
         | HxExpr.ECast (_, __enum_param_78) -> __enum_param_78
@@ -277,13 +278,13 @@ let rec countUnsupportedExprsInExpr = fun e -> try (
           __assign_80
         )
       )
-      | 20 -> let _g = let __enum_param_82 = e in if __enum_param_82 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_82 with
+      | 21 -> let _g = let __enum_param_82 = e in if __enum_param_82 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_82 with
         | HxExpr.EUntyped __enum_param_81 -> __enum_param_81
         | _ -> failwith "Unexpected enum parameter" in let expr = _g in let __assign_83 = countUnsupportedExprsInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) in (
         tempResult := __assign_83;
         __assign_83
       )
-      | 21 -> (
+      | 22 -> (
         ignore (let __enum_param_85 = e in if __enum_param_85 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_85 with
           | HxExpr.EUnsupported __enum_param_84 -> __enum_param_84
           | _ -> failwith "Unexpected enum parameter");
@@ -317,16 +318,17 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
     | HxExpr.ECall (_, _) -> 9
     | HxExpr.ELambda (_, _) -> 10
     | HxExpr.ETryCatchRaw _ -> 11
-    | HxExpr.ENew (_, _) -> 12
-    | HxExpr.EUnop (_, _) -> 13
-    | HxExpr.EBinop (_, _, _) -> 14
-    | HxExpr.ETernary (_, _, _) -> 15
-    | HxExpr.EAnon (_, _) -> 16
-    | HxExpr.EArrayDecl _ -> 17
-    | HxExpr.EArrayAccess (_, _) -> 18
-    | HxExpr.ECast (_, _) -> 19
-    | HxExpr.EUntyped _ -> 20
-    | HxExpr.EUnsupported _ -> 21 with
+    | HxExpr.ESwitchRaw _ -> 12
+    | HxExpr.ENew (_, _) -> 13
+    | HxExpr.EUnop (_, _) -> 14
+    | HxExpr.EBinop (_, _, _) -> 15
+    | HxExpr.ETernary (_, _, _) -> 16
+    | HxExpr.EAnon (_, _) -> 17
+    | HxExpr.EArrayDecl _ -> 18
+    | HxExpr.EArrayAccess (_, _) -> 19
+    | HxExpr.ECast (_, _) -> 20
+    | HxExpr.EUntyped _ -> 21
+    | HxExpr.EUnsupported _ -> 22 with
     | 8 -> ignore (let _g = let __enum_param_90 = e in if __enum_param_90 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_90 with
       | HxExpr.EField (__enum_param_89, _) -> __enum_param_89
       | _ -> failwith "Unexpected enum parameter" in (
@@ -363,7 +365,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
       ignore _g;
       ()
     ))
-    | 12 -> ignore (let _g = let __enum_param_106 = e in if __enum_param_106 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_106 with
+    | 13 -> ignore (let _g = let __enum_param_106 = e in if __enum_param_106 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_106 with
       | HxExpr.ENew (__enum_param_105, _) -> __enum_param_105
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_108 = e in if __enum_param_108 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_108 with
       | HxExpr.ENew (_, __enum_param_107) -> __enum_param_107
@@ -377,7 +379,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
         collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr a)) out max
       )) done
     ))
-    | 13 -> ignore (let _g = let __enum_param_112 = e in if __enum_param_112 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_112 with
+    | 14 -> ignore (let _g = let __enum_param_112 = e in if __enum_param_112 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_112 with
       | HxExpr.EUnop (__enum_param_111, _) -> __enum_param_111
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_114 = e in if __enum_param_114 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_114 with
       | HxExpr.EUnop (_, __enum_param_113) -> __enum_param_113
@@ -385,7 +387,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
       ignore _g;
       let expr = _g1 in collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) out max
     ))
-    | 14 -> ignore (let _g = let __enum_param_116 = e in if __enum_param_116 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_116 with
+    | 15 -> ignore (let _g = let __enum_param_116 = e in if __enum_param_116 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_116 with
       | HxExpr.EBinop (__enum_param_115, _, _) -> __enum_param_115
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_118 = e in if __enum_param_118 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_118 with
       | HxExpr.EBinop (_, __enum_param_117, _) -> __enum_param_117
@@ -398,7 +400,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
         collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr right)) out max
       )
     ))
-    | 15 -> ignore (let _g = let __enum_param_122 = e in if __enum_param_122 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_122 with
+    | 16 -> ignore (let _g = let __enum_param_122 = e in if __enum_param_122 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_122 with
       | HxExpr.ETernary (__enum_param_121, _, _) -> __enum_param_121
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_124 = e in if __enum_param_124 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_124 with
       | HxExpr.ETernary (_, __enum_param_123, _) -> __enum_param_123
@@ -409,7 +411,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
       ignore (collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr thenExpr)) out max);
       collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr elseExpr)) out max
     ))
-    | 16 -> ignore (let _g = let __enum_param_128 = e in if __enum_param_128 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_128 with
+    | 17 -> ignore (let _g = let __enum_param_128 = e in if __enum_param_128 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_128 with
       | HxExpr.EAnon (__enum_param_127, _) -> __enum_param_127
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_130 = e in if __enum_param_130 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_130 with
       | HxExpr.EAnon (_, __enum_param_129) -> __enum_param_129
@@ -423,7 +425,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
         collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr v)) out max
       )) done
     ))
-    | 17 -> ignore (let _g = let __enum_param_134 = e in if __enum_param_134 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_134 with
+    | 18 -> ignore (let _g = let __enum_param_134 = e in if __enum_param_134 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_134 with
       | HxExpr.EArrayDecl __enum_param_133 -> __enum_param_133
       | _ -> failwith "Unexpected enum parameter" in let values = _g in let _g2 = ref 0 in while !_g2 < HxArray.length values do ignore (let v = HxArray.get values (!_g2) in (
       ignore (let __old_135 = !_g2 in let __new_136 = HxInt.add __old_135 1 in (
@@ -432,7 +434,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
       ));
       collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr v)) out max
     )) done)
-    | 18 -> ignore (let _g = let __enum_param_138 = e in if __enum_param_138 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_138 with
+    | 19 -> ignore (let _g = let __enum_param_138 = e in if __enum_param_138 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_138 with
       | HxExpr.EArrayAccess (__enum_param_137, _) -> __enum_param_137
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_140 = e in if __enum_param_140 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_140 with
       | HxExpr.EArrayAccess (_, __enum_param_139) -> __enum_param_139
@@ -440,7 +442,7 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
       ignore (collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr arr)) out max);
       collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr idx)) out max
     ))
-    | 19 -> ignore (let _g = let __enum_param_142 = e in if __enum_param_142 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_142 with
+    | 20 -> ignore (let _g = let __enum_param_142 = e in if __enum_param_142 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_142 with
       | HxExpr.ECast (__enum_param_141, _) -> __enum_param_141
       | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_144 = e in if __enum_param_144 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_144 with
       | HxExpr.ECast (_, __enum_param_143) -> __enum_param_143
@@ -448,10 +450,10 @@ let rec collectUnsupportedExprRawInExpr = fun e out max -> try (
       ignore _g1;
       collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) out max
     ))
-    | 20 -> ignore (let _g = let __enum_param_146 = e in if __enum_param_146 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_146 with
+    | 21 -> ignore (let _g = let __enum_param_146 = e in if __enum_param_146 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_146 with
       | HxExpr.EUntyped __enum_param_145 -> __enum_param_145
       | _ -> failwith "Unexpected enum parameter" in let expr = _g in collectUnsupportedExprRawInExpr (HxEnum.box_if_needed "HxExpr" (Obj.repr expr)) out max)
-    | 21 -> ignore (let _g = let __enum_param_148 = e in if __enum_param_148 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_148 with
+    | 22 -> ignore (let _g = let __enum_param_148 = e in if __enum_param_148 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_148 with
       | HxExpr.EUnsupported __enum_param_147 -> __enum_param_147
       | _ -> failwith "Unexpected enum parameter" in let raw = _g in if HxArray.length out < max then ignore (HxArray.push out raw) else ())
     | _ -> ignore ())

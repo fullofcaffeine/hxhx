@@ -411,7 +411,7 @@
 					}
 			case TString(s):
 				bump();
-				EString(s);
+				parseInterpolatedStringExpr(s);
 			case TInt(v):
 				bump();
 				EInt(v);
@@ -433,6 +433,103 @@
 				bump();
 				EUnsupported(raw);
 		}
+	}
+
+	function parseInterpolatedStringExpr(s:String):HxExpr {
+		// String interpolation (bring-up subset):
+		// - `$ident`
+		// - `${ident}`
+		//
+		// Why
+		// - Upstream harness code (RunCi) uses both forms (e.g. `'test ${test} failed'`).
+		// - If we keep the `$...` text literal, programs still compile but their control-flow
+		//   diagnostics become misleading, which hurts Gate bring-up.
+		if (s == null) return EString("");
+		if (s.indexOf("$") == -1) return EString(s);
+
+		function isIdentStart(c:Int):Bool {
+			return (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || c == "_".code;
+		}
+		function isIdentCont(c:Int):Bool {
+			return isIdentStart(c) || (c >= "0".code && c <= "9".code);
+		}
+		function isSimpleIdent(text:String):Bool {
+			if (text == null || text.length == 0) return false;
+			if (!isIdentStart(text.charCodeAt(0))) return false;
+			for (i in 1...text.length) if (!isIdentCont(text.charCodeAt(i))) return false;
+			return true;
+		}
+
+		final parts = new Array<HxExpr>();
+		var buf = new StringBuf();
+
+		function flushBuf():Void {
+			if (buf.length > 0) {
+				parts.push(EString(buf.toString()));
+				buf = new StringBuf();
+			}
+		}
+
+		var i = 0;
+		while (i < s.length) {
+			final c = s.charCodeAt(i);
+			if (c != "$".code) {
+				buf.addChar(c);
+				i++;
+				continue;
+			}
+
+			// Escape `$` as `$$`.
+			if (i + 1 < s.length && s.charCodeAt(i + 1) == "$".code) {
+				buf.addChar("$".code);
+				i += 2;
+				continue;
+			}
+
+			flushBuf();
+
+			// `${ident}` form.
+			if (i + 1 < s.length && s.charCodeAt(i + 1) == "{".code) {
+				final start = i + 2;
+				var j = start;
+				while (j < s.length && s.charCodeAt(j) != "}".code) j++;
+				if (j < s.length && s.charCodeAt(j) == "}".code) {
+					final inner = StringTools.trim(s.substr(start, j - start));
+					if (isSimpleIdent(inner)) {
+						parts.push(ECall(EField(EIdent("Std"), "string"), [EIdent(inner)]));
+						i = j + 1;
+						continue;
+					}
+				}
+				// Best-effort fallback: treat `$` as literal.
+				buf.addChar("$".code);
+				i++;
+				continue;
+			}
+
+			// `$ident` form.
+			final j0 = i + 1;
+			if (j0 < s.length && isIdentStart(s.charCodeAt(j0))) {
+				var j = j0 + 1;
+				while (j < s.length && isIdentCont(s.charCodeAt(j))) j++;
+				final name = s.substr(j0, j - j0);
+				parts.push(ECall(EField(EIdent("Std"), "string"), [EIdent(name)]));
+				i = j;
+				continue;
+			}
+
+			// Fallback: literal `$`.
+			buf.addChar("$".code);
+			i++;
+		}
+
+		flushBuf();
+		if (parts.length == 0) return EString(s);
+
+		// Fold into left-associative `+` concatenation.
+		var out = parts[0];
+		for (k in 1...parts.length) out = EBinop("+", out, parts[k]);
+		return out;
 	}
 
 	function parseArrayDeclExpr():HxExpr {
@@ -587,6 +684,24 @@
 
 	function parseUnaryExpr(stop:()->Bool):HxExpr {
 		return switch (cur.kind) {
+			case TOther("@".code):
+				// Expression-level metadata: `@:meta expr`.
+				//
+				// Bring-up semantics: ignore metadata and return the underlying expression.
+				while (cur.kind.match(TOther("@".code))) {
+					bump();
+					if (cur.kind.match(TColon)) bump();
+					switch (cur.kind) {
+						case TIdent(_), TKeyword(_):
+							bump();
+						case _:
+					}
+					if (cur.kind.match(TLParen)) {
+						bump();
+						try skipBalancedParens() catch (_:Dynamic) {}
+					}
+				}
+				parseUnaryExpr(stop);
 			case TKeyword(k) if (k == KCast):
 				bump();
 				// `cast expr` or `cast(expr, Type)`
@@ -788,51 +903,108 @@
 			function parseSwitchExpr(stop:()->Bool):HxExpr {
 				// `switch (<expr>) { ... }` used in expression position.
 				//
-				// Bring-up semantics: treat as unsupported, but consume the switch body so parsing can continue.
+				// Bring-up semantics: preserve the overall shape (consume balanced parens/braces),
+				// but keep the content as a raw token string for now.
 				if (!cur.kind.match(TKeyword(KSwitch))) return EUnsupported("switch");
 
-				bump(); // 'switch'
+				final raw = new StringBuf();
 
-				// Consume `( ... )` selector.
-				if (!cur.kind.match(TLParen)) return EUnsupported("switch_missing_parens");
-				bump(); // '('
-				try {
-					skipBalancedParens();
-				} catch (_:Dynamic) {
-					// Best-effort: continue; outer recovery will resync.
-				}
-
-				// Consume `{ ... }` switch body, but leave the *final* closing brace unconsumed so
-				// statement resync (`syncToStmtEnd`) can use it as a boundary.
-				if (!cur.kind.match(TLBrace)) return EUnsupported("switch_missing_block");
-				bump(); // '{'
-				var depth = 1;
-				while (depth > 0) {
-					switch (cur.kind) {
-						case TEof:
-							depth = 0;
+				inline function tokText():String {
+					return switch (cur.kind) {
+						case TIdent(name):
+							name;
+						case TKeyword(k):
+							keywordText(k);
+						case TString(s):
+							"\"" + s + "\"";
+						case TInt(v):
+							Std.string(v);
+						case TFloat(v):
+							Std.string(v);
+						case TLParen:
+							"(";
+						case TRParen:
+							")";
 						case TLBrace:
-							depth++;
-							bump();
+							"{";
 						case TRBrace:
-							if (depth == 1) {
-								// Do not consume: leave `}` as a boundary for the enclosing statement parser.
-								depth = 0;
-							} else {
-								depth--;
+							"}";
+						case TSemicolon:
+							";";
+						case TColon:
+							":";
+						case TDot:
+							".";
+						case TComma:
+							",";
+						case TOther(c):
+							String.fromCharCode(c);
+						case TEof:
+							"";
+					};
+				}
+
+				function consumeBalancedParensRaw():Void {
+					expect(TLParen, "'('");
+					raw.add("(");
+					bump();
+					var depth = 1;
+					while (depth > 0 && !stop()) {
+						switch (cur.kind) {
+							case TEof:
+								break;
+							case TLParen:
+								raw.add("(");
 								bump();
-							}
-						case _:
-							bump();
-					}
-					if (stop() && depth > 0) {
-						// Bring-up: if the caller wants to stop early (e.g. hit a `;` in an initializer),
-						// respect it to avoid drifting too far on malformed input.
-						break;
+								depth++;
+							case TRParen:
+								raw.add(")");
+								bump();
+								depth--;
+							case _:
+								raw.add(tokText());
+								bump();
+						}
 					}
 				}
 
-				return EUnsupported("switch_expr");
+				function consumeBalancedBracesRaw():Void {
+					expect(TLBrace, "'{'");
+					raw.add("{");
+					bump();
+					var depth = 1;
+					while (depth > 0 && !stop()) {
+						switch (cur.kind) {
+							case TEof:
+								break;
+							case TLBrace:
+								raw.add("{");
+								bump();
+								depth++;
+							case TRBrace:
+								raw.add("}");
+								bump();
+								depth--;
+							case _:
+								raw.add(tokText());
+								bump();
+						}
+					}
+				}
+
+				// `switch`
+				raw.add("switch");
+				bump();
+
+				// `( ... )`
+				if (!cur.kind.match(TLParen)) return EUnsupported("switch_missing_parens");
+				consumeBalancedParensRaw();
+
+				// `{ ... }`
+				if (!cur.kind.match(TLBrace)) return EUnsupported("switch_missing_block");
+				consumeBalancedBracesRaw();
+
+				return ESwitchRaw(raw.toString());
 			}
 
 			function parseTryCatchExpr(stop:()->Bool):HxExpr {
@@ -1111,28 +1283,42 @@
 					final thenBranch = parseStmt(stop);
 					final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
 					SIf(cond, thenBranch, elseBranch, pos);
-				case TKeyword(KSwitch):
-					// Bring-up: consume `switch (...) { ... }` as an unsupported statement, but
-					// make sure we skip the braces so we don't accidentally terminate the
-					// surrounding function body early.
-					bump();
-					if (cur.kind.match(TLParen)) {
+			case TKeyword(KSwitch):
+					// Bring-up: preserve the overall switch shape (so braces are consumed deterministically),
+					// but keep contents as raw text.
+					final expr = parseSwitchExpr(() -> cur.kind.match(TEof));
+					SExpr(expr, pos);
+				case TOther("@".code):
+					// Expression-level metadata: `@:meta expr`.
+					//
+					// Why
+					// - Upstream macro-heavy code uses e.g. `@:privateAccess foo.bar`.
+					// - Treating `@` as an unsupported expression creates noisy Gate2 diagnostics and can
+					//   lead to token drift when metadata appears in statement position.
+					//
+					// Bring-up semantics
+					// - We ignore metadata and parse the following statement/expression.
+					while (cur.kind.match(TOther("@".code))) {
 						bump();
-						try {
-							skipBalancedParens();
-						} catch (_:Dynamic) {
-							// Best-effort: fall through; later recovery will resync.
+						// Optional `:` in `@:meta`.
+						if (cur.kind.match(TColon)) bump();
+						// Meta name.
+						switch (cur.kind) {
+							case TIdent(_):
+								bump();
+							case TKeyword(_):
+								// Some meta-like tokens are keywords in our lexer; accept them best-effort.
+								bump();
+							case _:
+						}
+						// Optional meta args: `@:meta(...)`.
+						if (cur.kind.match(TLParen)) {
+							bump();
+							try skipBalancedParens() catch (_:Dynamic) {}
 						}
 					}
-					if (cur.kind.match(TLBrace)) {
-						bump();
-						try {
-							skipBalancedBraces();
-						} catch (_:Dynamic) {
-							// Best-effort: fall through.
-						}
-					}
-					SExpr(EUnsupported("switch"), pos);
+					// Parse the following statement now that metadata is consumed.
+					parseStmt(stop);
 				case TKeyword(KTry):
 					// Bring-up: consume `try { ... } catch (...) { ... }` as an unsupported statement.
 					// We don't model exception semantics yet, but we must skip its braces to avoid

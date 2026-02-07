@@ -422,6 +422,27 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^>hello<$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: string interpolation + hex escapes"
+tmpstr="$tmpdir/string_interp"
+mkdir -p "$tmpstr/src"
+cat >"$tmpstr/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    var x = 3;
+    Sys.println('x=$x');
+    Sys.println('y=${x}');
+    Sys.println("hex=\x41");
+    Sys.println("dollar=$$");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstr/src" -main Main --hxhx-out "$tmpstr/out")"
+echo "$out" | grep -q "^x=3$"
+echo "$out" | grep -q "^y=3$"
+echo "$out" | grep -q "^hex=A$"
+echo "$out" | grep -Fxq "dollar=\$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: multi-unit .hxml via --next"
 tmpmulti="$tmpdir/multi_unit_hxml"
 mkdir -p "$tmpmulti/src"
