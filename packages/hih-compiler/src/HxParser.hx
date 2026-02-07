@@ -672,7 +672,15 @@ class HxParser {
 			final thenExpr = parseExpr(() -> cur.kind.match(TColon) || cur.kind.match(TEof));
 			expect(TColon, "':'");
 			final elseExpr = parseExpr(stop);
-			e = ETernary(e, thenExpr, elseExpr);
+			// Precedence fix (bring-up):
+			// In `a = cond ? x : y`, the ternary binds to the *right-hand side* of the assignment.
+			// Our parser handles `?:` after binary parsing, so we patch up this common shape here.
+			e = switch (e) {
+				case EBinop("=", left, right):
+					EBinop("=", left, ETernary(right, thenExpr, elseExpr));
+				case _:
+					ETernary(e, thenExpr, elseExpr);
+			}
 		}
 		return e;
 	}

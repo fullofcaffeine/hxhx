@@ -121,11 +121,22 @@ class TyperStage {
 					}
 				}
 				hinted;
-			} else {
-				// No explicit hint: if we couldn't infer anything from the body, default to `Void` to
-				// match the common `function f() { ... }` / `static function main()` shape.
-				returnExprTy.isUnknown() ? TyType.fromHintText("Void") : returnExprTy;
-			}
+				} else {
+					// No explicit hint:
+					// - If we inferred a return type from `return` statements, use it.
+					// - Otherwise, default to `Void` to match the common `function f() { ... }` / `static function main()` shape.
+					//
+					// Bring-up heuristic:
+					// - The native frontend protocol can capture a "first return string literal" even when
+					//   we can't parse a complex body (e.g. a `switch` with returns in cases).
+					// - If present, treat the function as returning `String` instead of collapsing to `Void`.
+					if (!returnExprTy.isUnknown()) {
+						returnExprTy;
+					} else {
+						final retStr = HxFunctionDecl.getReturnStringLiteral(fn);
+						(retStr != null && retStr.length > 0) ? TyType.fromHintText("String") : TyType.fromHintText("Void");
+					}
+				}
 
 			return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
 		}
