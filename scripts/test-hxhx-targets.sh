@@ -443,6 +443,32 @@ echo "$out" | grep -q "^hex=A$"
 echo "$out" | grep -Fxq "dollar=\$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: package type paths lower to OCaml modules"
+tmppkg="$tmpdir/pkg_module"
+mkdir -p "$tmppkg/src/a/b"
+cat >"$tmppkg/src/a/b/Util.hx" <<'HX'
+package a.b;
+
+class Util {
+  public static function hello():String {
+    return "hi";
+  }
+}
+HX
+cat >"$tmppkg/src/Main.hx" <<'HX'
+import a.b.Util;
+
+class Main {
+  static function main() {
+    var s = a.b.Util.hello();
+    untyped __ocaml__("print_endline s");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg/src" -main Main --hxhx-out "$tmppkg/out")"
+echo "$out" | grep -q "^hi$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: multi-unit .hxml via --next"
 tmpmulti="$tmpdir/multi_unit_hxml"
 mkdir -p "$tmpmulti/src"

@@ -884,7 +884,7 @@ let init () : unit =
   HxType.register_class_instance_fields "CompilerDriver" [];
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
   HxType.register_class_instance_fields "EmitterStage" [];
-  HxType.register_class_static_fields "EmitterStage" [ "constFoldString"; "emit"; "emitToDir"; "escapeOcamlIdentPart"; "escapeOcamlString"; "exprToOcaml"; "exprToOcamlString"; "isOcamlKeyword"; "isUpperStart"; "lowerFirst"; "ocamlTypeFromTy"; "ocamlValueIdent"; "returnExprToOcaml"; "stmtListToOcaml" ];
+  HxType.register_class_static_fields "EmitterStage" [ "constFoldString"; "emit"; "emitToDir"; "escapeOcamlIdentPart"; "escapeOcamlString"; "exprToOcaml"; "exprToOcamlString"; "isOcamlKeyword"; "isUpperStart"; "lowerFirst"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlTypeFromTy"; "ocamlValueIdent"; "returnExprToOcaml"; "stmtListToOcaml"; "tryExtractTypePathPartsFromExpr"; "upperFirst" ];
   HxType.register_class_instance_fields "FrontendFixture" [ "expectHasStaticMain"; "expectMainClassName"; "expectPackagePath"; "getExpectHasStaticMain"; "getExpectMainClassName"; "getExpectPackagePath"; "getLabel"; "getSource"; "label"; "source" ];
   HxType.register_class_static_fields "FrontendFixture" [];
   HxType.register_class_instance_fields "HxClassDecl" [ "fields"; "functions"; "hasStaticMain"; "name" ];

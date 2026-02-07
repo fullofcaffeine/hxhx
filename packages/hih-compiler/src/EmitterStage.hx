@@ -99,6 +99,42 @@ class EmitterStage {
 		return c >= 65 && c <= 90;
 	}
 
+	static function upperFirst(s:String):String {
+		if (s == null || s.length == 0) return s;
+		final c = s.charCodeAt(0);
+		final isLower = c >= 97 && c <= 122;
+		return isLower ? (String.fromCharCode(c - 32) + s.substr(1)) : s;
+	}
+
+	static function ocamlModuleNameFromTypePathParts(parts:Array<String>):String {
+		if (parts == null || parts.length == 0) return "Unknown";
+		final escaped = parts.map(escapeOcamlIdentPart);
+		escaped[0] = upperFirst(escaped[0]);
+		return escaped.join("_");
+	}
+
+	static function ocamlModuleNameFromTypePath(typePath:String):String {
+		if (typePath == null) return "Unknown";
+		final trimmed = StringTools.trim(typePath);
+		if (trimmed.length == 0) return "Unknown";
+		return ocamlModuleNameFromTypePathParts(trimmed.split("."));
+	}
+
+	static function tryExtractTypePathPartsFromExpr(e:HxExpr):Null<Array<String>> {
+		return switch (e) {
+			case EIdent(name):
+				[name];
+			case EField(obj, field):
+				final parts = tryExtractTypePathPartsFromExpr(obj);
+				if (parts == null) null else {
+					parts.push(field);
+					parts;
+				}
+			case _:
+				null;
+		}
+	}
+
 	static function escapeOcamlString(s:String):String {
 		if (s == null) return "\"\"";
 		// Minimal escaping: enough for our fixtures.
@@ -236,7 +272,9 @@ class EmitterStage {
 				e:HxExpr,
 				?arityByIdent:Map<String, Int>,
 				?tyByIdent:Map<String, TyType>,
-				?staticImportByIdent:Map<String, String>
+				?staticImportByIdent:Map<String, String>,
+				?currentPackagePath:String,
+				?moduleNameByPkgAndClass:Map<String, String>
 			):String {
 				inline function tyForIdent(name:String):String {
 					if (tyByIdent == null) return "";
@@ -300,7 +338,7 @@ class EmitterStage {
 					case EInt(_), EFloat(_), EBool(_), EIdent(_):
 						exprToOcamlString(expr, tyByIdent);
 					case _:
-						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent);
+						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				}
 			}
 
@@ -312,7 +350,7 @@ class EmitterStage {
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlValueIdent(name);
 					case _:
-						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent);
+						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				}
 			}
 
@@ -329,15 +367,23 @@ class EmitterStage {
 			// - These rewrites exist only to keep bring-up moving; Stage1/Stage4 must
 			//   eventually implement real semantics in the proper backend/runtime.
 			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
-				"(classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent) + ") = FP_nan)";
+				"(classify_float ("
+				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ") = FP_nan)";
 			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
-				"(match classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent) + ") with | FP_nan | FP_infinite -> false | _ -> true)";
+				"(match classify_float ("
+				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+				+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
 				case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
-					"(classify_float (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent) + ") = FP_infinite)";
+					"(classify_float ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") = FP_infinite)";
 					case ECall(EField(EIdent("Math"), "abs"), [arg]):
 						// Best-effort numeric abs. Prefer float when the expression looks float-typed.
 						(isFloatExpr(arg) ? "abs_float " : (isIntExpr(arg) ? "abs " : "abs_float "))
-						+ "(" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent) + ")";
+						+ "("
+						+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+						+ ")";
 				case EField(EIdent("String"), "fromCharCode"):
 					// Stage 3 bring-up: map Haxe `String.fromCharCode(int)` to an OCaml function value.
 					// This is used in upstream-ish stdlib code as `var fcc = String.fromCharCode;`.
@@ -364,7 +410,7 @@ class EmitterStage {
 						"(fun "
 						+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
 						+ " -> "
-						+ exprToOcaml(body, arityByIdent, tyByIdent, staticImportByIdent)
+						+ exprToOcaml(body, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 						+ ")";
 					case ETryCatchRaw(_raw):
 						// Stage 3 bring-up: avoid committing to an exception model yet.
@@ -498,13 +544,32 @@ class EmitterStage {
 					// Stage 3 bring-up: allocation + constructors are not modeled yet.
 					"(Obj.magic 0)";
 				case EField(obj, field):
-					// Stage 3 bring-up: only treat `TypeName.field` as a valid module/static access.
-					// Instance field semantics require real object modeling and class layouts.
-					switch (obj) {
-						case EIdent(name) if (isUpperStart(name)):
-							name + "." + ocamlValueIdent(field);
-						case _:
-							"(Obj.magic 0)";
+					// Stage 3 bring-up: treat `<type path>.field` as a static/module access.
+					//
+					// Why
+					// - Upstream Haxe code refers to types as fully-qualified paths like `runci.targets.Macro`.
+					// - Our emitter represents each Haxe module as a single OCaml compilation unit, so we can
+					//   map `a.b.C.field` to `A_b_C.field` deterministically.
+					//
+					// Non-goal
+					// - Instance field semantics (requires real class/object layouts).
+					final parts = tryExtractTypePathPartsFromExpr(obj);
+					if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
+						var modName = ocamlModuleNameFromTypePathParts(parts);
+						// If the type path is unqualified (`Util.foo()`), prefer resolving it within the
+						// current package when we know a matching emitted module exists.
+						//
+						// Example:
+						// - Haxe: `package demo; class A { static function f() Util.ping(); }`
+						// - OCaml: `Demo_Util.ping ()` (not `Util.ping ()`)
+						if (parts.length == 1 && currentPackagePath != null && currentPackagePath.length > 0 && moduleNameByPkgAndClass != null) {
+							final key = currentPackagePath + ":" + parts[0];
+							final local = moduleNameByPkgAndClass.get(key);
+							if (local != null && local.length > 0) modName = local;
+						}
+						modName + "." + ocamlValueIdent(field);
+					} else {
+						"(Obj.magic 0)";
 					}
 				case ECall(EIdent("__ocaml__"), [arg]):
 					// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
@@ -557,7 +622,7 @@ class EmitterStage {
 					case _:
 				}
 
-				final c = exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent);
+				final c = exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
 				//
 				// Why
@@ -575,7 +640,9 @@ class EmitterStage {
 					} else {
 						c
 						+ " "
-						+ fullArgs.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent) + ")").join(" ");
+						+ fullArgs
+							.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")")
+							.join(" ");
 					}
 				}
 			case EUnop(op, expr):
@@ -586,10 +653,12 @@ class EmitterStage {
 				// If we can't emit safely, fall back to bring-up poison.
 				switch (op) {
 					case "!":
-						"(not (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent) + "))";
+						"(not ("
+						+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+						+ "))";
 					case "-":
 						(isFloatExpr(expr) ? "(-.(" : "(-(")
-						+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent)
+						+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 						+ "))";
 					case _:
 						"(Obj.magic 0)";
@@ -601,8 +670,8 @@ class EmitterStage {
 				// Important: this emitter does not have reliable type information yet, so we
 				// intentionally only support operators that are unambiguous enough for our
 				// bring-up fixtures (primarily `Int` + boolean comparisons).
-					final la = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent);
-					final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent);
+					final la = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 					function exprToOcamlAsFloat(e:HxExpr):String {
 						// Best-effort numeric coercion: when Haxe mixes Int/Float, it promotes to Float.
 						return switch (e) {
@@ -614,7 +683,7 @@ class EmitterStage {
 										&& tyByIdent.get(name).toString() == "Int"):
 									"float_of_int " + ocamlValueIdent(name);
 							case _:
-								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent);
+								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 						}
 					}
 					switch (op) {
@@ -675,10 +744,12 @@ class EmitterStage {
 				// progress to the next missing semantic, not to be correct yet.
 				"(Obj.magic 0)";
 			case ETernary(cond, thenExpr, elseExpr):
-				"(if (" + exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent) + ") then ("
-					+ exprToOcaml(thenExpr, arityByIdent, tyByIdent, staticImportByIdent)
+				"(if ("
+					+ exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") then ("
+					+ exprToOcaml(thenExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ") else ("
-					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent)
+					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ "))";
 			case ESwitchRaw(_raw):
 				// Stage 3 bring-up: preserve switch shape during parsing/typing, but do not attempt to
@@ -696,10 +767,10 @@ class EmitterStage {
 					"(Obj.magic 0)";
 				case ECast(expr, _hint):
 					// Bring-up: treat casts as identity.
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent);
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				case EUntyped(expr):
 					// Bring-up: preserve shape by emitting the inner expression.
-					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent);
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 			}
 		}
 
@@ -708,7 +779,9 @@ class EmitterStage {
 		allowedValueIdents:Map<String, Bool>,
 		?arityByIdent:Map<String, Int>,
 		?tyByIdent:Map<String, TyType>,
-		?staticImportByIdent:Map<String, String>
+		?staticImportByIdent:Map<String, String>,
+		?currentPackagePath:String,
+		?moduleNameByPkgAndClass:Map<String, String>
 	):String {
 		// Stage 3 bring-up: if we couldn't parse/type an expression, keep compilation moving.
 		//
@@ -770,8 +843,18 @@ class EmitterStage {
 					} else {
 						true;
 					}
-				case EField(obj, _):
-					hasBringupPoison(obj);
+				case EField(obj, _field):
+					// Stage 3 bring-up: treat `<type path>.field` as non-poison.
+					//
+					// Why
+					// - Fully-qualified type paths like `a.b.Util.hello()` appear frequently in upstream code.
+					// - The emitter can lower these deterministically to OCaml module accesses.
+					//
+					// Without this exception, the poison detector sees the leading package identifier (`a`)
+					// as an unbound value ident and collapses the whole call to `Obj.magic 0`, which can
+					// segfault at runtime once forced into a concrete OCaml type (e.g. `print_endline`).
+					final parts = tryExtractTypePathPartsFromExpr(obj);
+					(parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) ? false : hasBringupPoison(obj);
 				// Stage 3 bring-up: allow the controlled OCaml escape hatch in expression positions.
 				//
 				// Why
@@ -808,7 +891,7 @@ class EmitterStage {
 			// Collapse to the bootstrap escape hatch instead.
 		if (hasBringupPoison(expr)) return "(Obj.magic 0)";
 
-		return exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent);
+		return exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 	}
 
 	static function stmtListToOcaml(
@@ -817,7 +900,9 @@ class EmitterStage {
 		returnExc:String,
 		?arityByIdent:Map<String, Int>,
 		?tyByIdent:Map<String, TyType>,
-		?staticImportByIdent:Map<String, String>
+		?staticImportByIdent:Map<String, String>,
+		?currentPackagePath:String,
+		?moduleNameByPkgAndClass:Map<String, String>
 	):String {
 		if (stmts == null || stmts.length == 0) return "()";
 
@@ -850,9 +935,13 @@ class EmitterStage {
 				case EBool(v):
 					v ? "true" : "false";
 				case EUnop("!", _):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent));
+					boolOrTrue(
+						returnExprToOcaml(e, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					);
 				case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-					boolOrTrue(returnExprToOcaml(e, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent));
+					boolOrTrue(
+						returnExprToOcaml(e, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					);
 				case _:
 					// Conservative default: we do not have real typing for conditions yet.
 					// Keep bring-up resilient by treating unknown conditions as true.
@@ -863,7 +952,7 @@ class EmitterStage {
 		function stmtToUnit(s:HxStmt):String {
 			return switch (s) {
 				case SBlock(ss, _pos):
-					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyByIdent, staticImportByIdent);
+					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
@@ -877,7 +966,7 @@ class EmitterStage {
 					"raise ("
 					+ returnExc
 					+ " (Obj.repr ("
-					+ returnExprToOcaml(expr, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent)
+					+ returnExprToOcaml(expr, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ ")))";
 				case SExpr(expr, _pos):
 					// Avoid emitting invalid OCaml when we parse Haxe assignment as `EBinop("=")`.
@@ -885,7 +974,9 @@ class EmitterStage {
 						case EBinop("=", _l, _r):
 							"()";
 						case _:
-							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent) + ")";
+							"ignore ("
+							+ returnExprToOcaml(expr, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")";
 			}
 		}
 		}
@@ -907,7 +998,15 @@ class EmitterStage {
 									case EIdent(n) if (n == name):
 										"(Obj.magic 0)";
 									case _:
-										returnExprToOcaml(init, allowedValueIdents, arityByIdent, tyByIdent, staticImportByIdent);
+										returnExprToOcaml(
+											init,
+											allowedValueIdents,
+											arityByIdent,
+											tyByIdent,
+											staticImportByIdent,
+											currentPackagePath,
+											moduleNameByPkgAndClass
+										);
 								}
 							};
 						final ident = ocamlValueIdent(name);
@@ -1120,6 +1219,32 @@ class EmitterStage {
 		final typedModules = p.getTypedModules();
 		if (typedModules.length == 0) throw "stage3 emitter: empty typed module graph";
 
+		inline function moduleNameForDecl(decl:HxModuleDecl, className:String):String {
+			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
+			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
+			final parts = (pkg.length == 0 ? [] : pkg.split(".")).concat([className]);
+			return ocamlModuleNameFromTypePathParts(parts);
+		}
+
+		// Map `<packagePath>:<ClassName>` to the OCaml module name we will emit.
+		//
+		// Why
+		// - In Haxe, unqualified type names inside a package (e.g. `Util.foo()`) resolve to the
+		//   current package by default.
+		// - Our OCaml emission flattens `package.Class` to `Package_Class`, so we need a way to
+		//   qualify those unqualified references during emission.
+		final moduleNameByPkgAndClass:Map<String, String> = new Map();
+		for (tm in typedModules) {
+			final decl = tm.getParsed().getDecl();
+			final cls = HxModuleDecl.getMainClass(decl);
+			final className = HxClassDecl.getName(cls);
+			if (className == null || className.length == 0 || className == "Unknown") continue;
+			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
+			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
+			final key = pkg + ":" + className;
+			moduleNameByPkgAndClass.set(key, moduleNameForDecl(decl, className));
+		}
+
 		// Index static members by module name so we can approximate `import Foo.Bar.*` static wildcard imports.
 		//
 		// Why
@@ -1134,8 +1259,9 @@ class EmitterStage {
 		for (tm in typedModules) {
 			final decl = tm.getParsed().getDecl();
 			final cls = HxModuleDecl.getMainClass(decl);
-			final modName = HxClassDecl.getName(cls);
-			if (modName == null || modName.length == 0 || modName == "Unknown") continue;
+			final className = HxClassDecl.getName(cls);
+			if (className == null || className.length == 0 || className == "Unknown") continue;
+			final modName = moduleNameForDecl(decl, className);
 
 			final members:Map<String, Bool> = new Map();
 			for (fn in HxClassDecl.getFunctions(cls)) {
@@ -1152,6 +1278,7 @@ class EmitterStage {
 			final mainClass = HxModuleDecl.getMainClass(decl);
 			final className = HxClassDecl.getName(mainClass);
 			if (className == null || className.length == 0 || className == "Unknown") return null;
+			final moduleName = moduleNameForDecl(decl, className);
 
 			final parsedFns = HxClassDecl.getFunctions(mainClass);
 			final parsedByName = new Map<String, HxFunctionDecl>();
@@ -1170,14 +1297,13 @@ class EmitterStage {
 				if (!StringTools.endsWith(imp, ".*")) continue;
 
 				final base = imp.substr(0, imp.length - 2);
-				final parts = base.split(".");
-				final moduleName = parts.length == 0 ? "" : parts[parts.length - 1];
-				if (moduleName.length == 0) continue;
+				final importModName = ocamlModuleNameFromTypePath(base);
+				if (importModName.length == 0) continue;
 
-				final members = staticMembersByModule.get(moduleName);
+				final members = staticMembersByModule.get(importModName);
 				if (members == null) continue;
 				for (name in members.keys()) {
-					if (!staticImportByIdent.exists(name)) staticImportByIdent.set(name, moduleName);
+					if (!staticImportByIdent.exists(name)) staticImportByIdent.set(name, importModName);
 				}
 			}
 
@@ -1244,7 +1370,15 @@ class EmitterStage {
 					final body = if (parsedFn == null) {
 						"()";
 					} else if (!emitFullBodies) {
-						returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, arityByName, tyByIdent, staticImportByIdent);
+						returnExprToOcaml(
+							parsedFn.getFirstReturnExpr(),
+							allowed,
+							arityByName,
+							tyByIdent,
+							staticImportByIdent,
+							HxModuleDecl.getPackagePath(decl),
+							moduleNameByPkgAndClass
+						);
 					} else {
 					// OCaml exception constructors must start with an uppercase letter.
 					final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
@@ -1264,7 +1398,16 @@ class EmitterStage {
 					//   "This variant expression is expected to have type bool; There is no constructor () within type bool".
 						"((" //
 						+ "try (let _ = "
-						+ stmtListToOcaml(stmts, allowed, exc, arityByName, tyByIdent, staticImportByIdent)
+						+ stmtListToOcaml(
+							stmts,
+							allowed,
+							exc,
+							arityByName,
+							tyByIdent,
+							staticImportByIdent,
+							HxModuleDecl.getPackagePath(decl),
+							moduleNameByPkgAndClass
+						)
 						+ " in (Obj.magic 0)) "
 						+ "with " + exc + " v -> (Obj.magic v)"
 						+ ") : " + retTy + ")";
@@ -1286,9 +1429,9 @@ class EmitterStage {
 				out.push("");
 			}
 
-			final mlPath = haxe.io.Path.join([outAbs, className + ".ml"]);
+			final mlPath = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
 			sys.io.File.saveContent(mlPath, out.join("\n"));
-			return className + ".ml";
+			return moduleName + ".ml";
 		}
 
 		// Emit dependencies first, but link the root module last so its `let () = main ()`
