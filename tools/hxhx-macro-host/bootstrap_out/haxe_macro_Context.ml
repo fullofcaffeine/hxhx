@@ -33,7 +33,7 @@ let error = fun msg pos depth -> (
   ignore (if not (let __nullable_1 = depth in if __nullable_1 == HxRuntime.hx_null then false else Obj.obj __nullable_1 = 0) then ignore () else ());
   Hxhxmacrohost_MacroError.raise msg (let __anon_2 = HxAnon.create () in (
     ignore (HxAnon.set __anon_2 "fileName" (Obj.repr "overrides/haxe/macro/Context.hx"));
-    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 312));
+    ignore (HxAnon.set __anon_2 "lineNumber" (Obj.repr 313));
     ignore (HxAnon.set __anon_2 "className" (Obj.repr "haxe.macro.Context"));
     ignore (HxAnon.set __anon_2 "methodName" (Obj.repr "error"));
     __anon_2
@@ -45,7 +45,7 @@ let fatalError = fun msg pos depth -> (
   ignore (if not (let __nullable_3 = depth in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 = 0) then ignore () else ());
   Hxhxmacrohost_MacroError.raise msg (let __anon_4 = HxAnon.create () in (
     ignore (HxAnon.set __anon_4 "fileName" (Obj.repr "overrides/haxe/macro/Context.hx"));
-    ignore (HxAnon.set __anon_4 "lineNumber" (Obj.repr 318));
+    ignore (HxAnon.set __anon_4 "lineNumber" (Obj.repr 319));
     ignore (HxAnon.set __anon_4 "className" (Obj.repr "haxe.macro.Context"));
     ignore (HxAnon.set __anon_4 "methodName" (Obj.repr "fatalError"));
     __anon_4
@@ -66,7 +66,14 @@ let info = fun msg pos depth -> (
 
 let currentPos = fun () -> Obj.magic (HxRuntime.hx_null)
 
+let getType = fun name -> (
+  ignore (if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then ignore () else ());
+  Haxe_macro_Type.TDynamic (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.Type" (Obj.magic (HxRuntime.hx_null))))
+)
+
 let onGenerate = fun callback persistent -> Hxhxmacrohost_api_Context.onGenerate callback persistent
+
+let onAfterGenerate = fun callback -> Hxhxmacrohost_api_Context.onAfterGenerate callback
 
 let onAfterTyping = fun callback -> Hxhxmacrohost_api_Context.onAfterTyping callback
 

@@ -37,6 +37,7 @@ class MacroState {
 	static var buildFieldsPayload:String = "";
 	static final afterTypingHookIds:Array<Int> = [];
 	static final onGenerateHookIds:Array<Int> = [];
+	static final afterGenerateHookIds:Array<Int> = [];
 
 	public static function reset():Void {
 		defines.clear();
@@ -49,6 +50,7 @@ class MacroState {
 		buildFieldsPayload = "";
 		afterTypingHookIds.resize(0);
 		onGenerateHookIds.resize(0);
+		afterGenerateHookIds.resize(0);
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -145,6 +147,7 @@ class MacroState {
 		- Two hook kinds exist in the current bring-up rung:
 		  - `afterTyping`
 		  - `onGenerate`
+		  - `afterGenerate`
 	**/
 	public static function registerHook(kind:String, id:Int):Void {
 		if (kind == null) return;
@@ -153,6 +156,8 @@ class MacroState {
 				afterTypingHookIds.push(id);
 			case "onGenerate":
 				onGenerateHookIds.push(id);
+			case "afterGenerate":
+				afterGenerateHookIds.push(id);
 			case _:
 				// Ignore unknown hook kinds during bring-up.
 		}
@@ -164,6 +169,10 @@ class MacroState {
 
 	public static function listOnGenerateHookIds():Array<Int> {
 		return onGenerateHookIds.copy();
+	}
+
+	public static function listAfterGenerateHookIds():Array<Int> {
+		return afterGenerateHookIds.copy();
 	}
 
 	/**

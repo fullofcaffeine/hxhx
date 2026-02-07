@@ -592,8 +592,8 @@ class OcamlASTPrinter {
 		final parts = constructors.map(function(c) {
 			if (c.args.length == 0) return indent0 + "| " + c.name;
 			final args = c.args.length == 1
-				? printTypeCtx(c.args[0], TPREC_TOP)
-				: c.args.map(a -> printTypeCtx(a, TPREC_TOP)).join(" * ");
+				? printTypeCtx(c.args[0], TPREC_TUPLE)
+				: c.args.map(a -> printTypeCtx(a, TPREC_TUPLE)).join(" * ");
 			return indent0 + "| " + c.name + " of " + args;
 		});
 		return "\n" + parts.join("\n");

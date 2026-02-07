@@ -1,12 +1,13 @@
 package haxe.macro;
 
 // Imports must appear before any declarations in this compilation unit.
-#if (neko || eval || display)
+#if macro
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Type.TypedExpr;
 #else
 import haxe.macro.Expr;
+import haxe.macro.Type;
 import hxhxmacrohost.api.Context as HostContext;
 import hxhxmacrohost.MacroError;
 #end
@@ -42,7 +43,7 @@ enum Message {
 	Warning(msg:String, pos:Position);
 }
 
-#if (neko || eval || display)
+#if macro
 class Context {
 	@:allow(haxe.macro.TypeTools)
 	@:allow(haxe.macro.MacroStringTools)
@@ -335,8 +336,19 @@ class Context {
 		return null;
 	}
 
+	public static function getType(name:String):Type {
+		// Bring-up rung: we don't have real type reflection at runtime yet.
+		// Return a conservative placeholder that keeps library initializers alive while we evolve the ABI.
+		if (name != null && name.length > 0) {}
+		return TDynamic(null);
+	}
+
 	public static function onGenerate(callback:Array<Dynamic>->Void, persistent:Bool = true):Void {
 		HostContext.onGenerate(callback, persistent);
+	}
+
+	public static function onAfterGenerate(callback:Void->Void):Void {
+		HostContext.onAfterGenerate(callback);
 	}
 
 	public static function onAfterTyping(callback:Array<Dynamic>->Void):Void {

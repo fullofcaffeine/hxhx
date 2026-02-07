@@ -13,4 +13,12 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhxmacros.Haxel
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhxmacros.HaxelibInitMacros" } : t)
 
-let init = fun () -> Haxe_macro_Compiler.define "HXHX_HAXELIB_INIT" "1"
+let init = fun () -> (
+  ignore (Haxe_macro_Compiler.define "HXHX_HAXELIB_INIT" "1");
+  ignore (Haxe_macro_Context.onAfterTyping (fun _hx -> Haxe_macro_Compiler.define "HXHX_HAXELIB_INIT_AFTER_TYPING" "1"));
+  ignore (Haxe_macro_Context.onGenerate (fun _hx -> (
+    ignore (Haxe_macro_Compiler.define "HXHX_HAXELIB_INIT_ON_GENERATE" "1");
+    Haxe_macro_Compiler.emitOcamlModule "HxHxHaxelibInitGen" "let haxelib_init_generated : int = 1"
+  )) (Obj.magic (HxRuntime.hx_null)));
+  Haxe_macro_Context.onAfterGenerate (fun () -> Haxe_macro_Compiler.define "HXHX_HAXELIB_INIT_AFTER_GENERATE" "1")
+)

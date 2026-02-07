@@ -216,7 +216,7 @@ let init () : unit =
   HxType.register_class_instance_fields "haxe.macro.Compiler" [];
   HxType.register_class_static_fields "haxe.macro.Compiler" [ "addClassPath"; "define"; "emitHxModule"; "emitOcamlModule"; "getDefine" ];
   HxType.register_class_instance_fields "haxe.macro.Context" [];
-  HxType.register_class_static_fields "haxe.macro.Context" [ "currentPos"; "defined"; "definedValue"; "error"; "fatalError"; "filterMessages"; "getBuildFields"; "getDefines"; "getMessages"; "info"; "onAfterTyping"; "onGenerate"; "warning" ];
+  HxType.register_class_static_fields "haxe.macro.Context" [ "currentPos"; "defined"; "definedValue"; "error"; "fatalError"; "filterMessages"; "getBuildFields"; "getDefines"; "getMessages"; "getType"; "info"; "onAfterGenerate"; "onAfterTyping"; "onGenerate"; "warning" ];
   HxType.register_class_instance_fields "hxhxmacrohost.BuildMacroSupport" [];
   HxType.register_class_static_fields "hxhxmacrohost.BuildMacroSupport" [ "afterEntrypoint"; "escapeHaxeString"; "printFieldMinimal"; "tryConstToHaxe"; "tryExtractReturnInt"; "tryExtractReturnString"; "tryExtractTraceString" ];
   HxType.register_class_instance_fields "hxhxmacrohost.BuiltinMacros" [];
@@ -230,7 +230,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhxmacrohost.MacroError" [];
   HxType.register_class_static_fields "hxhxmacrohost.MacroError" [ "raise" ];
   HxType.register_class_instance_fields "hxhxmacrohost.MacroRuntime" [];
-  HxType.register_class_static_fields "hxhxmacrohost.MacroRuntime" [ "afterTypingHooks"; "builtinTypeDesc"; "clearCurrentBuildFieldSnapshot"; "currentBuildFieldNames"; "defines"; "hasBuildFieldSnapshot"; "hasCurrentBuildFieldName"; "hasCurrentBuildFieldSnapshot"; "onGenerateHooks"; "registerAfterTyping"; "registerOnGenerate"; "runHook"; "setCurrentBuildFieldNames" ];
+  HxType.register_class_static_fields "hxhxmacrohost.MacroRuntime" [ "afterGenerateHooks"; "afterTypingHooks"; "builtinTypeDesc"; "clearCurrentBuildFieldSnapshot"; "currentBuildFieldNames"; "defines"; "hasBuildFieldSnapshot"; "hasCurrentBuildFieldName"; "hasCurrentBuildFieldSnapshot"; "onGenerateHooks"; "registerAfterGenerate"; "registerAfterTyping"; "registerOnGenerate"; "runHook"; "setCurrentBuildFieldNames" ];
   HxType.register_class_instance_fields "hxhxmacrohost.Main" [];
   HxType.register_class_static_fields "hxhxmacrohost.Main" [ "expandExprMacro"; "flushStdout"; "handleReq"; "main"; "parseDecInt"; "parseKV"; "parseOneStringLiteralArg"; "replyErr"; "replyOk"; "runMacroExpr"; "safeReadLine" ];
   HxType.register_class_instance_fields "hxhxmacrohost.Protocol" [];
@@ -238,7 +238,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhxmacrohost.api.Compiler" [];
   HxType.register_class_static_fields "hxhxmacrohost.api.Compiler" [ "addClassPath"; "define"; "emitBuildFields"; "emitHxModule"; "emitOcamlModule"; "getDefine"; "includeModule" ];
   HxType.register_class_instance_fields "hxhxmacrohost.api.Context" [];
-  HxType.register_class_static_fields "hxhxmacrohost.api.Context" [ "defined"; "definedValue"; "getBuildFields"; "getDefines"; "getType"; "onAfterTyping"; "onGenerate" ];
+  HxType.register_class_static_fields "hxhxmacrohost.api.Context" [ "defined"; "definedValue"; "getBuildFields"; "getDefines"; "getType"; "onAfterGenerate"; "onAfterTyping"; "onGenerate" ];
   HxType.register_class_instance_fields "hxhxmacros.ArgsMacros" [];
   HxType.register_class_static_fields "hxhxmacros.ArgsMacros" [ "setArg" ];
   HxType.register_class_instance_fields "hxhxmacros.BuildFieldMacros" [];

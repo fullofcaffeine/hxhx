@@ -1475,6 +1475,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		// Stage4 macro-host bring-up requires compiling upstream `haxe.macro.Expr` under dune.
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Expr");
+		// Stage4 macro-host bring-up also requires compiling `haxe.macro.Type` (many mutually-referencing enums).
+		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Type");
 
 		// Type registry (M10): allow `Type.resolveClass/resolveEnum` to work with runtime strings.
 		//
@@ -1983,12 +1985,17 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final isUpper = first >= 65 && first <= 90;
 		var s = (isUpper ? String.fromCharCode(first + 32) : haxeName.substr(0, 1)) + haxeName.substr(1);
 		s = sanitizeLowerIdent(s);
-		return s.length > 0 ? s : "t";
+		if (s.length == 0) return "t";
+		// OCaml keywords are not valid identifiers in type declarations (`type type = ...` is a syntax error).
+		// Keep emission deterministic by prefixing reserved names.
+		return OcamlNameTools.isOcamlReservedValueName(s) ? ("hx_" + s) : s;
 	}
 
 	static function ocamlTypeParam(haxeName:String):String {
 		if (haxeName == null || haxeName.length == 0) return "a";
-		return sanitizeLowerIdent(haxeName.toLowerCase());
+		final s = sanitizeLowerIdent(haxeName.toLowerCase());
+		if (s.length == 0) return "a";
+		return OcamlNameTools.isOcamlReservedValueName(s) ? ("hx_" + s) : s;
 	}
 
 	static function sanitizeLowerIdent(name:String):String {

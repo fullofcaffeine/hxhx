@@ -236,11 +236,24 @@ private class MacroClient {
 		final msg = tail == null || tail.length == 0
 			? ("req " + id + " " + method + "\n")
 			: ("req " + id + " " + method + " " + tail + "\n");
-		proc.stdin.writeString(msg, null);
-		proc.stdin.flush();
+		try {
+			proc.stdin.writeString(msg, null);
+			proc.stdin.flush();
+		} catch (e:Dynamic) {
+			throw "macro host: failed to write request: " + Std.string(e);
+		}
 
 		while (true) {
-			final line = proc.stdout.readLine();
+			final line = try {
+				proc.stdout.readLine();
+			} catch (_:haxe.io.Eof) {
+				final hostStderr = drainStderr(60);
+				final exitCode = try proc.exitCode() catch (_:Dynamic) -1;
+				throw "macro host: unexpected EOF while waiting for response (method=" + method + ", exit=" + exitCode + ")"
+					+ (hostStderr.length == 0 ? "" : ("\nmacro host stderr:\n" + hostStderr));
+			} catch (e:Dynamic) {
+				throw "macro host: failed to read response: " + Std.string(e);
+			}
 			final trimmed = StringTools.trim(line);
 			if (trimmed.length == 0) continue;
 
@@ -264,6 +277,19 @@ private class MacroClient {
 		}
 
 		return "";
+	}
+
+	function drainStderr(maxLines:Int):String {
+		if (maxLines <= 0) return "";
+		final lines = new Array<String>();
+		try {
+			while (lines.length < maxLines) {
+				lines.push(proc.stderr.readLine());
+			}
+		} catch (_:haxe.io.Eof) {
+			// ok
+		} catch (_:Dynamic) {}
+		return lines.join("\n");
 	}
 
 	function handleInboundReq(line:String):Void {

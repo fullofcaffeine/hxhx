@@ -3,3 +3,4 @@
 module Compiler = Haxe_macro_Compiler
 module Context = Haxe_macro_Context
 module Expr = Haxe_macro_Expr
+module Type = Haxe_macro_Type

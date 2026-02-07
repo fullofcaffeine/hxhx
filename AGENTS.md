@@ -46,7 +46,11 @@ bd sync               # Sync with git
 
 ## Licensing (MIT Goal, Keep Private for Now)
 
-This repository is intended to become a **MIT-licensed** OCaml target *and* (eventually) a **MIT-licensed Haxe-in-Haxe compiler** (`hxhx`).
+This repository is intended to become:
+
+- a **MIT-licensed** OCaml target for Haxe (`reflaxe.ocaml`), and
+- a **MIT-licensed, production-grade Haxe-in-Haxe compiler** (`hxhx`) that can eventually act as a
+  **drop-in replacement** for upstream Haxe (target version: **4.3.7**), including macros + plugin system.
 
 To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in proprietary apps:
 
@@ -59,6 +63,25 @@ To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in
 - Be cautious about bundling a stage0 `haxe` binary in distributions: if you ship it, you must comply with its license.
   - Prefer making `hxhx` truly non-delegating before publishing “batteries included” builds.
 - Inbound contributions must be MIT-compatible; avoid accepting code with unclear provenance/licensing.
+
+### Permissive-license success criteria (engineering target)
+
+These are practical goals for when we can reasonably say “this is a complete, MIT-licensed compiler”
+(not legal advice; engineering acceptance).
+
+- **No upstream compiler code vendored**: `vendor/haxe` remains untracked and used only as a behavior oracle.
+- **No stage0 dependency** for correctness:
+  - `hxhx` can compile real projects without delegating compilation or macro execution to upstream `haxe`.
+  - Stage0 may exist only as an optional dev tool (e.g. regenerating committed bootstrap snapshots).
+- **Upstream behavioral gates**:
+  - Gate 1: upstream unit macro suite is green via non-delegating `hxhx`.
+  - Gate 2+: upstream runci workloads relevant to macros/targets become green incrementally.
+- **Plugin system parity** (at least for Reflaxe targets):
+  - `--library reflaxe.<target>` activates the backend (library macros + hooks) without stage0.
+  - Hooks like `Context.onAfterTyping` / `Context.onGenerate` work in native mode.
+- **Provenance discipline**:
+  - Prefer tests + black-box oracle runs over “porting” implementation details.
+  - Avoid “translate/port” wording; use “reimplement/behavior-driven”.
 
 ### Strict provenance rules (MUST follow on every change)
 

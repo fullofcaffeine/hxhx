@@ -156,8 +156,26 @@ trim_ws() {
 
         entry_escaped="$(escape_hx_string "$entry")"
 
-        # Emit case. We reference the method directly so Haxe resolves it statically.
-        # We intentionally only dispatch exact strings for auditability.
+        # Emit case.
+        #
+        # We dispatch exact strings for auditability and call the entrypoint directly:
+        # `untyped pack.Class.method(...)`.
+        #
+        # Why `untyped` (bring-up tradeoff)
+        # - We need one dispatcher that can call entrypoints with unknown return types:
+        #     - `Void` (initializers like `init()`)
+        #     - `String` (macro.run summaries)
+        #     - `Array<Field>` (build macros)
+        # - Using `untyped` lets us store the return into `Dynamic` without needing to know
+        #   the static return type.
+        #
+        # Why not `Reflect.callMethod(Reflect.field(...))` yet
+        # - Our current portable runtime represents *anonymous structures* as `HxAnon`, but Haxe
+        #   class values (`Type`) are not anonymous objects. `Reflect.field(SomeClass,"x")`
+        #   therefore resolves through `HxAnon.get` and returns null, causing the macro host to
+        #   crash when attempting to call the function.
+        # - We may add a dedicated "Type field" reflection surface later; until then, prefer
+        #   direct calls.
         #
         # Return value policy:
         # - If the entrypoint returns a `String`, propagate it (useful for macro.run summaries
@@ -185,6 +203,16 @@ trim_ws() {
       cp="$(normalize_cp "$cp")"
       if [ -n "$cp" ]; then
         extra+=("-cp" "$cp")
+      fi
+    done
+  fi
+
+  if [ -n "${HXHX_MACRO_HOST_DEFINES:-}" ]; then
+    IFS=':' read -r -a defs <<<"${HXHX_MACRO_HOST_DEFINES}"
+    for d in "${defs[@]}"; do
+      d="$(trim_ws "$d")"
+      if [ -n "$d" ]; then
+        extra+=("-D" "$d")
       fi
     done
   fi

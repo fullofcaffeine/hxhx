@@ -27,6 +27,21 @@ type proc = {
   mutable exit_code : int option;
 }
 
+(* Avoid hard process termination when the peer closes its end of a pipe.
+
+   Why
+   - `hxhx` talks to `hxhx-macro-host` over stdin/stdout pipes.
+   - During bring-up it's common to hit server-side crashes or early exits.
+   - On some platforms, writing to a closed pipe can raise SIGPIPE and terminate the
+     whole compiler process (exit code 141), which hides the real underlying error.
+
+   Policy
+   - Ignore SIGPIPE so writes instead raise an exception (`Sys_error "Broken pipe"`)
+     which we can surface as a normal Haxe exception for diagnostics.
+*)
+let () =
+  try Sys.set_signal Sys.sigpipe Sys.Signal_ignore with _ -> ()
+
 let next_id = ref 1
 let table : (int, proc) Hashtbl.t = Hashtbl.create 16
 

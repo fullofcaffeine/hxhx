@@ -1134,6 +1134,19 @@ class Stage3Compiler {
 				}
 			}
 
+			if (macroSession != null) {
+				final hooks = hxhx.macro.MacroState.listAfterGenerateHookIds();
+				for (i in 0...hooks.length) {
+					try {
+						macroSession.runHook("afterGenerate", hooks[i]);
+					} catch (e:Dynamic) {
+						closeMacroSession();
+						return error("afterGenerate hook failed: " + Std.string(e));
+					}
+					Sys.println("hook_afterGenerate[" + i + "]=ok");
+				}
+			}
+
 			closeMacroSession();
 			Sys.println("typed_modules=" + typedCount);
 			Sys.println("header_only_modules=" + headerOnlyCount);
@@ -1189,6 +1202,19 @@ class Stage3Compiler {
 					return error("onGenerate hook failed: " + Std.string(e));
 				}
 				Sys.println("hook_onGenerate[" + i + "]=ok");
+			}
+		}
+
+		if (macroSession != null) {
+			final hooks = hxhx.macro.MacroState.listAfterGenerateHookIds();
+			for (i in 0...hooks.length) {
+				try {
+					macroSession.runHook("afterGenerate", hooks[i]);
+				} catch (e:Dynamic) {
+					closeMacroSession();
+					return error("afterGenerate hook failed: " + Std.string(e));
+				}
+				Sys.println("hook_afterGenerate[" + i + "]=ok");
 			}
 		}
 

@@ -42,10 +42,21 @@ let registerOnGenerate = fun cb -> (
   HxInt.sub (HxArray.length onGenerateHooks) 1
 )
 
+let afterGenerateHooks = let __arr_16 = HxArray.create () in __arr_16
+
+let registerAfterGenerate = fun cb -> (
+  ignore (HxArray.push afterGenerateHooks cb);
+  HxInt.sub (HxArray.length afterGenerateHooks) 1
+)
+
 let runHook = fun kind id -> (
   ignore (if kind == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "MacroRuntime.runHook: missing kind") ["Dynamic"; "String"]) else ());
   ignore (if id < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: invalid hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
   match kind with
+    | "afterGenerate" -> ignore ((
+      ignore (if id >= HxArray.length afterGenerateHooks then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown afterGenerate hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
+      HxArray.get afterGenerateHooks id ()
+    ))
     | "afterTyping" -> ignore ((
       ignore (if id >= HxArray.length afterTypingHooks then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown afterTyping hook id: " ^ string_of_int id)) ["Dynamic"; "String"]) else ());
       HxArray.get afterTypingHooks id (let __arr_10 = HxArray.create () in __arr_10)
@@ -57,7 +68,7 @@ let runHook = fun kind id -> (
     | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr ("MacroRuntime.runHook: unknown kind: " ^ HxString.toStdString kind)) ["Dynamic"; "String"])
 )
 
-let currentBuildFieldNames = ref (let __arr_16 = HxArray.create () in __arr_16 : string HxArray.t)
+let currentBuildFieldNames = ref (let __arr_17 = HxArray.create () in __arr_17 : string HxArray.t)
 
 let hasCurrentBuildFieldName = fun name -> try (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());

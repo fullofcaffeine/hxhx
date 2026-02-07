@@ -57,6 +57,19 @@ class MacroRuntime {
 	static final onGenerateHooks:Array<Array<Dynamic>->Void> = [];
 
 	/**
+		Hook callbacks registered via `Context.onAfterGenerate`.
+
+		Why
+		- Some macro libraries register a "post generation" callback (e.g. finalize compiler output).
+		- Even before we have full upstream phase parity, we keep a distinct hook kind so the compiler
+		  can call it at a deterministic point.
+
+		Bring-up behavior
+		- Currently invoked after `onGenerate` hooks in the Stage3 pipeline.
+	**/
+	static final afterGenerateHooks:Array<Void->Void> = [];
+
+	/**
 		Field names for the current `Context.getBuildFields()` snapshot.
 
 		Why
@@ -102,6 +115,11 @@ class MacroRuntime {
 		return onGenerateHooks.length - 1;
 	}
 
+	public static function registerAfterGenerate(cb:Void->Void):Int {
+		afterGenerateHooks.push(cb);
+		return afterGenerateHooks.length - 1;
+	}
+
 	public static function runHook(kind:String, id:Int):Void {
 		if (kind == null) throw "MacroRuntime.runHook: missing kind";
 		if (id < 0) throw "MacroRuntime.runHook: invalid hook id: " + id;
@@ -112,6 +130,9 @@ class MacroRuntime {
 			case "onGenerate":
 				if (id >= onGenerateHooks.length) throw "MacroRuntime.runHook: unknown onGenerate hook id: " + id;
 				onGenerateHooks[id]([]);
+			case "afterGenerate":
+				if (id >= afterGenerateHooks.length) throw "MacroRuntime.runHook: unknown afterGenerate hook id: " + id;
+				afterGenerateHooks[id]();
 			case _:
 				throw "MacroRuntime.runHook: unknown kind: " + kind;
 		}

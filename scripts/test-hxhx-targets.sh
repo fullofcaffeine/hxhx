@@ -551,6 +551,12 @@ out="$(
 )"
 echo "$out" | grep -q "^lib_macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_HAXELIB_INIT\\]=1$"
+echo "$out" | grep -q "^hook_afterTyping\\[0\\]=ok$"
+echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
+echo "$out" | grep -q "^hook_afterGenerate\\[0\\]=ok$"
+echo "$out" | grep -q "^macro_define2\\[HXHX_HAXELIB_INIT_AFTER_TYPING\\]=1$"
+echo "$out" | grep -q "^macro_define2\\[HXHX_HAXELIB_INIT_ON_GENERATE\\]=1$"
+echo "$out" | grep -q "^macro_define2\\[HXHX_HAXELIB_INIT_AFTER_GENERATE\\]=1$"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage3 bring-up: expression macro expansion replaces call sites"

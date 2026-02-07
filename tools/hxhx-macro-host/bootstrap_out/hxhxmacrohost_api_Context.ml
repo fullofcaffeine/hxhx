@@ -38,31 +38,37 @@ let onGenerate = fun cb persistent -> try (
 ) with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
+let onAfterGenerate = fun cb -> try (
+  ignore (if cb == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  let id = Hxhxmacrohost_MacroRuntime.registerAfterGenerate cb in let tail = (HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "k" "afterGenerate") ^ " ") ^ HxString.toStdString (Hxhxmacrohost_Protocol.encodeLen "i" (string_of_int id)) in Hxhxmacrohost_HostToCompilerRpc.call "compiler.registerHook" tail
+) with
+  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+
 let getDefines = fun () -> try let out = HxMap.create_string () in let payload = Hxhxmacrohost_HostToCompilerRpc.call "context.getDefines" "" in (
   ignore (if payload == Obj.magic (HxRuntime.hx_null) || HxString.length payload = 0 then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let m = Hxhxmacrohost_Protocol.kvParse payload in let tempMaybeString = ref (Obj.magic ()) in (
-    ignore (if HxMap.exists_string m "c" then let __assign_5 = HxMap.get_string m "c" in (
-      tempMaybeString := __assign_5;
-      __assign_5
-    ) else let __assign_6 = "" in (
+    ignore (if HxMap.exists_string m "c" then let __assign_6 = HxMap.get_string m "c" in (
       tempMaybeString := __assign_6;
       __assign_6
+    ) else let __assign_7 = "" in (
+      tempMaybeString := __assign_7;
+      __assign_7
     ));
     let count = Std.parseInt (!tempMaybeString) in (
-      ignore (if count == HxRuntime.hx_null || (let __nullable_7 = count in let __nullable_8 = 0 in if __nullable_7 == HxRuntime.hx_null then false else Obj.obj __nullable_7 <= __nullable_8) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+      ignore (if count == HxRuntime.hx_null || (let __nullable_8 = count in let __nullable_9 = 0 in if __nullable_8 == HxRuntime.hx_null then false else Obj.obj __nullable_8 <= __nullable_9) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
       let _g = ref 0 in let _g1 = count in (
-        ignore (try while let __nullable_9 = !_g in let __nullable_10 = _g1 in if __nullable_10 == HxRuntime.hx_null then false else __nullable_9 < Obj.obj __nullable_10 do try ignore (let i = let __old_11 = !_g in let __new_12 = HxInt.add __old_11 1 in (
-          ignore (_g := __new_12);
-          __old_11
+        ignore (try while let __nullable_10 = !_g in let __nullable_11 = _g1 in if __nullable_11 == HxRuntime.hx_null then false else __nullable_10 < Obj.obj __nullable_11 do try ignore (let i = let __old_12 = !_g in let __new_13 = HxInt.add __old_12 1 in (
+          ignore (_g := __new_13);
+          __old_12
         ) in let kKey = "k" ^ string_of_int i in let vKey = "v" ^ string_of_int i in (
           ignore (if not (HxMap.exists_string m kKey) then raise (HxRuntime.Hx_continue) else ());
           let key = HxMap.get_string m kKey in let tempString = ref "" in (
-            ignore (if HxMap.exists_string m vKey then let __assign_13 = HxMap.get_string m vKey in (
-              tempString := __assign_13;
-              __assign_13
-            ) else let __assign_14 = "" in (
+            ignore (if HxMap.exists_string m vKey then let __assign_14 = HxMap.get_string m vKey in (
               tempString := __assign_14;
               __assign_14
+            ) else let __assign_15 = "" in (
+              tempString := __assign_15;
+              __assign_15
             ));
             let value = !tempString in HxMap.set_string out key value
           )
@@ -74,13 +80,13 @@ let getDefines = fun () -> try let out = HxMap.create_string () in let payload =
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
+  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
 
 let getType = fun name -> try (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr "missing")) else ());
   Hxhxmacrohost_MacroRuntime.builtinTypeDesc name
 ) with
-  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
+  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
 let getBuildFields = fun () -> try let payload = Hxhxmacrohost_HostToCompilerRpc.call "context.getBuildFields" "" in let out = HxArray.create () in let names = HxArray.create () in (
   ignore (if payload == Obj.magic (HxRuntime.hx_null) || HxString.length payload = 0 then ignore ((
@@ -88,67 +94,67 @@ let getBuildFields = fun () -> try let payload = Hxhxmacrohost_HostToCompilerRpc
     raise (HxRuntime.Hx_return (Obj.repr out))
   )) else ());
   let m = Hxhxmacrohost_Protocol.kvParse payload in let tempMaybeString = ref (Obj.magic ()) in (
-    ignore (if HxMap.exists_string m "c" then let __assign_17 = HxMap.get_string m "c" in (
-      tempMaybeString := __assign_17;
-      __assign_17
-    ) else let __assign_18 = "" in (
+    ignore (if HxMap.exists_string m "c" then let __assign_18 = HxMap.get_string m "c" in (
       tempMaybeString := __assign_18;
       __assign_18
+    ) else let __assign_19 = "" in (
+      tempMaybeString := __assign_19;
+      __assign_19
     ));
     let count = Std.parseInt (!tempMaybeString) in (
-      ignore (if count == HxRuntime.hx_null || (let __nullable_19 = count in let __nullable_20 = 0 in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 < __nullable_20) then ignore ((
+      ignore (if count == HxRuntime.hx_null || (let __nullable_20 = count in let __nullable_21 = 0 in if __nullable_20 == HxRuntime.hx_null then false else Obj.obj __nullable_20 < __nullable_21) then ignore ((
         ignore (Hxhxmacrohost_MacroRuntime.clearCurrentBuildFieldSnapshot ());
         raise (HxRuntime.Hx_return (Obj.repr out))
       )) else ());
-      let nullExpr = let __anon_21 = HxAnon.create () in (
-        ignore (HxAnon.set __anon_21 "expr" (Obj.repr (Haxe_macro_Expr.EConst (Haxe_macro_Expr.CIdent "null"))));
-        ignore (HxAnon.set __anon_21 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-        __anon_21
+      let nullExpr = let __anon_22 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_22 "expr" (Obj.repr (Haxe_macro_Expr.EConst (Haxe_macro_Expr.CIdent "null"))));
+        ignore (HxAnon.set __anon_22 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+        __anon_22
       ) in let _g = ref 0 in let _g1 = count in (
-        ignore (try while let __nullable_22 = !_g in let __nullable_23 = _g1 in if __nullable_23 == HxRuntime.hx_null then false else __nullable_22 < Obj.obj __nullable_23 do try ignore (let i = let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
-          ignore (_g := __new_25);
-          __old_24
+        ignore (try while let __nullable_23 = !_g in let __nullable_24 = _g1 in if __nullable_24 == HxRuntime.hx_null then false else __nullable_23 < Obj.obj __nullable_24 do try ignore (let i = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+          ignore (_g := __new_26);
+          __old_25
         ) in let nKey = "n" ^ string_of_int i in let kKey = "k" ^ string_of_int i in let sKey = "s" ^ string_of_int i in let vKey = "v" ^ string_of_int i in (
           ignore (if not (HxMap.exists_string m nKey) then raise (HxRuntime.Hx_continue) else ());
           let name = HxMap.get_string m nKey in (
             ignore (if HxString.length name = 0 then raise (HxRuntime.Hx_continue) else ());
             let tempMaybeString1 = ref (Obj.magic ()) in (
-              ignore (if HxMap.exists_string m kKey then let __assign_26 = HxMap.get_string m kKey in (
-                tempMaybeString1 := __assign_26;
-                __assign_26
-              ) else let __assign_27 = "" in (
+              ignore (if HxMap.exists_string m kKey then let __assign_27 = HxMap.get_string m kKey in (
                 tempMaybeString1 := __assign_27;
                 __assign_27
+              ) else let __assign_28 = "" in (
+                tempMaybeString1 := __assign_28;
+                __assign_28
               ));
               let kind = !tempMaybeString1 in let isStatic = HxMap.exists_string m sKey && HxString.equals (HxMap.get_string m sKey) "1" in let tempMaybeString2 = ref (Obj.magic ()) in (
-                ignore (if HxMap.exists_string m vKey then let __assign_28 = HxMap.get_string m vKey in (
-                  tempMaybeString2 := __assign_28;
-                  __assign_28
-                ) else let __assign_29 = "" in (
+                ignore (if HxMap.exists_string m vKey then let __assign_29 = HxMap.get_string m vKey in (
                   tempMaybeString2 := __assign_29;
                   __assign_29
+                ) else let __assign_30 = "" in (
+                  tempMaybeString2 := __assign_30;
+                  __assign_30
                 ));
                 let vis = !tempMaybeString2 in let access = HxArray.create () in (
                   ignore (if HxString.equals vis "Public" then ignore (HxArray.push access (Haxe_macro_Expr.APublic)) else ignore (HxArray.push access (Haxe_macro_Expr.APrivate)));
                   ignore (if isStatic then ignore (HxArray.push access (Haxe_macro_Expr.AStatic)) else ());
                   let tempFieldType = ref (Obj.magic ()) in (
-                    ignore (if HxString.equals kind "var" then let __assign_30 = Haxe_macro_Expr.FVar (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.ComplexType" (Obj.magic (HxRuntime.hx_null))), HxRuntime.hx_null) in (
-                      tempFieldType := __assign_30;
-                      __assign_30
-                    ) else let __assign_31 = Haxe_macro_Expr.FFun (let __anon_32 = HxAnon.create () in (
-                      ignore (HxAnon.set __anon_32 "args" (Obj.repr (let __arr_33 = HxArray.create () in __arr_33)));
-                      ignore (HxAnon.set __anon_32 "expr" (Obj.repr nullExpr));
-                      __anon_32
-                    )) in (
+                    ignore (if HxString.equals kind "var" then let __assign_31 = Haxe_macro_Expr.FVar (Obj.obj (HxEnum.unbox_or_obj "haxe.macro.ComplexType" (Obj.magic (HxRuntime.hx_null))), HxRuntime.hx_null) in (
                       tempFieldType := __assign_31;
                       __assign_31
+                    ) else let __assign_32 = Haxe_macro_Expr.FFun (let __anon_33 = HxAnon.create () in (
+                      ignore (HxAnon.set __anon_33 "args" (Obj.repr (let __arr_34 = HxArray.create () in __arr_34)));
+                      ignore (HxAnon.set __anon_33 "expr" (Obj.repr nullExpr));
+                      __anon_33
+                    )) in (
+                      tempFieldType := __assign_32;
+                      __assign_32
                     ));
-                    let field = let __anon_34 = HxAnon.create () in (
-                      ignore (HxAnon.set __anon_34 "name" (Obj.repr name));
-                      ignore (HxAnon.set __anon_34 "access" (Obj.repr access));
-                      ignore (HxAnon.set __anon_34 "kind" (Obj.repr (!tempFieldType)));
-                      ignore (HxAnon.set __anon_34 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
-                      __anon_34
+                    let field = let __anon_35 = HxAnon.create () in (
+                      ignore (HxAnon.set __anon_35 "name" (Obj.repr name));
+                      ignore (HxAnon.set __anon_35 "access" (Obj.repr access));
+                      ignore (HxAnon.set __anon_35 "kind" (Obj.repr (!tempFieldType)));
+                      ignore (HxAnon.set __anon_35 "pos" (Obj.repr (Obj.magic (HxRuntime.hx_null))));
+                      __anon_35
                     ) in (
                       ignore (HxArray.push out field);
                       HxArray.push names name
@@ -167,4 +173,4 @@ let getBuildFields = fun () -> try let payload = Hxhxmacrohost_HostToCompilerRpc
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_35 -> Obj.obj __ret_35
+  | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36

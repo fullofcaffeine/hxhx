@@ -1,6 +1,7 @@
 package hxhxmacros;
 
 import haxe.macro.Compiler;
+import haxe.macro.Context;
 
 /**
 	Stage4 bring-up macro module: library-provided macro initializers (haxelib extra params).
@@ -25,6 +26,21 @@ import haxe.macro.Compiler;
 class HaxelibInitMacros {
 	public static function init():Void {
 		Compiler.define("HXHX_HAXELIB_INIT", "1");
+
+		Context.onAfterTyping(function(_) {
+			Compiler.define("HXHX_HAXELIB_INIT_AFTER_TYPING", "1");
+		});
+
+		Context.onGenerate(function(_) {
+			Compiler.define("HXHX_HAXELIB_INIT_ON_GENERATE", "1");
+			Compiler.emitOcamlModule(
+				"HxHxHaxelibInitGen",
+				"let haxelib_init_generated : int = 1"
+			);
+		});
+
+		Context.onAfterGenerate(function() {
+			Compiler.define("HXHX_HAXELIB_INIT_AFTER_GENERATE", "1");
+		});
 	}
 }
-

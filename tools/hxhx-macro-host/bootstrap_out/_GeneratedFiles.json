@@ -21,6 +21,7 @@
 		"hxhxmacrohost_EntryPoints.ml",
 		"hxhxmacrohost_BuiltinMacros.ml",
 		"hxhxmacrohost_BuildMacroSupport.ml",
+		"haxe_macro_Type.ml",
 		"haxe_macro_Expr.ml",
 		"haxe_macro_Context.ml",
 		"haxe_macro_Compiler.ml",

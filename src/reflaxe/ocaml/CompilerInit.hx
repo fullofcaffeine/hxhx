@@ -31,7 +31,9 @@ class CompilerInit {
 		#end
 
 			// Ensure std/_std injection is only applied when targeting OCaml.
+			#if macro
 			CompilerBootstrap.InjectClassPaths();
+			#end
 			#if macro
 			final isOcamlTarget =
 				haxe.macro.Context.defined("ocaml_output") ||

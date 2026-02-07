@@ -1,6 +1,6 @@
 package haxe.macro;
 
-#if (neko || eval)
+#if macro
 import haxe.macro.Context;
 #else
 import hxhxmacrohost.api.Compiler as HostCompiler;
@@ -16,7 +16,7 @@ import hxhxmacrohost.api.Compiler as HostCompiler;
 	  affect compilation (defines, classpaths, generated modules).
 
 	What
-	- `#if (neko || eval)`: forward a small subset to the compiler's macro API via `Context.load`.
+	- `#if macro`: forward a small subset to the compiler's macro API via `Context.load`.
 	- `#else`: map a small runtime subset to the Stage4 reverse-RPC API (`hxhxmacrohost.api.Compiler`).
 
 	Gotchas
@@ -51,7 +51,7 @@ typedef CompilerConfiguration = {
 	final stdPath:Array<String>;
 }
 
-#if (neko || eval)
+#if macro
 class Compiler {
 	macro static public function getDefine(key:String) {
 		return macro $v{haxe.macro.Context.definedValue(key)};
@@ -81,7 +81,7 @@ class Compiler {
 		load("register_metadata_impl", 2)(meta, source);
 	}
 
-	static inline function load(f:String, nargs:Int):Dynamic {
+static inline function load(f:String, nargs:Int):Dynamic {
 		return @:privateAccess haxe.macro.Context.load(f, nargs);
 	}
 }

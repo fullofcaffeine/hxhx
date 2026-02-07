@@ -73,6 +73,29 @@ class Context {
 	}
 
 	/**
+		Register an "after generate" hook.
+
+		Why
+		- Some macro libraries (notably compiler-style plugins) register a finalization callback
+		  that runs after the generation phase completes.
+		- Keeping a distinct hook kind makes it possible to evolve Stage3/Stage4 ordering without
+		  overloading `onGenerate`.
+
+		What
+		- Stores `cb` inside the macro host and returns immediately.
+		- Notifies the compiler of the hook ID so the compiler can invoke it later.
+
+		Gotchas
+		- This hook kind currently receives no arguments.
+	**/
+	public static function onAfterGenerate(cb:Void->Void):Void {
+		if (cb == null) return;
+		final id = MacroRuntime.registerAfterGenerate(cb);
+		final tail = Protocol.encodeLen("k", "afterGenerate") + " " + Protocol.encodeLen("i", Std.string(id));
+		HostToCompilerRpc.call("compiler.registerHook", tail);
+	}
+
+	/**
 		Return a snapshot of all compiler defines.
 
 		Why
