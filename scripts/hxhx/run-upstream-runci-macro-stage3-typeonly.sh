@@ -53,5 +53,6 @@ out="$(
 )"
 echo "$out"
 
+echo "$out" | grep -q "^unsupported_exprs_total=0$"
+echo "$out" | grep -q "^unsupported_files=0$"
 echo "$out" | grep -q "^stage3=type_only_ok$"
-
