@@ -2339,7 +2339,7 @@ let run = fun args -> try let outDir = ref "" in let typeOnly = ref false in let
                                           ));
                                           if StringTools.startsWith name "HXHX_" then ignore (print_endline ((("macro_define2[" ^ HxString.toStdString name) ^ "]=") ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue name))) else ()
                                         )) done);
-                                        ignore (if !noEmit then ignore (let headerOnlyCount = ref 0 in let unsupportedExprsTotal = ref 0 in let unsupportedFilesCount = ref 0 in let traceUnsupported = isTrueEnv "HXHX_TRACE_UNSUPPORTED" in let unsupportedRawCount = ref 0 in let unsupportedFnCount = ref 0 in (
+                                        ignore (if !noEmit then ignore (let headerOnlyCount = ref 0 in let unsupportedExprsTotal = ref 0 in let unsupportedFilesCount = ref 0 in let traceUnsupported = isTrueEnv "HXHX_TRACE_UNSUPPORTED" in let unsupportedRawCount = ref 0 in let unsupportedFnCount = ref 0 in let unsupportedFileIndex = ref 0 in (
                                           ignore (let _g = ref 0 in while !_g < HxArray.length (!tempArray8) do ignore (let m = HxArray.get (!tempArray8) (!_g) in (
                                             ignore (let __old_507 = !_g in let __new_508 = HxInt.add __old_507 1 in (
                                               ignore (_g := __new_508);
@@ -2351,6 +2351,8 @@ let run = fun args -> try let outDir = ref "" in let typeOnly = ref false in let
                                                 ignore (unsupportedExprsTotal := HxInt.add (!unsupportedExprsTotal) unsupportedInFile);
                                                 if unsupportedInFile > 0 then ignore ((
                                                   ignore (unsupportedFilesCount := HxInt.add (!unsupportedFilesCount) 1);
+                                                  ignore (print_endline ((((((("unsupported_file[" ^ string_of_int (!unsupportedFileIndex)) ^ "]=") ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ " header_only=") ^ HxString.toStdString (bool01 (HxModuleDecl.getHeaderOnly (ParsedModule.getDecl pm ())))) ^ " unsupported_exprs=") ^ string_of_int unsupportedInFile));
+                                                  ignore (unsupportedFileIndex := HxInt.add (!unsupportedFileIndex) 1);
                                                   if traceUnsupported then ignore (let cls = HxModuleDecl.getMainClass (ParsedModule.getDecl pm ()) in (
                                                     ignore (let _g2 = ref 0 in let _g1 = HxClassDecl.getFunctions cls in try while !_g2 < HxArray.length _g1 do try ignore (let fn = HxArray.get _g1 (!_g2) in (
                                                       ignore (let __old_509 = !_g2 in let __new_510 = HxInt.add __old_509 1 in (

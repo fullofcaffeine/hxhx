@@ -1330,6 +1330,7 @@ class Stage3Compiler {
 				final traceUnsupported = isTrueEnv("HXHX_TRACE_UNSUPPORTED");
 				var unsupportedRawCount = 0;
 				var unsupportedFnCount = 0;
+				var unsupportedFileIndex = 0;
 				for (m in resolvedForTyping) {
 					final pm = ResolvedModule.getParsed(m);
 					if (HxModuleDecl.getHeaderOnly(pm.getDecl())) headerOnlyCount += 1;
@@ -1337,6 +1338,13 @@ class Stage3Compiler {
 					unsupportedExprsTotal += unsupportedInFile;
 					if (unsupportedInFile > 0) {
 						unsupportedFilesCount += 1;
+						Sys.println(
+							"unsupported_file[" + unsupportedFileIndex + "]="
+							+ ResolvedModule.getFilePath(m)
+							+ " header_only=" + bool01(HxModuleDecl.getHeaderOnly(pm.getDecl()))
+							+ " unsupported_exprs=" + unsupportedInFile
+						);
+						unsupportedFileIndex += 1;
 						if (traceUnsupported) {
 							final cls = HxModuleDecl.getMainClass(pm.getDecl());
 							for (fn in HxClassDecl.getFunctions(cls)) {

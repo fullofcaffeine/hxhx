@@ -38,6 +38,10 @@ class HxConditionalCompilation {
 		return c == 9 || c == 32; // \t or space
 	}
 
+	private static inline function isLineWs(c:Int):Bool {
+		return c == 9 || c == 10 || c == 13 || c == 32; // \t \n \r space
+	}
+
 	private static function makeBlankLineLike(line:String):String {
 		if (line == null || line.length == 0) return line;
 		final b = new StringBuf();
@@ -73,7 +77,28 @@ class HxConditionalCompilation {
 		for (line in lines) {
 			final directive = parseDirectiveLine(line);
 			if (directive == null) {
-				out.add(currentActive ? line : makeBlankLineLike(line));
+				if (!currentActive) {
+					out.add(makeBlankLineLike(line));
+					continue;
+				}
+
+				// Bootstrap preprocessor extension: handle a small subset of inline conditionals.
+				//
+				// Why
+				// - Upstream stdlib frequently uses inline `#if ... #else ... #end` in expressions, e.g.:
+				//     var b = #if (js || hl) @:privateAccess s.b #else s.getData() #end;
+				// - The stage1/stage3 frontends are not full preprocessors, so leaving `#` tokens in
+				//   the active source causes parse failures / unsupported-expr diagnostics.
+				//
+				// What
+				// - We rewrite the line to keep only the active branch (best-effort) while blanking
+				//   the directive tokens and inactive branch with spaces (newlines preserved).
+				//
+				// Non-goals
+				// - Full nested inline preprocessing.
+				// - Correct handling inside strings/comments (best-effort heuristics only).
+				final inlineFiltered = filterInlineConditionals(line, defines);
+				out.add(inlineFiltered == null ? line : inlineFiltered);
 				continue;
 			}
 
@@ -127,6 +152,163 @@ class HxConditionalCompilation {
 		}
 
 		return out.toString();
+	}
+
+	/**
+		Filter a single physical line that contains an inline `#if ... #else ... #end`.
+
+		Returns `null` if the line does not contain a supported inline construct.
+	**/
+	private static function filterInlineConditionals(line:String, defines:haxe.ds.StringMap<String>):Null<String> {
+		if (line == null || line.length == 0) return null;
+		// Fast-path: avoid scanning most lines.
+		if (line.indexOf("#if") == -1) return null;
+
+		// Only attempt when there's a matching `#end` somewhere later.
+		if (line.indexOf("#end") == -1) return null;
+
+		// Find a `#if` token outside string literals.
+		final idxIf = findTokenOutsideStrings(line, "#if", 0);
+		if (idxIf < 0) return null;
+
+		final idxEnd = findTokenOutsideStrings(line, "#end", idxIf + 3);
+		if (idxEnd < 0) return null;
+
+		// Optional `#else`.
+		final idxElse = findTokenOutsideStrings(line, "#else", idxIf + 3);
+		final elseInRange = idxElse >= 0 && idxElse < idxEnd;
+		final idxElse0 = elseInRange ? idxElse : -1;
+
+		// Parse the condition boundary so we can separate it from the "then" expression.
+		var condStart = idxIf + 3;
+		while (condStart < line.length && isLineWs(line.charCodeAt(condStart))) condStart++;
+		if (condStart >= line.length) return null;
+
+		final condEnd = parseInlineCondEnd(line, condStart, idxEnd);
+		if (condEnd <= condStart) return null;
+
+		final condText = StringTools.trim(line.substr(condStart, condEnd - condStart));
+		final thenStart = condEnd;
+		final thenEnd = idxElse0 >= 0 ? idxElse0 : idxEnd;
+		final elseStart = idxElse0 >= 0 ? (idxElse0 + 5) : -1; // "#else".length == 5
+		final elseEnd = idxEnd;
+
+		// Decide which branch is active.
+		final takeThen = evalExpr(condText, defines);
+		final keepStart = takeThen ? thenStart : elseStart;
+		final keepEnd = takeThen ? thenEnd : elseEnd;
+		if (keepStart < 0 || keepEnd < keepStart) {
+			// No else branch and condition is false: keep nothing.
+			return makeBlankLineLike(line);
+		}
+
+		// Build an output line of the same length that keeps:
+		// - prefix before #if
+		// - chosen branch payload
+		// - suffix after #end
+		final outCodes = new Array<Int>();
+		outCodes.resize(line.length);
+		for (i in 0...line.length) {
+			final c = line.charCodeAt(i);
+			outCodes[i] = (c == "\n".code || c == "\r".code) ? c : " ".code;
+		}
+
+		inline function copyRange(a:Int, b:Int):Void {
+			var i = a;
+			while (i < b && i < line.length) {
+				outCodes[i] = line.charCodeAt(i);
+				i++;
+			}
+		}
+
+		copyRange(0, idxIf);
+		copyRange(keepStart, keepEnd);
+		copyRange(idxEnd + 4, line.length); // "#end".length == 4
+
+		final b = new StringBuf();
+		for (c in outCodes) b.addChar(c);
+		return b.toString();
+	}
+
+	private static function parseInlineCondEnd(line:String, start:Int, max:Int):Int {
+		// If the condition starts with `(`, scan to the matching `)`.
+		// Otherwise, scan to the next whitespace.
+		final first = line.charCodeAt(start);
+		if (first == "(".code) {
+			var depth = 0;
+			var i = start;
+			while (i < line.length && i < max) {
+				final c = line.charCodeAt(i);
+				if (c == "(".code) {
+					depth++;
+				} else if (c == ")".code) {
+					depth--;
+					if (depth == 0) return i + 1;
+				} else if (c == "\"".code || c == "'".code) {
+					// Skip over quoted strings inside the condition (best-effort).
+					i = skipStringLiteral(line, i, c, max);
+					continue;
+				}
+				i++;
+			}
+			return -1;
+		}
+
+		var i = start;
+		while (i < line.length && i < max && !isLineWs(line.charCodeAt(i))) i++;
+		return i;
+	}
+
+	private static function skipStringLiteral(line:String, start:Int, quote:Int, max:Int):Int {
+		// start points at the opening quote
+		var i = start + 1;
+		while (i < line.length && i < max) {
+			final c = line.charCodeAt(i);
+			if (c == "\\".code) {
+				i += 2;
+				continue;
+			}
+			if (c == quote) return i + 1;
+			i++;
+		}
+		return i;
+	}
+
+	private static function findTokenOutsideStrings(line:String, token:String, from:Int):Int {
+		if (line == null || token == null) return -1;
+		if (token.length == 0) return -1;
+
+		var i = from < 0 ? 0 : from;
+		var inQuote = 0; // 0 = none, otherwise quote charcode
+		while (i <= line.length - token.length) {
+			final c = line.charCodeAt(i);
+			if (inQuote != 0) {
+				if (c == "\\".code) {
+					i += 2;
+					continue;
+				}
+				if (c == inQuote) {
+					inQuote = 0;
+				}
+				i++;
+				continue;
+			}
+
+			if (c == "\"".code || c == "'".code) {
+				inQuote = c;
+				i++;
+				continue;
+			}
+
+			// Very small comment heuristic: do not match inside `//` comment tails.
+			if (c == "/".code && i + 1 < line.length && line.charCodeAt(i + 1) == "/".code) {
+				return -1;
+			}
+
+			if (line.substr(i, token.length) == token) return i;
+			i++;
+		}
+		return -1;
 	}
 
 	private static function splitLinesPreserveNewlines(s:String):Array<String> {

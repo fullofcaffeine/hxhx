@@ -873,7 +873,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxClassDecl" [ "fields"; "functions"; "hasStaticMain"; "name" ];
   HxType.register_class_static_fields "HxClassDecl" [ "getFields"; "getFunctions"; "getHasStaticMain"; "getName" ];
   HxType.register_class_instance_fields "HxConditionalCompilation" [];
-  HxType.register_class_static_fields "HxConditionalCompilation" [ "evalExpr"; "filterSource"; "isSpace"; "makeBlankLineLike"; "parseDirectiveLine"; "splitLinesPreserveNewlines" ];
+  HxType.register_class_static_fields "HxConditionalCompilation" [ "evalExpr"; "filterInlineConditionals"; "filterSource"; "findTokenOutsideStrings"; "isLineWs"; "isSpace"; "makeBlankLineLike"; "parseDirectiveLine"; "parseInlineCondEnd"; "skipStringLiteral"; "splitLinesPreserveNewlines" ];
   HxType.register_class_instance_fields "HxDefineMap" [];
   HxType.register_class_static_fields "HxDefineMap" [ "addRawDefine"; "fromRawDefines"; "mergeInto" ];
   HxType.register_class_instance_fields "HxFieldDecl" [ "init"; "isStatic"; "name"; "typeHint"; "visibility" ];
