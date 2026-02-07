@@ -552,6 +552,13 @@ apply_misc_filter_if_requested() {
 # compiler via HAXE_BIN to avoid recursion.
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
+if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+  # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free
+  # with respect to macro-host selection/build.
+  HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+  export HXHX_MACRO_HOST_EXE
+fi
+
 if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free
   # with respect to macro-host selection/build.
@@ -572,10 +579,6 @@ fi
 export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
-
-# Allow Stage3 to auto-build a macro host when needed. This uses stage0 haxe (still required today).
-export HAXE_BIN="${STAGE0_HAXE}"
-export HXHX_MACRO_HOST_AUTO_BUILD=1
 
 exec "${HXHX_BIN}" --hxhx-stage3 --hxhx-no-emit --hxhx-out out_hxhx_runci_stage3_no_emit "\$@"
 EOF
