@@ -79,6 +79,52 @@ class Stage3Compiler {
 		return 2;
 	}
 
+	static function hasFlag(args:Array<String>, flag:String):Bool {
+		if (args == null || flag == null || flag.length == 0) return false;
+		for (a in args) if (a == flag) return true;
+		return false;
+	}
+
+	static function parseGlobalStage3Flags(args:Array<String>):{ outDir:String, typeOnly:Bool, emitFullBodies:Bool, noEmit:Bool, noRun:Bool, rest:Array<String> } {
+		var outDir = "";
+		var typeOnly = false;
+		var emitFullBodies = false;
+		var noEmit = false;
+		var noRun = false;
+		final rest = new Array<String>();
+
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			switch (a) {
+				case "--hxhx-out":
+					if (i + 1 >= args.length) {
+						// Keep the existing user-facing error shape.
+						throw "missing value after --hxhx-out";
+					}
+					outDir = args[i + 1];
+					i += 2;
+				case "--hxhx-type-only":
+					typeOnly = true;
+					i += 1;
+				case "--hxhx-no-emit":
+					noEmit = true;
+					i += 1;
+				case "--hxhx-no-run":
+					noRun = true;
+					i += 1;
+				case "--hxhx-emit-full-bodies":
+					emitFullBodies = true;
+					i += 1;
+				case _:
+					rest.push(a);
+					i += 1;
+			}
+		}
+
+		return { outDir: outDir, typeOnly: typeOnly, emitFullBodies: emitFullBodies, noEmit: noEmit, noRun: noRun, rest: rest };
+	}
+
 	static function escapeOneLine(s:String):String {
 		if (s == null) return "";
 		// Keep logs parseable and stable even when we store raw source snippets.
@@ -664,52 +710,19 @@ class Stage3Compiler {
 		return parts.join(" ");
 	}
 
-		public static function run(args:Array<String>):Int {
+		static function runOne(args:Array<String>):Int {
 			// Extract stage3-only flags before passing the remainder to `Stage1Args`.
-			var outDir = "";
-			var typeOnly = false;
-			var emitFullBodies = false;
-			var noEmit = false;
-			var noRun = false;
-			final rest = new Array<String>();
-			var i = 0;
-			while (i < args.length) {
-				final a = args[i];
-				switch (a) {
-				case "--hxhx-out":
-					if (i + 1 >= args.length) return error("missing value after --hxhx-out");
-					outDir = args[i + 1];
-					i += 2;
-					case "--hxhx-type-only":
-						// Diagnostic bring-up mode: resolve + type the module graph, but don't emit/build.
-						typeOnly = true;
-						i += 1;
-					case "--hxhx-no-emit":
-						// Diagnostic rung: execute macros + type the module graph, but skip OCaml emission/build.
-						noEmit = true;
-						i += 1;
-					case "--hxhx-no-run":
-						// Build-only rung: emit+build the OCaml executable, but do not execute it.
-						//
-						// Why
-						// - Some compiler-shaped artifacts are *servers* (macro host, display server, etc.) and would
-						//   block forever if we tried to run them as a validation step.
-						// - Gate runners and scripts sometimes need an executable path, not its output.
-						//
-						// What
-						// - We still type the full graph and produce `out.exe`, printing `exe=...` like normal.
-						// - We print `run=skipped` instead of `run=ok`.
-						noRun = true;
-						i += 1;
-					case "--hxhx-emit-full-bodies":
-						// Bring-up rung: emit best-effort OCaml for full statement bodies (not just first return).
-						emitFullBodies = true;
-						i += 1;
-				case _:
-					rest.push(a);
-					i += 1;
+			final g = try {
+				parseGlobalStage3Flags(args);
+			} catch (e:Dynamic) {
+				return error(Std.string(e));
 			}
-		}
+			final outDir = g.outDir;
+			final typeOnly = g.typeOnly;
+			final emitFullBodies = g.emitFullBodies;
+			final noEmit = g.noEmit;
+			final noRun = g.noRun;
+			final rest = g.rest;
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
 		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
@@ -1408,6 +1421,46 @@ class Stage3Compiler {
 		final code = Sys.command(exe, []);
 		if (code != 0) return error("built executable failed with exit code " + code);
 		Sys.println("run=ok");
-		return 0;
-	}
+			return 0;
+		}
+
+		public static function run(args:Array<String>):Int {
+			final global = try {
+				parseGlobalStage3Flags(args);
+			} catch (e:Dynamic) {
+				return error(Std.string(e));
+			}
+
+			final units = Hxml.expandArgsToUnits(global.rest);
+			if (units == null) return error("failed to expand .hxml args (multi-unit)");
+
+			// Single-unit fast path: keep logs identical for the common bring-up case.
+			if (units.length <= 1) {
+				return runOne(args);
+			}
+
+			// Multi-unit `.hxml` support: run each unit sequentially.
+			//
+			// Bootstrap behavior:
+			// - Global stage3-only flags (`--hxhx-no-run`, `--hxhx-type-only`, etc.) apply to every unit.
+			// - If a global `--hxhx-out <dir>` is provided, we suffix it per-unit to avoid collisions.
+			for (idx in 0...units.length) {
+				final u = units[idx];
+				final unitArgs = new Array<String>();
+				if (global.typeOnly) unitArgs.push("--hxhx-type-only");
+				if (global.noEmit) unitArgs.push("--hxhx-no-emit");
+				if (global.noRun) unitArgs.push("--hxhx-no-run");
+				if (global.emitFullBodies) unitArgs.push("--hxhx-emit-full-bodies");
+
+				if (global.outDir != null && global.outDir.length > 0 && !hasFlag(u, "--hxhx-out")) {
+					unitArgs.push("--hxhx-out");
+					unitArgs.push(global.outDir + "_u" + idx);
+				}
+				for (a in u) unitArgs.push(a);
+
+				final code = runOne(unitArgs);
+				if (code != 0) return code;
+			}
+			return 0;
+		}
 }

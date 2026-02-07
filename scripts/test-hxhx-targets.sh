@@ -422,6 +422,35 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^>hello<$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: multi-unit .hxml via --next"
+tmpmulti="$tmpdir/multi_unit_hxml"
+mkdir -p "$tmpmulti/src"
+cat >"$tmpmulti/src/A.hx" <<'HX'
+class A {
+  static function main() {
+    Sys.println("A");
+  }
+}
+HX
+cat >"$tmpmulti/src/B.hx" <<'HX'
+class B {
+  static function main() {
+    Sys.println("B");
+  }
+}
+HX
+cat >"$tmpmulti/build.hxml" <<HX
+-cp $tmpmulti/src
+-main A
+--next
+-cp $tmpmulti/src
+-main B
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-out "$tmpmulti/out" "$tmpmulti/build.hxml")"
+test "$(echo "$out" | grep -c '^stage3=ok$')" -eq 2
+echo "$out" | grep -q "^A$"
+echo "$out" | grep -q "^B$"
+
 echo "== Stage3 bring-up: lazy type-driven module loading (same-package type)"
 tmplazy="$tmpdir/lazy_module_loading"
 mkdir -p "$tmplazy/src/p"

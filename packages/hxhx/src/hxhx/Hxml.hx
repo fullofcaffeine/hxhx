@@ -31,10 +31,86 @@ import haxe.io.Path;
 class Hxml {
 	public static function parseFile(path:String):Null<Array<String>> {
 		final seen = new Map<String, Bool>();
-		return parseFileRec(Path.normalize(path), seen, 0);
+		return parseFileRec(Path.normalize(path), seen, 0, false);
 	}
 
-	static function parseFileRec(path:String, seen:Map<String, Bool>, depth:Int):Null<Array<String>> {
+	/**
+		Parse a `.hxml` file into a list of argv “units” split by upstream directives like `--next`.
+
+		Why
+		- Upstream’s `.hxml` format supports multiple compiler invocations in one file:
+		  each `--next` starts a new unit.
+		- Gate bring-up needs this for upstream harness files like `tests/unit/compile.hxml`.
+
+		What
+		- Returns a list of units, where each unit is a flat argv list.
+		- Expands positional `.hxml` includes recursively (splicing their tokens into the stream).
+
+		How
+		- We first expand the file into a flat token stream **including** `--next` / `--each`.
+		- We then split the stream into units on those tokens.
+	**/
+	public static function parseFileUnits(path:String):Null<Array<Array<String>>> {
+		final seen = new Map<String, Bool>();
+		final toks = parseFileRec(Path.normalize(path), seen, 0, true);
+		if (toks == null) return null;
+		return splitIntoUnits(toks);
+	}
+
+	/**
+		Expand an argv array into one-or-more compilation units.
+
+		Why
+		- The stage3 bring-up runner accepts positional `.hxml` arguments like upstream `haxe`.
+		- When those `.hxml` files contain `--next`, we need to run multiple units deterministically.
+
+		What
+		- Expands any positional `.hxml` args and then splits on `--next` / `--each`.
+		- Non-`.hxml` args are passed through as-is.
+
+		Notes
+		- `--each` is treated like `--next` for now (bootstrap behavior).
+	**/
+	public static function expandArgsToUnits(args:Array<String>):Null<Array<Array<String>>> {
+		if (args == null) return [[]];
+		final seen = new Map<String, Bool>();
+		final toks = new Array<String>();
+
+		for (a in args) {
+			if (a != null && a.length > 0 && !StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
+				final expanded = parseFileRec(Path.normalize(a), seen, 0, true);
+				if (expanded == null) return null;
+				for (t in expanded) toks.push(t);
+				continue;
+			}
+			toks.push(a);
+		}
+
+		return splitIntoUnits(toks);
+	}
+
+	static function splitIntoUnits(tokens:Array<String>):Array<Array<String>> {
+		final units = new Array<Array<String>>();
+		var cur = new Array<String>();
+
+		inline function flush():Void {
+			// Ignore empty units to match upstream’s permissive behavior (multiple `--next` lines, etc.).
+			if (cur.length > 0) units.push(cur);
+			cur = new Array<String>();
+		}
+
+		for (t in tokens) {
+			if (t == "--next" || t == "--each") {
+				flush();
+				continue;
+			}
+			cur.push(t);
+		}
+		flush();
+		return units.length == 0 ? [ [] ] : units;
+	}
+
+	static function parseFileRec(path:String, seen:Map<String, Bool>, depth:Int, allowNext:Bool):Null<Array<String>> {
 		if (depth > 25) {
 			Sys.println("hxhx(stage1): hxml include depth exceeded: " + path);
 			return null;
@@ -84,14 +160,14 @@ class Hxml {
 		// Expand positional `.hxml` includes (upstream uses this heavily, e.g. `compile-macro.hxml` includes `compile-each.hxml`).
 		final out = new Array<String>();
 		for (t in tokens) {
-			if (t == "--next" || t == "--each") {
+			if (!allowNext && (t == "--next" || t == "--each")) {
 				Sys.println("hxhx(stage1): unsupported hxml directive: " + t);
 				return null;
 			}
 
 			if (!StringTools.startsWith(t, "-") && StringTools.endsWith(t, ".hxml")) {
 				final included = Path.isAbsolute(t) ? Path.normalize(t) : Path.normalize(Path.join([fileDir, t]));
-				final expanded = parseFileRec(included, seen, depth + 1);
+				final expanded = parseFileRec(included, seen, depth + 1, allowNext);
 				if (expanded == null) return null;
 				for (x in expanded) out.push(x);
 				continue;
