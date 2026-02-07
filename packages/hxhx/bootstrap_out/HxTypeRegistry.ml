@@ -81,7 +81,7 @@ let init () : unit =
   ignore (HxType.enum_ "HxVisibility");
   ignore (HxType.enum_ "_HxConditionalCompilation.Token");
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
-  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayDecl"; "EArrayAccess"; "ECast"; "EUntyped"; "EUnsupported" ];
+  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ELambda"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayDecl"; "EArrayAccess"; "ECast"; "EUntyped"; "EUnsupported" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
   HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
@@ -140,6 +140,12 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'callee' for HxExpr.ECall" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'args' for HxExpr.ECall" in
     Obj.repr (HxExpr.ECall (a0, a1))
+  );
+  HxType.register_enum_ctor "HxExpr" "ELambda" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'args' for HxExpr.ELambda" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'body' for HxExpr.ELambda" in
+    Obj.repr (HxExpr.ELambda (a0, a1))
   );
   HxType.register_enum_ctor "HxExpr" "ENew" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -889,7 +895,7 @@ let init () : unit =
   HxType.register_class_instance_fields "HxParseError" [ "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "HxParseError" [];
   HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "bump"; "capturedReturnStringLiteral"; "consumeBinop"; "cur"; "expect"; "fail"; "isOtherChar"; "lex"; "parseAnonExpr"; "parseArrayDeclExpr"; "parseBinaryExpr"; "parseClassMembers"; "parseExpr"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseModule"; "parsePostfixExpr"; "parsePrimaryExpr"; "parseReturnStmt"; "parseStmt"; "parseUnaryExpr"; "parseVarStmt"; "peek"; "peek2"; "peekBinop"; "peekKind"; "peekKind2"; "peeked1"; "peeked2"; "readDottedPath"; "readIdent"; "readImportPath"; "readTypeHintText"; "skipBalancedBraces"; "skipBalancedParens"; "syncToStmtEnd" ];
-  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "isRightAssoc"; "parseExprText"; "parseFunctionBodyText" ];
+  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "isRightAssoc"; "keywordText"; "parseExprText"; "parseFunctionBodyText" ];
   HxType.register_class_instance_fields "HxPos" [ "column"; "getColumn"; "getIndex"; "getLine"; "index"; "line"; "toString" ];
   HxType.register_class_static_fields "HxPos" [ "unknown" ];
   HxType.register_class_instance_fields "HxToken" [ "kind"; "pos" ];
