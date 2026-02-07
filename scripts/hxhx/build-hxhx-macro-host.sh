@@ -58,7 +58,7 @@ if [ -d "$BOOTSTRAP_DIR" ] \
   exit 0
 fi
 
-PREFER_HXHX="${HXHX_MACRO_HOST_PREFER_HXHX:-1}"
+PREFER_HXHX="${HXHX_MACRO_HOST_PREFER_HXHX:-0}"
 has_hxhx() {
   # `build-hxhx.sh` is stage0-free by default (uses packages/hxhx/bootstrap_out when available).
   "$ROOT/scripts/hxhx/build-hxhx.sh" >/dev/null 2>&1
@@ -238,7 +238,7 @@ trim_ws() {
     done
   fi
 
-  # Prefer stage0-free build via `hxhx --hxhx-stage3` when dynamic entrypoints/classpaths are requested.
+  # Optional/experimental: attempt stage0-free build via `hxhx --hxhx-stage3`.
   #
   # Why
   # - Gate1/Gate2 acceptance require macro host bring-up to be stage0-free.
@@ -246,6 +246,10 @@ trim_ws() {
   #
   # How
   # - Use `--hxhx-no-run` to avoid hanging (macro host is a long-lived server process).
+  #
+  # Status
+  # - This path is currently bring-up/experimental: it can build an executable, but does not yet
+  #   guarantee a protocol-correct, runnable macro host. Keep it opt-in until Gate2 requires it.
   if ! is_true "${HXHX_MACRO_HOST_FORCE_STAGE0:-}" && is_true "$PREFER_HXHX"; then
     HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
     STD_ROOT="$(resolve_std_root)"
@@ -290,7 +294,8 @@ trim_ws() {
 
   if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
     echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-    echo "Tip: set HXHX_MACRO_HOST_PREFER_HXHX=1 (default) to build via hxhx(stage3) when possible." >&2
+    echo "This macro host build requires stage0 `haxe` when dynamic entrypoints/classpaths are used." >&2
+    echo "Stage3 stage0-free builds are currently experimental (set HXHX_MACRO_HOST_PREFER_HXHX=1 to try)." >&2
     exit 1
   fi
 

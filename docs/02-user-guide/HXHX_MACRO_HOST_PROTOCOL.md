@@ -361,9 +361,9 @@ The macro RPC section specifically runs:
 - **Bootstrap snapshot (stage0-free, default when possible)**:
   - If `tools/hxhx-macro-host/bootstrap_out/` exists *and* no dynamic entrypoints/classpaths are requested,
     the macro host is built via dune from the committed snapshot.
-- **Stage3 build attempt (stage0-free, for dynamic entrypoints)**:
-  - When `HXHX_MACRO_HOST_ENTRYPOINTS` and/or `HXHX_MACRO_HOST_EXTRA_CP` are set, the script *prefers* to
-    build via `hxhx --hxhx-stage3` (controlled by `HXHX_MACRO_HOST_PREFER_HXHX=1`).
+- **Stage3 build attempt (stage0-free, experimental)**:
+  - When `HXHX_MACRO_HOST_ENTRYPOINTS` and/or `HXHX_MACRO_HOST_EXTRA_CP` are set, the script can *optionally*
+    attempt to build via `hxhx --hxhx-stage3` by setting `HXHX_MACRO_HOST_PREFER_HXHX=1`.
   - This requires a real Haxe std root so the macro host can resolve `haxe.macro.*`:
     - set `HAXE_STD_PATH=/path/to/haxe/std`, or
     - have an untracked upstream checkout at `vendor/haxe/std`, or
