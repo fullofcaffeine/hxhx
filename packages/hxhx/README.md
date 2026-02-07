@@ -24,6 +24,24 @@ Binary will be at:
 
 `packages/hxhx/out/_build/default/out.exe`
 
+## Bootstrap snapshot (maintainers)
+
+By default, `scripts/hxhx/build-hxhx.sh` builds from the committed OCaml snapshot under
+`packages/hxhx/bootstrap_out/` so CI can build `hxhx` without requiring a stage0 `haxe`
+binary on PATH.
+
+To regenerate the snapshot (requires stage0 `haxe`):
+
+```bash
+HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
+```
+
+Notes:
+
+- This can take several minutes because it runs stage0 Haxe macros for codegen.
+- For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
+- If you run a compilation server, you can pass `HAXE_CONNECT=<port>` to reuse it.
+
 ## Run
 
 No args (example harness mode):

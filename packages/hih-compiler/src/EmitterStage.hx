@@ -338,6 +338,18 @@ class EmitterStage {
 				}
 			}
 
+			function isSysIoProcessExpr(expr:HxExpr):Bool {
+				return switch (expr) {
+					case EIdent(name):
+						final t = tyForIdent(name);
+						t == "sys.io.Process" || t == "sys.io.Process.Process";
+					case ECast(inner, _hint):
+						isSysIoProcessExpr(inner);
+					case _:
+						false;
+				}
+			}
+
 			function exprToOcamlForConcat(expr:HxExpr):String {
 				// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
 				// For complex expressions we assume the caller is already producing a string.
@@ -499,6 +511,10 @@ class EmitterStage {
 					"print_endline (" + exprToOcamlString(arg, tyByIdent) + ")";
 				case ECall(EField(EIdent("Sys"), "print"), [arg]):
 					"print_string (" + exprToOcamlString(arg, tyByIdent) + ")";
+				case ECall(EField(obj, "toString"), []) if (isStringExpr(obj)):
+					// Bring-up: in Haxe, `String.toString()` is an identity; mapping this avoids
+					// poisoning common patterns like `input.readAll().toString()`.
+					exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 
 			case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
@@ -544,12 +560,22 @@ class EmitterStage {
 			case ESuper:
 				// Stage 3 bring-up: no class hierarchy semantics yet.
 				"(Obj.magic 0)";
-			case ENull:
-				// Stage 3 bring-up: null semantics are not modeled yet. Keep compilation moving.
-				"(Obj.magic 0)";
-				case ENew(_typePath, _args):
-					// Stage 3 bring-up: allocation + constructors are not modeled yet.
+				case ENull:
+					// Stage 3 bring-up: null semantics are not modeled yet. Keep compilation moving.
 					"(Obj.magic 0)";
+				case ENew(typePath, args):
+					// Stage 3 bring-up: support a tiny subset of allocations used by orchestration code.
+					//
+					// Today we special-case `sys.io.Process` so RunCi-like workloads can actually spawn
+					// the `haxe` subcommands (routed through the Gate2 wrapper).
+					(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && args.length == 2
+						? ("HxBootProcess.run ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") ("
+							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")")
+						// Stage 3 bring-up: allocation + constructors are not modeled yet.
+						: "(Obj.magic 0)";
 				case EField(obj, field):
 					// Stage 3 bring-up: model a couple of common "instance field" shapes that appear in
 					// orchestration code, without committing to a full object layout/runtime.
@@ -569,6 +595,14 @@ class EmitterStage {
 								if (StringTools.startsWith(t, "Array<")) return "HxBootArray.length (" + o + ")";
 							case _:
 						}
+					}
+
+					// Stage 3 bring-up: treat a few `sys.io.Process` fields as intrinsic accessors.
+					if (field == "stdout" && isSysIoProcessExpr(obj)) {
+						return "HxBootProcess.stdout (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					}
+					if (field == "stderr" && isSysIoProcessExpr(obj)) {
+						return "HxBootProcess.stderr (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 					}
 
 					// Stage 3 bring-up: treat `<type path>.field` as a static/module access.
@@ -646,6 +680,15 @@ class EmitterStage {
 						return "print_endline (" + exprToOcamlString(args[0], tyByIdent) + ")";
 					case EField(ECall(EField(EIdent("Sys"), "stdout"), []), "flush") if (args.length == 0):
 						return "(flush stdout)";
+					// Stage 3 bring-up: `sys.io.Process.exitCode()` is used pervasively by RunCi to test
+					// whether subcommands succeeded. Map it to our bootstrap shim.
+					case EField(proc, "exitCode") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.exitCode (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					// Bring-up: allow reading process output as a single string.
+					case EField(EField(proc, "stdout"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.stdoutReadAll (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					case EField(EField(proc, "stderr"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.stderrReadAll (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 					// Stage 3 bring-up: allow a tiny subset of `Array` operations so orchestration code
 					// can run under `--hxhx-emit-full-bodies`.
 					case EField(obj, "push") if (args.length == 1):
@@ -1199,6 +1242,45 @@ class EmitterStage {
 		// - These shims are intentionally tiny and non-semantic: they exist only to keep the
 		//   bring-up compiler compiling further so we can discover the next missing feature.
 		// - They are only emitted when the corresponding `<Name>.ml` is not already present.
+		var shimRepoRoot = "";
+		function inferRepoRootForShims():String {
+			if (shimRepoRoot.length > 0) return shimRepoRoot;
+			final env = Sys.getEnv("HXHX_REPO_ROOT");
+			if (env != null && env.length > 0) {
+				final candidate = haxe.io.Path.join([env, "packages", "hih-compiler", "shims"]);
+				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) {
+					shimRepoRoot = env;
+					return shimRepoRoot;
+				}
+			}
+
+			final prog = Sys.programPath();
+			if (prog == null || prog.length == 0) return "";
+			final abs = try sys.FileSystem.fullPath(prog) catch (_:Dynamic) prog;
+			var dir = try haxe.io.Path.directory(abs) catch (_:Dynamic) "";
+			if (dir == null || dir.length == 0) return "";
+
+			for (_ in 0...10) {
+				final shimsDir = haxe.io.Path.join([dir, "packages", "hih-compiler", "shims"]);
+				if (sys.FileSystem.exists(shimsDir) && sys.FileSystem.isDirectory(shimsDir)) {
+					shimRepoRoot = dir;
+					return shimRepoRoot;
+				}
+				final parent = haxe.io.Path.normalize(haxe.io.Path.join([dir, ".."]));
+				if (parent == dir) break;
+				dir = parent;
+			}
+			return "";
+		}
+
+		function readShimTemplate(shimName:String):String {
+			final root = inferRepoRootForShims();
+			if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for shim templates (set HXHX_REPO_ROOT)";
+			final path = haxe.io.Path.join([root, "packages", "hih-compiler", "shims", shimName + ".ml"]);
+			if (!sys.FileSystem.exists(path)) throw "stage3 emitter: missing shim template: " + path;
+			return sys.io.File.getContent(path);
+		}
+
 		{
 			final shimName = "Std";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
@@ -1243,63 +1325,15 @@ class EmitterStage {
 			final shimName = "HxBootArray";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
 			if (!sys.FileSystem.exists(shimPath)) {
-				// Keep the generated OCaml source as a line list to avoid building a huge nested
-				// `a + b + c + ...` expression in Haxe (which can significantly slow down stage0
-				// compilation of `hxhx` itself).
-				final shimSrc = [
-					"(* hxhx(stage3) bootstrap shim: HxBootArray *)",
-					"type 'a t = {",
-					"  mutable data : Obj.t array;",
-					"  mutable length : int;",
-					"}",
-					"",
-					"let hx_null : Obj.t = Obj.repr (Obj.magic 0)",
-					"",
-					"let create () : 'a t = { data = [||]; length = 0 }",
-					"let length (a : 'a t) : int = a.length",
-					"",
-					"let ensure_capacity (a : 'a t) (needed : int) : unit =",
-					"  let current = Array.length a.data in",
-					"  if current < needed then (",
-					"    let doubled = if current = 0 then 4 else current * 2 in",
-					"    let new_cap = if doubled < needed then needed else doubled in",
-					"    let next = Array.make new_cap hx_null in",
-					"    if a.length > 0 then Array.blit a.data 0 next 0 a.length;",
-					"    a.data <- next",
-					"  )",
-					"",
-					"let get (a : 'a t) (i : int) : 'a =",
-					"  if i < 0 || i >= a.length then Obj.magic 0 else Obj.obj a.data.(i)",
-					"",
-					"let set (a : 'a t) (i : int) (v : 'a) : 'a =",
-					"  if i < 0 then v else (",
-					"    if i >= a.length then (",
-					"      ensure_capacity a (i + 1);",
-					"      for j = a.length to i - 1 do a.data.(j) <- hx_null done;",
-					"      a.length <- i + 1",
-					"    );",
-					"    a.data.(i) <- Obj.repr v;",
-					"    v",
-					"  )",
-					"",
-					"let push (a : 'a t) (v : 'a) : int =",
-					"  ensure_capacity a (a.length + 1);",
-					"  a.data.(a.length) <- Obj.repr v;",
-					"  a.length <- a.length + 1;",
-					"  a.length",
-					"",
-					"let of_list (xs : 'a list) : 'a t =",
-					"  let a = create () in",
-					"  List.iter (fun x -> ignore (push a x)) xs;",
-					"  a",
-					"",
-					"let iter (a : 'a t) (f : 'a -> unit) : unit =",
-					"  for i = 0 to a.length - 1 do f (Obj.obj a.data.(i)) done"
-				].join("\n") + "\n";
-				sys.io.File.saveContent(
-					shimPath,
-					shimSrc
-				);
+				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
+				generatedPaths.push(shimName + ".ml");
+			}
+		}
+		{
+			final shimName = "HxBootProcess";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
 				generatedPaths.push(shimName + ".ml");
 			}
 		}

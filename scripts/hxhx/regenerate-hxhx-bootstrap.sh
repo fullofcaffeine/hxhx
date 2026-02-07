@@ -18,6 +18,8 @@ set -euo pipefail
 # - Do not edit files inside `packages/hxhx/bootstrap_out/` by hand.
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
+HAXE_CONNECT="${HAXE_CONNECT:-}"
+HXHX_BOOTSTRAP_DEBUG="${HXHX_BOOTSTRAP_DEBUG:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
@@ -40,6 +42,7 @@ if [ ! -d "$PKG_DIR" ]; then
 fi
 
 echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
+start_ts="$(date +%s)"
 (
   # We only need the emitted OCaml sources for the snapshot. Running the full OCaml build step
   # (dune/ocamlopt) here is redundant, and it can make snapshot refreshes significantly slower.
@@ -49,8 +52,22 @@ echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
   cd "$PKG_DIR"
   rm -rf out
   mkdir -p out
-  "$HAXE_BIN" build.hxml -D ocaml_emit_only >/dev/null
+  haxe_args=(build.hxml -D ocaml_emit_only)
+  if [ -n "$HAXE_CONNECT" ]; then
+    haxe_args+=(--connect "$HAXE_CONNECT")
+  fi
+
+  # `--times` prints only at the end; keep it enabled in debug mode so maintainers can
+  # see where stage0 is spending time.
+  if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
+    haxe_args+=(--times)
+    "$HAXE_BIN" "${haxe_args[@]}"
+  else
+    "$HAXE_BIN" "${haxe_args[@]}" >/dev/null
+  fi
 )
+end_ts="$(date +%s)"
+echo "== Stage0 emit duration: $((end_ts - start_ts))s"
 
 if [ ! -d "$OUT_DIR" ]; then
   echo "Missing generated output directory: $OUT_DIR" >&2
