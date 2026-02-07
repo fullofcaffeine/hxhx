@@ -30,6 +30,8 @@ export HXHX_GATE2_SKIP_PARTY
 # What
 # - `stage0_shim` (default): RunCi calls `haxe` → wrapper runs `hxhx` as a stage0 shim.
 # - `stage3_no_emit`: RunCi calls `haxe` → wrapper runs `hxhx --hxhx-stage3 --hxhx-no-emit`.
+# - `stage3_emit_runner`: RunCi is compiled+run by `hxhx --hxhx-stage3 --hxhx-emit-full-bodies`,
+#   and RunCi sub-invocations (`haxe`) are routed through `hxhx --hxhx-stage3 --hxhx-no-emit`.
 #
 # Notes
 # - `stage3_no_emit` is a diagnostic rung, not full Gate2 acceptance yet: it does not produce target
@@ -550,6 +552,13 @@ apply_misc_filter_if_requested() {
 # compiler via HAXE_BIN to avoid recursion.
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+  # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free
+  # with respect to macro-host selection/build.
+  HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+  export HXHX_MACRO_HOST_EXE
+fi
+
 WRAP_DIR="$(mktemp -d)"
 
 if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ]; then
@@ -569,6 +578,20 @@ export HAXE_BIN="${STAGE0_HAXE}"
 export HXHX_MACRO_HOST_AUTO_BUILD=1
 
 exec "${HXHX_BIN}" --hxhx-stage3 --hxhx-no-emit --hxhx-out out_hxhx_runci_stage3_no_emit "\$@"
+EOF
+elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+  cat >"$WRAP_DIR/haxe" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+
+exec "${HXHX_BIN}" --hxhx-stage3 --hxhx-no-emit --hxhx-out out_hxhx_runci_stage3_emit_runner_no_emit "\$@"
 EOF
 else
   cat >"$WRAP_DIR/haxe" <<EOF
@@ -640,6 +663,9 @@ case "$HXHX_GATE2_MODE" in
   stage3_no_emit)
     echo "== Gate 2: upstream tests/runci Macro target (diagnostic: hxhx --hxhx-stage3 --hxhx-no-emit for sub-invocations)"
     ;;
+  stage3_emit_runner)
+    echo "== Gate 2: upstream tests/runci Macro target (native attempt: hxhx --hxhx-stage3 --hxhx-emit-full-bodies for RunCi; stage3_no_emit for sub-invocations)"
+    ;;
   *)
     echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
     ;;
@@ -671,5 +697,11 @@ esac
   # RunCi defaults to the Macro target when no args/TEST are provided.
   # We intentionally pass no args here because `hxhx` treats `--` as a separator
   # and would drop everything before it.
-  PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+  if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+    rm -rf out_hxhx_runci_stage3_emit_runner
+    PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$HAXELIB_BIN" \
+      "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
+  else
+    PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+  fi
 )
