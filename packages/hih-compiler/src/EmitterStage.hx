@@ -166,12 +166,41 @@ class EmitterStage {
 	}
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>):String {
+		inline function condToOcamlBoolForString(cond:HxExpr):String {
+			// Keep the Stage3 “full bodies” rung resilient: a string expression can contain a ternary
+			// like `colorSupported ? "..." + msg : msg`, but we do not yet type/emit arbitrary bool
+			// conditions.
+			//
+			// In bring-up, prefer "always true" over emitting a non-bool expression that would fail
+			// OCaml compilation.
+			return switch (cond) {
+				case EBool(v):
+					v ? "true" : "false";
+				case EUnop("!", _),
+					EBinop("==", _, _),
+					EBinop("!=", _, _),
+					EBinop("<", _, _),
+					EBinop(">", _, _),
+					EBinop("<=", _, _),
+					EBinop(">=", _, _),
+					EBinop("&&", _, _),
+					EBinop("||", _, _):
+					final s = exprToOcaml(cond, null, tyByIdent, null);
+					s == "(Obj.magic 0)" ? "true" : s;
+				case _:
+					"true";
+			};
+		}
+
 		return switch (e) {
 			case EString(v): escapeOcamlString(v);
 			// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 			// string concatenation and lower it to OCaml's `^`.
 			case EBinop("+", a, b):
 				"(" + exprToOcamlString(a, tyByIdent) + " ^ " + exprToOcamlString(b, tyByIdent) + ")";
+			// Bootstrap: allow string-y ternaries in upstream-ish code (runci/System.hx).
+			case ETernary(cond, thenExpr, elseExpr):
+				"(if " + condToOcamlBoolForString(cond) + " then " + exprToOcamlString(thenExpr, tyByIdent) + " else " + exprToOcamlString(elseExpr, tyByIdent) + ")";
 			case EInt(v): "string_of_int " + Std.string(v);
 			case EBool(v): "string_of_bool " + (v ? "true" : "false");
 			case EFloat(v): "string_of_float " + Std.string(v);

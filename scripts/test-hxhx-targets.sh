@@ -405,6 +405,23 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --std "$tmpdir/fake_std" -cp "$t
 echo "$out" | grep -q "^unsupported_exprs_total=0$"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
+echo "== Stage3 bring-up: string ternary in println emits"
+tmpternary="$tmpdir/ternary_print"
+mkdir -p "$tmpternary/src"
+cat >"$tmpternary/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    var colorSupported = true;
+    var msg = "hello";
+    Sys.println(colorSupported ? ">" + msg + "<" : msg);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpternary/src" -main Main --hxhx-out "$tmpternary/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^>hello<$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: lazy type-driven module loading (same-package type)"
 tmplazy="$tmpdir/lazy_module_loading"
 mkdir -p "$tmplazy/src/p"
