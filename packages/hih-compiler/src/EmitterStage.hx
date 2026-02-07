@@ -168,6 +168,10 @@ class EmitterStage {
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>):String {
 		return switch (e) {
 			case EString(v): escapeOcamlString(v);
+			// When an expression is demanded as a string (e.g. trace/println), treat `+` as
+			// string concatenation and lower it to OCaml's `^`.
+			case EBinop("+", a, b):
+				"(" + exprToOcamlString(a, tyByIdent) + " ^ " + exprToOcamlString(b, tyByIdent) + ")";
 			case EInt(v): "string_of_int " + Std.string(v);
 			case EBool(v): "string_of_bool " + (v ? "true" : "false");
 			case EFloat(v): "string_of_float " + Std.string(v);
@@ -186,6 +190,11 @@ class EmitterStage {
 						&& tyByIdent.get(name) != null
 						&& tyByIdent.get(name).toString() == "Bool"):
 					"string_of_bool " + ocamlValueIdent(name);
+				case EIdent(name)
+					if (tyByIdent != null
+						&& tyByIdent.get(name) != null
+						&& tyByIdent.get(name).toString() == "String"):
+					ocamlValueIdent(name);
 			case _: escapeOcamlString("<unsupported>");
 		}
 	}
