@@ -718,10 +718,10 @@ class Stage3Compiler {
 				return error(Std.string(e));
 			}
 			final outDir = g.outDir;
-			final typeOnly = g.typeOnly;
-			final emitFullBodies = g.emitFullBodies;
-			final noEmit = g.noEmit;
-			final noRun = g.noRun;
+			var typeOnly = g.typeOnly;
+			var emitFullBodies = g.emitFullBodies;
+			var noEmit = g.noEmit;
+			var noRun = g.noRun;
 			final rest = g.rest;
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
@@ -730,6 +730,13 @@ class Stage3Compiler {
 		// a curated set of known upstream flags (e.g. `--interp`, `--debug`, `--dce`, `--resource`).
 			final parsed = Stage1Args.parse(rest, true);
 			if (parsed == null) return 2;
+			// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
+			// we emulate this by enabling the full-body emission rung.
+			final sawInterp = parsed.defines != null && parsed.defines.indexOf("interp=1") != -1;
+			emitFullBodies = emitFullBodies || sawInterp;
+
+			// Respect upstream `--no-output` by treating it as “no emit” in bring-up.
+			noEmit = noEmit || parsed.noOutput;
 
 			function inferMainFromMacroExpr(expr:String):String {
 				if (expr == null) return "";
