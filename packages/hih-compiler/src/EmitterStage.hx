@@ -130,6 +130,41 @@ class EmitterStage {
 		return "\"" + out + "\"";
 	}
 
+	/**
+		Best-effort constant folding for string expressions.
+
+		Why
+		- Stage 3 bring-up wants a tiny “escape hatch” for embedding raw OCaml expressions
+		  via `untyped __ocaml__("<ocaml expr>")`.
+		- To keep Haxe sources readable, we often build these strings by concatenating
+		  multiple string literals (e.g. `"(let\\n" + " ...\\n" + ")"`).
+		- The bootstrap emitter does not implement general constant folding; this helper
+		  exists solely to detect and fold the small subset we need.
+
+		What
+		- Returns the constant string value if `e` is provably a compile-time string
+		  built from literals and `+` concatenation.
+		- Returns `null` if the expression is not a safe constant string.
+	**/
+	static function constFoldString(e:HxExpr):Null<String> {
+		return switch (e) {
+			case EString(v):
+				v == null ? "" : v;
+			case EBinop("+", a, b):
+				final sa = constFoldString(a);
+				if (sa == null) null else {
+					final sb = constFoldString(b);
+					sb == null ? null : (sa + sb);
+				}
+			case ECast(expr, _hint):
+				constFoldString(expr);
+			case EUntyped(expr):
+				constFoldString(expr);
+			case _:
+				null;
+		}
+	}
+
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>):String {
 		return switch (e) {
 			case EString(v): escapeOcamlString(v);
@@ -388,7 +423,7 @@ class EmitterStage {
 						case _:
 							"(Obj.magic 0)";
 					}
-				case ECall(EIdent("__ocaml__"), [EString(code)]):
+				case ECall(EIdent("__ocaml__"), [arg]):
 					// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
 					//
 					// Why
@@ -397,11 +432,13 @@ class EmitterStage {
 					//
 					// What
 					// - We lower `untyped __ocaml__("<ocaml expr>")` to the raw `<ocaml expr>` at the call site.
+					// - To keep sources readable, we also accept literal concatenation:
+					//     `untyped __ocaml__("(let\\n" + \"...\" + \")\")`
 					//
-					// Non-goals / safety
-					// - This is intentionally *not* a general feature for user code. It is a controlled escape hatch
-					//   for repo-owned bring-up sources.
-					"(" + (code == null ? "" : code) + ")";
+					// Safety
+					// - Only constant-foldable strings are accepted. Anything dynamic collapses to bring-up poison.
+					final code = constFoldString(arg);
+					code == null ? "(Obj.magic 0)" : ("(" + code + ")");
 				case ECall(callee, args):
 					// Stage 3 bring-up: avoid partial applications when Haxe calls a function
 					// with omitted optional/default parameters.
@@ -640,6 +677,19 @@ class EmitterStage {
 					}
 				case EField(obj, _):
 					hasBringupPoison(obj);
+				// Stage 3 bring-up: allow the controlled OCaml escape hatch in expression positions.
+				//
+				// Why
+				// - Bring-up server binaries (macro host, display server) need small bits of native
+				//   OCaml I/O and looping semantics before Stage3 models the full Haxe runtime.
+				// - We lower `untyped __ocaml__("<ocaml expr>")` directly in `exprToOcaml`, but
+				//   `returnExprToOcaml` must also treat the call as non-poison so it isn't collapsed
+				//   to `(Obj.magic 0)` in statement positions.
+				//
+				// Safety
+				// - This only whitelists the exact `__ocaml__("<string literal>")` shape.
+				case ECall(EIdent("__ocaml__"), [arg]) if (constFoldString(arg) != null):
+					false;
 				case ECall(callee, args):
 					if (hasBringupPoison(callee)) return true;
 					for (a in args) if (hasBringupPoison(a)) return true;

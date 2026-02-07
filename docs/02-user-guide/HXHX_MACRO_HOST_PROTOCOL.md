@@ -18,6 +18,24 @@ while we bootstrap:
 - macro state can be reset deterministically
 - the ABI boundary becomes explicit and testable (good for Gate 1/Gate 2)
 
+## Macro host implementations in this repo (bring-up)
+
+There are currently **two** macro-host entrypoints, depending on how the host is built:
+
+- Stage 4 host (`hxhxmacrohost.Main`)
+  - Built by stage0 `haxe` + `reflaxe.ocaml` (or via the committed OCaml bootstrap snapshot when no dynamic entrypoints are requested).
+  - Implements the broader bring-up method set documented below (including reverse-RPC).
+- Stage 3 host (`hxhxmacrohost.Stage3Main`)
+  - Built by `hxhx --hxhx-stage3` (stage0-free) and used specifically to make dynamic macro-host builds possible
+    without a stage0 toolchain.
+  - **Protocol-correct** for the handshake and the `--hxhx-macro-selftest` probe, but intentionally minimal:
+    - `ping`
+    - `compiler.define`
+    - `context.defined`
+    - `context.definedValue`
+
+When you see “macro host” in Gate bring-up notes, it may refer to either implementation.
+
 ## Versioning rules
 
 This is a versioned protocol.
