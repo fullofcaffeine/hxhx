@@ -344,14 +344,36 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
 echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^OK$"
-echo "$out" | grep -vq "^BAD$"
-echo "$out" | grep -q "^run=ok$"
+	echo "$out" | grep -q "^OK$"
+	echo "$out" | grep -vq "^BAD$"
+	echo "$out" | grep -q "^run=ok$"
 
-echo "== Stage3 bring-up: parses try/catch expression initializer"
-tmptry="$tmpdir/try_expr"
-mkdir -p "$tmptry/src"
-cat >"$tmptry/src/Main.hx" <<'HX'
+	echo "== Stage3 bring-up: body parse recovery doesn't truncate after unsupported constructs"
+	tmpbodyrecover="$tmpdir/body_recover"
+	mkdir -p "$tmpbodyrecover/src"
+	cat >"$tmpbodyrecover/src/Main.hx" <<'HX'
+	class Main {
+	  static function main() {
+	    trace("A");
+	    // Our Stage3 body parser doesn't support `for` loops yet, but it must not
+	    // silently truncate the remainder of the function body when it encounters one.
+	    for (i in 0...3) {
+	      trace(i);
+	    }
+	    trace("C");
+	  }
+	}
+HX
+	out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbodyrecover/src" -main Main --hxhx-out "$tmpbodyrecover/out")"
+	echo "$out" | grep -q "^stage3=ok$"
+	echo "$out" | grep -q "^A$"
+	echo "$out" | grep -q "^C$"
+	echo "$out" | grep -q "^run=ok$"
+
+	echo "== Stage3 bring-up: parses try/catch expression initializer"
+	tmptry="$tmpdir/try_expr"
+	mkdir -p "$tmptry/src"
+	cat >"$tmptry/src/Main.hx" <<'HX'
 class Main {
   static function main() {
     // Gate2 regression: `try` is commonly used as an *expression* in variable initializers.

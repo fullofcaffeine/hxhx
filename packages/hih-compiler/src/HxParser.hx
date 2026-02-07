@@ -1068,40 +1068,71 @@
 		}
 	}
 
-	function parseFunctionBodyStatementsBestEffort():Array<HxStmt> {
-		// Like `parseFunctionBodyStatements`, but never throws.
-		//
-		// Why
-		// - The native frontend protocol transmits method bodies as raw source slices.
+		function parseFunctionBodyStatementsBestEffort():Array<HxStmt> {
+			// Like `parseFunctionBodyStatements`, but never throws.
+			//
+			// Why
+			// - The native frontend protocol transmits method bodies as raw source slices.
 		// - Our statement/expression grammar is still incomplete; we want to recover as much
 		//   structure as possible without hard-failing the whole module.
 		//
 		// How
-		// - Parse statement-by-statement.
-		// - On parse errors, resynchronize to `;` / `}` / EOF and continue.
-		final out = new Array<HxStmt>();
-		while (true) {
-			switch (cur.kind) {
-				case TEof:
-					return out;
-				case TRBrace:
-					bump();
-					return out;
-				case _:
-					try {
-						out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
-						0; // ensure try/catch has a concrete, consistent expression type across targets
-					} catch (_:Dynamic) {
-						// Best-effort resync: advance until a plausible statement boundary.
-						while (!cur.kind.match(TSemicolon) && !cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+			// - Parse statement-by-statement.
+			// - On parse errors, resynchronize to `;` / `}` / EOF and continue.
+			final out = new Array<HxStmt>();
+			inline function isWrapperCloseBrace():Bool {
+				return cur.kind.match(TRBrace) && peekKind().match(TEof);
+			}
+			while (true) {
+				switch (cur.kind) {
+					case TEof:
+						return out;
+					case TRBrace:
+						// Important: method bodies can contain nested blocks, so a stray `}` may appear
+						// at top-level if we failed to parse a construct that contains braces.
+						//
+						// Our wrapper source is always:
+						//   "{\n" + body + "\n}"
+						// so the *real* end-of-body brace is the one immediately followed by TEof.
+						if (isWrapperCloseBrace()) {
 							bump();
+							return out;
 						}
-						if (cur.kind.match(TSemicolon)) bump();
-						0;
-					}
+						// Stray brace: consume it and continue so we don't silently truncate the body.
+						bump();
+						out.push(SExpr(EUnsupported("stray_rbrace"), HxPos.unknown()));
+					case _:
+						try {
+							out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+							0; // ensure try/catch has a concrete, consistent expression type across targets
+						} catch (_:Dynamic) {
+							// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
+							out.push(SExpr(EUnsupported("body_parse_error"), HxPos.unknown()));
+
+							// Best-effort resync: advance until a plausible statement boundary.
+							while (true) {
+								switch (cur.kind) {
+									case TEof:
+										break;
+									case TSemicolon:
+										bump();
+										break;
+									case TRBrace:
+										// Only treat the wrapper close brace as "end of body".
+										if (isWrapperCloseBrace()) {
+											break;
+										}
+										// Otherwise, consume and keep scanning.
+										bump();
+									case _:
+										bump();
+								}
+							}
+							0;
+						}
+				}
 			}
 		}
-	}
 
 	function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool):HxFunctionDecl {
 		capturedReturnStringLiteral = "";
