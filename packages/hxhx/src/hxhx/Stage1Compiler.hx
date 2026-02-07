@@ -222,37 +222,40 @@ class Stage1Compiler {
 	- Parses only `-cp/-p`, `-main`, and `--no-output`.
 	- Returns `null` (and prints a user-facing message) on invalid input.
 **/
-class Stage1Args {
-	public final classPaths:Array<String>;
-	public final main:String;
-	public final noOutput:Bool;
-	public final defines:Array<String>;
-	public final libs:Array<String>;
-	public final macros:Array<String>;
-	public final cwd:String;
+	class Stage1Args {
+		public final classPaths:Array<String>;
+		public final main:String;
+		public final noOutput:Bool;
+		public final roots:Array<String>;
+		public final defines:Array<String>;
+		public final libs:Array<String>;
+		public final macros:Array<String>;
+		public final cwd:String;
 
-	function new(classPaths:Array<String>, main:String, noOutput:Bool, defines:Array<String>, libs:Array<String>, macros:Array<String>, cwd:String) {
-		this.classPaths = classPaths;
-		this.main = main;
-		this.noOutput = noOutput;
-		this.defines = defines;
-		this.libs = libs;
-		this.macros = macros;
-		this.cwd = cwd;
-	}
+		function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>, cwd:String) {
+			this.classPaths = classPaths;
+			this.main = main;
+			this.noOutput = noOutput;
+			this.roots = roots;
+			this.defines = defines;
+			this.libs = libs;
+			this.macros = macros;
+			this.cwd = cwd;
+		}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
 		final expanded = expandHxmlArgs(args);
 		if (expanded == null) return null;
 
-		final classPaths = new Array<String>();
-		var main = "";
-		var noOutput = false;
-		final defines = new Array<String>();
-		final libs = new Array<String>();
-		final macros = new Array<String>();
-		var cwd = ".";
-		var stdRoot = "";
+			final classPaths = new Array<String>();
+			var main = "";
+			var noOutput = false;
+			final roots = new Array<String>();
+			final defines = new Array<String>();
+			final libs = new Array<String>();
+			final macros = new Array<String>();
+			var cwd = ".";
+			var stdRoot = "";
 
 		var i = 0;
 		while (i < expanded.length) {
@@ -274,17 +277,48 @@ class Stage1Args {
 					}
 					defines.push("dce=" + expanded[i + 1]);
 					i += 2;
-				case "--resource" if (permissive):
-					if (i + 1 >= expanded.length) {
-						Sys.println("hxhx(stage1): missing value after --resource");
-						return null;
-					}
-					i += 2;
-				case "-cp", "-p", "--class-path":
-					if (i + 1 >= expanded.length) {
-						Sys.println("hxhx(stage1): missing value after " + a);
-						return null;
-					}
+					case "--resource" if (permissive):
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after --resource");
+							return null;
+						}
+						i += 2;
+					// Target selection flags: Stage3 bring-up does not emit target artifacts, but we must
+					// consume these flags (and their output path) so the output file is not mis-parsed as
+					// a positional "dot path" root.
+					case "-js" | "--js" | "-lua" | "--lua" | "-python" | "--python" | "-php" | "--php" | "-neko" | "--neko" | "-cpp"
+						| "--cpp" | "-cs" | "--cs" | "-java" | "--java" | "-jvm" | "--jvm" | "-hl" | "--hl" | "-swf" | "--swf"
+						| "-as3" | "--as3" | "-xml" | "--xml" if (permissive):
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after " + a);
+							return null;
+						}
+						i += 2;
+					case "--cmd" if (permissive):
+						// Upstream `.hxml` frequently includes `--cmd <shell...>` setup steps.
+						// Stage1/Stage3 bring-up does not execute commands, but we must consume the argument
+						// to avoid treating it as a stray positional token (which can break parsing).
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after --cmd");
+							return null;
+						}
+						i += 2;
+					case "--run", "-x" if (permissive):
+						// Upstream allows macro/compile-time suites to be driven via `--run`/`-x` instead
+						// of `-main` in some fixtures. For Stage3 diagnostic runs, treat this as setting
+						// the main module and ignore any additional runtime args.
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after " + a);
+							return null;
+						}
+						main = expanded[i + 1];
+						i += 2;
+						while (i < expanded.length && !StringTools.startsWith(expanded[i], "-")) i++;
+					case "-cp", "-p", "--class-path":
+						if (i + 1 >= expanded.length) {
+							Sys.println("hxhx(stage1): missing value after " + a);
+							return null;
+						}
 					classPaths.push(expanded[i + 1]);
 					i += 2;
 				case "-C", "--cwd":
@@ -353,21 +387,24 @@ class Stage1Args {
 						Sys.println("hxhx(stage1): unsupported flag: " + a);
 						return null;
 					}
-					if (permissive) {
-						Sys.println("hxhx(stage1): ignoring unsupported arg in permissive mode: " + a);
-						i += 1;
-						continue;
-					}
-					Sys.println("hxhx(stage1): unsupported argument: " + a);
-					return null;
+						if (permissive) {
+							// Upstream allows passing "dot paths" (type/module roots) as positional args.
+							// For Stage1/Stage3 bring-up, record these so Stage3 can treat them as resolver roots
+							// in macro-only/compile-time suites that omit `-main`.
+							roots.push(a);
+							i += 1;
+							continue;
+						}
+						Sys.println("hxhx(stage1): unsupported argument: " + a);
+						return null;
+				}
 			}
-		}
 
-		if (classPaths.length == 0) classPaths.push(".");
-		if (stdRoot == null || stdRoot.length == 0) stdRoot = inferStdRoot();
-		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
-		return new Stage1Args(classPaths, main, noOutput, defines, libs, macros, cwd);
-	}
+			if (classPaths.length == 0) classPaths.push(".");
+			if (stdRoot == null || stdRoot.length == 0) stdRoot = inferStdRoot();
+			if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
+			return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, cwd);
+		}
 
 	static function inferStdRoot():String {
 		try {
@@ -419,14 +456,15 @@ class Stage1Args {
 		- Using non-inline getters avoids relying on OCaml record-field label visibility and keeps the
 		  Stage1/Stage3 bring-up code stable as we evolve the backend.
 	**/
-	public static function getClassPaths(a:Stage1Args):Array<String> return a.classPaths;
-	public static function getMain(a:Stage1Args):String return a.main;
-	public static function getNoOutput(a:Stage1Args):Bool return a.noOutput;
-	public static function getDefines(a:Stage1Args):Array<String> return a.defines;
-	public static function getLibs(a:Stage1Args):Array<String> return a.libs;
-	public static function getMacros(a:Stage1Args):Array<String> return a.macros;
-	public static function getCwd(a:Stage1Args):String return a.cwd;
-}
+		public static function getClassPaths(a:Stage1Args):Array<String> return a.classPaths;
+		public static function getMain(a:Stage1Args):String return a.main;
+		public static function getNoOutput(a:Stage1Args):Bool return a.noOutput;
+		public static function getRoots(a:Stage1Args):Array<String> return a.roots;
+		public static function getDefines(a:Stage1Args):Array<String> return a.defines;
+		public static function getLibs(a:Stage1Args):Array<String> return a.libs;
+		public static function getMacros(a:Stage1Args):Array<String> return a.macros;
+		public static function getCwd(a:Stage1Args):String return a.cwd;
+	}
 
 /**
 	Stage1 module resolver (main module only).

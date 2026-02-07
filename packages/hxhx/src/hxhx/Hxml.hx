@@ -116,6 +116,35 @@ class Hxml {
 		if (i >= s.length) return [];
 		if (s.charCodeAt(i) == "#".code) return [];
 
+		// Upstream `.hxml` treats some flags as "consume the rest of the line as a single argument"
+		// (not whitespace-tokenized). This is especially important for:
+		// - `--macro <expr>` where `<expr>` commonly contains spaces/parentheses, and
+		// - `--cmd <shell>` where the command is naturally multi-word.
+		//
+		// Our Stage1/Stage3 bring-up uses `.hxml` heavily for upstream gates (Gate1/Gate2), so we
+		// implement this small compatibility behavior here in the tokenizer (before generic splitting).
+		function restOfLineAfter(prefix:String):Null<Array<String>> {
+			final p = prefix.length;
+			if (i + p > s.length) return null;
+			if (s.substr(i, p) != prefix) return null;
+			final j = i + p;
+			// Require whitespace after the flag to avoid matching `--macroFoo`.
+			if (j < s.length && !isSpace(s.charCodeAt(j))) return null;
+			var k = j;
+			while (k < s.length && isSpace(s.charCodeAt(k))) k++;
+			final rest = StringTools.rtrim(s.substr(k));
+			if (rest.length == 0) {
+				Sys.println("hxhx(stage1): missing value after " + prefix);
+				return null;
+			}
+			return [prefix, rest];
+		}
+
+		final macroLine = restOfLineAfter("--macro");
+		if (macroLine != null) return macroLine;
+		final cmdLine = restOfLineAfter("--cmd");
+		if (cmdLine != null) return cmdLine;
+
 		final tokens = new Array<String>();
 		var cur = new StringBuf();
 		var quote:Int = 0; // 0 = none, otherwise quote char code

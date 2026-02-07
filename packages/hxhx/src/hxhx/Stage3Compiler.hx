@@ -469,12 +469,26 @@ class Stage3Compiler {
 		return out;
 	}
 
-	static function isBuiltinMacroExpr(expr:String):Bool {
-		final e = trim(expr);
-		return StringTools.startsWith(e, "BuiltinMacros.")
-			|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros.")
-			|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros");
-	}
+		static function isBuiltinMacroExpr(expr:String):Bool {
+			final e = trim(expr);
+			// Builtins compiled into the macro host binary (and/or treated as "no-op builtins" during bring-up).
+			//
+			// Why
+			// - Stage4 brings up a *safe* macro execution surface incrementally. Many upstream macro expressions
+			//   (especially in compiler test suites) are not supported as real "user macro entrypoints" yet.
+			// - Auto-building a macro host that tries to execute those expressions can crash the host (because
+			//   the runtime macro API surface is still incomplete).
+			//
+			// What
+			// - Treat a tiny allowlist as builtins so they are NOT included in the auto-built macro-host entrypoint list.
+			// - The expressions are still sent to the macro host via `macro.run`; the host may treat them as a no-op.
+			return StringTools.startsWith(e, "BuiltinMacros.")
+				|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros.")
+				|| StringTools.startsWith(e, "hxhxmacrohost.BuiltinMacros")
+				// Upstream null-safety test suite macros (Gate2 diagnostics).
+				|| StringTools.startsWith(e, "nullSafety(")
+				|| StringTools.startsWith(e, "Validator.register(");
+		}
 
 	static function anyNonBuiltinMacro(exprs:Array<String>):Bool {
 		for (e in exprs) if (!isBuiltinMacroExpr(e)) return true;
@@ -680,10 +694,40 @@ class Stage3Compiler {
 		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
 		// non-essential flags. We therefore use Stage1Args in a small permissive mode that ignores
 		// a curated set of known upstream flags (e.g. `--interp`, `--debug`, `--dce`, `--resource`).
-		final parsed = Stage1Args.parse(rest, true);
-		if (parsed == null) return 2;
+			final parsed = Stage1Args.parse(rest, true);
+			if (parsed == null) return 2;
 
-		if (parsed.main == null || parsed.main.length == 0) return error("missing -main <TypeName>");
+			function inferMainFromMacroExpr(expr:String):String {
+				if (expr == null) return "";
+				var s = StringTools.trim(expr);
+				if (s.length == 0) return "";
+				final p = s.indexOf("(");
+				if (p != -1) s = StringTools.trim(s.substr(0, p));
+				final lastDot = s.lastIndexOf(".");
+				if (lastDot == -1) return s;
+				return StringTools.trim(s.substr(0, lastDot));
+			}
+
+			// Upstream allows invocations without `-main`:
+			// - "macro-only" compilation (`--macro ...`) and/or
+			// - compile-time suites that pass "dot paths" as positional args (type/module roots).
+			//
+			// Stage3 bring-up supports this by deriving resolver roots in this priority order:
+			// 1) explicit `-main`
+			// 2) positional roots (`<pack.TypeName>` args)
+			// 3) first `--macro` entrypoint's type path (before the final `.method(...)`)
+			final roots0 = new Array<String>();
+			if (parsed.main != null && parsed.main.length > 0) {
+				roots0.push(parsed.main);
+			} else if (parsed.roots != null && parsed.roots.length > 0) {
+				for (r in parsed.roots) if (r != null && r.length > 0) roots0.push(r);
+			} else if (parsed.macros.length > 0) {
+				final inferred = inferMainFromMacroExpr(parsed.macros[0]);
+				if (inferred.length == 0) return error("missing -main <TypeName>");
+				roots0.push(inferred);
+			} else {
+				return error("missing -main <TypeName>");
+			}
 
 		// Type-only mode is intended to answer “how far does the typer get?” without requiring a
 		// working macro host. Upstream-ish workloads (e.g. `tests/unit/compile-macro.hxml`) often
@@ -853,7 +897,7 @@ class Stage3Compiler {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}
 
-		final roots = [parsed.main].concat(hxhx.macro.MacroState.listIncludedModules());
+		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());
 		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots, definesMap) catch (e:Dynamic) {
 				closeMacroSession();
 				return error("resolve failed: " + formatException(e));

@@ -20,6 +20,24 @@ UPSTREAM_REF="${HAXE_UPSTREAM_REF:-4.3.7}"
 : "${HXHX_GATE2_SKIP_PARTY:=1}"
 export HXHX_GATE2_SKIP_PARTY
 
+# Gate2 runner mode.
+#
+# Why
+# - Gate2 acceptance ultimately requires running runci Macro with a non-delegating `hxhx`.
+# - Today `hxhx` is still a stage0 shim for the general `haxe` CLI, but we already have a Stage3
+#   pipeline (`--hxhx-stage3`) that can resolve/type macro-shaped workloads without delegating.
+#
+# What
+# - `stage0_shim` (default): RunCi calls `haxe` → wrapper runs `hxhx` as a stage0 shim.
+# - `stage3_no_emit`: RunCi calls `haxe` → wrapper runs `hxhx --hxhx-stage3 --hxhx-no-emit`.
+#
+# Notes
+# - `stage3_no_emit` is a diagnostic rung, not full Gate2 acceptance yet: it does not produce target
+#   artifacts, so later runci stages may fail due to missing outputs. Use it to surface the next missing
+#   frontend/typer/macro gap.
+: "${HXHX_GATE2_MODE:=stage0_shim}"
+export HXHX_GATE2_MODE
+
 # Upstream `tests/misc` includes Issue11737, which runs a networked `haxelib install hxjava`
 # in `_setup.hxml`. That makes Gate2 flaky/offline-hostile in CI.
 #
@@ -534,7 +552,26 @@ HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
 WRAP_DIR="$(mktemp -d)"
 
-cat >"$WRAP_DIR/haxe" <<EOF
+if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ]; then
+  cat >"$WRAP_DIR/haxe" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${STAGE0_STD_PATH}" ]; then
+  export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+fi
+export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+
+# Allow Stage3 to auto-build a macro host when needed. This uses stage0 haxe (still required today).
+export HAXE_BIN="${STAGE0_HAXE}"
+export HXHX_MACRO_HOST_AUTO_BUILD=1
+
+exec "${HXHX_BIN}" --hxhx-stage3 --hxhx-no-emit --hxhx-out out_hxhx_runci_stage3_no_emit "\$@"
+EOF
+else
+  cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
@@ -547,6 +584,7 @@ export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH
 export HAXE_BIN="${STAGE0_HAXE}"
 exec "${HXHX_BIN}" "\$@"
 EOF
+fi
 chmod +x "$WRAP_DIR/haxe"
 
 cat >"$WRAP_DIR/haxelib" <<EOF
@@ -591,7 +629,21 @@ exec "${STAGE0_NEKO}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/neko"
 
-echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
+if [ "${HXHX_GATE2_DEBUG_WRAPPER:-0}" = "1" ]; then
+  echo "--- wrapper haxe ---"
+  nl -ba "$WRAP_DIR/haxe" || true
+  echo "--- wrapper haxelib ---"
+  nl -ba "$WRAP_DIR/haxelib" || true
+fi
+
+case "$HXHX_GATE2_MODE" in
+  stage3_no_emit)
+    echo "== Gate 2: upstream tests/runci Macro target (diagnostic: hxhx --hxhx-stage3 --hxhx-no-emit for sub-invocations)"
+    ;;
+  *)
+    echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
+    ;;
+esac
 (
   cd "$UPSTREAM_DIR/tests"
   # Use a local haxelib repository scoped to the worktree so we don't mutate the user's global repo.

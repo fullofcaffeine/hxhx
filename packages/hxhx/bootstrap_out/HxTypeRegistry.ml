@@ -710,11 +710,12 @@ let init () : unit =
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'classPaths' for hxhx.Stage1Args" in
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'main' for hxhx.Stage1Args" in
     let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'noOutput' for hxhx.Stage1Args" in
-    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'defines' for hxhx.Stage1Args" in
-    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'libs' for hxhx.Stage1Args" in
-    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'macros' for hxhx.Stage1Args" in
-    let a6 = if len > 6 then Obj.obj ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'cwd' for hxhx.Stage1Args" in
-    Obj.repr (Hxhx_Stage1Compiler.stage1args_create a0 a1 a2 a3 a4 a5 a6)
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'roots' for hxhx.Stage1Args" in
+    let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'defines' for hxhx.Stage1Args" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'libs' for hxhx.Stage1Args" in
+    let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'macros' for hxhx.Stage1Args" in
+    let a7 = if len > 7 then Obj.obj ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'cwd' for hxhx.Stage1Args" in
+    Obj.repr (Hxhx_Stage1Compiler.stage1args_create a0 a1 a2 a3 a4 a5 a6 a7)
   );
   HxType.register_class_ctor "hxhx.Stage1Compiler" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage1Compiler.create ())
@@ -961,8 +962,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.Hxml" [ "isSpace"; "parseFile"; "parseFileRec"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
   HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "stripAll" ];
-  HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "libs"; "macros"; "main"; "noOutput" ];
-  HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCwd"; "getDefines"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "inferStdRoot"; "parse" ];
+  HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "libs"; "macros"; "main"; "noOutput"; "roots" ];
+  HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCwd"; "getDefines"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getRoots"; "inferStdRoot"; "parse" ];
   HxType.register_class_instance_fields "hxhx.Stage1Compiler" [];
   HxType.register_class_static_fields "hxhx.Stage1Compiler" [ "error"; "formatParseError"; "haxelibBin"; "resolveHaxelibPaths"; "run" ];
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
