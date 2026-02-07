@@ -9,7 +9,7 @@ set -euo pipefail
 #   and building it with `dune`.
 #
 # What
-# - Builds `packages/hxhx` via stage0 `haxe` + `reflaxe.ocaml`.
+# - Emits `packages/hxhx` via stage0 `haxe` + `reflaxe.ocaml` (emit-only; no dune build).
 # - Copies the generated OCaml sources (excluding `_build/` and `_gen_hx/`) into:
 #     packages/hxhx/bootstrap_out/
 #
@@ -41,9 +41,15 @@ fi
 
 echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
 (
-  cd "$ROOT"
-  HXHX_FORCE_STAGE0=1 \
-  bash "$ROOT/scripts/hxhx/build-hxhx.sh" >/dev/null
+  # We only need the emitted OCaml sources for the snapshot. Running the full OCaml build step
+  # (dune/ocamlopt) here is redundant, and it can make snapshot refreshes significantly slower.
+  #
+  # `-D ocaml_emit_only` keeps stage0 as a codegen oracle while preserving the "stage0-free build"
+  # property for everyone else via the committed snapshot + dune build in CI.
+  cd "$PKG_DIR"
+  rm -rf out
+  mkdir -p out
+  "$HAXE_BIN" build.hxml -D ocaml_emit_only >/dev/null
 )
 
 if [ ! -d "$OUT_DIR" ]; then
@@ -58,5 +64,10 @@ mkdir -p "$BOOTSTRAP_DIR"
 # Copy everything except build artifacts and generator sources.
 (cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
 
-echo "OK: regenerated bootstrap snapshot"
+echo "== Verifying bootstrap snapshot builds (dune)"
+(
+  cd "$BOOTSTRAP_DIR"
+  dune build >/dev/null
+)
 
+echo "OK: regenerated bootstrap snapshot"

@@ -166,13 +166,17 @@ class ExprMacroExpander {
 			case SVar(name, typeHint, init, pos):
 				final rInit = rewriteExprOrNull(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				rInit != init ? SVar(name, typeHint, rInit, pos) : s;
-			case SIf(cond, thenBranch, elseBranch, pos):
-				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-				final rElse = elseBranch == null ? null : rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-				(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
-			case SReturnVoid(_):
-				s;
+				case SIf(cond, thenBranch, elseBranch, pos):
+					final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+					final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+					final rElse = elseBranch == null ? null : rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+					(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
+				case SForIn(name, iterable, body, pos):
+					final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+					final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+					(rIt != iterable || rBody != body) ? SForIn(name, rIt, rBody, pos) : s;
+				case SReturnVoid(_):
+					s;
 			case SReturn(e, pos):
 				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				re != e ? SReturn(re, pos) : s;
@@ -292,13 +296,17 @@ class ExprMacroExpander {
 						out.push(rv);
 					}
 					changed ? EArrayDecl(out) : e;
-				case EArrayAccess(arr, idx):
-					final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-					final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-					(ra != arr || ri != idx) ? EArrayAccess(ra, ri) : e;
-				case ECast(expr, hint):
-					final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-					re != expr ? ECast(re, hint) : e;
+					case EArrayAccess(arr, idx):
+						final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						(ra != arr || ri != idx) ? EArrayAccess(ra, ri) : e;
+					case ERange(start, end):
+						final rs = rewriteExpr(start, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						final re = rewriteExpr(end, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						(rs != start || re != end) ? ERange(rs, re) : e;
+					case ECast(expr, hint):
+						final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						re != expr ? ECast(re, hint) : e;
 				case EUntyped(expr):
 					final re = rewriteExpr(expr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 					re != expr ? EUntyped(re) : e;
@@ -327,13 +335,14 @@ class ExprMacroExpander {
 			case EBinop(_, _, _): "Binop";
 				case ETernary(_, _, _): "Ternary";
 				case EAnon(_, _): "Anon";
-				case EArrayDecl(_): "ArrayDecl";
-				case EArrayAccess(_, _): "ArrayAccess";
-				case ECast(_, _): "Cast";
-				case EUntyped(_): "Untyped";
-				case EUnsupported(_): "Unsupported";
+					case EArrayDecl(_): "ArrayDecl";
+					case EArrayAccess(_, _): "ArrayAccess";
+					case ERange(_, _): "Range";
+					case ECast(_, _): "Cast";
+					case EUntyped(_): "Untyped";
+					case EUnsupported(_): "Unsupported";
+				}
 			}
-		}
 
 	static function buildImportMap(imports:Array<String>, modulePkg:String):haxe.ds.StringMap<String> {
 		final map = new haxe.ds.StringMap<String>();

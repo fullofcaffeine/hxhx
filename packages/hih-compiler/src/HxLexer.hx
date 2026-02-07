@@ -130,6 +130,7 @@ class HxLexer {
 			case "while": new HxToken(TKeyword(KWhile), startPos);
 			case "do": new HxToken(TKeyword(KDo), startPos);
 			case "for": new HxToken(TKeyword(KFor), startPos);
+			case "in": new HxToken(TKeyword(KIn), startPos);
 			case "break": new HxToken(TKeyword(KBreak), startPos);
 			case "continue": new HxToken(TKeyword(KContinue), startPos);
 			case "untyped": new HxToken(TKeyword(KUntyped), startPos);

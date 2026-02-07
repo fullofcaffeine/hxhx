@@ -239,6 +239,23 @@
 		EArrayAccess(array:HxExpr, index:HxExpr);
 
 		/**
+			Range expression: `start...end`.
+
+			Why
+			- This shape appears most often in `for` loops (`for (i in 0...n)`), which are used
+			  heavily by upstream compiler test harnesses (including Gate2 bring-up).
+
+			What
+			- Stores the start and end expressions (end is **exclusive**, like Haxe).
+
+			How (bring-up)
+			- Today this node is only produced by the Stage3 parser for `for (i in start...end)`
+			  loops so the Stage3 bootstrap emitter can lower it to an OCaml `for` loop without
+			  needing a full `IntIterator` runtime model.
+		**/
+		ERange(start:HxExpr, end:HxExpr);
+
+		/**
 			Cast expression: `cast expr` or `cast(expr, Type)`.
 
 			Why

@@ -37,6 +37,7 @@ enum HxKeyword {
 	KWhile;
 	KDo;
 	KFor;
+	KIn;
 	KBreak;
 	KContinue;
 	KUntyped;

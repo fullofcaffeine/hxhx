@@ -174,6 +174,20 @@ class TyperStage {
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(thenBranch);
 					if (elseBranch != null) typeStmt(elseBranch);
+				case SForIn(name, iterable, body, pos):
+					// Bring-up: type-check the iterable expression and bind the loop variable.
+					//
+					// We intentionally model the loop variable as a function-local symbol for now
+					// (not a nested scope) so later statements can still reference it during bring-up.
+					inferExprType(iterable, scope, ctx, pos);
+					final loopTy = switch (iterable) {
+						case ERange(_, _):
+							TyType.fromHintText("Int");
+						case _:
+							TyType.fromHintText("Dynamic");
+					}
+					scope.declareLocal(name, loopTy);
+					typeStmt(body);
 					case SVar(name, typeHint, init, pos):
 						// Declare first so subsequent statements can reference the symbol deterministically.
 						final hinted = typeFromHintInContext(typeHint, ctx);
@@ -429,6 +443,11 @@ class TyperStage {
 					inferExprType(array, scope, ctx, pos);
 					inferExprType(index, scope, ctx, pos);
 					// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
+					TyType.fromHintText("Dynamic");
+				case ERange(start, end):
+					inferExprType(start, scope, ctx, pos);
+					inferExprType(end, scope, ctx, pos);
+					// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
 					TyType.fromHintText("Dynamic");
 				case ECast(expr, typeHint):
 					final inner = inferExprType(expr, scope, ctx, pos);

@@ -59,7 +59,7 @@ let ocamlTypeFromTy = fun t -> let tempResult = ref "" in (
       tempResult := __assign_24;
       __assign_24
     )
-    | "Int64" | "haxe.Int64" -> let __assign_25 = "HxInt64.t" in (
+    | "Int64" | "haxe.Int64" -> let __assign_25 = "Haxe_Int64.t" in (
       tempResult := __assign_25;
       __assign_25
     )
@@ -15173,12 +15173,12 @@ let emitToDir = fun p outDir emitFullBodies -> (
         ignore (HxFile.saveContent shimPath ((((((("(* hxhx(stage3) bootstrap shim: haxe.PosInfos *)\n" ^ "type t = {\n") ^ "  fileName : string;\n") ^ "  lineNumber : int;\n") ^ "  className : string;\n") ^ "  methodName : string;\n") ^ "  customParams : Obj.t;\n") ^ "}\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
-      ignore (let shimName = "HxInt64" in let shimPath = Haxe_io_Path.join (let __arr_2549 = HxArray.create () in (
+      ignore (let shimName = "Haxe_Int64" in let shimPath = Haxe_io_Path.join (let __arr_2549 = HxArray.create () in (
         ignore (HxArray.push __arr_2549 outAbs);
         ignore (HxArray.push __arr_2549 (HxString.toStdString shimName ^ ".ml"));
         __arr_2549
       )) in if not (HxFileSystem.exists shimPath) then ignore ((
-        ignore (HxFile.saveContent shimPath (((("(* hxhx(stage3) bootstrap shim: haxe.Int64 (shape-only) *)\n" ^ "type t = {\n") ^ "  low : int;\n") ^ "  high : int;\n") ^ "}\n"));
+        ignore (HxFile.saveContent shimPath (((((("(* hxhx(stage3) bootstrap shim: haxe.Int64 (shape-only) *)\n" ^ "type t = {\n") ^ "  low : int;\n") ^ "  high : int;\n") ^ "}\n") ^ "\n") ^ "let make (low : int) (high : int) : t = { low; high }\n"));
         HxArray.push generatedPaths (HxString.toStdString shimName ^ ".ml")
       )) else ());
       let typedModules = MacroExpandedProgram.getTypedModules p () in (

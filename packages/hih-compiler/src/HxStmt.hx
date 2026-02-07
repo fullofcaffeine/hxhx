@@ -57,6 +57,31 @@ enum HxStmt {
 	**/
 	SIf(cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>, pos:HxPos);
 
+	/**
+		For-in loop: `for (name in iterable) body`.
+
+		Why
+		- Gate2 (and many upstream-ish workloads) use `for (i in 0...n)` and `for (x in arr)`
+		  heavily for orchestration and simple iteration.
+		- Even a minimal loop form unlocks a lot of "compiler-shaped" code paths (building lists
+		  of work items, walking arrays, etc.).
+
+		What
+		- Stores:
+		  - the loop variable name
+		  - the iterable expression (bring-up supports `start...end` ranges and arrays)
+		  - the loop body statement
+
+		How (bring-up semantics)
+		- Stage3 typer:
+		  - declares the loop variable as a local (best-effort type: `Int` for `start...end`, otherwise `Dynamic`)
+		  - types the body with that local in scope
+		- Stage3 bootstrap emitter:
+		  - lowers `start...end` to an OCaml `for` loop (exclusive end)
+		  - lowers array iteration to `HxBootArray.iter`.
+	**/
+	SForIn(name:String, iterable:HxExpr, body:HxStmt, pos:HxPos);
+
 	SReturnVoid(pos:HxPos);
 	SReturn(expr:HxExpr, pos:HxPos);
 	SExpr(expr:HxExpr, pos:HxPos);

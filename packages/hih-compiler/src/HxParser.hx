@@ -55,9 +55,10 @@
 				case KCatch: "catch";
 				case KThrow: "throw";
 				case KWhile: "while";
-				case KDo: "do";
-				case KFor: "for";
-				case KBreak: "break";
+					case KDo: "do";
+					case KFor: "for";
+					case KIn: "in";
+					case KBreak: "break";
 				case KContinue: "continue";
 				case KUntyped: "untyped";
 				case KCast: "cast";
@@ -1371,19 +1372,72 @@
 					}
 					SExpr(EUnsupported("while"), pos);
 				case TKeyword(KFor):
-					// Bring-up: consume `for (...) stmt` as unsupported.
+					// Stage 3 bring-up: support the Haxe `for (name in iterable) stmt` form.
+					//
+					// Why
+					// - This is the dominant loop form in upstream test harness code.
+					// - Even without a full iterator model, we can model the two most common iterables:
+					//   - ranges: `start...end`
+					//   - arrays: `[ ... ]` / local arrays
+					//
+					// Non-goal
+					// - C-style `for (init; cond; step)` loops (deferred).
 					bump();
-					if (cur.kind.match(TLParen)) {
-						bump();
+
+					if (!cur.kind.match(TLParen)) {
+						syncToStmtEnd();
+						return SExpr(EUnsupported("for"), pos);
+					}
+					bump(); // consume '('
+
+					// Detect and reject C-style `for` early (we keep parsing resilient).
+					if (cur.kind.match(TSemicolon) || cur.kind.match(TKeyword(KVar))) {
 						try skipBalancedParens() catch (_:Dynamic) {}
+						if (cur.kind.match(TLBrace)) {
+							bump();
+							try skipBalancedBraces() catch (_:Dynamic) {}
+						} else {
+							parseStmt(stop);
+						}
+						return SExpr(EUnsupported("for"), pos);
 					}
-					if (cur.kind.match(TLBrace)) {
-						bump();
-						try skipBalancedBraces() catch (_:Dynamic) {}
-					} else {
-						parseStmt(stop);
+
+					final name = readIdent("for-in loop variable");
+					if (!acceptKeyword(KIn)) {
+						// Not a `for-in` loop (future work). Consume the remainder best-effort.
+						try skipBalancedParens() catch (_:Dynamic) {}
+						if (cur.kind.match(TLBrace)) {
+							bump();
+							try skipBalancedBraces() catch (_:Dynamic) {}
+						} else {
+							parseStmt(stop);
+						}
+						return SExpr(EUnsupported("for"), pos);
 					}
-					SExpr(EUnsupported("for"), pos);
+
+					inline function isTripleDotStart():Bool {
+						return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+					}
+
+					// Parse the iterable with a tiny special-case for `start...end` ranges.
+					final startExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof) || isTripleDotStart());
+					var iterable:HxExpr = startExpr;
+					if (isTripleDotStart()) {
+						expect(TDot, "'.'");
+						expect(TDot, "'.'");
+						expect(TDot, "'.'");
+						final endExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+						iterable = ERange(startExpr, endExpr);
+					}
+
+					// Consume ')', keeping behavior aligned with other bring-up branches.
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+
+					final body = parseStmt(stop);
+					SForIn(name, iterable, body, pos);
 				case TKeyword(KDo):
 					// Bring-up: consume `do stmt while (...);` as unsupported.
 					bump();

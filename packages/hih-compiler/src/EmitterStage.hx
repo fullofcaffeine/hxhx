@@ -60,7 +60,14 @@ class EmitterStage {
 			case "haxe.PosInfos", "PosInfos": "HxPosInfos.t";
 			// Stage 3 bring-up: enough structure for `haxe.Int64` callsites that destructure
 			// into `{ low, high }` (common in stdlib and upstream unit tests).
-			case "haxe.Int64", "Int64": "HxInt64.t";
+			//
+			// Note
+			// - We intentionally name the shim module `Haxe_Int64` (not `HxInt64`) because:
+			//   - Static calls like `haxe.Int64.make(...)` lower to the module name derived from the
+			//     type path (`haxe.Int64` -> `Haxe_Int64`) in the Stage3 bootstrap emitter.
+			//   - Keeping the type module name aligned avoids "Unbound module Haxe_Int64" failures
+			//     when compiling stdlib code under the Stage3 emit runner.
+			case "haxe.Int64", "Int64": "Haxe_Int64.t";
 			// Stage 3: anything else is unknown; avoid making up a type.
 			case _: "_";
 		}
@@ -544,6 +551,26 @@ class EmitterStage {
 					// Stage 3 bring-up: allocation + constructors are not modeled yet.
 					"(Obj.magic 0)";
 				case EField(obj, field):
+					// Stage 3 bring-up: model a couple of common "instance field" shapes that appear in
+					// orchestration code, without committing to a full object layout/runtime.
+					//
+					// - Array.length (via the bootstrap `HxBootArray` shim)
+					// - String.length (OCaml primitive)
+					if (field == "length") {
+						final o = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						if (isStringExpr(obj)) {
+							return "String.length (" + o + ")";
+						}
+						switch (obj) {
+							case EArrayDecl(_):
+								return "HxBootArray.length (" + o + ")";
+							case EIdent(name):
+								final t = tyForIdent(name);
+								if (StringTools.startsWith(t, "Array<")) return "HxBootArray.length (" + o + ")";
+							case _:
+						}
+					}
+
 					// Stage 3 bring-up: treat `<type path>.field` as a static/module access.
 					//
 					// Why
@@ -619,6 +646,23 @@ class EmitterStage {
 						return "print_endline (" + exprToOcamlString(args[0], tyByIdent) + ")";
 					case EField(ECall(EField(EIdent("Sys"), "stdout"), []), "flush") if (args.length == 0):
 						return "(flush stdout)";
+					// Stage 3 bring-up: allow a tiny subset of `Array` operations so orchestration code
+					// can run under `--hxhx-emit-full-bodies`.
+					case EField(obj, "push") if (args.length == 1):
+						switch (obj) {
+							case EArrayDecl(_):
+								return "HxBootArray.push (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EIdent(name):
+								final t = tyForIdent(name);
+								if (StringTools.startsWith(t, "Array<")) {
+									return "HxBootArray.push (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") ("
+										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+										+ ")";
+								}
+							case _:
+						}
 					case _:
 				}
 
@@ -759,11 +803,27 @@ class EmitterStage {
 					// Stage 3 bring-up: anonymous structures are represented in the real backend/runtime.
 					// The Stage 3 bootstrap emitter does not model them yet.
 					"(Obj.magic 0)";
-				case EArrayDecl(_values):
-					// Stage 3 bring-up: arrays require a runtime representation.
-					"(Obj.magic 0)";
-				case EArrayAccess(_arr, _idx):
-					// Stage 3 bring-up: indexing semantics depend on the runtime representation.
+				case EArrayDecl(values):
+					// Stage 3 bring-up: lower array literals to the local bootstrap shim container.
+					//
+					// Important
+					// - This intentionally does *not* use the real reflaxe.ocaml runtime Array.
+					// - The Stage3 bootstrap emitter output is "plain OCaml" and should stay standalone.
+					final elems = values == null || values.length == 0
+						? ""
+						: values
+							.map(v -> exprToOcaml(v, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass))
+							.join("; ");
+					"HxBootArray.of_list [" + elems + "]";
+				case EArrayAccess(arr, idx):
+					"HxBootArray.get ("
+					+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+				case ERange(_start, _end):
+					// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see
+					// a range in expression position, collapse to poison.
 					"(Obj.magic 0)";
 				case ECast(expr, _hint):
 					// Bring-up: treat casts as identity.
@@ -960,6 +1020,24 @@ class EmitterStage {
 					final thenUnit = stmtToUnit(thenBranch);
 					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch);
 					"if " + condToOcamlBool(cond) + " then (" + thenUnit + ") else (" + elseUnit + ")";
+				case SForIn(name, iterable, body, _pos):
+					final ident = ocamlValueIdent(name);
+					final bodyUnit = stmtToUnit(body);
+					switch (iterable) {
+						case ERange(startExpr, endExpr):
+							final start = exprToOcaml(startExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							final end = exprToOcaml(endExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							"(let __start = (" + start + ") in "
+							+ "let __end = (" + end + ") in "
+							+ "if (__end <= __start) then () else ("
+							+ "for " + ident + " = __start to (__end - 1) do "
+							+ bodyUnit
+							+ " done))";
+						case _:
+							"HxBootArray.iter ("
+							+ exprToOcaml(iterable, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") (fun " + ident + " -> " + bodyUnit + ")";
+					}
 				case SReturnVoid(_pos):
 					"raise (" + returnExc + " (Obj.repr ()))";
 				case SReturn(expr, _pos):
@@ -1149,6 +1227,82 @@ class EmitterStage {
 				generatedPaths.push(shimName + ".ml");
 			}
 		}
+		{
+			// Stage 3 bring-up: a tiny "array-like" container used only by the bootstrap emitter output.
+			//
+			// Why
+			// - Gate2-shaped orchestration code uses `Array` pervasively and expects mutation (`push`)
+			//   and iteration (`for (x in arr)`).
+			// - The Stage3 bootstrap emitter deliberately does **not** link the full reflaxe.ocaml
+			//   runtime (`std/runtime`), so we provide a self-contained OCaml shim here.
+			//
+			// Note
+			// - This is not Haxe-correct `Array<T>` semantics. It is a bring-up convenience to let
+			//   stage3_emit_runner style workloads execute far enough to expose the *next* missing
+			//   frontend/typer/macro feature.
+			final shimName = "HxBootArray";
+			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+			if (!sys.FileSystem.exists(shimPath)) {
+				// Keep the generated OCaml source as a line list to avoid building a huge nested
+				// `a + b + c + ...` expression in Haxe (which can significantly slow down stage0
+				// compilation of `hxhx` itself).
+				final shimSrc = [
+					"(* hxhx(stage3) bootstrap shim: HxBootArray *)",
+					"type 'a t = {",
+					"  mutable data : Obj.t array;",
+					"  mutable length : int;",
+					"}",
+					"",
+					"let hx_null : Obj.t = Obj.repr (Obj.magic 0)",
+					"",
+					"let create () : 'a t = { data = [||]; length = 0 }",
+					"let length (a : 'a t) : int = a.length",
+					"",
+					"let ensure_capacity (a : 'a t) (needed : int) : unit =",
+					"  let current = Array.length a.data in",
+					"  if current < needed then (",
+					"    let doubled = if current = 0 then 4 else current * 2 in",
+					"    let new_cap = if doubled < needed then needed else doubled in",
+					"    let next = Array.make new_cap hx_null in",
+					"    if a.length > 0 then Array.blit a.data 0 next 0 a.length;",
+					"    a.data <- next",
+					"  )",
+					"",
+					"let get (a : 'a t) (i : int) : 'a =",
+					"  if i < 0 || i >= a.length then Obj.magic 0 else Obj.obj a.data.(i)",
+					"",
+					"let set (a : 'a t) (i : int) (v : 'a) : 'a =",
+					"  if i < 0 then v else (",
+					"    if i >= a.length then (",
+					"      ensure_capacity a (i + 1);",
+					"      for j = a.length to i - 1 do a.data.(j) <- hx_null done;",
+					"      a.length <- i + 1",
+					"    );",
+					"    a.data.(i) <- Obj.repr v;",
+					"    v",
+					"  )",
+					"",
+					"let push (a : 'a t) (v : 'a) : int =",
+					"  ensure_capacity a (a.length + 1);",
+					"  a.data.(a.length) <- Obj.repr v;",
+					"  a.length <- a.length + 1;",
+					"  a.length",
+					"",
+					"let of_list (xs : 'a list) : 'a t =",
+					"  let a = create () in",
+					"  List.iter (fun x -> ignore (push a x)) xs;",
+					"  a",
+					"",
+					"let iter (a : 'a t) (f : 'a -> unit) : unit =",
+					"  for i = 0 to a.length - 1 do f (Obj.obj a.data.(i)) done"
+				].join("\n") + "\n";
+				sys.io.File.saveContent(
+					shimPath,
+					shimSrc
+				);
+				generatedPaths.push(shimName + ".ml");
+			}
+		}
 			{
 				final shimName = "Reflect";
 				final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
@@ -1201,7 +1355,7 @@ class EmitterStage {
 				}
 		}
 		{
-			final shimName = "HxInt64";
+			final shimName = "Haxe_Int64";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(
@@ -1211,6 +1365,8 @@ class EmitterStage {
 					+ "  low : int;\n"
 					+ "  high : int;\n"
 					+ "}\n"
+					+ "\n"
+					+ "let make (low : int) (high : int) : t = { low; high }\n"
 				);
 				generatedPaths.push(shimName + ".ml");
 			}
@@ -1345,6 +1501,9 @@ class EmitterStage {
 							case SIf(_cond, thenBranch, elseBranch, _):
 								collectLocalNamesInStmt(thenBranch, out);
 								if (elseBranch != null) collectLocalNamesInStmt(elseBranch, out);
+							case SForIn(name, _iterable, body, _):
+								out.set(name, true);
+								collectLocalNamesInStmt(body, out);
 							case SVar(name, _hint, _init, _):
 								out.set(name, true);
 							case _:

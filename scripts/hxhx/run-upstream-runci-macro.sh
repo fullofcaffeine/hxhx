@@ -671,6 +671,11 @@ fi
 
 WRAP_DIR="$(mktemp -d)"
 
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+  export HXHX_GATE2_WRAP_LOG="$WRAP_DIR/hxhx_gate2_haxe_wrap.log"
+  : >"$HXHX_GATE2_WRAP_LOG"
+fi
+
 if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; then
   cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
@@ -689,6 +694,9 @@ elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
   cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+if [ -n "\${HXHX_GATE2_WRAP_LOG:-}" ]; then
+  printf '%s\n' "haxe \$*" >>"\${HXHX_GATE2_WRAP_LOG}"
+fi
 export NEKOPATH="${NEKOPATH_DIR}"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
@@ -816,3 +824,11 @@ esac
     PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
   fi
 )
+
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+  if [ ! -s "$HXHX_GATE2_WRAP_LOG" ]; then
+    echo "Gate2 stage3_emit_runner: upstream RunCi did not invoke any 'haxe' subcommands (wrapper log empty)." >&2
+    exit 1
+  fi
+  echo "subinvocations=$(wc -l <"$HXHX_GATE2_WRAP_LOG" | tr -d ' ')"
+fi
