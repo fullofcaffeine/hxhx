@@ -254,12 +254,14 @@
 							Sys.println("body_parse_src=" + name + " " + shown);
 						} catch (_:Dynamic) {}
 					}
-					// Best-effort: recover a structured statement list from the raw source slice.
+				// Best-effort: recover a structured statement list from the raw source slice.
 					//
 					// Why
 					// - The native frontend protocol v1+ transmits method bodies as raw source
 				//   (via `ast method_body`) rather than an OCaml-side statement AST.
 				// - Stage3 bring-up wants bodies so it can validate full-body lowering.
+				// Debug aid: allow logging parse holes with the method name.
+				HxParser.debugBodyLabel = name;
 				try {
 					outBody = HxParser.parseFunctionBodyText(methodBodySrc);
 				} catch (e:Dynamic) {
@@ -271,6 +273,7 @@
 					// Fall back to the summary-only body.
 					outBody = body;
 				}
+				HxParser.debugBodyLabel = "";
 			}
 
 			return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);

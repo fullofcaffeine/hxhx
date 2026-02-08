@@ -82,6 +82,29 @@ enum HxStmt {
 	**/
 	SForIn(name:String, iterable:HxExpr, body:HxStmt, pos:HxPos);
 
+	/**
+		Switch statement (Stage 3 bring-up).
+
+		Why
+		- The upstream `tests/RunCi.hx` harness uses statement-level `switch` to:
+		  - handle platform differences (`switch (systemName)`), and
+		  - dispatch to a target runner (`switch (test)`).
+		- Without a structured switch statement, the Stage3 bootstrap emitter either:
+		  - emits it as `Obj.magic` (no control flow), or
+		  - truncates parsing due to unconsumed braces.
+
+		What
+		- A scrutinee expression and an ordered list of cases.
+		- Each case stores:
+		  - a small pattern (`HxSwitchPattern`)
+		  - a statement body (typically a block)
+
+		How (bring-up semantics)
+		- This uses a restricted pattern subset (see `HxSwitchPattern`).
+		- Lowered by the bootstrap emitter to nested `if ... then ... else ...` chains.
+	**/
+	SSwitch(scrutinee:HxExpr, cases:Array<{ pattern:HxSwitchPattern, body:HxStmt }>, pos:HxPos);
+
 	SReturnVoid(pos:HxPos);
 	SReturn(expr:HxExpr, pos:HxPos);
 	SExpr(expr:HxExpr, pos:HxPos);

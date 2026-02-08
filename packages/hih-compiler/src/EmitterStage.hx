@@ -235,18 +235,26 @@ class EmitterStage {
 			};
 		}
 
-		return switch (e) {
-			case EString(v): escapeOcamlString(v);
+			return switch (e) {
+				case EString(v): escapeOcamlString(v);
+				case EEnumValue(name): escapeOcamlString(name);
 			// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 			// string concatenation and lower it to OCaml's `^`.
 			case EBinop("+", a, b):
 				"(" + exprToOcamlString(a, tyByIdent) + " ^ " + exprToOcamlString(b, tyByIdent) + ")";
-			case ECall(EField(EIdent("Std"), "string"), [arg]):
+				case ECall(EField(EIdent("Std"), "string"), [arg]):
 				// String interpolation lowering uses `Std.string(...)` to force stringification.
-				// Reuse our OCaml stringification helpers here so prints remain informative.
-				exprToOcamlString(arg, tyByIdent);
-			// Bootstrap: allow string-y ternaries in upstream-ish code (runci/System.hx).
-			case ETernary(cond, thenExpr, elseExpr):
+				//
+				// Important
+				// - Do not inline this as `exprToOcamlString(arg)`:
+				//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
+				//   - and it would diverge from the target runtime’s own stringification behavior.
+					"Std.string (Obj.repr (" + exprToOcaml(arg, null, tyByIdent, null, null, null) + "))";
+				case ECall(EField(_obj, "join"), [_sep]):
+					// Bring-up: join returns a string; delegate to normal expression lowering when available.
+					exprToOcaml(e, null, tyByIdent, null, null, null);
+				// Bootstrap: allow string-y ternaries in upstream-ish code (runci/System.hx).
+				case ETernary(cond, thenExpr, elseExpr):
 				"(if " + condToOcamlBoolForString(cond) + " then " + exprToOcamlString(thenExpr, tyByIdent) + " else " + exprToOcamlString(elseExpr, tyByIdent) + ")";
 			case EInt(v): "string_of_int " + Std.string(v);
 			case EBool(v): "string_of_bool " + (v ? "true" : "false");
@@ -338,22 +346,40 @@ class EmitterStage {
 				}
 			}
 
-			function isSysIoProcessExpr(expr:HxExpr):Bool {
-				return switch (expr) {
-					case EIdent(name):
-						final t = tyForIdent(name);
-						t == "sys.io.Process" || t == "sys.io.Process.Process";
-					case ECast(inner, _hint):
-						isSysIoProcessExpr(inner);
-					case _:
-						false;
+				function isSysIoProcessExpr(expr:HxExpr):Bool {
+					return switch (expr) {
+						case EIdent(name):
+							final t = tyForIdent(name);
+							t == "sys.io.Process" || t == "sys.io.Process.Process";
+						case ECast(inner, _hint):
+							isSysIoProcessExpr(inner);
+						case _:
+							false;
+					}
 				}
-			}
 
-			function exprToOcamlForConcat(expr:HxExpr):String {
-				// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
-				// For complex expressions we assume the caller is already producing a string.
-				return switch (expr) {
+				function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+					final out = new Map<String, TyType>();
+					if (ty != null) {
+						for (k in ty.keys()) out.set(k, ty.get(k));
+					}
+					out.set(name, t);
+					return out;
+				}
+
+				function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
+					final out = new Map<String, TyType>();
+					if (ty != null) {
+						for (k in ty.keys()) out.set(k, ty.get(k));
+					}
+					if (names != null) for (n in names) out.set(n, t);
+					return out;
+				}
+
+				function exprToOcamlForConcat(expr:HxExpr):String {
+					// Best-effort: keep concatenation type-safe by stringifying obvious primitives.
+					// For complex expressions we assume the caller is already producing a string.
+					return switch (expr) {
 					case EInt(_), EFloat(_), EBool(_), EIdent(_):
 						exprToOcamlString(expr, tyByIdent);
 					case _:
@@ -373,7 +399,7 @@ class EmitterStage {
 				}
 			}
 
-			return switch (e) {
+				return switch (e) {
 				// Stage 3 bring-up: map a tiny set of Haxe `Math` statics to OCaml primitives.
 			//
 			// Why
@@ -389,7 +415,7 @@ class EmitterStage {
 				"(classify_float ("
 				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 				+ ") = FP_nan)";
-			case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
+				case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
 				"(match classify_float ("
 				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 				+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
@@ -407,30 +433,38 @@ class EmitterStage {
 					// Stage 3 bring-up: map Haxe `String.fromCharCode(int)` to an OCaml function value.
 					// This is used in upstream-ish stdlib code as `var fcc = String.fromCharCode;`.
 					"(fun i -> String.make 1 (Char.chr i))";
-					case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
-						// Bring-up: avoid pulling in correct float/int coercions for exponentiation.
+						case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
+							// Bring-up: avoid pulling in correct float/int coercions for exponentiation.
+							"(Obj.magic 0)";
+					case ECall(EField(EIdent("Math"), "round"), [arg]):
+						// Bring-up: good-enough rounding for positive values (used by RunCi timing logs).
+						//
+						// NOTE: Haxe's `Math.round` handles negatives differently; for Gate bring-up the
+						// upstream harness uses `Timer.stamp()` deltas which are non-negative.
+						"(int_of_float (floor ((" + exprToOcamlAsFloatValue(arg) + ") +. 0.5)))";
+					case ECall(EField(EIdent("Math"), "floor"), [_arg]):
 						"(Obj.magic 0)";
-				case ECall(EField(EIdent("Math"), "floor"), [_arg]):
-					"(Obj.magic 0)";
-				case ECall(EField(EIdent("Math"), "log"), [_arg]):
-					"(Obj.magic 0)";
-					case ECall(EField(EIdent("Math"), "round"), [_arg]):
+					case ECall(EField(EIdent("Math"), "log"), [_arg]):
 						"(Obj.magic 0)";
-					case ECall(EField(EIdent("Math"), "fround"), [_arg]):
-						"(Obj.magic 0)";
-					case ELambda(args, body):
-						// Stage 3 bring-up: emit a direct OCaml closure.
+						case ECall(EField(EIdent("Math"), "fround"), [_arg]):
+							"(Obj.magic 0)";
+					case ECall(EField(EIdent("Timer"), "stamp"), []):
+						// Bring-up: map `haxe.Timer.stamp()` to wall-clock time.
+						"(Unix.gettimeofday ())";
+						case ELambda(args, body):
+							// Stage 3 bring-up: emit a direct OCaml closure.
 						//
 						// Notes
-						// - We don't model Haxe function typing yet; this is purely syntactic lowering.
-						// - Multi-arg lambdas are supported syntactically as `fun a b -> ...`, which in OCaml
-						//   is sugar for nested single-arg functions.
-						final ocamlArgs = args.map(ocamlValueIdent).join(" ");
-						"(fun "
-						+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
-						+ " -> "
-						+ exprToOcaml(body, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-						+ ")";
+							// - We don't model Haxe function typing yet; this is purely syntactic lowering.
+							// - Multi-arg lambdas are supported syntactically as `fun a b -> ...`, which in OCaml
+							//   is sugar for nested single-arg functions.
+							final ocamlArgs = args.map(ocamlValueIdent).join(" ");
+							final ty2 = extendTyByIdentMany(tyByIdent, args, TyType.fromHintText("Dynamic"));
+							"(fun "
+							+ (ocamlArgs.length == 0 ? "_" : ocamlArgs)
+							+ " -> "
+							+ exprToOcaml(body, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")";
 					case ETryCatchRaw(_raw):
 						// Stage 3 bring-up: avoid committing to an exception model yet.
 						//
@@ -499,7 +533,7 @@ class EmitterStage {
 					+ "let __i = (" + i2 + ") in "
 					+ "if (__i < 0) || (__i >= String.length __s) then (-1) else (Char.code (String.get __s __i)))";
 
-				case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
+					case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 					// Bring-up: avoid needing a real `StringTools` implementation in the Stage3 emitter output.
 					escapeOcamlString("");
 
@@ -521,18 +555,18 @@ class EmitterStage {
 				//
 				// This is *not* a real stdlib/runtime mapping; it's a bootstrap convenience so we can
 				// observe that emitted function bodies are actually executing.
-				case ECall(EIdent("trace"), [arg]):
+					case ECall(EIdent("trace"), [arg]):
 					"print_endline (" + exprToOcamlString(arg, tyByIdent) + ")";
 				case ECall(EField(EIdent("Sys"), "println"), [arg]):
 					"print_endline (" + exprToOcamlString(arg, tyByIdent) + ")";
 				case ECall(EField(EIdent("Sys"), "print"), [arg]):
 					"print_string (" + exprToOcamlString(arg, tyByIdent) + ")";
-				case ECall(EField(obj, "toString"), []) if (isStringExpr(obj)):
+					case ECall(EField(obj, "toString"), []) if (isStringExpr(obj)):
 					// Bring-up: in Haxe, `String.toString()` is an identity; mapping this avoids
 					// poisoning common patterns like `input.readAll().toString()`.
 					exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 
-			case EBool(v): v ? "true" : "false";
+				case EBool(v): v ? "true" : "false";
 			case EInt(v): Std.string(v);
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
@@ -577,22 +611,53 @@ class EmitterStage {
 				// Stage 3 bring-up: no class hierarchy semantics yet.
 				"(Obj.magic 0)";
 				case ENull:
-					// Stage 3 bring-up: null semantics are not modeled yet. Keep compilation moving.
-					"(Obj.magic 0)";
-				case ENew(typePath, args):
-					// Stage 3 bring-up: support a tiny subset of allocations used by orchestration code.
-					//
-					// Today we special-case `sys.io.Process` so RunCi-like workloads can actually spawn
-					// the `haxe` subcommands (routed through the Gate2 wrapper).
-					(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && args.length == 2
-						? ("HxBootProcess.run ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")")
-						// Stage 3 bring-up: allocation + constructors are not modeled yet.
-						: "(Obj.magic 0)";
-				case EField(obj, field):
+					// Stage 3 bring-up: represent `null` as the runtime sentinel and cast it as needed.
+					"(Obj.magic HxRuntime.hx_null)";
+				case EEnumValue(name):
+					// Bring-up: lower enum-like value tags (e.g. `Macro`) to a stable string.
+					escapeOcamlString(name);
+					case ENew(typePath, args):
+						// Stage 3 bring-up: support a tiny subset of allocations used by orchestration code.
+						//
+						// Today we special-case `sys.io.Process` so RunCi-like workloads can actually spawn
+						// the `haxe` subcommands (routed through the Gate2 wrapper).
+						(typePath == "Array" && args.length == 0)
+							? "HxBootArray.create ()"
+						:
+						(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && args.length == 2
+							? ("HxBootProcess.run ("
+								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+								+ ") ("
+								+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+								+ ")")
+								// Stage 3 bring-up: allocation + constructors are not modeled yet.
+								: "(Obj.magic 0)";
+					case EArrayComprehension(name, iterable, yieldExpr):
+						// Lower `[for (x in it) e]` to a small imperative builder.
+						//
+						// Note: for now we only support array/range iterables (matching bring-up needs).
+						final out = "__arr_comp_out";
+						final v = ocamlValueIdent(name);
+						final ty2 = extendTyByIdent(tyByIdent, name, TyType.fromHintText("Dynamic"));
+						final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						return switch (iterable) {
+							case ERange(startExpr, endExpr):
+								final start = exprToOcaml(startExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+								final end = exprToOcaml(endExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+								"(let " + out + " = HxBootArray.create () in "
+								+ "let __start = (" + start + ") in "
+								+ "let __end = (" + end + ") in "
+								+ "(if (__end <= __start) then () else (for " + v + " = __start to (__end - 1) do ignore (HxBootArray.push " + out + " (" + body + ")) done)); "
+								+ out
+								+ ")";
+							case _:
+								final it = exprToOcaml(iterable, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+								"(let " + out + " = HxBootArray.create () in "
+								+ "HxBootArray.iter (" + it + ") (fun " + v + " -> ignore (HxBootArray.push " + out + " (" + body + "))); "
+								+ out
+								+ ")";
+						};
+					case EField(obj, field):
 					// Stage 3 bring-up: model a couple of common "instance field" shapes that appear in
 					// orchestration code, without committing to a full object layout/runtime.
 					//
@@ -664,7 +729,7 @@ class EmitterStage {
 					// - Only constant-foldable strings are accepted. Anything dynamic collapses to bring-up poison.
 					final code = constFoldString(arg);
 					code == null ? "(Obj.magic 0)" : ("(" + code + ")");
-				case ECall(callee, args):
+					case ECall(callee, args):
 					// Stage 3 bring-up: avoid partial applications when Haxe calls a function
 					// with omitted optional/default parameters.
 				//
@@ -678,7 +743,7 @@ class EmitterStage {
 				// append `(Obj.magic 0)` for any missing arguments when the callee is a known in-module
 				// identifier and the call provides fewer args than the declaration.
 				final missing =
-					switch (callee) {
+						switch (callee) {
 						case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
 							final expected = arityByIdent.get(name);
 							(expected != null && expected > args.length) ? (expected - args.length) : 0;
@@ -691,9 +756,53 @@ class EmitterStage {
 
 				// Special-case a tiny slice of `Sys` I/O so bring-up server binaries can function
 				// before the full runtime is modeled.
-				switch (callee) {
-					case EField(EIdent("Sys"), "println") if (args.length == 1):
-						return "print_endline (" + exprToOcamlString(args[0], tyByIdent) + ")";
+					switch (callee) {
+						// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
+						//
+						// Note
+						// - Haxe lowers `s.split(",")` as an instance call.
+						// - Our Stage3 emitter does not implement general instance dispatch yet, so we treat
+						//   a few String methods as intrinsics backed by the repo-owned OCaml runtime.
+							case EField(obj, "split") if (args.length == 1):
+								return "HxString.split ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(obj, "toLowerCase") if (args.length == 0):
+								return "HxString.toLowerCase ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ()";
+								case EField(obj, "toUpperCase") if (args.length == 0):
+								return "HxString.toUpperCase ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ()";
+							case EField(obj, "trim") if (args.length == 0):
+								return "String.trim ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("StringTools"), "trim") if (args.length == 1):
+								return "String.trim ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(obj, "substr") if (args.length == 2):
+								return "HxString.substr ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(obj, "substring") if (args.length == 2):
+								return "HxString.substring ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+						case EField(EIdent("Sys"), "println") if (args.length == 1):
+							return "print_endline (" + exprToOcamlString(args[0], tyByIdent) + ")";
 					case EField(ECall(EField(EIdent("Sys"), "stdout"), []), "flush") if (args.length == 0):
 						return "(flush stdout)";
 					// Stage 3 bring-up: `Sys.command(cmd, ?args)` is used by upstream RunCi to execute
@@ -709,18 +818,24 @@ class EmitterStage {
 							+ ") (HxBootArray.create ())";
 					case EField(EIdent("Sys"), "command") if (args.length == 2):
 						// `Sys.command(cmd, null)` occurs in upstream `runci.System.runSysTest`.
-						// In our bring-up model, `null` lowers to `(Obj.magic 0)`, so coerce to an empty
+						// In our bring-up model, `null` lowers to the `HxRuntime.hx_null` sentinel, so coerce to an empty
 						// `HxBootArray` at runtime to avoid segfaulting in the shim.
 						final rawCmd = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 						final rawArgs = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 						return "(let __args = Obj.repr (" + rawArgs + ") in "
-							+ "let __arr : string HxBootArray.t = if __args == Obj.repr (Obj.magic 0) then HxBootArray.create () else (Obj.obj __args) in "
+							+ "let __arr : string HxBootArray.t = if __args == HxRuntime.hx_null then HxBootArray.create () else (Obj.obj __args) in "
 							+ "HxBootProcess.command (" + rawCmd + ") __arr)";
 					// Stage 3 bring-up: basic env/CWD helpers used by upstream RunCi orchestration.
-					case EField(EIdent("Sys"), "getEnv") if (args.length == 1):
-						return "(try Sys.getenv ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") with Not_found -> \"\")";
+						case EField(EIdent("Sys"), "getEnv") if (args.length == 1):
+							return "(match Stdlib.Sys.getenv_opt ("
+								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+								+ ") with | Some v -> v | None -> Std.hx_null_string)";
+					case EField(EIdent("Sys"), "args") if (args.length == 0):
+						// Haxe: Sys.args() excludes argv[0].
+						return "(let __argv = Stdlib.Sys.argv in "
+							+ "let __len = Array.length __argv in "
+							+ "if __len <= 1 then HxBootArray.create () "
+							+ "else HxBootArray.of_list (Array.to_list (Array.sub __argv 1 (__len - 1))))";
 					case EField(EIdent("Sys"), "putEnv") if (args.length == 2):
 						return "((Unix.putenv ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -728,13 +843,13 @@ class EmitterStage {
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")); ())";
 					case EField(EIdent("Sys"), "setCwd") if (args.length == 1):
-						return "(Sys.chdir ("
+						return "(Stdlib.Sys.chdir ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ "))";
 					case EField(EIdent("Sys"), "getCwd") if (args.length == 0):
-						return "(Sys.getcwd ())";
+						return "(Stdlib.Sys.getcwd ())";
 					case EField(EIdent("Sys"), "systemName") if (args.length == 0):
-						return "(if Sys.os_type = \"Win32\" then \"Windows\" else (try let u = Unix.uname () in if u.sysname = \"Darwin\" then \"Mac\" else \"Linux\" with _ -> \"Linux\"))";
+						return "(if Stdlib.Sys.os_type = \"Win32\" then \"Windows\" else (try let u = Unix.uname () in if u.sysname = \"Darwin\" then \"Mac\" else \"Linux\" with _ -> \"Linux\"))";
 					// Stage 3 bring-up: `sys.io.Process.exitCode()` is used pervasively by RunCi to test
 					// whether subcommands succeeded. Map it to our bootstrap shim.
 					case EField(proc, "exitCode") if (args.length == 0 && isSysIoProcessExpr(proc)):
@@ -763,9 +878,9 @@ class EmitterStage {
 								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 							case _:
 						}
-					// Stage 3 bring-up: allow a tiny subset of `Array` operations so orchestration code
-					// can run under `--hxhx-emit-full-bodies`.
-					case EField(obj, "push") if (args.length == 1):
+						// Stage 3 bring-up: allow a tiny subset of `Array` operations so orchestration code
+						// can run under `--hxhx-emit-full-bodies`.
+						case EField(obj, "push") if (args.length == 1):
 						switch (obj) {
 							case EArrayDecl(_):
 								return "HxBootArray.push (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") ("
@@ -777,11 +892,54 @@ class EmitterStage {
 									return "HxBootArray.push (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") ("
 										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 										+ ")";
-								}
-							case _:
-						}
-					case _:
-				}
+									}
+								case _:
+							}
+						case EField(obj, "copy") if (args.length == 0):
+							switch (obj) {
+								case EArrayDecl(_):
+									return "HxArray.copy (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+								case EIdent(name):
+									final t = tyForIdent(name);
+									if (StringTools.startsWith(t, "Array<")) {
+										return "HxArray.copy (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+									}
+								case _:
+							}
+						case EField(obj, "concat") if (args.length == 1):
+							switch (obj) {
+								case EArrayDecl(_):
+									return "HxArray.concat ("
+										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+										+ ") ("
+										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+										+ ")";
+								case EIdent(name):
+									final t = tyForIdent(name);
+									if (StringTools.startsWith(t, "Array<")) {
+										return "HxArray.concat ("
+											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+											+ ") ("
+											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+											+ ")";
+									}
+								case _:
+							}
+						case EField(obj, "join") if (args.length == 1):
+							switch (obj) {
+								case EIdent(name):
+									final t = tyForIdent(name);
+									if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
+										return "HxArray.join ("
+											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+											+ ") ("
+											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+											+ ") (fun (s : string) -> s)";
+									}
+								case _:
+							}
+						case _:
+					}
 
 				final c = exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
@@ -912,6 +1070,48 @@ class EmitterStage {
 					+ ") else ("
 					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 					+ "))";
+			case ESwitch(scrutinee, cases):
+				// Stage 3 bring-up: lower a small structured switch expression subset to nested `if`.
+				//
+				// We intentionally implement matching in terms of `Obj.repr` + `HxRuntime.dynamic_equals`
+				// so we don't need to commit to concrete OCaml types for the scrutinee.
+				final sw = exprToOcaml(scrutinee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				var chain = "(Obj.magic HxRuntime.hx_null)";
+					if (cases != null) {
+						for (i in 0...cases.length) {
+							final c = cases[cases.length - 1 - i];
+							final localTy =
+								switch (c.pattern) {
+									case PBind(name):
+										extendTyByIdent(tyByIdent, name, TyType.fromHintText("Dynamic"));
+									case _:
+										tyByIdent;
+								};
+							final body = exprToOcaml(c.expr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							final thenExpr =
+								switch (c.pattern) {
+									case PBind(name):
+										"(let " + ocamlValueIdent(name) + " = __sw in (" + body + "))";
+									case _:
+										"(" + body + ")";
+								};
+						final cond =
+							switch (c.pattern) {
+								case PNull:
+									"(HxRuntime.is_null (Obj.repr __sw))";
+								case PWildcard, PBind(_):
+									"true";
+								case PString(v):
+									"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
+								case PInt(v):
+									"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
+								case PEnumValue(name):
+									"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
+							};
+						chain = "(if " + cond + " then " + thenExpr + " else (" + chain + "))";
+					}
+				}
+				"(let __sw = (" + sw + ") in " + chain + ")";
 			case ESwitchRaw(_raw):
 				// Stage 3 bring-up: preserve switch shape during parsing/typing, but do not attempt to
 				// lower it in the bootstrap emitter yet.
@@ -971,13 +1171,36 @@ class EmitterStage {
 				case EUnsupported(_):
 					true;
 				case ENull:
-					true;
+					// `null` is representable as a runtime sentinel in the Stage3 bootstrap output.
+					false;
+				case EEnumValue(_):
+					false;
 				case EThis:
 					true;
 				case ESuper:
 					true;
-				case ENew(_, _):
-					true;
+				case ENew(typePath, args):
+					// Stage 3 bring-up: allow a tiny subset of allocations that we can lower
+					// deterministically in `exprToOcaml`.
+					//
+					// Important
+					// - `returnExprToOcaml` collapses *any* poisoned subtree to `(Obj.magic 0)`.
+					// - If we add an allocation special-case in `exprToOcaml`, it must also be
+					//   whitelisted here or the special-case will never run.
+					switch (typePath) {
+						case "Array":
+							// `new Array()` is used heavily by upstream orchestration code.
+							args.length == 0 ? false : true;
+						case "sys.io.Process" | "sys.io.Process.Process":
+							// Allow process spawning so RunCi can execute subcommands.
+							if (args.length != 2) {
+								true;
+							} else {
+								hasBringupPoison(args[0]) || hasBringupPoison(args[1]);
+							}
+						case _:
+							true;
+					}
 				case EUnop(op, inner):
 					// Stage 3: allow a tiny subset of unary operators in return positions so bring-up
 					// programs can become incrementally more semantic.
@@ -1032,6 +1255,34 @@ class EmitterStage {
 					// segfault at runtime once forced into a concrete OCaml type (e.g. `print_endline`).
 					final parts = tryExtractTypePathPartsFromExpr(obj);
 					(parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) ? false : hasBringupPoison(obj);
+				case ESwitch(scrutinee, cases):
+					if (hasBringupPoison(scrutinee)) {
+						true;
+					} else if (cases == null) {
+						false;
+					} else {
+						// Stage 3 bring-up: do not collapse an entire switch expression just because one
+						// case body contains unsupported sub-expressions.
+						//
+						// Why
+						// - Upstream harness code often has "fast path" switch cases we can execute
+						//   (e.g. `case null: [Macro];`) alongside cases that exercise unsupported
+						//   syntax (e.g. array comprehensions).
+						// - If we poison the entire switch, we lose the fast path and bring-up stalls.
+						//
+						// Rule
+						// - If *all* case bodies are poison, treat the switch as poison.
+						// - Otherwise, allow emission and let unsupported cases degrade to `(Obj.magic 0)`
+						//   at their expression sites.
+						var allPoison = true;
+						for (c in cases) {
+							if (!hasBringupPoison(c.expr)) {
+								allPoison = false;
+								break;
+							}
+						}
+						allPoison;
+					}
 				// Stage 3 bring-up: allow the controlled OCaml escape hatch in expression positions.
 				//
 				// Why
@@ -1049,11 +1300,13 @@ class EmitterStage {
 					if (hasBringupPoison(callee)) return true;
 					for (a in args) if (hasBringupPoison(a)) return true;
 					false;
-				case EArrayDecl(values):
-					for (v in values) if (hasBringupPoison(v)) return true;
-					false;
-				case EArrayAccess(arr, idx):
-					hasBringupPoison(arr) || hasBringupPoison(idx);
+					case EArrayDecl(values):
+						for (v in values) if (hasBringupPoison(v)) return true;
+						false;
+					case EArrayComprehension(_name, iterable, yieldExpr):
+						hasBringupPoison(iterable) || hasBringupPoison(yieldExpr);
+					case EArrayAccess(arr, idx):
+						hasBringupPoison(arr) || hasBringupPoison(idx);
 				case ECast(expr, _hint):
 					hasBringupPoison(expr);
 				case EUntyped(expr):
@@ -1089,6 +1342,20 @@ class EmitterStage {
 					true;
 				case SIf(_cond, thenBranch, elseBranch, _):
 					elseBranch != null && stmtAlwaysReturns(thenBranch) && stmtAlwaysReturns(elseBranch);
+				case SSwitch(_scrutinee, cases, _):
+					// Bring-up: treat switches as non-returning unless every case body returns.
+					if (cases == null || cases.length == 0) {
+						false;
+					} else {
+						var all = true;
+						for (c in cases) {
+							if (!stmtAlwaysReturns(c.body)) {
+								all = false;
+								break;
+							}
+						}
+						all;
+					}
 				case SBlock(ss, _):
 					if (ss == null || ss.length == 0) {
 						false;
@@ -1133,6 +1400,37 @@ class EmitterStage {
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
+				case SSwitch(scrutinee, cases, _pos):
+					final sw = exprToOcaml(scrutinee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					var chain = "()";
+					if (cases != null) {
+						for (i in 0...cases.length) {
+							final c = cases[cases.length - 1 - i];
+							final bodyUnit = stmtToUnit(c.body);
+							final thenUnit =
+								switch (c.pattern) {
+									case PBind(name):
+										"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
+									case _:
+										"(" + bodyUnit + ")";
+								};
+							final cond =
+								switch (c.pattern) {
+									case PNull:
+										"(HxRuntime.is_null (Obj.repr __sw))";
+									case PWildcard, PBind(_):
+										"true";
+									case PString(v):
+										"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
+									case PInt(v):
+										"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
+									case PEnumValue(name):
+										"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
+								};
+							chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
+						}
+					}
+					"(let __sw = (" + sw + ") in " + chain + ")";
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					final thenUnit = stmtToUnit(thenBranch);
 					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch);
@@ -1264,7 +1562,7 @@ class EmitterStage {
 				(v == null || v.length == 0) ? "ocamldep" : v;
 			}
 
-			final p = new sys.io.Process(ocamldep, ["-sort"].concat(mlFiles));
+			final p = new sys.io.Process(ocamldep, ["-I", "runtime", "-I", "+unix", "-I", "+str", "-sort"].concat(mlFiles));
 			final chunks = new Array<String>();
 			try {
 				while (true) {
@@ -1347,32 +1645,50 @@ class EmitterStage {
 			return "";
 		}
 
-		function readShimTemplate(shimName:String):String {
-			final root = inferRepoRootForShims();
-			if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for shim templates (set HXHX_REPO_ROOT)";
-			final path = haxe.io.Path.join([root, "packages", "hih-compiler", "shims", shimName + ".ml"]);
-			if (!sys.FileSystem.exists(path)) throw "stage3 emitter: missing shim template: " + path;
-			return sys.io.File.getContent(path);
-		}
-
-		{
-			final shimName = "Std";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(
-					shimPath,
-					"(* hxhx(stage3) bootstrap shim: Std *)\n"
-					+ "let isOfType _ _ = false\n"
-					+ "let string _ = \"\"\n"
-				);
-				generatedPaths.push(shimName + ".ml");
+			function readShimTemplate(shimName:String):String {
+				final root = inferRepoRootForShims();
+				if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for shim templates (set HXHX_REPO_ROOT)";
+				final path = haxe.io.Path.join([root, "packages", "hih-compiler", "shims", shimName + ".ml"]);
+				if (!sys.FileSystem.exists(path)) throw "stage3 emitter: missing shim template: " + path;
+				return sys.io.File.getContent(path);
 			}
-		}
-		{
-			final shimName = "Lambda";
-			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-			if (!sys.FileSystem.exists(shimPath)) {
-				sys.io.File.saveContent(
+
+			// Stage 3 bring-up: link the repo-owned OCaml runtime when compiling the emitted program.
+			//
+			// Why
+			// - Gate2's `stage3_emit_runner` rung compiles and runs upstream-shaped Haxe code (tests/RunCi.hx).
+			// - The emitted OCaml references runtime helpers like `HxRuntime.hx_null`, `HxRuntime.dynamic_equals`,
+			//   `Std.string`, and `EReg`.
+			//
+			// Provenance
+			// - These modules live in `std/runtime/*.ml` and are authored for this repo.
+			// - They are **not** copied from upstream Haxe compiler sources.
+			final runtimePaths = new Array<String>();
+			{
+				final root = inferRepoRootForShims();
+				if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
+				final runtimeSrcDir = haxe.io.Path.join([root, "std", "runtime"]);
+				if (!sys.FileSystem.exists(runtimeSrcDir) || !sys.FileSystem.isDirectory(runtimeSrcDir)) {
+					throw "stage3 emitter: missing std/runtime directory: " + runtimeSrcDir;
+				}
+
+				final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
+				if (!sys.FileSystem.exists(runtimeOutDir)) sys.FileSystem.createDirectory(runtimeOutDir);
+
+				for (name in sys.FileSystem.readDirectory(runtimeSrcDir)) {
+					if (name == null || !StringTools.endsWith(name, ".ml")) continue;
+					final srcPath = haxe.io.Path.join([runtimeSrcDir, name]);
+					final dstPath = haxe.io.Path.join([runtimeOutDir, name]);
+					sys.io.File.copy(srcPath, dstPath);
+					runtimePaths.push("runtime/" + name);
+				}
+			}
+
+			{
+				final shimName = "Lambda";
+				final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+				if (!sys.FileSystem.exists(shimPath)) {
+					sys.io.File.saveContent(
 					shimPath,
 					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
 					+ "let has _ _ = false\n"
@@ -1411,25 +1727,30 @@ class EmitterStage {
 				generatedPaths.push(shimName + ".ml");
 			}
 		}
-			{
-				final shimName = "Reflect";
-				final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
-				if (!sys.FileSystem.exists(shimPath)) {
-					sys.io.File.saveContent(
-						shimPath,
-						"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
-						+ "let field _ _ = (Obj.magic 0)\n"
-						+ "let fields _ = (Obj.magic 0)\n"
-						+ "let getProperty _ _ = (Obj.magic 0)\n"
-						+ "let setProperty _ _ _ = ()\n"
-						+ "let hasField _ _ = false\n"
-						+ "let isFunction _ = false\n"
-						+ "let isObject _ = true\n"
-						+ "let compare _ _ = 0\n"
-					);
-					generatedPaths.push(shimName + ".ml");
+				{
+					final shimName = "Reflect";
+					final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
+					if (!sys.FileSystem.exists(shimPath)) {
+						sys.io.File.saveContent(
+							shimPath,
+							"(* hxhx(stage3) bootstrap shim: Reflect *)\n"
+							+ "let field o f = HxAnon.get o f\n"
+							+ "let fields o = HxAnon.fields o\n"
+							+ "let getProperty o f = HxAnon.get o f\n"
+							+ "let setProperty o f v = HxAnon.set o f v\n"
+								+ "let hasField o f = HxAnon.has o f\n"
+								+ "let isFunction = HxReflect.isFunction\n"
+								+ "let isObject = HxReflect.isObject\n"
+								+ "let compare = HxReflect.compare\n"
+								+ "let callMethod = HxReflect.callMethod\n"
+								+ "let makeVarArgs = HxReflect.makeVarArgs\n"
+								+ "let makeVarArgsVoid = HxReflect.makeVarArgsVoid\n"
+								+ "let deleteField o f = HxAnon.delete o f\n"
+								+ "let copy = HxAnon.copy\n"
+							);
+						generatedPaths.push(shimName + ".ml");
+					}
 				}
-			}
 			{
 				final shimName = "IgnoredFixture";
 				final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
@@ -1736,20 +2057,29 @@ class EmitterStage {
 		// How
 			// - Use `ocamldep -sort` to topologically sort the emitted `.ml` units.
 			// - Keep the root unit last so `let () = main ()` (when present) runs after linking deps.
-			final orderedMl = uniqStrings(ocamldepSort(uniqStrings(generatedPaths.concat(emittedModulePaths))));
+				final orderedMl = uniqStrings(ocamldepSort(uniqStrings(runtimePaths.concat(generatedPaths).concat(emittedModulePaths))));
 			final orderedNoRoot = new Array<String>();
 			final rootName = rootPath;
 			for (f in orderedMl) if (rootName == null || f != rootName) orderedNoRoot.push(f);
 			if (rootName != null) orderedNoRoot.push(rootName);
 			final orderedNoRootUniq = uniqStrings(orderedNoRoot);
 
-			final args = new Array<String>();
-			args.push("-o");
-			args.push("out.exe");
-			// Stage3 bootstrap shims use the OCaml `Unix` module (process spawning, env, uname, etc).
-			// Link the standard library `unix` package explicitly so dune-less `ocamlopt` builds work.
-			args.push("unix.cmxa");
-			for (p in orderedNoRootUniq) args.push(p);
+				final args = new Array<String>();
+				// OCaml 5: make the unix stdlib include directory explicit to silence the
+				// "ocaml_deprecated_auto_include" warning.
+				args.push("-I");
+				args.push("+unix");
+				args.push("-I");
+				args.push("+str");
+				// Allow emitted units in `outAbs/` to see providers compiled under `outAbs/runtime/`.
+				args.push("-I");
+				args.push("runtime");
+				args.push("-o");
+				args.push("out.exe");
+				// Link the OCaml stdlib packages used by our runtime and shims.
+				args.push("unix.cmxa");
+				args.push("str.cmxa");
+				for (p in orderedNoRootUniq) args.push(p);
 			final code = try Sys.command(ocamlopt, args) catch (e:Dynamic) {
 				Sys.setCwd(prevCwd);
 				throw e;

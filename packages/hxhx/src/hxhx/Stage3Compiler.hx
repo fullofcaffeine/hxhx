@@ -176,6 +176,8 @@ class Stage3Compiler {
 				var c = 0;
 				for (v in values) c += countUnsupportedExprsInExpr(v);
 				c;
+			case EArrayComprehension(_name, iterable, yieldExpr):
+				countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInExpr(yieldExpr);
 			case EArrayAccess(arr, idx):
 				countUnsupportedExprsInExpr(arr) + countUnsupportedExprsInExpr(idx);
 			case ECast(expr, _hint):
@@ -216,6 +218,9 @@ class Stage3Compiler {
 				for (v in values) collectUnsupportedExprRawInExpr(v, out, max);
 			case EArrayDecl(values):
 				for (v in values) collectUnsupportedExprRawInExpr(v, out, max);
+			case EArrayComprehension(_name, iterable, yieldExpr):
+				collectUnsupportedExprRawInExpr(iterable, out, max);
+				collectUnsupportedExprRawInExpr(yieldExpr, out, max);
 			case EArrayAccess(arr, idx):
 				collectUnsupportedExprRawInExpr(arr, out, max);
 				collectUnsupportedExprRawInExpr(idx, out, max);
@@ -227,27 +232,30 @@ class Stage3Compiler {
 		}
 	}
 
-		static function collectUnsupportedExprRawInStmt(s:HxStmt, out:Array<String>, max:Int):Void {
-			if (out.length >= max) return;
-			switch (s) {
-				case SBlock(stmts, _pos):
-					for (ss in stmts) collectUnsupportedExprRawInStmt(ss, out, max);
-				case SVar(_name, _hint, init, _pos):
-					collectUnsupportedExprRawInExpr(init, out, max);
-				case SIf(cond, thenBranch, elseBranch, _pos):
-					collectUnsupportedExprRawInExpr(cond, out, max);
-					collectUnsupportedExprRawInStmt(thenBranch, out, max);
-					if (elseBranch != null) collectUnsupportedExprRawInStmt(elseBranch, out, max);
-				case SForIn(_name, iterable, body, _pos):
-					collectUnsupportedExprRawInExpr(iterable, out, max);
-					collectUnsupportedExprRawInStmt(body, out, max);
-				case SReturnVoid(_pos):
-				case SReturn(expr, _pos):
-					collectUnsupportedExprRawInExpr(expr, out, max);
-				case SExpr(expr, _pos):
-					collectUnsupportedExprRawInExpr(expr, out, max);
+			static function collectUnsupportedExprRawInStmt(s:HxStmt, out:Array<String>, max:Int):Void {
+				if (out.length >= max) return;
+				switch (s) {
+					case SBlock(stmts, _pos):
+						for (ss in stmts) collectUnsupportedExprRawInStmt(ss, out, max);
+					case SVar(_name, _hint, init, _pos):
+						collectUnsupportedExprRawInExpr(init, out, max);
+					case SIf(cond, thenBranch, elseBranch, _pos):
+						collectUnsupportedExprRawInExpr(cond, out, max);
+						collectUnsupportedExprRawInStmt(thenBranch, out, max);
+						if (elseBranch != null) collectUnsupportedExprRawInStmt(elseBranch, out, max);
+					case SForIn(_name, iterable, body, _pos):
+						collectUnsupportedExprRawInExpr(iterable, out, max);
+						collectUnsupportedExprRawInStmt(body, out, max);
+					case SSwitch(scrutinee, cases, _pos):
+						collectUnsupportedExprRawInExpr(scrutinee, out, max);
+						for (c in cases) collectUnsupportedExprRawInStmt(c.body, out, max);
+					case SReturnVoid(_pos):
+					case SReturn(expr, _pos):
+						collectUnsupportedExprRawInExpr(expr, out, max);
+					case SExpr(expr, _pos):
+						collectUnsupportedExprRawInExpr(expr, out, max);
+				}
 			}
-		}
 
 	static function collectUnsupportedExprRawInModule(pm:ParsedModule, max:Int):Array<String> {
 		final decl = pm.getDecl();
@@ -260,23 +268,27 @@ class Stage3Compiler {
 		return out;
 	}
 
-		static function countUnsupportedExprsInStmt(s:HxStmt):Int {
-			return switch (s) {
-				case SBlock(stmts, _pos):
-					var c = 0;
-					for (ss in stmts) c += countUnsupportedExprsInStmt(ss);
-					c;
-				case SVar(_name, _hint, init, _pos):
-					countUnsupportedExprsInExpr(init);
-				case SIf(cond, thenBranch, elseBranch, _pos):
-					countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(thenBranch) + (elseBranch == null ? 0 : countUnsupportedExprsInStmt(elseBranch));
-				case SForIn(_name, iterable, body, _pos):
-					countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
-				case SReturnVoid(_pos):
-					0;
-				case SReturn(expr, _pos):
-					countUnsupportedExprsInExpr(expr);
-				case SExpr(expr, _pos):
+			static function countUnsupportedExprsInStmt(s:HxStmt):Int {
+				return switch (s) {
+					case SBlock(stmts, _pos):
+						var c = 0;
+						for (ss in stmts) c += countUnsupportedExprsInStmt(ss);
+						c;
+					case SVar(_name, _hint, init, _pos):
+						countUnsupportedExprsInExpr(init);
+					case SIf(cond, thenBranch, elseBranch, _pos):
+						countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(thenBranch) + (elseBranch == null ? 0 : countUnsupportedExprsInStmt(elseBranch));
+					case SForIn(_name, iterable, body, _pos):
+						countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
+					case SSwitch(scrutinee, cases, _pos):
+						var c = countUnsupportedExprsInExpr(scrutinee);
+						for (cc in cases) c += countUnsupportedExprsInStmt(cc.body);
+						c;
+					case SReturnVoid(_pos):
+						0;
+					case SReturn(expr, _pos):
+						countUnsupportedExprsInExpr(expr);
+					case SExpr(expr, _pos):
 					countUnsupportedExprsInExpr(expr);
 			}
 		}

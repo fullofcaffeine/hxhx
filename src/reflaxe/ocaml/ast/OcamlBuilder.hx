@@ -132,7 +132,24 @@ class OcamlBuilder {
 	var currentUsedLocalIds:Null<Map<Int, Bool>> = null;
 
 	// Set while compiling a switch arm to resolve TEnumParameter -> bound pattern variables.
+	//
+	// Correctness note:
+	// `TEnumParameter(enumValueExpr, ef, index)` does not carry a unique "pattern binding id".
+	// The Haxe typer may emit multiple `TEnumParameter` nodes with the same `(ef,index)` inside
+	// nested lambdas/conditions that *also* use enum-index tests. If we key only by `(ef,index)`,
+	// we can accidentally capture an outer pattern binding for a different scrutinee value.
+	//
+	// To avoid that, we only resolve via this map when the `enumValueExpr` is the same compiler-
+	// introduced `TLocal` scrutinee for the current switch arm.
 	var currentEnumParamNames:Null<Map<String, String>> = null;
+	var currentEnumParamScrutineeLocalId:Null<Int> = null;
+
+	static inline function enumParamScrutineeLocalId(e:TypedExpr):Null<Int> {
+		return switch (unwrap(e).expr) {
+			case TLocal(v): v.id;
+			case _: null;
+		}
+	}
 
 	public function new(ctx:CompilationContext, typeExprFromHaxeType:Type->OcamlTypeExpr, emitSourceMap:Bool = false) {
 		this.ctx = ctx;
@@ -3160,14 +3177,21 @@ class OcamlBuilder {
 								}
 							}
 					}
-			case TEnumParameter(enumValueExpr, ef, index):
-				final key = ef.name + ":" + index;
-				if (currentEnumParamNames != null && currentEnumParamNames.exists(key)) {
-					OcamlExpr.EIdent(currentEnumParamNames.get(key));
-				} else {
-					final unwrappedType = unwrapNullType(enumValueExpr.t);
-					final isNullable = unwrappedType != enumValueExpr.t;
-					final enumType:Null<EnumType> = switch (unwrappedType) {
+				case TEnumParameter(enumValueExpr, ef, index):
+					final key = ef.name + ":" + index;
+					final scrutId = enumParamScrutineeLocalId(enumValueExpr);
+					if (
+						currentEnumParamNames != null
+						&& currentEnumParamScrutineeLocalId != null
+						&& scrutId != null
+						&& scrutId == currentEnumParamScrutineeLocalId
+						&& currentEnumParamNames.exists(key)
+					) {
+						OcamlExpr.EIdent(currentEnumParamNames.get(key));
+					} else {
+						final unwrappedType = unwrapNullType(enumValueExpr.t);
+						final isNullable = unwrappedType != enumValueExpr.t;
+						final enumType:Null<EnumType> = switch (unwrappedType) {
 						case TEnum(eRef, _): eRef.get();
 						case _: null;
 					}
@@ -6393,18 +6417,21 @@ class OcamlBuilder {
 							final arms:Array<OcamlMatchCase> = [];
 							final isExhaustive = enumIndexSwitchIsExhaustive(enumType, cases);
 	
-							for (c in cases) {
-								// Only support a single constructor index per case for now.
-								final patRes = (c.values.length == 1) ? buildEnumIndexCasePat(enumType, c.values[0]) : null;
-								final pat = patRes != null ? patRes.pat : OcamlPat.PAny;
-	
-								final prev = currentEnumParamNames;
-								currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-								final expr = wrapCaseExpr(buildExpr(c.expr));
-								currentEnumParamNames = prev;
-	
-								arms.push({ pat: pat, guard: null, expr: expr });
-							}
+								for (c in cases) {
+									// Only support a single constructor index per case for now.
+									final patRes = (c.values.length == 1) ? buildEnumIndexCasePat(enumType, c.values[0]) : null;
+									final pat = patRes != null ? patRes.pat : OcamlPat.PAny;
+		
+									final prev = currentEnumParamNames;
+									final prevScrut = currentEnumParamScrutineeLocalId;
+									currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+									currentEnumParamScrutineeLocalId = patRes != null ? enumParamScrutineeLocalId(enumValueExpr) : null;
+									final expr = wrapCaseExpr(buildExpr(c.expr));
+									currentEnumParamNames = prev;
+									currentEnumParamScrutineeLocalId = prevScrut;
+		
+									arms.push({ pat: pat, guard: null, expr: expr });
+								}
 
 						if (!isExhaustive) {
 							arms.push({
@@ -6421,7 +6448,7 @@ class OcamlBuilder {
 		}
 
 		final arms:Array<OcamlMatchCase> = [];
-		for (c in cases) {
+			for (c in cases) {
 			// NOTE: For now, only support enum-parameter binding for a single pattern.
 			final patRes = c.values.length == 1 ? buildSwitchValuePatAndEnumParams(c.values[0]) : null;
 			final pat = if (patRes != null) {
@@ -6431,13 +6458,16 @@ class OcamlBuilder {
 				pats.length == 1 ? pats[0] : OcamlPat.POr(pats);
 			}
 
-			final prev = currentEnumParamNames;
-			currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-			final expr = wrapCaseExpr(buildExpr(c.expr));
-			currentEnumParamNames = prev;
+				final prev = currentEnumParamNames;
+				final prevScrut = currentEnumParamScrutineeLocalId;
+				currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+				currentEnumParamScrutineeLocalId = patRes != null ? enumParamScrutineeLocalId(scrutinee) : null;
+				final expr = wrapCaseExpr(buildExpr(c.expr));
+				currentEnumParamNames = prev;
+				currentEnumParamScrutineeLocalId = prevScrut;
 
-			arms.push({ pat: pat, guard: null, expr: expr });
-		}
+				arms.push({ pat: pat, guard: null, expr: expr });
+			}
 		arms.push({
 			pat: OcamlPat.PAny,
 			guard: null,
@@ -6495,13 +6525,16 @@ class OcamlBuilder {
 						pats.length == 1 ? pats[0] : OcamlPat.POr(pats);
 					}
 
-					final prev = currentEnumParamNames;
-					currentEnumParamNames = patRes != null ? patRes.enumParams : null;
-					final expr = wrapCaseExpr(buildExpr(c.expr));
-					currentEnumParamNames = prev;
+						final prev = currentEnumParamNames;
+						final prevScrut = currentEnumParamScrutineeLocalId;
+						currentEnumParamNames = patRes != null ? patRes.enumParams : null;
+						currentEnumParamScrutineeLocalId = patRes != null ? enumParamScrutineeLocalId(scrutinee) : null;
+						final expr = wrapCaseExpr(buildExpr(c.expr));
+						currentEnumParamNames = prev;
+						currentEnumParamScrutineeLocalId = prevScrut;
 
-					nonNullArms.push({ pat: pat, guard: null, expr: expr });
-				}
+						nonNullArms.push({ pat: pat, guard: null, expr: expr });
+					}
 				nonNullArms.push({ pat: OcamlPat.PAny, guard: null, expr: defaultBranch });
 
 				final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]);

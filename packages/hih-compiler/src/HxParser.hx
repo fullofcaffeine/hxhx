@@ -22,6 +22,21 @@
 	- We grow coverage rung-by-rung while keeping acceptance fixtures runnable.
 **/
 	class HxParser {
+		/**
+			Debug label for method-body parsing (native frontend seam).
+
+			Why
+			- When we parse raw method body slices via `parseFunctionBodyText`, any parse holes are
+			  reported as `body_parse_error` statements.
+			- During Gate bring-up, it is useful to know *which* method body hit the parse hole.
+
+			How
+			- `ParserStage.decodeMethodPayload` sets this to the method name immediately before
+			  calling `parseFunctionBodyText`, and resets it afterwards.
+			- Logging is gated by `HXHX_TRACE_BODY_STMT_PARSE_ERROR=1`.
+		**/
+		public static var debugBodyLabel:String = "";
+
 		final lex:HxLexer;
 		var cur:HxToken;
 		var peeked1:Null<HxToken> = null;
@@ -71,6 +86,12 @@
 				case KFalse: "false";
 				case KNull: "null";
 			};
+		}
+
+		static function isUpperStart(name:String):Bool {
+			if (name == null || name.length == 0) return false;
+			final c = name.charCodeAt(0);
+			return c >= "A".code && c <= "Z".code;
 		}
 
 		public function new(source:String) {
@@ -134,6 +155,31 @@
 			peeked2 = null;
 		} else {
 			cur = lex.next();
+		}
+	}
+
+	function parseSwitchPattern():HxSwitchPattern {
+		// Bring-up: support a very small pattern subset (see HxSwitchPattern docs).
+		return switch (cur.kind) {
+			case TKeyword(KNull):
+				bump();
+				PNull;
+			case TIdent("_"):
+				bump();
+				PWildcard;
+			case TString(s):
+				bump();
+				PString(s);
+			case TInt(v):
+				bump();
+				PInt(v);
+			case TIdent(name):
+				bump();
+				isUpperStart(name) ? PEnumValue(name) : PBind(name);
+			case _:
+				// Best-effort: consume one token and treat it as a wildcard.
+				bump();
+				PWildcard;
 		}
 	}
 
@@ -293,16 +339,25 @@
 		}
 	}
 
-	function readTypeHintText(stop:()->Bool):String {
-		// Bootstrap: type hints are kept as raw text until we implement a full type grammar.
-		final parts = new Array<String>();
-		while (!stop()) {
-			switch (cur.kind) {
-				case TEof:
-					break;
-				case TIdent(name):
-					parts.push(name);
-					bump();
+		function readTypeHintText(stop:()->Bool):String {
+			// Bootstrap: type hints are kept as raw text until we implement a full type grammar.
+			final parts = new Array<String>();
+			while (true) {
+				// Special-case structural/anonymous type hints that begin with `{ ... }`.
+				//
+				// Example (upstream runci/System.hx):
+				//   static function commandResult(...):{ stdout:String, ... } { ... }
+				//
+				// In this case, the first `{` is part of the *type hint*, not the function body.
+				// Our callers often use `stop()` predicates that stop on `{` (body start), so we
+				// allow a leading `{` to be consumed into the type-hint text.
+				if (stop() && !(parts.length == 0 && cur.kind.match(TLBrace))) break;
+				switch (cur.kind) {
+					case TEof:
+						break;
+					case TIdent(name):
+						parts.push(name);
+						bump();
 					case TKeyword(k):
 						parts.push(keywordText(k));
 						bump();
@@ -421,7 +476,15 @@
 				EFloat(v);
 			case TIdent(name):
 				bump();
-				EIdent(name);
+				// Stage 3 bring-up: treat a bare uppercase identifier as an enum-like value
+				// (e.g. `Macro`), but keep uppercase idents that are used as a module/type
+				// prefix intact (e.g. `Sys.command`).
+				//
+				// Heuristic:
+				// - If the next token is `.`, we assume this is a type/module prefix and keep `EIdent`.
+				// - Otherwise, model it as a value tag (`EEnumValue`) so the emitter can lower it
+				//   without requiring a real enum runtime/type model.
+				(isUpperStart(name) && !cur.kind.match(TDot)) ? EEnumValue(name) : EIdent(name);
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
 			case TOther(c):
@@ -548,17 +611,35 @@
 		return out;
 	}
 
-	function parseArrayDeclExpr():HxExpr {
-		// `[e1, e2, ...]`
-		//
-		// Best-effort: if we don't find the closing `]`, return the partial list.
-		if (!cur.kind.match(TOther("[".code))) return EArrayDecl([]);
-		bump(); // '['
-		final values = new Array<HxExpr>();
-		if (cur.kind.match(TOther("]".code))) {
-			bump();
-			return EArrayDecl(values);
-		}
+		function parseArrayDeclExpr():HxExpr {
+			// `[e1, e2, ...]`
+			//
+			// Best-effort: if we don't find the closing `]`, return the partial list.
+			if (!cur.kind.match(TOther("[".code))) return EArrayDecl([]);
+			bump(); // '['
+			// Array comprehension: `[for (name in iterable) expr]`
+			//
+			// This is required by upstream `tests/RunCi.hx` for computing the `tests` list.
+			if (cur.kind.match(TKeyword(KFor))) {
+				bump(); // `for`
+				expect(TLParen, "'('");
+				// Some code bases allow `for (var x in ...)` in comprehensions; accept `var`/`final` if present.
+				acceptKeyword(KVar);
+				acceptKeyword(KFinal);
+				final name = readIdent("comprehension variable name");
+				expect(TKeyword(KIn), "'in'");
+				final iterable = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				expect(TRParen, "')'");
+				final yieldExpr = parseExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
+				if (cur.kind.match(TOther("]".code))) bump();
+				return EArrayComprehension(name, iterable, yieldExpr);
+			}
+
+			final values = new Array<HxExpr>();
+			if (cur.kind.match(TOther("]".code))) {
+				bump();
+				return EArrayDecl(values);
+			}
 		while (!cur.kind.match(TEof)) {
 			if (cur.kind.match(TOther("]".code))) {
 				bump();
@@ -885,14 +966,12 @@
 				// Stage 3 expansion: `switch (...) { ... }` as an *expression*.
 				//
 				// Why
-				// - Upstream runci uses `switch` in expression position (e.g. `var tests = switch (...) { ... }`).
-				// - Treating `switch` as a single-token `EUnsupported("switch")` leaves the `{ ... }` block
-				//   unconsumed, which causes statement resynchronization to misinterpret the switch block
-				//   as the end of the surrounding statement/function.
+				// - Upstream orchestration code uses `switch` to compute values (e.g. choose targets).
+				// - Gate2’s Stage3 emit-runner needs real switch control-flow to execute the upstream
+				//   RunCi harness unmodified (no patching).
 				//
 				// Bring-up scope
-				// - We do not parse cases yet; we only *consume* the balanced `{ ... }` so the rest of the
-				//   function body can still be parsed.
+				// - We implement only a small subset of patterns/case bodies (see `HxSwitchPattern`).
 				if (!stop() && cur.kind.match(TKeyword(KSwitch))) {
 					return parseSwitchExpr(stop);
 				}
@@ -917,110 +996,60 @@
 			}
 
 			function parseSwitchExpr(stop:()->Bool):HxExpr {
-				// `switch (<expr>) { ... }` used in expression position.
+				// `switch (<expr>) { case <pat>: <expr>; ... }`
 				//
-				// Bring-up semantics: preserve the overall shape (consume balanced parens/braces),
-				// but keep the content as a raw token string for now.
+				// Bring-up semantics:
+				// - Parse a small, structured subset so Stage3’s bootstrap emitter can execute
+				//   harness-style programs (notably upstream RunCi).
+				// - Keep parsing resilient: if we encounter unexpected shapes, we still consume
+				//   balanced braces so later statements remain parseable.
 				if (!cur.kind.match(TKeyword(KSwitch))) return EUnsupported("switch");
 
-				final raw = new StringBuf();
+				bump(); // `switch`
 
-				inline function tokText():String {
-					return switch (cur.kind) {
-						case TIdent(name):
-							name;
-						case TKeyword(k):
-							keywordText(k);
-						case TString(s):
-							"\"" + s + "\"";
-						case TInt(v):
-							Std.string(v);
-						case TFloat(v):
-							Std.string(v);
-						case TLParen:
-							"(";
-						case TRParen:
-							")";
-						case TLBrace:
-							"{";
-						case TRBrace:
-							"}";
-						case TSemicolon:
-							";";
-						case TColon:
-							":";
-						case TDot:
-							".";
-						case TComma:
-							",";
-						case TOther(c):
-							String.fromCharCode(c);
-						case TEof:
-							"";
-					};
+				// `( <scrutinee> )`
+				expect(TLParen, "'('");
+				final scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+				// Best-effort resync to `)`.
+				if (!cur.kind.match(TRParen)) {
+					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
 				}
+				if (cur.kind.match(TRParen)) bump();
 
-				function consumeBalancedParensRaw():Void {
-					expect(TLParen, "'('");
-					raw.add("(");
-					bump();
-					var depth = 1;
-					while (depth > 0 && !stop()) {
-						switch (cur.kind) {
-							case TEof:
-								break;
-							case TLParen:
-								raw.add("(");
-								bump();
-								depth++;
-							case TRParen:
-								raw.add(")");
-								bump();
-								depth--;
-							case _:
-								raw.add(tokText());
-								bump();
+				// `{ <cases> }`
+				if (!cur.kind.match(TLBrace)) {
+					// Nothing more to consume deterministically.
+					return ESwitch(scrutinee, []);
+				}
+				bump(); // '{'
+
+					final cases = new Array<{ pattern:HxSwitchPattern, expr:HxExpr }>();
+					while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !stop()) {
+						final pat:HxSwitchPattern = if (acceptKeyword(KCase)) {
+							parseSwitchPattern();
+						} else if (acceptKeyword(KDefault)) {
+							// Haxe: `default:` (no pattern). Bring-up: treat as wildcard.
+							PWildcard;
+						} else {
+							// Bring-up: skip unknown tokens until we find `case` or `}`.
+							bump();
+							continue;
 						}
+						expect(TColon, "':'");
+						// Case body as a single expression; stop before the next `case`/`}`.
+						final expr = parseExpr(() ->
+							cur.kind.match(TSemicolon)
+							|| cur.kind.match(TRBrace)
+							|| cur.kind.match(TEof)
+							|| cur.kind.match(TKeyword(KCase))
+							|| cur.kind.match(TKeyword(KDefault))
+						);
+						if (cur.kind.match(TSemicolon)) bump();
+						cases.push({ pattern: pat, expr: expr });
 					}
-				}
+				if (cur.kind.match(TRBrace)) bump();
 
-				function consumeBalancedBracesRaw():Void {
-					expect(TLBrace, "'{'");
-					raw.add("{");
-					bump();
-					var depth = 1;
-					while (depth > 0 && !stop()) {
-						switch (cur.kind) {
-							case TEof:
-								break;
-							case TLBrace:
-								raw.add("{");
-								bump();
-								depth++;
-							case TRBrace:
-								raw.add("}");
-								bump();
-								depth--;
-							case _:
-								raw.add(tokText());
-								bump();
-						}
-					}
-				}
-
-				// `switch`
-				raw.add("switch");
-				bump();
-
-				// `( ... )`
-				if (!cur.kind.match(TLParen)) return EUnsupported("switch_missing_parens");
-				consumeBalancedParensRaw();
-
-				// `{ ... }`
-				if (!cur.kind.match(TLBrace)) return EUnsupported("switch_missing_block");
-				consumeBalancedBracesRaw();
-
-				return ESwitchRaw(raw.toString());
+				return ESwitch(scrutinee, cases);
 			}
 
 			function parseTryCatchExpr(stop:()->Bool):HxExpr {
@@ -1077,9 +1106,12 @@
 			function consumeBalancedBraces():Void {
 				expect(TLBrace, "'{'");
 				raw.add("{");
-				bump();
 				var depth = 1;
-				while (depth > 0 && !stop()) {
+				// IMPORTANT
+				// - Do not use the outer `stop()` predicate here.
+				// - Callers often pass `stop` functions that return true on `}` (statement boundaries),
+				//   which would prematurely terminate brace consumption inside `try { ... }`.
+				while (depth > 0) {
 					switch (cur.kind) {
 						case TEof:
 							break;
@@ -1101,9 +1133,10 @@
 			function consumeBalancedParens():Void {
 				expect(TLParen, "'('");
 				raw.add("(");
-				bump();
 				var depth = 1;
-				while (depth > 0 && !stop()) {
+				// Same rationale as `consumeBalancedBraces`: ignore the outer `stop()` predicate
+				// so we can consume nested parentheses deterministically.
+				while (depth > 0) {
 					switch (cur.kind) {
 						case TEof:
 							break;
@@ -1288,6 +1321,15 @@
 			case TKeyword(KVar):
 				bump();
 				parseVarStmt(pos);
+			case TKeyword(KFinal):
+				// Stage 3 bring-up: treat `final name = expr;` like `var` for local binding purposes.
+				//
+				// Why
+				// - Upstream harness code (RunCi) and helpers use `final` pervasively.
+				// - If we don't bind the name, subsequent references become "unbound" and the emitter
+				//   collapses control-flow to bring-up poison.
+				bump();
+				parseVarStmt(pos);
 				case TKeyword(KIf):
 					bump();
 					expect(TLParen, "'('");
@@ -1300,10 +1342,46 @@
 					final elseBranch = acceptKeyword(KElse) ? parseStmt(stop) : null;
 					SIf(cond, thenBranch, elseBranch, pos);
 			case TKeyword(KSwitch):
-					// Bring-up: preserve the overall switch shape (so braces are consumed deterministically),
-					// but keep contents as raw text.
-					final expr = parseSwitchExpr(() -> cur.kind.match(TEof));
-					SExpr(expr, pos);
+					// Bring-up: structured switch statement (minimal patterns).
+					bump(); // `switch`
+					expect(TLParen, "'('");
+					final scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+
+					if (!cur.kind.match(TLBrace)) {
+						syncToStmtEnd();
+						SSwitch(scrutinee, [], pos);
+						} else {
+							bump(); // '{'
+							final cases = new Array<{ pattern:HxSwitchPattern, body:HxStmt }>();
+							while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+								final pat:HxSwitchPattern = if (acceptKeyword(KCase)) {
+									parseSwitchPattern();
+								} else if (acceptKeyword(KDefault)) {
+									PWildcard;
+								} else {
+									bump();
+									continue;
+								}
+								expect(TColon, "':'");
+
+								final stmts = new Array<HxStmt>();
+								while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))) {
+									stmts.push(parseStmt(() ->
+										cur.kind.match(TRBrace)
+										|| cur.kind.match(TEof)
+										|| cur.kind.match(TKeyword(KCase))
+										|| cur.kind.match(TKeyword(KDefault))
+									));
+								}
+								cases.push({ pattern: pat, body: SBlock(stmts, pos) });
+							}
+						if (cur.kind.match(TRBrace)) bump();
+						SSwitch(scrutinee, cases, pos);
+					}
 				case TOther("@".code):
 					// Expression-level metadata: `@:meta expr`.
 					//
@@ -1504,6 +1582,25 @@
 			// - Parse statement-by-statement.
 			// - On parse errors, resynchronize to `;` / `}` / EOF and continue.
 			final out = new Array<HxStmt>();
+			inline function curTokLabel():String {
+				return switch (cur.kind) {
+					case TEof: "eof";
+					case TLBrace: "{";
+					case TRBrace: "}";
+					case TLParen: "(";
+					case TRParen: ")";
+					case TSemicolon: ";";
+					case TColon: ":";
+					case TDot: ".";
+					case TComma: ",";
+					case TIdent(name): "ident(" + name + ")";
+					case TString(_): "string";
+					case TInt(_): "int";
+					case TFloat(_): "float";
+					case TKeyword(k): "kw(" + keywordText(k) + ")";
+					case TOther(c): "other(" + String.fromCharCode(c) + ")";
+				};
+			}
 			inline function isWrapperCloseBrace():Bool {
 				return cur.kind.match(TRBrace) && peekKind().match(TEof);
 			}
@@ -1530,6 +1627,12 @@
 							out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 							0; // ensure try/catch has a concrete, consistent expression type across targets
 						} catch (_:Dynamic) {
+							if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
+								try {
+									final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
+									Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel());
+								} catch (_:Dynamic) {}
+							}
 							// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
 							out.push(SExpr(EUnsupported("body_parse_error"), HxPos.unknown()));
 
@@ -1558,7 +1661,7 @@
 			}
 		}
 
-	function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool):HxFunctionDecl {
+		function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool):HxFunctionDecl {
 		capturedReturnStringLiteral = "";
 		final name = switch (cur.kind) {
 			case TKeyword(KNew):
@@ -1569,12 +1672,13 @@
 		}
 		expect(TLParen, "'('");
 
-		final args = new Array<HxFunctionArg>();
-		if (!cur.kind.match(TRParen)) {
-			while (true) {
-				final argName = readIdent("argument name");
-				var argType = "";
-				var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
+			final args = new Array<HxFunctionArg>();
+			if (!cur.kind.match(TRParen)) {
+				while (true) {
+					final isOptional = acceptOtherChar("?");
+					final argName = readIdent("argument name");
+					var argType = "";
+					var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
 
 				if (cur.kind.match(TColon)) {
 					bump();
@@ -1585,11 +1689,11 @@
 					defaultValue = HxDefaultValue.Default(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
 				}
 
-				args.push(new HxFunctionArg(argName, argType, defaultValue));
-				if (cur.kind.match(TComma)) {
-					bump();
-					continue;
-				}
+					args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional));
+					if (cur.kind.match(TComma)) {
+						bump();
+						continue;
+					}
 				break;
 			}
 		}

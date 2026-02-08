@@ -320,6 +320,10 @@ let parse_module_from_tokens (src : string) (toks : token array)
     while !paren > 0 do
       match cur () with
       | Eof p -> raise (Parse_error (p, "unexpected eof in parameter list"))
+      | Sym ('?', _) when !paren = 1 && !cur_name = None && not !reading_type ->
+          (* Optional argument marker: `?arg:T`. We ignore the marker in the v1 payload,
+             but we must consume it so the parameter name is read correctly. *)
+          bump ()
       | Sym ('(', _) ->
           if !reading_type then cur_type_parts := !cur_type_parts @ [ "(" ];
           paren := !paren + 1;
@@ -354,19 +358,44 @@ let parse_module_from_tokens (src : string) (toks : token array)
   let parse_return_type_hint () : string option =
     if token_eq_sym (cur ()) ':' then (
       bump ();
-      let parts = ref [] in
-      while
+      (* Return type hints can include structural types that begin with `{ ... }`,
+         e.g. `:{ stdout:String, ... }`.
+
+         Treat a *leading* `{` as part of the type hint, but stop on `{` once we have
+         already consumed some type text (that `{` is the function body). *)
+      let parts = Buffer.create 64 in
+      let brace = ref 0 in
+      let paren = ref 0 in
+      let done_ = ref false in
+      while not !done_ do
         match cur () with
-        | Eof _ -> false
-        | Sym ('{', _) -> false
-        | Sym (';', _) -> false
-        | Kw ("return", _) -> false
-        | _ -> true
-      do
-        parts := !parts @ [ tok_to_text (cur ()) ];
-        bump ()
+        | Eof _ -> done_ := true
+        | Sym (';', _) when !brace = 0 && !paren = 0 -> done_ := true
+        | Kw ("return", _) when !brace = 0 && !paren = 0 -> done_ := true
+        | Sym ('{', _) when !brace = 0 && !paren = 0 && Buffer.length parts > 0 ->
+            (* Function body starts. *)
+            done_ := true
+        | Sym ('{', _) ->
+            brace := !brace + 1;
+            Buffer.add_string parts "{";
+            bump ()
+        | Sym ('}', _) ->
+            if !brace > 0 then brace := !brace - 1;
+            Buffer.add_string parts "}";
+            bump ()
+        | Sym ('(', _) ->
+            paren := !paren + 1;
+            Buffer.add_string parts "(";
+            bump ()
+        | Sym (')', _) ->
+            if !paren > 0 then paren := !paren - 1;
+            Buffer.add_string parts ")";
+            bump ()
+        | tok ->
+            Buffer.add_string parts (tok_to_text tok);
+            bump ()
       done;
-      let txt = String.concat "" !parts |> String.trim in
+      let txt = Buffer.contents parts |> String.trim in
       if txt = "" then None else Some txt)
     else None
   in
@@ -882,10 +911,10 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
   try
     let header_only_enabled () : bool =
       try
-        match String.lowercase_ascii (Sys.getenv "HXHX_NATIVE_FRONTEND_HEADER_ONLY") with
+        match Stdlib.String.lowercase_ascii (Stdlib.Sys.getenv "HXHX_NATIVE_FRONTEND_HEADER_ONLY") with
         | "1" | "true" | "yes" -> true
         | _ -> false
-      with Not_found -> false
+      with Stdlib.Not_found -> false
     in
 
     let lex_stream = HxHxNativeLexer.tokenize src in

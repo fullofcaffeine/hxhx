@@ -67,6 +67,13 @@ UPSTREAM_WORKTREE_DIR=""
 WRAP_DIR=""
 
 cleanup() {
+  if [ "${HXHX_GATE2_KEEP_TMP:-0}" = "1" ]; then
+    echo "HXHX_GATE2_KEEP_TMP=1; keeping temporary directories for debugging:" >&2
+    if [ -n "$UPSTREAM_WORKTREE_DIR" ]; then echo "  worktree=$UPSTREAM_WORKTREE_DIR" >&2; fi
+    if [ -n "$WRAP_DIR" ]; then echo "  wrap_dir=$WRAP_DIR" >&2; fi
+    return
+  fi
+
   if [ -n "$WRAP_DIR" ] && [ -d "$WRAP_DIR" ]; then
     rm -rf "$WRAP_DIR" >/dev/null 2>&1 || true
   fi

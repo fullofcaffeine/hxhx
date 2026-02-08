@@ -179,6 +179,20 @@ class TyperStage {
 				switch (s) {
 				case SBlock(stmts, _pos):
 					for (ss in stmts) typeStmt(ss);
+				case SSwitch(scrutinee, cases, pos):
+					// Bring-up: type-check the scrutinee, then each case body.
+					// Binder patterns declare a best-effort local for the body.
+					final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+					if (cases != null) {
+						for (c in cases) {
+							switch (c.pattern) {
+								case PBind(name):
+									scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
+								case _:
+							}
+							typeStmt(c.body);
+						}
+					}
 				case SIf(cond, thenBranch, elseBranch, pos):
 					// Best-effort: ensure the condition is at least type-checked for locals.
 					inferExprType(cond, scope, ctx, pos);
@@ -252,6 +266,10 @@ class TyperStage {
 				TyType.fromHintText("Int");
 			case EFloat(_):
 				TyType.fromHintText("Float");
+			case EEnumValue(_):
+				// Bring-up: model enum-like tags as strings so switch dispatch can work
+				// without a real enum/abstract runtime.
+				TyType.fromHintText("String");
 			case EThis:
 				{
 					final full = ctx.getClassFullName();
@@ -393,6 +411,33 @@ class TyperStage {
 					// can proceed deterministically through upstream-shaped code (notably runci).
 					// Correct semantics (pattern matching + guards + value typing) are Stage 4+ work.
 					TyType.fromHintText("Dynamic");
+				case ESwitch(scrutinee, cases):
+					// Bring-up: type the scrutinee and unify case-expression types best-effort.
+					// This is intentionally permissive; if unification fails we widen to Dynamic.
+					final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+					var out:TyType = TyType.unknown();
+					if (cases != null) {
+						for (c in cases) {
+							var branchTy:TyType = TyType.unknown();
+							switch (c.pattern) {
+								case PBind(name):
+									// Bring-up: we do not model nested scopes yet; declare the binder as
+									// a best-effort local so the case body can type its references.
+									scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
+									branchTy = inferExprType(c.expr, scope, ctx, pos);
+								case _:
+									branchTy = inferExprType(c.expr, scope, ctx, pos);
+							}
+
+							if (out.isUnknown()) out = branchTy;
+							else {
+								final u = TyType.unify(out, branchTy);
+								if (u != null) out = u;
+								else if (!isStrict()) out = TyType.fromHintText("Dynamic");
+							}
+						}
+					}
+					out.isUnknown() ? TyType.fromHintText("Dynamic") : out;
 				case ENew(_typePath, args):
 					for (a in args) inferExprType(a, scope, ctx, pos);
 					final c = ctx.resolveType(_typePath);
@@ -476,13 +521,20 @@ class TyperStage {
 					final t2 = inferExprType(elseExpr, scope, ctx, pos);
 					final u = TyType.unify(t1, t2);
 					u == null ? TyType.fromHintText("Dynamic") : u;
-				case EAnon(_names, values):
-					for (v in values) inferExprType(v, scope, ctx, pos);
-					TyType.fromHintText("Dynamic");
-					case EArrayDecl(values):
-						var elem:TyType = TyType.unknown();
-						var saw = false;
-						for (v in values) {
+					case EAnon(_names, values):
+						for (v in values) inferExprType(v, scope, ctx, pos);
+						TyType.fromHintText("Dynamic");
+					case EArrayComprehension(name, iterable, yieldExpr):
+						// Bring-up: type the iterable and bind the loop variable for the yield expression.
+						final itTy = inferExprType(iterable, scope, ctx, pos);
+						final elemTy = arrayElementType(itTy);
+						scope.declareLocal(name, (elemTy != null && !elemTy.isUnknown()) ? elemTy : TyType.fromHintText("Dynamic"));
+						inferExprType(yieldExpr, scope, ctx, pos);
+						TyType.fromHintText("Array<Dynamic>");
+						case EArrayDecl(values):
+							var elem:TyType = TyType.unknown();
+							var saw = false;
+							for (v in values) {
 							final vt = inferExprType(v, scope, ctx, pos);
 							if (!saw) {
 								saw = true;

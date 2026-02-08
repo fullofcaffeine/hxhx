@@ -25,6 +25,26 @@
 	EFloat(value:Float);
 
 	/**
+		Bare enum-like value reference (Stage 3 bring-up).
+
+		Why
+		- Upstream test harnesses often use unqualified “enum-ish” values like `Macro`,
+		  `GithubActions`, etc. In real Haxe these might be enum constructors or
+		  `enum abstract` values.
+		- In early bring-up, emitting a bare uppercase identifier as an OCaml constructor
+		  produces “unbound constructor” errors unless we model the full type.
+
+		What
+		- Represents a bare uppercase identifier used as a *value* (not a module/type prefix).
+
+		How (bring-up semantics)
+		- Stage3 typer treats this as `String`.
+		- Stage3 bootstrap emitter lowers it to a stable string tag (e.g. `"Macro"`), which is
+		  sufficient for simple switch/case dispatch in harness code.
+	**/
+	EEnumValue(name:String);
+
+	/**
 		`this` expression.
 
 		Why
@@ -128,6 +148,29 @@
 	ESwitchRaw(raw:String);
 
 	/**
+		Switch expression with a minimal, structured case list (Stage 3 bring-up).
+
+		Why
+		- `ESwitchRaw` lets the parser consume braces deterministically, but it prevents
+		  running orchestration code under the Stage3 bootstrap emitter.
+		- Gate2’s stage3 emit-runner needs `switch` to work for the upstream RunCi harness
+		  (selecting targets and controlling subprocess execution).
+
+		What
+		- A scrutinee expression and an ordered list of cases.
+		- Each case stores:
+		  - a small pattern (`HxSwitchPattern`)
+		  - a single expression result
+
+		How (bootstrap constraints)
+		- Case bodies are expressions (not statement blocks) so we avoid introducing an
+		  OCaml bootstrap module cycle (`HxStmt` already references `HxExpr`).
+		- Full Haxe switch semantics are deferred; see `HxSwitchPattern` docs for the
+		  supported subset.
+	**/
+	ESwitch(scrutinee:HxExpr, cases:Array<{ pattern:HxSwitchPattern, expr:HxExpr }>);
+
+	/**
 		Constructor call: `new TypePath(args...)`.
 
 		Why
@@ -212,8 +255,35 @@
 		How
 		- Stage 3 typer currently treats the resulting value as `Dynamic`, but still types each
 		  field initializer for basic checking/local inference.
-	**/
+		**/
 		EAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>);
+
+		/**
+			Array comprehension expression: `[for (name in iterable) expr]`.
+
+			Why
+			- Upstream `tests/RunCi.hx` uses this to derive a target list from an env-var string:
+			  `[for (v in env.split(",")) v.trim().toLowerCase()]`.
+			- In early bring-up, treating this as `EUnsupported` makes the resulting array contain
+			  `(Obj.magic 0)` elements, which breaks `switch (test)` dispatch and prevents Gate2
+			  from exercising real `runCommand("haxe", ...)` sub-invocations.
+
+			What
+			- Stores:
+			  - the loop variable name
+			  - the iterable expression
+			  - the yielded element expression
+
+			How (bring-up semantics)
+			- Stage 3 typer models this as `Array<Dynamic>` and types the body in a nested scope
+			  that binds `name` as `Dynamic` (or `Array<T>` element type when inferable).
+			- Stage 3 emitter lowers this to:
+			  - allocate an empty array
+			  - iterate the iterable
+			  - push each yielded element
+			  - return the filled array
+		**/
+		EArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr);
 
 		/**
 			Array literal: `[e1, e2, ...]`.

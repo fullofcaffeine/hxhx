@@ -143,18 +143,18 @@ class ExprMacroExpander {
 		return t == "1" || t == "true" || t == "yes";
 	}
 
-	static function rewriteStmt(
-		s:HxStmt,
-		session:MacroHostSession,
-		allowed:haxe.ds.StringMap<Bool>,
+		static function rewriteStmt(
+			s:HxStmt,
+			session:MacroHostSession,
+			allowed:haxe.ds.StringMap<Bool>,
 		allowKeys:Array<String>,
 		importMap:haxe.ds.StringMap<String>,
 		modulePkg:String,
 		trace:Bool,
-		onExpand:()->Void
-	):HxStmt {
-		return switch (s) {
-			case SBlock(stmts, pos):
+			onExpand:()->Void
+		):HxStmt {
+			return switch (s) {
+				case SBlock(stmts, pos):
 				final out = new Array<HxStmt>();
 				var changed = false;
 				for (ss in stmts) {
@@ -162,24 +162,34 @@ class ExprMacroExpander {
 					if (rs != ss) changed = true;
 					out.push(rs);
 				}
-				changed ? SBlock(out, pos) : s;
-			case SVar(name, typeHint, init, pos):
-				final rInit = rewriteExprOrNull(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				rInit != init ? SVar(name, typeHint, rInit, pos) : s;
-				case SIf(cond, thenBranch, elseBranch, pos):
-					final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-					final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-					final rElse = elseBranch == null ? null : rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-					(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
-				case SForIn(name, iterable, body, pos):
-					final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-					final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-					(rIt != iterable || rBody != body) ? SForIn(name, rIt, rBody, pos) : s;
-				case SReturnVoid(_):
-					s;
-			case SReturn(e, pos):
-				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
-				re != e ? SReturn(re, pos) : s;
+					changed ? SBlock(out, pos) : s;
+				case SVar(name, typeHint, init, pos):
+					final rInit = rewriteExprOrNull(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+					rInit != init ? SVar(name, typeHint, rInit, pos) : s;
+					case SIf(cond, thenBranch, elseBranch, pos):
+						final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+						final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+						final rElse = elseBranch == null ? null : rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+						(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
+					case SForIn(name, iterable, body, pos):
+						final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+						final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+						(rIt != iterable || rBody != body) ? SForIn(name, rIt, rBody, pos) : s;
+					case SSwitch(scrutinee, cases, pos):
+						final rScrutinee = rewriteExpr(scrutinee, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+						var changed = rScrutinee != scrutinee;
+						final outCases = new Array<{pattern:HxSwitchPattern, body:HxStmt}>();
+						for (c in cases) {
+							final rBody = rewriteStmt(c.body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+							if (rBody != c.body) changed = true;
+							outCases.push({pattern: c.pattern, body: rBody});
+						}
+						changed ? SSwitch(rScrutinee, outCases, pos) : s;
+					case SReturnVoid(_):
+						s;
+				case SReturn(e, pos):
+					final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+					re != e ? SReturn(re, pos) : s;
 			case SExpr(e, pos):
 				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				re != e ? SExpr(re, pos) : s;
@@ -287,19 +297,23 @@ class ExprMacroExpander {
 					outValues.push(rv);
 					}
 					changed ? EAnon(outNames, outValues) : e;
-				case EArrayDecl(values):
-					final out = new Array<HxExpr>();
-					var changed = false;
-					for (v in values) {
-						final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-						if (rv != v) changed = true;
-						out.push(rv);
-					}
-					changed ? EArrayDecl(out) : e;
-					case EArrayAccess(arr, idx):
-						final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-						final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
-						(ra != arr || ri != idx) ? EArrayAccess(ra, ri) : e;
+					case EArrayDecl(values):
+						final out = new Array<HxExpr>();
+						var changed = false;
+						for (v in values) {
+							final rv = rewriteExpr(v, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+							if (rv != v) changed = true;
+							out.push(rv);
+						}
+						changed ? EArrayDecl(out) : e;
+					case EArrayComprehension(name, iterable, yieldExpr):
+						final ri = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						final ry = rewriteExpr(yieldExpr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+						(ri != iterable || ry != yieldExpr) ? EArrayComprehension(name, ri, ry) : e;
+						case EArrayAccess(arr, idx):
+							final ra = rewriteExpr(arr, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+							final ri = rewriteExpr(idx, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
+							(ra != arr || ri != idx) ? EArrayAccess(ra, ri) : e;
 					case ERange(start, end):
 						final rs = rewriteExpr(start, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 						final re = rewriteExpr(end, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
@@ -315,19 +329,21 @@ class ExprMacroExpander {
 			}
 		}
 
-		static function exprKind(e:HxExpr):String {
-			return switch (e) {
-				case EBool(_): "Bool";
-				case EInt(_): "Int";
-				case EFloat(_): "Float";
-				case EString(_): "String";
-				case ELambda(_, _): "Lambda";
-				case ETryCatchRaw(_): "TryCatch";
-				case ESwitchRaw(_): "Switch";
-				case EIdent(_): "Ident";
-				case EThis: "This";
-				case ESuper: "Super";
-				case ENull: "Null";
+			static function exprKind(e:HxExpr):String {
+				return switch (e) {
+					case EBool(_): "Bool";
+					case EInt(_): "Int";
+					case EFloat(_): "Float";
+					case EString(_): "String";
+					case EEnumValue(_): "EnumValue";
+					case ELambda(_, _): "Lambda";
+					case ETryCatchRaw(_): "TryCatch";
+					case ESwitchRaw(_): "Switch";
+					case ESwitch(_, _): "Switch";
+					case EIdent(_): "Ident";
+					case EThis: "This";
+					case ESuper: "Super";
+					case ENull: "Null";
 				case ENew(_, _): "New";
 			case EField(_, _): "Field";
 			case ECall(_, _): "Call";
@@ -335,8 +351,9 @@ class ExprMacroExpander {
 			case EBinop(_, _, _): "Binop";
 				case ETernary(_, _, _): "Ternary";
 				case EAnon(_, _): "Anon";
-					case EArrayDecl(_): "ArrayDecl";
-					case EArrayAccess(_, _): "ArrayAccess";
+						case EArrayDecl(_): "ArrayDecl";
+						case EArrayComprehension(_, _, _): "ArrayComprehension";
+						case EArrayAccess(_, _): "ArrayAccess";
 					case ERange(_, _): "Range";
 					case ECast(_, _): "Cast";
 					case EUntyped(_): "Untyped";
