@@ -21,6 +21,10 @@ set -euo pipefail
 # If you want the experimental "native attempt" (compile+run upstream `tests/RunCi.hxml` under the
 # Stage3 bootstrap emitter), set:
 #   HXHX_GATE2_MODE=stage3_emit_runner
+#
+# If you want the bring-up minimal harness (patches `tests/RunCi.hx` in the temporary worktree to
+# prove sub-invocation spawning), set:
+#   HXHX_GATE2_MODE=stage3_emit_runner_minimal
 
 export HXHX_GATE2_MODE="${HXHX_GATE2_MODE:-stage3_no_emit_direct}"
 

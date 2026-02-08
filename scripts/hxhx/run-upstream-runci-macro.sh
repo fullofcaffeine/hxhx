@@ -35,6 +35,10 @@ export HXHX_GATE2_SKIP_PARTY
 #   `hxhx --hxhx-stage3 --hxhx-no-emit`.
 # - `stage3_emit_runner`: RunCi is compiled+run by `hxhx --hxhx-stage3 --hxhx-emit-full-bodies`,
 #   and RunCi sub-invocations (`haxe`) are routed through `hxhx --hxhx-stage3 --hxhx-no-emit`.
+#   This mode is intended to run the upstream `tests/RunCi.hx` *unmodified* (once Stage3 is ready).
+# - `stage3_emit_runner_minimal`: patched bring-up rung that replaces upstream `tests/RunCi.hx` in the
+#   temporary worktree with a minimal harness (one `Sys.command("haxe", ["-version"])` call) to prove
+#   we can spawn sub-invocations under the Stage3 bootstrap emitter.
 #
 # Notes
 # - `stage3_no_emit` is a diagnostic rung, not full Gate2 acceptance yet: it does not produce target
@@ -260,7 +264,7 @@ patch_runci_stage3_emit_runner_minimal_harness() {
   #
   # To keep this rung useful and deterministic, we patch `tests/RunCi.hx` in the temporary worktree
   # to a minimal harness that issues exactly one `haxe` invocation via `Sys.command`.
-  if [ "$HXHX_GATE2_MODE" != "stage3_emit_runner" ]; then
+  if [ "$HXHX_GATE2_MODE" != "stage3_emit_runner_minimal" ]; then
     return 0
   fi
 
@@ -700,7 +704,7 @@ apply_misc_filter_if_requested() {
 # - The experimental `stage3_emit_runner` rung is extremely sensitive to Stage3 emitter
 #   semantics, and snapshot refresh can be slow on some dev machines.
 # - So for `stage3_emit_runner`, prefer building `hxhx` from source via stage0 Haxe.
-if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
   export HXHX_FORCE_STAGE0=1
 fi
 
@@ -713,7 +717,7 @@ if { [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3
   export HXHX_MACRO_HOST_EXE
 fi
 
-if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+if { [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; } && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free
   # with respect to macro-host selection/build.
   HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
@@ -722,7 +726,7 @@ fi
 
 WRAP_DIR="$(mktemp -d)"
 
-if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
   export HXHX_GATE2_WRAP_LOG="$WRAP_DIR/hxhx_gate2_haxe_wrap.log"
   : >"$HXHX_GATE2_WRAP_LOG"
   export HXHX_GATE2_RUNCI_EXIT_FILE="$WRAP_DIR/hxhx_gate2_stage3_emit_runner_exit.txt"
@@ -743,7 +747,7 @@ export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH
 
 exec "${HXHX_BIN}" --hxhx-stage3 --hxhx-no-emit --hxhx-out out_hxhx_runci_stage3_no_emit "\$@"
 EOF
-elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
   cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -836,6 +840,9 @@ case "$HXHX_GATE2_MODE" in
   stage3_emit_runner)
     echo "== Gate 2: upstream tests/runci Macro target (native attempt: hxhx --hxhx-stage3 --hxhx-emit-full-bodies for RunCi; stage3_no_emit for sub-invocations)"
     ;;
+  stage3_emit_runner_minimal)
+    echo "== Gate 2: upstream tests/runci Macro target (stage3 emit runner minimal harness; patched RunCi; stage3_no_emit for sub-invocations)"
+    ;;
   *)
     echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
     ;;
@@ -870,7 +877,7 @@ esac
   # and would drop everything before it.
   if [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; then
     run_stage3_no_emit_direct_macro
-  elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+  elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
     rm -rf out_hxhx_runci_stage3_emit_runner
     set +e
     PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$HAXELIB_BIN" \
@@ -883,7 +890,7 @@ esac
   fi
 )
 
-if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
   if [ ! -s "$HXHX_GATE2_WRAP_LOG" ]; then
     echo "Gate2 stage3_emit_runner: upstream RunCi did not invoke any 'haxe' subcommands (wrapper log empty)." >&2
     exit 1

@@ -68,8 +68,9 @@ Notes:
   sequence as upstream runci Macro, but routes every `haxe` invocation through `hxhx --hxhx-stage3 --hxhx-no-emit`.
   - To run the historical “stage0 shim” harness instead, set `HXHX_GATE2_MODE=stage0_shim`.
   - `HXHX_GATE2_MODE=stage3_emit_runner` is an experimental rung: it tries to compile+run the upstream RunCi runner under the
-    Stage3 bootstrap emitter. While Stage3 is still incomplete, this rung may patch the runner to a minimal harness inside the
-    temporary worktree so we can at least prove sub-invocation spawning.
+    Stage3 bootstrap emitter (intended to run upstream `tests/RunCi.hx` unmodified once Stage3 is ready).
+  - `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
+    to a minimal harness so we can at least prove sub-invocation spawning.
 
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 

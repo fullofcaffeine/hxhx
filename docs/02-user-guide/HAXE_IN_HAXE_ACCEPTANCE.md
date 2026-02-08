@@ -77,6 +77,7 @@ As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” m
 - Gate 1 (`npm run test:upstream:unit-macro`): still **delegates to stage0** (system `haxe`) by default.
 - Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
   - An experimental rung exists (`stage3_emit_runner`) but it is not yet able to run upstream `tests/RunCi.hx` unmodified.
+  - A bring-up rung exists (`stage3_emit_runner_minimal`) which patches RunCi in the temporary worktree to prove sub-invocation spawning.
 
 ### Gate 0 — Self-hosting sanity (repo-local)
 
@@ -222,9 +223,10 @@ Today, `npm run test:upstream:runci-macro` defaults to a **non-delegating** Gate
 Other useful modes:
 
 - `HXHX_GATE2_MODE=stage0_shim`: historical baseline (execute upstream `RunCi.hxml` via stage0 `haxe`, with wrappers).
-- `HXHX_GATE2_MODE=stage3_emit_runner`: experimental rung that compiles+executes a runner under the Stage3 bootstrap emitter.
-  While Stage3 is still incomplete, this rung may patch the runner inside the temporary worktree to a minimal harness so we can
-  prove sub-invocation spawning; it is not full runci acceptance yet.
+- `HXHX_GATE2_MODE=stage3_emit_runner`: experimental rung that compiles+executes upstream `tests/RunCi.hx` under the Stage3
+  bootstrap emitter (goal: run it unmodified and route sub-invocations through Stage3 `--no-emit`).
+- `HXHX_GATE2_MODE=stage3_emit_runner_minimal`: bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree* to a
+  minimal harness so we can prove sub-invocation spawning (not full runci acceptance).
 
 CI workflow notes (scheduled + manual upstream job) live in:
 
