@@ -21,6 +21,7 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_BOOTSTRAP_DEBUG="${HXHX_BOOTSTRAP_DEBUG:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
+HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
@@ -54,6 +55,9 @@ start_ts="$(date +%s)"
   rm -rf out
   mkdir -p out
   haxe_args=(build.hxml -D ocaml_emit_only)
+  if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
+    haxe_args+=(-v)
+  fi
   if [ -n "$HAXE_CONNECT" ]; then
     haxe_args+=(--connect "$HAXE_CONNECT")
   fi

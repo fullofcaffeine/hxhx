@@ -41,12 +41,13 @@ Notes:
 - This can take several minutes because it runs stage0 Haxe macros for codegen.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
+- For very verbose stage0 compiler logs (including typing/module loading), set `HXHX_STAGE0_VERBOSE=1` (passes `-v` to stage0 `haxe`).
 - If you run a compilation server, you can pass `HAXE_CONNECT=<port>` to reuse it.
 
 If you need to rebuild `hxhx` from stage0 source (instead of the committed `bootstrap_out`), use:
 
 ```bash
-HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_PROGRESS=1 HXHX_STAGE0_TIMES=1 bash scripts/hxhx/build-hxhx.sh
+HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_PROGRESS=1 HXHX_STAGE0_TIMES=1 HXHX_STAGE0_VERBOSE=1 bash scripts/hxhx/build-hxhx.sh
 ```
 
 ## Run
