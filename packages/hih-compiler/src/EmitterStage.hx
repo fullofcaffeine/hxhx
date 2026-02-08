@@ -788,6 +788,60 @@ class EmitterStage {
 								return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
 							case EField(EIdent("runci.Config"), "isCi") if (args.length == 0):
 								return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+							// Stage 3 emit-runner bring-up: map `sys.FileSystem` statics used by RunCi to the
+							// repo-owned OCaml runtime implementation (`std/runtime/HxFileSystem.ml`).
+							//
+							// Why
+							// - Upstream `tests/runci/Config.hx` imports `sys.FileSystem` and then calls
+							//   `FileSystem.fullPath(...)` in static initializers.
+							// - Our bootstrap emitter doesn't yet resolve imported type short-names to OCaml
+							//   module paths, so it would otherwise emit `FileSystem.fullPath` (unbound).
+							//
+							// Scope
+							// - Minimal set needed by Gate2 bring-up; expand as upstream workloads demand.
+							case EField(EIdent("FileSystem"), "fullPath") if (args.length == 1):
+								return "HxFileSystem.fullPath ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "absolutePath") if (args.length == 1):
+								return "HxFileSystem.absolutePath ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "exists") if (args.length == 1):
+								return "HxFileSystem.exists ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "isDirectory") if (args.length == 1):
+								return "HxFileSystem.isDirectory ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "readDirectory") if (args.length == 1):
+								return "HxFileSystem.readDirectory ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "createDirectory") if (args.length == 1):
+								return "HxFileSystem.createDirectory ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "deleteFile") if (args.length == 1):
+								return "HxFileSystem.deleteFile ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "deleteDirectory") if (args.length == 1):
+								return "HxFileSystem.deleteDirectory ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("FileSystem"), "rename") if (args.length == 2):
+								return "HxFileSystem.rename ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							// Path joining (haxe.io.Path), used by upstream RunCi config.
+							case EField(EIdent("Path"), "join") if (args.length == 1):
+								return "HxBootArray.join ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") (\"/\") (fun (s : string) -> s)";
 							// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
 							//
 							// Note
@@ -2027,6 +2081,9 @@ class EmitterStage {
 			// - Upstream harness code relies on `static final` constants (Ints/Strings + simple if/switch).
 			// - Without emitting these as OCaml `let` bindings, references collapse to bring-up poison.
 			final parsedFields = HxClassDecl.getFields(mainClass);
+			// Static initializers often refer to earlier static finals (e.g. `unitDir` refers to `repoDir`).
+			// During bring-up we treat those names as "bound" incrementally to avoid collapsing them to poison.
+			final staticTyByIdent:Map<String, TyType> = new Map();
 			for (f in parsedFields) {
 				if (!HxFieldDecl.getIsStatic(f)) continue;
 				final nameRaw = HxFieldDecl.getName(f);
@@ -2037,12 +2094,13 @@ class EmitterStage {
 					: exprToOcaml(
 						init,
 						arityByName,
-						null,
+						staticTyByIdent,
 						staticImportByIdent,
 						HxModuleDecl.getPackagePath(decl),
 						moduleNameByPkgAndClass
 					);
 				out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
+				if (staticTyByIdent.get(nameRaw) == null) staticTyByIdent.set(nameRaw, TyType.unknown());
 			}
 			if (parsedFields.length > 0) out.push("");
 

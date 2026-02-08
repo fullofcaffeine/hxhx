@@ -705,15 +705,13 @@ apply_misc_filter_if_requested() {
 # we prepend a wrapper called `haxe` to PATH and point `hxhx` at the real stage0
 # compiler via HAXE_BIN to avoid recursion.
 #
-# Note (bootstrap snapshot vs latest Stage3 semantics)
+# Note (bootstrap snapshot vs stage0 build)
 # - `scripts/hxhx/build-hxhx.sh` defaults to building from the committed
 #   `packages/hxhx/bootstrap_out/` snapshot when it exists (stage0-free).
-# - The experimental `stage3_emit_runner` rung is extremely sensitive to Stage3 emitter
-#   semantics, and snapshot refresh can be slow on some dev machines.
-# - So for `stage3_emit_runner`, prefer building `hxhx` from source via stage0 Haxe.
-if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
-  export HXHX_FORCE_STAGE0=1
-fi
+# - For Gate2 bring-up we prefer staying stage0-free by default.
+# - If you need to test the latest source changes without refreshing the snapshot, set:
+#     HXHX_FORCE_STAGE0=1
+#   to force a stage0 `haxe` build of `hxhx`.
 
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 

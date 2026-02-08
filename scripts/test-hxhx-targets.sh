@@ -385,6 +385,64 @@ echo "$out" | grep -q "^2$"
 echo "$out" | grep -qE "^[;:]$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: imported sys.FileSystem + haxe.io.Path statics lower to runtime"
+tmpfs="$tmpdir/filesystem_path"
+mkdir -p "$tmpfs/src"
+mkdir -p "$tmpfs/src/sys"
+mkdir -p "$tmpfs/src/haxe/io"
+cat >"$tmpfs/src/sys/FileSystem.hx" <<'HX'
+package sys;
+
+/**
+ * Minimal extern stub used by `scripts/test-hxhx-targets.sh`.
+ *
+ * Why
+ * - Stage3 bring-up needs to support upstream-ish code that imports `sys.FileSystem`
+ *   and calls static helpers like `FileSystem.fullPath(...)`.
+ *
+ * What
+ * - We intentionally declare this as `extern` so no OCaml implementation unit is emitted.
+ *   The program only compiles if the Stage3 emitter rewrites `FileSystem.*` to our runtime
+ *   module (`HxFileSystem.*`).
+ */
+extern class FileSystem {
+  public static function fullPath(path:String):String;
+}
+HX
+cat >"$tmpfs/src/haxe/io/Path.hx" <<'HX'
+package haxe.io;
+
+/**
+ * Minimal extern stub used by `scripts/test-hxhx-targets.sh`.
+ *
+ * Why
+ * - Mirrors upstream-ish usage patterns: `import haxe.io.Path; Path.join([...])`.
+ *
+ * What
+ * - Declared as `extern` so no OCaml unit is emitted; compilation relies on the Stage3
+ *   emitter rewriting `Path.join(...)` to a runtime implementation.
+ */
+extern class Path {
+  public static function join(parts:Array<String>):String;
+}
+HX
+cat >"$tmpfs/src/Main.hx" <<'HX'
+import sys.FileSystem;
+import haxe.io.Path;
+
+class Main {
+  static function main() {
+    var here = FileSystem.fullPath(".");
+    var unit = Path.join([here, "unit"]);
+    Sys.println(unit);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfs/src" -main Main --hxhx-out "$tmpfs/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "unit"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: body parse recovery doesn't truncate after unsupported constructs"
 tmpbodyrecover="$tmpdir/body_recover"
 mkdir -p "$tmpbodyrecover/src"
