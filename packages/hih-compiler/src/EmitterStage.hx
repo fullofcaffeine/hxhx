@@ -849,7 +849,20 @@ class EmitterStage {
 					case EField(EIdent("Sys"), "getCwd") if (args.length == 0):
 						return "(Stdlib.Sys.getcwd ())";
 					case EField(EIdent("Sys"), "systemName") if (args.length == 0):
-						return "(if Stdlib.Sys.os_type = \"Win32\" then \"Windows\" else (try let u = Unix.uname () in if u.sysname = \"Darwin\" then \"Mac\" else \"Linux\" with _ -> \"Linux\"))";
+						// Keep this compatible with older OCaml runtimes (e.g. 4.13) where `Unix.uname`
+						// is not available.
+						//
+						// Best-effort mapping to Haxe's coarse-grained names:
+						// - Win32/Cygwin -> Windows
+						// - presence of /System/Library -> Mac
+						// - presence of /proc dir -> Linux
+						// - otherwise -> Linux (fallback)
+						return "(match Stdlib.Sys.os_type with "
+							+ "| \"Win32\" | \"Cygwin\" -> \"Windows\" "
+							+ "| _ -> "
+							+ "if Stdlib.Sys.file_exists \"/System/Library\" then \"Mac\" "
+							+ "else if Stdlib.Sys.file_exists \"/proc\" && Stdlib.Sys.is_directory \"/proc\" then \"Linux\" "
+							+ "else \"Linux\")";
 					// Stage 3 bring-up: `sys.io.Process.exitCode()` is used pervasively by RunCi to test
 					// whether subcommands succeeded. Map it to our bootstrap shim.
 					case EField(proc, "exitCode") if (args.length == 0 && isSysIoProcessExpr(proc)):
