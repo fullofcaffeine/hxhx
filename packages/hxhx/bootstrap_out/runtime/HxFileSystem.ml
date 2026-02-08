@@ -21,10 +21,10 @@ type file_stat = {
 }
 
 let exists (path : string) : bool =
-  Sys.file_exists path
+  Stdlib.Sys.file_exists path
 
 let rename (path : string) (newPath : string) : unit =
-  Sys.rename path newPath
+  Stdlib.Sys.rename path newPath
 
 let stat (path : string) : file_stat =
   let s = Unix.stat path in
@@ -71,34 +71,34 @@ let normalize_path (p : string) : string =
 let absolutePath (relPath : string) : string =
   let base =
     if Filename.is_relative relPath then
-      Filename.concat (Sys.getcwd ()) relPath
+      Filename.concat (Stdlib.Sys.getcwd ()) relPath
     else
       relPath
   in
   normalize_path base
 
 let isDirectory (path : string) : bool =
-  Sys.is_directory path
+  Stdlib.Sys.is_directory path
 
 let rec createDirectory (path : string) : unit =
   if path = "" || path = "." then
     ()
-  else if Sys.file_exists path then (
-    if Sys.is_directory path then () else raise (Sys_error ("Not a directory: " ^ path))
+  else if Stdlib.Sys.file_exists path then (
+    if Stdlib.Sys.is_directory path then () else raise (Sys_error ("Not a directory: " ^ path))
   ) else (
     let parent = Filename.dirname path in
     if parent <> path && parent <> "." then createDirectory parent;
-    Sys.mkdir path 0o755
+    Stdlib.Sys.mkdir path 0o755
   )
 
 let deleteFile (path : string) : unit =
-  Sys.remove path
+  Stdlib.Sys.remove path
 
 let deleteDirectory (path : string) : unit =
-  Sys.rmdir path
+  Stdlib.Sys.rmdir path
 
 let readDirectory (path : string) : string HxArray.t =
   let out = HxArray.create () in
-  let entries = Sys.readdir path in
+  let entries = Stdlib.Sys.readdir path in
   Array.iter (fun name -> ignore (HxArray.push out name)) entries;
   out

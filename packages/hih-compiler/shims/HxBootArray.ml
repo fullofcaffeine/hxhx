@@ -1,60 +1,64 @@
-(* hxhx(stage3) bootstrap shim: HxBootArray *)
+(* hxhx(stage3) bootstrap shim: HxBootArray
 
-type 'a t = {
-  mutable data : Obj.t array;
-  mutable length : int;
-}
+   Why
+   - Stage3-emitted programs need a small `Array<T>` runtime surface for orchestration
+     (RunCi, simple examples), but we don't want a second, incompatible array type.
+   - The Stage3 emitter and other runtime helpers already use `HxArray.t` in some paths
+     (e.g. `HxString.split`), so `HxBootArray.t` must unify with `HxArray.t` to keep the
+     generated OCaml type-checkable.
 
-let hx_null : Obj.t = Obj.repr (Obj.magic 0)
+   What
+   - `HxBootArray.t` is a type alias of `HxArray.t`.
+   - We provide a tiny convenience API (`of_list`, `to_list`) used by the Stage3 emitter
+     to lower array literals and interop with OCaml stdlib functions.
 
-let create () : 'a t = { data = [||]; length = 0 }
-let length (a : 'a t) : int = a.length
+   How
+   - Most operations delegate to `HxArray`.
+   - `to_list` reads the underlying representation directly; this is safe because the
+     alias means both modules share the same record layout.
+*)
 
-let ensure_capacity (a : 'a t) (needed : int) : unit =
-  let current = Array.length a.data in
-  if current < needed then (
-    let doubled = if current = 0 then 4 else current * 2 in
-    let new_cap = if doubled < needed then needed else doubled in
-    let next = Array.make new_cap hx_null in
-    if a.length > 0 then Array.blit a.data 0 next 0 a.length;
-    a.data <- next
-  )
+type 'a t = 'a HxArray.t
+
+let hx_null : Obj.t =
+  HxArray.hx_null
+
+let create () : 'a t =
+  HxArray.create ()
+
+let length (a : 'a t) : int =
+  HxArray.length a
 
 let get (a : 'a t) (i : int) : 'a =
-  if i < 0 || i >= a.length then Obj.magic 0 else Obj.obj a.data.(i)
+  HxArray.get a i
 
 let set (a : 'a t) (i : int) (v : 'a) : 'a =
-  if i < 0 then v
-  else (
-    if i >= a.length then (
-      ensure_capacity a (i + 1);
-      for j = a.length to i - 1 do
-        a.data.(j) <- hx_null
-      done;
-      a.length <- i + 1
-    );
-    a.data.(i) <- Obj.repr v;
-    v
-  )
+  HxArray.set a i v
 
 let push (a : 'a t) (v : 'a) : int =
-  ensure_capacity a (a.length + 1);
-  a.data.(a.length) <- Obj.repr v;
-  a.length <- a.length + 1;
-  a.length
+  HxArray.push a v
+
+let iter (a : 'a t) (f : 'a -> unit) : unit =
+  HxArray.iter a f
 
 let of_list (xs : 'a list) : 'a t =
   let a = create () in
   List.iter (fun x -> ignore (push a x)) xs;
   a
 
-let iter (a : 'a t) (f : 'a -> unit) : unit =
-  for i = 0 to a.length - 1 do
-    f (Obj.obj a.data.(i))
-  done
-
 let to_list (a : 'a t) : 'a list =
+  (* `HxArray.t` is a record; the type alias lets us access the fields. *)
   let rec loop i acc =
     if i < 0 then acc else loop (i - 1) (Obj.obj a.data.(i) :: acc)
   in
   loop (a.length - 1) []
+
+let copy (a : 'a t) : 'a t =
+  HxArray.copy a
+
+let concat (a : 'a t) (b : 'a t) : 'a t =
+  HxArray.concat a b
+
+let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
+  HxArray.join a sep to_string
+

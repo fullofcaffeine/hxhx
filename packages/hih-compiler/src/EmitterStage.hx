@@ -279,7 +279,33 @@ class EmitterStage {
 						&& tyByIdent.get(name) != null
 						&& tyByIdent.get(name).toString() == "String"):
 					ocamlValueIdent(name);
-			case _: escapeOcamlString("<unsupported>");
+				case EIdent(name)
+					if (tyByIdent != null
+						&& tyByIdent.get(name) != null
+						&& StringTools.startsWith(tyByIdent.get(name).toString(), "Array<")):
+					// Haxe string interpolation uses `Std.string(...)` for non-strings.
+					// For `Array<String>`, upstream RunCi relies on `Array.toString()` semantics,
+					// which are equivalent to `join(",")`.
+					//
+					// Using `Std.string` on our array representation would currently degrade to
+					// "<object>" (because `dynamic_toStdString` can't reliably detect records).
+					final t = tyByIdent.get(name).toString();
+					final compact = StringTools.replace(t, " ", "");
+					(compact.indexOf("Array<String>") == 0)
+						? ("HxBootArray.join (" + ocamlValueIdent(name) + ") (\",\") (fun (s : string) -> s)")
+						: ("Std.string (Obj.repr (" + ocamlValueIdent(name) + "))");
+				case EIdent(name)
+					if (tyByIdent != null
+						&& tyByIdent.get(name) != null
+						&& tyByIdent.get(name).toString() == "Array"):
+					"Std.string (Obj.repr (" + ocamlValueIdent(name) + "))";
+			case _:
+				// Bring-up default: prefer *some* stringification over `<unsupported>` so
+				// upstream harness logs remain readable (and don't change meaning).
+				//
+				// Note: this uses the backend's `Std.string` implementation (Haxe semantics),
+				// not OCaml's `Stdlib.string_of_*`.
+				"Std.string (Obj.repr (" + exprToOcaml(e, null, tyByIdent, null, null, null) + "))";
 		}
 	}
 
@@ -925,18 +951,18 @@ class EmitterStage {
 						case EField(obj, "copy") if (args.length == 0):
 							switch (obj) {
 								case EArrayDecl(_):
-									return "HxArray.copy (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+									return "HxBootArray.copy (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 								case EIdent(name):
 									final t = tyForIdent(name);
 									if (StringTools.startsWith(t, "Array<")) {
-										return "HxArray.copy (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+										return "HxBootArray.copy (" + exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 									}
 								case _:
 							}
 						case EField(obj, "concat") if (args.length == 1):
 							switch (obj) {
 								case EArrayDecl(_):
-									return "HxArray.concat ("
+									return "HxBootArray.concat ("
 										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 										+ ") ("
 										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -944,7 +970,7 @@ class EmitterStage {
 								case EIdent(name):
 									final t = tyForIdent(name);
 									if (StringTools.startsWith(t, "Array<")) {
-										return "HxArray.concat ("
+										return "HxBootArray.concat ("
 											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 											+ ") ("
 											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -957,7 +983,7 @@ class EmitterStage {
 								case EIdent(name):
 									final t = tyForIdent(name);
 									if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
-										return "HxArray.join ("
+										return "HxBootArray.join ("
 											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 											+ ") ("
 											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -1534,6 +1560,69 @@ class EmitterStage {
 						// can contain locals that are intentionally unused. In OCaml, that triggers warnings
 						// which can become hard errors under `-warn-error`.
 					out = "let " + ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))";
+					case SIf(cond, thenBranch, elseBranch, _pos):
+						// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
+						// idiom used by upstream RunCi:
+						//
+						//   if (x == null) x = expr;
+						//
+						// Why
+						// - Our Stage3 emitter models locals/params as immutable OCaml `let` bindings.
+						// - Emitting `x = expr` as a side-effecting assignment would require `ref`/mutable
+						//   lowering across the entire function.
+						// - This pattern can be expressed without mutation by shadowing:
+						//     let x = if x == null then expr else x in ...
+						//
+						// Note
+						// - We only do this for the exact "if (x == null) x = ..." shape with no else.
+						function unwrapSingleAssign(b:HxStmt):Null<{name:String, rhs:HxExpr}> {
+							return switch (b) {
+								case SExpr(EBinop("=", EIdent(name), rhs), _):
+									{name: name, rhs: rhs};
+								case SBlock(ss, _):
+									(ss != null && ss.length == 1) ? unwrapSingleAssign(ss[0]) : null;
+								case _:
+									null;
+							}
+						}
+
+						function isNullCheckFor(name:String, c:HxExpr):Bool {
+							return switch (c) {
+								case EBinop("==", EIdent(n), ENull): n == name;
+								case EBinop("==", ENull, EIdent(n)): n == name;
+								case _:
+									false;
+							}
+						}
+
+						final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
+						if (assign != null && isNullCheckFor(assign.name, cond)) {
+							final ident = ocamlValueIdent(assign.name);
+							final rhs = returnExprToOcaml(
+								assign.rhs,
+								allowedValueIdents,
+								arityByIdent,
+								tyByIdent,
+								staticImportByIdent,
+								currentPackagePath,
+								moduleNameByPkgAndClass
+							);
+							out =
+								"(let "
+								+ ident
+								+ " = (if "
+								+ condToOcamlBool(cond)
+								+ " then ("
+								+ rhs
+								+ ") else "
+								+ ident
+								+ ") in ("
+								+ out
+								+ "))";
+						} else {
+							// Default lowering for if-statements.
+							out = stmtAlwaysReturns(s) ? stmtToUnit(s) : ("(" + stmtToUnit(s) + "; " + out + ")");
+						}
 				case _:
 					// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
 					// (nonreturning-statement). This also naturally drops statements that appear after

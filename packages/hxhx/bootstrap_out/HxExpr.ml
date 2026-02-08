@@ -8,6 +8,7 @@ type hxexpr =
 | EString of string
 | EInt of int
 | EFloat of float
+| EEnumValue of string
 | EThis
 | ESuper
 | EIdent of string
@@ -16,11 +17,13 @@ type hxexpr =
 | ELambda of string HxArray.t * hxexpr
 | ETryCatchRaw of string
 | ESwitchRaw of string
+| ESwitch of hxexpr * Obj.t HxArray.t
 | ENew of string * hxexpr HxArray.t
 | EUnop of string * hxexpr
 | EBinop of string * hxexpr * hxexpr
 | ETernary of hxexpr * hxexpr * hxexpr
 | EAnon of string HxArray.t * hxexpr HxArray.t
+| EArrayComprehension of string * hxexpr * hxexpr
 | EArrayDecl of hxexpr HxArray.t
 | EArrayAccess of hxexpr * hxexpr
 | ERange of hxexpr * hxexpr

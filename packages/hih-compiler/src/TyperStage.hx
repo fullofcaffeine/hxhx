@@ -336,6 +336,16 @@ class TyperStage {
 						case EField(EIdent("Sys"), "args"):
 							for (a in args) inferExprType(a, scope, ctx, pos);
 							return TyType.fromHintText("Array<String>");
+						case EField(EIdent("Timer"), "stamp"):
+							// Gate2 bring-up: RunCi uses `Timer.stamp()` for timing logs.
+							// We map it to a float so `Math.round(Timer.stamp() - t)` can type.
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("Float");
+						case EField(EIdent("Math"), "round"):
+							// Gate2 bring-up: RunCi computes `final dt = Math.round(Timer.stamp() - t);`.
+							// If this stays unknown, string interpolation of `${dt}s` degrades to `<unsupported>`.
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("Int");
 						case _:
 					}
 

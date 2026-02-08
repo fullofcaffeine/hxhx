@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue }
+type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue; mutable isOptional : bool }
 
-let create = fun name2 typeHint2 defaultValue2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic () } : t) in (
+let create = fun name2 typeHint2 defaultValue2 isOptional2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (); isOptional = false } : t) in (
   ignore ((
     ignore (let __assign_1 = name2 in (
       self.name <- __assign_1;
@@ -16,18 +16,24 @@ let create = fun name2 typeHint2 defaultValue2 -> let self = ({ __hx_type = HxTy
       self.typeHint <- __assign_2;
       __assign_2
     ));
-    let __assign_3 = defaultValue2 in (
+    ignore (let __assign_3 = defaultValue2 in (
       self.defaultValue <- __assign_3;
       __assign_3
+    ));
+    let __assign_4 = isOptional2 in (
+      self.isOptional <- __assign_4;
+      __assign_4
     )
   ));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (); isOptional = false } : t)
 
 let getName = fun a -> a.name
 
 let getTypeHint = fun a -> a.typeHint
 
 let getDefaultValue = fun a -> a.defaultValue
+
+let getIsOptional = fun a -> a.isOptional
