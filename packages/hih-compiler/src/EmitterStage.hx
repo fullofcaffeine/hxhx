@@ -680,15 +680,73 @@ class EmitterStage {
 						return "print_endline (" + exprToOcamlString(args[0], tyByIdent) + ")";
 					case EField(ECall(EField(EIdent("Sys"), "stdout"), []), "flush") if (args.length == 0):
 						return "(flush stdout)";
+					// Stage 3 bring-up: `Sys.command(cmd, ?args)` is used by upstream RunCi to execute
+					// the `haxe` toolchain (and a few shell snippets like `export FOO=1 && ...`).
+					//
+					// We route through the stage3 bootstrap shim so Gate2 can run without relying on
+					// an external runtime layer. The shim itself decides whether to use `/usr/bin/env`
+					// or a shell (`/bin/sh -c`) based on whether `args` is empty and the command looks
+					// like it contains shell operators.
+					case EField(EIdent("Sys"), "command") if (args.length == 1):
+						return "HxBootProcess.command ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") (HxBootArray.create ())";
+					case EField(EIdent("Sys"), "command") if (args.length == 2):
+						// `Sys.command(cmd, null)` occurs in upstream `runci.System.runSysTest`.
+						// In our bring-up model, `null` lowers to `(Obj.magic 0)`, so coerce to an empty
+						// `HxBootArray` at runtime to avoid segfaulting in the shim.
+						final rawCmd = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						final rawArgs = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						return "(let __args = Obj.repr (" + rawArgs + ") in "
+							+ "let __arr : string HxBootArray.t = if __args == Obj.repr (Obj.magic 0) then HxBootArray.create () else (Obj.obj __args) in "
+							+ "HxBootProcess.command (" + rawCmd + ") __arr)";
+					// Stage 3 bring-up: basic env/CWD helpers used by upstream RunCi orchestration.
+					case EField(EIdent("Sys"), "getEnv") if (args.length == 1):
+						return "(try Sys.getenv ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") with Not_found -> \"\")";
+					case EField(EIdent("Sys"), "putEnv") if (args.length == 2):
+						return "((Unix.putenv ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") ("
+							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")); ())";
+					case EField(EIdent("Sys"), "setCwd") if (args.length == 1):
+						return "(Sys.chdir ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ "))";
+					case EField(EIdent("Sys"), "getCwd") if (args.length == 0):
+						return "(Sys.getcwd ())";
+					case EField(EIdent("Sys"), "systemName") if (args.length == 0):
+						return "(if Sys.os_type = \"Win32\" then \"Windows\" else (try let u = Unix.uname () in if u.sysname = \"Darwin\" then \"Mac\" else \"Linux\" with _ -> \"Linux\"))";
 					// Stage 3 bring-up: `sys.io.Process.exitCode()` is used pervasively by RunCi to test
 					// whether subcommands succeeded. Map it to our bootstrap shim.
 					case EField(proc, "exitCode") if (args.length == 0 && isSysIoProcessExpr(proc)):
 						return "HxBootProcess.exitCode (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					// Bring-up: `sys.io.Process.close()` exists for resource cleanup; our shim is eager
+					// and already waits + buffers outputs, so close is a no-op.
+					case EField(proc, "close") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.close (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 					// Bring-up: allow reading process output as a single string.
 					case EField(EField(proc, "stdout"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
 						return "HxBootProcess.stdoutReadAll (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 					case EField(EField(proc, "stderr"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
 						return "HxBootProcess.stderrReadAll (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					// Bring-up: allow line-wise reads used by upstream `runci.System.getHaxelibPath`.
+					case EField(EField(proc, "stdout"), "readLine") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.stdoutReadLine (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					case EField(EField(proc, "stderr"), "readLine") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.stderrReadLine (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					// Bring-up: `readAll()` on process pipes returns bytes in upstream; `.toString()` is
+					// commonly chained. Our shim returns a string already, so treat it as identity.
+					case EField(obj, "toString") if (args.length == 0):
+						switch (obj) {
+							case ECall(EField(EField(proc, "stdout"), "readAll"), []) if (isSysIoProcessExpr(proc)):
+								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							case ECall(EField(EField(proc, "stderr"), "readAll"), []) if (isSysIoProcessExpr(proc)):
+								return exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							case _:
+						}
 					// Stage 3 bring-up: allow a tiny subset of `Array` operations so orchestration code
 					// can run under `--hxhx-emit-full-bodies`.
 					case EField(obj, "push") if (args.length == 1):
@@ -1672,6 +1730,9 @@ class EmitterStage {
 			final args = new Array<String>();
 			args.push("-o");
 			args.push("out.exe");
+			// Stage3 bootstrap shims use the OCaml `Unix` module (process spawning, env, uname, etc).
+			// Link the standard library `unix` package explicitly so dune-less `ocamlopt` builds work.
+			args.push("unix.cmxa");
 			for (p in orderedNoRootUniq) args.push(p);
 			final code = try Sys.command(ocamlopt, args) catch (e:Dynamic) {
 				Sys.setCwd(prevCwd);
