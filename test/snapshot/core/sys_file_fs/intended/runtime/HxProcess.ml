@@ -40,7 +40,7 @@ type proc = {
      which we can surface as a normal Haxe exception for diagnostics.
 *)
 let () =
-  try Sys.set_signal Sys.sigpipe Sys.Signal_ignore with _ -> ()
+  try Stdlib.Sys.set_signal Stdlib.Sys.sigpipe Stdlib.Sys.Signal_ignore with _ -> ()
 
 let next_id = ref 1
 let table : (int, proc) Hashtbl.t = Hashtbl.create 16
@@ -114,7 +114,7 @@ let flush_stdin (id : int) : unit =
 let kill (id : int) : unit =
   let p = get_exn id in
   (* Best-effort: SIGKILL. *)
-  (try Unix.kill p.pid Sys.sigkill with _ -> ())
+  (try Unix.kill p.pid Stdlib.Sys.sigkill with _ -> ())
 
 let close (id : int) : int =
   let p = get_exn id in

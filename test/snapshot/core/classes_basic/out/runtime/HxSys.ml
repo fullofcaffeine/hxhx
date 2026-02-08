@@ -21,7 +21,7 @@ let hx_unset_sentinel = "\x1e__REFlAXE_OCAML_UNSET__\x1f"
 
 let args () : string HxArray.t =
   let out = HxArray.create () in
-  let argv = Sys.argv in
+  let argv = Stdlib.Sys.argv in
   let n = Array.length argv in
   let i = ref 1 in
   while !i < n do
@@ -32,7 +32,7 @@ let args () : string HxArray.t =
 
 let getEnv (s : string) : string =
   let null_string : string = Obj.magic HxRuntime.hx_null in
-  match Sys.getenv_opt s with
+  match Stdlib.Sys.getenv_opt s with
   | Some v when v = hx_unset_sentinel -> null_string
   | Some v -> v
   | None -> null_string
@@ -73,27 +73,27 @@ let sleep (seconds : float) : unit =
   ignore (Unix.select [] [] [] seconds)
 
 let getCwd () : string =
-  Sys.getcwd ()
+  Stdlib.Sys.getcwd ()
 
 let setCwd (s : string) : unit =
-  Sys.chdir s
+  Stdlib.Sys.chdir s
 
 let systemName () : string =
-  match Sys.os_type with
+  match Stdlib.Sys.os_type with
   | "Win32" | "Cygwin" -> "Windows"
   | _ ->
       (* OCaml 4.13's Unix module does not expose `uname` on all distros.
          Use a small heuristic that matches Haxe's coarse-grained names. *)
-      if Sys.file_exists "/System/Library" then
+      if Stdlib.Sys.file_exists "/System/Library" then
         "Mac"
-      else if Sys.file_exists "/proc" && Sys.is_directory "/proc" then
+      else if Stdlib.Sys.file_exists "/proc" && Stdlib.Sys.is_directory "/proc" then
         "Linux"
       else
         "BSD"
 
 let command (cmd : string) (args_opt : string HxArray.t option) : int =
   match args_opt with
-  | None -> Sys.command cmd
+  | None -> Stdlib.Sys.command cmd
   | Some args ->
       let len = HxArray.length args in
       let argv = Array.make (len + 1) "" in
@@ -116,13 +116,13 @@ let time () : float =
   Unix.gettimeofday ()
 
 let cpuTime () : float =
-  Sys.time ()
+  Stdlib.Sys.time ()
 
 let programPath () : string =
-  let p = Sys.executable_name in
+  let p = Stdlib.Sys.executable_name in
   try Unix.realpath p with _ ->
     if Filename.is_relative p then
-      Filename.concat (Sys.getcwd ()) p
+      Filename.concat (Stdlib.Sys.getcwd ()) p
     else
       p
 
