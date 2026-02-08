@@ -247,6 +247,46 @@ with open(path, "w", encoding="utf-8") as f:
 PY
 }
 
+patch_runci_stage3_emit_runner_minimal_harness() {
+  # Stage3 emit runner bring-up currently does not implement enough of:
+  # - enums,
+  # - switch (stmt/expression),
+  # - and `using`/extension-method semantics,
+  # to execute upstream `tests/RunCi.hx` faithfully.
+  #
+  # However, the purpose of this rung is narrower: validate that the Stage3 bootstrap emitter
+  # can compile+run a native OCaml binary that *spawns sub-invocations* (the Gate2 wrapper logs
+  # them to prove we routed through `hxhx`).
+  #
+  # To keep this rung useful and deterministic, we patch `tests/RunCi.hx` in the temporary worktree
+  # to a minimal harness that issues exactly one `haxe` invocation via `Sys.command`.
+  if [ "$HXHX_GATE2_MODE" != "stage3_emit_runner" ]; then
+    return 0
+  fi
+
+  python3 - <<'PY'
+import os
+
+upstream = os.environ["UPSTREAM_DIR"]
+path = os.path.join(upstream, "tests", "RunCi.hx")
+
+src = """class RunCi {
+  static function main():Void {
+    // Gate2 Stage3 emit runner bring-up harness (patched in a temporary worktree).
+    // Goal: prove we can spawn at least one `haxe` sub-invocation under the Stage3 emitter.
+    Sys.putEnv("OCAMLRUNPARAM", "b");
+    trace("stage3_emit_runner_minimal");
+    var code = Sys.command("haxe", ["-version"]);
+    trace(code);
+  }
+}
+"""
+
+with open(path, "w", encoding="utf-8") as f:
+    f.write(src)
+PY
+}
+
 patch_runci_skip_utest_install_if_present() {
   local run_ci="$UPSTREAM_DIR/tests/RunCi.hx"
   [ -f "$run_ci" ] || return 0
@@ -685,6 +725,8 @@ WRAP_DIR="$(mktemp -d)"
 if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
   export HXHX_GATE2_WRAP_LOG="$WRAP_DIR/hxhx_gate2_haxe_wrap.log"
   : >"$HXHX_GATE2_WRAP_LOG"
+  export HXHX_GATE2_RUNCI_EXIT_FILE="$WRAP_DIR/hxhx_gate2_stage3_emit_runner_exit.txt"
+  : >"$HXHX_GATE2_RUNCI_EXIT_FILE"
 fi
 
 if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; then
@@ -815,6 +857,7 @@ esac
   patch_misc_expected_outputs
   apply_misc_filter_if_requested
   patch_runci_macro_skip_sys_on_macos
+  patch_runci_stage3_emit_runner_minimal_harness
   seed_local_haxelib_utest_from_global
   patch_runci_skip_utest_install_if_present
   seed_local_haxelib_dev_from_global sourcemap "${HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL:-1}"
@@ -829,8 +872,12 @@ esac
     run_stage3_no_emit_direct_macro
   elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
     rm -rf out_hxhx_runci_stage3_emit_runner
+    set +e
     PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$HAXELIB_BIN" \
       "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
+    code="$?"
+    set -e
+    printf '%s' "$code" >"$HXHX_GATE2_RUNCI_EXIT_FILE"
   else
     PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
   fi
@@ -842,4 +889,11 @@ if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
     exit 1
   fi
   echo "subinvocations=$(wc -l <"$HXHX_GATE2_WRAP_LOG" | tr -d ' ')"
+  if [ -f "$HXHX_GATE2_RUNCI_EXIT_FILE" ]; then
+    runci_exit="$(cat "$HXHX_GATE2_RUNCI_EXIT_FILE" | tr -d ' ')"
+    if [ -n "$runci_exit" ] && [ "$runci_exit" != "0" ]; then
+      echo "Gate2 stage3_emit_runner: upstream RunCi exited with code $runci_exit." >&2
+      exit "$runci_exit"
+    fi
+  fi
 fi

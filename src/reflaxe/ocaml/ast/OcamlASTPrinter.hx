@@ -13,13 +13,16 @@ using StringTools;
  */
 class OcamlASTPrinter {
 	static inline final INDENT = "  ";
+	static final indentCache:Array<String> = [""];
 
 	public function new() {}
 
 	static function indent(level:Int):String {
-		var s = "";
-		for (_ in 0...level) s += INDENT;
-		return s;
+		if (level <= 0) return "";
+		while (indentCache.length <= level) {
+			indentCache.push(indentCache[indentCache.length - 1] + INDENT);
+		}
+		return indentCache[level];
 	}
 
 	static function escapeLineDirectiveFile(file:String):String {
@@ -28,11 +31,14 @@ class OcamlASTPrinter {
 	}
 
 	public function printModule(items:Array<OcamlModuleItem>):String {
-		final parts:Array<String> = [];
-		for (item in items) {
-			parts.push(printItem(item));
+		if (items.length == 0) return "";
+		if (items.length == 1) return printItem(items[0]);
+		final buf = new StringBuf();
+		for (i in 0...items.length) {
+			if (i != 0) buf.add("\n\n");
+			buf.add(printItem(items[i]));
 		}
-		return parts.join("\n\n");
+		return buf.toString();
 	}
 
 	public function printItem(item:OcamlModuleItem):String {
@@ -238,8 +244,17 @@ class OcamlASTPrinter {
 
 		final indent0 = indent(indentLevel);
 		final indent1 = indent(indentLevel + 1);
-		final parts = exprs.map(e -> indent1 + printExprCtx(e, PREC_TOP, indentLevel + 1));
-		return "(\n" + parts.join(";\n") + "\n" + indent0 + ")";
+		final buf = new StringBuf();
+		buf.add("(\n");
+		for (i in 0...exprs.length) {
+			if (i != 0) buf.add(";\n");
+			buf.add(indent1);
+			buf.add(printExprCtx(exprs[i], PREC_TOP, indentLevel + 1));
+		}
+		buf.add("\n");
+		buf.add(indent0);
+		buf.add(")");
+		return buf.toString();
 	}
 
 	function printBinop(op:OcamlBinop, left:OcamlExpr, right:OcamlExpr, indentLevel:Int):String {
@@ -314,12 +329,16 @@ class OcamlASTPrinter {
 
 	function printRecord(fields:Array<OcamlRecordField>, indentLevel:Int):String {
 		if (fields.length == 0) return "{}";
-		final parts = fields.map(function(f) {
+		final buf = new StringBuf();
+		buf.add("{ ");
+		for (i in 0...fields.length) {
+			if (i != 0) buf.add("; ");
+			final f = fields[i];
 			// OCaml precedence gotcha: `fun ... -> ...; other_field = ...` can be parsed as a
 			// sequence inside the function body instead of a record field separator.
 			// Parenthesize function values to keep record syntax unambiguous.
 			final rendered = printExprCtx(f.value, PREC_TOP, indentLevel);
-			return f.name + " = " + (switch (f.value) {
+			final value = switch (f.value) {
 				case EPos(_, inner):
 					switch (inner) {
 						case EFun(_, _): "(" + rendered + ")";
@@ -327,19 +346,27 @@ class OcamlASTPrinter {
 					}
 				case EFun(_, _): "(" + rendered + ")";
 				case _: rendered;
-			});
-		});
-		return "{ " + parts.join("; ") + " }";
+			};
+			buf.add(f.name);
+			buf.add(" = ");
+			buf.add(value);
+		}
+		buf.add(" }");
+		return buf.toString();
 	}
 
 	function printApp(fn:OcamlExpr, args:Array<OcamlExpr>, indentLevel:Int):String {
 		final f = printExprCtx(fn, PREC_APP, indentLevel);
 		if (args.length == 0) return f;
-		final renderedArgs = args.map(function(a) {
+		final buf = new StringBuf();
+		buf.add(f);
+		for (i in 0...args.length) {
+			buf.add(" ");
+			final a = args[i];
 			final rendered = printExprCtx(a, PREC_ATOM, indentLevel);
-			return needsExprParensInApp(a) ? ("(" + rendered + ")") : rendered;
-		}).join(" ");
-		return f + " " + renderedArgs;
+			buf.add(needsExprParensInApp(a) ? ("(" + rendered + ")") : rendered);
+		}
+		return buf.toString();
 	}
 
 	function printAppArgs(fn:OcamlExpr, args:Array<OcamlApplyArg>, indentLevel:Int):String {
@@ -366,17 +393,21 @@ class OcamlASTPrinter {
 				: (prefix + label + ":" + rendered);
 		}
 
-		final renderedArgs = args.map(function(a) {
+		final buf = new StringBuf();
+		buf.add(f);
+		for (i in 0...args.length) {
+			buf.add(" ");
+			final a = args[i];
 			if (a.label == null) {
 				final rendered = printExprCtx(a.expr, PREC_ATOM, indentLevel);
-				return needsExprParensInApp(a.expr) ? ("(" + rendered + ")") : rendered;
+				buf.add(needsExprParensInApp(a.expr) ? ("(" + rendered + ")") : rendered);
+			} else {
+				final prefix = a.isOptional ? "?" : "~";
+				buf.add(renderLabelArg(prefix, a.label, a.expr));
 			}
+		}
 
-			final prefix = a.isOptional ? "?" : "~";
-			return renderLabelArg(prefix, a.label, a.expr);
-		}).join(" ");
-
-		return f + " " + renderedArgs;
+		return buf.toString();
 	}
 
 	function needsExprParensInApp(e:OcamlExpr):Bool {

@@ -78,11 +78,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var profileEnabled:Bool = false;
 	var profileStartS:Float = 0.0;
 	var profileLastS:Float = 0.0;
-	var profClassCount:Int = 0;
-	var profEnumCount:Int = 0;
-	var profileVerbose:Bool = false;
-	static var profileLog:Null<FileOutput> = null;
-	static var profileLogPath:Null<String> = null;
+		var profClassCount:Int = 0;
+		var profEnumCount:Int = 0;
+		var profileVerbose:Bool = false;
+		var profileClassFilter:Null<String> = null;
+		var profileFieldFilter:Null<String> = null;
+		var profileDetail:Bool = false;
+		static var profileLog:Null<FileOutput> = null;
+		static var profileLogPath:Null<String> = null;
 
 	inline function profileNowS():Float return haxe.Timer.stamp();
 
@@ -180,11 +183,15 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super();
 		instance = this;
 
-		#if macro
-		profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_profile");
-		profileVerbose = Context.defined("reflaxe_ocaml_profile");
-		if (profileEnabled) profileInit();
-		// Precompute inheritance participants after typing, before codegen starts.
+			#if macro
+			profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_profile");
+			profileVerbose = Context.defined("reflaxe_ocaml_profile");
+			profileClassFilter = Context.definedValue("reflaxe_ocaml_profile_class");
+			profileFieldFilter = Context.definedValue("reflaxe_ocaml_profile_field");
+			profileDetail = Context.defined("reflaxe_ocaml_profile_detail");
+			if (profileEnabled) profileInit();
+			ctx.profileLogLine = profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null;
+			// Precompute inheritance participants after typing, before codegen starts.
 			//
 			// Why not compute lazily in `compileClassImpl`?
 			// - Base classes can be compiled before derived classes.
@@ -548,18 +555,20 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 	#end
 
-	public function compileClassImpl(
-		classType:ClassType,
-		varFields:Array<ClassVarData>,
-		funcFields:Array<ClassFuncData>
-	):Null<String> {
-		#if macro
-		profClassCount++;
-		final profClassName = (classType.pack ?? []).concat([classType.name]).join(".");
-		profileWarnEvery("class", profClassCount, profClassName, classType.pos, 50);
-		if (profileVerbose) profileLogLine("reflaxe.ocaml: class_begin count=" + Std.string(profClassCount) + " name=" + profClassName);
-		#end
-		ctx.emittedHaxeModules.set(classType.module, true);
+		public function compileClassImpl(
+			classType:ClassType,
+			varFields:Array<ClassVarData>,
+			funcFields:Array<ClassFuncData>
+		):Null<String> {
+			#if macro
+			final profClassStartS = profileEnabled ? profileNowS() : 0.0;
+			profClassCount++;
+			final profClassName = (classType.pack ?? []).concat([classType.name]).join(".");
+			final profClassMatch = profileClassFilter != null && profileClassFilter.length > 0 && profClassName == profileClassFilter;
+			profileWarnEvery("class", profClassCount, profClassName, classType.pos, 50);
+			if (profileVerbose) profileLogLine("reflaxe.ocaml: class_begin count=" + Std.string(profClassCount) + " name=" + profClassName);
+			#end
+			ctx.emittedHaxeModules.set(classType.module, true);
 		ctx.currentModuleId = classType.module;
 		ctx.currentTypeName = classType.name;
 		ctx.variableRenameMap.clear();
@@ -1193,11 +1202,21 @@ class OcamlCompiler extends DirectToStringCompiler {
 						});
 					}
 
-				for (f in instanceMethods) {
-					final compiled = {
-						final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(f.field.type)) {
-							case TFun(fargs, _): fargs;
-							case _: null;
+					for (f in instanceMethods) {
+						#if macro
+						if (profileVerbose && profClassMatch && profileDetail) {
+							if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
+								profileLogLine(
+									"reflaxe.ocaml: field_begin class=" + profClassName
+									+ " kind=instance_method name=" + f.field.name
+								);
+							}
+						}
+						#end
+						final compiled = {
+							final expectedArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = switch (TypeTools.follow(f.field.type)) {
+								case TFun(fargs, _): fargs;
+								case _: null;
 						}
 						final argInfo = f.args.map(a -> ({
 							id: a.tvar != null ? a.tvar.id : -1,
@@ -1269,20 +1288,46 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
-			// Static functions (M2+)
-			for (f in funcFields) {
-				if (f.expr == null) continue;
-				if (!f.isStatic) continue;
+				// Static functions (M2+)
+				for (f in funcFields) {
+					if (f.expr == null) continue;
+					if (!f.isStatic) continue;
 
-				final name = ctx.scopedValueName(classType.module, classType.name, f.field.name);
-				final argInfo = f.args.map(a -> ({
-					id: a.tvar != null ? a.tvar.id : -1,
-					name: a.getName()
-				}));
-				final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr);
+					#if macro
+					if (profileVerbose && profClassMatch && profileDetail) {
+						if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
+							profileLogLine(
+								"reflaxe.ocaml: field_begin class=" + profClassName
+								+ " kind=static_method name=" + f.field.name
+							);
+						}
+					}
+					#end
 
-				// `dynamic function` fields are mutable in Haxe: they can be reassigned at runtime
-				// (including statics, see upstream Issue5556). Model them like mutable statics:
+					final name = ctx.scopedValueName(classType.module, classType.name, f.field.name);
+					final argInfo = f.args.map(a -> ({
+						id: a.tvar != null ? a.tvar.id : -1,
+						name: a.getName()
+					}));
+					#if macro
+					final profFieldStartS = (profileVerbose && profClassMatch && profileDetail) ? profileNowS() : 0.0;
+					#end
+					final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr);
+					#if macro
+					if (profileVerbose && profClassMatch && profileDetail) {
+						if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
+							final dtMs = Std.int((profileNowS() - profFieldStartS) * 1000);
+							profileLogLine(
+								"reflaxe.ocaml: field_end class=" + profClassName
+								+ " kind=static_method name=" + f.field.name
+								+ " dt_ms=" + Std.string(dtMs)
+							);
+						}
+					}
+					#end
+
+					// `dynamic function` fields are mutable in Haxe: they can be reassigned at runtime
+					// (including statics, see upstream Issue5556). Model them like mutable statics:
 				// - store as `ref` cell
 				// - lower reads to `!x` and writes to `x := v` in the builder.
 				final isDynamicMethod = switch (f.field.kind) {
@@ -1306,9 +1351,19 @@ class OcamlCompiler extends DirectToStringCompiler {
 		// - This currently models *declaration + initialization* only.
 		// - Reassignment semantics (`MyClass.x = v`) require an explicit representation decision
 		//   (`ref` vs `mutable record field` vs other), and are handled separately.
-				for (v in varFields) {
-					if (!v.isStatic) continue;
-					final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
+					for (v in varFields) {
+						if (!v.isStatic) continue;
+						#if macro
+						if (profileVerbose && profClassMatch && profileDetail) {
+							if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == v.field.name) {
+								profileLogLine(
+									"reflaxe.ocaml: field_begin class=" + profClassName
+									+ " kind=static_var name=" + v.field.name
+								);
+							}
+						}
+						#end
+						final name = ctx.scopedValueName(classType.module, classType.name, v.field.name);
 
 					// Haxe `static var` is mutable by default. We currently model this uniformly as a
 					// `ref` cell in OCaml and lower reads/writes to `!x` / `x := v`.
@@ -1341,13 +1396,33 @@ class OcamlCompiler extends DirectToStringCompiler {
 			for (g in orderLetBindingsForOcaml(lets)) {
 				items.push(OcamlModuleItem.ILet(g.bindings, g.isRec));
 			}
+			}
+
+			var out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe type: " + fullName + " *)\n\n";
+			final printStartS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
+			final printed = printer.printModule(items);
+			final printEndS = #if macro (profileVerbose && profClassMatch) ? profileNowS() : 0.0 #else 0.0 #end;
+			out += printed;
+			#if macro
+			if (profileVerbose && profClassMatch) {
+				final dtMs = Std.int((printEndS - printStartS) * 1000);
+				profileLogLine(
+					"reflaxe.ocaml: class_print class=" + profClassName + " dt_ms=" + Std.string(dtMs) + " chars="
+					+ Std.string(printed != null ? printed.length : 0)
+				);
+			}
+			if (profileVerbose) {
+				final classEndS = profileNowS();
+				final dtMs = Std.int((classEndS - profClassStartS) * 1000);
+				profileLogLine(
+					"reflaxe.ocaml: class_end count=" + Std.string(profClassCount) + " name=" + profClassName + " dt_ms="
+					+ Std.string(dtMs) + " chars=" + Std.string(out.length)
+				);
+			}
+			#end
+
+			return out;
 		}
-
-		var out = "(* Generated by reflaxe.ocaml (WIP) *)\n(* Haxe type: " + fullName + " *)\n\n";
-		out += printer.printModule(items);
-
-		return out;
-	}
 
 	public override function onOutputComplete() {
 		#if eval

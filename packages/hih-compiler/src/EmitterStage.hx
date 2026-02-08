@@ -483,6 +483,22 @@ class EmitterStage {
 				case ECall(EField(_obj, "set_high"), [_v]):
 					"()";
 
+				// Stage 3 bring-up: `haxe.io.Bytes` and other stdlib code frequently call
+				// `StringTools.fastCodeAt(s, i)` / `StringTools.unsafeCodeAt(s, i)`.
+				//
+				// In upstream Haxe these are typically `inline` and lower to a target primitive,
+				// but the Stage3 bootstrap compiler does not implement inlining.
+				//
+				// Instead of requiring a full `StringTools` module in the emitted program,
+				// map them to OCaml primitives directly.
+				case ECall(EField(EIdent("StringTools"), "fastCodeAt"), [s, idx]),
+					ECall(EField(EIdent("StringTools"), "unsafeCodeAt"), [s, idx]):
+					final s2 = exprToOcaml(s, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					final i2 = exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					"(let __s = (" + s2 + ") in "
+					+ "let __i = (" + i2 + ") in "
+					+ "if (__i < 0) || (__i >= String.length __s) then (-1) else (Char.code (String.get __s __i)))";
+
 				case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 					// Bring-up: avoid needing a real `StringTools` implementation in the Stage3 emitter output.
 					escapeOcamlString("");

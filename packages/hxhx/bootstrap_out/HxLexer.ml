@@ -523,73 +523,77 @@ let readIdent = fun self (startPos : HxPos.t) -> let start = self.index in (
         tempResult := __assign_187;
         __assign_187
       )
-      | "new" -> let __assign_188 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KNew)) startPos in (
+      | "in" -> let __assign_188 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KIn)) startPos in (
         tempResult := __assign_188;
         __assign_188
       )
-      | "null" -> let __assign_189 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KNull)) startPos in (
+      | "new" -> let __assign_189 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KNew)) startPos in (
         tempResult := __assign_189;
         __assign_189
       )
-      | "package" -> let __assign_190 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KPackage)) startPos in (
+      | "null" -> let __assign_190 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KNull)) startPos in (
         tempResult := __assign_190;
         __assign_190
       )
-      | "private" -> let __assign_191 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KPrivate)) startPos in (
+      | "package" -> let __assign_191 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KPackage)) startPos in (
         tempResult := __assign_191;
         __assign_191
       )
-      | "public" -> let __assign_192 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KPublic)) startPos in (
+      | "private" -> let __assign_192 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KPrivate)) startPos in (
         tempResult := __assign_192;
         __assign_192
       )
-      | "return" -> let __assign_193 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KReturn)) startPos in (
+      | "public" -> let __assign_193 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KPublic)) startPos in (
         tempResult := __assign_193;
         __assign_193
       )
-      | "static" -> let __assign_194 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KStatic)) startPos in (
+      | "return" -> let __assign_194 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KReturn)) startPos in (
         tempResult := __assign_194;
         __assign_194
       )
-      | "super" -> let __assign_195 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KSuper)) startPos in (
+      | "static" -> let __assign_195 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KStatic)) startPos in (
         tempResult := __assign_195;
         __assign_195
       )
-      | "switch" -> let __assign_196 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KSwitch)) startPos in (
+      | "super" -> let __assign_196 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KSuper)) startPos in (
         tempResult := __assign_196;
         __assign_196
       )
-      | "this" -> let __assign_197 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KThis)) startPos in (
+      | "switch" -> let __assign_197 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KSwitch)) startPos in (
         tempResult := __assign_197;
         __assign_197
       )
-      | "throw" -> let __assign_198 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KThrow)) startPos in (
+      | "this" -> let __assign_198 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KThis)) startPos in (
         tempResult := __assign_198;
         __assign_198
       )
-      | "true" -> let __assign_199 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KTrue)) startPos in (
+      | "throw" -> let __assign_199 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KThrow)) startPos in (
         tempResult := __assign_199;
         __assign_199
       )
-      | "try" -> let __assign_200 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KTry)) startPos in (
+      | "true" -> let __assign_200 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KTrue)) startPos in (
         tempResult := __assign_200;
         __assign_200
       )
-      | "untyped" -> let __assign_201 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KUntyped)) startPos in (
+      | "try" -> let __assign_201 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KTry)) startPos in (
         tempResult := __assign_201;
         __assign_201
       )
-      | "using" -> let __assign_202 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KUsing)) startPos in (
+      | "untyped" -> let __assign_202 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KUntyped)) startPos in (
         tempResult := __assign_202;
         __assign_202
       )
-      | "var" -> let __assign_203 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KVar)) startPos in (
+      | "using" -> let __assign_203 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KUsing)) startPos in (
         tempResult := __assign_203;
         __assign_203
       )
-      | "while" -> let __assign_204 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KWhile)) startPos in (
+      | "var" -> let __assign_204 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KVar)) startPos in (
         tempResult := __assign_204;
         __assign_204
+      )
+      | "while" -> let __assign_205 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KWhile)) startPos in (
+        tempResult := __assign_205;
+        __assign_205
       )
       | _ -> let __assign_171 = HxToken.create (HxTokenKind.TIdent text) startPos in (
         tempResult := __assign_171;
@@ -602,44 +606,44 @@ let readIdent = fun self (startPos : HxPos.t) -> let start = self.index in (
 let readNumber = fun self (startPos : HxPos.t) -> try let start = self.index in (
   ignore (try while true do try ignore (let tempRight = ref false in (
     ignore (let tempNumber = ref 0 in (
-      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_205 = -1 in (
-        tempNumber := __assign_205;
-        __assign_205
-      ) else let __assign_206 = let __nullable_int_207 = HxString.charCodeAt (self.src) i in if __nullable_int_207 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_207 in (
+      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_206 = -1 in (
         tempNumber := __assign_206;
         __assign_206
+      ) else let __assign_207 = let __nullable_int_208 = HxString.charCodeAt (self.src) i in if __nullable_int_208 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_208 in (
+        tempNumber := __assign_207;
+        __assign_207
       ));
-      let c = !tempNumber in let __assign_208 = c >= 48 && c <= 57 in (
-        tempRight := __assign_208;
-        __assign_208
+      let c = !tempNumber in let __assign_209 = c >= 48 && c <= 57 in (
+        tempRight := __assign_209;
+        __assign_209
       )
     ));
     ignore (if not (self.index < HxString.length (self.src) && !tempRight) then raise (HxRuntime.Hx_break) else ());
     let tempNumber1 = ref 0 in (
-      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_209 = -1 in (
-        tempNumber1 := __assign_209;
-        __assign_209
-      ) else let __assign_210 = let __nullable_int_211 = HxString.charCodeAt (self.src) i in if __nullable_int_211 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_211 in (
+      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_210 = -1 in (
         tempNumber1 := __assign_210;
         __assign_210
+      ) else let __assign_211 = let __nullable_int_212 = HxString.charCodeAt (self.src) i in if __nullable_int_212 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_212 in (
+        tempNumber1 := __assign_211;
+        __assign_211
       ));
       let c = !tempNumber1 in (
-        ignore (let __obj_212 = self in let __old_213 = __obj_212.index in let __new_214 = HxInt.add __old_213 1 in (
-          ignore (__obj_212.index <- __new_214);
-          __old_213
+        ignore (let __obj_213 = self in let __old_214 = __obj_213.index in let __new_215 = HxInt.add __old_214 1 in (
+          ignore (__obj_213.index <- __new_215);
+          __old_214
         ));
         ignore (if c = 10 then ignore ((
-          ignore (let __obj_215 = self in let __old_216 = __obj_215.line in let __new_217 = HxInt.add __old_216 1 in (
-            ignore (__obj_215.line <- __new_217);
-            __old_216
+          ignore (let __obj_216 = self in let __old_217 = __obj_216.line in let __new_218 = HxInt.add __old_217 1 in (
+            ignore (__obj_216.line <- __new_218);
+            __old_217
           ));
-          let __assign_218 = 1 in (
-            self.column <- __assign_218;
-            __assign_218
+          let __assign_219 = 1 in (
+            self.column <- __assign_219;
+            __assign_219
           )
-        )) else ignore (if c <> 13 then ignore (let __obj_219 = self in let __old_220 = __obj_219.column in let __new_221 = HxInt.add __old_220 1 in (
-          ignore (__obj_219.column <- __new_221);
-          __old_220
+        )) else ignore (if c <> 13 then ignore (let __obj_220 = self in let __old_221 = __obj_220.column in let __new_222 = HxInt.add __old_221 1 in (
+          ignore (__obj_220.column <- __new_222);
+          __old_221
         )) else ()));
         c
       )
@@ -648,86 +652,86 @@ let readNumber = fun self (startPos : HxPos.t) -> try let start = self.index in 
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   let tempLeft = ref 0 in (
-    ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_222 = -1 in (
-      tempLeft := __assign_222;
-      __assign_222
-    ) else let __assign_223 = let __nullable_int_224 = HxString.charCodeAt (self.src) i in if __nullable_int_224 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_224 in (
+    ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_223 = -1 in (
       tempLeft := __assign_223;
       __assign_223
+    ) else let __assign_224 = let __nullable_int_225 = HxString.charCodeAt (self.src) i in if __nullable_int_225 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_225 in (
+      tempLeft := __assign_224;
+      __assign_224
     ));
     let tempLeft1 = ref 0 in (
-      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_225 = -1 in (
-        tempLeft1 := __assign_225;
-        __assign_225
-      ) else let __assign_226 = let __nullable_int_227 = HxString.charCodeAt (self.src) i in if __nullable_int_227 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_227 in (
+      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_226 = -1 in (
         tempLeft1 := __assign_226;
         __assign_226
+      ) else let __assign_227 = let __nullable_int_228 = HxString.charCodeAt (self.src) i in if __nullable_int_228 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_228 in (
+        tempLeft1 := __assign_227;
+        __assign_227
       ));
-      ignore (if self.index < HxString.length (self.src) && self.index = HxInt.add start 1 && (let __nullable_228 = HxString.charCodeAt (self.src) start in if __nullable_228 == HxRuntime.hx_null then false else Obj.obj __nullable_228 = 48) && (!tempLeft = 120 || !tempLeft1 = 88) then ignore ((
+      ignore (if self.index < HxString.length (self.src) && self.index = HxInt.add start 1 && (let __nullable_229 = HxString.charCodeAt (self.src) start in if __nullable_229 == HxRuntime.hx_null then false else Obj.obj __nullable_229 = 48) && (!tempLeft = 120 || !tempLeft1 = 88) then ignore ((
         ignore (let tempNumber2 = ref 0 in (
-          ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_229 = -1 in (
-            tempNumber2 := __assign_229;
-            __assign_229
-          ) else let __assign_230 = let __nullable_int_231 = HxString.charCodeAt (self.src) i in if __nullable_int_231 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_231 in (
+          ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_230 = -1 in (
             tempNumber2 := __assign_230;
             __assign_230
+          ) else let __assign_231 = let __nullable_int_232 = HxString.charCodeAt (self.src) i in if __nullable_int_232 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_232 in (
+            tempNumber2 := __assign_231;
+            __assign_231
           ));
           let c = !tempNumber2 in (
-            ignore (let __obj_232 = self in let __old_233 = __obj_232.index in let __new_234 = HxInt.add __old_233 1 in (
-              ignore (__obj_232.index <- __new_234);
-              __old_233
+            ignore (let __obj_233 = self in let __old_234 = __obj_233.index in let __new_235 = HxInt.add __old_234 1 in (
+              ignore (__obj_233.index <- __new_235);
+              __old_234
             ));
             ignore (if c = 10 then ignore ((
-              ignore (let __obj_235 = self in let __old_236 = __obj_235.line in let __new_237 = HxInt.add __old_236 1 in (
-                ignore (__obj_235.line <- __new_237);
-                __old_236
+              ignore (let __obj_236 = self in let __old_237 = __obj_236.line in let __new_238 = HxInt.add __old_237 1 in (
+                ignore (__obj_236.line <- __new_238);
+                __old_237
               ));
-              let __assign_238 = 1 in (
-                self.column <- __assign_238;
-                __assign_238
+              let __assign_239 = 1 in (
+                self.column <- __assign_239;
+                __assign_239
               )
-            )) else ignore (if c <> 13 then ignore (let __obj_239 = self in let __old_240 = __obj_239.column in let __new_241 = HxInt.add __old_240 1 in (
-              ignore (__obj_239.column <- __new_241);
-              __old_240
+            )) else ignore (if c <> 13 then ignore (let __obj_240 = self in let __old_241 = __obj_240.column in let __new_242 = HxInt.add __old_241 1 in (
+              ignore (__obj_240.column <- __new_242);
+              __old_241
             )) else ()));
             c
           )
         ));
         ignore (try while self.index < HxString.length (self.src) do try ignore (let tempNumber3 = ref 0 in (
-          ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_242 = -1 in (
-            tempNumber3 := __assign_242;
-            __assign_242
-          ) else let __assign_243 = let __nullable_int_244 = HxString.charCodeAt (self.src) i in if __nullable_int_244 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_244 in (
+          ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_243 = -1 in (
             tempNumber3 := __assign_243;
             __assign_243
+          ) else let __assign_244 = let __nullable_int_245 = HxString.charCodeAt (self.src) i in if __nullable_int_245 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_245 in (
+            tempNumber3 := __assign_244;
+            __assign_244
           ));
           let c = !tempNumber3 in let isHex = c >= 48 && c <= 57 || c >= 97 && c <= 102 || c >= 65 && c <= 70 in (
             ignore (if not (isHex) then raise (HxRuntime.Hx_break) else ());
             let tempNumber4 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_245 = -1 in (
-                tempNumber4 := __assign_245;
-                __assign_245
-              ) else let __assign_246 = let __nullable_int_247 = HxString.charCodeAt (self.src) i in if __nullable_int_247 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_247 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_246 = -1 in (
                 tempNumber4 := __assign_246;
                 __assign_246
+              ) else let __assign_247 = let __nullable_int_248 = HxString.charCodeAt (self.src) i in if __nullable_int_248 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_248 in (
+                tempNumber4 := __assign_247;
+                __assign_247
               ));
               let c2 = !tempNumber4 in (
-                ignore (let __obj_248 = self in let __old_249 = __obj_248.index in let __new_250 = HxInt.add __old_249 1 in (
-                  ignore (__obj_248.index <- __new_250);
-                  __old_249
+                ignore (let __obj_249 = self in let __old_250 = __obj_249.index in let __new_251 = HxInt.add __old_250 1 in (
+                  ignore (__obj_249.index <- __new_251);
+                  __old_250
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_251 = self in let __old_252 = __obj_251.line in let __new_253 = HxInt.add __old_252 1 in (
-                    ignore (__obj_251.line <- __new_253);
-                    __old_252
+                  ignore (let __obj_252 = self in let __old_253 = __obj_252.line in let __new_254 = HxInt.add __old_253 1 in (
+                    ignore (__obj_252.line <- __new_254);
+                    __old_253
                   ));
-                  let __assign_254 = 1 in (
-                    self.column <- __assign_254;
-                    __assign_254
+                  let __assign_255 = 1 in (
+                    self.column <- __assign_255;
+                    __assign_255
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_255 = self in let __old_256 = __obj_255.column in let __new_257 = HxInt.add __old_256 1 in (
-                  ignore (__obj_255.column <- __new_257);
-                  __old_256
+                )) else ignore (if c2 <> 13 then ignore (let __obj_256 = self in let __old_257 = __obj_256.column in let __new_258 = HxInt.add __old_257 1 in (
+                  ignore (__obj_256.column <- __new_258);
+                  __old_257
                 )) else ()));
                 c2
               )
@@ -737,112 +741,112 @@ let readNumber = fun self (startPos : HxPos.t) -> try let start = self.index in 
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
         let text = HxString.substring (self.src) start (self.index) in let value = Std.parseInt text in let tempNumber5 = ref 0 in (
-          ignore (if value == HxRuntime.hx_null then let __assign_258 = 0 in (
-            tempNumber5 := __assign_258;
-            __assign_258
-          ) else let __assign_259 = let __nullable_int_260 = value in if __nullable_int_260 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_260 in (
+          ignore (if value == HxRuntime.hx_null then let __assign_259 = 0 in (
             tempNumber5 := __assign_259;
             __assign_259
+          ) else let __assign_260 = let __nullable_int_261 = value in if __nullable_int_261 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_261 in (
+            tempNumber5 := __assign_260;
+            __assign_260
           ));
           raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (HxTokenKind.TInt (!tempNumber5)) startPos)))
         )
       )) else ());
       let isFloat = ref false in let tempLeft2 = ref 0 in (
-        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_261 = -1 in (
-          tempLeft2 := __assign_261;
-          __assign_261
-        ) else let __assign_262 = let __nullable_int_263 = HxString.charCodeAt (self.src) i in if __nullable_int_263 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_263 in (
+        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_262 = -1 in (
           tempLeft2 := __assign_262;
           __assign_262
+        ) else let __assign_263 = let __nullable_int_264 = HxString.charCodeAt (self.src) i in if __nullable_int_264 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_264 in (
+          tempLeft2 := __assign_263;
+          __assign_263
         ));
         let tempRight1 = ref false in (
           ignore (let tempNumber6 = ref 0 in (
-            ignore (let i = HxInt.add (self.index) 1 in if i >= HxString.length (self.src) then let __assign_264 = -1 in (
-              tempNumber6 := __assign_264;
-              __assign_264
-            ) else let __assign_265 = let __nullable_int_266 = HxString.charCodeAt (self.src) i in if __nullable_int_266 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_266 in (
+            ignore (let i = HxInt.add (self.index) 1 in if i >= HxString.length (self.src) then let __assign_265 = -1 in (
               tempNumber6 := __assign_265;
               __assign_265
+            ) else let __assign_266 = let __nullable_int_267 = HxString.charCodeAt (self.src) i in if __nullable_int_267 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_267 in (
+              tempNumber6 := __assign_266;
+              __assign_266
             ));
-            let c = !tempNumber6 in let __assign_267 = c >= 48 && c <= 57 in (
-              tempRight1 := __assign_267;
-              __assign_267
+            let c = !tempNumber6 in let __assign_268 = c >= 48 && c <= 57 in (
+              tempRight1 := __assign_268;
+              __assign_268
             )
           ));
           ignore (if self.index < HxString.length (self.src) && !tempLeft2 = 46 && !tempRight1 then ignore ((
-            ignore (let __assign_268 = true in (
-              isFloat := __assign_268;
-              __assign_268
+            ignore (let __assign_269 = true in (
+              isFloat := __assign_269;
+              __assign_269
             ));
             ignore (let tempNumber7 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_269 = -1 in (
-                tempNumber7 := __assign_269;
-                __assign_269
-              ) else let __assign_270 = let __nullable_int_271 = HxString.charCodeAt (self.src) i in if __nullable_int_271 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_271 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_270 = -1 in (
                 tempNumber7 := __assign_270;
                 __assign_270
+              ) else let __assign_271 = let __nullable_int_272 = HxString.charCodeAt (self.src) i in if __nullable_int_272 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_272 in (
+                tempNumber7 := __assign_271;
+                __assign_271
               ));
               let c = !tempNumber7 in (
-                ignore (let __obj_272 = self in let __old_273 = __obj_272.index in let __new_274 = HxInt.add __old_273 1 in (
-                  ignore (__obj_272.index <- __new_274);
-                  __old_273
+                ignore (let __obj_273 = self in let __old_274 = __obj_273.index in let __new_275 = HxInt.add __old_274 1 in (
+                  ignore (__obj_273.index <- __new_275);
+                  __old_274
                 ));
                 ignore (if c = 10 then ignore ((
-                  ignore (let __obj_275 = self in let __old_276 = __obj_275.line in let __new_277 = HxInt.add __old_276 1 in (
-                    ignore (__obj_275.line <- __new_277);
-                    __old_276
+                  ignore (let __obj_276 = self in let __old_277 = __obj_276.line in let __new_278 = HxInt.add __old_277 1 in (
+                    ignore (__obj_276.line <- __new_278);
+                    __old_277
                   ));
-                  let __assign_278 = 1 in (
-                    self.column <- __assign_278;
-                    __assign_278
+                  let __assign_279 = 1 in (
+                    self.column <- __assign_279;
+                    __assign_279
                   )
-                )) else ignore (if c <> 13 then ignore (let __obj_279 = self in let __old_280 = __obj_279.column in let __new_281 = HxInt.add __old_280 1 in (
-                  ignore (__obj_279.column <- __new_281);
-                  __old_280
+                )) else ignore (if c <> 13 then ignore (let __obj_280 = self in let __old_281 = __obj_280.column in let __new_282 = HxInt.add __old_281 1 in (
+                  ignore (__obj_280.column <- __new_282);
+                  __old_281
                 )) else ()));
                 c
               )
             ));
             try while true do try ignore (let tempRight2 = ref false in (
               ignore (let tempNumber8 = ref 0 in (
-                ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_282 = -1 in (
-                  tempNumber8 := __assign_282;
-                  __assign_282
-                ) else let __assign_283 = let __nullable_int_284 = HxString.charCodeAt (self.src) i in if __nullable_int_284 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_284 in (
+                ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_283 = -1 in (
                   tempNumber8 := __assign_283;
                   __assign_283
+                ) else let __assign_284 = let __nullable_int_285 = HxString.charCodeAt (self.src) i in if __nullable_int_285 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_285 in (
+                  tempNumber8 := __assign_284;
+                  __assign_284
                 ));
-                let c = !tempNumber8 in let __assign_285 = c >= 48 && c <= 57 in (
-                  tempRight2 := __assign_285;
-                  __assign_285
+                let c = !tempNumber8 in let __assign_286 = c >= 48 && c <= 57 in (
+                  tempRight2 := __assign_286;
+                  __assign_286
                 )
               ));
               ignore (if not (self.index < HxString.length (self.src) && !tempRight2) then raise (HxRuntime.Hx_break) else ());
               let tempNumber9 = ref 0 in (
-                ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_286 = -1 in (
-                  tempNumber9 := __assign_286;
-                  __assign_286
-                ) else let __assign_287 = let __nullable_int_288 = HxString.charCodeAt (self.src) i in if __nullable_int_288 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_288 in (
+                ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_287 = -1 in (
                   tempNumber9 := __assign_287;
                   __assign_287
+                ) else let __assign_288 = let __nullable_int_289 = HxString.charCodeAt (self.src) i in if __nullable_int_289 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_289 in (
+                  tempNumber9 := __assign_288;
+                  __assign_288
                 ));
                 let c = !tempNumber9 in (
-                  ignore (let __obj_289 = self in let __old_290 = __obj_289.index in let __new_291 = HxInt.add __old_290 1 in (
-                    ignore (__obj_289.index <- __new_291);
-                    __old_290
+                  ignore (let __obj_290 = self in let __old_291 = __obj_290.index in let __new_292 = HxInt.add __old_291 1 in (
+                    ignore (__obj_290.index <- __new_292);
+                    __old_291
                   ));
                   ignore (if c = 10 then ignore ((
-                    ignore (let __obj_292 = self in let __old_293 = __obj_292.line in let __new_294 = HxInt.add __old_293 1 in (
-                      ignore (__obj_292.line <- __new_294);
-                      __old_293
+                    ignore (let __obj_293 = self in let __old_294 = __obj_293.line in let __new_295 = HxInt.add __old_294 1 in (
+                      ignore (__obj_293.line <- __new_295);
+                      __old_294
                     ));
-                    let __assign_295 = 1 in (
-                      self.column <- __assign_295;
-                      __assign_295
+                    let __assign_296 = 1 in (
+                      self.column <- __assign_296;
+                      __assign_296
                     )
-                  )) else ignore (if c <> 13 then ignore (let __obj_296 = self in let __old_297 = __obj_296.column in let __new_298 = HxInt.add __old_297 1 in (
-                    ignore (__obj_296.column <- __new_298);
-                    __old_297
+                  )) else ignore (if c <> 13 then ignore (let __obj_297 = self in let __old_298 = __obj_297.column in let __new_299 = HxInt.add __old_298 1 in (
+                    ignore (__obj_297.column <- __new_299);
+                    __old_298
                   )) else ()));
                   c
                 )
@@ -852,167 +856,167 @@ let readNumber = fun self (startPos : HxPos.t) -> try let start = self.index in 
               | HxRuntime.Hx_break -> ()
           )) else ());
           let tempLeft3 = ref 0 in (
-            ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_299 = -1 in (
-              tempLeft3 := __assign_299;
-              __assign_299
-            ) else let __assign_300 = let __nullable_int_301 = HxString.charCodeAt (self.src) i in if __nullable_int_301 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_301 in (
+            ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_300 = -1 in (
               tempLeft3 := __assign_300;
               __assign_300
+            ) else let __assign_301 = let __nullable_int_302 = HxString.charCodeAt (self.src) i in if __nullable_int_302 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_302 in (
+              tempLeft3 := __assign_301;
+              __assign_301
             ));
             let tempLeft4 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_302 = -1 in (
-                tempLeft4 := __assign_302;
-                __assign_302
-              ) else let __assign_303 = let __nullable_int_304 = HxString.charCodeAt (self.src) i in if __nullable_int_304 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_304 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_303 = -1 in (
                 tempLeft4 := __assign_303;
                 __assign_303
+              ) else let __assign_304 = let __nullable_int_305 = HxString.charCodeAt (self.src) i in if __nullable_int_305 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_305 in (
+                tempLeft4 := __assign_304;
+                __assign_304
               ));
               ignore (if self.index < HxString.length (self.src) && (!tempLeft3 = 101 || !tempLeft4 = 69) then ignore (let off = ref 1 in let tempNumber10 = ref 0 in (
-                ignore (let i = HxInt.add (self.index) 1 in if i >= HxString.length (self.src) then let __assign_305 = -1 in (
-                  tempNumber10 := __assign_305;
-                  __assign_305
-                ) else let __assign_306 = let __nullable_int_307 = HxString.charCodeAt (self.src) i in if __nullable_int_307 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_307 in (
+                ignore (let i = HxInt.add (self.index) 1 in if i >= HxString.length (self.src) then let __assign_306 = -1 in (
                   tempNumber10 := __assign_306;
                   __assign_306
+                ) else let __assign_307 = let __nullable_int_308 = HxString.charCodeAt (self.src) i in if __nullable_int_308 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_308 in (
+                  tempNumber10 := __assign_307;
+                  __assign_307
                 ));
                 let sign = !tempNumber10 in (
-                  ignore (if sign = 43 || sign = 45 then ignore (let __assign_308 = 2 in (
-                    off := __assign_308;
-                    __assign_308
+                  ignore (if sign = 43 || sign = 45 then ignore (let __assign_309 = 2 in (
+                    off := __assign_309;
+                    __assign_309
                   )) else ());
                   let tempBool = ref false in (
                     ignore (let tempNumber11 = ref 0 in (
-                      ignore (let i = HxInt.add (self.index) (!off) in if i >= HxString.length (self.src) then let __assign_309 = -1 in (
-                        tempNumber11 := __assign_309;
-                        __assign_309
-                      ) else let __assign_310 = let __nullable_int_311 = HxString.charCodeAt (self.src) i in if __nullable_int_311 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_311 in (
+                      ignore (let i = HxInt.add (self.index) (!off) in if i >= HxString.length (self.src) then let __assign_310 = -1 in (
                         tempNumber11 := __assign_310;
                         __assign_310
+                      ) else let __assign_311 = let __nullable_int_312 = HxString.charCodeAt (self.src) i in if __nullable_int_312 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_312 in (
+                        tempNumber11 := __assign_311;
+                        __assign_311
                       ));
-                      let c = !tempNumber11 in let __assign_312 = c >= 48 && c <= 57 in (
-                        tempBool := __assign_312;
-                        __assign_312
+                      let c = !tempNumber11 in let __assign_313 = c >= 48 && c <= 57 in (
+                        tempBool := __assign_313;
+                        __assign_313
                       )
                     ));
                     if !tempBool then ignore ((
-                      ignore (let __assign_313 = true in (
-                        isFloat := __assign_313;
-                        __assign_313
+                      ignore (let __assign_314 = true in (
+                        isFloat := __assign_314;
+                        __assign_314
                       ));
                       ignore (let tempNumber12 = ref 0 in (
-                        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_314 = -1 in (
-                          tempNumber12 := __assign_314;
-                          __assign_314
-                        ) else let __assign_315 = let __nullable_int_316 = HxString.charCodeAt (self.src) i in if __nullable_int_316 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_316 in (
+                        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_315 = -1 in (
                           tempNumber12 := __assign_315;
                           __assign_315
+                        ) else let __assign_316 = let __nullable_int_317 = HxString.charCodeAt (self.src) i in if __nullable_int_317 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_317 in (
+                          tempNumber12 := __assign_316;
+                          __assign_316
                         ));
                         let c = !tempNumber12 in (
-                          ignore (let __obj_317 = self in let __old_318 = __obj_317.index in let __new_319 = HxInt.add __old_318 1 in (
-                            ignore (__obj_317.index <- __new_319);
-                            __old_318
+                          ignore (let __obj_318 = self in let __old_319 = __obj_318.index in let __new_320 = HxInt.add __old_319 1 in (
+                            ignore (__obj_318.index <- __new_320);
+                            __old_319
                           ));
                           ignore (if c = 10 then ignore ((
-                            ignore (let __obj_320 = self in let __old_321 = __obj_320.line in let __new_322 = HxInt.add __old_321 1 in (
-                              ignore (__obj_320.line <- __new_322);
-                              __old_321
+                            ignore (let __obj_321 = self in let __old_322 = __obj_321.line in let __new_323 = HxInt.add __old_322 1 in (
+                              ignore (__obj_321.line <- __new_323);
+                              __old_322
                             ));
-                            let __assign_323 = 1 in (
-                              self.column <- __assign_323;
-                              __assign_323
+                            let __assign_324 = 1 in (
+                              self.column <- __assign_324;
+                              __assign_324
                             )
-                          )) else ignore (if c <> 13 then ignore (let __obj_324 = self in let __old_325 = __obj_324.column in let __new_326 = HxInt.add __old_325 1 in (
-                            ignore (__obj_324.column <- __new_326);
-                            __old_325
+                          )) else ignore (if c <> 13 then ignore (let __obj_325 = self in let __old_326 = __obj_325.column in let __new_327 = HxInt.add __old_326 1 in (
+                            ignore (__obj_325.column <- __new_327);
+                            __old_326
                           )) else ()));
                           c
                         )
                       ));
                       let tempLeft5 = ref 0 in (
-                        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_327 = -1 in (
-                          tempLeft5 := __assign_327;
-                          __assign_327
-                        ) else let __assign_328 = let __nullable_int_329 = HxString.charCodeAt (self.src) i in if __nullable_int_329 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_329 in (
+                        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_328 = -1 in (
                           tempLeft5 := __assign_328;
                           __assign_328
+                        ) else let __assign_329 = let __nullable_int_330 = HxString.charCodeAt (self.src) i in if __nullable_int_330 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_330 in (
+                          tempLeft5 := __assign_329;
+                          __assign_329
                         ));
                         let tempLeft6 = ref 0 in (
-                          ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_330 = -1 in (
-                            tempLeft6 := __assign_330;
-                            __assign_330
-                          ) else let __assign_331 = let __nullable_int_332 = HxString.charCodeAt (self.src) i in if __nullable_int_332 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_332 in (
+                          ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_331 = -1 in (
                             tempLeft6 := __assign_331;
                             __assign_331
+                          ) else let __assign_332 = let __nullable_int_333 = HxString.charCodeAt (self.src) i in if __nullable_int_333 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_333 in (
+                            tempLeft6 := __assign_332;
+                            __assign_332
                           ));
                           ignore (if !tempLeft5 = 43 || !tempLeft6 = 45 then ignore (let tempNumber13 = ref 0 in (
-                            ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_333 = -1 in (
-                              tempNumber13 := __assign_333;
-                              __assign_333
-                            ) else let __assign_334 = let __nullable_int_335 = HxString.charCodeAt (self.src) i in if __nullable_int_335 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_335 in (
+                            ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_334 = -1 in (
                               tempNumber13 := __assign_334;
                               __assign_334
+                            ) else let __assign_335 = let __nullable_int_336 = HxString.charCodeAt (self.src) i in if __nullable_int_336 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_336 in (
+                              tempNumber13 := __assign_335;
+                              __assign_335
                             ));
                             let c = !tempNumber13 in (
-                              ignore (let __obj_336 = self in let __old_337 = __obj_336.index in let __new_338 = HxInt.add __old_337 1 in (
-                                ignore (__obj_336.index <- __new_338);
-                                __old_337
+                              ignore (let __obj_337 = self in let __old_338 = __obj_337.index in let __new_339 = HxInt.add __old_338 1 in (
+                                ignore (__obj_337.index <- __new_339);
+                                __old_338
                               ));
                               ignore (if c = 10 then ignore ((
-                                ignore (let __obj_339 = self in let __old_340 = __obj_339.line in let __new_341 = HxInt.add __old_340 1 in (
-                                  ignore (__obj_339.line <- __new_341);
-                                  __old_340
+                                ignore (let __obj_340 = self in let __old_341 = __obj_340.line in let __new_342 = HxInt.add __old_341 1 in (
+                                  ignore (__obj_340.line <- __new_342);
+                                  __old_341
                                 ));
-                                let __assign_342 = 1 in (
-                                  self.column <- __assign_342;
-                                  __assign_342
+                                let __assign_343 = 1 in (
+                                  self.column <- __assign_343;
+                                  __assign_343
                                 )
-                              )) else ignore (if c <> 13 then ignore (let __obj_343 = self in let __old_344 = __obj_343.column in let __new_345 = HxInt.add __old_344 1 in (
-                                ignore (__obj_343.column <- __new_345);
-                                __old_344
+                              )) else ignore (if c <> 13 then ignore (let __obj_344 = self in let __old_345 = __obj_344.column in let __new_346 = HxInt.add __old_345 1 in (
+                                ignore (__obj_344.column <- __new_346);
+                                __old_345
                               )) else ()));
                               c
                             )
                           )) else ());
                           try while true do try ignore (let tempRight3 = ref false in (
                             ignore (let tempNumber14 = ref 0 in (
-                              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_346 = -1 in (
-                                tempNumber14 := __assign_346;
-                                __assign_346
-                              ) else let __assign_347 = let __nullable_int_348 = HxString.charCodeAt (self.src) i in if __nullable_int_348 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_348 in (
+                              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_347 = -1 in (
                                 tempNumber14 := __assign_347;
                                 __assign_347
+                              ) else let __assign_348 = let __nullable_int_349 = HxString.charCodeAt (self.src) i in if __nullable_int_349 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_349 in (
+                                tempNumber14 := __assign_348;
+                                __assign_348
                               ));
-                              let c = !tempNumber14 in let __assign_349 = c >= 48 && c <= 57 in (
-                                tempRight3 := __assign_349;
-                                __assign_349
+                              let c = !tempNumber14 in let __assign_350 = c >= 48 && c <= 57 in (
+                                tempRight3 := __assign_350;
+                                __assign_350
                               )
                             ));
                             ignore (if not (self.index < HxString.length (self.src) && !tempRight3) then raise (HxRuntime.Hx_break) else ());
                             let tempNumber15 = ref 0 in (
-                              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_350 = -1 in (
-                                tempNumber15 := __assign_350;
-                                __assign_350
-                              ) else let __assign_351 = let __nullable_int_352 = HxString.charCodeAt (self.src) i in if __nullable_int_352 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_352 in (
+                              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_351 = -1 in (
                                 tempNumber15 := __assign_351;
                                 __assign_351
+                              ) else let __assign_352 = let __nullable_int_353 = HxString.charCodeAt (self.src) i in if __nullable_int_353 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_353 in (
+                                tempNumber15 := __assign_352;
+                                __assign_352
                               ));
                               let c = !tempNumber15 in (
-                                ignore (let __obj_353 = self in let __old_354 = __obj_353.index in let __new_355 = HxInt.add __old_354 1 in (
-                                  ignore (__obj_353.index <- __new_355);
-                                  __old_354
+                                ignore (let __obj_354 = self in let __old_355 = __obj_354.index in let __new_356 = HxInt.add __old_355 1 in (
+                                  ignore (__obj_354.index <- __new_356);
+                                  __old_355
                                 ));
                                 ignore (if c = 10 then ignore ((
-                                  ignore (let __obj_356 = self in let __old_357 = __obj_356.line in let __new_358 = HxInt.add __old_357 1 in (
-                                    ignore (__obj_356.line <- __new_358);
-                                    __old_357
+                                  ignore (let __obj_357 = self in let __old_358 = __obj_357.line in let __new_359 = HxInt.add __old_358 1 in (
+                                    ignore (__obj_357.line <- __new_359);
+                                    __old_358
                                   ));
-                                  let __assign_359 = 1 in (
-                                    self.column <- __assign_359;
-                                    __assign_359
+                                  let __assign_360 = 1 in (
+                                    self.column <- __assign_360;
+                                    __assign_360
                                   )
-                                )) else ignore (if c <> 13 then ignore (let __obj_360 = self in let __old_361 = __obj_360.column in let __new_362 = HxInt.add __old_361 1 in (
-                                  ignore (__obj_360.column <- __new_362);
-                                  __old_361
+                                )) else ignore (if c <> 13 then ignore (let __obj_361 = self in let __old_362 = __obj_361.column in let __new_363 = HxInt.add __old_362 1 in (
+                                  ignore (__obj_361.column <- __new_363);
+                                  __old_362
                                 )) else ()));
                                 c
                               )
@@ -1029,12 +1033,12 @@ let readNumber = fun self (startPos : HxPos.t) -> try let start = self.index in 
               let text = HxString.substring (self.src) start (self.index) in (
                 ignore (if !isFloat then ignore (let value = Std.parseFloat text in raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (HxTokenKind.TFloat value) startPos)))) else ());
                 let value = Std.parseInt text in let tempNumber16 = ref 0 in (
-                  ignore (if value == HxRuntime.hx_null then let __assign_363 = 0 in (
-                    tempNumber16 := __assign_363;
-                    __assign_363
-                  ) else let __assign_364 = let __nullable_int_365 = value in if __nullable_int_365 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_365 in (
+                  ignore (if value == HxRuntime.hx_null then let __assign_364 = 0 in (
                     tempNumber16 := __assign_364;
                     __assign_364
+                  ) else let __assign_365 = let __nullable_int_366 = value in if __nullable_int_366 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_366 in (
+                    tempNumber16 := __assign_365;
+                    __assign_365
                   ));
                   HxToken.create (HxTokenKind.TInt (!tempNumber16)) startPos
                 )
@@ -1046,100 +1050,100 @@ let readNumber = fun self (startPos : HxPos.t) -> try let start = self.index in 
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_366 -> Obj.obj __ret_366
+  | HxRuntime.Hx_return __ret_367 -> Obj.obj __ret_367
 
 let readString = fun self (startPos : HxPos.t) -> try let _gthis = self in (
   ignore (let tempNumber = ref 0 in (
-    ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_367 = -1 in (
-      tempNumber := __assign_367;
-      __assign_367
-    ) else let __assign_368 = let __nullable_int_369 = HxString.charCodeAt (self.src) i in if __nullable_int_369 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_369 in (
+    ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_368 = -1 in (
       tempNumber := __assign_368;
       __assign_368
+    ) else let __assign_369 = let __nullable_int_370 = HxString.charCodeAt (self.src) i in if __nullable_int_370 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_370 in (
+      tempNumber := __assign_369;
+      __assign_369
     ));
     let c = !tempNumber in (
-      ignore (let __obj_370 = self in let __old_371 = __obj_370.index in let __new_372 = HxInt.add __old_371 1 in (
-        ignore (__obj_370.index <- __new_372);
-        __old_371
+      ignore (let __obj_371 = self in let __old_372 = __obj_371.index in let __new_373 = HxInt.add __old_372 1 in (
+        ignore (__obj_371.index <- __new_373);
+        __old_372
       ));
       ignore (if c = 10 then ignore ((
-        ignore (let __obj_373 = self in let __old_374 = __obj_373.line in let __new_375 = HxInt.add __old_374 1 in (
-          ignore (__obj_373.line <- __new_375);
-          __old_374
+        ignore (let __obj_374 = self in let __old_375 = __obj_374.line in let __new_376 = HxInt.add __old_375 1 in (
+          ignore (__obj_374.line <- __new_376);
+          __old_375
         ));
-        let __assign_376 = 1 in (
-          self.column <- __assign_376;
-          __assign_376
+        let __assign_377 = 1 in (
+          self.column <- __assign_377;
+          __assign_377
         )
-      )) else ignore (if c <> 13 then ignore (let __obj_377 = self in let __old_378 = __obj_377.column in let __new_379 = HxInt.add __old_378 1 in (
-        ignore (__obj_377.column <- __new_379);
-        __old_378
+      )) else ignore (if c <> 13 then ignore (let __obj_378 = self in let __old_379 = __obj_378.column in let __new_380 = HxInt.add __old_379 1 in (
+        ignore (__obj_378.column <- __new_380);
+        __old_379
       )) else ()));
       c
     )
   ));
   let buf = StringBuf.create () in let hexVal = fun c -> let tempResult = ref 0 in (
-    ignore (if c >= 48 && c <= 57 then let __assign_380 = HxInt.sub c 48 in (
-      tempResult := __assign_380;
-      __assign_380
-    ) else if c >= 97 && c <= 102 then let __assign_381 = HxInt.add 10 (HxInt.sub c 97) in (
+    ignore (if c >= 48 && c <= 57 then let __assign_381 = HxInt.sub c 48 in (
       tempResult := __assign_381;
       __assign_381
-    ) else if c >= 65 && c <= 70 then let __assign_382 = HxInt.add 10 (HxInt.sub c 65) in (
+    ) else if c >= 97 && c <= 102 then let __assign_382 = HxInt.add 10 (HxInt.sub c 97) in (
       tempResult := __assign_382;
       __assign_382
-    ) else let __assign_383 = -1 in (
+    ) else if c >= 65 && c <= 70 then let __assign_383 = HxInt.add 10 (HxInt.sub c 65) in (
       tempResult := __assign_383;
       __assign_383
+    ) else let __assign_384 = -1 in (
+      tempResult := __assign_384;
+      __assign_384
     ));
     !tempResult
   ) in let readHexDigits = fun count -> try let acc = ref 0 in let _g = ref 0 in let _g1 = count in (
     ignore (while !_g < _g1 do ignore ((
-      ignore (let __old_384 = !_g in let __new_385 = HxInt.add __old_384 1 in (
-        ignore (_g := __new_385);
-        __old_384
+      ignore (let __old_385 = !_g in let __new_386 = HxInt.add __old_385 1 in (
+        ignore (_g := __new_386);
+        __old_385
       ));
       let tempNumber1 = ref 0 in (
-        ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_386 = -1 in (
-          tempNumber1 := __assign_386;
-          __assign_386
-        ) else let __assign_387 = let __nullable_int_388 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_388 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_388 in (
+        ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_387 = -1 in (
           tempNumber1 := __assign_387;
           __assign_387
+        ) else let __assign_388 = let __nullable_int_389 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_389 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_389 in (
+          tempNumber1 := __assign_388;
+          __assign_388
         ));
         let c = !tempNumber1 in (
           ignore (if c = -1 then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
           let v = hexVal c in (
             ignore (if v < 0 then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
-            ignore (let __assign_389 = HxInt.logor (HxInt.shl (!acc) 4) v in (
-              acc := __assign_389;
-              __assign_389
+            ignore (let __assign_390 = HxInt.logor (HxInt.shl (!acc) 4) v in (
+              acc := __assign_390;
+              __assign_390
             ));
             let tempNumber2 = ref 0 in (
-              ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_390 = -1 in (
-                tempNumber2 := __assign_390;
-                __assign_390
-              ) else let __assign_391 = let __nullable_int_392 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_392 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_392 in (
+              ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_391 = -1 in (
                 tempNumber2 := __assign_391;
                 __assign_391
+              ) else let __assign_392 = let __nullable_int_393 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_393 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_393 in (
+                tempNumber2 := __assign_392;
+                __assign_392
               ));
               let c2 = !tempNumber2 in (
-                ignore (let __obj_393 = _gthis in let __old_394 = __obj_393.index in let __new_395 = HxInt.add __old_394 1 in (
-                  ignore (__obj_393.index <- __new_395);
-                  __old_394
+                ignore (let __obj_394 = _gthis in let __old_395 = __obj_394.index in let __new_396 = HxInt.add __old_395 1 in (
+                  ignore (__obj_394.index <- __new_396);
+                  __old_395
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_396 = _gthis in let __old_397 = __obj_396.line in let __new_398 = HxInt.add __old_397 1 in (
-                    ignore (__obj_396.line <- __new_398);
-                    __old_397
+                  ignore (let __obj_397 = _gthis in let __old_398 = __obj_397.line in let __new_399 = HxInt.add __old_398 1 in (
+                    ignore (__obj_397.line <- __new_399);
+                    __old_398
                   ));
-                  let __assign_399 = 1 in (
-                    _gthis.column <- __assign_399;
-                    __assign_399
+                  let __assign_400 = 1 in (
+                    _gthis.column <- __assign_400;
+                    __assign_400
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_400 = _gthis in let __old_401 = __obj_400.column in let __new_402 = HxInt.add __old_401 1 in (
-                  ignore (__obj_400.column <- __new_402);
-                  __old_401
+                )) else ignore (if c2 <> 13 then ignore (let __obj_401 = _gthis in let __old_402 = __obj_401.column in let __new_403 = HxInt.add __old_402 1 in (
+                  ignore (__obj_401.column <- __new_403);
+                  __old_402
                 )) else ()));
                 c2
               )
@@ -1150,37 +1154,37 @@ let readString = fun self (startPos : HxPos.t) -> try let _gthis = self in (
     )) done);
     !acc
   ) with
-    | HxRuntime.Hx_return __ret_403 -> Obj.obj __ret_403 in (
+    | HxRuntime.Hx_return __ret_404 -> Obj.obj __ret_404 in (
     ignore (try while self.index < HxString.length (self.src) do try ignore (let tempNumber3 = ref 0 in (
       ignore (let tempNumber4 = ref 0 in (
-        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_404 = -1 in (
-          tempNumber4 := __assign_404;
-          __assign_404
-        ) else let __assign_405 = let __nullable_int_406 = HxString.charCodeAt (self.src) i in if __nullable_int_406 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_406 in (
+        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_405 = -1 in (
           tempNumber4 := __assign_405;
           __assign_405
+        ) else let __assign_406 = let __nullable_int_407 = HxString.charCodeAt (self.src) i in if __nullable_int_407 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_407 in (
+          tempNumber4 := __assign_406;
+          __assign_406
         ));
         let c = !tempNumber4 in (
-          ignore (let __obj_407 = self in let __old_408 = __obj_407.index in let __new_409 = HxInt.add __old_408 1 in (
-            ignore (__obj_407.index <- __new_409);
-            __old_408
+          ignore (let __obj_408 = self in let __old_409 = __obj_408.index in let __new_410 = HxInt.add __old_409 1 in (
+            ignore (__obj_408.index <- __new_410);
+            __old_409
           ));
           ignore (if c = 10 then ignore ((
-            ignore (let __obj_410 = self in let __old_411 = __obj_410.line in let __new_412 = HxInt.add __old_411 1 in (
-              ignore (__obj_410.line <- __new_412);
-              __old_411
+            ignore (let __obj_411 = self in let __old_412 = __obj_411.line in let __new_413 = HxInt.add __old_412 1 in (
+              ignore (__obj_411.line <- __new_413);
+              __old_412
             ));
-            let __assign_413 = 1 in (
-              self.column <- __assign_413;
-              __assign_413
+            let __assign_414 = 1 in (
+              self.column <- __assign_414;
+              __assign_414
             )
-          )) else ignore (if c <> 13 then ignore (let __obj_414 = self in let __old_415 = __obj_414.column in let __new_416 = HxInt.add __old_415 1 in (
-            ignore (__obj_414.column <- __new_416);
-            __old_415
+          )) else ignore (if c <> 13 then ignore (let __obj_415 = self in let __old_416 = __obj_415.column in let __new_417 = HxInt.add __old_416 1 in (
+            ignore (__obj_415.column <- __new_417);
+            __old_416
           )) else ()));
-          let __assign_417 = c in (
-            tempNumber3 := __assign_417;
-            __assign_417
+          let __assign_418 = c in (
+            tempNumber3 := __assign_418;
+            __assign_418
           )
         )
       ));
@@ -1190,34 +1194,34 @@ let readString = fun self (startPos : HxPos.t) -> try let _gthis = self in (
           ignore (if self.index >= HxString.length (self.src) then raise (HxRuntime.Hx_break) else ());
           let tempNumber5 = ref 0 in (
             ignore (let tempNumber6 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_418 = -1 in (
-                tempNumber6 := __assign_418;
-                __assign_418
-              ) else let __assign_419 = let __nullable_int_420 = HxString.charCodeAt (self.src) i in if __nullable_int_420 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_420 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_419 = -1 in (
                 tempNumber6 := __assign_419;
                 __assign_419
+              ) else let __assign_420 = let __nullable_int_421 = HxString.charCodeAt (self.src) i in if __nullable_int_421 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_421 in (
+                tempNumber6 := __assign_420;
+                __assign_420
               ));
               let c2 = !tempNumber6 in (
-                ignore (let __obj_421 = self in let __old_422 = __obj_421.index in let __new_423 = HxInt.add __old_422 1 in (
-                  ignore (__obj_421.index <- __new_423);
-                  __old_422
+                ignore (let __obj_422 = self in let __old_423 = __obj_422.index in let __new_424 = HxInt.add __old_423 1 in (
+                  ignore (__obj_422.index <- __new_424);
+                  __old_423
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_424 = self in let __old_425 = __obj_424.line in let __new_426 = HxInt.add __old_425 1 in (
-                    ignore (__obj_424.line <- __new_426);
-                    __old_425
+                  ignore (let __obj_425 = self in let __old_426 = __obj_425.line in let __new_427 = HxInt.add __old_426 1 in (
+                    ignore (__obj_425.line <- __new_427);
+                    __old_426
                   ));
-                  let __assign_427 = 1 in (
-                    self.column <- __assign_427;
-                    __assign_427
+                  let __assign_428 = 1 in (
+                    self.column <- __assign_428;
+                    __assign_428
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_428 = self in let __old_429 = __obj_428.column in let __new_430 = HxInt.add __old_429 1 in (
-                  ignore (__obj_428.column <- __new_430);
-                  __old_429
+                )) else ignore (if c2 <> 13 then ignore (let __obj_429 = self in let __old_430 = __obj_429.column in let __new_431 = HxInt.add __old_430 1 in (
+                  ignore (__obj_429.column <- __new_431);
+                  __old_430
                 )) else ()));
-                let __assign_431 = c2 in (
-                  tempNumber5 := __assign_431;
-                  __assign_431
+                let __assign_432 = c2 in (
+                  tempNumber5 := __assign_432;
+                  __assign_432
                 )
               )
             ));
@@ -1243,100 +1247,100 @@ let readString = fun self (startPos : HxPos.t) -> try let _gthis = self in (
     HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create "Unterminated string literal" startPos)) ["Dynamic"; "HxParseError"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_432 -> Obj.obj __ret_432
+  | HxRuntime.Hx_return __ret_433 -> Obj.obj __ret_433
 
 let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let _gthis = self in (
   ignore (let tempNumber = ref 0 in (
-    ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_433 = -1 in (
-      tempNumber := __assign_433;
-      __assign_433
-    ) else let __assign_434 = let __nullable_int_435 = HxString.charCodeAt (self.src) i in if __nullable_int_435 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_435 in (
+    ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_434 = -1 in (
       tempNumber := __assign_434;
       __assign_434
+    ) else let __assign_435 = let __nullable_int_436 = HxString.charCodeAt (self.src) i in if __nullable_int_436 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_436 in (
+      tempNumber := __assign_435;
+      __assign_435
     ));
     let c = !tempNumber in (
-      ignore (let __obj_436 = self in let __old_437 = __obj_436.index in let __new_438 = HxInt.add __old_437 1 in (
-        ignore (__obj_436.index <- __new_438);
-        __old_437
+      ignore (let __obj_437 = self in let __old_438 = __obj_437.index in let __new_439 = HxInt.add __old_438 1 in (
+        ignore (__obj_437.index <- __new_439);
+        __old_438
       ));
       ignore (if c = 10 then ignore ((
-        ignore (let __obj_439 = self in let __old_440 = __obj_439.line in let __new_441 = HxInt.add __old_440 1 in (
-          ignore (__obj_439.line <- __new_441);
-          __old_440
+        ignore (let __obj_440 = self in let __old_441 = __obj_440.line in let __new_442 = HxInt.add __old_441 1 in (
+          ignore (__obj_440.line <- __new_442);
+          __old_441
         ));
-        let __assign_442 = 1 in (
-          self.column <- __assign_442;
-          __assign_442
+        let __assign_443 = 1 in (
+          self.column <- __assign_443;
+          __assign_443
         )
-      )) else ignore (if c <> 13 then ignore (let __obj_443 = self in let __old_444 = __obj_443.column in let __new_445 = HxInt.add __old_444 1 in (
-        ignore (__obj_443.column <- __new_445);
-        __old_444
+      )) else ignore (if c <> 13 then ignore (let __obj_444 = self in let __old_445 = __obj_444.column in let __new_446 = HxInt.add __old_445 1 in (
+        ignore (__obj_444.column <- __new_446);
+        __old_445
       )) else ()));
       c
     )
   ));
   let buf = StringBuf.create () in let hexVal = fun c -> let tempResult = ref 0 in (
-    ignore (if c >= 48 && c <= 57 then let __assign_446 = HxInt.sub c 48 in (
-      tempResult := __assign_446;
-      __assign_446
-    ) else if c >= 97 && c <= 102 then let __assign_447 = HxInt.add 10 (HxInt.sub c 97) in (
+    ignore (if c >= 48 && c <= 57 then let __assign_447 = HxInt.sub c 48 in (
       tempResult := __assign_447;
       __assign_447
-    ) else if c >= 65 && c <= 70 then let __assign_448 = HxInt.add 10 (HxInt.sub c 65) in (
+    ) else if c >= 97 && c <= 102 then let __assign_448 = HxInt.add 10 (HxInt.sub c 97) in (
       tempResult := __assign_448;
       __assign_448
-    ) else let __assign_449 = -1 in (
+    ) else if c >= 65 && c <= 70 then let __assign_449 = HxInt.add 10 (HxInt.sub c 65) in (
       tempResult := __assign_449;
       __assign_449
+    ) else let __assign_450 = -1 in (
+      tempResult := __assign_450;
+      __assign_450
     ));
     !tempResult
   ) in let readHexDigits = fun count -> try let acc = ref 0 in let _g = ref 0 in let _g1 = count in (
     ignore (while !_g < _g1 do ignore ((
-      ignore (let __old_450 = !_g in let __new_451 = HxInt.add __old_450 1 in (
-        ignore (_g := __new_451);
-        __old_450
+      ignore (let __old_451 = !_g in let __new_452 = HxInt.add __old_451 1 in (
+        ignore (_g := __new_452);
+        __old_451
       ));
       let tempNumber1 = ref 0 in (
-        ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_452 = -1 in (
-          tempNumber1 := __assign_452;
-          __assign_452
-        ) else let __assign_453 = let __nullable_int_454 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_454 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_454 in (
+        ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_453 = -1 in (
           tempNumber1 := __assign_453;
           __assign_453
+        ) else let __assign_454 = let __nullable_int_455 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_455 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_455 in (
+          tempNumber1 := __assign_454;
+          __assign_454
         ));
         let c = !tempNumber1 in (
           ignore (if c = -1 then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
           let v = hexVal c in (
             ignore (if v < 0 then raise (HxRuntime.Hx_return (Obj.repr (-1))) else ());
-            ignore (let __assign_455 = HxInt.logor (HxInt.shl (!acc) 4) v in (
-              acc := __assign_455;
-              __assign_455
+            ignore (let __assign_456 = HxInt.logor (HxInt.shl (!acc) 4) v in (
+              acc := __assign_456;
+              __assign_456
             ));
             let tempNumber2 = ref 0 in (
-              ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_456 = -1 in (
-                tempNumber2 := __assign_456;
-                __assign_456
-              ) else let __assign_457 = let __nullable_int_458 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_458 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_458 in (
+              ignore (let i = _gthis.index in if i >= HxString.length (_gthis.src) then let __assign_457 = -1 in (
                 tempNumber2 := __assign_457;
                 __assign_457
+              ) else let __assign_458 = let __nullable_int_459 = HxString.charCodeAt (_gthis.src) i in if __nullable_int_459 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_459 in (
+                tempNumber2 := __assign_458;
+                __assign_458
               ));
               let c2 = !tempNumber2 in (
-                ignore (let __obj_459 = _gthis in let __old_460 = __obj_459.index in let __new_461 = HxInt.add __old_460 1 in (
-                  ignore (__obj_459.index <- __new_461);
-                  __old_460
+                ignore (let __obj_460 = _gthis in let __old_461 = __obj_460.index in let __new_462 = HxInt.add __old_461 1 in (
+                  ignore (__obj_460.index <- __new_462);
+                  __old_461
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_462 = _gthis in let __old_463 = __obj_462.line in let __new_464 = HxInt.add __old_463 1 in (
-                    ignore (__obj_462.line <- __new_464);
-                    __old_463
+                  ignore (let __obj_463 = _gthis in let __old_464 = __obj_463.line in let __new_465 = HxInt.add __old_464 1 in (
+                    ignore (__obj_463.line <- __new_465);
+                    __old_464
                   ));
-                  let __assign_465 = 1 in (
-                    _gthis.column <- __assign_465;
-                    __assign_465
+                  let __assign_466 = 1 in (
+                    _gthis.column <- __assign_466;
+                    __assign_466
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_466 = _gthis in let __old_467 = __obj_466.column in let __new_468 = HxInt.add __old_467 1 in (
-                  ignore (__obj_466.column <- __new_468);
-                  __old_467
+                )) else ignore (if c2 <> 13 then ignore (let __obj_467 = _gthis in let __old_468 = __obj_467.column in let __new_469 = HxInt.add __old_468 1 in (
+                  ignore (__obj_467.column <- __new_469);
+                  __old_468
                 )) else ()));
                 c2
               )
@@ -1347,37 +1351,37 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let _gthis = s
     )) done);
     !acc
   ) with
-    | HxRuntime.Hx_return __ret_469 -> Obj.obj __ret_469 in (
+    | HxRuntime.Hx_return __ret_470 -> Obj.obj __ret_470 in (
     ignore (try while self.index < HxString.length (self.src) do try ignore (let tempNumber3 = ref 0 in (
       ignore (let tempNumber4 = ref 0 in (
-        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_470 = -1 in (
-          tempNumber4 := __assign_470;
-          __assign_470
-        ) else let __assign_471 = let __nullable_int_472 = HxString.charCodeAt (self.src) i in if __nullable_int_472 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_472 in (
+        ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_471 = -1 in (
           tempNumber4 := __assign_471;
           __assign_471
+        ) else let __assign_472 = let __nullable_int_473 = HxString.charCodeAt (self.src) i in if __nullable_int_473 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_473 in (
+          tempNumber4 := __assign_472;
+          __assign_472
         ));
         let c = !tempNumber4 in (
-          ignore (let __obj_473 = self in let __old_474 = __obj_473.index in let __new_475 = HxInt.add __old_474 1 in (
-            ignore (__obj_473.index <- __new_475);
-            __old_474
+          ignore (let __obj_474 = self in let __old_475 = __obj_474.index in let __new_476 = HxInt.add __old_475 1 in (
+            ignore (__obj_474.index <- __new_476);
+            __old_475
           ));
           ignore (if c = 10 then ignore ((
-            ignore (let __obj_476 = self in let __old_477 = __obj_476.line in let __new_478 = HxInt.add __old_477 1 in (
-              ignore (__obj_476.line <- __new_478);
-              __old_477
+            ignore (let __obj_477 = self in let __old_478 = __obj_477.line in let __new_479 = HxInt.add __old_478 1 in (
+              ignore (__obj_477.line <- __new_479);
+              __old_478
             ));
-            let __assign_479 = 1 in (
-              self.column <- __assign_479;
-              __assign_479
+            let __assign_480 = 1 in (
+              self.column <- __assign_480;
+              __assign_480
             )
-          )) else ignore (if c <> 13 then ignore (let __obj_480 = self in let __old_481 = __obj_480.column in let __new_482 = HxInt.add __old_481 1 in (
-            ignore (__obj_480.column <- __new_482);
-            __old_481
+          )) else ignore (if c <> 13 then ignore (let __obj_481 = self in let __old_482 = __obj_481.column in let __new_483 = HxInt.add __old_482 1 in (
+            ignore (__obj_481.column <- __new_483);
+            __old_482
           )) else ()));
-          let __assign_483 = c in (
-            tempNumber3 := __assign_483;
-            __assign_483
+          let __assign_484 = c in (
+            tempNumber3 := __assign_484;
+            __assign_484
           )
         )
       ));
@@ -1387,34 +1391,34 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let _gthis = s
           ignore (if self.index >= HxString.length (self.src) then raise (HxRuntime.Hx_break) else ());
           let tempNumber5 = ref 0 in (
             ignore (let tempNumber6 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_484 = -1 in (
-                tempNumber6 := __assign_484;
-                __assign_484
-              ) else let __assign_485 = let __nullable_int_486 = HxString.charCodeAt (self.src) i in if __nullable_int_486 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_486 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_485 = -1 in (
                 tempNumber6 := __assign_485;
                 __assign_485
+              ) else let __assign_486 = let __nullable_int_487 = HxString.charCodeAt (self.src) i in if __nullable_int_487 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_487 in (
+                tempNumber6 := __assign_486;
+                __assign_486
               ));
               let c2 = !tempNumber6 in (
-                ignore (let __obj_487 = self in let __old_488 = __obj_487.index in let __new_489 = HxInt.add __old_488 1 in (
-                  ignore (__obj_487.index <- __new_489);
-                  __old_488
+                ignore (let __obj_488 = self in let __old_489 = __obj_488.index in let __new_490 = HxInt.add __old_489 1 in (
+                  ignore (__obj_488.index <- __new_490);
+                  __old_489
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_490 = self in let __old_491 = __obj_490.line in let __new_492 = HxInt.add __old_491 1 in (
-                    ignore (__obj_490.line <- __new_492);
-                    __old_491
+                  ignore (let __obj_491 = self in let __old_492 = __obj_491.line in let __new_493 = HxInt.add __old_492 1 in (
+                    ignore (__obj_491.line <- __new_493);
+                    __old_492
                   ));
-                  let __assign_493 = 1 in (
-                    self.column <- __assign_493;
-                    __assign_493
+                  let __assign_494 = 1 in (
+                    self.column <- __assign_494;
+                    __assign_494
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_494 = self in let __old_495 = __obj_494.column in let __new_496 = HxInt.add __old_495 1 in (
-                  ignore (__obj_494.column <- __new_496);
-                  __old_495
+                )) else ignore (if c2 <> 13 then ignore (let __obj_495 = self in let __old_496 = __obj_495.column in let __new_497 = HxInt.add __old_496 1 in (
+                  ignore (__obj_495.column <- __new_497);
+                  __old_496
                 )) else ()));
-                let __assign_497 = c2 in (
-                  tempNumber5 := __assign_497;
-                  __assign_497
+                let __assign_498 = c2 in (
+                  tempNumber5 := __assign_498;
+                  __assign_498
                 )
               )
             ));
@@ -1440,346 +1444,346 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let _gthis = s
     HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create "Unterminated string literal" startPos)) ["Dynamic"; "HxParseError"]
   )
 ) with
-  | HxRuntime.Hx_return __ret_498 -> Obj.obj __ret_498
+  | HxRuntime.Hx_return __ret_499 -> Obj.obj __ret_499
 
 let next = fun self () -> try (
   ignore (skipWhitespaceAndComments self ());
   let p = HxPos.create (self.index) (self.line) (self.column) in (
     ignore (if self.index >= HxString.length (self.src) then raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (HxTokenKind.TEof) p))) else ());
     let tempNumber = ref 0 in (
-      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_499 = -1 in (
-        tempNumber := __assign_499;
-        __assign_499
-      ) else let __assign_500 = let __nullable_int_501 = HxString.charCodeAt (self.src) i in if __nullable_int_501 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_501 in (
+      ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_500 = -1 in (
         tempNumber := __assign_500;
         __assign_500
+      ) else let __assign_501 = let __nullable_int_502 = HxString.charCodeAt (self.src) i in if __nullable_int_502 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_502 in (
+        tempNumber := __assign_501;
+        __assign_501
       ));
       let c = !tempNumber in let tempResult = ref (Obj.magic ()) in (
         ignore (match c with
-          | 34 -> let __assign_518 = readString self p in (
-            tempResult := __assign_518;
-            __assign_518
-          )
-          | 39 -> let __assign_519 = readSingleQuotedString self p in (
+          | 34 -> let __assign_519 = readString self p in (
             tempResult := __assign_519;
             __assign_519
           )
+          | 39 -> let __assign_520 = readSingleQuotedString self p in (
+            tempResult := __assign_520;
+            __assign_520
+          )
           | 40 -> (
             ignore (let tempNumber1 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_520 = -1 in (
-                tempNumber1 := __assign_520;
-                __assign_520
-              ) else let __assign_521 = let __nullable_int_522 = HxString.charCodeAt (self.src) i in if __nullable_int_522 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_522 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_521 = -1 in (
                 tempNumber1 := __assign_521;
                 __assign_521
+              ) else let __assign_522 = let __nullable_int_523 = HxString.charCodeAt (self.src) i in if __nullable_int_523 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_523 in (
+                tempNumber1 := __assign_522;
+                __assign_522
               ));
               let c2 = !tempNumber1 in (
-                ignore (let __obj_523 = self in let __old_524 = __obj_523.index in let __new_525 = HxInt.add __old_524 1 in (
-                  ignore (__obj_523.index <- __new_525);
-                  __old_524
+                ignore (let __obj_524 = self in let __old_525 = __obj_524.index in let __new_526 = HxInt.add __old_525 1 in (
+                  ignore (__obj_524.index <- __new_526);
+                  __old_525
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_526 = self in let __old_527 = __obj_526.line in let __new_528 = HxInt.add __old_527 1 in (
-                    ignore (__obj_526.line <- __new_528);
-                    __old_527
+                  ignore (let __obj_527 = self in let __old_528 = __obj_527.line in let __new_529 = HxInt.add __old_528 1 in (
+                    ignore (__obj_527.line <- __new_529);
+                    __old_528
                   ));
-                  let __assign_529 = 1 in (
-                    self.column <- __assign_529;
-                    __assign_529
+                  let __assign_530 = 1 in (
+                    self.column <- __assign_530;
+                    __assign_530
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_530 = self in let __old_531 = __obj_530.column in let __new_532 = HxInt.add __old_531 1 in (
-                  ignore (__obj_530.column <- __new_532);
-                  __old_531
+                )) else ignore (if c2 <> 13 then ignore (let __obj_531 = self in let __old_532 = __obj_531.column in let __new_533 = HxInt.add __old_532 1 in (
+                  ignore (__obj_531.column <- __new_533);
+                  __old_532
                 )) else ()));
                 c2
               )
             ));
-            let __assign_533 = HxToken.create (HxTokenKind.TLParen) p in (
-              tempResult := __assign_533;
-              __assign_533
+            let __assign_534 = HxToken.create (HxTokenKind.TLParen) p in (
+              tempResult := __assign_534;
+              __assign_534
             )
           )
           | 41 -> (
             ignore (let tempNumber2 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_534 = -1 in (
-                tempNumber2 := __assign_534;
-                __assign_534
-              ) else let __assign_535 = let __nullable_int_536 = HxString.charCodeAt (self.src) i in if __nullable_int_536 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_536 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_535 = -1 in (
                 tempNumber2 := __assign_535;
                 __assign_535
+              ) else let __assign_536 = let __nullable_int_537 = HxString.charCodeAt (self.src) i in if __nullable_int_537 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_537 in (
+                tempNumber2 := __assign_536;
+                __assign_536
               ));
               let c2 = !tempNumber2 in (
-                ignore (let __obj_537 = self in let __old_538 = __obj_537.index in let __new_539 = HxInt.add __old_538 1 in (
-                  ignore (__obj_537.index <- __new_539);
-                  __old_538
+                ignore (let __obj_538 = self in let __old_539 = __obj_538.index in let __new_540 = HxInt.add __old_539 1 in (
+                  ignore (__obj_538.index <- __new_540);
+                  __old_539
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_540 = self in let __old_541 = __obj_540.line in let __new_542 = HxInt.add __old_541 1 in (
-                    ignore (__obj_540.line <- __new_542);
-                    __old_541
+                  ignore (let __obj_541 = self in let __old_542 = __obj_541.line in let __new_543 = HxInt.add __old_542 1 in (
+                    ignore (__obj_541.line <- __new_543);
+                    __old_542
                   ));
-                  let __assign_543 = 1 in (
-                    self.column <- __assign_543;
-                    __assign_543
+                  let __assign_544 = 1 in (
+                    self.column <- __assign_544;
+                    __assign_544
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_544 = self in let __old_545 = __obj_544.column in let __new_546 = HxInt.add __old_545 1 in (
-                  ignore (__obj_544.column <- __new_546);
-                  __old_545
+                )) else ignore (if c2 <> 13 then ignore (let __obj_545 = self in let __old_546 = __obj_545.column in let __new_547 = HxInt.add __old_546 1 in (
+                  ignore (__obj_545.column <- __new_547);
+                  __old_546
                 )) else ()));
                 c2
               )
             ));
-            let __assign_547 = HxToken.create (HxTokenKind.TRParen) p in (
-              tempResult := __assign_547;
-              __assign_547
+            let __assign_548 = HxToken.create (HxTokenKind.TRParen) p in (
+              tempResult := __assign_548;
+              __assign_548
             )
           )
           | 44 -> (
             ignore (let tempNumber3 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_548 = -1 in (
-                tempNumber3 := __assign_548;
-                __assign_548
-              ) else let __assign_549 = let __nullable_int_550 = HxString.charCodeAt (self.src) i in if __nullable_int_550 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_550 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_549 = -1 in (
                 tempNumber3 := __assign_549;
                 __assign_549
+              ) else let __assign_550 = let __nullable_int_551 = HxString.charCodeAt (self.src) i in if __nullable_int_551 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_551 in (
+                tempNumber3 := __assign_550;
+                __assign_550
               ));
               let c2 = !tempNumber3 in (
-                ignore (let __obj_551 = self in let __old_552 = __obj_551.index in let __new_553 = HxInt.add __old_552 1 in (
-                  ignore (__obj_551.index <- __new_553);
-                  __old_552
+                ignore (let __obj_552 = self in let __old_553 = __obj_552.index in let __new_554 = HxInt.add __old_553 1 in (
+                  ignore (__obj_552.index <- __new_554);
+                  __old_553
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_554 = self in let __old_555 = __obj_554.line in let __new_556 = HxInt.add __old_555 1 in (
-                    ignore (__obj_554.line <- __new_556);
-                    __old_555
+                  ignore (let __obj_555 = self in let __old_556 = __obj_555.line in let __new_557 = HxInt.add __old_556 1 in (
+                    ignore (__obj_555.line <- __new_557);
+                    __old_556
                   ));
-                  let __assign_557 = 1 in (
-                    self.column <- __assign_557;
-                    __assign_557
+                  let __assign_558 = 1 in (
+                    self.column <- __assign_558;
+                    __assign_558
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_558 = self in let __old_559 = __obj_558.column in let __new_560 = HxInt.add __old_559 1 in (
-                  ignore (__obj_558.column <- __new_560);
-                  __old_559
+                )) else ignore (if c2 <> 13 then ignore (let __obj_559 = self in let __old_560 = __obj_559.column in let __new_561 = HxInt.add __old_560 1 in (
+                  ignore (__obj_559.column <- __new_561);
+                  __old_560
                 )) else ()));
                 c2
               )
             ));
-            let __assign_561 = HxToken.create (HxTokenKind.TComma) p in (
-              tempResult := __assign_561;
-              __assign_561
+            let __assign_562 = HxToken.create (HxTokenKind.TComma) p in (
+              tempResult := __assign_562;
+              __assign_562
             )
           )
           | 46 -> (
             ignore (let tempNumber4 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_562 = -1 in (
-                tempNumber4 := __assign_562;
-                __assign_562
-              ) else let __assign_563 = let __nullable_int_564 = HxString.charCodeAt (self.src) i in if __nullable_int_564 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_564 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_563 = -1 in (
                 tempNumber4 := __assign_563;
                 __assign_563
+              ) else let __assign_564 = let __nullable_int_565 = HxString.charCodeAt (self.src) i in if __nullable_int_565 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_565 in (
+                tempNumber4 := __assign_564;
+                __assign_564
               ));
               let c2 = !tempNumber4 in (
-                ignore (let __obj_565 = self in let __old_566 = __obj_565.index in let __new_567 = HxInt.add __old_566 1 in (
-                  ignore (__obj_565.index <- __new_567);
-                  __old_566
+                ignore (let __obj_566 = self in let __old_567 = __obj_566.index in let __new_568 = HxInt.add __old_567 1 in (
+                  ignore (__obj_566.index <- __new_568);
+                  __old_567
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_568 = self in let __old_569 = __obj_568.line in let __new_570 = HxInt.add __old_569 1 in (
-                    ignore (__obj_568.line <- __new_570);
-                    __old_569
+                  ignore (let __obj_569 = self in let __old_570 = __obj_569.line in let __new_571 = HxInt.add __old_570 1 in (
+                    ignore (__obj_569.line <- __new_571);
+                    __old_570
                   ));
-                  let __assign_571 = 1 in (
-                    self.column <- __assign_571;
-                    __assign_571
+                  let __assign_572 = 1 in (
+                    self.column <- __assign_572;
+                    __assign_572
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_572 = self in let __old_573 = __obj_572.column in let __new_574 = HxInt.add __old_573 1 in (
-                  ignore (__obj_572.column <- __new_574);
-                  __old_573
+                )) else ignore (if c2 <> 13 then ignore (let __obj_573 = self in let __old_574 = __obj_573.column in let __new_575 = HxInt.add __old_574 1 in (
+                  ignore (__obj_573.column <- __new_575);
+                  __old_574
                 )) else ()));
                 c2
               )
             ));
-            let __assign_575 = HxToken.create (HxTokenKind.TDot) p in (
-              tempResult := __assign_575;
-              __assign_575
+            let __assign_576 = HxToken.create (HxTokenKind.TDot) p in (
+              tempResult := __assign_576;
+              __assign_576
             )
           )
           | 58 -> (
             ignore (let tempNumber5 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_576 = -1 in (
-                tempNumber5 := __assign_576;
-                __assign_576
-              ) else let __assign_577 = let __nullable_int_578 = HxString.charCodeAt (self.src) i in if __nullable_int_578 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_578 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_577 = -1 in (
                 tempNumber5 := __assign_577;
                 __assign_577
+              ) else let __assign_578 = let __nullable_int_579 = HxString.charCodeAt (self.src) i in if __nullable_int_579 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_579 in (
+                tempNumber5 := __assign_578;
+                __assign_578
               ));
               let c2 = !tempNumber5 in (
-                ignore (let __obj_579 = self in let __old_580 = __obj_579.index in let __new_581 = HxInt.add __old_580 1 in (
-                  ignore (__obj_579.index <- __new_581);
-                  __old_580
+                ignore (let __obj_580 = self in let __old_581 = __obj_580.index in let __new_582 = HxInt.add __old_581 1 in (
+                  ignore (__obj_580.index <- __new_582);
+                  __old_581
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_582 = self in let __old_583 = __obj_582.line in let __new_584 = HxInt.add __old_583 1 in (
-                    ignore (__obj_582.line <- __new_584);
-                    __old_583
+                  ignore (let __obj_583 = self in let __old_584 = __obj_583.line in let __new_585 = HxInt.add __old_584 1 in (
+                    ignore (__obj_583.line <- __new_585);
+                    __old_584
                   ));
-                  let __assign_585 = 1 in (
-                    self.column <- __assign_585;
-                    __assign_585
+                  let __assign_586 = 1 in (
+                    self.column <- __assign_586;
+                    __assign_586
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_586 = self in let __old_587 = __obj_586.column in let __new_588 = HxInt.add __old_587 1 in (
-                  ignore (__obj_586.column <- __new_588);
-                  __old_587
+                )) else ignore (if c2 <> 13 then ignore (let __obj_587 = self in let __old_588 = __obj_587.column in let __new_589 = HxInt.add __old_588 1 in (
+                  ignore (__obj_587.column <- __new_589);
+                  __old_588
                 )) else ()));
                 c2
               )
             ));
-            let __assign_589 = HxToken.create (HxTokenKind.TColon) p in (
-              tempResult := __assign_589;
-              __assign_589
+            let __assign_590 = HxToken.create (HxTokenKind.TColon) p in (
+              tempResult := __assign_590;
+              __assign_590
             )
           )
           | 59 -> (
             ignore (let tempNumber6 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_590 = -1 in (
-                tempNumber6 := __assign_590;
-                __assign_590
-              ) else let __assign_591 = let __nullable_int_592 = HxString.charCodeAt (self.src) i in if __nullable_int_592 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_592 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_591 = -1 in (
                 tempNumber6 := __assign_591;
                 __assign_591
+              ) else let __assign_592 = let __nullable_int_593 = HxString.charCodeAt (self.src) i in if __nullable_int_593 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_593 in (
+                tempNumber6 := __assign_592;
+                __assign_592
               ));
               let c2 = !tempNumber6 in (
-                ignore (let __obj_593 = self in let __old_594 = __obj_593.index in let __new_595 = HxInt.add __old_594 1 in (
-                  ignore (__obj_593.index <- __new_595);
-                  __old_594
+                ignore (let __obj_594 = self in let __old_595 = __obj_594.index in let __new_596 = HxInt.add __old_595 1 in (
+                  ignore (__obj_594.index <- __new_596);
+                  __old_595
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_596 = self in let __old_597 = __obj_596.line in let __new_598 = HxInt.add __old_597 1 in (
-                    ignore (__obj_596.line <- __new_598);
-                    __old_597
+                  ignore (let __obj_597 = self in let __old_598 = __obj_597.line in let __new_599 = HxInt.add __old_598 1 in (
+                    ignore (__obj_597.line <- __new_599);
+                    __old_598
                   ));
-                  let __assign_599 = 1 in (
-                    self.column <- __assign_599;
-                    __assign_599
+                  let __assign_600 = 1 in (
+                    self.column <- __assign_600;
+                    __assign_600
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_600 = self in let __old_601 = __obj_600.column in let __new_602 = HxInt.add __old_601 1 in (
-                  ignore (__obj_600.column <- __new_602);
-                  __old_601
+                )) else ignore (if c2 <> 13 then ignore (let __obj_601 = self in let __old_602 = __obj_601.column in let __new_603 = HxInt.add __old_602 1 in (
+                  ignore (__obj_601.column <- __new_603);
+                  __old_602
                 )) else ()));
                 c2
               )
             ));
-            let __assign_603 = HxToken.create (HxTokenKind.TSemicolon) p in (
-              tempResult := __assign_603;
-              __assign_603
+            let __assign_604 = HxToken.create (HxTokenKind.TSemicolon) p in (
+              tempResult := __assign_604;
+              __assign_604
             )
           )
           | 123 -> (
             ignore (let tempNumber7 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_604 = -1 in (
-                tempNumber7 := __assign_604;
-                __assign_604
-              ) else let __assign_605 = let __nullable_int_606 = HxString.charCodeAt (self.src) i in if __nullable_int_606 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_606 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_605 = -1 in (
                 tempNumber7 := __assign_605;
                 __assign_605
+              ) else let __assign_606 = let __nullable_int_607 = HxString.charCodeAt (self.src) i in if __nullable_int_607 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_607 in (
+                tempNumber7 := __assign_606;
+                __assign_606
               ));
               let c2 = !tempNumber7 in (
-                ignore (let __obj_607 = self in let __old_608 = __obj_607.index in let __new_609 = HxInt.add __old_608 1 in (
-                  ignore (__obj_607.index <- __new_609);
-                  __old_608
+                ignore (let __obj_608 = self in let __old_609 = __obj_608.index in let __new_610 = HxInt.add __old_609 1 in (
+                  ignore (__obj_608.index <- __new_610);
+                  __old_609
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_610 = self in let __old_611 = __obj_610.line in let __new_612 = HxInt.add __old_611 1 in (
-                    ignore (__obj_610.line <- __new_612);
-                    __old_611
+                  ignore (let __obj_611 = self in let __old_612 = __obj_611.line in let __new_613 = HxInt.add __old_612 1 in (
+                    ignore (__obj_611.line <- __new_613);
+                    __old_612
                   ));
-                  let __assign_613 = 1 in (
-                    self.column <- __assign_613;
-                    __assign_613
+                  let __assign_614 = 1 in (
+                    self.column <- __assign_614;
+                    __assign_614
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_614 = self in let __old_615 = __obj_614.column in let __new_616 = HxInt.add __old_615 1 in (
-                  ignore (__obj_614.column <- __new_616);
-                  __old_615
+                )) else ignore (if c2 <> 13 then ignore (let __obj_615 = self in let __old_616 = __obj_615.column in let __new_617 = HxInt.add __old_616 1 in (
+                  ignore (__obj_615.column <- __new_617);
+                  __old_616
                 )) else ()));
                 c2
               )
             ));
-            let __assign_617 = HxToken.create (HxTokenKind.TLBrace) p in (
-              tempResult := __assign_617;
-              __assign_617
+            let __assign_618 = HxToken.create (HxTokenKind.TLBrace) p in (
+              tempResult := __assign_618;
+              __assign_618
             )
           )
           | 125 -> (
             ignore (let tempNumber8 = ref 0 in (
-              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_618 = -1 in (
-                tempNumber8 := __assign_618;
-                __assign_618
-              ) else let __assign_619 = let __nullable_int_620 = HxString.charCodeAt (self.src) i in if __nullable_int_620 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_620 in (
+              ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_619 = -1 in (
                 tempNumber8 := __assign_619;
                 __assign_619
+              ) else let __assign_620 = let __nullable_int_621 = HxString.charCodeAt (self.src) i in if __nullable_int_621 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_621 in (
+                tempNumber8 := __assign_620;
+                __assign_620
               ));
               let c2 = !tempNumber8 in (
-                ignore (let __obj_621 = self in let __old_622 = __obj_621.index in let __new_623 = HxInt.add __old_622 1 in (
-                  ignore (__obj_621.index <- __new_623);
-                  __old_622
+                ignore (let __obj_622 = self in let __old_623 = __obj_622.index in let __new_624 = HxInt.add __old_623 1 in (
+                  ignore (__obj_622.index <- __new_624);
+                  __old_623
                 ));
                 ignore (if c2 = 10 then ignore ((
-                  ignore (let __obj_624 = self in let __old_625 = __obj_624.line in let __new_626 = HxInt.add __old_625 1 in (
-                    ignore (__obj_624.line <- __new_626);
-                    __old_625
+                  ignore (let __obj_625 = self in let __old_626 = __obj_625.line in let __new_627 = HxInt.add __old_626 1 in (
+                    ignore (__obj_625.line <- __new_627);
+                    __old_626
                   ));
-                  let __assign_627 = 1 in (
-                    self.column <- __assign_627;
-                    __assign_627
+                  let __assign_628 = 1 in (
+                    self.column <- __assign_628;
+                    __assign_628
                   )
-                )) else ignore (if c2 <> 13 then ignore (let __obj_628 = self in let __old_629 = __obj_628.column in let __new_630 = HxInt.add __old_629 1 in (
-                  ignore (__obj_628.column <- __new_630);
-                  __old_629
+                )) else ignore (if c2 <> 13 then ignore (let __obj_629 = self in let __old_630 = __obj_629.column in let __new_631 = HxInt.add __old_630 1 in (
+                  ignore (__obj_629.column <- __new_631);
+                  __old_630
                 )) else ()));
                 c2
               )
             ));
-            let __assign_631 = HxToken.create (HxTokenKind.TRBrace) p in (
-              tempResult := __assign_631;
-              __assign_631
+            let __assign_632 = HxToken.create (HxTokenKind.TRBrace) p in (
+              tempResult := __assign_632;
+              __assign_632
             )
           )
-          | _ -> if c >= 48 && c <= 57 then let __assign_502 = readNumber self p in (
-            tempResult := __assign_502;
-            __assign_502
-          ) else if c >= 65 && c <= 90 || c >= 97 && c <= 122 || c = 95 then let __assign_503 = readIdent self p in (
+          | _ -> if c >= 48 && c <= 57 then let __assign_503 = readNumber self p in (
             tempResult := __assign_503;
             __assign_503
+          ) else if c >= 65 && c <= 90 || c >= 97 && c <= 122 || c = 95 then let __assign_504 = readIdent self p in (
+            tempResult := __assign_504;
+            __assign_504
           ) else let tempNumber9 = ref 0 in (
-            ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_504 = -1 in (
-              tempNumber9 := __assign_504;
-              __assign_504
-            ) else let __assign_505 = let __nullable_int_506 = HxString.charCodeAt (self.src) i in if __nullable_int_506 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_506 in (
+            ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_505 = -1 in (
               tempNumber9 := __assign_505;
               __assign_505
+            ) else let __assign_506 = let __nullable_int_507 = HxString.charCodeAt (self.src) i in if __nullable_int_507 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_507 in (
+              tempNumber9 := __assign_506;
+              __assign_506
             ));
             let c1 = !tempNumber9 in (
-              ignore (let __obj_507 = self in let __old_508 = __obj_507.index in let __new_509 = HxInt.add __old_508 1 in (
-                ignore (__obj_507.index <- __new_509);
-                __old_508
+              ignore (let __obj_508 = self in let __old_509 = __obj_508.index in let __new_510 = HxInt.add __old_509 1 in (
+                ignore (__obj_508.index <- __new_510);
+                __old_509
               ));
               ignore (if c1 = 10 then ignore ((
-                ignore (let __obj_510 = self in let __old_511 = __obj_510.line in let __new_512 = HxInt.add __old_511 1 in (
-                  ignore (__obj_510.line <- __new_512);
-                  __old_511
+                ignore (let __obj_511 = self in let __old_512 = __obj_511.line in let __new_513 = HxInt.add __old_512 1 in (
+                  ignore (__obj_511.line <- __new_513);
+                  __old_512
                 ));
-                let __assign_513 = 1 in (
-                  self.column <- __assign_513;
-                  __assign_513
+                let __assign_514 = 1 in (
+                  self.column <- __assign_514;
+                  __assign_514
                 )
-              )) else ignore (if c1 <> 13 then ignore (let __obj_514 = self in let __old_515 = __obj_514.column in let __new_516 = HxInt.add __old_515 1 in (
-                ignore (__obj_514.column <- __new_516);
-                __old_515
+              )) else ignore (if c1 <> 13 then ignore (let __obj_515 = self in let __old_516 = __obj_515.column in let __new_517 = HxInt.add __old_516 1 in (
+                ignore (__obj_515.column <- __new_517);
+                __old_516
               )) else ()));
               ignore c1;
-              let __assign_517 = HxToken.create (HxTokenKind.TOther c) p in (
-                tempResult := __assign_517;
-                __assign_517
+              let __assign_518 = HxToken.create (HxTokenKind.TOther c) p in (
+                tempResult := __assign_518;
+                __assign_518
               )
             )
           ));
@@ -1788,7 +1792,7 @@ let next = fun self () -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_632 -> Obj.obj __ret_632
+  | HxRuntime.Hx_return __ret_633 -> Obj.obj __ret_633
 
 let isSpace = fun c -> c = 9 || c = 10 || c = 13 || c = 32
 

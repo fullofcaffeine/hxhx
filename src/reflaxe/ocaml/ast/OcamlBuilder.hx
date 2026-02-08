@@ -3388,8 +3388,27 @@ class OcamlBuilder {
 					} else {
 						OcamlExpr.EWhile(condExpr, builtBody);
 					}
-			case TSwitch(scrutinee, cases, edef):
-				buildSwitch(scrutinee, cases, edef, e.t);
+				case TSwitch(scrutinee, cases, edef):
+					#if macro
+					final log = ctx.profileLogLine;
+					final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
+					final profMatch = log != null
+						&& Context.defined("reflaxe_ocaml_profile_detail")
+						&& profClass != null
+						&& ctx.currentTypeFullName != null
+						&& ctx.currentTypeFullName == profClass;
+					final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
+					#end
+					final out = buildSwitch(scrutinee, cases, edef, e.t);
+					#if macro
+					if (profMatch) {
+						var valueCount = 0;
+						for (c in cases) valueCount += (c.values != null ? c.values.length : 0);
+						final dtMs = Std.int((haxe.Timer.stamp() - t0) * 1000);
+						log("reflaxe.ocaml: builder_switch dt_ms=" + Std.string(dtMs) + " cases=" + Std.string(cases.length) + " values=" + Std.string(valueCount));
+					}
+					#end
+					out;
 			case TArray(arr, idx):
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [buildExpr(arr), buildExpr(idx)]);
 			case TArrayDecl(items):
@@ -5855,13 +5874,41 @@ class OcamlBuilder {
 			}
 
 	function buildFunctionBodyBlock(exprs:Array<TypedExpr>):OcamlExpr {
+		#if macro
+		final log = ctx.profileLogLine;
+		final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
+		final profMatch = log != null
+			&& Context.defined("reflaxe_ocaml_profile_detail")
+			&& profClass != null
+			&& ctx.currentTypeFullName != null
+			&& ctx.currentTypeFullName == profClass;
+		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final refIds = collectRefLocalIdsFromExprs(exprs);
+		#if macro
+		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final prev = currentMutatedLocalIds;
 		currentMutatedLocalIds = refIds;
+		#if macro
+		if (profMatch) log("reflaxe.ocaml: builder_block_refs dt_ms=" + Std.string(Std.int((t1 - t0) * 1000)) + " stmts=" + Std.string(exprs.length));
+		final t2 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final usedIds = collectUsedLocalIdsFromExprs(exprs);
+		#if macro
+		final t3 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final prevUsed = currentUsedLocalIds;
 		currentUsedLocalIds = usedIds;
+		#if macro
+		if (profMatch) log("reflaxe.ocaml: builder_block_used dt_ms=" + Std.string(Std.int((t3 - t2) * 1000)) + " stmts=" + Std.string(exprs.length));
+		final t4 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final result = buildBlockFromIndex(exprs, 0, true);
+		#if macro
+		final t5 = profMatch ? haxe.Timer.stamp() : 0.0;
+		if (profMatch) log("reflaxe.ocaml: builder_block_build dt_ms=" + Std.string(Std.int((t5 - t4) * 1000)) + " stmts=" + Std.string(exprs.length));
+		#end
 		currentMutatedLocalIds = prev;
 		currentUsedLocalIds = prevUsed;
 		return result;
@@ -5896,7 +5943,21 @@ class OcamlBuilder {
 	}
 
 	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr):OcamlExpr {
+		#if macro
+		final log = ctx.profileLogLine;
+		final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
+		final profMatch = log != null
+			&& Context.defined("reflaxe_ocaml_profile_detail")
+			&& profClass != null
+			&& ctx.currentTypeFullName != null
+			&& ctx.currentTypeFullName == profClass;
+		final t0 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final refIds = collectRefLocalIds(bodyExpr);
+		#if macro
+		final t1 = profMatch ? haxe.Timer.stamp() : 0.0;
+		if (profMatch) log("reflaxe.ocaml: builder_fn_refs dt_ms=" + Std.string(Std.int((t1 - t0) * 1000)));
+		#end
 
 		final params = args.length == 0
 			? [OcamlPat.PConst(OcamlConst.CUnit)]
@@ -5910,7 +5971,15 @@ class OcamlBuilder {
 			}
 		}
 
+		#if macro
+		final t2 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 		final needsReturnCatch = containsNestedReturnInFunctionBody(bodyExpr);
+		#if macro
+		final t3 = profMatch ? haxe.Timer.stamp() : 0.0;
+		if (profMatch) log("reflaxe.ocaml: builder_fn_return_scan dt_ms=" + Std.string(Std.int((t3 - t2) * 1000)));
+		final t4 = profMatch ? haxe.Timer.stamp() : 0.0;
+		#end
 
 		var body:OcamlExpr = switch (unwrap(bodyExpr).expr) {
 			case TReturn(ret):
@@ -5920,6 +5989,11 @@ class OcamlBuilder {
 			case _:
 				buildExpr(bodyExpr);
 		}
+
+		#if macro
+		final t5 = profMatch ? haxe.Timer.stamp() : 0.0;
+		if (profMatch) log("reflaxe.ocaml: builder_fn_body dt_ms=" + Std.string(Std.int((t5 - t4) * 1000)));
+		#end
 
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
@@ -5939,6 +6013,10 @@ class OcamlBuilder {
 		}
 
 		currentMutatedLocalIds = prev;
+		#if macro
+		final t6 = profMatch ? haxe.Timer.stamp() : 0.0;
+		if (profMatch) log("reflaxe.ocaml: builder_fn_total dt_ms=" + Std.string(Std.int((t6 - t0) * 1000)));
+		#end
 		return OcamlExpr.EFun(params, body);
 	}
 
@@ -6065,40 +6143,72 @@ class OcamlBuilder {
 		This intentionally leaves more-advanced SSA-style rewrites for later milestones; the goal
 		is a simple, predictable win for common straight-line assignment patterns.
 	**/
-	static function collectRefLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
-		final mutatedAny:Map<Int, Bool> = [];
-		final needsRef:Map<Int, Bool> = [];
+		static function collectRefLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
+			final mutatedAny:Map<Int, Bool> = [];
+			final needsRef:Map<Int, Bool> = [];
 
-		final captured:Map<Int, Bool> = [];
-		for (e in exprs) collectCapturedOuterLocalIdsInto(e, captured);
+			final captured:Map<Int, Bool> = [];
 
-		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
-
-		function markMutated(id:Int, isShadowableStmt:Bool):Void {
-			mutatedAny.set(id, true);
-			if (!isShadowableStmt) needsRef.set(id, true);
-		}
-
-		function visit(e:TypedExpr, depth:Int, inLoop:Bool, inFn:Bool, isStmt:Bool):Void {
-			if (visited.exists(e)) return;
-			visited.set(e, true);
-
-			switch (e.expr) {
-				case TFunction(tfunc):
-					// Any mutations inside nested functions require refs for the mutated locals.
-					visit(tfunc.expr, depth + 1, inLoop, true, false);
-					return;
-					case TWhile(cond, body, _):
-						visit(cond, depth + 1, true, inFn, false);
-						visit(body, depth + 1, true, inFn, false);
-						return;
-					case TBlock(items):
-						// Nested blocks (relative to this block) are treated conservatively: mutations in them
-						// require refs for the mutated locals, since `let`-shadowing would not propagate out.
-						for (x in items) visit(x, depth + 1, inLoop, inFn, true);
-						return;
-				case _:
+			function collectDeclaredLocalIdsShallow(e:TypedExpr, declared:Map<Int, Bool>):Void {
+				switch (e.expr) {
+					case TVar(v, _):
+						declared.set(v.id, true);
+					case TFunction(_):
+						// Stop: nested function defines its own scope.
+					case _:
+						TypedExprTools.iter(e, (x) -> collectDeclaredLocalIdsShallow(x, declared));
+				}
 			}
+
+			function collectUsedLocalIdsShallow(e:TypedExpr, used:Map<Int, Bool>):Void {
+				switch (e.expr) {
+					case TLocal(v):
+						used.set(v.id, true);
+					case TFunction(_):
+						// Stop: nested function defines its own scope.
+					case _:
+						TypedExprTools.iter(e, (x) -> collectUsedLocalIdsShallow(x, used));
+				}
+			}
+
+			function capturedOuterLocalsForFunction(tfunc:haxe.macro.Type.TFunc):Map<Int, Bool> {
+				final declared:Map<Int, Bool> = [];
+				final used:Map<Int, Bool> = [];
+				for (a in tfunc.args) declared.set(a.v.id, true);
+				collectDeclaredLocalIdsShallow(tfunc.expr, declared);
+				collectUsedLocalIdsShallow(tfunc.expr, used);
+
+				final out:Map<Int, Bool> = [];
+				for (id in used.keys()) {
+					if (!declared.exists(id)) out.set(id, true);
+				}
+				return out;
+			}
+
+			function markMutated(id:Int, isShadowableStmt:Bool):Void {
+				mutatedAny.set(id, true);
+				if (!isShadowableStmt) needsRef.set(id, true);
+			}
+
+			function visit(e:TypedExpr, depth:Int, inLoop:Bool, inFn:Bool, isStmt:Bool):Void {
+				switch (e.expr) {
+					case TFunction(tfunc):
+						final cap = capturedOuterLocalsForFunction(tfunc);
+						for (id in cap.keys()) captured.set(id, true);
+						// Any mutations inside nested functions require refs for the mutated locals.
+						visit(tfunc.expr, depth + 1, inLoop, true, false);
+						return;
+						case TWhile(cond, body, _):
+							visit(cond, depth + 1, true, inFn, false);
+							visit(body, depth + 1, true, inFn, false);
+							return;
+						case TBlock(items):
+							// Nested blocks (relative to this block) are treated conservatively: mutations in them
+							// require refs for the mutated locals, since `let`-shadowing would not propagate out.
+							for (x in items) visit(x, depth + 1, inLoop, inFn, true);
+							return;
+					case _:
+				}
 
 			switch (e.expr) {
 				case TBinop(OpAssign, lhs, _):
@@ -6134,8 +6244,8 @@ class OcamlBuilder {
 			if (mutatedAny.exists(id) && mutatedAny.get(id) == true) needsRef.set(id, true);
 		}
 
-		return needsRef;
-	}
+			return needsRef;
+		}
 
 	static function collectRefLocalIds(e:TypedExpr):Map<Int, Bool> {
 		return switch (e.expr) {
@@ -6146,91 +6256,30 @@ class OcamlBuilder {
 		}
 	}
 
-	static function collectCapturedOuterLocalIdsInto(e:TypedExpr, out:Map<Int, Bool>):Void {
-		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
-
-		function collectDeclaredLocalIdsShallow(e:TypedExpr, declared:Map<Int, Bool>):Void {
-			switch (e.expr) {
-				case TVar(v, _):
-					declared.set(v.id, true);
-				case TFunction(_):
-					// Stop: nested function defines its own scope.
-				case _:
-					TypedExprTools.iter(e, (x) -> collectDeclaredLocalIdsShallow(x, declared));
-			}
-		}
-
-		function collectUsedLocalIdsShallow(e:TypedExpr, used:Map<Int, Bool>):Void {
-			switch (e.expr) {
-				case TLocal(v):
-					used.set(v.id, true);
-				case TFunction(_):
-					// Stop: nested function defines its own scope.
-				case _:
-					TypedExprTools.iter(e, (x) -> collectUsedLocalIdsShallow(x, used));
-			}
-		}
-
-		function capturedOuterLocalsForFunction(tfunc:haxe.macro.Type.TFunc):Map<Int, Bool> {
-			final declared:Map<Int, Bool> = [];
+		function collectUsedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
 			final used:Map<Int, Bool> = [];
-			for (a in tfunc.args) declared.set(a.v.id, true);
-			collectDeclaredLocalIdsShallow(tfunc.expr, declared);
-			collectUsedLocalIdsShallow(tfunc.expr, used);
-
-			final captured:Map<Int, Bool> = [];
-			for (id in used.keys()) {
-				if (!declared.exists(id)) captured.set(id, true);
-			}
-			return captured;
+			for (e in exprs) collectUsedLocalIdsInto(e, used);
+			return used;
 		}
 
-		function visit(e:TypedExpr):Void {
-			if (visited.exists(e)) return;
-			visited.set(e, true);
-
-			switch (e.expr) {
-				case TFunction(tfunc):
-					final captured = capturedOuterLocalsForFunction(tfunc);
-					for (id in captured.keys()) out.set(id, true);
-					TypedExprTools.iter(tfunc.expr, visit);
-				case _:
-					TypedExprTools.iter(e, visit);
-			}
-		}
-
-		visit(e);
-	}
-
-	function collectUsedLocalIdsFromExprs(exprs:Array<TypedExpr>):Map<Int, Bool> {
-		final used:Map<Int, Bool> = [];
-		for (e in exprs) {
-			final u = collectUsedLocalIds(e);
-			for (k in u.keys()) used.set(k, true);
-		}
-		return used;
-	}
-
-	function collectUsedLocalIds(e:TypedExpr):Map<Int, Bool> {
-		final used:Map<Int, Bool> = [];
-		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
-
-		function visit(e:TypedExpr):Void {
-			if (visited.exists(e)) return;
-			visited.set(e, true);
-
-			switch (e.expr) {
-				case TLocal(v):
-					used.set(v.id, true);
-				case _:
+		function collectUsedLocalIdsInto(e:TypedExpr, used:Map<Int, Bool>):Void {
+			function visit(e:TypedExpr):Void {
+				switch (e.expr) {
+					case TLocal(v):
+						used.set(v.id, true);
+					case _:
+				}
+				TypedExprTools.iter(e, visit);
 			}
 
-			TypedExprTools.iter(e, visit);
+			visit(e);
 		}
 
-		visit(e);
-		return used;
-	}
+		function collectUsedLocalIds(e:TypedExpr):Map<Int, Bool> {
+			final used:Map<Int, Bool> = [];
+			collectUsedLocalIdsInto(e, used);
+			return used;
+		}
 
 	/**
 		Returns true if the given local is *read* before it is *written* again in the suffix
@@ -6257,12 +6306,7 @@ class OcamlBuilder {
 	}
 
 	static function exprWritesLocalId(e:TypedExpr, id:Int):Bool {
-		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
-
 		function visit(e:TypedExpr):Bool {
-			if (visited.exists(e)) return false;
-			visited.set(e, true);
-
 			switch (e.expr) {
 				case TBinop(OpAssign, lhs, _):
 					switch (lhs.expr) {
@@ -6296,12 +6340,7 @@ class OcamlBuilder {
 	}
 
 	static function exprReadsLocalId(e:TypedExpr, id:Int):Bool {
-		final visited = new haxe.ds.ObjectMap<TypedExpr, Bool>();
-
 		function visit(e:TypedExpr, writeOnly:Bool):Bool {
-			if (visited.exists(e)) return false;
-			visited.set(e, true);
-
 			switch (e.expr) {
 				case TLocal(v) if (!writeOnly && v.id == id):
 					return true;

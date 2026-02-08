@@ -83,6 +83,12 @@ Notes:
 - The upstream suite expects additional host tools depending on the stages it exercises.
 - See `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1` for OS caveats (e.g. sys-stage behavior on macOS).
 - Useful env flags for the runner (`scripts/hxhx/run-upstream-runci-macro.sh`):
+  - `HXHX_GATE2_MODE=stage3_no_emit_direct` (default): stage0-free direct Macro stage sequence; each sub-invocation goes through
+    `hxhx --hxhx-stage3 --hxhx-no-emit`.
+  - `HXHX_GATE2_MODE=stage0_shim`: run the upstream `RunCi.hxml` harness via stage0 `haxe` (useful as a baseline).
+  - `HXHX_GATE2_MODE=stage3_emit_runner`: experimental rung that compiles+executes a runner under the Stage3 bootstrap emitter.
+    While Stage3 is still incomplete, this rung may patch the runner to a minimal harness inside the temporary worktree; treat it as
+    a “prove we can spawn sub-invocations” check, not full runci acceptance.
   - `HXHX_GATE2_SKIP_PARTY=0`: enable `tests/party` (network-heavy; skipped by default for stability).
   - `HXHX_GATE2_MISC_FILTER=<pattern>`: run only a subset of `tests/misc` fixtures.
   - `HXHX_GATE2_SKIP_PARTY=1`: skip `tests/party` entirely (default).

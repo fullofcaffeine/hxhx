@@ -22,6 +22,9 @@ HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_BOOTSTRAP_DEBUG="${HXHX_BOOTSTRAP_DEBUG:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
 HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
+HXHX_STAGE0_PROFILE_DETAIL="${HXHX_STAGE0_PROFILE_DETAIL:-0}"
+HXHX_STAGE0_PROFILE_CLASS="${HXHX_STAGE0_PROFILE_CLASS:-}"
+HXHX_STAGE0_PROFILE_FIELD="${HXHX_STAGE0_PROFILE_FIELD:-}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 
@@ -66,6 +69,15 @@ start_ts="$(date +%s)"
   if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
     haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
   fi
+  if [ "$HXHX_STAGE0_PROFILE_DETAIL" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_profile_detail)
+  fi
+  if [ -n "$HXHX_STAGE0_PROFILE_CLASS" ]; then
+    haxe_args+=(-D "reflaxe_ocaml_profile_class=$HXHX_STAGE0_PROFILE_CLASS")
+  fi
+  if [ -n "$HXHX_STAGE0_PROFILE_FIELD" ]; then
+    haxe_args+=(-D "reflaxe_ocaml_profile_field=$HXHX_STAGE0_PROFILE_FIELD")
+  fi
 
   # `--times` prints only at the end; keep it enabled in debug mode so maintainers can
   # see where stage0 is spending time.
@@ -106,7 +118,12 @@ mkdir -p "$BOOTSTRAP_DIR"
 echo "== Verifying bootstrap snapshot builds (dune)"
 (
   cd "$BOOTSTRAP_DIR"
-  dune build >/dev/null
+  # NOTE: On some platforms (notably macOS/arm64), extremely large generated compilation units
+  # can cause native `ocamlopt` assembly failures (e.g. "fixup value out of range").
+  #
+  # The bootstrap snapshot is primarily a stage0-free fallback; verifying the bytecode build
+  # is sufficient to ensure the snapshot is structurally sound and runnable everywhere.
+  dune build ./out.bc >/dev/null
 )
 
 echo "OK: regenerated bootstrap snapshot"

@@ -92,6 +92,9 @@ Build the `hxhx` example (requires `dune` + `ocamlc`):
 bash scripts/hxhx/build-hxhx.sh
 ```
 
+By default this builds the bootstrap snapshot as **bytecode** (`out.bc`) for portability (some platforms/architectures can fail to native-compile the large generated OCaml units).
+To prefer a native build first, set `HXHX_BOOTSTRAP_PREFER_NATIVE=1` (it will fall back to bytecode if native fails).
+
 Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s path):
 
 ```bash

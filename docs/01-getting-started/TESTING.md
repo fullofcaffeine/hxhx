@@ -64,6 +64,12 @@ Notes:
 - This is **not** run in GitHub Actions CI by default (it is network-heavy and relies on external toolchains).
 - Host toolchain requirements and macOS sys-stage caveats are documented in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
 - Debugging: set `HXHX_GATE2_MISC_FILTER=<pattern>` to run only a subset of `tests/misc` fixtures.
+- By default this uses a **non-delegating** Gate 2 mode (`HXHX_GATE2_MODE=stage3_no_emit_direct`): it runs the same stage
+  sequence as upstream runci Macro, but routes every `haxe` invocation through `hxhx --hxhx-stage3 --hxhx-no-emit`.
+  - To run the historical “stage0 shim” harness instead, set `HXHX_GATE2_MODE=stage0_shim`.
+  - `HXHX_GATE2_MODE=stage3_emit_runner` is an experimental rung: it tries to compile+run the upstream RunCi runner under the
+    Stage3 bootstrap emitter. While Stage3 is still incomplete, this rung may patch the runner to a minimal harness inside the
+    temporary worktree so we can at least prove sub-invocation spawning.
 
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 

@@ -359,31 +359,35 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfull/src" -main Main --hxhx-out "$tmpfull/out")"
 echo "$out" | grep -q "^stage3=ok$"
-	echo "$out" | grep -q "^OK$"
-	echo "$out" | grep -vq "^BAD$"
-	echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^OK$"
+echo "$out" | grep -vq "^BAD$"
+echo "$out" | grep -q "^run=ok$"
 
-	echo "== Stage3 bring-up: body parse recovery doesn't truncate after unsupported constructs"
-	tmpbodyrecover="$tmpdir/body_recover"
-	mkdir -p "$tmpbodyrecover/src"
-	cat >"$tmpbodyrecover/src/Main.hx" <<'HX'
-	class Main {
-	  static function main() {
-	    trace("A");
-	    // Our Stage3 body parser doesn't support `for` loops yet, but it must not
-	    // silently truncate the remainder of the function body when it encounters one.
-	    for (i in 0...3) {
-	      trace(i);
-	    }
-	    trace("C");
-	  }
-	}
+echo "== Stage3 bring-up: body parse recovery doesn't truncate after unsupported constructs"
+tmpbodyrecover="$tmpdir/body_recover"
+mkdir -p "$tmpbodyrecover/src"
+cat >"$tmpbodyrecover/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    trace("A");
+    // Regression: `for` loops must parse and must not truncate the remainder of
+    // the function body (we previously saw only A/C printed due to `SForIn` missing
+    // from the bootstrap snapshot).
+    for (i in 0...3) {
+      trace(i);
+    }
+    trace("C");
+  }
+}
 HX
-	out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbodyrecover/src" -main Main --hxhx-out "$tmpbodyrecover/out")"
-	echo "$out" | grep -q "^stage3=ok$"
-	echo "$out" | grep -q "^A$"
-	echo "$out" | grep -q "^C$"
-	echo "$out" | grep -q "^run=ok$"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbodyrecover/src" -main Main --hxhx-out "$tmpbodyrecover/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^A$"
+echo "$out" | grep -q "^0$"
+echo "$out" | grep -q "^1$"
+echo "$out" | grep -q "^2$"
+echo "$out" | grep -q "^C$"
+echo "$out" | grep -q "^run=ok$"
 
 	echo "== Stage3 bring-up: parses try/catch expression initializer"
 	tmptry="$tmpdir/try_expr"

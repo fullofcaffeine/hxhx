@@ -6,6 +6,7 @@ type hxstmt =
 | SBlock of hxstmt HxArray.t * HxPos.t
 | SVar of string * string * Obj.t * HxPos.t
 | SIf of HxExpr.hxexpr * hxstmt * Obj.t * HxPos.t
+| SForIn of string * HxExpr.hxexpr * hxstmt * HxPos.t
 | SReturnVoid of HxPos.t
 | SReturn of HxExpr.hxexpr * HxPos.t
 | SExpr of HxExpr.hxexpr * HxPos.t

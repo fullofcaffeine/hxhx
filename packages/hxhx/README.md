@@ -17,12 +17,22 @@ Long-term, `hxhx` becomes the real Haxe-in-Haxe compiler, and the delegation pat
 From repo root (requires `dune` + `ocamlc`):
 
 ```bash
-haxe -C packages/hxhx build.hxml -D ocaml_build=native
+bash scripts/hxhx/build-hxhx.sh
 ```
 
-Binary will be at:
+This prints the built `hxhx` binary path (by default **bytecode** via `out.bc` for portability).
 
-`packages/hxhx/out/_build/default/out.exe`
+To build from stage0 source (instead of the committed `bootstrap_out` snapshot), set:
+
+```bash
+HXHX_FORCE_STAGE0=1 bash scripts/hxhx/build-hxhx.sh
+```
+
+To prefer native (may fail on some platforms/architectures for very large generated units), set:
+
+```bash
+HXHX_BOOTSTRAP_PREFER_NATIVE=1 HXHX_STAGE0_PREFER_NATIVE=1 bash scripts/hxhx/build-hxhx.sh
+```
 
 ## Bootstrap snapshot (maintainers)
 
@@ -58,11 +68,11 @@ HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_PROGRE
 No args (example harness mode):
 
 ```bash
-packages/hxhx/out/_build/default/out.exe
+"$(bash scripts/hxhx/build-hxhx.sh)"
 ```
 
 Delegate to Stage 0 `haxe`:
 
 ```bash
-HAXE_BIN=haxe packages/hxhx/out/_build/default/out.exe -- compile.hxml
+HAXE_BIN=haxe "$(bash scripts/hxhx/build-hxhx.sh)" -- compile.hxml
 ```

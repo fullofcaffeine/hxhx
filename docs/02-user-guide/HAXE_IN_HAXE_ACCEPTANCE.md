@@ -201,9 +201,17 @@ In this repo, Gate 2 is exercised via:
 
 - `npm run test:upstream:runci-macro` (wraps `scripts/hxhx/run-upstream-runci-macro.sh`)
 
-As with Gate 1, the current Gate 2 runner exercises the **stage0 shim** path by default (delegating to the system
-`haxe`). A “native/non-delegating Gate 2” runner will be introduced once `hxhx` can type and execute macros without
-delegation.
+Today, `npm run test:upstream:runci-macro` defaults to a **non-delegating** Gate 2 mode:
+
+- `HXHX_GATE2_MODE=stage3_no_emit_direct` (default): runs the same stage sequence as upstream runci Macro, but routes every
+  `haxe` invocation through `hxhx --hxhx-stage3 --hxhx-no-emit` (stage0-free in the hot path).
+
+Other useful modes:
+
+- `HXHX_GATE2_MODE=stage0_shim`: historical baseline (execute upstream `RunCi.hxml` via stage0 `haxe`, with wrappers).
+- `HXHX_GATE2_MODE=stage3_emit_runner`: experimental rung that compiles+executes a runner under the Stage3 bootstrap emitter.
+  While Stage3 is still incomplete, this rung may patch the runner inside the temporary worktree to a minimal harness so we can
+  prove sub-invocation spawning; it is not full runci acceptance yet.
 
 CI workflow notes (scheduled + manual upstream job) live in:
 

@@ -237,6 +237,13 @@ Prefer adding tests that match the repo’s testing layers:
 
 Use hxdoc (`/** ... */`) proactively.
 
+## README Maintenance
+
+Keep `README.md` up to date as milestones land.
+
+- When you add/change a workflow (build/test/bootstrap, stage flags, new required tools), update `README.md` in the same change.
+- Prefer documenting “why/what/how” briefly and linking to the deeper doc under `docs/` when it exists.
+
 This repo should be a **world-class, didactic example** of building a compiler backend with **Haxe + Reflaxe** that produces **idiomatic target-language code** (OCaml in this repo; the principles should also read well for targets like Rust).
 
 - For any **vital** or **complex** class/function, write a verbose hxdoc explaining:

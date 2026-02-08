@@ -51,7 +51,7 @@ let read_file (path : string) : string =
   s
 
 let safe_remove (path : string) : unit =
-  try Sys.remove path with _ -> ()
+  try Unix.unlink path with _ -> ()
 
 let command_line_argv (cmd : string) (args : string HxBootArray.t) : string array =
   Array.of_list ("/usr/bin/env" :: cmd :: HxBootArray.to_list args)
@@ -69,8 +69,8 @@ let run (cmd : string) (args : string HxBootArray.t) : t =
   let err_fd = openfile err_path [ O_WRONLY; O_CREAT; O_TRUNC ] 0o600 in
   let pid = create_process prog argv stdin out_fd err_fd in
   let (_pid, st) = waitpid [] pid in
-  close out_fd;
-  close err_fd;
+  Unix.close out_fd;
+  Unix.close err_fd;
   let stdout_all = read_file out_path in
   let stderr_all = read_file err_path in
   safe_remove out_path;

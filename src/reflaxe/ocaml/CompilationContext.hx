@@ -10,6 +10,19 @@ import reflaxe.ocaml.OcamlNameTools;
  * required for correct OCaml emission (especially around closures).
  */
 class CompilationContext {
+	/**
+		Optional macro-time logger used for opt-in profiling.
+
+		Why
+		- Stage0 bootstrap builds (notably `packages/hxhx`) can spend a long time inside macro-time
+		  passes like TypedExpr lowering, and default Haxe logs do not indicate progress.
+
+		What
+		- When non-null, internal compiler phases may call this with concise, newline-free messages.
+		- The OCaml backend wires this up when `-D reflaxe_ocaml_profile` is enabled.
+	**/
+	public var profileLogLine:Null<String->Void> = null;
+
 	/** Tracks renames applied to Haxe locals to avoid collisions and keep output stable. */
 	public final variableRenameMap:Map<String, String> = [];
 

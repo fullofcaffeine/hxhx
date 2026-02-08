@@ -81,9 +81,9 @@ let init () : unit =
   ignore (HxType.enum_ "HxVisibility");
   ignore (HxType.enum_ "_HxConditionalCompilation.Token");
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
-  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayDecl"; "EArrayAccess"; "ECast"; "EUntyped"; "EUnsupported" ];
-  HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
-  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SReturnVoid"; "SReturn"; "SExpr" ];
+  HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
+  HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
+  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
@@ -200,6 +200,12 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'index' for HxExpr.EArrayAccess" in
     Obj.repr (HxExpr.EArrayAccess (a0, a1))
   );
+  HxType.register_enum_ctor "HxExpr" "ERange" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'start' for HxExpr.ERange" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'end' for HxExpr.ERange" in
+    Obj.repr (HxExpr.ERange (a0, a1))
+  );
   HxType.register_enum_ctor "HxExpr" "ECast" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxExpr.ECast" in
@@ -279,6 +285,9 @@ let init () : unit =
   HxType.register_enum_ctor "HxKeyword" "KFor" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxKeyword.KFor)
   );
+  HxType.register_enum_ctor "HxKeyword" "KIn" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HxKeyword.KIn)
+  );
   HxType.register_enum_ctor "HxKeyword" "KBreak" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxKeyword.KBreak)
   );
@@ -336,6 +345,14 @@ let init () : unit =
     let a2 = if len > 2 then (HxArray.get args 2) else failwith "Type.createEnum: missing ctor arg 'elseBranch' for HxStmt.SIf" in
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SIf" in
     Obj.repr (HxStmt.SIf (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "HxStmt" "SForIn" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'name' for HxStmt.SForIn" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'iterable' for HxStmt.SForIn" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SForIn" in
+    let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SForIn" in
+    Obj.repr (HxStmt.SForIn (a0, a1, a2, a3))
   );
   HxType.register_enum_ctor "HxStmt" "SReturnVoid" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -956,7 +973,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperIndexBuild" [];
   HxType.register_class_static_fields "TyperIndexBuild" [ "classFullName"; "fromResolvedModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "inferExprType"; "inferReturnType"; "isStrict"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "inferExprType"; "inferReturnType"; "isStrict"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprLexer" [ "bump"; "eof"; "i"; "isIdentCont"; "isIdentStart"; "isWs"; "next"; "peek"; "readIdent"; "readString"; "s"; "skipWs" ];
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprLexer" [];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprParser" [ "bump"; "cur"; "definedValue"; "defines"; "lex"; "parse"; "parseAnd"; "parseIdentTail"; "parseOr"; "parsePrimary"; "parseStringLit"; "parseUnary" ];

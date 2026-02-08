@@ -23,6 +23,7 @@ type hxexpr =
 | EAnon of string HxArray.t * hxexpr HxArray.t
 | EArrayDecl of hxexpr HxArray.t
 | EArrayAccess of hxexpr * hxexpr
+| ERange of hxexpr * hxexpr
 | ECast of hxexpr * string
 | EUntyped of hxexpr
 | EUnsupported of string

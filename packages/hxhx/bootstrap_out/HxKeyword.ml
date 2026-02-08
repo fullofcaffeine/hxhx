@@ -24,6 +24,7 @@ type hxkeyword =
 | KWhile
 | KDo
 | KFor
+| KIn
 | KBreak
 | KContinue
 | KUntyped
