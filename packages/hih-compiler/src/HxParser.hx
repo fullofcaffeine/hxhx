@@ -476,15 +476,28 @@
 				EFloat(v);
 			case TIdent(name):
 				bump();
-				// Stage 3 bring-up: treat a bare uppercase identifier as an enum-like value
-				// (e.g. `Macro`), but keep uppercase idents that are used as a module/type
-				// prefix intact (e.g. `Sys.command`).
+				// Stage 3 bring-up: treat some uppercase-start identifiers as enum-like value
+				// tags (e.g. `Macro`), but keep others as normal identifiers.
 				//
 				// Heuristic:
 				// - If the next token is `.`, we assume this is a type/module prefix and keep `EIdent`.
-				// - Otherwise, model it as a value tag (`EEnumValue`) so the emitter can lower it
-				//   without requiring a real enum runtime/type model.
-				(isUpperStart(name) && !cur.kind.match(TDot)) ? EEnumValue(name) : EIdent(name);
+				// - Otherwise, treat *TitleCase* names as enum-like tags (`EEnumValue`) so the emitter
+				//   can lower them without requiring a real enum runtime/type model.
+				// - Treat ALL_CAPS constants (e.g. `TRIALS`, `UTF8`) as identifiers so arithmetic and
+				//   comparisons don't accidentally become string operations.
+				//
+				// Note
+				// - This is intentionally imperfect. It's a pragmatic bring-up choice to keep upstream
+				//   harnesses compiling, not a full typing model.
+				function hasLowerAlpha(s:String):Bool {
+					if (s == null) return false;
+					for (i in 0...s.length) {
+						final c = s.charCodeAt(i);
+						if (c >= "a".code && c <= "z".code) return true;
+					}
+					return false;
+				}
+				(isUpperStart(name) && !cur.kind.match(TDot) && hasLowerAlpha(name)) ? EEnumValue(name) : EIdent(name);
 			case TOther(c) if (c == "[".code):
 				parseArrayDeclExpr();
 			case TOther(c):
