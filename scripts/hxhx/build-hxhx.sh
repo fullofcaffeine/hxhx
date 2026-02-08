@@ -2,7 +2,10 @@
 set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
+HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-}"
+HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
+HXHX_STAGE0_TIMES="${HXHX_STAGE0_TIMES:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
@@ -43,7 +46,17 @@ fi
   cd "$HXHX_DIR"
   rm -rf out
   mkdir -p out
-  "$HAXE_BIN" build.hxml -D ocaml_build=native
+  haxe_args=(build.hxml -D ocaml_build=native)
+  if [ -n "$HAXE_CONNECT" ]; then
+    haxe_args+=(--connect "$HAXE_CONNECT")
+  fi
+  if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_progress)
+  fi
+  if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
+    haxe_args+=(--times)
+  fi
+  "$HAXE_BIN" "${haxe_args[@]}"
 )
 
 BIN="$HXHX_DIR/out/_build/default/out.exe"

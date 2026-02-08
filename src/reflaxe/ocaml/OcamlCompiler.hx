@@ -56,6 +56,56 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var checkedOutputCollisions:Bool = false;
 
 	#if macro
+	/**
+		Opt-in progress/profiling logs for large stage0 builds.
+
+		Why
+		- When compiling large compiler-shaped programs (notably `packages/hxhx`) the stage0 Haxe
+		  invocation can take a long time and produce no on-disk output until late in codegen.
+		- That makes snapshot refreshes look “stuck” even when they’re just busy.
+
+		What
+		- If either define is set:
+		  - `-D reflaxe_ocaml_progress`
+		  - `-D reflaxe_ocaml_profile`
+		  we emit periodic `Context.warning(...)` messages with counts + elapsed time.
+
+		Notes
+		- Keep this coarse and opt-in so normal CI/user builds remain quiet.
+	**/
+	var profileEnabled:Bool = false;
+	var profileStartS:Float = 0.0;
+	var profileLastS:Float = 0.0;
+	var profClassCount:Int = 0;
+	var profEnumCount:Int = 0;
+
+	inline function profileNowS():Float return haxe.Timer.stamp();
+
+	function profileInit():Void {
+		if (!profileEnabled || profileStartS != 0.0) return;
+		profileStartS = profileNowS();
+		profileLastS = profileStartS;
+		Context.warning("reflaxe.ocaml: progress logging enabled (-D reflaxe_ocaml_progress/-D reflaxe_ocaml_profile)", Context.currentPos());
+	}
+
+	function profileWarnEvery(kind:String, count:Int, name:String, pos:haxe.macro.Expr.Position, every:Int):Void {
+		if (!profileEnabled) return;
+		profileInit();
+		if (every <= 0 || count % every != 0) return;
+		final now = profileNowS();
+		final dt = now - profileStartS;
+		final delta = now - profileLastS;
+		profileLastS = now;
+		Context.warning(
+			"reflaxe.ocaml: " + kind + " count=" + Std.string(count) + " dt=" + Std.string(Math.round(dt)) + "s (+"
+			+ Std.string(Math.round(delta))
+			+ "s) last=" + name,
+			pos
+		);
+	}
+	#end
+
+	#if macro
 	static var haxeStdRoots:Null<Array<String>> = null;
 
 	static function normalizePath(p:String):String {
@@ -99,19 +149,34 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super();
 		instance = this;
 
-		#if macro
-		// Precompute inheritance participants after typing, before codegen starts.
-		//
-		// Why not compute lazily in `compileClassImpl`?
-		// - Base classes can be compiled before derived classes.
+			#if macro
+			profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_profile");
+			if (profileEnabled) profileInit();
+			// Precompute inheritance participants after typing, before codegen starts.
+			//
+			// Why not compute lazily in `compileClassImpl`?
+			// - Base classes can be compiled before derived classes.
 		// - We need base classes to be marked “virtual” (method-field dispatch) before we emit them.
-		Context.onAfterTyping(function(types:Array<haxe.macro.Type.ModuleType>) {
-			if (ctx.virtualTypesComputed) return;
-			ctx.virtualTypesComputed = true;
+			Context.onAfterTyping(function(types:Array<haxe.macro.Type.ModuleType>) {
+				if (ctx.virtualTypesComputed) return;
+				ctx.virtualTypesComputed = true;
 
-			// Primary-type mapping (naming): keep historical short names stable when a module
-			// only contains a single type, even if that type name differs from the file/module name.
-			final moduleToClasses:Map<String, Array<ClassType>> = [];
+				#if macro
+				if (profileEnabled) {
+					profileInit();
+					final now = profileNowS();
+					Context.warning(
+						"reflaxe.ocaml: after typing moduleTypes=" + Std.string(types.length) + " dt="
+						+ Std.string(Math.round(now - profileStartS))
+						+ "s",
+						Context.currentPos()
+					);
+				}
+				#end
+
+				// Primary-type mapping (naming): keep historical short names stable when a module
+				// only contains a single type, even if that type name differs from the file/module name.
+				final moduleToClasses:Map<String, Array<ClassType>> = [];
 
 			inline function fullNameOf(c:ClassType):String {
 				return (c.pack ?? []).concat([c.name]).join(".");
@@ -456,6 +521,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 		varFields:Array<ClassVarData>,
 		funcFields:Array<ClassFuncData>
 	):Null<String> {
+		#if macro
+		profClassCount++;
+		profileWarnEvery("class", profClassCount, (classType.pack ?? []).concat([classType.name]).join("."), classType.pos, 50);
+		#end
 		ctx.emittedHaxeModules.set(classType.module, true);
 		ctx.currentModuleId = classType.module;
 		ctx.currentTypeName = classType.name;
@@ -1249,6 +1318,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public override function onOutputComplete() {
 		#if eval
 		if (output == null || output.outputDir == null) return;
+		#if macro
+		if (profileEnabled) {
+			profileInit();
+			Context.warning("reflaxe.ocaml: onOutputComplete begin", Context.currentPos());
+		}
+		#end
 		final outDir = output.outputDir;
 		final useLineDirectives = #if macro !Context.defined("ocaml_no_line_directives") #else false #end;
 
@@ -1477,6 +1552,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Expr");
 		// Stage4 macro-host bring-up also requires compiling `haxe.macro.Type` (many mutually-referencing enums).
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Type");
+
+		#if macro
+		if (profileEnabled) {
+			final now = profileNowS();
+			Context.warning(
+				"reflaxe.ocaml: onOutputComplete after reorder dt=" + Std.string(Math.round(now - profileStartS)) + "s",
+				Context.currentPos()
+			);
+		}
+		#end
 
 		// Type registry (M10): allow `Type.resolveClass/resolveEnum` to work with runtime strings.
 		//
@@ -1724,6 +1809,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 				output.saveFile("HxTypeRegistry.ml", lines.join("\n"));
 			}
 
+		#if macro
+		if (profileEnabled) {
+			final now = profileNowS();
+			Context.warning(
+				"reflaxe.ocaml: onOutputComplete after type registry dt=" + Std.string(Math.round(now - profileStartS)) + "s",
+				Context.currentPos()
+			);
+		}
+		#end
+
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
 		if (!noDune) {
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
@@ -1844,10 +1939,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 				// Strict mode (ocaml_build=...) should stop compilation if build fails.
 				haxe.macro.Context.error(msg, haxe.macro.Context.currentPos());
 		}
+		#if macro
+		if (profileEnabled) {
+			final now = profileNowS();
+			Context.warning(
+				"reflaxe.ocaml: onOutputComplete end dt=" + Std.string(Math.round(now - profileStartS)) + "s",
+				Context.currentPos()
+			);
+		}
+		#end
 		#end
 	}
 
 	public function compileEnumImpl(enumType:EnumType, options:Array<EnumOptionData>):Null<String> {
+		#if macro
+		profEnumCount++;
+		profileWarnEvery("enum", profEnumCount, (enumType.pack ?? []).concat([enumType.name]).join("."), enumType.pos, 50);
+		#end
 		// ocaml.* surface types map to native Stdlib types; do not emit duplicate type decls
 		// and do not register reflection metadata for modules that won't exist.
 		if (enumType.pack != null && enumType.pack.length == 1 && enumType.pack[0] == "ocaml") {
