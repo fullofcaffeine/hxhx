@@ -41,6 +41,7 @@ let init () : unit =
   ignore (HxType.class_ "TyperIndex");
   ignore (HxType.class_ "TyperIndexBuild");
   ignore (HxType.class_ "TyperStage");
+  ignore (HxType.class_ "_EmitterStage._EmitterStageDebug");
   ignore (HxType.class_ "_HxConditionalCompilation.ExprLexer");
   ignore (HxType.class_ "_HxConditionalCompilation.ExprParser");
   ignore (HxType.class_ "haxe.Exception");
@@ -565,7 +566,8 @@ let init () : unit =
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'typeHint' for HxFunctionArg" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'defaultValue' for HxFunctionArg" in
     let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else Obj.magic HxRuntime.hx_null in
-    Obj.repr (HxFunctionArg.create a0 a1 a2 a3)
+    let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (HxFunctionArg.create a0 a1 a2 a3 a4)
   );
   HxType.register_class_ctor "HxFunctionDecl" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -750,6 +752,9 @@ let init () : unit =
   HxType.register_class_ctor "TyperStage" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (TyperStage.create ())
   );
+  HxType.register_class_ctor "_EmitterStage._EmitterStageDebug" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (EmitterStage._emitterstagedebug_create ())
+  );
   HxType.register_class_ctor "_HxConditionalCompilation.ExprLexer" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 's' for _HxConditionalCompilation.ExprLexer" in
@@ -921,6 +926,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "TyperIndex" (fun () -> Obj.repr (TyperIndex.__empty ()));
   HxType.register_class_empty_ctor "TyperIndexBuild" (fun () -> Obj.repr (ModuleLoader.typerindexbuild___empty ()));
   HxType.register_class_empty_ctor "TyperStage" (fun () -> Obj.repr (TyperStage.__empty ()));
+  HxType.register_class_empty_ctor "_EmitterStage._EmitterStageDebug" (fun () -> Obj.repr (EmitterStage._emitterstagedebug___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprLexer" (fun () -> Obj.repr (HxConditionalCompilation.exprlexer___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprParser" (fun () -> Obj.repr (HxConditionalCompilation.exprparser___empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
@@ -966,8 +972,8 @@ let init () : unit =
   HxType.register_class_static_fields "HxDefineMap" [ "addRawDefine"; "fromRawDefines"; "mergeInto" ];
   HxType.register_class_instance_fields "HxFieldDecl" [ "init"; "isStatic"; "name"; "typeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFieldDecl" [ "getInit"; "getIsStatic"; "getName"; "getTypeHint"; "getVisibility" ];
-  HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "isOptional"; "name"; "typeHint" ];
-  HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getIsOptional"; "getName"; "getTypeHint" ];
+  HxType.register_class_instance_fields "HxFunctionArg" [ "defaultValue"; "isOptional"; "isRest"; "name"; "typeHint" ];
+  HxType.register_class_static_fields "HxFunctionArg" [ "getDefaultValue"; "getIsOptional"; "getIsRest"; "getName"; "getTypeHint" ];
   HxType.register_class_instance_fields "HxFunctionDecl" [ "args"; "body"; "getFirstReturnExpr"; "isStatic"; "name"; "returnStringLiteral"; "returnTypeHint"; "visibility" ];
   HxType.register_class_static_fields "HxFunctionDecl" [ "getArgs"; "getBody"; "getIsStatic"; "getName"; "getReturnStringLiteral"; "getReturnTypeHint"; "getVisibility" ];
   HxType.register_class_instance_fields "HxLexer" [ "bump"; "column"; "eof"; "index"; "line"; "next"; "peek"; "pos"; "readIdent"; "readNumber"; "readSingleQuotedString"; "readString"; "skipWhitespaceAndComments"; "src" ];
@@ -1028,6 +1034,8 @@ let init () : unit =
   HxType.register_class_static_fields "TyperIndexBuild" [ "classFullName"; "fromResolvedModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
   HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "inferExprType"; "inferReturnType"; "isStrict"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_instance_fields "_EmitterStage._EmitterStageDebug" [];
+  HxType.register_class_static_fields "_EmitterStage._EmitterStageDebug" [ "traceCallSig" ];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprLexer" [ "bump"; "eof"; "i"; "isIdentCont"; "isIdentStart"; "isWs"; "next"; "peek"; "readIdent"; "readString"; "s"; "skipWs" ];
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprLexer" [];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprParser" [ "bump"; "cur"; "definedValue"; "defines"; "lex"; "parse"; "parseAnd"; "parseIdentTail"; "parseOr"; "parsePrimary"; "parseStringLit"; "parseUnary" ];
@@ -1140,6 +1148,7 @@ let init () : unit =
   HxType.register_class_tags "TyperIndexBuild" [ "TyperIndexBuild" ];
   HxType.register_class_tags "TyperStage" [ "TyperStage" ];
   HxType.register_class_tags "_Any.Any_Impl_" [ "_Any.Any_Impl_" ];
+  HxType.register_class_tags "_EmitterStage._EmitterStageDebug" [ "_EmitterStage._EmitterStageDebug" ];
   HxType.register_class_tags "_EnumValue.EnumValue_Impl_" [ "_EnumValue.EnumValue_Impl_" ];
   HxType.register_class_tags "_HxConditionalCompilation.ExprLexer" [ "_HxConditionalCompilation.ExprLexer" ];
   HxType.register_class_tags "_HxConditionalCompilation.ExprParser" [ "_HxConditionalCompilation.ExprParser" ];

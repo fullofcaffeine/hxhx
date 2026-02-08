@@ -255,6 +255,41 @@ class TyperStage {
 		}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
+		/**
+			Best-effort: extract a dotted name from a field chain expression.
+
+			Why
+			- Stage3 must recognize fully-qualified type paths used directly in expressions, e.g.:
+			  `runci.targets.Macro.run(args)` (no import for `runci.targets.Macro`).
+			- The lazy ModuleLoader can load such modules on-demand, but only if we call
+			  `ctx.resolveType(...)` with the dotted type path.
+
+			What
+			- Converts `EIdent("runci")`, `EField(_, "targets")`, `EField(_, "Macro")` into:
+			  `"runci.targets.Macro"`.
+
+			How
+			- Conservative: only supports `EIdent` + `EField` chains.
+			- Returns `null` for non-chain expressions.
+		**/
+		function dottedFieldPath(e:HxExpr):Null<String> {
+			return switch (e) {
+				case EIdent(name):
+					name;
+				case EField(obj, field):
+					final base = dottedFieldPath(obj);
+					base == null ? null : (base + "." + field);
+				case _:
+					null;
+			}
+		}
+
+		function isUpperStartName(name:String):Bool {
+			if (name == null || name.length == 0) return false;
+			final c = name.charCodeAt(0);
+			return c >= "A".code && c <= "Z".code;
+		}
+
 		return switch (expr) {
 			case ENull:
 				TyType.fromHintText("Null");
@@ -383,12 +418,31 @@ class TyperStage {
 									TyType.unknown();
 								}
 							case _:
+								// Fully-qualified static call: `pack.sub.Type.method(...)`.
+								//
+								// The upstream RunCi harness uses this shape heavily without imports,
+								// so we must resolve the type path and let the ModuleLoader pull it in.
+								final dotted = dottedFieldPath(obj);
+								if (dotted != null) {
+									final parts = dotted.split(".");
+									final last = parts.length == 0 ? "" : parts[parts.length - 1];
+									if (isUpperStartName(last)) {
+										final c = ctx.resolveType(dotted);
+										if (c != null) {
+											for (a in args) inferExprType(a, scope, ctx, pos);
+											final sig = c.staticMethod(field);
+											return sig != null ? sig.getReturnType() : TyType.unknown();
+										}
+									}
+								}
+
+								// `obj` is a value identifier (local/param), not a type name.
 								final objTy = inferExprType(obj, scope, ctx, pos);
 								for (a in args) inferExprType(a, scope, ctx, pos);
 								final idx = ctx.getIndex();
-								final c = idx == null ? null : idx.getByFullName(objTy.getDisplay());
-								if (c != null) {
-									final sig = c.instanceMethod(field);
+								final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
+								if (c2 != null) {
+									final sig = c2.instanceMethod(field);
 									sig != null ? sig.getReturnType() : TyType.unknown();
 								} else {
 									TyType.unknown();

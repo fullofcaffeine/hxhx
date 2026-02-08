@@ -135,6 +135,8 @@ Notes:
   - `vis` is `public` or `private`
   - `static` is `0` or `1`
   - `args` is a comma-separated list of argument names
+    - Rest params are encoded as `...name` (leading `...`), matching Haxe syntax.
+    - Haxe-side decoding strips the prefix and sets `isRest=true`, and lowers the parameter type to `Array<T>`.
   - `ret` is the (raw) return type hint text, or empty
   - `retstr` is the first detected string literal returned by the function (if any), or empty
   - `retid` is the first detected `return <ident>` (if any), or empty

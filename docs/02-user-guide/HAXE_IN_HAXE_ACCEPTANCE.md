@@ -74,10 +74,15 @@ These are ordered so we can land value continuously, while keeping the final “
 
 As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” mode:
 
-- Gate 1 (`npm run test:upstream:unit-macro`): still **delegates to stage0** (system `haxe`) by default.
+- Gate 1 (`npm run test:upstream:unit-macro`): defaults to a **native/non-delegating bring-up rung**
+  (Stage3 `--hxhx-no-emit`), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
+  - The historical stage0-shim baseline is still available as: `npm run test:upstream:unit-macro-stage0`.
 - Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
-  - An experimental rung exists (`stage3_emit_runner`) but it is not yet able to run upstream `tests/RunCi.hx` unmodified.
-  - A bring-up rung exists (`stage3_emit_runner_minimal`) which patches RunCi in the temporary worktree to prove sub-invocation spawning.
+  - An experimental rung exists (`stage3_emit_runner`) which now compiles+runs the upstream `tests/RunCi.hxml`
+    under the Stage3 bootstrap emitter, but it does not yet execute the full Macro orchestration loop faithfully.
+    (Expect low sub-invocation counts until enum/switch/using semantics are expanded.)
+  - A bring-up rung exists (`stage3_emit_runner_minimal`) which patches RunCi in the temporary worktree to prove
+    sub-invocation spawning deterministically.
 
 ### Gate 0 — Self-hosting sanity (repo-local)
 

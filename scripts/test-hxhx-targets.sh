@@ -489,6 +489,53 @@ out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --std "$tmpdir/fake_std" -cp "$t
 echo "$out" | grep -q "^unsupported_exprs_total=0$"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
+echo "== Stage3 bring-up: try/catch statement body is not collapsed"
+tmptrystmt="$tmpdir/try_stmt"
+mkdir -p "$tmptrystmt/src"
+cat >"$tmptrystmt/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    trace("A");
+    try {
+      trace("TRY");
+    } catch (e:Dynamic) {
+      trace("CATCH");
+    }
+    trace("C");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmptrystmt/src" -main Main --hxhx-out "$tmptrystmt/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^A$"
+echo "$out" | grep -q "^TRY$"
+echo "$out" | grep -q "^C$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: rest args pack into Array<T>"
+tmprest="$tmpdir/rest_args"
+mkdir -p "$tmprest/src"
+cat >"$tmprest/src/Main.hx" <<'HX'
+class Main {
+  static function join(prefix:String, ...parts:String):String {
+    // Upstream shape (RunCi config) uses `rest.toArray().join(...)`.
+    return prefix + ":" + parts.toArray().join(",");
+  }
+
+  static function main() {
+    trace(join("p"));
+    trace(join("p", "a"));
+    trace(join("p", "a", "b"));
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprest/src" -main Main --hxhx-out "$tmprest/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^p:$"
+echo "$out" | grep -q "^p:a$"
+echo "$out" | grep -q "^p:a,b$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: string ternary in println emits"
 tmpternary="$tmpdir/ternary_print"
 mkdir -p "$tmpternary/src"

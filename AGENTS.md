@@ -260,3 +260,13 @@ This repo should be a **world-class, didactic example** of building a compiler b
   - **Type-system tricks** (`@:generic`, `@:multiType`, `typedef` structural types, `Dynamic`, `Null<T>`, variance/casts, `inline` behavior).
   - **Safety escape hatches** (`untyped`, `@:privateAccess`, `Reflect`, `Type`, `cast`, `Obj.magic`-style patterns).
   - **Conditional compilation** (`#if`, `-D`, feature flags) and how it affects output/backwards compatibility.
+
+## Repository Docs (README)
+
+Keep `README.md` up to date as behavior evolves:
+
+- When adding/changing compiler flags, bootstrap stages, CI gates, or build scripts, update `README.md` in the same PR.
+- Prefer documenting:
+  - the intended user workflow (install, compile, run),
+  - the developer workflow (tests, gates, bootstrap regen),
+  - and any environment prerequisites (Haxe 4.3.7, OCaml/dune versions, etc.).

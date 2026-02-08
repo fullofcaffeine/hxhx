@@ -19,12 +19,14 @@ class HxFunctionArg {
 	public final typeHint:String;
 	public final defaultValue:HxDefaultValue;
 	public final isOptional:Bool;
+	public final isRest:Bool;
 
-	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue, isOptional:Bool = false) {
+	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue, isOptional:Bool = false, isRest:Bool = false) {
 		this.name = name;
 		this.typeHint = typeHint;
 		this.defaultValue = defaultValue;
 		this.isOptional = isOptional;
+		this.isRest = isRest;
 	}
 
 	/**
@@ -36,4 +38,5 @@ class HxFunctionArg {
 	public static function getTypeHint(a:HxFunctionArg):String return a.typeHint;
 	public static function getDefaultValue(a:HxFunctionArg):HxDefaultValue return a.defaultValue;
 	public static function getIsOptional(a:HxFunctionArg):Bool return a.isOptional;
+	public static function getIsRest(a:HxFunctionArg):Bool return a.isRest;
 }

@@ -312,6 +312,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
     let cur_name : string option ref = ref None in
     let cur_type_parts : string list ref = ref [] in
     let reading_type = ref false in
+    let rest_next = ref false in
 
     let flush_arg () =
       match !cur_name with
@@ -333,6 +334,19 @@ let parse_module_from_tokens (src : string) (toks : token array)
           (* Optional argument marker: `?arg:T`. We ignore the marker in the v1 payload,
              but we must consume it so the parameter name is read correctly. *)
           bump ()
+      | Sym ('.', _)
+        when !paren = 1 && !cur_name = None && not !reading_type
+             && token_eq_sym (peek 1) '.' && token_eq_sym (peek 2) '.' ->
+          (* Rest argument marker: `...args:T`.
+
+             Protocol note
+             - We preserve the marker by prefixing the argument name with "...".
+             - Haxe-side decoding strips this prefix and sets `isRest=true`.
+          *)
+          bump ();
+          bump ();
+          bump ();
+          rest_next := true
       | Sym ('(', _) ->
           if !reading_type then cur_type_parts := !cur_type_parts @ [ "(" ];
           paren := !paren + 1;
@@ -355,7 +369,9 @@ let parse_module_from_tokens (src : string) (toks : token array)
           bump ()
       | Ident (name, _) when !paren = 1 && !cur_name = None && not !reading_type
         ->
-          cur_name := Some name;
+          let final_name = if !rest_next then "..." ^ name else name in
+          rest_next := false;
+          cur_name := Some final_name;
           bump ()
       | tok ->
           if !reading_type then cur_type_parts := !cur_type_parts @ [ tok_to_text tok ];

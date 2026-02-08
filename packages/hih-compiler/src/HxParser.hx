@@ -1454,14 +1454,39 @@
 					// Parse the following statement now that metadata is consumed.
 					parseStmt(stop);
 				case TKeyword(KTry):
-					// Bring-up: consume `try { ... } catch (...) { ... }` as an unsupported statement.
-					// We don't model exception semantics yet, but we must skip its braces to avoid
-					// truncating the remainder of the function body.
+					// Stage 3 bring-up: parse `try { ... } catch (...) { ... }` as a statement *body*.
+					//
+					// Why
+					// - The upstream `tests/RunCi.hx` harness wraps most of its work in try/catch and
+					//   exits on CommandFailure. Treating `try` as unsupported collapses the entire
+					//   suite body to `(Obj.magic 0)`, which prevents Gate2 stage3_emit_runner from
+					//   executing orchestration code (and from spawning wrapped sub-invocations).
+					//
+					// Bring-up semantics (intentionally incomplete)
+					// - We parse and keep the `try` body so its statements are available to the typer
+					//   and bootstrap emitter.
+					// - We still *skip* catch blocks (do not model exception binding/flow yet).
+					//
+					// This is a pragmatic rung: it unlocks RunCi orchestration while we separately
+					// track real exception semantics (throw + typed catches).
 					bump();
-					if (cur.kind.match(TLBrace)) {
-						bump();
-						try skipBalancedBraces() catch (_:Dynamic) {}
-					}
+
+					final tryBody:HxStmt =
+						if (cur.kind.match(TLBrace)) {
+							bump();
+							final stmts = new Array<HxStmt>();
+							while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+								stmts.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+							}
+							if (cur.kind.match(TRBrace)) bump();
+							SBlock(stmts, pos);
+						} else {
+							// Best-effort: allow a single-statement try body even though upstream-style
+							// harnesses always use the block form.
+							parseStmt(stop);
+						};
+
+					// Skip one or more `catch (...) { ... }` blocks.
 					while (acceptKeyword(KCatch)) {
 						if (cur.kind.match(TLParen)) {
 							bump();
@@ -1472,7 +1497,8 @@
 							try skipBalancedBraces() catch (_:Dynamic) {}
 						}
 					}
-					SExpr(ETryCatchRaw("try"), pos);
+
+					tryBody;
 				case TKeyword(KWhile):
 					// Bring-up: consume `while (...) stmt` as unsupported, but skip its body so we
 					// can keep parsing subsequent statements.
@@ -1712,29 +1738,49 @@
 		}
 		expect(TLParen, "'('");
 
-			final args = new Array<HxFunctionArg>();
-			if (!cur.kind.match(TRParen)) {
-				while (true) {
-					final isOptional = acceptOtherChar("?");
-					final argName = readIdent("argument name");
-					var argType = "";
-					var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
+				final args = new Array<HxFunctionArg>();
+				if (!cur.kind.match(TRParen)) {
+					while (true) {
+						final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+						if (isRest) {
+							// Rest argument: `...name:Type`
+							//
+							// Stage3 bring-up:
+							// - We lower rest args to a single `Array<T>` parameter.
+							// - Call sites are responsible for packing trailing arguments into an array.
+							bump();
+							bump();
+							bump();
+						}
+
+						var isOptional = acceptOtherChar("?");
+						final argName = readIdent("argument name");
+						var argType = "";
+						var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
 
 				if (cur.kind.match(TColon)) {
 					bump();
 					argType = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
 				}
 
-				if (acceptOtherChar("=")) {
-					defaultValue = HxDefaultValue.Default(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
-				}
-
-					args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional));
-					if (cur.kind.match(TComma)) {
-						bump();
-						continue;
+					if (acceptOtherChar("=")) {
+						defaultValue = HxDefaultValue.Default(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
 					}
-				break;
+
+						if (isRest) {
+							// Rest args are always omittable at call sites. Represent them as an `Array<T>`
+							// so later stages can use array intrinsics (`concat`, `join`, ...) during bring-up.
+							final inner = (argType == null || StringTools.trim(argType).length == 0) ? "Dynamic" : argType;
+							argType = "Array<" + inner + ">";
+							isOptional = true;
+						}
+
+						args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional, isRest));
+						if (cur.kind.match(TComma)) {
+							bump();
+							continue;
+						}
+					break;
 			}
 		}
 		expect(TRParen, "')'");

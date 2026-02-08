@@ -222,7 +222,9 @@
 				if (entry.length == 0) continue;
 				final idx = entry.indexOf(":");
 				if (idx <= 0) continue;
-				final argName = entry.substr(0, idx);
+				var argName = entry.substr(0, idx);
+				// Native parser encodes rest params as `...name`. Normalize for lookup.
+				if (StringTools.startsWith(argName, "...")) argName = argName.substr(3);
 				final ty = entry.substr(idx + 1);
 				argTypes.set(argName, ty);
 			}
@@ -233,8 +235,23 @@
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
 				if (a.length == 0) continue;
-				final ty = argTypes.exists(a) ? argTypes.get(a) : "";
-				args.push(new HxFunctionArg(a, ty, HxDefaultValue.NoDefault));
+				var rawName = a;
+				var isRest = false;
+				if (StringTools.startsWith(rawName, "...")) {
+					isRest = true;
+					rawName = rawName.substr(3);
+				}
+				var ty = argTypes.exists(rawName) ? argTypes.get(rawName) : "";
+				var isOptional = false;
+
+				if (isRest) {
+					// Stage3 bring-up: lower rest args to a single `Array<T>` parameter.
+					final inner = (ty == null || StringTools.trim(ty).length == 0) ? "Dynamic" : ty;
+					ty = "Array<" + inner + ">";
+					isOptional = true;
+				}
+
+				args.push(new HxFunctionArg(rawName, ty, HxDefaultValue.NoDefault, isOptional, isRest));
 			}
 		}
 
