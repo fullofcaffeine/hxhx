@@ -34,6 +34,9 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
 fi
 
+# Prefer building `hxhx` from source for this rung so it always reflects the current
+# Stage3 emitter lowering logic (bootstrap snapshots can lag behind when regen is slow).
+export HXHX_FORCE_STAGE0=1
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
 # Use the repo's committed bootstrap macro host snapshot by default so this rung stays stage0-free.
@@ -59,4 +62,3 @@ if echo "$out" | grep -E -q "Warning 21 \\[nonreturning-statement\\]|Warning 26 
   echo "Stage3 emit runner rung produced OCaml warnings (21/26). Tighten EmitterStage lowering." >&2
   exit 1
 fi
-

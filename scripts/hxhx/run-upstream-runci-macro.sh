@@ -653,6 +653,17 @@ apply_misc_filter_if_requested() {
 # runci Macro relies on a working `haxe` command. To run it through `hxhx`,
 # we prepend a wrapper called `haxe` to PATH and point `hxhx` at the real stage0
 # compiler via HAXE_BIN to avoid recursion.
+#
+# Note (bootstrap snapshot vs latest Stage3 semantics)
+# - `scripts/hxhx/build-hxhx.sh` defaults to building from the committed
+#   `packages/hxhx/bootstrap_out/` snapshot when it exists (stage0-free).
+# - The experimental `stage3_emit_runner` rung is extremely sensitive to Stage3 emitter
+#   semantics, and snapshot refresh can be slow on some dev machines.
+# - So for `stage3_emit_runner`, prefer building `hxhx` from source via stage0 Haxe.
+if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ]; then
+  export HXHX_FORCE_STAGE0=1
+fi
+
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
 
 if { [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; } && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
