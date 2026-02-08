@@ -754,13 +754,27 @@ class EmitterStage {
 							0;
 					}
 
-				// Special-case a tiny slice of `Sys` I/O so bring-up server binaries can function
-				// before the full runtime is modeled.
-					switch (callee) {
-						// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
-						//
-						// Note
-						// - Haxe lowers `s.split(",")` as an instance call.
+					// Special-case a tiny slice of `Sys` I/O so bring-up server binaries can function
+					// before the full runtime is modeled.
+						switch (callee) {
+							// Upstream `tests/runci/Config.hx` declares `macro function isCi()` and uses it in
+							// runtime code (e.g. `if (!isCi() && ...)`).
+							//
+							// In real Haxe, that macro call expands to a constant expression, so there is no
+							// runtime dependency on a macro execution model.
+							//
+							// Stage3 bring-up doesn't execute macros, so we approximate `isCi()` as a simple
+							// env probe (matches the upstream definition of `ci` for GitHub Actions).
+							case EIdent("isCi") if (args.length == 0):
+								return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+							case EField(EIdent("Config"), "isCi") if (args.length == 0):
+								return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+							case EField(EIdent("runci.Config"), "isCi") if (args.length == 0):
+								return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
+							// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
+							//
+							// Note
+							// - Haxe lowers `s.split(",")` as an instance call.
 						// - Our Stage3 emitter does not implement general instance dispatch yet, so we treat
 						//   a few String methods as intrinsics backed by the repo-owned OCaml runtime.
 							case EField(obj, "split") if (args.length == 1):
