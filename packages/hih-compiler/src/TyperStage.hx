@@ -13,6 +13,16 @@ class TyperStage {
 		return v == "1" || v == "true" || v == "yes";
 	}
 
+	static function arrayElementType(t:TyType):Null<TyType> {
+		if (t == null) return null;
+		final d = t.getDisplay();
+		if (d == null) return null;
+		if (!StringTools.startsWith(d, "Array<")) return null;
+		if (!StringTools.endsWith(d, ">")) return null;
+		final inner = StringTools.trim(d.substr("Array<".length, d.length - "Array<".length - 1));
+		return inner.length == 0 ? TyType.unknown() : TyType.fromHintText(inner);
+	}
+
 	static function typeFromHintInContext(hint:String, ctx:TyperContext):TyType {
 		final raw = hint == null ? "" : StringTools.trim(hint);
 		if (raw.length == 0) return TyType.unknown();
@@ -174,21 +184,24 @@ class TyperStage {
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(thenBranch);
 					if (elseBranch != null) typeStmt(elseBranch);
-				case SForIn(name, iterable, body, pos):
-					// Bring-up: type-check the iterable expression and bind the loop variable.
-					//
-					// We intentionally model the loop variable as a function-local symbol for now
-					// (not a nested scope) so later statements can still reference it during bring-up.
-					inferExprType(iterable, scope, ctx, pos);
-					final loopTy = switch (iterable) {
-						case ERange(_, _):
-							TyType.fromHintText("Int");
-						case _:
-							TyType.fromHintText("Dynamic");
-					}
-					scope.declareLocal(name, loopTy);
-					typeStmt(body);
-					case SVar(name, typeHint, init, pos):
+					case SForIn(name, iterable, body, pos):
+						// Bring-up: type-check the iterable expression and bind the loop variable.
+						//
+						// We intentionally model the loop variable as a function-local symbol for now
+						// (not a nested scope) so later statements can still reference it during bring-up.
+						final iterableTy = inferExprType(iterable, scope, ctx, pos);
+						final loopTy = switch (iterable) {
+							case ERange(_, _):
+								TyType.fromHintText("Int");
+							case _:
+								// Best-effort: if we can see an `Array<T>` element type, propagate it
+								// to the loop variable so string/number-heavy harness code can emit.
+								final elem = arrayElementType(iterableTy);
+								(elem != null && !elem.isUnknown()) ? elem : TyType.fromHintText("Dynamic");
+						}
+						scope.declareLocal(name, loopTy);
+						typeStmt(body);
+						case SVar(name, typeHint, init, pos):
 						// Declare first so subsequent statements can reference the symbol deterministically.
 						final hinted = typeFromHintInContext(typeHint, ctx);
 						final sym = scope.declareLocal(name, hinted);
@@ -436,13 +449,29 @@ class TyperStage {
 				case EAnon(_names, values):
 					for (v in values) inferExprType(v, scope, ctx, pos);
 					TyType.fromHintText("Dynamic");
-				case EArrayDecl(values):
-					for (v in values) inferExprType(v, scope, ctx, pos);
-					TyType.fromHintText("Array<Dynamic>");
-				case EArrayAccess(array, index):
-					inferExprType(array, scope, ctx, pos);
-					inferExprType(index, scope, ctx, pos);
-					// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
+					case EArrayDecl(values):
+						var elem:TyType = TyType.unknown();
+						var saw = false;
+						for (v in values) {
+							final vt = inferExprType(v, scope, ctx, pos);
+							if (!saw) {
+								saw = true;
+								elem = vt;
+								continue;
+							}
+							final u = TyType.unify(elem, vt);
+							if (u == null) {
+								elem = TyType.fromHintText("Dynamic");
+								break;
+							}
+							elem = u;
+						}
+						if (!saw) elem = TyType.fromHintText("Dynamic");
+						TyType.fromHintText("Array<" + elem.getDisplay() + ">");
+					case EArrayAccess(array, index):
+						inferExprType(array, scope, ctx, pos);
+						inferExprType(index, scope, ctx, pos);
+						// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
 					TyType.fromHintText("Dynamic");
 				case ERange(start, end):
 					inferExprType(start, scope, ctx, pos);
