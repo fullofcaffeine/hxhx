@@ -1886,10 +1886,28 @@ class EmitterStage {
 		}
 
 			function emitModule(tm:TypedModule, isRoot:Bool):Null<String> {
-			final decl = tm.getParsed().getDecl();
-			final mainClass = HxModuleDecl.getMainClass(decl);
-			final className = HxClassDecl.getName(mainClass);
-			if (className == null || className.length == 0 || className == "Unknown") return null;
+				// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
+				// upstream-style harness code (RunCi, macro host, etc).
+				//
+				// However, the Haxe standard library contains many constructs we do not model yet
+				// (regex literals, abstracts, complex typing), and attempting to emit full bodies
+				// for `std/` quickly explodes the surface area.
+				//
+				// Pragmatic rule:
+				// - When `emitFullBodies=true`, still skip full-body emission for modules under `std/`.
+				function allowFullBodiesForFile(filePath:String, isRoot:Bool):Bool {
+					if (isRoot) return true;
+					if (filePath == null || filePath.length == 0) return false;
+					final p = filePath;
+					final isStd = p.indexOf("/std/") != -1 || p.indexOf("\\std\\") != -1;
+					return !isStd;
+				}
+				final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
+
+				final decl = tm.getParsed().getDecl();
+				final mainClass = HxModuleDecl.getMainClass(decl);
+				final className = HxClassDecl.getName(mainClass);
+				if (className == null || className.length == 0 || className == "Unknown") return null;
 			final moduleName = moduleNameForDecl(decl, className);
 
 			final parsedFns = HxClassDecl.getFunctions(mainClass);
@@ -1969,7 +1987,7 @@ class EmitterStage {
 					// Only allow locals when we're actually emitting statement bodies that bind them.
 					// Use the parsed statement list (not the typed-local list) so we don't accidentally
 					// "allow" identifiers that won't be bound in emitted OCaml.
-					if (emitFullBodies && parsedFn != null) {
+					if (moduleEmitBodies && parsedFn != null) {
 						final localNames:Map<String, Bool> = new Map();
 						for (s in HxFunctionDecl.getBody(parsedFn)) collectLocalNamesInStmt(s, localNames);
 						for (name in localNames.keys()) allowed.set(name, true);
@@ -1984,7 +2002,7 @@ class EmitterStage {
 
 					final body = if (parsedFn == null) {
 						"()";
-					} else if (!emitFullBodies) {
+					} else if (!moduleEmitBodies) {
 						returnExprToOcaml(
 							parsedFn.getFirstReturnExpr(),
 							allowed,
@@ -2032,12 +2050,12 @@ class EmitterStage {
 				final kw = i == 0 ? "let rec" : "and";
 				out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 				out.push("");
-			}
+				}
 
-			if (emitFullBodies && exceptions.length > 0) {
-				// Prepend exceptions so the `try ... with` clauses can reference them.
-				out.insert(2, exceptions.join("\n") + "\n");
-			}
+				if (moduleEmitBodies && exceptions.length > 0) {
+					// Prepend exceptions so the `try ... with` clauses can reference them.
+					out.insert(2, exceptions.join("\n") + "\n");
+				}
 
 			if (isRoot && sawMain) {
 				out.push("let () = ignore (main ())");
