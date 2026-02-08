@@ -989,6 +989,33 @@
 					return parseSwitchExpr(stop);
 				}
 
+				// Stage 3 expansion: `if (cond) thenExpr else elseExpr` as an *expression*.
+				//
+				// Why
+				// - Upstream harness code uses `static final X = if (...) ... else ...;` patterns
+				//   (notably in runci/Config.hx and runci/System.hx).
+				// - Without parsing this shape, class-scope constants fall back to `EUnsupported`,
+				//   which forces the Stage3 emitter to collapse the value to bring-up poison.
+				//
+				// Bring-up scope
+				// - Branches are expressions (not statement blocks).
+				// - Missing `else` is treated as unsupported.
+				if (!stop() && cur.kind.match(TKeyword(KIf))) {
+					bump(); // `if`
+					expect(TLParen, "'('");
+					final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					// Best-effort resync to `)`.
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+
+					final thenExpr = parseExpr(() -> cur.kind.match(TKeyword(KElse)) || cur.kind.match(TEof));
+					if (!acceptKeyword(KElse)) return EUnsupported("if_missing_else");
+					final elseExpr = parseExpr(stop);
+					return ETernary(cond, thenExpr, elseExpr);
+				}
+
 				var e = parseBinaryExpr(1, stop);
 			// Ternary conditional: `cond ? thenExpr : elseExpr`
 			if (!stop() && acceptOtherChar("?")) {

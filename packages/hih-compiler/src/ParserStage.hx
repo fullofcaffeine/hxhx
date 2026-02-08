@@ -108,8 +108,10 @@
 				var hasToplevelMain = false;
 				var hasStaticMain = false;
 				final methodPayloads = new Array<String>();
+				final staticFinalPayloads = new Array<String>();
 				final methodBodies:Map<String, String> = [];
 				final functions = new Array<HxFunctionDecl>();
+				final fields = new Array<HxFieldDecl>();
 				var sawOk = false;
 
 			for (i in 1...lines.length) {
@@ -150,6 +152,8 @@
 								hasToplevelMain = payload == "1";
 							case "method":
 								methodPayloads.push(payload);
+							case "static_final":
+								staticFinalPayloads.push(payload);
 							case "method_body":
 								// Payload format: "<methodName>\n<bodySource>"
 								final nl = payload.indexOf("\n");
@@ -177,7 +181,18 @@
 					functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
 				}
 
-				return new HxModuleDecl(packagePath, imports, new HxClassDecl(className, hasStaticMain, functions), headerOnly, hasToplevelMain);
+				for (fp in staticFinalPayloads) {
+					final f = decodeStaticFinalPayload(fp);
+					if (f != null) fields.push(f);
+				}
+
+				return new HxModuleDecl(
+					packagePath,
+					imports,
+					new HxClassDecl(className, hasStaticMain, functions, fields),
+					headerOnly,
+					hasToplevelMain
+				);
 			}
 
 		static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>):HxFunctionDecl {
@@ -277,6 +292,23 @@
 			}
 
 			return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+		}
+
+		static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
+			// v=1 extension:
+			// Payload format (after unescaping):
+			//   name\nvis\nstatic\ntypehint\ninitexpr
+			if (payload == null || payload.length == 0) return null;
+			final lines = payload.split("\n");
+			final name = lines.length > 0 ? lines[0] : "";
+			if (name.length == 0) return null;
+			final visLine = lines.length > 1 ? lines[1] : "public";
+			final vis = visLine == "private" ? HxVisibility.Private : HxVisibility.Public;
+			final isStatic = (lines.length > 2 ? lines[2] : "1") == "1";
+			final typeHint = lines.length > 3 ? lines[3] : "";
+			final initRaw = lines.length > 4 ? lines.slice(4).join("\n") : "";
+			final init = initRaw.length > 0 ? parseReturnExprText(initRaw) : null;
+			return new HxFieldDecl(name, vis, isStatic, typeHint, init);
 		}
 
 	static function parseReturnExprText(raw:String):HxExpr {

@@ -363,6 +363,28 @@ echo "$out" | grep -q "^OK$"
 echo "$out" | grep -vq "^BAD$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: class-scope static finals bind + run"
+tmpstaticfinal="$tmpdir/static_final"
+mkdir -p "$tmpstaticfinal/src"
+cat >"$tmpstaticfinal/src/Main.hx" <<'HX'
+class Main {
+  static final TRIALS = 3;
+  static final SEP = if (Sys.systemName() == "Windows") ";" else ":";
+
+  static function main() {
+    for (i in 0...TRIALS) trace(i);
+    trace(SEP);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstaticfinal/src" -main Main --hxhx-out "$tmpstaticfinal/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^0$"
+echo "$out" | grep -q "^1$"
+echo "$out" | grep -q "^2$"
+echo "$out" | grep -qE "^[;:]$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: body parse recovery doesn't truncate after unsupported constructs"
 tmpbodyrecover="$tmpdir/body_recover"
 mkdir -p "$tmpbodyrecover/src"

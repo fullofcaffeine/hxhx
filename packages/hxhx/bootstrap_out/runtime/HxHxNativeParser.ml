@@ -21,6 +21,7 @@
      - `ast imports <len>:<payload>`        (payload uses '|' separator for now)
      - `ast class <len>:<payload>`
      - `ast static_main 0|1`
+     - `ast static_final <len>:<payload>`    (payload is `name\\nvis\\nstatic\\ntypehint\\ninitexpr`)
      - `ast method <len>:<payload>`         (payload is `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`)
    - Terminal:
      - `ok`
@@ -55,6 +56,14 @@ type method_decl = {
   return_ident : string option;
   return_expr : string option;
   body_src : string option;
+}
+
+type field_decl = {
+  name : string;
+  visibility : visibility;
+  is_static : bool;
+  type_hint : string option;
+  init_expr : string option;
 }
 
 let starts_with (s : string) (prefix : string) : bool =
@@ -186,7 +195,7 @@ let token_eq_sym (t : token) (c : char) : bool =
 
 let parse_module_from_tokens (src : string) (toks : token array)
     (expected_main_class : string option) :
-    (string * string list * bool * string * bool * method_decl list) =
+    (string * string list * bool * string * bool * method_decl list * field_decl list) =
   let i = ref 0 in
   let cur () : token =
     if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
@@ -555,19 +564,86 @@ let parse_module_from_tokens (src : string) (toks : token array)
         (None, None, None, None)
   in
 
-  let parse_class_body () : (bool * method_decl list) =
+  let capture_expr_text_until_stmt_end () : string option =
+    (* Capture expression source text until ';' or a statement-level '}'.
+
+       Why
+       - Class-scope `static final` constants often use `if (...) ... else ...` or `switch (...) { ... }`
+         initializers in upstream harness code (runci).
+       - We don't model an OCaml-side expression AST yet; instead we capture the token-rendered
+         expression and let the Haxe-side bring-up parser handle it.
+
+       Behavior
+       - Consumes tokens that belong to the expression.
+       - Consumes a trailing ';' when present.
+       - Does NOT consume a terminating '}' at statement level (so the class parser can see it). *)
+    let parts = Buffer.create 64 in
+    let paren = ref 0 in
+    let brace = ref 0 in
+    let bracket = ref 0 in
+    let done_ = ref false in
+    while not !done_ do
+      match cur () with
+      | Eof _ ->
+          done_ := true
+      | Sym (';', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
+          bump ();
+          done_ := true
+      | Sym ('}', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
+          (* Do not consume this brace: it belongs to the surrounding class parser. *)
+          done_ := true
+      | Sym ('}', _) ->
+          if !brace > 0 then brace := !brace - 1;
+          Buffer.add_string parts "}";
+          bump ()
+      | Sym ('{', _) ->
+          brace := !brace + 1;
+          Buffer.add_string parts "{";
+          bump ()
+      | Sym (']', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
+          (* Like '}', stop before consuming a statement-level ']' so we don't eat
+             the surrounding parser's terminator. *)
+          done_ := true
+      | Sym (']', _) ->
+          if !bracket > 0 then bracket := !bracket - 1;
+          Buffer.add_string parts "]";
+          bump ()
+      | Sym ('[', _) ->
+          bracket := !bracket + 1;
+          Buffer.add_string parts "[";
+          bump ()
+      | Sym ('(', _) ->
+          paren := !paren + 1;
+          Buffer.add_string parts "(";
+          bump ()
+      | Sym (')', _) ->
+          if !paren > 0 then paren := !paren - 1;
+          Buffer.add_string parts ")";
+          bump ()
+      | tok ->
+          Buffer.add_string parts (tok_to_text tok);
+          bump ()
+    done;
+    let s = Buffer.contents parts |> String.trim in
+    if s = "" then None else Some s
+  in
+
+  let parse_class_body () : (bool * method_decl list * field_decl list) =
     (* Called when current token is '{'. *)
     expect_sym '{';
 
     let depth = ref 1 in
     let has_static_main = ref false in
     let methods : method_decl list ref = ref [] in
+    let fields : field_decl list ref = ref [] in
     let cur_visibility : visibility ref = ref Public in
     let cur_static : bool ref = ref false in
+    let cur_final : bool ref = ref false in
 
     let reset_mods () =
       cur_visibility := Public;
-      cur_static := false
+      cur_static := false;
+      cur_final := false
     in
 
     while !depth > 0 do
@@ -585,7 +661,10 @@ let parse_module_from_tokens (src : string) (toks : token array)
             | Kw ("static", _) ->
                 cur_static := true;
                 bump ()
-            | Kw (("inline" | "override" | "final" | "macro" | "extern" | "dynamic"), _) ->
+            | Kw ("final", _) ->
+                cur_final := true;
+                bump ()
+            | Kw (("inline" | "override" | "macro" | "extern" | "dynamic"), _) ->
                 (* Common Haxe member modifiers we don't model yet. Treat them as no-ops so we can
                    still detect `function` declarations that follow. *)
                 bump ()
@@ -620,6 +699,52 @@ let parse_module_from_tokens (src : string) (toks : token array)
                       };
                     ];
                 reset_mods ())
+            | Ident (_name, _) when not (!cur_static && !cur_final) ->
+                bump ();
+                reset_mods ()
+            | Ident (_name, _) ->
+                (* Bootstrap: class-scope `static final NAME[:Type] = <expr>;` *)
+                let name = read_ident () in
+                let type_hint =
+                  if token_eq_sym (cur ()) ':' then (
+                    bump ();
+                    let parts = Buffer.create 32 in
+                    while
+                      match cur () with
+                      | Eof _ -> false
+                      | Sym ('=', _) -> false
+                      | Sym (';', _) -> false
+                      | _ ->
+                          Buffer.add_string parts (tok_to_text (cur ()));
+                          bump ();
+                          true
+                    do
+                      ()
+                    done;
+                    let s = Buffer.contents parts |> String.trim in
+                    if s = "" then None else Some s)
+                  else None
+                in
+                let init_expr =
+                  if token_eq_sym (cur ()) '=' then (
+                    bump ();
+                    capture_expr_text_until_stmt_end ())
+                  else None
+                in
+                (* Best-effort: consume a trailing ';' if the initializer capture stopped on '}'. *)
+                if token_eq_sym (cur ()) ';' then bump ();
+                fields :=
+                  !fields
+                  @ [
+                      {
+                        name;
+                        visibility = !cur_visibility;
+                        is_static = !cur_static;
+                        type_hint;
+                        init_expr;
+                      };
+                    ];
+                reset_mods ()
             | Sym ('{', _) ->
                 depth := !depth + 1;
                 bump ();
@@ -634,10 +759,10 @@ let parse_module_from_tokens (src : string) (toks : token array)
             else if token_eq_sym tok '}' then depth := !depth - 1;
             bump ())
     done;
-    (!has_static_main, !methods)
+    (!has_static_main, !methods, !fields)
   in
 
-  let parse_class_decl () : (string * bool * method_decl list) =
+  let parse_class_decl () : (string * bool * method_decl list * field_decl list) =
     expect_kw "class";
     let name = read_ident () in
 
@@ -654,13 +779,13 @@ let parse_module_from_tokens (src : string) (toks : token array)
           seek_body ()
     in
 
-    let has_static_main, methods =
-      if seek_body () then parse_class_body () else (false, [])
+    let has_static_main, methods, fields =
+      if seek_body () then parse_class_body () else (false, [], [])
     in
-    (name, has_static_main, methods)
+    (name, has_static_main, methods, fields)
   in
 
-  let classes : (string * bool * method_decl list) list ref = ref [] in
+  let classes : (string * bool * method_decl list * field_decl list) list ref = ref [] in
 
   while
     match cur () with
@@ -679,8 +804,8 @@ let parse_module_from_tokens (src : string) (toks : token array)
     else bump ()
   done;
 
-  let pick_last (xs : (string * bool * method_decl list) list) :
-      (string * bool * method_decl list) option =
+  let pick_last (xs : (string * bool * method_decl list * field_decl list) list) :
+      (string * bool * method_decl list * field_decl list) option =
     match List.rev xs with [] -> None | x :: _ -> Some x
   in
 
@@ -688,18 +813,18 @@ let parse_module_from_tokens (src : string) (toks : token array)
     match (expected_main_class, !classes) with
     | None, xs -> pick_last xs
     | Some expected, xs -> (
-        match List.find_opt (fun (n, _, _) -> n = expected) xs with
+        match List.find_opt (fun (n, _, _, _) -> n = expected) xs with
         | Some x -> Some x
         | None -> pick_last xs)
   in
 
-  let class_name, has_static_main, methods =
+  let class_name, has_static_main, methods, fields =
     match selected with
-    | None -> ("", false, [])
-    | Some (n, sm, ms) -> (n, sm, ms)
+    | None -> ("", false, [], [])
+    | Some (n, sm, ms, fs) -> (n, sm, ms, fs)
   in
 
-  (!package_path, !imports, !has_toplevel_main, class_name, has_static_main, methods)
+  (!package_path, !imports, !has_toplevel_main, class_name, has_static_main, methods, fields)
 
 (* Best-effort header-only parser for upstream-scale modules.
 
@@ -845,7 +970,7 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
 
 let encode_ast_lines (package_path : string) (imports : string list)
     (class_name : string) (header_only : bool) (has_toplevel_main : bool)
-    (has_static_main : bool) (methods : method_decl list) : string =
+    (has_static_main : bool) (methods : method_decl list) (fields : field_decl list) : string =
   let pkg_enc = escape_payload package_path in
   let imports_payload = String.concat "|" imports in
   let imports_enc = escape_payload imports_payload in
@@ -899,6 +1024,25 @@ let encode_ast_lines (package_path : string) (imports : string list)
         Printf.sprintf "ast method %d:%s" (String.length enc) enc)
       methods
   in
+  let field_lines =
+    fields
+    |> List.filter (fun (f : field_decl) -> f.is_static)
+    |> List.map (fun (f : field_decl) ->
+           let vis =
+             match f.visibility with Public -> "public" | Private -> "private"
+           in
+           let static_s = if f.is_static then "1" else "0" in
+           let hint = match f.type_hint with None -> "" | Some s -> s in
+           let init = match f.init_expr with None -> "" | Some s -> s in
+           (* Payload format (after unescaping):
+                name\nvis\nstatic\ntypehint\ninitexpr
+
+              Why newlines:
+              - Avoids `|` collisions in the initializer expression text. *)
+           let payload = f.name ^ "\n" ^ vis ^ "\n" ^ static_s ^ "\n" ^ hint ^ "\n" ^ init in
+           let enc = escape_payload payload in
+           Printf.sprintf "ast static_final %d:%s" (String.length enc) enc)
+  in
   let body_lines =
     methods
     |> List.filter_map (fun (m : method_decl) ->
@@ -915,7 +1059,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
                let enc = escape_payload payload in
                Some (Printf.sprintf "ast method_body %d:%s" (String.length enc) enc))
   in
-  String.concat "\n" (base @ method_lines @ body_lines)
+  String.concat "\n" (base @ field_lines @ method_lines @ body_lines)
 
 let encode_err_line (p : pos) (msg : string) : string =
   let enc = escape_payload msg in
@@ -955,14 +1099,14 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
     | Ok ((toks, None)) -> (
         let base = strip_terminal_ok lex_stream in
         try
-          let package_path, imports, has_toplevel_main, class_name, has_static_main, methods =
+          let package_path, imports, has_toplevel_main, class_name, has_static_main, methods, fields =
             parse_module_from_tokens src toks expected_main_class
           in
           String.concat "\n"
             [
               base;
               encode_ast_lines package_path imports class_name false has_toplevel_main
-                has_static_main methods;
+                has_static_main methods fields;
               "ok";
             ]
         with
@@ -977,7 +1121,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
                 [
                   base;
                   encode_ast_lines package_path imports class_name true has_toplevel_main
-                    false [];
+                    false [] [];
                   "ok";
                 ]
             else
@@ -991,7 +1135,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
                 [
                   base;
                   encode_ast_lines package_path imports class_name true has_toplevel_main
-                    false [];
+                    false [] [];
                   "ok";
                 ]
             else

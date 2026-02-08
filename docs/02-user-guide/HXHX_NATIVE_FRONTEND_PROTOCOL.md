@@ -102,6 +102,7 @@ ast class <len>:<payload>
 ast header_only <len>:<payload>
 ast toplevel_main <len>:<payload>
 ast static_main 0|1
+ast static_final <len>:<payload>
 ast method <len>:<payload>
 ast method_body <len>:<payload>
 ```
@@ -119,6 +120,16 @@ Notes:
 - `ast toplevel_main` is a bootstrap hint:
   - payload is `0` or `1`
   - `1` means the module contains a toplevel `function main(...)` (no class required)
+- `ast static_final` is a bootstrap record for class-scope constants like:
+  - `static final TRIALS = 3;`
+  - `static final sep = if (cond) ";" else ":";`
+  - `static final x = switch (v) { case 1: "a"; default: "b"; };`
+  Payload format (after unescaping):
+  - line 1: field name
+  - line 2: `public` or `private`
+  - line 3: `0` or `1` for `static` (currently always `1` in practice)
+  - line 4: raw type hint text (may be empty)
+  - remaining text: initializer expression text (may be empty)
 - `ast method` is a bootstrap record that encodes a function signature summary as a `|` separated payload:
   `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`
   - `vis` is `public` or `private`
