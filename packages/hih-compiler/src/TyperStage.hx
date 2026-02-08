@@ -291,6 +291,36 @@ class TyperStage {
 						}
 				}
 				case ECall(callee, args):
+					// Stage 3 bring-up: type a small set of `Sys.*` primitives explicitly.
+					//
+					// Why
+					// - Gate2/Stage3 emit-runner harnesses rely on `Sys.command` for spawning sub-invocations.
+					// - Without recognizing these return types, simple code like:
+					//     `var code = Sys.command("haxe", ["-version"]); trace(code);`
+					//   loses the `Int` type for `code` and degrades into `<unsupported>` printing.
+					//
+					// What
+					// - This is *not* a complete stdlib typing story.
+					// - It is a targeted bring-up bridge so the bootstrap emitter can produce runnable OCaml.
+					switch (callee) {
+						case EField(EIdent("Sys"), "command"):
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("Int");
+						case EField(EIdent("Sys"), "getEnv"):
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("String");
+						case EField(EIdent("Sys"), "putEnv"), EField(EIdent("Sys"), "setCwd"):
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("Void");
+						case EField(EIdent("Sys"), "getCwd"), EField(EIdent("Sys"), "systemName"):
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("String");
+						case EField(EIdent("Sys"), "args"):
+							for (a in args) inferExprType(a, scope, ctx, pos);
+							return TyType.fromHintText("Array<String>");
+						case _:
+					}
+
 					// Best-effort: type children for local inference, and use the index when we can.
 					switch (callee) {
 					case EField(obj, field):

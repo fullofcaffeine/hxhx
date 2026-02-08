@@ -84,6 +84,13 @@ Optional flags:
 
 `hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is a **stage0 shim** that delegates to a system `haxe`, but it already provides a place to hang acceptance tests and bootstrapping gates.
 
+### Naming: `hih-*` vs `hxhx`
+
+- `hih-*` (“Haxe-in-Haxe”) packages are **internal implementation libraries** used for staged bring-up (parser/typer/emitter slices, small runtimes, test harness glue).
+- `hxhx` is the **end-user/compiler product name** (the CLI/binary and the public “Haxe-in-Haxe” story).
+
+In practice: `hxhx` depends on `hih-*` today, and we may rename/reshape the internal packages later without changing the external `hxhx` name.
+
 Terminology note: in this repo, “compile Haxe” might mean compiling this backend, building the upstream compiler binary, or compiling Haxe projects. See `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1` for precise definitions and the Stage0→Stage2 bootstrapping model.
 
 Build the `hxhx` example (requires `dune` + `ocamlc`):

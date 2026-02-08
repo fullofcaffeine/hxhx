@@ -24,6 +24,11 @@ So the acceptance criteria must include **compile + run** for the official test 
 
 ## Definitions
 
+### Project naming
+
+- `hxhx` is the end-user/compiler **product name** (CLI/binary).
+- `hih-*` (“Haxe-in-Haxe”) packages are internal staged bring-up libraries that `hxhx` uses.
+
 ### What “compile Haxe” means (terminology)
 
 In this repo, the phrase “compile Haxe” can refer to three different things:
@@ -64,6 +69,14 @@ This requires:
 ## Acceptance levels (gates)
 
 These are ordered so we can land value continuously, while keeping the final “replacement” claim rigorous.
+
+## Current bring-up status (snapshot)
+
+As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” mode:
+
+- Gate 1 (`npm run test:upstream:unit-macro`): still **delegates to stage0** (system `haxe`) by default.
+- Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
+  - An experimental rung exists (`stage3_emit_runner`) but it is not yet able to run upstream `tests/RunCi.hx` unmodified.
 
 ### Gate 0 — Self-hosting sanity (repo-local)
 
