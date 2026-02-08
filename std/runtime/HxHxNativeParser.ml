@@ -425,21 +425,45 @@ let parse_module_from_tokens (src : string) (toks : token array)
          - The Haxe-side decoder can parse a small chain grammar (`a.b(c)`) from this.
 
          What
-         - Consumes tokens that belong to the expression.
-         - Consumes a trailing ';' (when present).
-         - Does NOT consume a terminating '}' (so the class-body parser sees it). *)
+       - Consumes tokens that belong to the expression.
+       - Consumes a trailing ';' (when present).
+       - Does NOT consume a terminating '}' (so the class-body parser sees it). *)
       let parts = Buffer.create 64 in
       let paren = ref 0 in
+      let brace = ref 0 in
+      let bracket = ref 0 in
       let done_ = ref false in
       while not !done_ do
         match cur () with
         | Eof _ ->
             done_ := true
-        | Sym (';', _) when !paren = 0 ->
+        | Sym (';', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
             bump ();
             done_ := true
-        | Sym ('}', _) when !paren = 0 ->
+        | Sym ('}', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
+            (* Terminates the return expression because we're back at the statement level.
+               Do not consume this brace: it belongs to the surrounding function/class parser. *)
             done_ := true
+        | Sym ('}', _) ->
+            if !brace > 0 then brace := !brace - 1;
+            Buffer.add_string parts "}";
+            bump ()
+        | Sym ('{', _) ->
+            brace := !brace + 1;
+            Buffer.add_string parts "{";
+            bump ()
+        | Sym (']', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
+            (* Like '}', stop before consuming a statement-level ']' so we don't eat
+               the surrounding parser's terminator. *)
+            done_ := true
+        | Sym (']', _) ->
+            if !bracket > 0 then bracket := !bracket - 1;
+            Buffer.add_string parts "]";
+            bump ()
+        | Sym ('[', _) ->
+            bracket := !bracket + 1;
+            Buffer.add_string parts "[";
+            bump ()
         | Sym ('(', _) ->
             paren := !paren + 1;
             Buffer.add_string parts "(";
