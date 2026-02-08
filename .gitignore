@@ -28,6 +28,15 @@ tools/**/out/
 tools/**/bootstrap_out/_build/
 tools/**/bootstrap_out/*.install
 
+# OCaml build artifacts (local dev/debug)
+*.cmi
+*.cmo
+*.cmx
+*.o
+*.a
+*.cma
+*.cmxa
+
 # Dist artifacts
 dist/
 
