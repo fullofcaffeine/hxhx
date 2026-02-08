@@ -6,6 +6,8 @@ import haxe.io.Path;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import sys.io.File;
+import sys.io.FileOutput;
 #end
 import haxe.macro.Type;
 import haxe.macro.Type.TConstant;
@@ -78,14 +80,43 @@ class OcamlCompiler extends DirectToStringCompiler {
 	var profileLastS:Float = 0.0;
 	var profClassCount:Int = 0;
 	var profEnumCount:Int = 0;
+	var profileVerbose:Bool = false;
+	static var profileLog:Null<FileOutput> = null;
+	static var profileLogPath:Null<String> = null;
 
 	inline function profileNowS():Float return haxe.Timer.stamp();
+
+	function profileTryOpenLog():Void {
+		try {
+			final path = Sys.getEnv("REFLAXE_OCAML_PROGRESS_FILE");
+			if (path == null || path.length == 0) return;
+			if (profileLog != null && profileLogPath == path) return;
+			// If the path changes mid-build, close the previous handle best-effort.
+			if (profileLog != null) {
+				try profileLog.close() catch (_:Dynamic) {}
+			}
+			profileLogPath = path;
+			profileLog = File.append(path, false);
+		} catch (_:Dynamic) {}
+	}
+
+	function profileLogLine(msg:String):Void {
+		if (!profileEnabled) return;
+		profileTryOpenLog();
+		if (profileLog == null) return;
+		try {
+			profileLog.writeString(msg + "\n");
+			profileLog.flush();
+		} catch (_:Dynamic) {}
+	}
 
 	function profileInit():Void {
 		if (!profileEnabled || profileStartS != 0.0) return;
 		profileStartS = profileNowS();
 		profileLastS = profileStartS;
-		Context.warning("reflaxe.ocaml: progress logging enabled (-D reflaxe_ocaml_progress/-D reflaxe_ocaml_profile)", Context.currentPos());
+		final msg = "reflaxe.ocaml: progress logging enabled (-D reflaxe_ocaml_progress/-D reflaxe_ocaml_profile)";
+		Context.warning(msg, Context.currentPos());
+		profileLogLine(msg);
 	}
 
 	function profileWarnEvery(kind:String, count:Int, name:String, pos:haxe.macro.Expr.Position, every:Int):Void {
@@ -96,12 +127,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final dt = now - profileStartS;
 		final delta = now - profileLastS;
 		profileLastS = now;
-		Context.warning(
+		final msg =
 			"reflaxe.ocaml: " + kind + " count=" + Std.string(count) + " dt=" + Std.string(Math.round(dt)) + "s (+"
 			+ Std.string(Math.round(delta))
-			+ "s) last=" + name,
-			pos
-		);
+			+ "s) last=" + name;
+		Context.warning(msg, pos);
+		profileLogLine(msg);
 	}
 	#end
 
@@ -149,10 +180,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		super();
 		instance = this;
 
-			#if macro
-			profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_profile");
-			if (profileEnabled) profileInit();
-			// Precompute inheritance participants after typing, before codegen starts.
+		#if macro
+		profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_profile");
+		profileVerbose = Context.defined("reflaxe_ocaml_profile");
+		if (profileEnabled) profileInit();
+		// Precompute inheritance participants after typing, before codegen starts.
 			//
 			// Why not compute lazily in `compileClassImpl`?
 			// - Base classes can be compiled before derived classes.
@@ -165,12 +197,12 @@ class OcamlCompiler extends DirectToStringCompiler {
 				if (profileEnabled) {
 					profileInit();
 					final now = profileNowS();
-					Context.warning(
+					final msg =
 						"reflaxe.ocaml: after typing moduleTypes=" + Std.string(types.length) + " dt="
 						+ Std.string(Math.round(now - profileStartS))
-						+ "s",
-						Context.currentPos()
-					);
+						+ "s";
+					Context.warning(msg, Context.currentPos());
+					profileLogLine(msg);
 				}
 				#end
 
@@ -523,7 +555,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 	):Null<String> {
 		#if macro
 		profClassCount++;
-		profileWarnEvery("class", profClassCount, (classType.pack ?? []).concat([classType.name]).join("."), classType.pos, 50);
+		final profClassName = (classType.pack ?? []).concat([classType.name]).join(".");
+		profileWarnEvery("class", profClassCount, profClassName, classType.pos, 50);
+		if (profileVerbose) profileLogLine("reflaxe.ocaml: class_begin count=" + Std.string(profClassCount) + " name=" + profClassName);
 		#end
 		ctx.emittedHaxeModules.set(classType.module, true);
 		ctx.currentModuleId = classType.module;
@@ -1321,7 +1355,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (profileEnabled) {
 			profileInit();
-			Context.warning("reflaxe.ocaml: onOutputComplete begin", Context.currentPos());
+			final msg = "reflaxe.ocaml: onOutputComplete begin";
+			Context.warning(msg, Context.currentPos());
+			profileLogLine(msg);
 		}
 		#end
 		final outDir = output.outputDir;
@@ -1556,10 +1592,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();
-			Context.warning(
-				"reflaxe.ocaml: onOutputComplete after reorder dt=" + Std.string(Math.round(now - profileStartS)) + "s",
-				Context.currentPos()
-			);
+			final msg = "reflaxe.ocaml: onOutputComplete after reorder dt=" + Std.string(Math.round(now - profileStartS)) + "s";
+			Context.warning(msg, Context.currentPos());
+			profileLogLine(msg);
 		}
 		#end
 
@@ -1812,10 +1847,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();
-			Context.warning(
-				"reflaxe.ocaml: onOutputComplete after type registry dt=" + Std.string(Math.round(now - profileStartS)) + "s",
-				Context.currentPos()
-			);
+			final msg = "reflaxe.ocaml: onOutputComplete after type registry dt=" + Std.string(Math.round(now - profileStartS)) + "s";
+			Context.warning(msg, Context.currentPos());
+			profileLogLine(msg);
 		}
 		#end
 
@@ -1942,10 +1976,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		#if macro
 		if (profileEnabled) {
 			final now = profileNowS();
-			Context.warning(
-				"reflaxe.ocaml: onOutputComplete end dt=" + Std.string(Math.round(now - profileStartS)) + "s",
-				Context.currentPos()
-			);
+			final msg = "reflaxe.ocaml: onOutputComplete end dt=" + Std.string(Math.round(now - profileStartS)) + "s";
+			Context.warning(msg, Context.currentPos());
+			profileLogLine(msg);
 		}
 		#end
 		#end
@@ -1954,7 +1987,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 	public function compileEnumImpl(enumType:EnumType, options:Array<EnumOptionData>):Null<String> {
 		#if macro
 		profEnumCount++;
-		profileWarnEvery("enum", profEnumCount, (enumType.pack ?? []).concat([enumType.name]).join("."), enumType.pos, 50);
+		final profEnumName = (enumType.pack ?? []).concat([enumType.name]).join(".");
+		profileWarnEvery("enum", profEnumCount, profEnumName, enumType.pos, 50);
+		if (profileVerbose) profileLogLine("reflaxe.ocaml: enum_begin count=" + Std.string(profEnumCount) + " name=" + profEnumName);
 		#end
 		// ocaml.* surface types map to native Stdlib types; do not emit duplicate type decls
 		// and do not register reflection metadata for modules that won't exist.

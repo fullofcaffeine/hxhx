@@ -5,8 +5,10 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
+HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
 HXHX_STAGE0_TIMES="${HXHX_STAGE0_TIMES:-0}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
+HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
@@ -56,6 +58,12 @@ fi
   fi
   if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
     haxe_args+=(-D reflaxe_ocaml_progress)
+  fi
+  if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_profile)
+  fi
+  if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
   fi
   if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
     haxe_args+=(--times)

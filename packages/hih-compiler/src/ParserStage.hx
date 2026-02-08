@@ -240,16 +240,24 @@
 			}
 
 			var outBody = body;
-			if (methodBodySrc != null && methodBodySrc.length > 0) {
-				if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
-					try {
-						Sys.println("body_parse_have=" + name + " len=" + methodBodySrc.length);
-					} catch (_:Dynamic) {}
-				}
-				// Best-effort: recover a structured statement list from the raw source slice.
-				//
-				// Why
-				// - The native frontend protocol v1+ transmits method bodies as raw source
+				if (methodBodySrc != null && methodBodySrc.length > 0) {
+					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
+						try {
+							Sys.println("body_parse_have=" + name + " len=" + methodBodySrc.length);
+						} catch (_:Dynamic) {}
+					}
+					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_SRC") == "1") {
+						try {
+							final oneLine = methodBodySrc.split("\n").join("\\n");
+							final max = 300;
+							final shown = oneLine.length > max ? (oneLine.substr(0, max) + "...") : oneLine;
+							Sys.println("body_parse_src=" + name + " " + shown);
+						} catch (_:Dynamic) {}
+					}
+					// Best-effort: recover a structured statement list from the raw source slice.
+					//
+					// Why
+					// - The native frontend protocol v1+ transmits method bodies as raw source
 				//   (via `ast method_body`) rather than an OCaml-side statement AST.
 				// - Stage3 bring-up wants bodies so it can validate full-body lowering.
 				try {

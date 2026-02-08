@@ -40,8 +40,11 @@ Notes:
 
 - This can take several minutes because it runs stage0 Haxe macros for codegen.
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
+- For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_PROFILE=1` (adds `-D reflaxe_ocaml_profile`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
 - For very verbose stage0 compiler logs (including typing/module loading), set `HXHX_STAGE0_VERBOSE=1` (passes `-v` to stage0 `haxe`).
+- If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
+- If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
 - If you run a compilation server, you can pass `HAXE_CONNECT=<port>` to reuse it.
 
 If you need to rebuild `hxhx` from stage0 source (instead of the committed `bootstrap_out`), use:

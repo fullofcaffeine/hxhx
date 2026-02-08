@@ -21,7 +21,9 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_BOOTSTRAP_DEBUG="${HXHX_BOOTSTRAP_DEBUG:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
+HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
+HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
@@ -61,6 +63,9 @@ start_ts="$(date +%s)"
   if [ -n "$HAXE_CONNECT" ]; then
     haxe_args+=(--connect "$HAXE_CONNECT")
   fi
+  if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
+  fi
 
   # `--times` prints only at the end; keep it enabled in debug mode so maintainers can
   # see where stage0 is spending time.
@@ -69,10 +74,16 @@ start_ts="$(date +%s)"
     if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
       haxe_args+=(-D reflaxe_ocaml_progress)
     fi
+    if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
+      haxe_args+=(-D reflaxe_ocaml_profile)
+    fi
     "$HAXE_BIN" "${haxe_args[@]}"
   else
     if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
       haxe_args+=(-D reflaxe_ocaml_progress)
+    fi
+    if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
+      haxe_args+=(-D reflaxe_ocaml_profile)
     fi
     "$HAXE_BIN" "${haxe_args[@]}" >/dev/null
   fi
