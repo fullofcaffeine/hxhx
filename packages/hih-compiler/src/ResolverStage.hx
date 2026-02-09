@@ -29,7 +29,21 @@ import haxe.io.Path;
 class ResolverStage {
 	static function resolveImplicitSamePackageTypesEnabled():Bool {
 		final v = Sys.getEnv("HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES");
-		return v == "1" || v == "true" || v == "yes";
+		// Default-on during bootstrapping.
+		//
+		// Why
+		// - Real Haxe resolves same-package types without explicit imports.
+		// - Our resolver is currently syntax-driven (not type-driven), so without this heuristic
+		//   we miss dependencies like `Linux.requireAptPackages(...)` in `package runci.targets;`
+		//   when `Linux` is referenced without an `import`.
+		//
+		// Opt-out
+		// - Set `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` (or "false"/"no") to disable if it causes
+		//   unwanted graph widening.
+		if (v == null || StringTools.trim(v).length == 0) return true;
+		final s = StringTools.trim(v).toLowerCase();
+		if (s == "0" || s == "false" || s == "no") return false;
+		return s == "1" || s == "true" || s == "yes";
 	}
 
 	static function implicitSamePackageDeps(source:String, modulePath:String, decl:HxModuleDecl):Array<String> {

@@ -329,7 +329,47 @@
 		}
 
 	static function parseReturnExprText(raw:String):HxExpr {
-		final s = StringTools.trim(raw);
+		// Bring-up: the native frontend transmits some expression text without fully parsing it.
+		//
+		// A common upstream pattern is `new Array<T>()` or `new Map<K,V>()`. In plain expression
+		// parsing, the `<...>` type-parameter group can be misinterpreted as `<`/`>` operators,
+		// producing a structurally valid but semantically nonsense AST (and then invalid OCaml).
+		//
+		// For Stage3 emission, we do not need to preserve the type parameters, only the allocation
+		// shape, so we strip the `<...>` group when it appears immediately after a `new Type`.
+		function stripNewTypeParams(s:String):String {
+			final t = s == null ? "" : StringTools.trim(s);
+			// The native protocol's expression capture concatenates tokens without spaces, so
+			// `new Array<T>()` can arrive as `newArray<T>()`. Normalize that first.
+			if (!StringTools.startsWith(t, "new")) return s;
+			var norm = t;
+			if (norm.length > 3) {
+				final c3 = norm.charCodeAt(3);
+				final isWs = c3 == " ".code || c3 == "\t".code || c3 == "\n".code || c3 == "\r".code;
+				if (!isWs) norm = "new " + norm.substr(3);
+			}
+			if (!StringTools.startsWith(norm, "new ")) return norm;
+			final lt = norm.indexOf("<");
+			final lp = norm.indexOf("(");
+			if (lt < 0 || lp < 0 || lt > lp) return s;
+			var depth = 0;
+			var i = lt;
+			while (i < norm.length) {
+				final c = norm.charCodeAt(i);
+				if (c == "<".code) depth++;
+				else if (c == ">".code) {
+					depth--;
+					if (depth == 0) {
+						return norm.substr(0, lt) + norm.substr(i + 1);
+					}
+				}
+				i++;
+			}
+			return norm;
+		}
+
+		var s = StringTools.trim(raw);
+		s = stripNewTypeParams(s);
 		if (s.length == 0) return EUnsupported("<empty-return-expr>");
 
 		if (s == "null") return ENull;

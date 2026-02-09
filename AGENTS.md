@@ -261,6 +261,13 @@ This repo should be a **world-class, didactic example** of building a compiler b
   - **Safety escape hatches** (`untyped`, `@:privateAccess`, `Reflect`, `Type`, `cast`, `Obj.magic`-style patterns).
   - **Conditional compilation** (`#if`, `-D`, feature flags) and how it affects output/backwards compatibility.
 
+## Docs Must Stay Current (README)
+
+When behavior, flags, workflows, or required tooling changes, update the relevant documentation in the same change:
+
+- Keep `README.md` accurate for "getting started" and the common workflows (`npm test`, Gate runners, building/running `hxhx`).
+- If the change is narrow and developer-facing, update the most relevant doc under `docs/` instead of bloating `README.md`.
+
 ## Repository Docs (README)
 
 Keep `README.md` up to date as behavior evolves:

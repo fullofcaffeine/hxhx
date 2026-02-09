@@ -662,6 +662,23 @@ let parse_module_from_tokens (src : string) (toks : token array)
       cur_final := false
     in
 
+    let skip_balanced_parens () : unit =
+      (* Called when current token is '(' (not yet consumed). *)
+      if token_eq_sym (cur ()) '(' then bump ();
+      let depth_p = ref 1 in
+      while !depth_p > 0 do
+        match cur () with
+        | Eof p -> raise (Parse_error (p, "unterminated parenthesis group"))
+        | Sym ('(', _) ->
+            depth_p := !depth_p + 1;
+            bump ()
+        | Sym (')', _) ->
+            depth_p := !depth_p - 1;
+            bump ()
+        | _ -> bump ()
+      done
+    in
+
     while !depth > 0 do
       match cur () with
       | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
@@ -680,6 +697,52 @@ let parse_module_from_tokens (src : string) (toks : token array)
             | Kw ("final", _) ->
                 cur_final := true;
                 bump ()
+            | Kw ("var", _) ->
+                (* Bring-up: capture `var` fields so Stage3 can resolve `Type.field` and emit
+                   basic stdlib references (e.g. `haxe.EntryPoint.threadCount`). *)
+                bump ();
+                let name = read_ident () in
+                (* Property accessors: `var x(get, never):T;` or `var x(default, null):T = ...;` *)
+                if token_eq_sym (cur ()) '(' then skip_balanced_parens ();
+                let type_hint =
+                  if token_eq_sym (cur ()) ':' then (
+                    bump ();
+                    let parts = Buffer.create 32 in
+                    while
+                      match cur () with
+                      | Eof _ -> false
+                      | Sym ('=', _) -> false
+                      | Sym (';', _) -> false
+                      | _ ->
+                          Buffer.add_string parts (tok_to_text (cur ()));
+                          bump ();
+                          true
+                    do
+                      ()
+                    done;
+                    let s = Buffer.contents parts |> String.trim in
+                    if s = "" then None else Some s)
+                  else None
+                in
+                let init_expr =
+                  if token_eq_sym (cur ()) '=' then (
+                    bump ();
+                    capture_expr_text_until_stmt_end ())
+                  else None
+                in
+                if token_eq_sym (cur ()) ';' then bump ();
+                fields :=
+                  !fields
+                  @ [
+                      {
+                        name;
+                        visibility = !cur_visibility;
+                        is_static = !cur_static;
+                        type_hint;
+                        init_expr;
+                      };
+                    ];
+                reset_mods ()
             | Kw (("inline" | "override" | "macro" | "extern" | "dynamic"), _) ->
                 (* Common Haxe member modifiers we don't model yet. Treat them as no-ops so we can
                    still detect `function` declarations that follow. *)
