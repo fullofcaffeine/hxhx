@@ -311,6 +311,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
     let paren = ref 1 in
     let cur_name : string option ref = ref None in
     let cur_type_parts : string list ref = ref [] in
+    let cur_default_hint : string option ref = ref None in
     let reading_type = ref false in
     let rest_next = ref false in
 
@@ -318,12 +319,18 @@ let parse_module_from_tokens (src : string) (toks : token array)
       match !cur_name with
       | None ->
           cur_type_parts := [];
+          cur_default_hint := None;
           reading_type := false
       | Some name ->
-          let ty = String.concat "" !cur_type_parts |> String.trim in
+          let ty_raw = String.concat "" !cur_type_parts |> String.trim in
+          let ty =
+            if ty_raw <> "" then ty_raw
+            else match !cur_default_hint with Some h -> h | None -> ""
+          in
           args := !args @ [ (name, if ty = "" then None else Some ty) ];
           cur_name := None;
           cur_type_parts := [];
+          cur_default_hint := None;
           reading_type := false
     in
 
@@ -372,6 +379,19 @@ let parse_module_from_tokens (src : string) (toks : token array)
           let final_name = if !rest_next then "..." ^ name else name in
           rest_next := false;
           cur_name := Some final_name;
+          cur_default_hint := None;
+          bump ()
+      | Sym ('=', _) when !paren = 1 && !cur_name <> None && not !reading_type
+        ->
+          (* Best-effort default-value typing:
+             - If a parameter has no explicit type hint but has a simple literal default,
+               treat the default as an implicit hint so downstream stages can emit
+               more correct OCaml (e.g. String concatenation in std macro Printer). *)
+          (match peek 1 with
+          | String _ -> cur_default_hint := Some "String"
+          | Kw ("true", _) | Kw ("false", _) -> cur_default_hint := Some "Bool"
+          | Kw ("null", _) -> cur_default_hint := Some "Dynamic"
+          | _ -> ());
           bump ()
       | tok ->
           if !reading_type then cur_type_parts := !cur_type_parts @ [ tok_to_text tok ];
@@ -461,6 +481,20 @@ let parse_module_from_tokens (src : string) (toks : token array)
       while not !done_ do
         match cur () with
         | Eof _ ->
+            done_ := true
+        | Kw
+            ( ( "public" | "private" | "static" | "inline" | "macro" | "extern"
+              | "override" | "dynamic" | "final" | "var" | "function" | "class"
+              | "interface" | "enum" | "typedef" | "abstract" | "using" | "import"
+              | "package" ),
+              _ )
+          when !paren = 0 && !brace = 0 && !bracket = 0 && Buffer.length parts > 0 ->
+            (* Expression-body `return <expr>` can omit a semicolon. In that case, we must not
+               accidentally consume the next class member declaration as part of the return
+               expression.
+
+               This heuristic terminates the capture when we see tokens that are valid class
+               member starts but are not valid expression continuations at statement level. *)
             done_ := true
         | Sym (';', _) when !paren = 0 && !brace = 0 && !bracket = 0 ->
             bump ();
@@ -679,12 +713,79 @@ let parse_module_from_tokens (src : string) (toks : token array)
       done
     in
 
+    let skip_balanced_angles () : unit =
+      (* Called when current token is '<' (not yet consumed).
+
+         Why
+         - Upstream stdlib and macro helpers frequently use generic methods, e.g.:
+             function opt<T>(v:T, f:T->String, prefix="") ...
+         - The bootstrap frontend does not model type parameters, but it must skip them
+           deterministically so we can still parse the real parameter list.
+      *)
+      if token_eq_sym (cur ()) '<' then bump ();
+      let depth_a = ref 1 in
+      while !depth_a > 0 do
+        match cur () with
+        | Eof p -> raise (Parse_error (p, "unterminated angle bracket group"))
+        | Sym ('<', _) ->
+            depth_a := !depth_a + 1;
+            bump ()
+        | Sym ('>', _) ->
+            depth_a := !depth_a - 1;
+            bump ()
+        | _ -> bump ()
+      done
+    in
+
+    let rec skip_metadata () : unit =
+      (* Called when current token is '@' (metadata / annotation).
+
+         Why
+         - Upstream Haxe unit tests use complex metadata payloads such as:
+             @:overload(function<...>(...):Void { })
+           which our bootstrap frontend does not want to parse.
+         - We only need to locate member declarations deterministically.
+
+         How
+         - Consume the metadata name and (if present) a balanced (...) argument list,
+           then return with `cur()` positioned at the next token after metadata.
+      *)
+      match cur () with
+      | Sym ('@', _) ->
+          bump ();
+          (* @:meta ... *)
+          if token_eq_sym (cur ()) ':' then bump ();
+          (* metadata name (best-effort): ident/keyword segments, possibly dotted *)
+          let rec consume_name () =
+            match cur () with
+            | Ident _ ->
+                bump ();
+                if token_eq_sym (cur ()) '.' then (
+                  bump ();
+                  consume_name ())
+            | Kw _ ->
+                bump ();
+                if token_eq_sym (cur ()) '.' then (
+                  bump ();
+                  consume_name ())
+            | _ -> ()
+          in
+          consume_name ();
+          if token_eq_sym (cur ()) '(' then skip_balanced_parens ();
+          (* Multiple metadata can stack. *)
+          skip_metadata ()
+      | _ -> ()
+    in
+
     while !depth > 0 do
       match cur () with
       | Eof p -> raise (Parse_error (p, "unexpected eof in class body"))
       | tok ->
           if !depth = 1 then (
             match tok with
+            | Sym ('@', _) ->
+                skip_metadata ();
+                reset_mods ()
             | Kw ("public", _) ->
                 cur_visibility := Public;
                 bump ()
@@ -751,6 +852,9 @@ let parse_module_from_tokens (src : string) (toks : token array)
                 bump ();
                 let name = read_ident () in
                 if !cur_static && name = "main" then has_static_main := true;
+
+                (* Skip generic type parameter lists: `function f<T, U>(...) ...` *)
+                if token_eq_sym (cur ()) '<' then skip_balanced_angles ();
 
                 let args =
                   if token_eq_sym (cur ()) '(' then (

@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable packagePath : string; mutable imports : string HxArray.t; mutable mainClass : HxClassDecl.t; mutable headerOnly : bool; mutable hasToplevelMain : bool }
+type t = { __hx_type : Obj.t; mutable packagePath : string; mutable imports : string HxArray.t; mutable mainClass : HxClassDecl.t; mutable classes : HxClassDecl.t HxArray.t; mutable headerOnly : bool; mutable hasToplevelMain : bool }
 
-let create = fun packagePath2 imports2 mainClass2 headerOnly2 hasToplevelMain2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic (); headerOnly = false; hasToplevelMain = false } : t) in (
+let create = fun packagePath2 imports2 mainClass2 classes2 headerOnly2 hasToplevelMain2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic (); classes = Obj.magic (); headerOnly = false; hasToplevelMain = false } : t) in (
   ignore ((
     ignore (let __assign_1 = packagePath2 in (
       self.packagePath <- __assign_1;
@@ -20,25 +20,66 @@ let create = fun packagePath2 imports2 mainClass2 headerOnly2 hasToplevelMain2 -
       self.mainClass <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = headerOnly2 in (
-      self.headerOnly <- __assign_4;
+    ignore (if classes2 == Obj.magic (HxRuntime.hx_null) || HxArray.length classes2 = 0 then ignore (let __assign_4 = let __arr_5 = HxArray.create () in (
+      ignore (HxArray.push __arr_5 mainClass2);
+      __arr_5
+    ) in (
+      self.classes <- __assign_4;
       __assign_4
+    )) else ignore (let hasMain = ref false in let _g = ref 0 in (
+      ignore (try while !_g < HxArray.length classes2 do try ignore (let c = HxArray.get classes2 (!_g) in (
+        ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
+          ignore (_g := __new_7);
+          __new_7
+        ));
+        if Obj.repr c == Obj.repr mainClass2 then ignore ((
+          ignore (let __assign_8 = true in (
+            hasMain := __assign_8;
+            __assign_8
+          ));
+          raise (HxRuntime.Hx_break)
+        )) else ()
+      )) with
+        | HxRuntime.Hx_continue -> () done with
+        | HxRuntime.Hx_break -> ());
+      let tempRight = ref (Obj.magic ()) in (
+        ignore (if !hasMain then let __assign_9 = classes2 in (
+          tempRight := __assign_9;
+          __assign_9
+        ) else let __assign_10 = HxArray.concat (let __arr_11 = HxArray.create () in (
+          ignore (HxArray.push __arr_11 mainClass2);
+          __arr_11
+        )) classes2 in (
+          tempRight := __assign_10;
+          __assign_10
+        ));
+        let __assign_12 = !tempRight in (
+          self.classes <- __assign_12;
+          __assign_12
+        )
+      )
+    )));
+    ignore (let __assign_13 = headerOnly2 in (
+      self.headerOnly <- __assign_13;
+      __assign_13
     ));
-    let __assign_5 = hasToplevelMain2 in (
-      self.hasToplevelMain <- __assign_5;
-      __assign_5
+    let __assign_14 = hasToplevelMain2 in (
+      self.hasToplevelMain <- __assign_14;
+      __assign_14
     )
   ));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic (); headerOnly = false; hasToplevelMain = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic (); classes = Obj.magic (); headerOnly = false; hasToplevelMain = false } : t)
 
 let getPackagePath = fun m -> m.packagePath
 
 let getImports = fun m -> m.imports
 
 let getMainClass = fun m -> m.mainClass
+
+let getClasses = fun m -> m.classes
 
 let getHeaderOnly = fun m -> m.headerOnly
 

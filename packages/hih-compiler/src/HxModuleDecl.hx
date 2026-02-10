@@ -10,19 +10,45 @@
 	What:
 	- Optional package path (as dotted string, e.g. "a.b.c").
 	- Import list (dotted strings).
-	- One top-level class declaration (for now).
+	- One or more top-level class declarations.
+
+	Note
+	- Haxe modules may contain multiple types. For bootstrap we only model `class`
+	  declarations, but we keep *all* of them so Stage3 emission can resolve
+	  module-local helper types (common in upstream unit tests).
 **/
 class HxModuleDecl {
 	public final packagePath:String;
 	public final imports:Array<String>;
 	public final mainClass:HxClassDecl;
+	public final classes:Array<HxClassDecl>;
 	public final headerOnly:Bool;
 	public final hasToplevelMain:Bool;
 
-	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl, headerOnly:Bool, hasToplevelMain:Bool) {
+	public function new(
+		packagePath:String,
+		imports:Array<String>,
+		mainClass:HxClassDecl,
+		classes:Array<HxClassDecl>,
+		headerOnly:Bool,
+		hasToplevelMain:Bool
+	) {
 		this.packagePath = packagePath;
 		this.imports = imports;
 		this.mainClass = mainClass;
+		// Keep `classes` non-empty and consistent with `mainClass` for downstream stages.
+		if (classes == null || classes.length == 0) {
+			this.classes = [mainClass];
+		} else {
+			var hasMain = false;
+			for (c in classes) {
+				if (c == mainClass) {
+					hasMain = true;
+					break;
+				}
+			}
+			this.classes = hasMain ? classes : ([mainClass].concat(classes));
+		}
 		this.headerOnly = headerOnly;
 		this.hasToplevelMain = hasToplevelMain;
 	}
@@ -51,6 +77,18 @@ class HxModuleDecl {
 	**/
 	public static function getMainClass(m:HxModuleDecl):HxClassDecl {
 		return m.mainClass;
+	}
+
+	/**
+		Non-inline getter for `classes` (see `getPackagePath` rationale).
+
+		Why
+		- Stage3 emission needs to know about *all* module-local class declarations
+		  so it can emit compilation units for helper types (e.g. `private class Foo`)
+		  referenced by the main class.
+	**/
+	public static function getClasses(m:HxModuleDecl):Array<HxClassDecl> {
+		return m.classes;
 	}
 
 	/**

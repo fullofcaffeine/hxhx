@@ -27,6 +27,10 @@ HXHX_STAGE0_PROFILE_CLASS="${HXHX_STAGE0_PROFILE_CLASS:-}"
 HXHX_STAGE0_PROFILE_FIELD="${HXHX_STAGE0_PROFILE_FIELD:-}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
+HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-0}"
+HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
+HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
+HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
@@ -81,24 +85,102 @@ start_ts="$(date +%s)"
 
   # `--times` prints only at the end; keep it enabled in debug mode so maintainers can
   # see where stage0 is spending time.
+  if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_progress)
+  fi
+  if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_profile)
+  fi
   if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
     haxe_args+=(--times)
-    if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
-      haxe_args+=(-D reflaxe_ocaml_progress)
-    fi
-    if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
-      haxe_args+=(-D reflaxe_ocaml_profile)
-    fi
-    "$HAXE_BIN" "${haxe_args[@]}"
-  else
-    if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
-      haxe_args+=(-D reflaxe_ocaml_progress)
-    fi
-    if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
-      haxe_args+=(-D reflaxe_ocaml_profile)
-    fi
-    "$HAXE_BIN" "${haxe_args[@]}" >/dev/null
   fi
+
+  run_stage0_emit() {
+    if [ -z "${HXHX_STAGE0_HEARTBEAT}" ] || [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
+      if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
+        echo "== Stage0 emit command: $HAXE_BIN ${haxe_args[*]}"
+        "$HAXE_BIN" "${haxe_args[@]}"
+      else
+        "$HAXE_BIN" "${haxe_args[@]}" >/dev/null
+      fi
+      return
+    fi
+
+    log_file="$(mktemp -t hxhx-stage0-emit.XXXXXX.log)"
+    echo "== Stage0 emit command: $HAXE_BIN ${haxe_args[*]}"
+    echo "== Stage0 emit log: $log_file"
+    pid=""
+    "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
+    pid="$!"
+
+    # Heartbeat: keep maintainers confident it's making progress.
+    interval="$HXHX_STAGE0_HEARTBEAT"
+    start_hb="$(date +%s)"
+    while kill -0 "$pid" >/dev/null 2>&1; do
+      sleep "$interval" || true
+      now="$(date +%s)"
+      child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
+      if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+        elapsed="$((now - start_hb))"
+        if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
+          echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
+          kill -9 "$pid" >/dev/null 2>&1 || true
+          echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+          tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+          exit 1
+        fi
+      fi
+      rss_probe_pid="$pid"
+      if [ -n "$child_pid" ]; then
+        rss_probe_pid="$child_pid"
+      fi
+      rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      if [ -n "$rss_kb" ]; then
+        rss_mb="$((rss_kb / 1024))"
+        if [ -n "$child_pid" ]; then
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid"
+        else
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid"
+        fi
+      else
+        if [ -n "$child_pid" ]; then
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s pid=$pid child=$child_pid"
+        else
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s pid=$pid"
+        fi
+      fi
+      if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
+        if [ -s "$log_file" ]; then
+          echo "== Stage0 emit log tail (last $HXHX_STAGE0_HEARTBEAT_TAIL_LINES lines):"
+          tail -n "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" "$log_file" || true
+        else
+          echo "== Stage0 emit log: (empty so far)"
+        fi
+      fi
+    done
+
+    if [ -z "$pid" ]; then
+      echo "Stage0 emit internal error: missing pid for stage0 process." >&2
+      exit 1
+    fi
+
+    set +e
+    wait "$pid"
+    code="$?"
+    set -e
+    if [ "$code" != "0" ]; then
+      echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+      tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+      exit "$code"
+    fi
+
+    if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
+      echo "== Stage0 emit completed; last $HXHX_STAGE0_LOG_TAIL_LINES lines:"
+      tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" || true
+    fi
+  }
+
+  run_stage0_emit
 )
 end_ts="$(date +%s)"
 echo "== Stage0 emit duration: $((end_ts - start_ts))s"

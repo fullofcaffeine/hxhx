@@ -97,6 +97,18 @@ class ResolverStage {
 		final visited = new Map<String, Bool>();
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 
+		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
+			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro.")) return true;
+			if (filePath == null || filePath.length == 0) return false;
+			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
+		}
+
+		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
+			final out = new haxe.ds.StringMap<String>();
+			if (src != null) for (k in src.keys()) out.set(k, src.get(k));
+			return out;
+		}
+
 		final stack = new Array<String>();
 		if (roots != null) {
 			for (r in roots) {
@@ -123,7 +135,26 @@ class ResolverStage {
 
 			// Apply conditional compilation filtering so inactive `#if` branches don't affect
 			// the resolver's module graph during bootstrapping.
-			final filteredSource = HxConditionalCompilation.filterSource(source, definesMap);
+			//
+			// Macro stdlib note
+			// - Haxe's `haxe.macro.*` APIs are only available when compiling the macro context, where
+			//   the compiler defines `macro`. The main compilation does not.
+			// - Our bootstrap pipeline does not fully separate "macro" vs "main" compilation yet,
+			//   but upstream unit harness modules can still reference `haxe.macro.*` at build time.
+			// - To keep Gate bring-up moving, parse/filter `haxe.macro.*` modules with `macro=1`
+			//   so their declarations exist for Stage3 emission (stubs/Obj.magic are fine here).
+			final effectiveDefines = isMacroStdModule(modulePath, filePath)
+				? (() -> {
+					final m = cloneDefines(definesMap);
+					if (!m.exists("macro")) m.set("macro", "1");
+					// Macros run on the eval host by default in Haxe 4.x. Many macro APIs are guarded by:
+					//   #if (neko || eval || display)
+					// so we also set `eval=1` to surface their declarations during bring-up.
+					if (!m.exists("eval")) m.set("eval", "1");
+					m;
+				})()
+				: definesMap;
+			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
 
 			final parsed = try ParserStage.parse(filteredSource, filePath) catch (e:Dynamic) {
 				throw "parse_failed " + filePath + ": " + Std.string(e);

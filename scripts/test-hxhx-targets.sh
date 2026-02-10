@@ -8,6 +8,10 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
+if ! command -v ocamlopt >/dev/null 2>&1; then
+  echo "Skipping hxhx Stage3 tests: ocamlopt not found on PATH."
+fi
+
 echo "== Building hxhx"
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
@@ -107,6 +111,38 @@ out="$(HAXE_STD_PATH="$tmpdir/fake_std" "$HXHX_BIN" --hxhx-stage1 --class-path "
 echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing haxe.io.Path"
 echo "$out" | grep -vq "stage1=warn import_missing StringTools"
+
+if command -v ocamlopt >/dev/null 2>&1; then
+  echo "== Stage3 regression: module-local helper types (multi-class modules)"
+  cat >"$tmpdir/src/MultiStage3.hx" <<'HX'
+package;
+
+private class Helper {
+  public static var answer:Int = 42;
+}
+
+class Helper2 {
+  public static var answer:Int = 7;
+}
+
+class MultiStage3 {
+  static function main() {
+    // Exercise both resolution shapes:
+    // - unqualified helper type (`Helper`)
+    // - module-qualified helper type (`MultiStage3.Helper2`)
+    //
+    // The Stage3 emitter is non-semantic, so the runtime result is irrelevant; this is a
+    // link-time regression check that providers for module-local helper types are emitted.
+    var a = Helper.answer;
+    var b = MultiStage3.Helper2.answer;
+    Sys.println(Std.string(a + b));
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+fi
 
 echo "== Stage1 bring-up: multi-class module selects expected class"
 cat >"$tmpdir/src/Multi.hx" <<'HX'
@@ -322,6 +358,55 @@ echo "$out" | grep -q "^stage3=ok$"
 exe="$(echo "$out" | sed -n 's/^exe=//p' | tail -n 1)"
 test -n "$exe"
 test -f "$exe"
+
+echo "== Stage3 bring-up: module-local helper class emits provider (Gate1 regression)"
+tmphelper="$tmpdir/module_local_helper"
+mkdir -p "$tmphelper/src"
+cat >"$tmphelper/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    // Regression: helper types declared in the same file must still be emitted as OCaml
+    // compilation units so static references compile.
+    trace(Helper.ANSWER);
+  }
+}
+
+private class Helper {
+  public static final ANSWER = 42;
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmphelper/src" -main Main --hxhx-out "$tmphelper/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: module-local enum abstract emits provider (Gate1 regression)"
+tmpenumabs="$tmpdir/module_local_enum_abstract"
+mkdir -p "$tmpenumabs/src/pkg"
+cat >"$tmpenumabs/src/pkg/MyAbstract.hx" <<'HX'
+package pkg;
+
+// Regression fixture: file's module name is `MyAbstract`, but the main type is an abstract (not a class).
+// The helper `enum abstract` must still be loadable and must emit an OCaml provider unit.
+abstract MyAbstract(Int) {}
+
+enum abstract FakeEnumAbstract(Int) {
+  var NotFound = 404;
+}
+HX
+
+cat >"$tmpenumabs/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    // Fully-qualified access to a module-local helper type.
+    var _v = pkg.MyAbstract.FakeEnumAbstract.NotFound;
+    trace("ok");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpenumabs/src" -main Main --hxhx-out "$tmpenumabs/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^ok$"
+echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: omitted optional args don't partial apply"
 tmpopt="$tmpdir/optional_args"

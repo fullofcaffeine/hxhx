@@ -2050,7 +2050,16 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                                             if not (!tempBool1) then ignore (HxArray.push keptFields f) else ()
                                                           )
                                                         )) done);
-                                                        let mergedFields = HxArray.concat keptFields (Obj.obj (HxAnon.get gen "fields")) in let newCls = HxClassDecl.create (HxClassDecl.getName oldCls) (HxClassDecl.getHasStaticMain oldCls) mergedFns mergedFields in let newDecl = HxModuleDecl.create (HxModuleDecl.getPackagePath oldDecl) (HxModuleDecl.getImports oldDecl) newCls (HxModuleDecl.getHeaderOnly oldDecl) (HxModuleDecl.getHasToplevelMain oldDecl) in let newParsed = ParsedModule.create (ParsedModule.getSource pm ()) newDecl (ParsedModule.getFilePath pm ()) in HxArray.push out2 (ResolvedModule.create modulePath (ResolvedModule.getFilePath m) newParsed)
+                                                        let mergedFields = HxArray.concat keptFields (Obj.obj (HxAnon.get gen "fields")) in let newCls = HxClassDecl.create (HxClassDecl.getName oldCls) (HxClassDecl.getHasStaticMain oldCls) mergedFns mergedFields in let newClasses = HxArray.create () in (
+                                                          ignore (let _g2 = ref 0 in let _g1 = HxModuleDecl.getClasses oldDecl in while !_g2 < HxArray.length _g1 do ignore (let c = HxArray.get _g1 (!_g2) in (
+                                                            ignore (let __old_460 = !_g2 in let __new_461 = HxInt.add __old_460 1 in (
+                                                              ignore (_g2 := __new_461);
+                                                              __new_461
+                                                            ));
+                                                            if HxString.equals (HxClassDecl.getName c) (HxClassDecl.getName oldCls) then ignore (HxArray.push newClasses newCls) else ignore (HxArray.push newClasses c)
+                                                          )) done);
+                                                          let newDecl = HxModuleDecl.create (HxModuleDecl.getPackagePath oldDecl) (HxModuleDecl.getImports oldDecl) newCls newClasses (HxModuleDecl.getHeaderOnly oldDecl) (HxModuleDecl.getHasToplevelMain oldDecl) in let newParsed = ParsedModule.create (ParsedModule.getSource pm ()) newDecl (ParsedModule.getFilePath pm ()) in HxArray.push out2 (ResolvedModule.create modulePath (ResolvedModule.getFilePath m) newParsed)
+                                                        )
                                                       )
                                                     )
                                                   )
@@ -2062,20 +2071,20 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                       )) with
                                         | HxRuntime.Hx_continue -> () done with
                                         | HxRuntime.Hx_break -> ());
-                                      let __assign_460 = out2 in (
-                                        tempArray8 := __assign_460;
-                                        __assign_460
+                                      let __assign_462 = out2 in (
+                                        tempArray8 := __assign_462;
+                                        __assign_462
                                       )
                                     )
                                   )) else ignore (if typeOnly && !anyBuildMacros then ignore (let i = ref 0 in let _g = ref 0 in while !_g < HxArray.length (!tempArray8) do ignore (let m = HxArray.get (!tempArray8) (!_g) in (
-                                    ignore (let __old_461 = !_g in let __new_462 = HxInt.add __old_461 1 in (
-                                      ignore (_g := __new_462);
-                                      __new_462
+                                    ignore (let __old_463 = !_g in let __new_464 = HxInt.add __old_463 1 in (
+                                      ignore (_g := __new_464);
+                                      __new_464
                                     ));
                                     let pm = ResolvedModule.getParsed m in let exprs = findBuildMacroExprs (ParsedModule.getSource pm ()) in let _g2 = ref 0 in while !_g2 < HxArray.length exprs do ignore (let e = HxArray.get exprs (!_g2) in (
-                                      ignore (let __old_463 = !_g2 in let __new_464 = HxInt.add __old_463 1 in (
-                                        ignore (_g2 := __new_464);
-                                        __new_464
+                                      ignore (let __old_465 = !_g2 in let __new_466 = HxInt.add __old_465 1 in (
+                                        ignore (_g2 := __new_466);
+                                        __new_466
                                       ));
                                       ignore (print_endline ((((("build_macro_skipped[" ^ string_of_int (!i)) ^ "]=") ^ HxString.toStdString (ResolvedModule.getModulePath m)) ^ ":") ^ HxString.toStdString e));
                                       i := HxInt.add (!i) 1
@@ -2085,17 +2094,17 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                     ignore (if !macroSession == Obj.magic (HxRuntime.hx_null) then ignore ((
                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                         ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                        let __assign_465 = Obj.magic (HxRuntime.hx_null) in (
-                                          macroSession := __assign_465;
-                                          __assign_465
+                                        let __assign_467 = Obj.magic (HxRuntime.hx_null) in (
+                                          macroSession := __assign_467;
+                                          __assign_467
                                         )
                                       )) else ());
                                       raise (HxRuntime.Hx_return (Obj.repr (error "expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available")))
                                     )) else ());
                                     let exp = Hxhx_ExprMacroExpander.expandResolvedModules (!tempArray8) (!macroSession) exprMacros in (
-                                      ignore (let __assign_466 = Obj.obj (HxAnon.get exp "modules") in (
-                                        tempArray8 := __assign_466;
-                                        __assign_466
+                                      ignore (let __assign_468 = Obj.obj (HxAnon.get exp "modules") in (
+                                        tempArray8 := __assign_468;
+                                        __assign_468
                                       ));
                                       print_endline ("expr_macros_expanded=" ^ string_of_int (Obj.obj (HxAnon.get exp "expandedCount")))
                                     )
@@ -2111,9 +2120,9 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                             ignore (print_endline ((((((("unsupported_file[" ^ string_of_int (!unsupportedFilesCount)) ^ "]=") ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ " header_only=") ^ HxString.toStdString (bool01 (HxModuleDecl.getHeaderOnly (ParsedModule.getDecl pm ())))) ^ " unsupported_exprs=") ^ string_of_int unsupportedInFile));
                                             ignore (if traceUnsupported then ignore (let cls = HxModuleDecl.getMainClass (ParsedModule.getDecl pm ()) in (
                                               ignore (let _g = ref 0 in let _g1 = HxClassDecl.getFunctions cls in try while !_g < HxArray.length _g1 do try ignore (let fn = HxArray.get _g1 (!_g) in (
-                                                ignore (let __old_467 = !_g in let __new_468 = HxInt.add __old_467 1 in (
-                                                  ignore (_g := __new_468);
-                                                  __new_468
+                                                ignore (let __old_469 = !_g in let __new_470 = HxInt.add __old_469 1 in (
+                                                  ignore (_g := __new_470);
+                                                  __new_470
                                                 ));
                                                 let fnUnsupported = countUnsupportedExprsInFunction fn in (
                                                   ignore (if fnUnsupported <= 0 then raise (HxRuntime.Hx_continue) else ());
@@ -2125,17 +2134,17 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                                 | HxRuntime.Hx_continue -> () done with
                                                 | HxRuntime.Hx_break -> ());
                                               let _g = ref 0 in let _g1 = collectUnsupportedExprRawInModule pm 20 in try while !_g < HxArray.length _g1 do try ignore (let raw = HxArray.get _g1 (!_g) in (
-                                                ignore (let __old_469 = !_g in let __new_470 = HxInt.add __old_469 1 in (
-                                                  ignore (_g := __new_470);
-                                                  __new_470
+                                                ignore (let __old_471 = !_g in let __new_472 = HxInt.add __old_471 1 in (
+                                                  ignore (_g := __new_472);
+                                                  __new_472
                                                 ));
                                                 let escaped = escapeOneLine raw in let tempNumber = ref 0 in (
-                                                  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_471 = 0 in (
-                                                    tempNumber := __assign_471;
-                                                    __assign_471
-                                                  ) else let __assign_472 = HxString.length raw in (
-                                                    tempNumber := __assign_472;
-                                                    __assign_472
+                                                  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_473 = 0 in (
+                                                    tempNumber := __assign_473;
+                                                    __assign_473
+                                                  ) else let __assign_474 = HxString.length raw in (
+                                                    tempNumber := __assign_474;
+                                                    __assign_474
                                                   ));
                                                   ignore (print_endline ((((((("unsupported_expr[" ^ string_of_int (!unsupportedRawCount)) ^ "]=") ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ":raw=") ^ HxString.toStdString escaped) ^ " len=") ^ string_of_int (!tempNumber)));
                                                   ignore (unsupportedRawCount := HxInt.add (!unsupportedRawCount) 1);
@@ -2153,30 +2162,17 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                           )) else ());
                                           ignore (parsedMethodsTotal := HxInt.add (!parsedMethodsTotal) (HxArray.length (HxClassDecl.getFunctions (HxModuleDecl.getMainClass (ParsedModule.getDecl pm ())))));
                                           let typed = TyperStage.typeResolvedModule m typerIndex moduleLoader in (
-                                            ignore (if HxString.equals (ResolvedModule.getFilePath m) rootFilePath then ignore (let __assign_473 = typed in (
-                                              rootTyped := __assign_473;
-                                              __assign_473
+                                            ignore (if HxString.equals (ResolvedModule.getFilePath m) rootFilePath then ignore (let __assign_475 = typed in (
+                                              rootTyped := __assign_475;
+                                              __assign_475
                                             )) else ());
                                             typedCount := HxInt.add (!typedCount) 1
                                           )
                                         ) with
                                           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_474 -> raise (HxRuntime.Hx_return __ret_474)
-                                          | HxRuntime.Hx_exception (__exn_v_475, __exn_tags_476) -> if true then let e = (__exn_v_475 : Obj.t) in (
-                                            ignore e;
-                                            (
-                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_477 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_477;
-                                                  __assign_477
-                                                )
-                                              )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ((("type failed: " ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ": ") ^ HxString.toStdString (formatException e)))))
-                                            )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_475 __exn_tags_476
-                                          | __exn_478 -> if true then let e = (Obj.repr __exn_478 : Obj.t) in (
+                                          | HxRuntime.Hx_return __ret_476 -> raise (HxRuntime.Hx_return __ret_476)
+                                          | HxRuntime.Hx_exception (__exn_v_477, __exn_tags_478) -> if true then let e = (__exn_v_477 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2188,60 +2184,60 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ((("type failed: " ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ": ") ^ HxString.toStdString (formatException e)))))
                                             )
-                                          ) else raise (__exn_478));
+                                          ) else HxRuntime.hx_throw_typed __exn_v_477 __exn_tags_478
+                                          | __exn_480 -> if true then let e = (Obj.repr __exn_480 : Obj.t) in (
+                                            ignore e;
+                                            (
+                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
+                                                let __assign_481 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_481;
+                                                  __assign_481
+                                                )
+                                              )) else ());
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ((("type failed: " ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ": ") ^ HxString.toStdString (formatException e)))))
+                                            )
+                                          ) else raise (__exn_480));
                                         let _g = ref 0 in let _g1 = moduleLoader.drainNewModules (Obj.magic moduleLoader) () in while !_g < HxArray.length _g1 do ignore (let nm = HxArray.get _g1 (!_g) in (
-                                          ignore (let __old_480 = !_g in let __new_481 = HxInt.add __old_480 1 in (
-                                            ignore (_g := __new_481);
-                                            __new_481
+                                          ignore (let __old_482 = !_g in let __new_483 = HxInt.add __old_482 1 in (
+                                            ignore (_g := __new_483);
+                                            __new_483
                                           ));
                                           ignore (HxArray.push (!tempArray8) nm);
                                           HxArray.push toType nm
                                         )) done
                                       )) done);
-                                      ignore (if !rootTyped != Obj.magic (HxRuntime.hx_null) then ignore (let fns = TyClassEnv.getFunctions (TyModuleEnv.getMainClass (TypedModule.getEnv (!rootTyped) ()) ()) () in let _g = ref 0 in let _g1 = HxArray.length fns in while !_g < _g1 do ignore (let i = let __old_482 = !_g in let __new_483 = HxInt.add __old_482 1 in (
-                                        ignore (_g := __new_483);
-                                        __old_482
+                                      ignore (if !rootTyped != Obj.magic (HxRuntime.hx_null) then ignore (let fns = TyClassEnv.getFunctions (TyModuleEnv.getMainClass (TypedModule.getEnv (!rootTyped) ()) ()) () in let _g = ref 0 in let _g1 = HxArray.length fns in while !_g < _g1 do ignore (let i = let __old_484 = !_g in let __new_485 = HxInt.add __old_484 1 in (
+                                        ignore (_g := __new_485);
+                                        __old_484
                                       ) in let tf = HxArray.get fns i in let locals = TyFunctionEnv.getLocals tf () in let localsParts = HxArray.create () in (
                                         ignore (let _g2 = ref 0 in while !_g2 < HxArray.length locals do ignore (let l = HxArray.get locals (!_g2) in (
-                                          ignore (let __old_484 = !_g2 in let __new_485 = HxInt.add __old_484 1 in (
-                                            ignore (_g2 := __new_485);
-                                            __new_485
+                                          ignore (let __old_486 = !_g2 in let __new_487 = HxInt.add __old_486 1 in (
+                                            ignore (_g2 := __new_487);
+                                            __new_487
                                           ));
                                           HxArray.push localsParts ((HxString.toStdString (TySymbol.getName l ()) ^ ":") ^ HxString.toStdString (TyType.toString (TySymbol.getType l ()) ()))
                                         )) done);
                                         let params = TyFunctionEnv.getParams tf () in let paramParts = HxArray.create () in (
                                           ignore (let _g2 = ref 0 in while !_g2 < HxArray.length params do ignore (let p = HxArray.get params (!_g2) in (
-                                            ignore (let __old_486 = !_g2 in let __new_487 = HxInt.add __old_486 1 in (
-                                              ignore (_g2 := __new_487);
-                                              __new_487
+                                            ignore (let __old_488 = !_g2 in let __new_489 = HxInt.add __old_488 1 in (
+                                              ignore (_g2 := __new_489);
+                                              __new_489
                                             ));
                                             HxArray.push paramParts ((HxString.toStdString (TySymbol.getName p ()) ^ ":") ^ HxString.toStdString (TyType.toString (TySymbol.getType p ()) ()))
                                           )) done);
                                           print_endline ((((((((((("typed_fn[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (TyFunctionEnv.getName tf ())) ^ " args=") ^ HxString.toStdString (HxArray.join paramParts "," (fun x -> x))) ^ " locals=") ^ HxString.toStdString (HxArray.join localsParts "," (fun x -> x))) ^ " ret=") ^ HxString.toStdString (TyType.toString (TyFunctionEnv.getReturnType tf ()) ())) ^ " inferred=") ^ HxString.toStdString (TyType.toString (TyFunctionEnv.getReturnExprType tf ()) ()))
                                         )
                                       )) done) else ());
-                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterTypingHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_488 = !_g in let __new_489 = HxInt.add __old_488 1 in (
-                                        ignore (_g := __new_489);
-                                        __old_488
+                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterTypingHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_490 = !_g in let __new_491 = HxInt.add __old_490 1 in (
+                                        ignore (_g := __new_491);
+                                        __old_490
                                       ) in (
                                         ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "afterTyping" (HxArray.get hooks i) with
                                           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_490 -> raise (HxRuntime.Hx_return __ret_490)
-                                          | HxRuntime.Hx_exception (__exn_v_491, __exn_tags_492) -> if true then let e = (__exn_v_491 : Obj.t) in (
-                                            ignore e;
-                                            (
-                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_493 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_493;
-                                                  __assign_493
-                                                )
-                                              )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterTyping hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
-                                            )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_491 __exn_tags_492
-                                          | __exn_494 -> if true then let e = (Obj.repr __exn_494 : Obj.t) in (
+                                          | HxRuntime.Hx_return __ret_492 -> raise (HxRuntime.Hx_return __ret_492)
+                                          | HxRuntime.Hx_exception (__exn_v_493, __exn_tags_494) -> if true then let e = (__exn_v_493 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2253,31 +2249,31 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ("afterTyping hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else raise (__exn_494));
-                                        print_endline (("hook_afterTyping[" ^ string_of_int i) ^ "]=ok")
-                                      )) done) else ());
-                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listOnGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_496 = !_g in let __new_497 = HxInt.add __old_496 1 in (
-                                        ignore (_g := __new_497);
-                                        __old_496
-                                      ) in (
-                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "onGenerate" (HxArray.get hooks i) with
-                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_498 -> raise (HxRuntime.Hx_return __ret_498)
-                                          | HxRuntime.Hx_exception (__exn_v_499, __exn_tags_500) -> if true then let e = (__exn_v_499 : Obj.t) in (
+                                          ) else HxRuntime.hx_throw_typed __exn_v_493 __exn_tags_494
+                                          | __exn_496 -> if true then let e = (Obj.repr __exn_496 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                                 ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_501 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_501;
-                                                  __assign_501
+                                                let __assign_497 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_497;
+                                                  __assign_497
                                                 )
                                               )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ("onGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterTyping hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_499 __exn_tags_500
-                                          | __exn_502 -> if true then let e = (Obj.repr __exn_502 : Obj.t) in (
+                                          ) else raise (__exn_496));
+                                        print_endline (("hook_afterTyping[" ^ string_of_int i) ^ "]=ok")
+                                      )) done) else ());
+                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listOnGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_498 = !_g in let __new_499 = HxInt.add __old_498 1 in (
+                                        ignore (_g := __new_499);
+                                        __old_498
+                                      ) in (
+                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "onGenerate" (HxArray.get hooks i) with
+                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+                                          | HxRuntime.Hx_return __ret_500 -> raise (HxRuntime.Hx_return __ret_500)
+                                          | HxRuntime.Hx_exception (__exn_v_501, __exn_tags_502) -> if true then let e = (__exn_v_501 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2289,31 +2285,31 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ("onGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else raise (__exn_502));
-                                        print_endline (("hook_onGenerate[" ^ string_of_int i) ^ "]=ok")
-                                      )) done) else ());
-                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_504 = !_g in let __new_505 = HxInt.add __old_504 1 in (
-                                        ignore (_g := __new_505);
-                                        __old_504
-                                      ) in (
-                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "afterGenerate" (HxArray.get hooks i) with
-                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_506 -> raise (HxRuntime.Hx_return __ret_506)
-                                          | HxRuntime.Hx_exception (__exn_v_507, __exn_tags_508) -> if true then let e = (__exn_v_507 : Obj.t) in (
+                                          ) else HxRuntime.hx_throw_typed __exn_v_501 __exn_tags_502
+                                          | __exn_504 -> if true then let e = (Obj.repr __exn_504 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                                 ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_509 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_509;
-                                                  __assign_509
+                                                let __assign_505 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_505;
+                                                  __assign_505
                                                 )
                                               )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ("onGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_507 __exn_tags_508
-                                          | __exn_510 -> if true then let e = (Obj.repr __exn_510 : Obj.t) in (
+                                          ) else raise (__exn_504));
+                                        print_endline (("hook_onGenerate[" ^ string_of_int i) ^ "]=ok")
+                                      )) done) else ());
+                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_506 = !_g in let __new_507 = HxInt.add __old_506 1 in (
+                                        ignore (_g := __new_507);
+                                        __old_506
+                                      ) in (
+                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "afterGenerate" (HxArray.get hooks i) with
+                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+                                          | HxRuntime.Hx_return __ret_508 -> raise (HxRuntime.Hx_return __ret_508)
+                                          | HxRuntime.Hx_exception (__exn_v_509, __exn_tags_510) -> if true then let e = (__exn_v_509 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2325,14 +2321,27 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ("afterGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else raise (__exn_510));
+                                          ) else HxRuntime.hx_throw_typed __exn_v_509 __exn_tags_510
+                                          | __exn_512 -> if true then let e = (Obj.repr __exn_512 : Obj.t) in (
+                                            ignore e;
+                                            (
+                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
+                                                let __assign_513 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_513;
+                                                  __assign_513
+                                                )
+                                              )) else ());
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                            )
+                                          ) else raise (__exn_512));
                                         print_endline (("hook_afterGenerate[" ^ string_of_int i) ^ "]=ok")
                                       )) done) else ());
                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                         ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                        let __assign_512 = Obj.magic (HxRuntime.hx_null) in (
-                                          macroSession := __assign_512;
-                                          __assign_512
+                                        let __assign_514 = Obj.magic (HxRuntime.hx_null) in (
+                                          macroSession := __assign_514;
+                                          __assign_514
                                         )
                                       )) else ());
                                       ignore (print_endline ("typed_modules=" ^ string_of_int (!typedCount)));
@@ -2349,21 +2358,8 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                         ignore (try HxArray.push typedModules (TyperStage.typeResolvedModule m typerIndex moduleLoader) with
                                           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_513 -> raise (HxRuntime.Hx_return __ret_513)
-                                          | HxRuntime.Hx_exception (__exn_v_514, __exn_tags_515) -> if true then let e = (__exn_v_514 : Obj.t) in (
-                                            ignore e;
-                                            (
-                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_516 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_516;
-                                                  __assign_516
-                                                )
-                                              )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ((("type failed: " ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ": ") ^ HxString.toStdString (formatException e)))))
-                                            )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_514 __exn_tags_515
-                                          | __exn_517 -> if true then let e = (Obj.repr __exn_517 : Obj.t) in (
+                                          | HxRuntime.Hx_return __ret_515 -> raise (HxRuntime.Hx_return __ret_515)
+                                          | HxRuntime.Hx_exception (__exn_v_516, __exn_tags_517) -> if true then let e = (__exn_v_516 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2375,38 +2371,38 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ((("type failed: " ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ": ") ^ HxString.toStdString (formatException e)))))
                                             )
-                                          ) else raise (__exn_517));
+                                          ) else HxRuntime.hx_throw_typed __exn_v_516 __exn_tags_517
+                                          | __exn_519 -> if true then let e = (Obj.repr __exn_519 : Obj.t) in (
+                                            ignore e;
+                                            (
+                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
+                                                let __assign_520 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_520;
+                                                  __assign_520
+                                                )
+                                              )) else ());
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ((("type failed: " ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ": ") ^ HxString.toStdString (formatException e)))))
+                                            )
+                                          ) else raise (__exn_519));
                                         let _g = ref 0 in let _g1 = moduleLoader.drainNewModules (Obj.magic moduleLoader) () in while !_g < HxArray.length _g1 do ignore (let nm = HxArray.get _g1 (!_g) in (
-                                          ignore (let __old_519 = !_g in let __new_520 = HxInt.add __old_519 1 in (
-                                            ignore (_g := __new_520);
-                                            __new_520
+                                          ignore (let __old_521 = !_g in let __new_522 = HxInt.add __old_521 1 in (
+                                            ignore (_g := __new_522);
+                                            __new_522
                                           ));
                                           ignore (HxArray.push (!tempArray8) nm);
                                           HxArray.push toType nm
                                         )) done
                                       )) done);
-                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterTypingHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_521 = !_g in let __new_522 = HxInt.add __old_521 1 in (
-                                        ignore (_g := __new_522);
-                                        __old_521
+                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterTypingHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_523 = !_g in let __new_524 = HxInt.add __old_523 1 in (
+                                        ignore (_g := __new_524);
+                                        __old_523
                                       ) in (
                                         ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "afterTyping" (HxArray.get hooks i) with
                                           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_523 -> raise (HxRuntime.Hx_return __ret_523)
-                                          | HxRuntime.Hx_exception (__exn_v_524, __exn_tags_525) -> if true then let e = (__exn_v_524 : Obj.t) in (
-                                            ignore e;
-                                            (
-                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_526 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_526;
-                                                  __assign_526
-                                                )
-                                              )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterTyping hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
-                                            )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_524 __exn_tags_525
-                                          | __exn_527 -> if true then let e = (Obj.repr __exn_527 : Obj.t) in (
+                                          | HxRuntime.Hx_return __ret_525 -> raise (HxRuntime.Hx_return __ret_525)
+                                          | HxRuntime.Hx_exception (__exn_v_526, __exn_tags_527) -> if true then let e = (__exn_v_526 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2418,31 +2414,31 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ("afterTyping hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else raise (__exn_527));
-                                        print_endline (("hook_afterTyping[" ^ string_of_int i) ^ "]=ok")
-                                      )) done) else ());
-                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listOnGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_529 = !_g in let __new_530 = HxInt.add __old_529 1 in (
-                                        ignore (_g := __new_530);
-                                        __old_529
-                                      ) in (
-                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "onGenerate" (HxArray.get hooks i) with
-                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_531 -> raise (HxRuntime.Hx_return __ret_531)
-                                          | HxRuntime.Hx_exception (__exn_v_532, __exn_tags_533) -> if true then let e = (__exn_v_532 : Obj.t) in (
+                                          ) else HxRuntime.hx_throw_typed __exn_v_526 __exn_tags_527
+                                          | __exn_529 -> if true then let e = (Obj.repr __exn_529 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                                 ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_534 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_534;
-                                                  __assign_534
+                                                let __assign_530 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_530;
+                                                  __assign_530
                                                 )
                                               )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ("onGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterTyping hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_532 __exn_tags_533
-                                          | __exn_535 -> if true then let e = (Obj.repr __exn_535 : Obj.t) in (
+                                          ) else raise (__exn_529));
+                                        print_endline (("hook_afterTyping[" ^ string_of_int i) ^ "]=ok")
+                                      )) done) else ());
+                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listOnGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_531 = !_g in let __new_532 = HxInt.add __old_531 1 in (
+                                        ignore (_g := __new_532);
+                                        __old_531
+                                      ) in (
+                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "onGenerate" (HxArray.get hooks i) with
+                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+                                          | HxRuntime.Hx_return __ret_533 -> raise (HxRuntime.Hx_return __ret_533)
+                                          | HxRuntime.Hx_exception (__exn_v_534, __exn_tags_535) -> if true then let e = (__exn_v_534 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2454,31 +2450,31 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ("onGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else raise (__exn_535));
-                                        print_endline (("hook_onGenerate[" ^ string_of_int i) ^ "]=ok")
-                                      )) done) else ());
-                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_537 = !_g in let __new_538 = HxInt.add __old_537 1 in (
-                                        ignore (_g := __new_538);
-                                        __old_537
-                                      ) in (
-                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "afterGenerate" (HxArray.get hooks i) with
-                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                          | HxRuntime.Hx_return __ret_539 -> raise (HxRuntime.Hx_return __ret_539)
-                                          | HxRuntime.Hx_exception (__exn_v_540, __exn_tags_541) -> if true then let e = (__exn_v_540 : Obj.t) in (
+                                          ) else HxRuntime.hx_throw_typed __exn_v_534 __exn_tags_535
+                                          | __exn_537 -> if true then let e = (Obj.repr __exn_537 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                                 ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                let __assign_542 = Obj.magic (HxRuntime.hx_null) in (
-                                                  macroSession := __assign_542;
-                                                  __assign_542
+                                                let __assign_538 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_538;
+                                                  __assign_538
                                                 )
                                               )) else ());
-                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ("onGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else HxRuntime.hx_throw_typed __exn_v_540 __exn_tags_541
-                                          | __exn_543 -> if true then let e = (Obj.repr __exn_543 : Obj.t) in (
+                                          ) else raise (__exn_537));
+                                        print_endline (("hook_onGenerate[" ^ string_of_int i) ^ "]=ok")
+                                      )) done) else ());
+                                      ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore (let hooks = Hxhx_macro_MacroState.listAfterGenerateHookIds () in let _g = ref 0 in let _g1 = HxArray.length hooks in while !_g < _g1 do ignore (let i = let __old_539 = !_g in let __new_540 = HxInt.add __old_539 1 in (
+                                        ignore (_g := __new_540);
+                                        __old_539
+                                      ) in (
+                                        ignore (try Hxhx_macro_MacroHostClient.macrohostsession_runHook (!macroSession) "afterGenerate" (HxArray.get hooks i) with
+                                          | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+                                          | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+                                          | HxRuntime.Hx_return __ret_541 -> raise (HxRuntime.Hx_return __ret_541)
+                                          | HxRuntime.Hx_exception (__exn_v_542, __exn_tags_543) -> if true then let e = (__exn_v_542 : Obj.t) in (
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2490,34 +2486,47 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                               )) else ());
                                               raise (HxRuntime.Hx_return (Obj.repr (error ("afterGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                             )
-                                          ) else raise (__exn_543));
+                                          ) else HxRuntime.hx_throw_typed __exn_v_542 __exn_tags_543
+                                          | __exn_545 -> if true then let e = (Obj.repr __exn_545 : Obj.t) in (
+                                            ignore e;
+                                            (
+                                              ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                                ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
+                                                let __assign_546 = Obj.magic (HxRuntime.hx_null) in (
+                                                  macroSession := __assign_546;
+                                                  __assign_546
+                                                )
+                                              )) else ());
+                                              raise (HxRuntime.Hx_return (Obj.repr (error ("afterGenerate hook failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                            )
+                                          ) else raise (__exn_545));
                                         print_endline (("hook_afterGenerate[" ^ string_of_int i) ^ "]=ok")
                                       )) done) else ());
                                       let generated = HxArray.create () in (
                                         ignore (let _g = ref 0 in let _g1 = Hxhx_macro_MacroState.listOcamlModuleNames () in while !_g < HxArray.length _g1 do ignore (let name = HxArray.get _g1 (!_g) in (
-                                          ignore (let __old_545 = !_g in let __new_546 = HxInt.add __old_545 1 in (
-                                            ignore (_g := __new_546);
-                                            __new_546
+                                          ignore (let __old_547 = !_g in let __new_548 = HxInt.add __old_547 1 in (
+                                            ignore (_g := __new_548);
+                                            __new_548
                                           ));
-                                          HxArray.push generated (let __anon_547 = HxAnon.create () in (
-                                            ignore (HxAnon.set __anon_547 "name" (Obj.repr name));
-                                            ignore (HxAnon.set __anon_547 "source" (Obj.repr (Hxhx_macro_MacroState.getOcamlModuleSource name)));
-                                            __anon_547
+                                          HxArray.push generated (let __anon_549 = HxAnon.create () in (
+                                            ignore (HxAnon.set __anon_549 "name" (Obj.repr name));
+                                            ignore (HxAnon.set __anon_549 "source" (Obj.repr (Hxhx_macro_MacroState.getOcamlModuleSource name)));
+                                            __anon_549
                                           ))
                                         )) done);
                                         let expanded = MacroStage.expandProgram typedModules generated in (
                                           ignore (let _g = ref 0 in let _g1 = Hxhx_macro_MacroState.listDefineNames () in while !_g < HxArray.length _g1 do ignore (let name = HxArray.get _g1 (!_g) in (
-                                            ignore (let __old_548 = !_g in let __new_549 = HxInt.add __old_548 1 in (
-                                              ignore (_g := __new_549);
-                                              __new_549
+                                            ignore (let __old_550 = !_g in let __new_551 = HxInt.add __old_550 1 in (
+                                              ignore (_g := __new_551);
+                                              __new_551
                                             ));
                                             if StringTools.startsWith name "HXHX_" then ignore (print_endline ((("macro_define2[" ^ HxString.toStdString name) ^ "]=") ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue name))) else ()
                                           )) done);
                                           ignore (if !noEmit then ignore (let headerOnlyCount = ref 0 in let unsupportedExprsTotal = ref 0 in let unsupportedFilesCount = ref 0 in let traceUnsupported = isTrueEnv "HXHX_TRACE_UNSUPPORTED" in let unsupportedRawCount = ref 0 in let unsupportedFnCount = ref 0 in let unsupportedFileIndex = ref 0 in (
                                             ignore (let _g = ref 0 in while !_g < HxArray.length (!tempArray8) do ignore (let m = HxArray.get (!tempArray8) (!_g) in (
-                                              ignore (let __old_550 = !_g in let __new_551 = HxInt.add __old_550 1 in (
-                                                ignore (_g := __new_551);
-                                                __new_551
+                                              ignore (let __old_552 = !_g in let __new_553 = HxInt.add __old_552 1 in (
+                                                ignore (_g := __new_553);
+                                                __new_553
                                               ));
                                               let pm = ResolvedModule.getParsed m in (
                                                 ignore (if HxModuleDecl.getHeaderOnly (ParsedModule.getDecl pm ()) then ignore (headerOnlyCount := HxInt.add (!headerOnlyCount) 1) else ());
@@ -2529,9 +2538,9 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                                     ignore (unsupportedFileIndex := HxInt.add (!unsupportedFileIndex) 1);
                                                     if traceUnsupported then ignore (let cls = HxModuleDecl.getMainClass (ParsedModule.getDecl pm ()) in (
                                                       ignore (let _g2 = ref 0 in let _g1 = HxClassDecl.getFunctions cls in try while !_g2 < HxArray.length _g1 do try ignore (let fn = HxArray.get _g1 (!_g2) in (
-                                                        ignore (let __old_552 = !_g2 in let __new_553 = HxInt.add __old_552 1 in (
-                                                          ignore (_g2 := __new_553);
-                                                          __new_553
+                                                        ignore (let __old_554 = !_g2 in let __new_555 = HxInt.add __old_554 1 in (
+                                                          ignore (_g2 := __new_555);
+                                                          __new_555
                                                         ));
                                                         let fnUnsupported = countUnsupportedExprsInFunction fn in (
                                                           ignore (if fnUnsupported <= 0 then raise (HxRuntime.Hx_continue) else ());
@@ -2543,17 +2552,17 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                                         | HxRuntime.Hx_continue -> () done with
                                                         | HxRuntime.Hx_break -> ());
                                                       let _g2 = ref 0 in let _g1 = collectUnsupportedExprRawInModule pm 20 in try while !_g2 < HxArray.length _g1 do try ignore (let raw = HxArray.get _g1 (!_g2) in (
-                                                        ignore (let __old_554 = !_g2 in let __new_555 = HxInt.add __old_554 1 in (
-                                                          ignore (_g2 := __new_555);
-                                                          __new_555
+                                                        ignore (let __old_556 = !_g2 in let __new_557 = HxInt.add __old_556 1 in (
+                                                          ignore (_g2 := __new_557);
+                                                          __new_557
                                                         ));
                                                         let escaped = escapeOneLine raw in let tempNumber1 = ref 0 in (
-                                                          ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_556 = 0 in (
-                                                            tempNumber1 := __assign_556;
-                                                            __assign_556
-                                                          ) else let __assign_557 = HxString.length raw in (
-                                                            tempNumber1 := __assign_557;
-                                                            __assign_557
+                                                          ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_558 = 0 in (
+                                                            tempNumber1 := __assign_558;
+                                                            __assign_558
+                                                          ) else let __assign_559 = HxString.length raw in (
+                                                            tempNumber1 := __assign_559;
+                                                            __assign_559
                                                           ));
                                                           ignore (print_endline ((((((("unsupported_expr[" ^ string_of_int (!unsupportedRawCount)) ^ "]=") ^ HxString.toStdString (ResolvedModule.getFilePath m)) ^ ":raw=") ^ HxString.toStdString escaped) ^ " len=") ^ string_of_int (!tempNumber1)));
                                                           ignore (unsupportedRawCount := HxInt.add (!unsupportedRawCount) 1);
@@ -2569,9 +2578,9 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                             )) done);
                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                               ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                              let __assign_558 = Obj.magic (HxRuntime.hx_null) in (
-                                                macroSession := __assign_558;
-                                                __assign_558
+                                              let __assign_560 = Obj.magic (HxRuntime.hx_null) in (
+                                                macroSession := __assign_560;
+                                                __assign_560
                                               )
                                             )) else ());
                                             ignore (print_endline ("typed_modules=" ^ string_of_int (HxArray.length typedModules)));
@@ -2582,27 +2591,14 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                             raise (HxRuntime.Hx_return (Obj.repr 0))
                                           )) else ());
                                           let tempString2 = ref "" in (
-                                            ignore (try let __assign_559 = EmitterStage.emitToDir expanded outAbs emitFullBodies in (
-                                              tempString2 := __assign_559;
-                                              __assign_559
+                                            ignore (try let __assign_561 = EmitterStage.emitToDir expanded outAbs emitFullBodies in (
+                                              tempString2 := __assign_561;
+                                              __assign_561
                                             ) with
                                               | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                               | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                                              | HxRuntime.Hx_return __ret_560 -> raise (HxRuntime.Hx_return __ret_560)
-                                              | HxRuntime.Hx_exception (__exn_v_561, __exn_tags_562) -> if true then let e = (__exn_v_561 : Obj.t) in (
-                                                ignore e;
-                                                (
-                                                  ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                    ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                                    let __assign_563 = Obj.magic (HxRuntime.hx_null) in (
-                                                      macroSession := __assign_563;
-                                                      __assign_563
-                                                    )
-                                                  )) else ());
-                                                  raise (HxRuntime.Hx_return (Obj.repr (error ("emit failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
-                                                )
-                                              ) else HxRuntime.hx_throw_typed __exn_v_561 __exn_tags_562
-                                              | __exn_564 -> if true then let e = (Obj.repr __exn_564 : Obj.t) in (
+                                              | HxRuntime.Hx_return __ret_562 -> raise (HxRuntime.Hx_return __ret_562)
+                                              | HxRuntime.Hx_exception (__exn_v_563, __exn_tags_564) -> if true then let e = (__exn_v_563 : Obj.t) in (
                                                 ignore e;
                                                 (
                                                   ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
@@ -2614,22 +2610,35 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
                                                   )) else ());
                                                   raise (HxRuntime.Hx_return (Obj.repr (error ("emit failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
                                                 )
-                                              ) else raise (__exn_564));
+                                              ) else HxRuntime.hx_throw_typed __exn_v_563 __exn_tags_564
+                                              | __exn_566 -> if true then let e = (Obj.repr __exn_566 : Obj.t) in (
+                                                ignore e;
+                                                (
+                                                  ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
+                                                    ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
+                                                    let __assign_567 = Obj.magic (HxRuntime.hx_null) in (
+                                                      macroSession := __assign_567;
+                                                      __assign_567
+                                                    )
+                                                  )) else ());
+                                                  raise (HxRuntime.Hx_return (Obj.repr (error ("emit failed: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)))))
+                                                )
+                                              ) else raise (__exn_566));
                                             ignore (print_endline "stage3=ok");
                                             ignore (print_endline ("outDir=" ^ HxString.toStdString outAbs));
                                             ignore (print_endline ("exe=" ^ HxString.toStdString (!tempString2)));
                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
                                               ignore (Hxhx_macro_MacroHostClient.macrohostsession_close (!macroSession) ());
-                                              let __assign_566 = Obj.magic (HxRuntime.hx_null) in (
-                                                macroSession := __assign_566;
-                                                __assign_566
+                                              let __assign_568 = Obj.magic (HxRuntime.hx_null) in (
+                                                macroSession := __assign_568;
+                                                __assign_568
                                               )
                                             )) else ());
                                             ignore (if noRun then ignore ((
                                               ignore (print_endline "run=skipped");
                                               raise (HxRuntime.Hx_return (Obj.repr 0))
                                             )) else ());
-                                            let code = HxSys.command (!tempString2) (Some (let __arr_567 = HxArray.create () in __arr_567)) in (
+                                            let code = HxSys.command (!tempString2) (Some (let __arr_569 = HxArray.create () in __arr_569)) in (
                                               ignore (if code <> 0 then raise (HxRuntime.Hx_return (Obj.repr (error ("built executable failed with exit code " ^ string_of_int code)))) else ());
                                               ignore (print_endline "run=ok");
                                               0
@@ -2656,19 +2665,19 @@ let runOne = fun args -> try let tempStruct = ref (Obj.magic ()) in (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_568 -> Obj.obj __ret_568
+  | HxRuntime.Hx_return __ret_570 -> Obj.obj __ret_570
 
 let findFlagValue = fun args a b -> try let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let t = HxArray.get args (!i) in (
     ignore (if (HxString.equals t a || HxString.equals t b) && HxInt.add (!i) 1 < HxArray.length args then raise (HxRuntime.Hx_return (Obj.repr (HxArray.get args (HxInt.add (!i) 1)))) else ());
-    let __old_581 = !i in let __new_582 = HxInt.add __old_581 1 in (
-      ignore (i := __new_582);
-      __old_581
+    let __old_583 = !i in let __new_584 = HxInt.add __old_583 1 in (
+      ignore (i := __new_584);
+      __old_583
     )
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) with
-  | HxRuntime.Hx_return __ret_583 -> Obj.obj __ret_583
+  | HxRuntime.Hx_return __ret_585 -> Obj.obj __ret_585
 
 let findManyFlagValues = fun args a b c -> let out = HxArray.create () in let i = ref 0 in (
   ignore (try while !i < HxArray.length args do try ignore (let t = HxArray.get args (!i) in let hx_match = HxString.equals t a || HxString.equals t b || c != Obj.magic (HxRuntime.hx_null) && HxString.equals t c in (
@@ -2677,9 +2686,9 @@ let findManyFlagValues = fun args a b c -> let out = HxArray.create () in let i 
       ignore (i := HxInt.add (!i) 2);
       raise (HxRuntime.Hx_continue)
     )) else ());
-    let __old_584 = !i in let __new_585 = HxInt.add __old_584 1 in (
-      ignore (i := __new_585);
-      __old_584
+    let __old_586 = !i in let __new_587 = HxInt.add __old_586 1 in (
+      ignore (i := __new_587);
+      __old_586
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
@@ -2691,31 +2700,31 @@ let summarizeArgs = fun args -> try let joined = HxArray.join args " " (fun x ->
   ignore (if HxString.length joined <= maxLen then raise (HxRuntime.Hx_return (Obj.repr joined)) else ());
   HxString.toStdString (HxString.substr joined 0 maxLen) ^ "..."
 ) with
-  | HxRuntime.Hx_return __ret_586 -> Obj.obj __ret_586
+  | HxRuntime.Hx_return __ret_588 -> Obj.obj __ret_588
 
 let run = fun args -> try let tempStruct = ref (Obj.magic ()) in (
-  ignore (try let __assign_569 = parseGlobalStage3Flags args in (
-    tempStruct := __assign_569;
-    __assign_569
+  ignore (try let __assign_571 = parseGlobalStage3Flags args in (
+    tempStruct := __assign_571;
+    __assign_571
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-    | HxRuntime.Hx_return __ret_570 -> raise (HxRuntime.Hx_return __ret_570)
-    | HxRuntime.Hx_exception (__exn_v_571, __exn_tags_572) -> if true then let e = (__exn_v_571 : Obj.t) in (
+    | HxRuntime.Hx_return __ret_572 -> raise (HxRuntime.Hx_return __ret_572)
+    | HxRuntime.Hx_exception (__exn_v_573, __exn_tags_574) -> if true then let e = (__exn_v_573 : Obj.t) in (
       ignore e;
       raise (HxRuntime.Hx_return (Obj.repr (error (HxRuntime.dynamic_toStdString e))))
-    ) else HxRuntime.hx_throw_typed __exn_v_571 __exn_tags_572
-    | __exn_573 -> if true then let e = (Obj.repr __exn_573 : Obj.t) in (
+    ) else HxRuntime.hx_throw_typed __exn_v_573 __exn_tags_574
+    | __exn_575 -> if true then let e = (Obj.repr __exn_575 : Obj.t) in (
       ignore e;
       raise (HxRuntime.Hx_return (Obj.repr (error (HxRuntime.dynamic_toStdString e))))
-    ) else raise (__exn_573));
+    ) else raise (__exn_575));
   let units = Hxhx_Hxml.expandArgsToUnits (Obj.obj (HxAnon.get (!tempStruct) "rest")) in (
     ignore (if units == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (error "failed to expand .hxml args (multi-unit)"))) else ());
     ignore (if HxArray.length units <= 1 then raise (HxRuntime.Hx_return (Obj.repr (runOne args))) else ());
     let _g = ref 0 in let _g1 = HxArray.length units in (
-      ignore (while !_g < _g1 do ignore (let idx = let __old_574 = !_g in let __new_575 = HxInt.add __old_574 1 in (
-        ignore (_g := __new_575);
-        __old_574
+      ignore (while !_g < _g1 do ignore (let idx = let __old_576 = !_g in let __new_577 = HxInt.add __old_576 1 in (
+        ignore (_g := __new_577);
+        __old_576
       ) in let u = HxArray.get units idx in let unitArgs = HxArray.create () in (
         ignore (if Obj.obj (HxAnon.get (!tempStruct) "typeOnly") then ignore (HxArray.push unitArgs "--hxhx-type-only") else ());
         ignore (if Obj.obj (HxAnon.get (!tempStruct) "noEmit") then ignore (HxArray.push unitArgs "--hxhx-no-emit") else ());
@@ -2727,19 +2736,19 @@ let run = fun args -> try let tempStruct = ref (Obj.magic ()) in (
         )) else ());
         let _g2 = ref 0 in (
           ignore (while !_g2 < HxArray.length u do ignore (let a = HxArray.get u (!_g2) in (
-            ignore (let __old_576 = !_g2 in let __new_577 = HxInt.add __old_576 1 in (
-              ignore (_g2 := __new_577);
-              __new_577
+            ignore (let __old_578 = !_g2 in let __new_579 = HxInt.add __old_578 1 in (
+              ignore (_g2 := __new_579);
+              __new_579
             ));
             HxArray.push unitArgs a
           )) done);
           ignore (if HxString.equals (HxSys.getEnv "HXHX_TRACE_UNITS") "1" then ignore (let main = findFlagValue u "-main" "--main" in let cp = findManyFlagValues u "-cp" "--class-path" "-p" in let tempMaybeString = ref (Obj.magic ()) in (
-            ignore (if main == Obj.magic (HxRuntime.hx_null) then let __assign_578 = "<none>" in (
-              tempMaybeString := __assign_578;
-              __assign_578
-            ) else let __assign_579 = main in (
-              tempMaybeString := __assign_579;
-              __assign_579
+            ignore (if main == Obj.magic (HxRuntime.hx_null) then let __assign_580 = "<none>" in (
+              tempMaybeString := __assign_580;
+              __assign_580
+            ) else let __assign_581 = main in (
+              tempMaybeString := __assign_581;
+              __assign_581
             ));
             print_endline ((((((("hxhx(stage3): unit_begin idx=" ^ string_of_int idx) ^ " main=") ^ HxString.toStdString (!tempMaybeString)) ^ " cp=") ^ HxString.toStdString (HxArray.join cp "," (fun x -> x))) ^ " args=") ^ HxString.toStdString (summarizeArgs u))
           )) else ());
@@ -2750,4 +2759,4 @@ let run = fun args -> try let tempStruct = ref (Obj.magic ()) in (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_580 -> Obj.obj __ret_580
+  | HxRuntime.Hx_return __ret_582 -> Obj.obj __ret_582

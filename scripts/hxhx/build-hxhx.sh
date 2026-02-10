@@ -14,6 +14,10 @@ HXHX_STAGE0_PREFER_NATIVE="${HXHX_STAGE0_PREFER_NATIVE:-0}"
 HXHX_STAGE0_TIMES="${HXHX_STAGE0_TIMES:-0}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
+HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-0}"
+HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
+HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
+HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
@@ -98,7 +102,75 @@ fi
     haxe_args+=(--times)
   fi
 
-  if ! "$HAXE_BIN" "${haxe_args[@]}"; then
+  run_stage0_build() {
+    if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
+      "$HAXE_BIN" "${haxe_args[@]}"
+      return
+    fi
+
+    log_file="$(mktemp -t hxhx-stage0-build.XXXXXX.log)"
+    echo "== Stage0 build command: $HAXE_BIN ${haxe_args[*]}" >&2
+    echo "== Stage0 build log: $log_file" >&2
+    "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
+    pid="$!"
+
+    interval="$HXHX_STAGE0_HEARTBEAT"
+    start_hb="$(date +%s)"
+    while kill -0 "$pid" >/dev/null 2>&1; do
+      sleep "$interval" || true
+      now="$(date +%s)"
+      child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
+      if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+        elapsed="$((now - start_hb))"
+        if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
+          echo "Stage0 build exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
+          kill -9 "$pid" >/dev/null 2>&1 || true
+          echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+          tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+          exit 1
+        fi
+      fi
+      rss_probe_pid="$pid"
+      if [ -n "$child_pid" ]; then
+        rss_probe_pid="$child_pid"
+      fi
+      rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      if [ -n "$rss_kb" ]; then
+        rss_mb="$((rss_kb / 1024))"
+        if [ -n "$child_pid" ]; then
+          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid" >&2
+        else
+          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid" >&2
+        fi
+      else
+        if [ -n "$child_pid" ]; then
+          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s pid=$pid child=$child_pid" >&2
+        else
+          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s pid=$pid" >&2
+        fi
+      fi
+      if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
+        if [ -s "$log_file" ]; then
+          echo "== Stage0 build log tail (last $HXHX_STAGE0_HEARTBEAT_TAIL_LINES lines):" >&2
+          tail -n "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" "$log_file" >&2 || true
+        else
+          echo "== Stage0 build log: (empty so far)" >&2
+        fi
+      fi
+    done
+
+    set +e
+    wait "$pid"
+    code="$?"
+    set -e
+    if [ "$code" != "0" ]; then
+      echo "Stage0 build failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+      tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+      exit "$code"
+    fi
+  }
+
+  if ! run_stage0_build; then
     if [ "$build_mode" = "native" ]; then
       echo "hxhx stage0 build: native failed; retrying bytecode (expected on some platforms; set HXHX_STAGE0_OCAML_BUILD=byte to skip native attempts)." >&2
       build_mode="byte"
@@ -132,7 +204,7 @@ fi
       if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
         haxe_args+=(--times)
       fi
-      "$HAXE_BIN" "${haxe_args[@]}"
+      run_stage0_build
     else
       exit 1
     fi

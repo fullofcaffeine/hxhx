@@ -68,6 +68,38 @@ private class _EmitterStageDebug {
 }
 
 class EmitterStage {
+	/**
+		The OCaml compilation unit we are currently emitting.
+
+		Why
+		- Haxe code commonly qualifies static calls with the defining type/module name, even
+		  inside that same module, e.g. `Lambda.flatten(Lambda.map(...))`.
+		- In OCaml, a compilation unit cannot refer to its own module name from within the
+		  unit itself. Emitting `Lambda.flatten` inside `Lambda.ml` is an "Unbound module"
+		  error and also causes `ocamldep -sort` to fail with a self-dependency cycle.
+
+		How
+		- `emitMainClass` sets this before emitting expressions and restores it after.
+		- `exprToOcaml` drops `ModName.` qualifiers when `ModName` matches this value.
+	**/
+	static var currentOcamlModuleName:Null<String> = null;
+
+	/**
+		Import-based rewrite for `Int64.<field>` in the current module.
+
+		Why
+		- Upstream Haxe commonly does `import haxe.Int64.*;` and then calls `Int64.mul(...)`.
+		- In OCaml, `Int64` is a stdlib module. Emitting `Int64.mul` therefore resolves to the
+		  wrong provider and fails typechecking.
+		- We intentionally avoid emitting an `Int64.ml` alias shim because it would shadow the
+		  OCaml stdlib.
+
+		How
+		- `emitMainClass` sets this to the imported provider module name (usually `Haxe_Int64`)
+		  and restores it after the unit is emitted.
+		- `exprToOcaml` consults it when lowering single-part type paths (`Int64.mul`).
+	**/
+	static var currentImportInt64:Null<String> = null;
 
 	public static function emit(_:MacroExpandedModule):Void {
 		// Stub: eventually write output files / bytecode.
@@ -103,16 +135,18 @@ class EmitterStage {
 			//   with the fields used by upstream (`fileName`, `lineNumber`, ...).
 			// - This is still bootstrap-only: values are often `Obj.magic` in bring-up code paths.
 			case "haxe.PosInfos", "PosInfos": "HxPosInfos.t";
-			// Stage 3 bring-up: enough structure for `haxe.Int64` callsites that destructure
-			// into `{ low, high }` (common in stdlib and upstream unit tests).
+			// Stage 3 bring-up: do not constrain `haxe.Int64` with a concrete OCaml type yet.
 			//
-			// Note
-			// - We intentionally name the shim module `Haxe_Int64` (not `HxInt64`) because:
-			//   - Static calls like `haxe.Int64.make(...)` lower to the module name derived from the
-			//     type path (`haxe.Int64` -> `Haxe_Int64`) in the Stage3 bootstrap emitter.
-			//   - Keeping the type module name aligned avoids "Unbound module Haxe_Int64" failures
-			//     when compiling stdlib code under the Stage3 emit runner.
-			case "haxe.Int64", "Int64": "Haxe_Int64.t";
+			// Why
+			// - Upstream unit code uses operator-overloaded Int64 expressions (`a / b`, `a * 7`, ...)
+			//   which our bootstrap typer/emitter does not model correctly yet.
+			// - Emitting a concrete OCaml type here (`Haxe_Int64.t`) often forces type errors when
+			//   the emitter temporarily lowers these operations through `float`/`int` operators.
+			//
+			// We still generate an `Haxe_Int64` provider module for the *static functions* (make/sub/...)
+			// so name resolution succeeds, but we keep the type annotation as `_` to let the OCaml
+			// compiler infer a permissive type.
+			case "haxe.Int64", "Int64": "_";
 			// Stage 3: anything else is unknown; avoid making up a type.
 			case _: "_";
 		}
@@ -381,22 +415,6 @@ class EmitterStage {
 					return t == null ? "" : t.toString();
 				}
 
-			function isFloatExpr(expr:HxExpr):Bool {
-				return switch (expr) {
-					case EFloat(_):
-						true;
-					case EIdent(name):
-						tyForIdent(name) == "Float";
-					case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*" || op == "/"):
-						// Best-effort: propagate float-ness through arithmetic.
-						isFloatExpr(a) || isFloatExpr(b);
-					case ETernary(_cond, thenExpr, elseExpr):
-						isFloatExpr(thenExpr) && isFloatExpr(elseExpr);
-					case _:
-						false;
-				}
-			}
-
 			function isIntExpr(expr:HxExpr):Bool {
 				return switch (expr) {
 					case EInt(_):
@@ -413,11 +431,43 @@ class EmitterStage {
 				}
 			}
 
-			function isStringExpr(expr:HxExpr):Bool {
+			function isFloatExpr(expr:HxExpr):Bool {
 				return switch (expr) {
-					case EString(_):
+					case EFloat(_):
 						true;
 					case EIdent(name):
+						tyForIdent(name) == "Float";
+					case EBinop("/", a, b):
+						// Division yields Float for numeric Int/Float operands in Haxe.
+						// For non-numeric/abstract cases we collapse emission to bring-up poison, so
+						// we only treat it as float-ish when both sides look numeric.
+						isFloatExpr(a) || isFloatExpr(b) || (isIntExpr(a) && isIntExpr(b));
+					case EBinop(op, a, b) if (op == "+" || op == "-" || op == "*"):
+						// Best-effort: propagate float-ness through arithmetic.
+						isFloatExpr(a) || isFloatExpr(b);
+					case ETernary(_cond, thenExpr, elseExpr):
+						isFloatExpr(thenExpr) && isFloatExpr(elseExpr);
+					case _:
+						false;
+				}
+			}
+
+				function isStringExpr(expr:HxExpr):Bool {
+					return switch (expr) {
+						case EString(_):
+							true;
+						case ECall(EField(EIdent("Std"), "string"), _):
+							// `Std.string(...)` is the canonical "stringify anything" helper in Haxe.
+							// Treat it as string-y so `Std.string(a) + Std.string(b)` lowers to `^`.
+							true;
+						case ECall(EField(_obj, "toString"), []):
+							// `x.toString()` always yields a string in Haxe.
+							true;
+						case ECall(EField(EIdent("StringTools"), "hex"), _):
+							// Stage 3 bring-up: treat `StringTools.hex(...)` as string-y so `+` concatenations
+							// lower to OCaml `^` instead of numeric `+`.
+							true;
+						case EIdent(name):
 						tyForIdent(name) == "String";
 					case EBinop("+", a, b):
 						// String concatenation is represented as `+` in Haxe, but Stage3 typing info is often
@@ -476,6 +526,9 @@ class EmitterStage {
 				return switch (expr) {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
+					case EUnop("-", inner):
+						// Make sure negative int literals become floats in float contexts.
+						"(-.(" + exprToOcamlAsFloatValue(inner) + "))";
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlValueIdent(name);
 					case _:
@@ -639,6 +692,16 @@ class EmitterStage {
 					+ "let __i = (" + i2 + ") in "
 					+ "if (__i < 0) || (__i >= String.length __s) then (-1) else (Char.code (String.get __s __i)))";
 
+				// Stage 3 bring-up: `StringTools.hex(n)` is used in upstream unit code but our
+				// bootstrap emitter doesn't model optional parameters.
+				//
+				// Haxe: `hex(n, ?digits)` defaults `digits` to 0.
+				// OCaml: we emit a fixed-arity `StringTools.hex n digits`, so supply `0` when omitted.
+				case ECall(EField(EIdent("StringTools"), "hex"), [n]):
+					"StringTools.hex ("
+					+ exprToOcaml(n, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ ") (0)";
+
 					case ECall(EField(EIdent("StringTools"), "replace"), [_s, _sub, _by]):
 					// Bring-up: avoid needing a real `StringTools` implementation in the Stage3 emitter output.
 					escapeOcamlString("");
@@ -646,6 +709,10 @@ class EmitterStage {
 				case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
 					// Bring-up: type tests require RTTI/runtime; keep compilation moving.
 					"true";
+				case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
+					// Bring-up: `Std.downcast` requires RTTI/class objects. We don't model those in the
+					// Stage3 emitter output yet, so collapse to `null`.
+					"(Obj.magic HxRuntime.hx_null)";
 
 				// Bring-up: extension-method style filesystem calls (via `using sys.FileSystem`) appear
 				// in macro code. The Stage3 emitter doesn't implement `using`, so we rewrite these
@@ -801,37 +868,53 @@ class EmitterStage {
 					final parts = tryExtractTypePathPartsFromExpr(obj);
 					if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
 						var modName = ocamlModuleNameFromTypePathParts(parts);
-						// If the type path is unqualified (`Util.foo()`), prefer resolving it within the
+						// If the type path is relative to the current package, prefer resolving it within the
 						// current package (or its parent packages) when we know a matching emitted module exists.
 						//
 						// Example:
 						// - Haxe: `package demo; class A { static function f() Util.ping(); }`
 						// - OCaml: `Demo_Util.ping ()` (not `Util.ping ()`)
 						//
+						// Also covers module-local helper types referenced as `Module.Helper`:
+						// - Haxe: `package unit; ... MyMacro.MyRestMacro.testRest1(...)`
+						// - OCaml: `Unit_MyMacro_MyRestMacro.testRest1 ...`
+						//
 						// Upstream also resolves unqualified type names by walking up parent packages.
 						// Example:
 						// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
 						//   even without an explicit import.
-						if (parts.length == 1 && currentPackagePath != null && currentPackagePath.length > 0 && moduleNameByPkgAndClass != null) {
-							var cur = currentPackagePath;
+						if (moduleNameByPkgAndClass != null) {
+							final raw = parts.join(".");
+							var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
 							while (true) {
-								final key = cur + ":" + parts[0];
+								final key = cur + ":" + raw;
 								final local = moduleNameByPkgAndClass.get(key);
 								if (local != null && local.length > 0) {
 									modName = local;
 									break;
 								}
+								if (cur.length == 0) break;
 								final lastDot = cur.lastIndexOf(".");
-								if (lastDot < 0) break;
-								cur = cur.substr(0, lastDot);
+								cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
 							}
 						}
-						modName + "." + ocamlValueIdent(field);
+						// Import-based resolution for type short names that would otherwise collide
+						// with OCaml stdlib modules.
+						//
+						// Example (upstream unit suite):
+						// - Haxe: `import haxe.Int64.*; Int64.mul(a, b);`
+						// - OCaml: `Haxe_Int64.mul a b` (not `Int64.mul a b` from stdlib)
+						if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0) {
+							modName = currentImportInt64;
+						}
+						(currentOcamlModuleName != null && modName == currentOcamlModuleName)
+							? ocamlValueIdent(field)
+							: (modName + "." + ocamlValueIdent(field));
 					} else {
 						"(Obj.magic 0)";
 					}
-				case ECall(EIdent("__ocaml__"), [arg]):
-					// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
+					case ECall(EIdent("__ocaml__"), [arg]):
+						// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
 					//
 					// Why
 					// - Some bring-up binaries (macro host, display server) need small pieces of direct OCaml I/O
@@ -844,12 +927,29 @@ class EmitterStage {
 					//
 					// Safety
 					// - Only constant-foldable strings are accepted. Anything dynamic collapses to bring-up poison.
-					final code = constFoldString(arg);
-					code == null ? "(Obj.magic 0)" : ("(" + code + ")");
+						final code = constFoldString(arg);
+						code == null ? "(Obj.magic 0)" : ("(" + code + ")");
 					case ECall(callee, args):
-					// Stage 3 bring-up: avoid partial applications when Haxe calls a function
-					// with omitted optional/default parameters.
-				//
+						// Stage 3 bring-up safety: enum-like tags are lowered as strings (`EEnumValue`),
+						// which is fine when used as *values* (e.g. in switches) but invalid when used as
+						// call targets.
+						//
+						// Example (upstream std macros):
+						// - `TPath({...})` in `haxe.macro.MacroStringTools` is an enum constructor call.
+						// - Our parser may classify `TPath` as `EEnumValue("TPath")`, which would emit as
+						//   `"TPath" (...)` and fail OCaml typechecking.
+						//
+						// Until we model real enum constructors in the typed AST, collapse such calls to a
+						// bootstrap escape hatch so the module can still compile.
+						switch (callee) {
+							case EEnumValue(_):
+								return "(Obj.magic 0)";
+							case _:
+						}
+
+						// Stage 3 bring-up: avoid partial applications when Haxe calls a function
+						// with omitted optional/default parameters.
+					//
 				// Example (stdlib):
 				// - `Bytes.readString(pos, len)` calls `getString(pos, len)` where `getString` is declared
 				//   as `getString(pos, len, ?encoding)`.
@@ -1234,6 +1334,38 @@ class EmitterStage {
 					} else {
 								final sig = (callSigByCallee == null) ? null : callSigByCallee.get(c);
 
+						// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
+						//
+						// Why
+						// - Our bootstrap frontend does not always recover accurate parameter lists for
+						//   complex Haxe signatures (notably `@:generic` with constrained type params).
+						// - When we under-count arity, OCaml compilation fails hard with:
+						//     "This function has type ... It is applied to too many arguments"
+						//
+						// Strategy
+						// - If we have a known signature and the call site passes *more* args than the
+						//   function can accept (and it is not a rest-arg function), collapse the call
+						//   to bring-up poison rather than emitting invalid OCaml.
+						if (sig != null && !sig.hasRest && args.length > sig.expected) {
+							return "(Obj.magic 0)";
+						}
+						// Also guard against mismatches between parsed call signatures and the *emitted*
+						// function arity for this module.
+						//
+						// Why
+						// - `callSigByCallee` is derived from the parsed surface (and can be more complete),
+						//   but the Stage3 typed environment may intentionally degrade or drop parameters for
+						//   unsupported signatures.
+						// - If we emit `let rec f () = ...` (arity 0) but keep call sites as `f a b`, OCaml
+						//   fails with "applied to too many arguments".
+						//
+						// Rule
+						// - When the callee is an unqualified in-module identifier and we have a recorded arity,
+						//   collapse over-applications to bring-up poison (unless we know it is a rest-arg call).
+						if (arityByIdent != null && arityByIdent.exists(c) && args.length > arityByIdent.get(c)) {
+							if (sig == null || !sig.hasRest) return "(Obj.magic 0)";
+						}
+
 						// Rest-args lowering (Stage3 bring-up)
 						//
 						// Haxe: `function f(a:Int, ...rest:String)` has a single rest parameter which can be
@@ -1269,14 +1401,39 @@ class EmitterStage {
 							if (missingCount == 0 && sig != null) {
 								final expected = sig.expected;
 								if (expected > args.length) missingCount = expected - args.length;
-							}
+								}
+	
+								var fullArgs = args.copy();
 
-							var fullArgs = args.copy();
+								// Stage 3 bring-up: upstream often passes `pos` as the last argument to APIs declared
+								// as `(required..., ?msg:String, ?pos:haxe.PosInfos)`, relying on Haxe's optional-arg
+								// skipping to interpret `f(x, pos)` as `f(x, null, pos)`.
+								//
+								// Our bootstrap typer/emitter does not model that unification yet. To keep OCaml output
+								// type-correct, we insert missing args as `null` immediately *before* a trailing `pos`
+								// identifier when we have a signature for the callee.
+								if (sig != null && sig.expected > fullArgs.length && fullArgs.length > 0) {
+									final last = fullArgs[fullArgs.length - 1];
+									final isTrailingPos = switch (last) {
+										case EIdent("pos"): true;
+										case _: false;
+									};
+									if (isTrailingPos) {
+										final missingBefore = sig.expected - fullArgs.length;
+										final adjusted = new Array<HxExpr>();
+										final prefixLen = fullArgs.length - 1;
+										for (i in 0...prefixLen) adjusted.push(fullArgs[i]);
+										for (_ in 0...missingBefore) adjusted.push(ENull);
+										adjusted.push(last);
+										fullArgs = adjusted;
+										missingCount = 0;
+									}
+								}
 
-							// Stage 3 bring-up: emulate upstream optional-arg "skipping" for a small set of
-							// Gate2 harness calls that intentionally pass a later argument type.
-							//
-							// Example (upstream runci):
+								// Stage 3 bring-up: emulate upstream optional-arg "skipping" for a small set of
+								// Gate2 harness calls that intentionally pass a later argument type.
+								//
+								// Example (upstream runci):
 							// - `haxelibInstallGit(account, repo, true)` is accepted by Haxe even though the
 							//   third parameter is `?branch:String`. Haxe effectively interprets this as:
 							//     `haxelibInstallGit(account, repo, null, null, true, null)`
@@ -1330,35 +1487,60 @@ class EmitterStage {
 				// intentionally only support operators that are unambiguous enough for our
 				// bring-up fixtures (primarily `Int` + boolean comparisons).
 					final la = exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-					final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-					function exprToOcamlAsFloat(e:HxExpr):String {
-						// Best-effort numeric coercion: when Haxe mixes Int/Float, it promotes to Float.
-						return switch (e) {
-							case EInt(v):
-								"float_of_int " + Std.string(v);
-								case EIdent(name)
-									if (tyByIdent != null
-										&& tyByIdent.get(name) != null
-										&& tyByIdent.get(name).toString() == "Int"):
-									"float_of_int " + ocamlValueIdent(name);
-							case _:
-								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						final rb = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						function exprToOcamlAsFloat(e:HxExpr):String {
+							// Best-effort numeric coercion: when Haxe mixes Int/Float, it promotes to Float.
+							return switch (e) {
+								case EInt(v):
+									"float_of_int " + Std.string(v);
+								case EUnop("-", inner):
+									// Promote negative int literals/expressions to float too.
+									"(-.(" + exprToOcamlAsFloat(inner) + "))";
+									case EIdent(name)
+										if (tyByIdent != null
+											&& tyByIdent.get(name) != null
+											&& tyByIdent.get(name).toString() == "Int"):
+										"float_of_int " + ocamlValueIdent(name);
+								case _:
+									exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							}
 						}
-					}
 					switch (op) {
 						case "+" if (isStringExpr(a) || isStringExpr(b)):
 							"((" + exprToOcamlForConcat(a) + ") ^ (" + exprToOcamlForConcat(b) + "))";
-						case "+" | "-" | "*" | "/" | "%":
-							// Best-effort numeric lowering:
-							// - if both sides look like floats, use OCaml float operators,
-							// - if both sides look like ints, use OCaml int operators,
-						// - otherwise, collapse to bring-up poison to avoid type errors.
+						case "/":
+							// Bring-up compromise:
+							// - When both sides look numeric (`Int`/`Float`), follow Haxe and emit float division.
+							// - Otherwise, collapse to bring-up poison to avoid type errors for abstract/operator-
+							//   overloaded cases (e.g. upstream Int64 tests).
 							final aIsF = isFloatExpr(a);
 							final bIsF = isFloatExpr(b);
 							final aIsI = isIntExpr(a);
 							final bIsI = isIntExpr(b);
-							final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
-							if ((aIsF || bIsF) && canFloat) {
+							((aIsF || bIsF) || (aIsI && bIsI))
+								? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))"
+								: "(Obj.magic 0)";
+							case "+" | "-" | "*" | "%":
+								// Best-effort numeric lowering:
+								// - if both sides look like floats, use OCaml float operators,
+								// - if both sides look like ints, use OCaml int operators,
+							// - otherwise, collapse to bring-up poison to avoid type errors.
+								final aIsF = isFloatExpr(a);
+								final bIsF = isFloatExpr(b);
+								final aIsI = isIntExpr(a);
+								final bIsI = isIntExpr(b);
+								final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
+								if (op == "%") {
+									if (aIsF || bIsF) {
+										final fa = exprToOcamlAsFloat(a);
+										final fb = exprToOcamlAsFloat(b);
+										"(mod_float (" + fa + ") (" + fb + "))";
+									} else if (aIsI && bIsI) {
+										"((" + la + ") mod (" + rb + "))";
+									} else {
+										"(Obj.magic 0)";
+									}
+								} else if ((aIsF || bIsF) && canFloat) {
 								final fop = switch (op) {
 									case "+": "+.";
 									case "-": "-.";
@@ -1366,14 +1548,14 @@ class EmitterStage {
 									case "/": "/.";
 									case _: op;
 								}
-								final fa = exprToOcamlAsFloat(a);
-								final fb = exprToOcamlAsFloat(b);
-								"((" + fa + ") " + fop + " (" + fb + "))";
-							} else if ((aIsI && bIsI) || (!aIsF && !bIsF)) {
-								"((" + la + ") " + op + " (" + rb + "))";
-							} else {
-								"(Obj.magic 0)";
-							}
+									final fa = exprToOcamlAsFloat(a);
+									final fb = exprToOcamlAsFloat(b);
+									"((" + fa + ") " + fop + " (" + fb + "))";
+								} else if (aIsI && bIsI) {
+									"((" + la + ") " + op + " (" + rb + "))";
+								} else {
+									"(Obj.magic 0)";
+								}
 						case "==":
 							if (isFloatExpr(a) || isFloatExpr(b)) {
 								"((" + exprToOcamlAsFloat(a) + ") = (" + exprToOcamlAsFloat(b) + "))";
@@ -1450,12 +1632,18 @@ class EmitterStage {
 										tyByIdent;
 								};
 							final body = exprToOcaml(c.expr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+							// Switch expressions can legitimately unify unrelated branch types in Haxe
+							// (e.g. `case OpAdd: Int`, `case OpEq: Bool`), but OCaml requires a single
+							// expression type for the whole `if ... then ... else ...` chain.
+							//
+							// Bring-up strategy: cast each branch to `Obj.t` to keep emission resilient.
+							final bodyAsDynamic = "(Obj.magic (" + body + "))";
 							final thenExpr =
 								switch (c.pattern) {
 									case PBind(name):
-										"(let " + ocamlValueIdent(name) + " = __sw in (" + body + "))";
+										"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
 									case _:
-										"(" + body + ")";
+										"(" + bodyAsDynamic + ")";
 								};
 						final cond = patternCond(c.pattern);
 						chain = "(if " + cond + " then " + thenExpr + " else (" + chain + "))";
@@ -1479,7 +1667,13 @@ class EmitterStage {
 					final elems = values == null || values.length == 0
 						? ""
 						: values
-							.map(v -> exprToOcaml(v, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass))
+							// Use `Obj.magic` per element so mixed-type array literals (common in upstream tests,
+							// e.g. `[1, "hello"]`) remain OCaml-typecheckable during bring-up.
+							.map(v ->
+								"(Obj.magic ("
+								+ exprToOcaml(v, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+								+ "))"
+							)
 							.join("; ");
 					"HxBootArray.of_list [" + elems + "]";
 				case EArrayAccess(arr, idx):
@@ -1713,14 +1907,134 @@ class EmitterStage {
 			?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>,
-			?callSigByCallee:Map<String, EmitterCallSig>
+			?callSigByCallee:Map<String, EmitterCallSig>,
+			?localTypeHints:Map<String, TyType>,
+			?fnReturnTypes:Map<String, TyType>
 		):String {
-		if (stmts == null || stmts.length == 0) return "()";
+			if (stmts == null || stmts.length == 0) return "()";
 
-		function stmtAlwaysReturns(s:HxStmt):Bool {
-			return switch (s) {
-				case SReturnVoid(_), SReturn(_, _):
-					true;
+			// Stage 3 bring-up: merge any precomputed local type hints with a tiny, local
+			// initializer-based inference pass so later statements can emit more correct OCaml.
+			//
+			// Example (upstream unit/TestNaN.hx):
+			// - `var a = foo(); if (a > 0) ...`
+			// - Even if the typer can't infer `a` from the call site, we can approximate it
+			//   from the known return type of `foo` in the same module.
+			final localHints:Map<String, TyType> = new Map();
+			if (localTypeHints != null) for (k in localTypeHints.keys()) localHints.set(k, localTypeHints.get(k));
+
+			function inferInitType(e:HxExpr):TyType {
+				if (e == null) return TyType.unknown();
+				return switch (e) {
+					case EFloat(_):
+						TyType.fromHintText("Float");
+					case EInt(_):
+						TyType.fromHintText("Int");
+					case EString(_):
+						TyType.fromHintText("String");
+					case EBool(_):
+						TyType.fromHintText("Bool");
+					case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY" | "PI"):
+						TyType.fromHintText("Float");
+					case ECall(EIdent(fn), _args) if (fnReturnTypes != null && fnReturnTypes.get(fn) != null):
+						fnReturnTypes.get(fn);
+					case _:
+						TyType.unknown();
+				}
+			}
+
+			function seedLocalHintsFromStmts(ss:Array<HxStmt>):Void {
+				if (ss == null) return;
+				for (s in ss) {
+					switch (s) {
+						case SVar(name, _hint, init, _pos):
+							if (name == null || name.length == 0) continue;
+							final existing = localHints.get(name);
+							final inferred = inferInitType(init);
+							if (existing == null || (existing.isUnknown() && !inferred.isUnknown())) {
+								localHints.set(name, inferred);
+							}
+						case _:
+					}
+				}
+			}
+
+			seedLocalHintsFromStmts(stmts);
+
+			/**
+				Stage 3 bring-up: compute statement-local "vars in scope before this statement".
+
+				Why
+				- We lower Haxe `var x = ...;` as nested OCaml `let x = ... in ...`.
+				- OCaml scope is lexical: `x` only exists in the remainder wrapped by the `let`.
+				- If we pre-mark all locals as "bound" for the whole function, early references
+				  to a later `var x = ...` will emit `x` and fail OCaml compilation with
+				  "Unbound value x".
+
+				What
+				- For the current statement list, track which `SVar` names are in scope before
+				  each statement index.
+
+				How (bootstrap constraints)
+				- Only `SVar` declarations in this statement list affect following statements.
+				  Declarations inside nested blocks are handled by the recursive `stmtListToOcaml`
+				  calls.
+			**/
+			function localsInScopeBefore(stmts:Array<HxStmt>):Array<Map<String, Bool>> {
+				final before = new Array<Map<String, Bool>>();
+				final cur:Map<String, Bool> = new Map();
+
+				function cloneMap(m:Map<String, Bool>):Map<String, Bool> {
+					final out:Map<String, Bool> = new Map();
+					for (k in m.keys()) out.set(k, m.get(k));
+					return out;
+				}
+
+				if (stmts == null) return before;
+				for (s in stmts) {
+					before.push(cloneMap(cur));
+					switch (s) {
+						case SVar(name, _hint, _init, _pos):
+							if (name != null && name.length > 0) cur.set(name, true);
+						case _:
+					}
+				}
+				return before;
+			}
+
+			function extendTyWithLocals(base:Null<Map<String, TyType>>, locals:Null<Map<String, Bool>>):Map<String, TyType> {
+				if (locals == null) return base == null ? new Map() : base;
+				var any = false;
+				for (_k in locals.keys()) {
+					any = true;
+					break;
+				}
+				if (!any) return base == null ? new Map() : base;
+
+				final out:Map<String, TyType> = new Map();
+				if (base != null) for (k in base.keys()) out.set(k, base.get(k));
+				for (name in locals.keys()) {
+					if (out.get(name) == null) {
+						final hinted = localHints.get(name);
+						out.set(name, hinted != null ? hinted : TyType.unknown());
+					}
+				}
+				return out;
+			}
+
+			function extendTyByIdentLocal(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+				final out:Map<String, TyType> = new Map();
+				if (ty != null) for (k in ty.keys()) out.set(k, ty.get(k));
+				out.set(name, t);
+				return out;
+			}
+
+			final localsBefore = localsInScopeBefore(stmts);
+
+			function stmtAlwaysReturns(s:HxStmt):Bool {
+				return switch (s) {
+					case SReturnVoid(_), SReturn(_, _):
+						true;
 				case SIf(_cond, thenBranch, elseBranch, _):
 					elseBranch != null && stmtAlwaysReturns(thenBranch) && stmtAlwaysReturns(elseBranch);
 				case SSwitch(_scrutinee, cases, _):
@@ -1748,11 +2062,11 @@ class EmitterStage {
 			}
 		}
 
-		function condToOcamlBool(e:HxExpr):String {
-			inline function boolOrTrue(s:String):String {
-				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
-				// In a condition position we prefer "always true" over emitting an unbound identifier
-				// that would abort OCaml compilation.
+			function condToOcamlBool(e:HxExpr, tyCtx:Null<Map<String, TyType>>):String {
+				inline function boolOrTrue(s:String):String {
+					// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
+					// In a condition position we prefer "always true" over emitting an unbound identifier
+					// that would abort OCaml compilation.
 				return s == "(Obj.magic 0)" ? "true" : s;
 			}
 
@@ -1760,48 +2074,50 @@ class EmitterStage {
 				case EBool(v):
 					v ? "true" : "false";
 					case EUnop("!", _):
-							boolOrTrue(
-								returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							);
-					case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
-							boolOrTrue(
-								returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							);
-				case _:
-					// Conservative default: we do not have real typing for conditions yet.
-					// Keep bring-up resilient by treating unknown conditions as true.
+								boolOrTrue(
+									returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+								);
+						case EBinop(op, _, _) if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||"):
+								boolOrTrue(
+									returnExprToOcaml(e, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+								);
+					case _:
+						// Conservative default: we do not have real typing for conditions yet.
+						// Keep bring-up resilient by treating unknown conditions as true.
 					"true";
 			};
 		}
 
-		function stmtToUnit(s:HxStmt):String {
-			return switch (s) {
-				case SBlock(ss, _pos):
-					stmtListToOcaml(
-						ss,
-						allowedValueIdents,
-						returnExc,
-						arityByIdent,
-						tyByIdent,
-						staticImportByIdent,
-						currentPackagePath,
-						moduleNameByPkgAndClass,
-						callSigByCallee
-					);
-				case SVar(_name, _typeHint, _init, _pos):
-					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
-					"()";
-				case SSwitch(scrutinee, cases, _pos):
-					final sw =
-						exprToOcaml(
-							scrutinee,
+			function stmtToUnit(s:HxStmt, tyCtx:Null<Map<String, TyType>>):String {
+				return switch (s) {
+					case SBlock(ss, _pos):
+						stmtListToOcaml(
+							ss,
+							allowedValueIdents,
+							returnExc,
 							arityByIdent,
-							tyByIdent,
+							tyCtx,
 							staticImportByIdent,
 							currentPackagePath,
 							moduleNameByPkgAndClass,
-							callSigByCallee
+							callSigByCallee,
+							localHints,
+							fnReturnTypes
 						);
+					case SVar(_name, _typeHint, _init, _pos):
+						// Handled at the list level because it needs to wrap the remainder with `let ... in`.
+						"()";
+					case SSwitch(scrutinee, cases, _pos):
+						final sw =
+							exprToOcaml(
+								scrutinee,
+								arityByIdent,
+								tyCtx,
+								staticImportByIdent,
+								currentPackagePath,
+								moduleNameByPkgAndClass,
+								callSigByCallee
+							);
 					function patternCond(p:HxSwitchPattern):String {
 						return switch (p) {
 							case POr(patterns):
@@ -1824,120 +2140,141 @@ class EmitterStage {
 								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
 						};
 					}
-					var chain = "()";
-					if (cases != null) {
-						for (i in 0...cases.length) {
-							final c = cases[cases.length - 1 - i];
-							final bodyUnit = stmtToUnit(c.body);
-							final thenUnit =
-								switch (c.pattern) {
-									case PBind(name):
-										"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
-									case _:
-										"(" + bodyUnit + ")";
-								};
-							final cond = patternCond(c.pattern);
-							chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
+						var chain = "()";
+						if (cases != null) {
+							for (i in 0...cases.length) {
+								final c = cases[cases.length - 1 - i];
+								final caseTy =
+									switch (c.pattern) {
+										case PBind(name):
+											extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
+										case _:
+											tyCtx;
+									};
+								final bodyUnit = stmtToUnit(c.body, caseTy);
+								final thenUnit =
+									switch (c.pattern) {
+										case PBind(name):
+											"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
+										case _:
+											"(" + bodyUnit + ")";
+									};
+								final cond = patternCond(c.pattern);
+								chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
+							}
 						}
-					}
-					"(let __sw = (" + sw + ") in " + chain + ")";
-				case SIf(cond, thenBranch, elseBranch, _pos):
-					final thenUnit = stmtToUnit(thenBranch);
-					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch);
-					"if " + condToOcamlBool(cond) + " then (" + thenUnit + ") else (" + elseUnit + ")";
-				case SForIn(name, iterable, body, _pos):
-					final ident = ocamlValueIdent(name);
-					final bodyUnit = stmtToUnit(body);
-					switch (iterable) {
-						case ERange(startExpr, endExpr):
-							final start =
-								exprToOcaml(
-									startExpr,
-									arityByIdent,
-									tyByIdent,
-									staticImportByIdent,
-									currentPackagePath,
-									moduleNameByPkgAndClass,
-									callSigByCallee
-								);
-							final end =
-								exprToOcaml(
-									endExpr,
-									arityByIdent,
-									tyByIdent,
-									staticImportByIdent,
-									currentPackagePath,
-									moduleNameByPkgAndClass,
-									callSigByCallee
-								);
+						"(let __sw = (" + sw + ") in " + chain + ")";
+					case SIf(cond, thenBranch, elseBranch, _pos):
+						final thenUnit = stmtToUnit(thenBranch, tyCtx);
+						final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
+						final condS = condToOcamlBool(cond, tyCtx);
+						// Avoid typechecking dead branches in bring-up:
+						// - Unknown conditions are lowered as `true` by default.
+						// - Keeping the unused branch can still constrain types and break compilation
+						//   (e.g. forcing a param to `Obj.t` due to a dead `Std.string` call).
+						if (condS == "true") {
+							"(" + thenUnit + ")";
+						} else if (condS == "false") {
+							"(" + elseUnit + ")";
+						} else {
+							"if " + condS + " then (" + thenUnit + ") else (" + elseUnit + ")";
+						}
+						case SForIn(name, iterable, body, _pos):
+						final ident = ocamlValueIdent(name);
+						final bodyTy = extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
+						final bodyUnit = stmtToUnit(body, bodyTy);
+						switch (iterable) {
+							case ERange(startExpr, endExpr):
+								final start =
+									exprToOcaml(
+										startExpr,
+										arityByIdent,
+										tyCtx,
+										staticImportByIdent,
+										currentPackagePath,
+										moduleNameByPkgAndClass,
+										callSigByCallee
+									);
+								final end =
+									exprToOcaml(
+										endExpr,
+										arityByIdent,
+										tyCtx,
+										staticImportByIdent,
+										currentPackagePath,
+										moduleNameByPkgAndClass,
+										callSigByCallee
+									);
 							"(let __start = (" + start + ") in "
 							+ "let __end = (" + end + ") in "
 							+ "if (__end <= __start) then () else ("
 							+ "for " + ident + " = __start to (__end - 1) do "
 							+ bodyUnit
-							+ " done))";
-							case _:
-								"HxBootArray.iter ("
-								+ exprToOcaml(iterable, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-								+ ") (fun " + ident + " -> " + bodyUnit + ")";
-					}
-				case SReturnVoid(_pos):
-					"raise (" + returnExc + " (Obj.repr ()))";
-					case SReturn(expr, _pos):
-						"raise ("
-							+ returnExc
-							+ " (Obj.repr ("
-							+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ")))";
-				case SExpr(expr, _pos):
-					// Avoid emitting invalid OCaml when we parse Haxe assignment as `EBinop("=")`.
-					switch (expr) {
-						case EBinop("=", _l, _r):
-							"()";
+								+ " done))";
 								case _:
-									"ignore ("
-									+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-									+ ")";
+									"HxBootArray.iter ("
+									+ exprToOcaml(iterable, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ ") (fun " + ident + " -> " + bodyUnit + ")";
+						}
+					case SReturnVoid(_pos):
+						"raise (" + returnExc + " (Obj.repr ()))";
+					case SReturn(expr, _pos):
+							"raise ("
+								+ returnExc
+								+ " (Obj.repr ("
+								+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+								+ ")))";
+					case SExpr(expr, _pos):
+						// Avoid emitting invalid OCaml when we parse Haxe assignment as `EBinop("=")`.
+						switch (expr) {
+							case EBinop("=", _l, _r):
+								"()";
+									case _:
+										"ignore ("
+										+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+										+ ")";
+				}
 			}
-		}
-		}
+			}
 
-		// Fold right so `var` statements can wrap the rest with `let name = init in ...`.
-		var out = "()";
-		for (i in 0...stmts.length) {
-			final s = stmts[stmts.length - 1 - i];
-			switch (s) {
-					case SVar(name, _typeHint, init, _pos):
-						final rhs =
-							if (init == null) {
-								"(Obj.magic 0)";
-							} else {
+			// Fold right so `var` statements can wrap the rest with `let name = init in ...`.
+			var out = "()";
+			for (i in 0...stmts.length) {
+				final idx = stmts.length - 1 - i;
+				final s = stmts[idx];
+				final tyCtx = extendTyWithLocals(tyByIdent, localsBefore[idx]);
+				switch (s) {
+						case SVar(name, _typeHint, init, _pos):
+							final rhs =
+								if (init == null) {
+									"(Obj.magic 0)";
+								} else {
 								// Stage 3 bring-up: in class methods, `var x = x;` commonly means
 								// "shadow a field" (`var x = this.x;`). We don't model `this` field
 								// access yet, and emitting `let x = x` produces an unbound OCaml value.
 								switch (init) {
 									case EIdent(n) if (n == name):
-										"(Obj.magic 0)";
-										case _:
-												returnExprToOcaml(
-													init,
-													allowedValueIdents,
-													null,
-													arityByIdent,
-													tyByIdent,
-													staticImportByIdent,
-													currentPackagePath,
-													moduleNameByPkgAndClass,
-												callSigByCallee
-											);
-								}
-							};
-						final ident = ocamlValueIdent(name);
-						// Keep OCaml warning discipline resilient: Haxe code (especially upstream-ish tests)
-						// can contain locals that are intentionally unused. In OCaml, that triggers warnings
-						// which can become hard errors under `-warn-error`.
-					out = "let " + ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))";
-					case SIf(cond, thenBranch, elseBranch, _pos):
+											"(Obj.magic 0)";
+											case _:
+													returnExprToOcaml(
+														init,
+														allowedValueIdents,
+														null,
+														arityByIdent,
+														tyCtx,
+														staticImportByIdent,
+														currentPackagePath,
+														moduleNameByPkgAndClass,
+													callSigByCallee
+												);
+									}
+								};
+							final ident = ocamlValueIdent(name);
+							// Keep OCaml warning discipline resilient: Haxe code (especially upstream-ish tests)
+							// can contain locals that are intentionally unused. In OCaml, that triggers warnings
+							// which can become hard errors under `-warn-error`.
+						out = "let " + ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))";
+						case SIf(cond, thenBranch, elseBranch, _pos):
 						// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
 						// idiom used by upstream RunCi:
 						//
@@ -1972,45 +2309,47 @@ class EmitterStage {
 							}
 						}
 
-						final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
-						if (assign != null && isNullCheckFor(assign.name, cond)) {
-								final ident = ocamlValueIdent(assign.name);
-									final rhs = returnExprToOcaml(
-										assign.rhs,
-										allowedValueIdents,
-										null,
-										arityByIdent,
-										tyByIdent,
-										staticImportByIdent,
-										currentPackagePath,
-										moduleNameByPkgAndClass,
-									callSigByCallee
-								);
-							out =
-								"(let "
-								+ ident
-								+ " = (if "
-								+ condToOcamlBool(cond)
-								+ " then ("
-								+ rhs
-								+ ") else "
-								+ ident
-								+ ") in ("
-								+ out
-								+ "))";
-						} else {
-							// Default lowering for if-statements.
-							out = stmtAlwaysReturns(s) ? stmtToUnit(s) : ("(" + stmtToUnit(s) + "; " + out + ")");
-						}
-				case _:
-					// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
-					// (nonreturning-statement). This also naturally drops statements that appear after
-					// a definite `return` in the same block (unreachable in Haxe).
-					out = stmtAlwaysReturns(s) ? stmtToUnit(s) : ("(" + stmtToUnit(s) + "; " + out + ")");
+							final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
+							if (assign != null && isNullCheckFor(assign.name, cond)) {
+									final ident = ocamlValueIdent(assign.name);
+										final rhs = returnExprToOcaml(
+											assign.rhs,
+											allowedValueIdents,
+											null,
+											arityByIdent,
+											tyCtx,
+											staticImportByIdent,
+											currentPackagePath,
+											moduleNameByPkgAndClass,
+										callSigByCallee
+									);
+								out =
+									"(let "
+									+ ident
+									+ " = (if "
+									+ condToOcamlBool(cond, tyCtx)
+									+ " then ("
+									+ rhs
+									+ ") else "
+									+ ident
+									+ ") in (ignore "
+									+ ident
+									+ "; ("
+									+ out
+									+ ")))";
+							} else {
+								// Default lowering for if-statements.
+								out = stmtAlwaysReturns(s) ? stmtToUnit(s, tyCtx) : ("(" + stmtToUnit(s, tyCtx) + "; " + out + ")");
+							}
+					case _:
+						// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
+						// (nonreturning-statement). This also naturally drops statements that appear after
+						// a definite `return` in the same block (unreachable in Haxe).
+						out = stmtAlwaysReturns(s) ? stmtToUnit(s, tyCtx) : ("(" + stmtToUnit(s, tyCtx) + "; " + out + ")");
+				}
 			}
+			return out;
 		}
-		return out;
-	}
 
 	/**
 		Emit a minimal OCaml program for the typed module and build it as a native executable.
@@ -2284,16 +2623,30 @@ class EmitterStage {
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(
 					shimPath,
-					"(* hxhx(stage3) bootstrap shim: haxe.Int64 (shape-only) *)\n"
-					+ "type t = {\n"
-					+ "  low : int;\n"
-					+ "  high : int;\n"
-					+ "}\n"
+					"(* hxhx(stage3) bootstrap shim: haxe.Int64 (bring-up only) *)\n"
 					+ "\n"
-					+ "let make (low : int) (high : int) : t = { low; high }\n"
+					+ "(*\n"
+					+ "  This is intentionally not a correct implementation of Haxe Int64 semantics.\n"
+					+ "  It exists so upstream-shaped code can typecheck and link during Stage3.\n"
+					+ "*)\n"
 					+ "\n"
-					+ "let ofInt (i : int) : t =\n"
-					+ "  make i (if i < 0 then (-1) else 0)\n"
+					+ "type t = int\n"
+					+ "\n"
+					+ "type divmod = { quotient : t; modulus : t }\n"
+					+ "\n"
+					+ "let make (_high : int) (low : int) : t = low\n"
+					+ "let ofInt (i : int) : t = i\n"
+					+ "let parseString (_s : string) : t = 0\n"
+					+ "let toInt (v : t) : int = v\n"
+					+ "let toStr (v : t) : string = string_of_int v\n"
+					+ "let add (a : t) (b : t) : t = a + b\n"
+					+ "let sub (a : t) (b : t) : t = a - b\n"
+					+ "let mul (a : t) (b : t) : t = a * b\n"
+					+ "let neg (a : t) : t = (-a)\n"
+					+ "let compare (a : t) (b : t) : int = Stdlib.compare a b\n"
+					+ "let divMod (a : t) (b : t) : divmod =\n"
+					+ "  if b = 0 then { quotient = 0; modulus = 0 } else { quotient = a / b; modulus = a mod b }\n"
+					+ "let isInt64 (_ : Obj.t) : bool = true\n"
 				);
 				generatedPaths.push(shimName + ".ml");
 			}
@@ -2302,10 +2655,72 @@ class EmitterStage {
 		final typedModules = p.getTypedModules();
 		if (typedModules.length == 0) throw "stage3 emitter: empty typed module graph";
 
-		inline function moduleNameForDecl(decl:HxModuleDecl, className:String):String {
+		// Stage 3 bring-up: avoid emitting placeholder units that shadow the repo-owned runtime.
+		//
+		// Why
+		// - We copy `std/runtime/*.ml` into `out/runtime/` and compile them as part of the Stage3 program.
+		// - The Stage3 typer/emitter can still produce placeholder `*.ml` units for the corresponding
+		//   Haxe std types (e.g. `haxe.CallStack`), which would overwrite the runtime `.cmi` and cause
+		//   downstream "Unbound value" errors.
+		//
+		// How
+		// - Build a set of runtime-provided OCaml module names and skip emitting any typed module whose
+		//   main unit name collides with a runtime unit.
+		inline function runtimeModuleNameFromPath(path:String):String {
+			final file = haxe.io.Path.withoutDirectory(path);
+			final base = StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
+			return upperFirst(base);
+		}
+		final runtimeModuleNames:Map<String, Bool> = new Map();
+		for (p0 in runtimePaths) runtimeModuleNames.set(runtimeModuleNameFromPath(p0), true);
+		// Stage 3 bring-up: keep the `Haxe_Int64.ml` shim authoritative.
+		//
+		// Why
+		// - The bootstrap frontend/typer does not index abstract/operator-heavy std modules well yet,
+		//   so the placeholder provider for `haxe.Int64` can be missing required values like `ofInt`.
+		// - We emit a tiny OCaml shim for `haxe.Int64` earlier in this stage to keep upstream-shaped
+		//   code compiling, but it must not be overwritten by the placeholder emitter.
+		//
+		// How
+		// - Treat `Haxe_Int64` as "runtime provided" so `emitModule` skips emitting the main unit.
+		runtimeModuleNames.set("Haxe_Int64", true);
+
+		inline function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
+			if (filePath == null || filePath.length == 0) return null;
+			final name = haxe.io.Path.withoutDirectory(filePath);
+			final dot = name.lastIndexOf(".");
+			return dot <= 0 ? name : name.substr(0, dot);
+		}
+
+			inline function moduleTypeNameFor(tm:TypedModule):Null<String> {
+				// In Haxe, the module name is the file base name (not "the first class we happened to parse").
+				//
+				// This matters for multi-type modules like upstream `unit/MyAbstract.hx`, where helper types are
+				// addressed as `unit.MyAbstract.HelperType` regardless of which class the frontend surfaced as
+				// the "main class" during bring-up.
+				final fromFile = expectedMainClassFromFile(tm == null ? null : tm.getParsed().getFilePath());
+				if (fromFile != null && fromFile.length > 0) return fromFile;
+
+				// Fallback (in-memory modules): use the parsed main class name when available.
+				final decl = tm == null ? null : tm.getParsed().getDecl();
+				final main = decl == null ? null : HxModuleDecl.getMainClass(decl);
+				final nm0 = main == null ? null : HxClassDecl.getName(main);
+				final nm = nm0 == null ? "" : StringTools.trim(nm0);
+				return (nm.length > 0 && nm != "Unknown") ? nm : null;
+			}
+
+		inline function moduleNameForDecl(decl:HxModuleDecl, moduleTypeName:Null<String>, typeName:String):String {
 			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
 			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
-			final parts = (pkg.length == 0 ? [] : pkg.split(".")).concat([className]);
+			final parts = (pkg.length == 0 ? [] : pkg.split("."));
+			final modName = moduleTypeName == null ? "" : StringTools.trim(moduleTypeName);
+			// Haxe type paths for module-local helper types include the module name:
+			//   `package.Module.Helper`
+			// Emitted OCaml module: `Package_Module_Helper`.
+			//
+			// When `typeName == moduleTypeName`, this is the main type and we emit `Package_Type`.
+			if (modName.length > 0 && modName != "Unknown" && typeName != modName) parts.push(modName);
+			parts.push(typeName);
 			return ocamlModuleNameFromTypePathParts(parts);
 		}
 
@@ -2316,22 +2731,43 @@ class EmitterStage {
 		//   current package by default.
 		// - Our OCaml emission flattens `package.Class` to `Package_Class`, so we need a way to
 		//   qualify those unqualified references during emission.
-		final moduleNameByPkgAndClass:Map<String, String> = new Map();
-		for (tm in typedModules) {
-			final decl = tm.getParsed().getDecl();
-			final cls = HxModuleDecl.getMainClass(decl);
-			final className = HxClassDecl.getName(cls);
-			if (className == null || className.length == 0 || className == "Unknown") continue;
-			final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
-			final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
-			final key = pkg + ":" + className;
-			moduleNameByPkgAndClass.set(key, moduleNameForDecl(decl, className));
-		}
+			final moduleNameByPkgAndClass:Map<String, String> = new Map();
+			for (tm in typedModules) {
+				final decl = tm.getParsed().getDecl();
+				final moduleTypeName = moduleTypeNameFor(tm);
+				final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
+				final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
+				final modName = moduleTypeName == null ? "" : StringTools.trim(moduleTypeName);
+				for (cls in HxModuleDecl.getClasses(decl)) {
+					final className = HxClassDecl.getName(cls);
+					if (className == null || className.length == 0 || className == "Unknown") continue;
+					final emitted = moduleNameForDecl(decl, moduleTypeName, className);
 
-		// Index static members by module name so we can approximate `import Foo.Bar.*` static wildcard imports.
-		//
-		// Why
-		// - Upstream `tests/RunCi.hx` uses `import runci.System.*` and refers to helpers like `infoMsg`
+					// Key 1: `<pkg>:<ClassName>` for unqualified references (`Util.foo()`).
+					//
+					// Note: this is ambiguous for module-local helper types that share a short name
+					// across modules, but it is a useful bring-up heuristic and matches prior behavior.
+					final key = pkg + ":" + className;
+					if (!moduleNameByPkgAndClass.exists(key)) moduleNameByPkgAndClass.set(key, emitted);
+
+					// Key 2: `<pkg>:<Module.Helper>` for module-local helper types referenced as
+					// `Module.Helper` (upstream Gate1 uses this heavily, e.g. `MyMacro.MyRestMacro`).
+					//
+					// Why add this
+					// - Our bootstrap expression emitter recognizes `<type path>.field` by extracting
+					//   a dotted path from the expression tree (e.g. `MyMacro.MyRestMacro`).
+					// - Without recording the module qualifier here, the emitter cannot qualify the
+					//   path with the current package, and OCaml compilation fails with "Unbound module".
+					final rel = (modName.length > 0 && modName != "Unknown" && className != modName) ? (modName + "." + className) : className;
+					final keyRel = pkg + ":" + rel;
+					if (!moduleNameByPkgAndClass.exists(keyRel)) moduleNameByPkgAndClass.set(keyRel, emitted);
+				}
+			}
+
+			// Index static members by module name so we can approximate `import Foo.Bar.*` static wildcard imports.
+			//
+			// Why
+			// - Upstream `tests/RunCi.hx` uses `import runci.System.*` and refers to helpers like `infoMsg`
 		//   without qualification.
 		// - Stage3 does not implement full import resolution yet; this index enables a conservative
 		//   `{ ident -> ModuleName }` rewrite that keeps bring-up moving.
@@ -2339,72 +2775,174 @@ class EmitterStage {
 			// How
 			// - Collect static function and field names from the parsed surface of each typed module.
 			final staticMembersByModule:Map<String, Map<String, Bool>> = new Map();
+
+			// Import-driven module alias index for call signature resolution.
+			//
+			// Why
+			// - The Stage3 expression emitter lowers `Assert.floatEquals(...)` as a module access on the
+			//   imported short name (`Assert`).
+			// - The actual emitted provider module is the fully qualified one (e.g. `Utest_Assert`).
+			// - Call signature lookups key off the OCaml callee expression string, so without alias
+			//   signature entries we'd fail to detect optional-arg omissions for `Assert.*` calls.
+			//
+			// What
+			// - `aliasShortsByTarget[targetMod] = [short1, short2, ...]`
+			// - Used to record `Short.fn` signatures alongside `Target.fn` signatures.
+			final aliasShortsByTarget:Map<String, Array<String>> = new Map();
+			{
+				final existingMods:Map<String, Bool> = new Map();
+				for (k in runtimeModuleNames.keys()) existingMods.set(k, true);
+				for (tm in typedModules) {
+					final decl = tm.getParsed().getDecl();
+					final moduleTypeName = moduleTypeNameFor(tm);
+					for (cls in HxModuleDecl.getClasses(decl)) {
+						final className = HxClassDecl.getName(cls);
+						if (className == null || className.length == 0 || className == "Unknown") continue;
+						final modName = moduleNameForDecl(decl, moduleTypeName, className);
+						existingMods.set(modName, true);
+					}
+				}
+
+				final deny:Map<String, Bool> = new Map();
+				for (m in [
+					"Array",
+					"Buffer",
+					"Bytes",
+					"Char",
+					"Filename",
+					"Format",
+					"Gc",
+					"Hashtbl",
+					"Int",
+					"Int32",
+					"Int64",
+					"List",
+					"Map",
+					"Marshal",
+					"Nativeint",
+					"Obj",
+					"Option",
+					"Printexc",
+					"Printf",
+					"Queue",
+					"Result",
+					"Set",
+					"Stack",
+					"Stdlib",
+					"Str",
+					"String",
+					"Sys",
+					"Unix",
+				]) deny.set(m, true);
+
+				final aliasByShort:Map<String, String> = new Map();
+				for (tm in typedModules) {
+					for (rawImport in tm.getEnv().getImports()) {
+						if (rawImport == null) continue;
+						final imp = StringTools.trim(rawImport);
+						if (imp.length == 0) continue;
+						if (StringTools.endsWith(imp, ".*")) continue;
+						final parts = imp.split(".");
+						if (parts.length == 0) continue;
+						final short = parts[parts.length - 1];
+						if (short == null || short.length == 0 || !isUpperStart(short)) continue;
+						if (deny.exists(short)) continue;
+						// Don't alias over a real provider.
+						if (existingMods.exists(short)) continue;
+						final target = ocamlModuleNameFromTypePath(imp);
+						if (target == null || target.length == 0) continue;
+						if (target == short) continue;
+						// Only alias to a provider that actually exists in this build output.
+						if (!existingMods.exists(target)) continue;
+						if (!aliasByShort.exists(short)) aliasByShort.set(short, target);
+					}
+				}
+
+				for (short in aliasByShort.keys()) {
+					final target = aliasByShort.get(short);
+					if (target == null || target.length == 0) continue;
+					var arr = aliasShortsByTarget.get(target);
+					if (arr == null) {
+						arr = [];
+						aliasShortsByTarget.set(target, arr);
+					}
+					if (arr.indexOf(short) == -1) arr.push(short);
+				}
+			}
+
 			// Call signature index used by `exprToOcaml` to avoid OCaml partial application when the
 			// Haxe call site omits optional/default/rest parameters.
 			//
 			// Keys match the emitted OCaml callee expression:
 			// - Qualified: `ModuleName.fn`
 			// - (Module-local unqualified keys are added per-module in `emitModule`.)
-			final globalCallSigByCallee:Map<String, EmitterCallSig> = new Map();
-			for (tm in typedModules) {
-				final decl = tm.getParsed().getDecl();
-				final cls = HxModuleDecl.getMainClass(decl);
-				final className = HxClassDecl.getName(cls);
-			if (className == null || className.length == 0 || className == "Unknown") continue;
-			final modName = moduleNameForDecl(decl, className);
+				final globalCallSigByCallee:Map<String, EmitterCallSig> = new Map();
+				for (tm in typedModules) {
+					final decl = tm.getParsed().getDecl();
+					final moduleTypeName = moduleTypeNameFor(tm);
+					for (cls in HxModuleDecl.getClasses(decl)) {
+						final className = HxClassDecl.getName(cls);
+						if (className == null || className.length == 0 || className == "Unknown") continue;
+						final modName = moduleNameForDecl(decl, moduleTypeName, className);
 
-			final members:Map<String, Bool> = new Map();
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				// Stage3 bootstrap: treat all class functions as "importable" members.
-				//
-				// Why
-				// - Stage3 emission flattens class members into module-level `let` bindings.
-				// - Some native frontend bring-up paths may not perfectly preserve `static` on all
-				//   declarations (e.g. `public static inline function ...`), which would otherwise
-				//   make `import Foo.*` miss helpers and collapse them to poison.
-				//
-				// Non-goal
-				// - Correct instance method semantics. If upstream code relies on instance dispatch,
-				//   Stage3 is not the rung for it.
-				members.set(HxFunctionDecl.getName(fn), true);
-			}
-				for (field in HxClassDecl.getFields(cls)) {
-					if (HxFieldDecl.getIsStatic(field)) members.set(HxFieldDecl.getName(field), true);
-				}
-				staticMembersByModule.set(modName, members);
+						final members:Map<String, Bool> = new Map();
+						for (fn in HxClassDecl.getFunctions(cls)) {
+							// Stage3 bootstrap: treat all class functions as "importable" members.
+							//
+							// Why
+							// - Stage3 emission flattens class members into module-level `let` bindings.
+							// - Some native frontend bring-up paths may not perfectly preserve `static` on all
+							//   declarations (e.g. `public static inline function ...`), which would otherwise
+							//   make `import Foo.*` miss helpers and collapse them to poison.
+							//
+							// Non-goal
+							// - Correct instance method semantics. If upstream code relies on instance dispatch,
+							//   Stage3 is not the rung for it.
+							members.set(HxFunctionDecl.getName(fn), true);
+						}
+						for (field in HxClassDecl.getFields(cls)) {
+							if (HxFieldDecl.getIsStatic(field)) members.set(HxFieldDecl.getName(field), true);
+						}
+						staticMembersByModule.set(modName, members);
 
-				// Record qualified function signatures so call sites can:
-				// - pack rest args (`...args:T`) into an array,
-				// - and fill missing optional args with `null` to avoid partial application.
-				for (fn in HxClassDecl.getFunctions(cls)) {
-					final fnNameRaw = HxFunctionDecl.getName(fn);
-					if (fnNameRaw == null || fnNameRaw.length == 0) continue;
+						// Record qualified function signatures so call sites can:
+						// - pack rest args (`...args:T`) into an array,
+						// - and fill missing optional args with `null` to avoid partial application.
+						for (fn in HxClassDecl.getFunctions(cls)) {
+							final fnNameRaw = HxFunctionDecl.getName(fn);
+							if (fnNameRaw == null || fnNameRaw.length == 0) continue;
 
-					final fnArgs = HxFunctionDecl.getArgs(fn);
-					final argCount = fnArgs == null ? 0 : fnArgs.length;
-					// Robust rest detection:
-					// - In valid Haxe syntax, the rest arg (if present) is the *last* parameter.
-					// - During bring-up, we prefer a rule that can't be confused by accidental rest
-					//   markings on earlier parameters (which would otherwise pack all args).
-					var hasRest = false;
-					var fixedCount = argCount;
-					if (argCount > 0 && HxFunctionArg.getIsRest(fnArgs[argCount - 1])) {
-						hasRest = true;
-						fixedCount = argCount - 1;
+							final fnArgs = HxFunctionDecl.getArgs(fn);
+							final argCount = fnArgs == null ? 0 : fnArgs.length;
+							// Robust rest detection:
+							// - In valid Haxe syntax, the rest arg (if present) is the *last* parameter.
+							// - During bring-up, we prefer a rule that can't be confused by accidental rest
+							//   markings on earlier parameters (which would otherwise pack all args).
+							var hasRest = false;
+							var fixedCount = argCount;
+							if (argCount > 0 && HxFunctionArg.getIsRest(fnArgs[argCount - 1])) {
+								hasRest = true;
+								fixedCount = argCount - 1;
+								}
+	
+								final expected = fixedCount + (hasRest ? 1 : 0);
+								_EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
+								final sig0:EmitterCallSig = { expected: expected, fixed: fixedCount, hasRest: hasRest };
+								final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
+								globalCallSigByCallee.set(key0, sig0);
+								final aliasShorts = aliasShortsByTarget.get(modName);
+								if (aliasShorts != null) {
+									for (short in aliasShorts) {
+										globalCallSigByCallee.set(short + "." + ocamlValueIdent(fnNameRaw), sig0);
+									}
+								}
+							}
+						}
 					}
 
-					final expected = fixedCount + (hasRest ? 1 : 0);
-					_EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
-					globalCallSigByCallee.set(
-						modName + "." + ocamlValueIdent(fnNameRaw),
-						{ expected: expected, fixed: fixedCount, hasRest: hasRest }
-					);
-				}
-			}
-
-			function emitModule(tm:TypedModule, isRoot:Bool):Null<String> {
-				// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
-				// upstream-style harness code (RunCi, macro host, etc).
+					function emitModule(tm:TypedModule, isRoot:Bool):{files:Array<String>, rootMain:Null<String>} {
+					// Stage 3 bring-up: `--hxhx-emit-full-bodies` exists so we can compile+run
+					// upstream-style harness code (RunCi, macro host, etc).
 				//
 				// However, the Haxe standard library contains many constructs we do not model yet
 				// (regex literals, abstracts, complex typing), and attempting to emit full bodies
@@ -2421,28 +2959,151 @@ class EmitterStage {
 				}
 				final moduleEmitBodies = emitFullBodies && allowFullBodiesForFile(tm.getParsed().getFilePath(), isRoot);
 
-				final decl = tm.getParsed().getDecl();
-				final mainClass = HxModuleDecl.getMainClass(decl);
-				final className = HxClassDecl.getName(mainClass);
-				if (className == null || className.length == 0 || className == "Unknown") return null;
-			final moduleName = moduleNameForDecl(decl, className);
+					final decl = tm.getParsed().getDecl();
+					final mainClass = HxModuleDecl.getMainClass(decl);
+					final parsedMainName = HxClassDecl.getName(mainClass);
+					final moduleTypeName = moduleTypeNameFor(tm);
+					final className = (moduleTypeName != null && moduleTypeName.length > 0) ? moduleTypeName : parsedMainName;
+					if (className == null || className.length == 0 || className == "Unknown") return { files: [], rootMain: null };
+					final mainModuleName = moduleNameForDecl(decl, moduleTypeName, className);
+					final isRuntimeProvided = runtimeModuleNames.exists(mainModuleName);
 
-			final parsedFns = HxClassDecl.getFunctions(mainClass);
-			final parsedByName = new Map<String, HxFunctionDecl>();
-			for (fn in parsedFns) parsedByName.set(HxFunctionDecl.getName(fn), fn);
+					// Import-driven resolution for `Int64.<field>` (Haxe `haxe.Int64` vs OCaml stdlib `Int64`).
+					function findInt64ImportTarget(imports:Array<String>):Null<String> {
+						if (imports == null) return null;
+						for (rawImport in imports) {
+							if (rawImport == null) continue;
+							final imp0 = StringTools.trim(rawImport);
+							if (imp0.length == 0) continue;
+							final base = StringTools.endsWith(imp0, ".*") ? imp0.substr(0, imp0.length - 2) : imp0;
+							final parts = base.split(".");
+							if (parts.length == 0) continue;
+							final short = parts[parts.length - 1];
+							if (short != "Int64") continue;
+							final target = ocamlModuleNameFromTypePath(base);
+							if (target != null && target.length > 0 && target != "Unknown") return target;
+						}
+						return null;
+					}
 
-				final typedFns = tm.getEnv().getMainClass().getFunctions();
-				final arityByName:Map<String, Int> = new Map();
-				for (tf in typedFns) arityByName.set(tf.getName(), tf.getParams().length);
+					final importInt64 = findInt64ImportTarget(tm.getEnv().getImports());
 
-				// Provide both:
-				// - qualified signatures (all modules) for `Pkg_Mod.fn(...)` style calls,
-				// - and unqualified signatures (this module) for `fn(...)` calls.
-				final callSigByCallee:Map<String, EmitterCallSig> = new Map();
-				for (k in globalCallSigByCallee.keys()) callSigByCallee.set(k, globalCallSigByCallee.get(k));
-				for (fn in parsedFns) {
-					final fnNameRaw = HxFunctionDecl.getName(fn);
-					if (fnNameRaw == null || fnNameRaw.length == 0) continue;
+					function emitStubClass(cls:HxClassDecl):Null<String> {
+						final nm = HxClassDecl.getName(cls);
+						if (nm == null || nm.length == 0 || nm == "Unknown") return null;
+						final moduleName = moduleNameForDecl(decl, moduleTypeName, nm);
+
+						final prevInt64 = currentImportInt64;
+						currentImportInt64 = importInt64;
+						try {
+							final out = new Array<String>();
+							out.push("(* Generated by hxhx(stage3) bootstrap emitter *)");
+							// Keep bring-up output warning-clean under strict dune setups.
+							// These warnings are common when we use `Obj.magic` / exception-return tricks.
+							out.push("[@@@warning \"-21-26\"]");
+							out.push("");
+
+							// Stage 3 bring-up: upstream unit fixtures call `StringTools.hex`, but our parser
+							// frequently fails to parse the full stdlib `StringTools.hx` at this rung, so the
+							// stub class would otherwise be empty and calls would fail at link time.
+							//
+							// Provide a tiny, self-contained implementation that is "close enough" for bootstrapping.
+							final hasStringToolsHex = moduleName == "StringTools";
+							if (hasStringToolsHex) {
+								out.push("(* hxhx(stage3) bootstrap shim: StringTools.hex *)");
+								out.push("let hex (n : int) (digits : int) : string =");
+								out.push("  let hexChars = \"0123456789ABCDEF\" in");
+								out.push("  let n32 = Int32.of_int n in");
+								out.push("  let rec build (x : Int32.t) (acc : string) : string =");
+								out.push("    let digit = Int32.to_int (Int32.logand x 0xFl) in");
+								out.push("    let acc2 = (String.make 1 hexChars.[digit]) ^ acc in");
+								out.push("    let x2 = Int32.shift_right_logical x 4 in");
+								out.push("    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2");
+								out.push("  in");
+								out.push("  let s = build n32 \"\" in");
+								out.push("  if digits <= 0 then s else");
+								out.push("    let rec pad (s0 : string) : string =");
+								out.push("      if String.length s0 < digits then pad (\"0\" ^ s0) else s0");
+								out.push("    in");
+								out.push("    pad s");
+								out.push("");
+							}
+
+							// Emit static fields (best-effort).
+							final parsedFields = HxClassDecl.getFields(cls);
+							final staticTyByIdent:Map<String, TyType> = new Map();
+							for (f in parsedFields) {
+								if (!HxFieldDecl.getIsStatic(f)) continue;
+								final nameRaw = HxFieldDecl.getName(f);
+								if (nameRaw == null || nameRaw.length == 0) continue;
+								final init = HxFieldDecl.getInit(f);
+								final initOcaml = init == null
+									? "(Obj.magic HxRuntime.hx_null)"
+									: exprToOcaml(
+										init,
+										null,
+										staticTyByIdent,
+										null,
+										HxModuleDecl.getPackagePath(decl),
+										moduleNameByPkgAndClass,
+										globalCallSigByCallee
+									);
+								out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
+								out.push("");
+								// Treat the binding as "known" for subsequent static inits, even without a real type.
+								if (staticTyByIdent.get(nameRaw) == null) staticTyByIdent.set(nameRaw, TyType.unknown());
+							}
+
+							// Emit function stubs with correct arity to avoid OCaml partial application issues.
+							for (fn in HxClassDecl.getFunctions(cls)) {
+								final nameRaw = HxFunctionDecl.getName(fn);
+								if (nameRaw == null || nameRaw.length == 0) continue;
+								if (hasStringToolsHex && nameRaw == "hex") continue;
+								final fnArgs = HxFunctionDecl.getArgs(fn);
+								final args = fnArgs == null ? [] : fnArgs;
+								final ocamlArgs = if (args.length == 0) {
+									"()";
+								} else {
+									args.map(a -> ocamlValueIdent(HxFunctionArg.getName(a))).join(" ");
+								};
+								out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " = (Obj.magic 0)");
+								out.push("");
+							}
+
+							final mlPath = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
+							sys.io.File.saveContent(mlPath, out.join("\n"));
+							currentImportInt64 = prevInt64;
+							return moduleName + ".ml";
+						} catch (e:Dynamic) {
+							currentImportInt64 = prevInt64;
+							throw e;
+						}
+					}
+
+					function emitMainClass():Null<String> {
+						final prevOcamlModule = currentOcamlModuleName;
+						final prevInt64 = currentImportInt64;
+						currentOcamlModuleName = mainModuleName;
+						currentImportInt64 = importInt64;
+						try {
+						final parsedFns = HxClassDecl.getFunctions(mainClass);
+						final parsedByName = new Map<String, HxFunctionDecl>();
+						for (fn in parsedFns) parsedByName.set(HxFunctionDecl.getName(fn), fn);
+
+						final typedFns = tm.getEnv().getMainClass().getFunctions();
+						final arityByName:Map<String, Int> = new Map();
+					for (tf in typedFns) arityByName.set(tf.getName(), tf.getParams().length);
+					final fnReturnTypesByName:Map<String, TyType> = new Map();
+					for (tf in typedFns) fnReturnTypesByName.set(tf.getName(), tf.getReturnType());
+
+					// Provide both:
+					// - qualified signatures (all modules) for `Pkg_Mod.fn(...)` style calls,
+					// - and unqualified signatures (this module) for `fn(...)` calls.
+					final callSigByCallee:Map<String, EmitterCallSig> = new Map();
+					for (k in globalCallSigByCallee.keys()) callSigByCallee.set(k, globalCallSigByCallee.get(k));
+					for (fn in parsedFns) {
+						final fnNameRaw = HxFunctionDecl.getName(fn);
+						if (fnNameRaw == null || fnNameRaw.length == 0) continue;
 					final fnArgs = HxFunctionDecl.getArgs(fn);
 					final argCount = fnArgs == null ? 0 : fnArgs.length;
 					var hasRest = false;
@@ -2451,10 +3112,10 @@ class EmitterStage {
 						hasRest = true;
 						fixedCount = argCount - 1;
 					}
-					final expected = fixedCount + (hasRest ? 1 : 0);
-					_EmitterStageDebug.traceCallSig(moduleName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
-					callSigByCallee.set(ocamlValueIdent(fnNameRaw), { expected: expected, fixed: fixedCount, hasRest: hasRest });
-				}
+						final expected = fixedCount + (hasRest ? 1 : 0);
+						_EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
+						callSigByCallee.set(ocamlValueIdent(fnNameRaw), { expected: expected, fixed: fixedCount, hasRest: hasRest });
+					}
 
 			// Best-effort `import Foo.Bar.*` support:
 			// Build a map of unqualified identifiers -> imported module name for static members.
@@ -2475,24 +3136,438 @@ class EmitterStage {
 				}
 			}
 
-			final out = new Array<String>();
-			out.push("(* Generated by hxhx(stage3) bootstrap emitter *)");
-			out.push("");
+				final out = new Array<String>();
+				out.push("(* Generated by hxhx(stage3) bootstrap emitter *)");
+				// Keep bring-up output warning-clean under strict dune setups.
+				// These warnings are common when we use `Obj.magic` / exception-return tricks.
+				out.push("[@@@warning \"-21-26\"]");
+				out.push("");
 
-			// Emit class-scope static values (bootstrap subset).
+				final parsedFields = HxClassDecl.getFields(mainClass);
+
+				// Stage 3 bring-up: static initializer ordering.
+				//
+				// Why
+				// - Haxe allows `static final` initializers to call helper functions declared later in
+				//   the class body.
+				// - OCaml evaluates top-level `let` bindings in order, and does not allow a `let` value
+				//   to reference a later `let rec` function group.
+				//
+				// How
+				// - Detect unqualified function calls used by static initializers.
+				// - Emit a small "prelude" `let rec ... and ...` group for those helper functions
+				//   *before* emitting static `let` values.
+				//
+				// Constraints
+				// - Prelude functions must not depend on static values (which are emitted later).
+				final staticFieldNames:Map<String, Bool> = new Map();
+				for (f in parsedFields) {
+					if (!HxFieldDecl.getIsStatic(f)) continue;
+					final n = HxFieldDecl.getName(f);
+					if (n != null && n.length > 0) staticFieldNames.set(n, true);
+				}
+
+					final staticInitCalls:Map<String, Bool> = new Map();
+					// Use an explicit stack instead of a recursive local function.
+					//
+					// Why
+					// - This code runs inside `hxhx` itself, which is compiled by our OCaml backend.
+					// - Recursive local functions are a known source of instability during bring-up,
+					//   so we prefer an explicit worklist here.
+					final staticInitWorklist = new Array<HxExpr>();
+					for (f in parsedFields) {
+						if (!HxFieldDecl.getIsStatic(f)) continue;
+						final init = HxFieldDecl.getInit(f);
+						if (init != null) staticInitWorklist.push(init);
+					}
+					while (staticInitWorklist.length > 0) {
+						final e = staticInitWorklist.pop();
+						if (e == null) continue;
+						switch (e) {
+							case ECall(callee, args):
+								switch (callee) {
+									case EIdent(name):
+										if (name != null && name.length > 0) staticInitCalls.set(name, true);
+									case EField(_obj, field):
+										if (field != null && field.length > 0) staticInitCalls.set(field, true);
+									case _:
+								}
+								if (callee != null) staticInitWorklist.push(callee);
+								if (args != null) for (a in args) if (a != null) staticInitWorklist.push(a);
+							case EField(obj, _):
+								if (obj != null) staticInitWorklist.push(obj);
+							case ELambda(_, body):
+								if (body != null) staticInitWorklist.push(body);
+							case ETernary(cond, thenExpr, elseExpr):
+								if (cond != null) staticInitWorklist.push(cond);
+								if (thenExpr != null) staticInitWorklist.push(thenExpr);
+								if (elseExpr != null) staticInitWorklist.push(elseExpr);
+							case EAnon(_, values):
+								if (values != null) for (v in values) if (v != null) staticInitWorklist.push(v);
+							case ESwitch(scrutinee, cases):
+								if (scrutinee != null) staticInitWorklist.push(scrutinee);
+								if (cases != null) for (c in cases) if (c != null && c.expr != null) staticInitWorklist.push(c.expr);
+							case ENew(_, args):
+								if (args != null) for (a in args) if (a != null) staticInitWorklist.push(a);
+							case EUnop(_, expr):
+								if (expr != null) staticInitWorklist.push(expr);
+							case EBinop(_, left, right):
+								if (left != null) staticInitWorklist.push(left);
+								if (right != null) staticInitWorklist.push(right);
+							case EArrayComprehension(_, iterable, yieldExpr):
+								if (iterable != null) staticInitWorklist.push(iterable);
+								if (yieldExpr != null) staticInitWorklist.push(yieldExpr);
+							case EArrayDecl(values):
+								if (values != null) for (v in values) if (v != null) staticInitWorklist.push(v);
+							case EArrayAccess(array, index):
+								if (array != null) staticInitWorklist.push(array);
+								if (index != null) staticInitWorklist.push(index);
+							case ERange(start, end):
+								if (start != null) staticInitWorklist.push(start);
+								if (end != null) staticInitWorklist.push(end);
+							case ECast(expr, _):
+								if (expr != null) staticInitWorklist.push(expr);
+							case EUntyped(expr):
+								if (expr != null) staticInitWorklist.push(expr);
+							case _:
+						}
+					}
+
+				final fnNames:Map<String, Bool> = new Map();
+				for (tf in typedFns) {
+					final n = tf.getName();
+					if (n != null && n.length > 0) fnNames.set(n, true);
+				}
+
+				final preludeFnNames:Map<String, Bool> = new Map();
+				for (name in staticInitCalls.keys()) {
+					if (!fnNames.exists(name)) continue;
+					if (name == "load") continue;
+					preludeFnNames.set(name, true);
+				}
+
+				function collectLocalsFromStmt(s:HxStmt, locals:Map<String, Bool>):Void {
+					switch (s) {
+						case SBlock(stmts, _):
+							if (stmts != null) for (ss in stmts) collectLocalsFromStmt(ss, locals);
+						case SVar(name, _, _, _):
+							if (name != null && name.length > 0) locals.set(name, true);
+						case SIf(_, thenBranch, elseBranch, _):
+							collectLocalsFromStmt(thenBranch, locals);
+							if (elseBranch != null) collectLocalsFromStmt(elseBranch, locals);
+						case SForIn(name, _, body, _):
+							if (name != null && name.length > 0) locals.set(name, true);
+							collectLocalsFromStmt(body, locals);
+						case SSwitch(_, cases, _):
+							if (cases != null) for (c in cases) collectLocalsFromStmt(c.body, locals);
+						case _:
+					}
+				}
+
+				function scanExprForDeps(e:Null<HxExpr>, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
+					if (e == null) return;
+					switch (e) {
+						case EIdent(name):
+							if (name != null && name.length > 0 && !locals.exists(name)) idents.set(name, true);
+						case EField(obj, _):
+							scanExprForDeps(obj, locals, calls, idents);
+						case ECall(callee, args):
+							switch (callee) {
+								case EIdent(name):
+									if (name != null && name.length > 0 && !locals.exists(name)) calls.set(name, true);
+								case EField(_obj, field):
+									if (field != null && field.length > 0 && !locals.exists(field)) calls.set(field, true);
+								case _:
+							}
+							scanExprForDeps(callee, locals, calls, idents);
+							if (args != null) for (a in args) scanExprForDeps(a, locals, calls, idents);
+						case ELambda(args, body):
+							final nestedLocals:Map<String, Bool> = new Map();
+							for (k in locals.keys()) nestedLocals.set(k, true);
+							if (args != null) for (a in args) if (a != null && a.length > 0) nestedLocals.set(a, true);
+							scanExprForDeps(body, nestedLocals, calls, idents);
+						case ETernary(cond, thenExpr, elseExpr):
+							scanExprForDeps(cond, locals, calls, idents);
+							scanExprForDeps(thenExpr, locals, calls, idents);
+							scanExprForDeps(elseExpr, locals, calls, idents);
+						case EAnon(_, values):
+							if (values != null) for (v in values) scanExprForDeps(v, locals, calls, idents);
+						case ESwitch(scrutinee, cases):
+							scanExprForDeps(scrutinee, locals, calls, idents);
+							if (cases != null) for (c in cases) scanExprForDeps(c.expr, locals, calls, idents);
+						case ENew(_, args):
+							if (args != null) for (a in args) scanExprForDeps(a, locals, calls, idents);
+						case EUnop(_, expr):
+							scanExprForDeps(expr, locals, calls, idents);
+						case EBinop(_, left, right):
+							scanExprForDeps(left, locals, calls, idents);
+							scanExprForDeps(right, locals, calls, idents);
+						case EArrayComprehension(name, iterable, yieldExpr):
+							final nestedLocals:Map<String, Bool> = new Map();
+							for (k in locals.keys()) nestedLocals.set(k, true);
+							if (name != null && name.length > 0) nestedLocals.set(name, true);
+							scanExprForDeps(iterable, locals, calls, idents);
+							scanExprForDeps(yieldExpr, nestedLocals, calls, idents);
+						case EArrayDecl(values):
+							if (values != null) for (v in values) scanExprForDeps(v, locals, calls, idents);
+						case EArrayAccess(array, index):
+							scanExprForDeps(array, locals, calls, idents);
+							scanExprForDeps(index, locals, calls, idents);
+						case ERange(start, end):
+							scanExprForDeps(start, locals, calls, idents);
+							scanExprForDeps(end, locals, calls, idents);
+						case ECast(expr, _):
+							scanExprForDeps(expr, locals, calls, idents);
+						case EUntyped(expr):
+							scanExprForDeps(expr, locals, calls, idents);
+						case _:
+					}
+				}
+
+				function scanStmtForDeps(s:HxStmt, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
+					switch (s) {
+						case SBlock(stmts, _):
+							if (stmts != null) for (ss in stmts) scanStmtForDeps(ss, locals, calls, idents);
+						case SVar(_name, _typeHint, init, _):
+							scanExprForDeps(init, locals, calls, idents);
+						case SIf(cond, thenBranch, elseBranch, _):
+							scanExprForDeps(cond, locals, calls, idents);
+							scanStmtForDeps(thenBranch, locals, calls, idents);
+							if (elseBranch != null) scanStmtForDeps(elseBranch, locals, calls, idents);
+						case SForIn(_name, iterable, body, _):
+							scanExprForDeps(iterable, locals, calls, idents);
+							scanStmtForDeps(body, locals, calls, idents);
+						case SSwitch(scrutinee, cases, _):
+							scanExprForDeps(scrutinee, locals, calls, idents);
+							if (cases != null) for (c in cases) scanStmtForDeps(c.body, locals, calls, idents);
+						case SReturn(expr, _):
+							scanExprForDeps(expr, locals, calls, idents);
+						case SExpr(expr, _):
+							scanExprForDeps(expr, locals, calls, idents);
+						case _:
+					}
+				}
+
+					final fnCallsByName:Map<String, Map<String, Bool>> = new Map();
+					final fnRefsStaticByName:Map<String, Bool> = new Map();
+					function analyzeFn(nameRaw:String):Void {
+						if (fnCallsByName.exists(nameRaw)) return;
+						var tf:Null<TyFunctionEnv> = null;
+						for (t in typedFns) {
+							if (t.getName() == nameRaw) {
+								tf = t;
+								break;
+							}
+						}
+						final parsedFn = parsedByName.get(nameRaw);
+						final calls:Map<String, Bool> = new Map();
+						var refsStatic = false;
+					if (tf != null && parsedFn != null) {
+						final locals:Map<String, Bool> = new Map();
+						for (p in tf.getParams()) {
+							final pn = p.getName();
+							if (pn != null && pn.length > 0) locals.set(pn, true);
+						}
+						for (s in HxFunctionDecl.getBody(parsedFn)) collectLocalsFromStmt(s, locals);
+						final idents:Map<String, Bool> = new Map();
+						for (s in HxFunctionDecl.getBody(parsedFn)) scanStmtForDeps(s, locals, calls, idents);
+						for (n in idents.keys()) {
+							if (staticFieldNames.exists(n)) {
+								refsStatic = true;
+								break;
+							}
+						}
+					}
+					fnCallsByName.set(nameRaw, calls);
+					fnRefsStaticByName.set(nameRaw, refsStatic);
+				}
+
+				// Close over unqualified call dependencies for prelude functions.
+				var changed = true;
+				while (changed) {
+					changed = false;
+					final keys = [for (k in preludeFnNames.keys()) k];
+					for (nameRaw in keys) {
+						analyzeFn(nameRaw);
+						final calls = fnCallsByName.get(nameRaw);
+						if (calls == null) continue;
+						for (callee in calls.keys()) {
+							if (!fnNames.exists(callee)) continue;
+							if (callee == "load") continue;
+							if (!preludeFnNames.exists(callee)) {
+								preludeFnNames.set(callee, true);
+								changed = true;
+							}
+						}
+					}
+				}
+
+				// Drop any prelude candidates that depend on static values (they cannot be emitted
+				// before static initializers without breaking OCaml scoping).
+				for (nameRaw in [for (k in preludeFnNames.keys()) k]) {
+					analyzeFn(nameRaw);
+					if (fnRefsStaticByName.get(nameRaw) == true) preludeFnNames.remove(nameRaw);
+				}
+
+				var sawMain = false;
+				final exceptions = new Array<String>();
+
+				// OCaml limitation (mutual recursion + polymorphism):
+			// `let rec ... and ...` groups do not generalize polymorphic values the same way as
+			// independent `let` bindings.
 			//
-			// Why
-			// - Upstream harness code relies on `static final` constants (Ints/Strings + simple if/switch).
-			// - Without emitting these as OCaml `let` bindings, references collapse to bring-up poison.
-			final parsedFields = HxClassDecl.getFields(mainClass);
-			// Static initializers often refer to earlier static finals (e.g. `unitDir` refers to `repoDir`).
-			// During bring-up we treat those names as "bound" incrementally to avoid collapsing them to poison.
-			final staticTyByIdent:Map<String, TyType> = new Map();
-			for (f in parsedFields) {
-				if (!HxFieldDecl.getIsStatic(f)) continue;
-				final nameRaw = HxFieldDecl.getName(f);
-				if (nameRaw == null || nameRaw.length == 0) continue;
-				final init = HxFieldDecl.getInit(f);
+			// In the macro API surface (notably `haxe.macro.Context`), a helper like `load`
+			// is used to return many different function shapes:
+			//   `load("defined")(1)(key)`  vs  `load("init_macros_done")(0)()`
+			//
+			// If `load` is emitted as an `and load ...` member of the same recursive group,
+			// OCaml will try to unify all those instantiations and we get type errors like:
+			//   "expected string but got unit" at zero-arg call sites.
+			//
+			// Bring-up fix:
+			// - When emitting macro std modules, hoist `load` to an independent non-rec `let`
+			//   binding before the main `let rec` group so it can be generalized.
+			//
+				// Note: This must apply in both "stub body" and "full body" emission modes. The failure mode
+				// (monomorphic `load` inside the recursive group) appears in both configurations.
+				final shouldHoistLoad = StringTools.startsWith(mainModuleName, "Haxe_macro_");
+				if (shouldHoistLoad) {
+					for (tf in typedFns) {
+					if (tf.getName() != "load") continue;
+					final nameRaw = tf.getName();
+					final args = tf.getParams();
+					final ocamlArgs = args.length == 0
+						? "()"
+						: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
+					final parsedFn = parsedByName.get(nameRaw);
+					final retTy = ocamlTypeFromTy(tf.getReturnType());
+					final allowed:Map<String, Bool> = new Map();
+					final tyByIdent:Map<String, TyType> = new Map();
+					for (a in args) allowed.set(a.getName(), true);
+					for (a in args) tyByIdent.set(a.getName(), a.getType());
+					for (name in allowed.keys()) if (tyByIdent.get(name) == null) tyByIdent.set(name, TyType.unknown());
+					final body = parsedFn == null
+						? "(Obj.magic 0)"
+						: returnExprToOcaml(
+							parsedFn.getFirstReturnExpr(),
+							allowed,
+							tf.getReturnType(),
+							arityByName,
+							tyByIdent,
+							staticImportByIdent,
+							HxModuleDecl.getPackagePath(decl),
+							moduleNameByPkgAndClass,
+							callSigByCallee
+						);
+
+						out.push("let " + ocamlValueIdent(nameRaw) + " " + ocamlArgs + " : " + retTy + " = " + body);
+						out.push("");
+						break;
+					}
+				}
+
+				// Emit static-initializer helper functions before static values so static `let` bindings
+				// can call them (Haxe semantics).
+				final typedFnsPrelude = new Array<TyFunctionEnv>();
+				for (tf in typedFns) {
+					final nameRaw = tf.getName();
+					if (nameRaw == null || nameRaw.length == 0) continue;
+					if (!preludeFnNames.exists(nameRaw)) continue;
+					typedFnsPrelude.push(tf);
+				}
+
+				function emitFnGroup(group:Array<TyFunctionEnv>):Void {
+					for (i in 0...group.length) {
+						final tf = group[i];
+						final nameRaw = tf.getName();
+						final name = ocamlValueIdent(nameRaw);
+						if (name == "main") sawMain = true;
+
+						final args = tf.getParams();
+						final ocamlArgs = args.length == 0
+							? "()"
+							: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
+
+						final parsedFn = parsedByName.get(nameRaw);
+						final retTy = ocamlTypeFromTy(tf.getReturnType());
+						final allowed:Map<String, Bool> = new Map();
+						final tyByIdent:Map<String, TyType> = new Map();
+						for (a in args) allowed.set(a.getName(), true);
+						for (a in args) tyByIdent.set(a.getName(), a.getType());
+						for (tf2 in typedFns) allowed.set(tf2.getName(), true);
+						for (f in parsedFields) if (HxFieldDecl.getIsStatic(f)) allowed.set(HxFieldDecl.getName(f), true);
+
+						final localTypeHints:Map<String, TyType> = new Map();
+						if (moduleEmitBodies) {
+							for (l in tf.getLocals()) {
+								final n = l.getName();
+								if (n != null && n.length > 0 && localTypeHints.get(n) == null) localTypeHints.set(n, l.getType());
+							}
+						}
+
+						for (name in allowed.keys()) if (tyByIdent.get(name) == null) tyByIdent.set(name, TyType.unknown());
+
+						final body = if (parsedFn == null) {
+							"()";
+						} else if (!moduleEmitBodies) {
+							returnExprToOcaml(
+								parsedFn.getFirstReturnExpr(),
+								allowed,
+								tf.getReturnType(),
+								arityByName,
+								tyByIdent,
+								staticImportByIdent,
+								HxModuleDecl.getPackagePath(decl),
+								moduleNameByPkgAndClass,
+								callSigByCallee
+							);
+						} else {
+							final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
+							exceptions.push("exception " + exc + " of Obj.t");
+							final stmts = HxFunctionDecl.getBody(parsedFn);
+							"((" //
+							+ "try (let _ = "
+							+ stmtListToOcaml(
+								stmts,
+								allowed,
+								exc,
+								arityByName,
+								tyByIdent,
+								staticImportByIdent,
+								HxModuleDecl.getPackagePath(decl),
+								moduleNameByPkgAndClass,
+								callSigByCallee,
+								localTypeHints,
+								fnReturnTypesByName
+							)
+							+ " in (Obj.magic 0)) "
+							+ "with " + exc + " v -> (Obj.magic v)"
+							+ ") : " + retTy + ")";
+						};
+
+						final kw = i == 0 ? "let rec" : "and";
+						out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
+						out.push("");
+					}
+				}
+
+				if (typedFnsPrelude.length > 0) {
+					emitFnGroup(typedFnsPrelude);
+				}
+
+				// Emit class-scope static values (bootstrap subset).
+				//
+				// Why
+				// - Upstream harness code relies on `static final` constants (Ints/Strings + simple if/switch).
+				// - Without emitting these as OCaml `let` bindings, references collapse to bring-up poison.
+				// Static initializers often refer to earlier static finals (e.g. `unitDir` refers to `repoDir`).
+				// During bring-up we treat those names as "bound" incrementally to avoid collapsing them to poison.
+				final staticTyByIdent:Map<String, TyType> = new Map();
+				for (f in parsedFields) {
+					if (!HxFieldDecl.getIsStatic(f)) continue;
+					final nameRaw = HxFieldDecl.getName(f);
+					if (nameRaw == null || nameRaw.length == 0) continue;
+					final init = HxFieldDecl.getInit(f);
 					final initOcaml = init == null
 						? "(Obj.magic 0)"
 						: exprToOcaml(
@@ -2504,152 +3579,629 @@ class EmitterStage {
 							moduleNameByPkgAndClass,
 							callSigByCallee
 						);
-				out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
-				if (staticTyByIdent.get(nameRaw) == null) staticTyByIdent.set(nameRaw, TyType.unknown());
-			}
-			if (parsedFields.length > 0) out.push("");
+					out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
+					if (staticTyByIdent.get(nameRaw) == null) staticTyByIdent.set(nameRaw, TyType.unknown());
+				}
+				if (parsedFields.length > 0) out.push("");
 
-			var sawMain = false;
-				final exceptions = new Array<String>();
-				for (i in 0...typedFns.length) {
-					final tf = typedFns[i];
-					final nameRaw = tf.getName();
-				final name = ocamlValueIdent(nameRaw);
-				if (name == "main") sawMain = true;
+					final typedFnsRest = new Array<TyFunctionEnv>();
+					for (tf in typedFns) {
+						if (shouldHoistLoad && tf.getName() == "load") continue;
+						if (preludeFnNames.exists(tf.getName())) continue;
+						typedFnsRest.push(tf);
+					}
 
-				final args = tf.getParams();
-				final ocamlArgs = args.length == 0
-					? "()"
-					: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
-
-					final parsedFn = parsedByName.get(nameRaw);
-					final retTy = ocamlTypeFromTy(tf.getReturnType());
-					final allowed:Map<String, Bool> = new Map();
-					final tyByIdent:Map<String, TyType> = new Map();
-					for (a in args) allowed.set(a.getName(), true);
-					for (a in args) tyByIdent.set(a.getName(), a.getType());
-					// Allow calls between methods in the same emitted module.
+					if (typedFnsRest.length > 0) {
+						// Stage 3 bring-up: avoid putting *every* function in a single `let rec ... and ...` group.
 						//
 						// Why
-					// - In Haxe, an unqualified call like `generated()` inside `Main.main` refers to a
-					//   static method on the current class.
-					// - In OCaml emission, those methods become top-level `let` bindings in the same
-					//   compilation unit, so the call is safe and should not be treated as bring-up poison.
-					for (tf2 in typedFns) allowed.set(tf2.getName(), true);
-					// Allow unqualified references to static fields/constants in the same module.
-					for (f in parsedFields) if (HxFieldDecl.getIsStatic(f)) allowed.set(HxFieldDecl.getName(f), true);
-					function collectLocalNamesInStmt(s:HxStmt, out:Map<String, Bool>):Void {
-						switch (s) {
-							case SBlock(stmts, _):
-								for (ss in stmts) collectLocalNamesInStmt(ss, out);
-							case SIf(_cond, thenBranch, elseBranch, _):
-								collectLocalNamesInStmt(thenBranch, out);
-								if (elseBranch != null) collectLocalNamesInStmt(elseBranch, out);
-							case SForIn(name, _iterable, body, _):
-								out.set(name, true);
-								collectLocalNamesInStmt(body, out);
-							case SVar(name, _hint, _init, _):
-								out.set(name, true);
-							case _:
+						// - In OCaml, values in a recursive group are *monomorphic within the group*.
+						// - Upstream test harnesses frequently call helpers like `isTrue(v:Dynamic, ...)` with
+						//   different `v` types (Int, Float, String, ...). If `testIs` and `isTrue` live in the
+						//   same recursive group, OCaml will unify `v` to the first use (e.g. `int`) and later
+						//   calls (e.g. `2.`) fail to typecheck.
+						//
+						// How
+						// - Build a best-effort call graph between module-local functions.
+						// - Emit strongly-connected components (SCCs) as separate recursive groups.
+						//   - SCC size > 1: `let rec ... and ...` (mutual recursion)
+						//   - SCC size == 1: `let rec f ...` (still recursive, but isolated so it can be
+						//     generalized before later bindings use it)
+						//
+						// This keeps output deterministic and matches OCaml scoping rules:
+						// callers must come *after* callees unless they share a recursive group.
+						final nRest = typedFnsRest.length;
+						final restIndexByName = new haxe.ds.StringMap<Int>();
+						for (i in 0...nRest) {
+							final nm = typedFnsRest[i].getName();
+							if (nm != null && nm.length > 0) restIndexByName.set(nm, i);
+						}
+
+						final edges = new Array<Array<Int>>();
+						final revEdges = new Array<Array<Int>>();
+						for (_ in 0...nRest) {
+							edges.push([]);
+							revEdges.push([]);
+						}
+
+						// Deduplicate edges per caller using an integer stamp array.
+						final seenStamp = new Array<Int>();
+						seenStamp.resize(nRest);
+						for (i in 0...nRest) seenStamp[i] = 0;
+
+						for (i in 0...nRest) {
+							final nameRaw = typedFnsRest[i].getName();
+							final parsedFn = nameRaw == null ? null : parsedByName.get(nameRaw);
+							if (parsedFn == null) continue;
+
+							final stamp = i + 1;
+							final stmtWorklist = new Array<HxStmt>();
+							final exprWorklist = new Array<HxExpr>();
+							for (s in HxFunctionDecl.getBody(parsedFn)) if (s != null) stmtWorklist.push(s);
+
+							while (stmtWorklist.length > 0) {
+								final s = stmtWorklist.pop();
+								if (s == null) continue;
+								switch (s) {
+									case SBlock(stmts, _):
+										if (stmts != null) for (ss in stmts) if (ss != null) stmtWorklist.push(ss);
+									case SVar(_name, _hint, init, _):
+										if (init != null) exprWorklist.push(init);
+									case SIf(cond, thenBranch, elseBranch, _):
+										if (cond != null) exprWorklist.push(cond);
+										if (thenBranch != null) stmtWorklist.push(thenBranch);
+										if (elseBranch != null) stmtWorklist.push(elseBranch);
+									case SForIn(_name, iterable, body, _):
+										if (iterable != null) exprWorklist.push(iterable);
+										if (body != null) stmtWorklist.push(body);
+									case SSwitch(scrutinee, cases, _):
+										if (scrutinee != null) exprWorklist.push(scrutinee);
+										if (cases != null) for (c in cases) if (c != null && c.body != null) stmtWorklist.push(c.body);
+									case SReturnVoid(_):
+									case SReturn(expr, _):
+										if (expr != null) exprWorklist.push(expr);
+									case SExpr(expr, _):
+										if (expr != null) exprWorklist.push(expr);
+								}
+							}
+
+							while (exprWorklist.length > 0) {
+								final e = exprWorklist.pop();
+								if (e == null) continue;
+								switch (e) {
+									case ECall(callee, args):
+										var calleeName:Null<String> = null;
+										switch (callee) {
+											case EIdent(name):
+												calleeName = name;
+											case EField(_obj, field):
+												calleeName = field;
+											case _:
+										}
+
+										if (calleeName != null && calleeName.length > 0 && restIndexByName.exists(calleeName)) {
+											final j = restIndexByName.get(calleeName);
+											if (j != null && j != i && seenStamp[j] != stamp) {
+												seenStamp[j] = stamp;
+												edges[i].push(j);
+												revEdges[j].push(i);
+											}
+										}
+
+										if (callee != null) exprWorklist.push(callee);
+										if (args != null) for (a in args) if (a != null) exprWorklist.push(a);
+									case EField(obj, _):
+										if (obj != null) exprWorklist.push(obj);
+									case ELambda(_args, body):
+										if (body != null) exprWorklist.push(body);
+									case ETernary(cond, thenExpr, elseExpr):
+										if (cond != null) exprWorklist.push(cond);
+										if (thenExpr != null) exprWorklist.push(thenExpr);
+										if (elseExpr != null) exprWorklist.push(elseExpr);
+									case EAnon(_names, values):
+										if (values != null) for (v in values) if (v != null) exprWorklist.push(v);
+									case ESwitch(scrutinee, cases):
+										if (scrutinee != null) exprWorklist.push(scrutinee);
+										if (cases != null) for (c in cases) if (c != null && c.expr != null) exprWorklist.push(c.expr);
+									case ENew(_typePath, args):
+										if (args != null) for (a in args) if (a != null) exprWorklist.push(a);
+									case EUnop(_op, expr):
+										if (expr != null) exprWorklist.push(expr);
+									case EBinop(_op, left, right):
+										if (left != null) exprWorklist.push(left);
+										if (right != null) exprWorklist.push(right);
+									case EArrayComprehension(_name, iterable, yieldExpr):
+										if (iterable != null) exprWorklist.push(iterable);
+										if (yieldExpr != null) exprWorklist.push(yieldExpr);
+									case EArrayDecl(values):
+										if (values != null) for (v in values) if (v != null) exprWorklist.push(v);
+									case EArrayAccess(array, index):
+										if (array != null) exprWorklist.push(array);
+										if (index != null) exprWorklist.push(index);
+									case ERange(start, end):
+										if (start != null) exprWorklist.push(start);
+										if (end != null) exprWorklist.push(end);
+									case ECast(expr, _hint):
+										if (expr != null) exprWorklist.push(expr);
+									case EUntyped(expr):
+										if (expr != null) exprWorklist.push(expr);
+									case _:
+								}
+							}
+						}
+
+						// Kosaraju SCC on the function dependency graph.
+						final visited = new Array<Int>();
+						visited.resize(nRest);
+						for (i in 0...nRest) visited[i] = 0;
+						final order = new Array<Int>();
+
+						for (v in 0...nRest) {
+							if (visited[v] != 0) continue;
+							final stackNode = new Array<Int>();
+							final stackEdgeIdx = new Array<Int>();
+							stackNode.push(v);
+							stackEdgeIdx.push(0);
+							visited[v] = 1;
+							while (stackNode.length > 0) {
+								final top = stackNode.length - 1;
+								final node = stackNode[top];
+								final ei = stackEdgeIdx[top];
+								final adj = edges[node];
+								if (adj != null && ei < adj.length) {
+									final w = adj[ei];
+									stackEdgeIdx[top] = ei + 1;
+									if (visited[w] == 0) {
+										visited[w] = 1;
+										stackNode.push(w);
+										stackEdgeIdx.push(0);
+									}
+								} else {
+									order.push(node);
+									stackNode.pop();
+									stackEdgeIdx.pop();
+								}
+							}
+						}
+
+						final compId = new Array<Int>();
+						compId.resize(nRest);
+						for (i in 0...nRest) compId[i] = -1;
+						final comps = new Array<Array<Int>>();
+
+						var oi = order.length - 1;
+						while (oi >= 0) {
+							final v = order[oi];
+							oi -= 1;
+							if (compId[v] != -1) continue;
+
+							final cid = comps.length;
+							final nodes = new Array<Int>();
+							final stack = new Array<Int>();
+							stack.push(v);
+							compId[v] = cid;
+
+							while (stack.length > 0) {
+								final x = stack.pop();
+								nodes.push(x);
+								final radj = revEdges[x];
+								if (radj != null) {
+									for (w in radj) {
+										if (compId[w] == -1) {
+											compId[w] = cid;
+											stack.push(w);
+										}
+									}
+								}
+							}
+
+							comps.push(nodes);
+						}
+
+						final nComp = comps.length;
+						final compAdj = new Array<Array<Int>>();
+						final indeg = new Array<Int>();
+						compAdj.resize(nComp);
+						indeg.resize(nComp);
+						for (c in 0...nComp) {
+							compAdj[c] = [];
+							indeg[c] = 0;
+						}
+
+						// Dedup comp edges via a dense stamp table (nComp is small per module).
+						final compEdgeSeen = new Array<Int>();
+						compEdgeSeen.resize(nComp * nComp);
+						for (k in 0...compEdgeSeen.length) compEdgeSeen[k] = 0;
+
+						for (i in 0...nRest) {
+							final callerComp = compId[i];
+							final adj = edges[i];
+							if (adj == null) continue;
+							for (j in adj) {
+								final calleeComp = compId[j];
+								if (callerComp == calleeComp) continue;
+								// Emit callee SCC before caller SCC.
+								final src = calleeComp;
+								final dst = callerComp;
+								final key = src * nComp + dst;
+								if (compEdgeSeen[key] != 0) continue;
+								compEdgeSeen[key] = 1;
+								compAdj[src].push(dst);
+								indeg[dst] += 1;
+							}
+						}
+
+						final q = new Array<Int>();
+						for (c in 0...nComp) if (indeg[c] == 0) q.push(c);
+						var qi = 0;
+						final compOrder = new Array<Int>();
+						while (qi < q.length) {
+							final c = q[qi];
+							qi += 1;
+							compOrder.push(c);
+
+							final outs = compAdj[c];
+							if (outs != null) {
+								for (d in outs) {
+									indeg[d] -= 1;
+									if (indeg[d] == 0) q.push(d);
+								}
+							}
+						}
+
+						// Safety fallback: if something went wrong, emit everything in one group.
+						// (Don't emit partial SCC order and then re-emit; that would duplicate definitions.)
+						if (compOrder.length != nComp) {
+							emitFnGroup(typedFnsRest);
+						} else {
+							for (c in compOrder) {
+								final nodes = comps[c];
+								// Deterministic order within the SCC: preserve original function order by sorting indices.
+								if (nodes != null && nodes.length > 1) {
+									var si = 1;
+									while (si < nodes.length) {
+										final key = nodes[si];
+										var sj = si - 1;
+										while (sj >= 0 && nodes[sj] > key) {
+											nodes[sj + 1] = nodes[sj];
+											sj -= 1;
+										}
+										nodes[sj + 1] = key;
+										si += 1;
+									}
+								}
+
+								final group = new Array<TyFunctionEnv>();
+								if (nodes != null) for (idx in nodes) group.push(typedFnsRest[idx]);
+								if (group.length > 0) emitFnGroup(group);
+							}
 						}
 					}
 
-					// Only allow locals when we're actually emitting statement bodies that bind them.
-					// Use the parsed statement list (not the typed-local list) so we don't accidentally
-					// "allow" identifiers that won't be bound in emitted OCaml.
-					if (moduleEmitBodies && parsedFn != null) {
-						final localNames:Map<String, Bool> = new Map();
-						for (s in HxFunctionDecl.getBody(parsedFn)) collectLocalNamesInStmt(s, localNames);
-						for (name in localNames.keys()) allowed.set(name, true);
-						// Keep type hints for those locals when available.
-						for (l in tf.getLocals()) if (allowed.get(l.getName()) == true) tyByIdent.set(l.getName(), l.getType());
+					if (moduleEmitBodies && exceptions.length > 0) {
+						// Prepend exceptions so the `try ... with` clauses can reference them.
+						out.insert(2, exceptions.join("\n") + "\n");
 					}
 
-					// Ensure allowed identifiers are treated as bound during emission, even if we don't know
-					// their precise type yet. This avoids `exprToOcaml` collapsing locals/helpers to bring-up
-					// poison purely because Stage3 typing info is incomplete.
-					for (name in allowed.keys()) if (tyByIdent.get(name) == null) tyByIdent.set(name, TyType.unknown());
+					if (isRoot && sawMain) {
+						out.push("let () = ignore (main ())");
+						out.push("");
+					}
 
-					final body = if (parsedFn == null) {
-						"()";
-						} else if (!moduleEmitBodies) {
-								returnExprToOcaml(
-									parsedFn.getFirstReturnExpr(),
-									allowed,
-									tf.getReturnType(),
-									arityByName,
-									tyByIdent,
-									staticImportByIdent,
-									HxModuleDecl.getPackagePath(decl),
-									moduleNameByPkgAndClass,
-									callSigByCallee
-								);
-						} else {
-					// OCaml exception constructors must start with an uppercase letter.
-					final exc = "HxReturn_" + escapeOcamlIdentPart(nameRaw);
-					exceptions.push("exception " + exc + " of Obj.t");
-					final stmts = HxFunctionDecl.getBody(parsedFn);
-					// Ensure the `try` expression itself typechecks as the function return type.
+						final mlPath = haxe.io.Path.join([outAbs, mainModuleName + ".ml"]);
+						sys.io.File.saveContent(mlPath, out.join("\n"));
+						currentOcamlModuleName = prevOcamlModule;
+						currentImportInt64 = prevInt64;
+						return mainModuleName + ".ml";
+						} catch (e:Dynamic) {
+							currentOcamlModuleName = prevOcamlModule;
+							currentImportInt64 = prevInt64;
+							throw e;
+						}
+				}
+
+					final files = new Array<String>();
+					var rootMain:Null<String> = null;
+
+					// Emit the main class first (typed, optional full bodies).
+					final mainPath = isRuntimeProvided ? null : emitMainClass();
+					if (mainPath != null) {
+						files.push(mainPath);
+						if (isRoot) rootMain = mainPath;
+					}
+
+					// Emit any additional module-local class declarations as separate compilation units.
 					//
 					// Why
-					// - In this bring-up emitter we implement `return` via exceptions.
-					// - The typed OCaml expression in the `try` body must still have type `retTy`,
-					//   even if the only "real" return path is the exception handler.
-					//
-					// How
-					// - Use `let _ = <stmts> in (Obj.magic 0)` for the no-return path and cast the entire
-					//   `try` to `retTy`.
-					// - This is intentionally non-semantic but avoids OCaml type errors like:
-					//   "This variant expression is expected to have type bool; There is no constructor () within type bool".
-						"((" //
-						+ "try (let _ = "
-						+ stmtListToOcaml(
-							stmts,
-							allowed,
-							exc,
-							arityByName,
-							tyByIdent,
-								staticImportByIdent,
-								HxModuleDecl.getPackagePath(decl),
-								moduleNameByPkgAndClass,
-								callSigByCallee
-							)
-						+ " in (Obj.magic 0)) "
-						+ "with " + exc + " v -> (Obj.magic v)"
-						+ ") : " + retTy + ")";
-					};
+					// - Upstream Haxe modules can declare helper types in the same file (often `private class Foo`).
+					// - Stage3 typing currently models only the chosen `mainClass`, but codegen still needs
+					//   providers for referenced static members like `Foo.bar`.
+					for (c in HxModuleDecl.getClasses(decl)) {
+						final nm = HxClassDecl.getName(c);
+						if (nm == null || nm.length == 0 || nm == "Unknown") continue;
+						if (nm == className) continue;
+						final p = emitStubClass(c);
+						if (p != null) files.push(p);
+					}
 
-				// Keep return type annotation to make early typing behavior visible.
-				final kw = i == 0 ? "let rec" : "and";
-				out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
-				out.push("");
+					return { files: files, rootMain: rootMain };
 				}
 
-				if (moduleEmitBodies && exceptions.length > 0) {
-					// Prepend exceptions so the `try ... with` clauses can reference them.
-					out.insert(2, exceptions.join("\n") + "\n");
+			// Emit dependencies first, but link the root module last so its `let () = main ()`
+			// runs after all referenced compilation units are linked.
+			final emittedModulePaths = new Array<String>();
+			var rootMainPath:Null<String> = null;
+			final deps = typedModules.slice(1);
+			for (tm in deps) {
+				final r = emitModule(tm, false);
+				for (f in r.files) emittedModulePaths.push(f);
+			}
+			final rr = emitModule(typedModules[0], true);
+			for (f in rr.files) emittedModulePaths.push(f);
+			rootMainPath = rr.rootMain;
+
+			// Stage 3 bring-up: upstream unit fixtures use `StringTools.hex`, but our Stage3 typing
+			// frequently produces a placeholder `StringTools.ml` compilation unit with no members.
+			//
+				// Emit a minimal provider implementation when we detect the placeholder unit, so calls
+				// like `StringTools.hex(n)` can link.
+				{
+					final shimName = "StringTools";
+					final shimFile = shimName + ".ml";
+				final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+				final placeholder = "(* Generated by hxhx(stage3) bootstrap emitter *)";
+				try {
+					if (sys.FileSystem.exists(shimPath)) {
+						final contents = sys.io.File.getContent(shimPath);
+						final trimmed = StringTools.trim(contents);
+						// The placeholder unit shape changed once we started emitting a file-local warning
+						// suppression directive (to keep bring-up output warning-clean under strict dune).
+						//
+						// Treat both of these as "empty placeholder" modules:
+						// - just the header comment
+						// - header comment + a single `[@@@warning "..."]` line
+						var isPlaceholder = false;
+						if (trimmed == placeholder) {
+							isPlaceholder = true;
+						} else {
+							final lines = trimmed.split("\n").filter(l -> l != null && StringTools.trim(l).length > 0);
+							if (lines.length == 2 && lines[0] == placeholder && StringTools.startsWith(lines[1], "[@@@warning")) {
+								isPlaceholder = true;
+							}
+						}
+						if (isPlaceholder) {
+							sys.io.File.saveContent(
+								shimPath,
+								"(* hxhx(stage3) bootstrap shim: StringTools.hex *)\n"
+								+ "\n"
+								+ "let hex (n : int) (digits : int) : string =\n"
+								+ "  let hexChars = \"0123456789ABCDEF\" in\n"
+								+ "  let n32 = Int32.of_int n in\n"
+								+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
+								+ "    let digit = Int32.to_int (Int32.logand x 0xFl) in\n"
+								+ "    let acc2 = (String.make 1 hexChars.[digit]) ^ acc in\n"
+								+ "    let x2 = Int32.shift_right_logical x 4 in\n"
+								+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
+								+ "  in\n"
+								+ "  let s = build n32 \"\" in\n"
+								+ "  if digits <= 0 then s else\n"
+								+ "    let rec pad (s0 : string) : string =\n"
+								+ "      if String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
+								+ "    in\n"
+								+ "    pad s\n"
+							);
+						}
+					} else {
+						sys.io.File.saveContent(
+							shimPath,
+							"(* hxhx(stage3) bootstrap shim: StringTools.hex *)\n"
+							+ "\n"
+							+ "let hex (n : int) (digits : int) : string =\n"
+							+ "  let hexChars = \"0123456789ABCDEF\" in\n"
+							+ "  let n32 = Int32.of_int n in\n"
+							+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
+							+ "    let digit = Int32.to_int (Int32.logand x 0xFl) in\n"
+							+ "    let acc2 = (String.make 1 hexChars.[digit]) ^ acc in\n"
+							+ "    let x2 = Int32.shift_right_logical x 4 in\n"
+							+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
+							+ "  in\n"
+							+ "  let s = build n32 \"\" in\n"
+							+ "  if digits <= 0 then s else\n"
+							+ "    let rec pad (s0 : string) : string =\n"
+							+ "      if String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
+							+ "    in\n"
+							+ "    pad s\n"
+						);
+						generatedPaths.push(shimFile);
+					}
+					} catch (_:Dynamic) {}
 				}
 
-			if (isRoot && sawMain) {
-				out.push("let () = ignore (main ())");
-				out.push("");
+				// Stage 3 bring-up: upstream unit fixtures call `haxe.xml.Parser.parse(...)`, but our Stage3
+				// typing can emit a `Haxe_xml_Parser.ml` unit that only contains placeholder statics
+				// (e.g. `escapes`) and no `parse` binding.
+				//
+				// Provide a minimal `parse` value so the suite can link during emit-only bring-up.
+				{
+					final shimName = "Haxe_xml_Parser";
+					final shimFile = shimName + ".ml";
+					final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+					try {
+						if (sys.FileSystem.exists(shimPath)) {
+							final contents = sys.io.File.getContent(shimPath);
+							final trimmed = StringTools.trim(contents);
+							final hasParse =
+								StringTools.startsWith(trimmed, "let parse")
+								|| StringTools.startsWith(trimmed, "let rec parse")
+								|| contents.indexOf("\nlet parse") != -1
+								|| contents.indexOf("\nlet rec parse") != -1;
+							if (!hasParse) {
+								sys.io.File.saveContent(shimPath, contents + "\n\nlet parse = (Obj.magic 0)\n");
+							}
+						} else {
+							sys.io.File.saveContent(
+								shimPath,
+								"(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n"
+								+ "[@@@warning \"-21-26\"]\n"
+								+ "let parse = (Obj.magic 0)\n"
+							);
+							generatedPaths.push(shimFile);
+						}
+					} catch (_:Dynamic) {}
+				}
+
+				// Stage 3 bring-up: upstream unit fixtures use `Xml.*` helpers (e.g. `Xml.createElement`)
+				// but Stage3 typing doesn't yet guarantee an emitted provider module for `Xml`.
+				//
+				// Provide a minimal module so the suite can link during emit-only bring-up.
+				{
+					final shimName = "Xml";
+					final shimFile = shimName + ".ml";
+					final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+					if (!sys.FileSystem.exists(shimPath)) {
+						sys.io.File.saveContent(
+							shimPath,
+							"(* hxhx(stage3) bootstrap shim: Xml helpers *)\n"
+							+ "[@@@warning \"-21-26\"]\n"
+							+ "let createElement = (Obj.magic 0)\n"
+							+ "let createPCData = (Obj.magic 0)\n"
+							+ "let createCData = (Obj.magic 0)\n"
+							+ "let createDocType = (Obj.magic 0)\n"
+							+ "let createProcessingInstruction = (Obj.magic 0)\n"
+							+ "let createComment = (Obj.magic 0)\n"
+						);
+						generatedPaths.push(shimFile);
+					}
+				}
+
+				// Stage 3 bring-up: explicit imports like `import haxe.CallStack;` allow referring to the
+				// type/module as `CallStack` in Haxe source.
+				//
+				// Our bootstrap emitter does not yet fully resolve imported type short names to their
+			// emitted OCaml module names, so `CallStack.toString(...)` would otherwise compile to an
+			// unbound OCaml module access.
+			//
+			// Provide a tiny alias shim when needed. This is intentionally narrow: we add only the
+			// module required by Gate1/utest, and avoid a broad aliasing scheme that could shadow
+			// OCaml stdlib modules (e.g. `List`) during bring-up.
+			{
+				final shimName = "CallStack";
+				final shimFile = shimName + ".ml";
+				final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+				if (!sys.FileSystem.exists(shimPath)) {
+					sys.io.File.saveContent(
+						shimPath,
+						"(* hxhx(stage3) bootstrap import shim: CallStack = haxe.CallStack *)\n"
+						+ "include Haxe_CallStack\n"
+					);
+					generatedPaths.push(shimFile);
+				}
 			}
 
-				final mlPath = haxe.io.Path.join([outAbs, moduleName + ".ml"]);
-				sys.io.File.saveContent(mlPath, out.join("\n"));
-				return moduleName + ".ml";
-			}
+			// Stage 3 bring-up: explicit import short-name shims.
+			//
+			// Haxe:
+			//   import utest.Assert;
+			//   Assert.floatEquals(...)
+			//
+			// OCaml:
+			// - Our emitter currently lowers `Assert.floatEquals` as a module access to `Assert`.
+			// - The *actual* emitted unit for `utest.Assert` is `Utest_Assert`.
+			//
+			// Emit a small alias compilation unit (`Assert.ml`) that re-exports the real provider.
+			//
+			// Safety
+			// - Avoid generating aliases that would conflict with:
+			//   - modules we already emit (typed modules),
+			//   - repo-owned runtime units (`runtime/*.ml`),
+			//   - or OCaml stdlib modules commonly used by our runtime.
+			{
+				inline function baseModuleName(path:String):String {
+					final file = haxe.io.Path.withoutDirectory(path);
+					return StringTools.endsWith(file, ".ml") ? file.substr(0, file.length - 3) : file;
+				}
 
-		// Emit dependencies first, but link the root module last so its `let () = main ()`
-		// runs after all referenced compilation units are linked.
-		final emittedModulePaths = new Array<String>();
-		final deps = typedModules.slice(1);
-		for (tm in deps) {
-			final path = emitModule(tm, false);
-			if (path != null) emittedModulePaths.push(path);
-		}
-		final rootPath = emitModule(typedModules[0], true);
-		if (rootPath != null) emittedModulePaths.push(rootPath);
+				final existing:Map<String, Bool> = new Map();
+				for (p in runtimePaths) existing.set(baseModuleName(p), true);
+				for (p in generatedPaths) existing.set(baseModuleName(p), true);
+				for (p in emittedModulePaths) existing.set(baseModuleName(p), true);
+
+				final deny:Map<String, Bool> = new Map();
+				// OCaml stdlib modules (avoid shadowing runtime dependencies).
+				for (m in [
+					"Array",
+					"Buffer",
+					"Bytes",
+					"Char",
+					"Filename",
+					"Format",
+					"Gc",
+					"Hashtbl",
+					"Int",
+					"Int32",
+					"Int64",
+					"List",
+					"Map",
+					"Marshal",
+					"Nativeint",
+					"Obj",
+					"Option",
+					"Printexc",
+					"Printf",
+					"Queue",
+					"Result",
+					"Set",
+					"Stack",
+					"Stdlib",
+					"Str",
+					"String",
+					"Sys",
+					"Unix",
+				]) deny.set(m, true);
+
+				final aliasByShort:Map<String, String> = new Map();
+				for (tm in typedModules) {
+					for (rawImport in tm.getEnv().getImports()) {
+						if (rawImport == null) continue;
+						final imp = StringTools.trim(rawImport);
+						if (imp.length == 0) continue;
+						if (StringTools.endsWith(imp, ".*")) continue;
+						final parts = imp.split(".");
+						if (parts.length == 0) continue;
+						final short = parts[parts.length - 1];
+						if (short == null || short.length == 0 || !isUpperStart(short)) continue;
+						if (deny.exists(short)) continue;
+						if (existing.exists(short)) continue;
+						final target = ocamlModuleNameFromTypePath(imp);
+						if (target == null || target.length == 0) continue;
+						if (target == short) continue;
+						// Only alias to a provider that actually exists in this build output.
+						//
+						// Why
+						// - Some imports are inactive after conditional compilation, or are otherwise not
+						//   present in the resolved+emitted module set during bring-up.
+						// - Emitting an alias to a missing provider turns an unused import into a hard
+						//   OCaml build failure.
+						if (!existing.exists(target)) continue;
+						if (!aliasByShort.exists(short)) aliasByShort.set(short, target);
+					}
+				}
+
+				for (short in aliasByShort.keys()) {
+					final target = aliasByShort.get(short);
+					if (target == null || target.length == 0) continue;
+					final aliasFile = short + ".ml";
+					final aliasPath = haxe.io.Path.join([outAbs, aliasFile]);
+					if (sys.FileSystem.exists(aliasPath)) continue;
+					sys.io.File.saveContent(
+						aliasPath,
+						"(* hxhx(stage3) bootstrap import shim: " + short + " = " + target + " *)\n"
+						+ "include " + target + "\n"
+					);
+					generatedPaths.push(aliasFile);
+					existing.set(short, true);
+				}
+			}
 
 		final exePath = haxe.io.Path.join([outAbs, "out.exe"]);
 		try {
@@ -2675,12 +4227,70 @@ class EmitterStage {
 		// How
 			// - Use `ocamldep -sort` to topologically sort the emitted `.ml` units.
 			// - Keep the root unit last so `let () = main ()` (when present) runs after linking deps.
-				final orderedMl = uniqStrings(ocamldepSort(uniqStrings(runtimePaths.concat(generatedPaths).concat(emittedModulePaths))));
-			final orderedNoRoot = new Array<String>();
-			final rootName = rootPath;
-			for (f in orderedMl) if (rootName == null || f != rootName) orderedNoRoot.push(f);
-			if (rootName != null) orderedNoRoot.push(rootName);
-			final orderedNoRootUniq = uniqStrings(orderedNoRoot);
+				// macOS default filesystems are case-insensitive. OCaml, however, treats module names as
+				// case-sensitive (and derives the compilation unit name from the *spelling* of the
+				// filename it was invoked with).
+				//
+				// If the emitted file list contains two paths that differ only by case
+				// (e.g. `Haxe_macro_Expr.ml` vs `Haxe_macro_expr.ml`), they point at the same file on
+				// case-insensitive filesystems. Compiling the same unit twice under different spellings
+				// will produce "Wrong file naming" errors when OCaml later loads the `.cmi`.
+				//
+				// Defensive bring-up fix:
+				// - Canonicalize `.ml` paths to the casing stored on disk under `outAbs/`,
+				// - de-duplicate case-insensitively before invoking `ocamldep`/`ocamlopt`.
+				inline function lowerKey(p:String):String {
+					return p == null ? "" : p.toLowerCase();
+				}
+				final canonicalByLower:Map<String, String> = new Map();
+				function registerCanonical(relPath:String):Void {
+					if (relPath == null || relPath.length == 0) return;
+					final key = lowerKey(relPath);
+					if (canonicalByLower.exists(key)) {
+						final prev = canonicalByLower.get(key);
+						// If we ever hit this on a case-sensitive filesystem, it means the build output is not
+						// portable to case-insensitive hosts (two distinct units collide by case-folding).
+						if (prev != relPath) throw "stage3 emitter: case-insensitive .ml collision: '" + prev + "' vs '" + relPath + "'";
+						return;
+					}
+					canonicalByLower.set(key, relPath);
+				}
+				function scanMlDir(absDir:String, prefix:String):Void {
+					if (absDir == null || absDir.length == 0) return;
+					if (!sys.FileSystem.exists(absDir) || !sys.FileSystem.isDirectory(absDir)) return;
+					for (name in sys.FileSystem.readDirectory(absDir)) {
+						if (name == null || !StringTools.endsWith(name, ".ml")) continue;
+						registerCanonical(prefix.length == 0 ? name : (prefix + "/" + name));
+					}
+				}
+				scanMlDir(outAbs, "");
+				scanMlDir(haxe.io.Path.join([outAbs, "runtime"]), "runtime");
+				function canonicalize(relPath:String):String {
+					if (relPath == null || relPath.length == 0) return relPath;
+					final key = lowerKey(relPath);
+					return canonicalByLower.exists(key) ? canonicalByLower.get(key) : relPath;
+				}
+				function uniqCaseInsensitive(xs:Array<String>):Array<String> {
+					if (xs == null || xs.length <= 1) return xs;
+					final seen:Map<String, Bool> = new Map();
+					final out = new Array<String>();
+					for (x in xs) {
+						if (x == null || x.length == 0) continue;
+						final key = lowerKey(x);
+						if (seen.exists(key)) continue;
+						seen.set(key, true);
+						out.push(canonicalize(x));
+					}
+					return out;
+				}
+
+				final allMl = uniqCaseInsensitive(runtimePaths.concat(generatedPaths).concat(emittedModulePaths).map(canonicalize));
+				final orderedMl = uniqCaseInsensitive(ocamldepSort(allMl).map(canonicalize));
+				final orderedNoRoot = new Array<String>();
+				final rootName = rootMainPath;
+				for (f in orderedMl) if (rootName == null || f != rootName) orderedNoRoot.push(f);
+				if (rootName != null) orderedNoRoot.push(rootName);
+				final orderedNoRootUniq = uniqStrings(orderedNoRoot);
 
 				final args = new Array<String>();
 				// OCaml 5: make the unix stdlib include directory explicit to silence the

@@ -112,19 +112,28 @@ class ExprMacroExpander {
 				continue;
 			}
 
-			final newCls = new HxClassDecl(
-				HxClassDecl.getName(cls),
-				HxClassDecl.getHasStaticMain(cls),
-				newFns,
-				newFields
-			);
-			final newDecl = new HxModuleDecl(
-				HxModuleDecl.getPackagePath(decl),
-				HxModuleDecl.getImports(decl),
-				newCls,
-				HxModuleDecl.getHeaderOnly(decl),
-				HxModuleDecl.getHasToplevelMain(decl)
-			);
+				final newCls = new HxClassDecl(
+					HxClassDecl.getName(cls),
+					HxClassDecl.getHasStaticMain(cls),
+					newFns,
+					newFields
+				);
+				final newClasses = new Array<HxClassDecl>();
+				for (c in HxModuleDecl.getClasses(decl)) {
+					if (HxClassDecl.getName(c) == HxClassDecl.getName(cls)) {
+						newClasses.push(newCls);
+					} else {
+						newClasses.push(c);
+					}
+				}
+				final newDecl = new HxModuleDecl(
+					HxModuleDecl.getPackagePath(decl),
+					HxModuleDecl.getImports(decl),
+					newCls,
+					newClasses,
+					HxModuleDecl.getHeaderOnly(decl),
+					HxModuleDecl.getHasToplevelMain(decl)
+				);
 			final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
 			final updated = new ResolvedModule(ResolvedModule.getModulePath(m), ResolvedModule.getFilePath(m), newParsed);
 			out.push(updated);

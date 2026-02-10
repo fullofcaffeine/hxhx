@@ -12911,7 +12911,7 @@ let parseModule = fun self (expectedMainClass : string) -> let packagePath = ref
             tempMaybeHxClassDecl := __assign_1848;
             __assign_1848
           ));
-          let mainClass = !tempMaybeHxClassDecl in HxModuleDecl.create (!packagePath) imports mainClass false (!hasToplevelMain)
+          let mainClass = !tempMaybeHxClassDecl in HxModuleDecl.create (!packagePath) imports mainClass classes false (!hasToplevelMain)
         )
       )
     )

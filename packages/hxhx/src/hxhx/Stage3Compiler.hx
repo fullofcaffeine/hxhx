@@ -1098,19 +1098,28 @@ class Stage3Compiler {
 					if (!genFieldKeys.exists(fieldKey(f))) keptFields.push(f);
 				}
 				final mergedFields = keptFields.concat(gen.fields);
-				final newCls = new HxClassDecl(
-					HxClassDecl.getName(oldCls),
-					HxClassDecl.getHasStaticMain(oldCls),
-					mergedFns,
-					mergedFields
-				);
-				final newDecl = new HxModuleDecl(
-					HxModuleDecl.getPackagePath(oldDecl),
-					HxModuleDecl.getImports(oldDecl),
-					newCls,
-					HxModuleDecl.getHeaderOnly(oldDecl),
-					HxModuleDecl.getHasToplevelMain(oldDecl)
-				);
+					final newCls = new HxClassDecl(
+						HxClassDecl.getName(oldCls),
+						HxClassDecl.getHasStaticMain(oldCls),
+						mergedFns,
+						mergedFields
+					);
+					final newClasses = new Array<HxClassDecl>();
+					for (c in HxModuleDecl.getClasses(oldDecl)) {
+						if (HxClassDecl.getName(c) == HxClassDecl.getName(oldCls)) {
+							newClasses.push(newCls);
+						} else {
+							newClasses.push(c);
+						}
+					}
+					final newDecl = new HxModuleDecl(
+						HxModuleDecl.getPackagePath(oldDecl),
+						HxModuleDecl.getImports(oldDecl),
+						newCls,
+						newClasses,
+						HxModuleDecl.getHeaderOnly(oldDecl),
+						HxModuleDecl.getHasToplevelMain(oldDecl)
+					);
 				final newParsed = new ParsedModule(pm.getSource(), newDecl, pm.getFilePath());
 				out2.push(new ResolvedModule(modulePath, ResolvedModule.getFilePath(m), newParsed));
 			}

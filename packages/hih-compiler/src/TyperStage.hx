@@ -240,7 +240,17 @@ class TyperStage {
 					unifyInto(TyType.fromHintText("Void"), pos);
 				case SReturn(e, pos):
 					final t = inferExprType(e, scope, ctx, pos);
-					unifyInto(t, pos);
+					// Bring-up rule: if we *see* `return <expr>` but can't infer a concrete type for
+					// the expression yet, treat it as `Dynamic` instead of leaving the return type
+					// as `Unknown`.
+					//
+					// Why
+					// - A function that returns an expression is almost never intended to be `Void`.
+					// - Leaving it as `Unknown` causes `typeFunction` to default to `Void`, which then
+					//   makes the Stage3 bootstrap emitter produce OCaml like:
+					//     `let f () : unit = <int expr>`
+					//   and fail typechecking.
+					unifyInto(t.isUnknown() ? TyType.fromHintText("Dynamic") : t, pos);
 				case SExpr(e, pos):
 					inferExprType(e, scope, ctx, pos);
 			}
@@ -321,11 +331,58 @@ class TyperStage {
 					final t = ctx.resolveType(name);
 					t != null ? TyType.fromHintText(t.getFullName()) : TyType.unknown();
 				}
-			case EField(obj, _field):
-				switch (obj) {
-					case EThis:
-						final c = ctx.currentClass();
-						if (c != null) {
+				case EField(obj, _field):
+					// Stage 3 bring-up: type a tiny set of `Math` constants used in upstream unit tests.
+					//
+					// Why
+					// - Upstream `unit/TestNaN.hx` uses `Math.NaN` as a `Float` value and then compares it
+					//   against numeric literals in `if` conditions.
+					// - Without recognizing `Math.NaN` as `Float`, our function return inference widens to
+					//   `Void`, and the bootstrap emitter produces OCaml like:
+					//     `let a : unit = foo () in if a > 0 then ...`
+					//   which fails typechecking.
+					//
+					// Scope
+					// - This is intentionally narrow (bring-up only). A real typer should derive these
+					//   from the standard library model.
+					switch ({ obj: obj, field: _field }) {
+						case { obj: EIdent("Math"), field: "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY" | "PI" }:
+							return TyType.fromHintText("Float");
+						case _:
+					}
+
+					// Static field access through a (possibly fully-qualified) type path.
+					//
+					// Why
+					// - Upstream suites access module-local helper values via fully-qualified paths, e.g.:
+					//     `unit.MyAbstract.FakeEnumAbstract.NotFound`
+					// - If we don't recognize `unit.MyAbstract.FakeEnumAbstract` as a type path here, the
+					//   lazy ModuleLoader never gets a chance to load the defining module, and Stage3
+					//   emission can fail later with OCaml errors like:
+					//     `Error: Unbound module Unit_MyAbstract_FakeEnumAbstract`.
+					//
+					// How
+					// - When `obj` is a dotted field chain whose last segment looks like a type name
+					//   (UpperStart), ask the context to resolve it as a type.
+					// - This triggers ModuleLoader-based on-demand loading.
+					final dotted = dottedFieldPath(obj);
+					if (dotted != null) {
+						final parts = dotted.split(".");
+						final last = parts.length == 0 ? "" : parts[parts.length - 1];
+						if (isUpperStartName(last)) {
+							final c = ctx.resolveType(dotted);
+							if (c != null) {
+								final ft = c.fieldType(_field);
+								if (ft != null) return ft;
+								// Bring-up default: static fields without hints are treated as dynamic.
+								return TyType.fromHintText("Dynamic");
+							}
+						}
+					}
+					switch (obj) {
+						case EThis:
+							final c = ctx.currentClass();
+							if (c != null) {
 							final ft = c.fieldType(_field);
 							ft != null ? ft : TyType.unknown();
 						} else {

@@ -68,13 +68,20 @@ if ! has_utest; then
 fi
 
 echo "== Gate 1 (stage3 emit rung): upstream tests/unit/compile-macro.hxml"
+set +e
 out="$(
   cd "$UPSTREAM_DIR/tests/unit"
   rm -rf out_hxhx_unit_macro_stage3_emit
   HAXELIB_BIN="$HAXELIB_BIN" \
     "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
 )"
+code="$?"
+set -e
 echo "$out"
+if [ "$code" != "0" ]; then
+  echo "FAILED: hxhx stage3 emit rung exited with code $code" >&2
+  exit "$code"
+fi
 
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"

@@ -244,6 +244,16 @@ Keep `README.md` up to date as milestones land.
 - When you add/change a workflow (build/test/bootstrap, stage flags, new required tools), update `README.md` in the same change.
 - Prefer documenting “why/what/how” briefly and linking to the deeper doc under `docs/` when it exists.
 
+## Bugs (Regression Tests)
+
+When fixing a bug, add a regression test when it fits the repo’s testing layers and the behavior is stable:
+
+- Prefer a snapshot test when the risk is codegen shape/ordering.
+- Prefer a portable fixture when runtime behavior matters (compile to OCaml, build, run, stdout diff).
+- Prefer an upstream oracle runner only when the behavior is best validated against upstream without vendoring.
+
+If a regression test is not feasible (nondeterministic behavior, too expensive for CI, etc.), document why in the bead.
+
 This repo should be a **world-class, didactic example** of building a compiler backend with **Haxe + Reflaxe** that produces **idiomatic target-language code** (OCaml in this repo; the principles should also read well for targets like Rust).
 
 - For any **vital** or **complex** class/function, write a verbose hxdoc explaining:

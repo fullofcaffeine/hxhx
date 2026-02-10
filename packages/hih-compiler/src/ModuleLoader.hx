@@ -173,7 +173,27 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final filtered = HxConditionalCompilation.filterSource(source, defines);
+		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
+			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro.")) return true;
+			if (filePath == null || filePath.length == 0) return false;
+			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
+		}
+
+		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
+			final out = new haxe.ds.StringMap<String>();
+			if (src != null) for (k in src.keys()) out.set(k, src.get(k));
+			return out;
+		}
+
+		final effectiveDefines = isMacroStdModule(modulePath, filePath)
+			? (() -> {
+				final m = cloneDefines(defines);
+				if (!m.exists("macro")) m.set("macro", "1");
+				if (!m.exists("eval")) m.set("eval", "1");
+				m;
+			})()
+			: defines;
+		final filtered = HxConditionalCompilation.filterSource(source, effectiveDefines);
 		final parsed = try ParserStage.parse(filtered, filePath) catch (_:Dynamic) null;
 		if (parsed == null) {
 			if (trace) Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
@@ -185,8 +205,9 @@ class ModuleLoader extends LazyTypeLoader {
 		if (trace) Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
 
 		if (index != null) {
-			final info = TyperIndexBuild.fromResolvedModule(rm);
-			if (info != null) index.addClass(info);
+			for (info in TyperIndexBuild.fromResolvedModule(rm)) {
+				if (info != null) index.addClass(info);
+			}
 		}
 	}
 
@@ -227,35 +248,62 @@ class TyperIndexBuild {
 		return (p.length == 0) ? cls : (p + "." + cls);
 	}
 
-	public static function fromResolvedModule(m:ResolvedModule):Null<TyClassInfo> {
-		if (m == null) return null;
+	static function expectedModuleNameFromFile(filePath:Null<String>):Null<String> {
+		if (filePath == null || filePath.length == 0) return null;
+		final name = Path.withoutDirectory(filePath);
+		final dot = name.lastIndexOf(".");
+		return dot <= 0 ? name : name.substr(0, dot);
+	}
+
+	static function classFullNameInModule(pkg:String, moduleName:Null<String>, clsName:String):String {
+		final p = pkg == null ? "" : StringTools.trim(pkg);
+		final m0 = moduleName == null ? "" : StringTools.trim(moduleName);
+		final m = (m0.length == 0 || m0 == "Unknown") ? "" : m0;
+		final c = clsName == null ? "" : StringTools.trim(clsName);
+
+		var prefix = p;
+		if (m.length > 0 && c.length > 0 && c != m) {
+			prefix = prefix.length == 0 ? m : (prefix + "." + m);
+		}
+		return prefix.length == 0 ? c : (prefix + "." + c);
+	}
+
+	public static function fromResolvedModule(m:ResolvedModule):Array<TyClassInfo> {
+		final out = new Array<TyClassInfo>();
+		if (m == null) return out;
 		final pm = ResolvedModule.getParsed(m);
-		if (pm == null) return null;
+		if (pm == null) return out;
 		final decl = pm.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
-		final cls = HxModuleDecl.getMainClass(decl);
-		final clsName = HxClassDecl.getName(cls);
-		final full = classFullName(pkg, clsName);
+		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(m));
 
-		final fields = new haxe.ds.StringMap<TyType>();
-		for (f in HxClassDecl.getFields(cls)) {
-			fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			final clsName = HxClassDecl.getName(cls);
+			if (clsName == null || clsName.length == 0 || clsName == "Unknown") continue;
+			final full = classFullNameInModule(pkg, moduleName, clsName);
+
+			final fields = new haxe.ds.StringMap<TyType>();
+			for (f in HxClassDecl.getFields(cls)) {
+				fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
+			}
+
+			final statics = new haxe.ds.StringMap<TyFunSig>();
+			final instances = new haxe.ds.StringMap<TyFunSig>();
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				final fnName = HxFunctionDecl.getName(fn);
+				final isStatic = HxFunctionDecl.getIsStatic(fn);
+				final args = new Array<TyType>();
+				for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+
+				final retHint = HxFunctionDecl.getReturnTypeHint(fn);
+				final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
+				final sig = new TyFunSig(fnName, isStatic, args, ret);
+				if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
+			}
+
+			out.push(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));
 		}
 
-		final statics = new haxe.ds.StringMap<TyFunSig>();
-		final instances = new haxe.ds.StringMap<TyFunSig>();
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			final fnName = HxFunctionDecl.getName(fn);
-			final isStatic = HxFunctionDecl.getIsStatic(fn);
-			final args = new Array<TyType>();
-			for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
-
-			final retHint = HxFunctionDecl.getReturnTypeHint(fn);
-			final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
-			final sig = new TyFunSig(fnName, isStatic, args, ret);
-			if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
-		}
-
-		return new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances);
+		return out;
 	}
 }

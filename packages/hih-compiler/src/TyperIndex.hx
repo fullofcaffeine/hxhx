@@ -18,6 +18,8 @@
 	  - `var` fields (name + type hint)
 	  - function signatures (arg hints + return hint)
 **/
+import haxe.io.Path;
+
 class TyperIndex {
 	final byFullName:haxe.ds.StringMap<TyClassInfo>;
 	final byShortName:haxe.ds.StringMap<Array<TyClassInfo>>;
@@ -50,6 +52,27 @@ class TyperIndex {
 		return (p.length == 0) ? cls : (p + "." + cls);
 	}
 
+	static function expectedModuleNameFromFile(filePath:Null<String>):Null<String> {
+		if (filePath == null || filePath.length == 0) return null;
+		final name = Path.withoutDirectory(filePath);
+		final dot = name.lastIndexOf(".");
+		return dot <= 0 ? name : name.substr(0, dot);
+	}
+
+	static function classFullNameInModule(pkg:String, moduleName:Null<String>, clsName:String):String {
+		final p = pkg == null ? "" : StringTools.trim(pkg);
+		final m0 = moduleName == null ? "" : StringTools.trim(moduleName);
+		final m = (m0.length == 0 || m0 == "Unknown") ? "" : m0;
+		final c = clsName == null ? "" : StringTools.trim(clsName);
+
+		var prefix = p;
+		// Haxe module-local helper types are addressed as `package.Module.Helper`.
+		if (m.length > 0 && c.length > 0 && c != m) {
+			prefix = prefix.length == 0 ? m : (prefix + "." + m);
+		}
+		return prefix.length == 0 ? c : (prefix + "." + c);
+	}
+
 	public static function build(resolved:Array<ResolvedModule>):TyperIndex {
 		final idx = new TyperIndex();
 		if (resolved == null) return idx;
@@ -58,30 +81,39 @@ class TyperIndex {
 			final pm = ResolvedModule.getParsed(m);
 			final decl = pm.getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
-			final cls = HxModuleDecl.getMainClass(decl);
-			final clsName = HxClassDecl.getName(cls);
-			final full = classFullName(pkg, clsName);
+			final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(m));
 
-			final fields = new haxe.ds.StringMap<TyType>();
-			for (f in HxClassDecl.getFields(cls)) {
-				fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
+			// Index every type declared in the module so module-local helper types resolve.
+			//
+			// Haxe rule (relevant subset):
+			// - Main type: `package.ModuleName` (where `ModuleName == <file base name>`)
+			// - Helper type: `package.ModuleName.Helper`
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				final clsName = HxClassDecl.getName(cls);
+				if (clsName == null || clsName.length == 0 || clsName == "Unknown") continue;
+				final full = classFullNameInModule(pkg, moduleName, clsName);
+
+				final fields = new haxe.ds.StringMap<TyType>();
+				for (f in HxClassDecl.getFields(cls)) {
+					fields.set(HxFieldDecl.getName(f), TyType.fromHintText(HxFieldDecl.getTypeHint(f)));
+				}
+
+				final statics = new haxe.ds.StringMap<TyFunSig>();
+				final instances = new haxe.ds.StringMap<TyFunSig>();
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final fnName = HxFunctionDecl.getName(fn);
+					final isStatic = HxFunctionDecl.getIsStatic(fn);
+					final args = new Array<TyType>();
+					for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+
+					final retHint = HxFunctionDecl.getReturnTypeHint(fn);
+					final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
+					final sig = new TyFunSig(fnName, isStatic, args, ret);
+					if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
+				}
+
+				idx.addClass(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));
 			}
-
-			final statics = new haxe.ds.StringMap<TyFunSig>();
-			final instances = new haxe.ds.StringMap<TyFunSig>();
-			for (fn in HxClassDecl.getFunctions(cls)) {
-				final fnName = HxFunctionDecl.getName(fn);
-				final isStatic = HxFunctionDecl.getIsStatic(fn);
-				final args = new Array<TyType>();
-				for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
-
-				final retHint = HxFunctionDecl.getReturnTypeHint(fn);
-				final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
-				final sig = new TyFunSig(fnName, isStatic, args, ret);
-				if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
-			}
-
-			idx.addClass(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));
 		}
 
 		return idx;

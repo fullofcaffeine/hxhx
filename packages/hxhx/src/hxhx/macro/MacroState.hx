@@ -39,6 +39,35 @@ class MacroState {
 	static final onGenerateHookIds:Array<Int> = [];
 	static final afterGenerateHookIds:Array<Int> = [];
 
+	static function sortStringsInPlace(arr:Array<String>):Void {
+		// Avoid `Array.sort(fn)` during bring-up.
+		//
+		// Why
+		// - `hxhx` itself is compiled by our OCaml backend, and higher-order Array operations
+		//   (callbacks/closures) are an unnecessary source of runtime instability while we
+		//   are still validating core semantics.
+		//
+		// What
+		// - Insertion-sort in-place using plain loops and string comparisons.
+		if (arr == null || arr.length <= 1) return;
+		var i = 1;
+		while (i < arr.length) {
+			final key = arr[i];
+			var j = i - 1;
+			while (j >= 0) {
+				final cur = arr[j];
+				// Null-safety: treat nulls as empty strings so ordering is deterministic.
+				final a = cur == null ? "" : cur;
+				final b = key == null ? "" : key;
+				if (!(a > b)) break;
+				arr[j + 1] = cur;
+				j -= 1;
+			}
+			arr[j + 1] = key;
+			i += 1;
+		}
+	}
+
 	public static function reset():Void {
 		defines.clear();
 		ocamlModules.clear();
@@ -113,7 +142,7 @@ class MacroState {
 	public static function listDefineNames():Array<String> {
 		final out = new Array<String>();
 		for (k in defines.keys()) out.push(k);
-		out.sort((a, b) -> (a < b ? -1 : (a > b ? 1 : 0)));
+		sortStringsInPlace(out);
 		return out;
 	}
 
@@ -214,7 +243,7 @@ class MacroState {
 	public static function listOcamlModuleNames():Array<String> {
 		final out = new Array<String>();
 		for (k in ocamlModules.keys()) out.push(k);
-		out.sort((a, b) -> (a < b ? -1 : (a > b ? 1 : 0)));
+		sortStringsInPlace(out);
 		return out;
 	}
 

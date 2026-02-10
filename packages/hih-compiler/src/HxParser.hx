@@ -2026,6 +2026,6 @@
 			}
 			if (chosen == null && classes.length > 0) chosen = classes[0];
 			final mainClass = chosen == null ? new HxClassDecl("Unknown", false, [], []) : chosen;
-			return new HxModuleDecl(packagePath, imports, mainClass, false, hasToplevelMain);
+			return new HxModuleDecl(packagePath, imports, mainClass, classes, false, hasToplevelMain);
 		}
-}
+	}
