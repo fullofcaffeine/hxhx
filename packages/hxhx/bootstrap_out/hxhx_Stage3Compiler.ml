@@ -1202,32 +1202,33 @@ let findBuildMacroExprs = fun source -> try let out = HxArray.create () in (
           | HxKeyword.KPublic -> 5
           | HxKeyword.KPrivate -> 6
           | HxKeyword.KStatic -> 7
-          | HxKeyword.KFunction -> 8
-          | HxKeyword.KReturn -> 9
-          | HxKeyword.KIf -> 10
-          | HxKeyword.KElse -> 11
-          | HxKeyword.KSwitch -> 12
-          | HxKeyword.KCase -> 13
-          | HxKeyword.KDefault -> 14
-          | HxKeyword.KTry -> 15
-          | HxKeyword.KCatch -> 16
-          | HxKeyword.KThrow -> 17
-          | HxKeyword.KWhile -> 18
-          | HxKeyword.KDo -> 19
-          | HxKeyword.KFor -> 20
-          | HxKeyword.KIn -> 21
-          | HxKeyword.KBreak -> 22
-          | HxKeyword.KContinue -> 23
-          | HxKeyword.KUntyped -> 24
-          | HxKeyword.KCast -> 25
-          | HxKeyword.KVar -> 26
-          | HxKeyword.KFinal -> 27
-          | HxKeyword.KNew -> 28
-          | HxKeyword.KThis -> 29
-          | HxKeyword.KSuper -> 30
-          | HxKeyword.KTrue -> 31
-          | HxKeyword.KFalse -> 32
-          | HxKeyword.KNull -> 33) = 4 then raise (HxRuntime.Hx_return (Obj.repr out)) else ignore ())
+          | HxKeyword.KInline -> 8
+          | HxKeyword.KFunction -> 9
+          | HxKeyword.KReturn -> 10
+          | HxKeyword.KIf -> 11
+          | HxKeyword.KElse -> 12
+          | HxKeyword.KSwitch -> 13
+          | HxKeyword.KCase -> 14
+          | HxKeyword.KDefault -> 15
+          | HxKeyword.KTry -> 16
+          | HxKeyword.KCatch -> 17
+          | HxKeyword.KThrow -> 18
+          | HxKeyword.KWhile -> 19
+          | HxKeyword.KDo -> 20
+          | HxKeyword.KFor -> 21
+          | HxKeyword.KIn -> 22
+          | HxKeyword.KBreak -> 23
+          | HxKeyword.KContinue -> 24
+          | HxKeyword.KUntyped -> 25
+          | HxKeyword.KCast -> 26
+          | HxKeyword.KVar -> 27
+          | HxKeyword.KFinal -> 28
+          | HxKeyword.KNew -> 29
+          | HxKeyword.KThis -> 30
+          | HxKeyword.KSuper -> 31
+          | HxKeyword.KTrue -> 32
+          | HxKeyword.KFalse -> 33
+          | HxKeyword.KNull -> 34) = 4 then raise (HxRuntime.Hx_return (Obj.repr out)) else ignore ())
         | HxTokenKind.TOther _p0 -> ignore (let _g2 = _p0 in let code = _g2 in if code = 64 then ignore (let t2 = HxLexer.next lex () in let t3 = HxLexer.next lex () in let t4 = HxLexer.next lex () in let tempBool = ref false in (
           ignore (let _g3 = t2.kind in let _g1 = t3.kind in let _g4 = t4.kind in if (match _g3 with
             | HxTokenKind.TEof -> 0

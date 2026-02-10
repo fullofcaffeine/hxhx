@@ -557,7 +557,8 @@ let rec inferExprType = fun expr scope ctx pos -> try let dottedFieldPath = ref 
               | HxSwitchPattern.PString _ -> 2
               | HxSwitchPattern.PInt _ -> 3
               | HxSwitchPattern.PEnumValue _ -> 4
-              | HxSwitchPattern.PBind _ -> 5) = 5 then ignore (let _g4 = match _g3 with
+              | HxSwitchPattern.PBind _ -> 5
+              | HxSwitchPattern.POr _ -> 6) = 5 then ignore (let _g4 = match _g3 with
               | HxSwitchPattern.PBind __enum_param_137 -> __enum_param_137
               | _ -> failwith "Unexpected enum parameter" in let name = _g4 in let tempTyType = ref (Obj.magic ()) in (
               ignore (if TyType.isUnknown scrutTy () then let __assign_138 = TyType.fromHintText "Dynamic" in (
@@ -985,7 +986,8 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (HxRuntime.hx
         | HxSwitchPattern.PString _ -> 2
         | HxSwitchPattern.PInt _ -> 3
         | HxSwitchPattern.PEnumValue _ -> 4
-        | HxSwitchPattern.PBind _ -> 5) = 5 then ignore (let _g5 = match _g4 with
+        | HxSwitchPattern.PBind _ -> 5
+        | HxSwitchPattern.POr _ -> 6) = 5 then ignore (let _g5 = match _g4 with
         | HxSwitchPattern.PBind __enum_param_41 -> __enum_param_41
         | _ -> failwith "Unexpected enum parameter" in let name = _g5 in let tempTyType = ref (Obj.magic ()) in (
         ignore (if TyType.isUnknown scrutTy () then let __assign_42 = TyType.fromHintText "Dynamic" in (

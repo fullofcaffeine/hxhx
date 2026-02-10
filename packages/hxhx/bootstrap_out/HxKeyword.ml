@@ -11,6 +11,7 @@ type hxkeyword =
 | KPublic
 | KPrivate
 | KStatic
+| KInline
 | KFunction
 | KReturn
 | KIf

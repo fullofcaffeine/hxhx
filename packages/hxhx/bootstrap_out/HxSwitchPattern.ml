@@ -9,3 +9,4 @@ type hxswitchpattern =
 | PInt of int
 | PEnumValue of string
 | PBind of string
+| POr of hxswitchpattern HxArray.t
