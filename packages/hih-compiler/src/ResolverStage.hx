@@ -169,12 +169,16 @@ class ResolverStage {
 				deps.push(resolvedImp);
 			}
 
-			// Bootstrap extension: approximate "same-package type resolution" used by the real compiler.
-			if (resolveImplicitSamePackageTypesEnabled()) {
-				for (dep in implicitSamePackageDeps(source, modulePath, decl)) {
-					if (resolveModuleFile(classPaths, dep) != null) deps.push(dep);
+				// Bootstrap extension: approximate "same-package type resolution" used by the real compiler.
+				//
+				// IMPORTANT: run the heuristic on the *filtered* source so inactive `#if` branches
+				// do not widen the module graph (and accidentally pull in platform-only modules
+				// like `unit.TestJava` during `--interp` bring-up).
+				if (resolveImplicitSamePackageTypesEnabled()) {
+					for (dep in implicitSamePackageDeps(filteredSource, modulePath, decl)) {
+						if (resolveModuleFile(classPaths, dep) != null) deps.push(dep);
+					}
 				}
-			}
 
 			// Preserve the old DFS-ish order by pushing dependencies in reverse.
 			var i = deps.length - 1;

@@ -536,6 +536,32 @@ echo "$out" | grep -q "^p:a$"
 echo "$out" | grep -q "^p:a,b$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 bring-up: rest-only args (no fixed params) pack into Array<T>"
+tmprestonly="$tmpdir/rest_only_args"
+mkdir -p "$tmprestonly/src"
+cat >"$tmprestonly/src/Main.hx" <<'HX'
+class Main {
+  static function join(...parts:String):String {
+    // Upstream `runci.Config.getMiscSubDir(...subDir)` is a rest-only signature.
+    // Ensure our frontend+emitter preserve the rest marker even when there are
+    // no fixed parameters.
+    return "[" + parts.toArray().join(",") + "]";
+  }
+
+  static function main() {
+    trace(join());
+    trace(join("a"));
+    trace(join("a", "b"));
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprestonly/src" -main Main --hxhx-out "$tmprestonly/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^\\[\\]$"
+echo "$out" | grep -q "^\\[a\\]$"
+echo "$out" | grep -q "^\\[a,b\\]$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: string ternary in println emits"
 tmpternary="$tmpdir/ternary_print"
 mkdir -p "$tmpternary/src"
@@ -598,6 +624,106 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg/src" -main Main --hxhx-out "$tmppkg/out")"
 echo "$out" | grep -q "^hi$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: parent package type name resolves"
+tmppkg_parent="$tmpdir/pkg_parent_type"
+mkdir -p "$tmppkg_parent/src/a/b"
+cat >"$tmppkg_parent/src/a/Util.hx" <<'HX'
+package a;
+
+class Util {
+  public static function hello():String {
+    return "hi-parent";
+  }
+}
+HX
+cat >"$tmppkg_parent/src/a/b/Main.hx" <<'HX'
+package a.b;
+
+class Main {
+  static function main() {
+    // Upstream shape: refer to a type in the parent package without an explicit import.
+    var s = Util.hello();
+    untyped __ocaml__("print_endline s");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg_parent/src" -main a.b.Main --hxhx-out "$tmppkg_parent/out")"
+echo "$out" | grep -q "^hi-parent$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: optional args can be skipped by type (runci install git)"
+tmpopt="$tmpdir/optional_arg_shift"
+mkdir -p "$tmpopt/src/runci/targets"
+cat >"$tmpopt/src/runci/System.hx" <<'HX'
+package runci;
+
+class System {
+  static public function haxelibInstallGit(account:String, repository:String, ?branch:String, ?srcPath:String, useRetry:Bool = false, ?altName:String):Void {
+    Sys.println(useRetry ? "retry" : "noretry");
+  }
+}
+HX
+cat >"$tmpopt/src/runci/targets/Main.hx" <<'HX'
+package runci.targets;
+
+import runci.System.*;
+
+class Main {
+  static function main() {
+    // Upstream shape: pass the later Bool arg while omitting optional String args.
+    haxelibInstallGit("HaxeFoundation", "hxjava", true);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpopt/src" -main runci.targets.Main --hxhx-out "$tmpopt/out")"
+echo "$out" | grep -q "^retry$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: sys.io.File whole-file ops map to runtime"
+tmpfileops="$tmpdir/sys_io_file_ops"
+mkdir -p "$tmpfileops/src"
+mkdir -p "$tmpfileops/src/sys/io"
+cat >"$tmpfileops/src/sys/io/File.hx" <<'HX'
+package sys.io;
+
+// Minimal stub so Stage3 can resolve `import sys.io.File` in bring-up tests.
+//
+// The Stage3 emitter treats whole-file operations as intrinsics and rewrites call sites to
+// the OCaml runtime (`HxFile.*`), so these bodies are not meant to be executed.
+class File {
+  public static function getContent(path:String):String return "";
+  public static function saveContent(path:String, content:String):Void {}
+}
+HX
+cat >"$tmpfileops/src/Main.hx" <<'HX'
+import sys.io.File;
+
+class Main {
+  static function main() {
+    File.saveContent("hello.txt", "hi");
+    Sys.println(File.getContent("hello.txt"));
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpfileops/src" -main Main --hxhx-out "$tmpfileops/out")"
+echo "$out" | grep -q "^hi$"
+echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 bring-up: Xml.parse collapses to bring-up poison (compile-only)"
+tmpxml="$tmpdir/xml_parse_poison"
+mkdir -p "$tmpxml/src"
+cat >"$tmpxml/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    var x = Xml.parse("<a/>");
+    Sys.println("ok");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpxml/src" -main Main --hxhx-out "$tmpxml/out")"
+echo "$out" | grep -q "^ok$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: multi-unit .hxml via --next"

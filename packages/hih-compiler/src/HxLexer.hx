@@ -117,6 +117,7 @@ class HxLexer {
 			case "public": new HxToken(TKeyword(KPublic), startPos);
 			case "private": new HxToken(TKeyword(KPrivate), startPos);
 			case "static": new HxToken(TKeyword(KStatic), startPos);
+			case "inline": new HxToken(TKeyword(KInline), startPos);
 			case "function": new HxToken(TKeyword(KFunction), startPos);
 			case "return": new HxToken(TKeyword(KReturn), startPos);
 			case "if": new HxToken(TKeyword(KIf), startPos);

@@ -68,7 +68,11 @@ let run (cmd : string) (args : string HxBootArray.t) : t =
   let out_fd = openfile out_path [ O_WRONLY; O_CREAT; O_TRUNC ] 0o600 in
   let err_fd = openfile err_path [ O_WRONLY; O_CREAT; O_TRUNC ] 0o600 in
   let pid = create_process prog argv stdin out_fd err_fd in
-  let (_pid, st) = waitpid [] pid in
+  let rec waitpid_retry () =
+    try waitpid [] pid with
+    | Unix_error (EINTR, _, _) -> waitpid_retry ()
+  in
+  let (_pid, st) = waitpid_retry () in
   Unix.close out_fd;
   Unix.close err_fd;
   let stdout_all = read_file out_path in

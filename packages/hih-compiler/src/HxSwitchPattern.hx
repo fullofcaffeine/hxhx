@@ -19,7 +19,8 @@
 	How
 	- This is *not* full Haxe `switch` semantics:
 	  - no guards (`if`),
-	  - no multiple patterns (`case a | b:`),
+	  - limited multiple patterns (`case a | b:`) are supported, but only as a
+	    shallow OR of simple literals (no guards, no extractors).
 	  - no structural patterns / extractors.
 	- It is intentionally “bring-up friendly” so we can run unmodified upstream
 	  harnesses without copying or translating upstream compiler code.
@@ -31,5 +32,15 @@ enum HxSwitchPattern {
 	PInt(value:Int);
 	PEnumValue(name:String);
 	PBind(name:String);
-}
+	/**
+		OR-pattern list: `case a | b | c:`
 
+		Bring-up constraint
+		- This is parsed and lowered as a simple boolean OR of each sub-pattern’s
+		  condition against the scrutinee.
+		- This is *not* the full upstream pattern algebra; it exists primarily to
+		  support harness-style code like:
+		  `case 'Linux' | 'Windows': ...`
+	**/
+	POr(patterns:Array<HxSwitchPattern>);
+}

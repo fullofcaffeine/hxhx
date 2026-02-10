@@ -713,7 +713,39 @@ apply_misc_filter_if_requested() {
 #     HXHX_FORCE_STAGE0=1
 #   to force a stage0 `haxe` build of `hxhx`.
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+if [ -z "${HXHX_BIN:-}" ]; then
+  # Default behavior: prefer the committed bootstrap snapshot (stage0-free) via `build-hxhx.sh`.
+  #
+  # Stage3 emit-runner bring-up note
+  # - Parser/emitter fixes often land faster than we refresh the bootstrap snapshot.
+  # - Rebuilding `hxhx` from stage0 on every Gate2 run is extremely slow.
+  #
+  # So for emit-runner modes, we prefer an *already built* stage0 artifact if it exists
+  # (typically produced by a one-time `HXHX_FORCE_STAGE0=1 scripts/hxhx/build-hxhx.sh`).
+  if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
+    stage0_exe="$ROOT/packages/hxhx/out/_build/default/out.exe"
+    stage0_bc="$ROOT/packages/hxhx/out/_build/default/out.bc"
+    if [ -f "$stage0_exe" ]; then
+      HXHX_BIN="$stage0_exe"
+    elif [ -f "$stage0_bc" ]; then
+      HXHX_BIN="$stage0_bc"
+    else
+      HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+    fi
+  else
+    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+  fi
+fi
+
+# If the caller provided a relative path to `HXHX_BIN`, resolve it against this repo root.
+# (The runner `cd`s into an upstream worktree later, so relative paths would break.)
+if [ -n "${HXHX_BIN:-}" ]; then
+  case "$HXHX_BIN" in
+    /*) : ;;
+    */*) HXHX_BIN="$ROOT/$HXHX_BIN" ;;
+    *) : ;; # bare command name, assume it is on PATH
+  esac
+fi
 
 if { [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_no_emit_direct" ]; } && [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   # Prefer the repo's committed bootstrap macro host snapshot so this rung stays stage0-free
@@ -743,6 +775,9 @@ if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_n
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+if [ -z "\${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:-}" ]; then
+  export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0
+fi
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
@@ -758,6 +793,18 @@ elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "st
 set -euo pipefail
 if [ -n "\${HXHX_GATE2_WRAP_LOG:-}" ]; then
   printf '%s\n' "haxe \$*" >>"\${HXHX_GATE2_WRAP_LOG}"
+fi
+if [ -z "\${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:-}" ]; then
+  # The Gate2 wrapper routes many upstream suites through: hxhx --hxhx-stage3 --hxhx-no-emit
+  #
+  # Our current resolver has an opt-in heuristic that widens the module graph by scanning
+  # same-package Type./new Type references (to approximate upstream behavior for code that
+  # omits explicit imports). In large suites with heavy conditional compilation, scanning the
+  # raw (pre-filter) source can pull in platform-only modules and fail resolution spuriously.
+  #
+  # For the wrapper sub-invocations, prefer the strict import-driven graph to match upstream
+  # behavior and keep this runner deterministic.
+  export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0
 fi
 export NEKOPATH="${NEKOPATH_DIR}"
 if [ -n "${STAGE0_STD_PATH}" ]; then

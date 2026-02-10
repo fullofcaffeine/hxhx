@@ -60,5 +60,14 @@ let concat (a : 'a t) (b : 'a t) : 'a t =
   HxArray.concat a b
 
 let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
-  HxArray.join a sep to_string
+  (* Stage3 emit-runner bring-up: we sometimes end up joining arrays that are *meant* to be
+     `Array<String>` but contain poison/null-ish values due to incomplete stdlib semantics.
 
+     If we pass through `(fun (s:string) -> s)` (the usual lowering for `Array<String>.join`)
+     then a poison value like `Obj.magic 0` becomes a "string" and the OCaml runtime will
+     segfault when `Buffer.add_string` tries to treat it as a byte sequence.
+
+     Using `dynamic_toStdString` here keeps the runner alive and lets Gate2 surface the next
+     missing semantic as a deterministic error instead of a hard crash. *)
+  ignore to_string;
+  HxArray.join a sep (fun v -> HxRuntime.dynamic_toStdString (Obj.repr v))

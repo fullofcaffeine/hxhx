@@ -80,6 +80,7 @@ class ModuleLoader extends LazyTypeLoader {
 		if (typePath == null) return null;
 		final raw = StringTools.trim(typePath);
 		if (raw.length == 0) return null;
+		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
 
 		// Fast path: already indexed.
 		final pkg = packagePath == null ? "" : packagePath;
@@ -88,6 +89,7 @@ class ModuleLoader extends LazyTypeLoader {
 
 		// Try deriving candidate module paths from the typing context.
 		final candidates = candidateModulePaths(raw, pkg, imports);
+		if (trace) Sys.println("loader_resolve type=" + raw + " pkg=" + pkg + " candidates=" + candidates.join(","));
 		for (mp in candidates) {
 			if (mp == null || mp.length == 0) continue;
 			loadModuleByPath(mp);
@@ -120,9 +122,26 @@ class ModuleLoader extends LazyTypeLoader {
 			}
 		}
 
-		// Same-package candidate.
+		// Same-package / parent-package candidates.
+		//
+		// Why
+		// - Upstream resolves unqualified type names by searching the current package and then
+		//   walking up parent packages. This means code in `a.b` can refer to `Util` and have
+		//   it resolve to `a.Util` without an explicit import, as long as `a.Util` exists.
+		//
+		// Example
+		// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
+		//   even without `import runci.Linux;`.
 		final pkg = packagePath == null ? "" : StringTools.trim(packagePath);
-		if (pkg.length > 0 && raw.indexOf(".") == -1) out.push(pkg + "." + raw);
+		if (pkg.length > 0 && raw.indexOf(".") == -1) {
+			var cur = pkg;
+			while (true) {
+				out.push(cur + "." + raw);
+				final lastDot = cur.lastIndexOf(".");
+				if (lastDot < 0) break;
+				cur = cur.substr(0, lastDot);
+			}
+		}
 
 		// Dedupe while preserving order.
 		final seen = new haxe.ds.StringMap<Bool>();
@@ -140,19 +159,30 @@ class ModuleLoader extends LazyTypeLoader {
 		if (modulePath == null || modulePath.length == 0) return;
 		if (visited.exists(modulePath)) return;
 		visited.set(modulePath, true);
+		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
 
 		final filePath = resolveModuleFile(modulePath);
-		if (filePath == null) return;
+		if (filePath == null) {
+			if (trace) Sys.println("loader_load miss module=" + modulePath);
+			return;
+		}
 
 		final source = try sys.io.File.getContent(filePath) catch (_:Dynamic) null;
-		if (source == null) return;
+		if (source == null) {
+			if (trace) Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
+			return;
+		}
 
 		final filtered = HxConditionalCompilation.filterSource(source, defines);
 		final parsed = try ParserStage.parse(filtered, filePath) catch (_:Dynamic) null;
-		if (parsed == null) return;
+		if (parsed == null) {
+			if (trace) Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
+			return;
+		}
 
 		final rm = new ResolvedModule(modulePath, filePath, parsed);
 		pending.push(rm);
+		if (trace) Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
 
 		if (index != null) {
 			final info = TyperIndexBuild.fromResolvedModule(rm);

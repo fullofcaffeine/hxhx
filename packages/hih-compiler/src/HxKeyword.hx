@@ -14,6 +14,7 @@ enum HxKeyword {
 	KPublic;
 	KPrivate;
 	KStatic;
+	KInline;
 	KFunction;
 	KReturn;
 	// Control-flow keywords (Stage 3 bring-up).

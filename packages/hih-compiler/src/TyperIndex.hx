@@ -111,11 +111,28 @@ class TyperIndex {
 			}
 		}
 
-		// Try same package.
+		// Try same package / parent packages.
+		//
+		// Why
+		// - Upstream Haxe resolves unqualified type names by searching the current package
+		//   and then walking up parent packages (e.g. `runci.targets.Php` can reference
+		//   `Linux` from `runci.Linux` without an explicit import).
+		//
+		// How
+		// - Check `packagePath.raw` first (`pkg + "." + raw`), then progressively drop
+		//   the last segment and retry until the package is empty.
 		final pkg = packagePath == null ? "" : StringTools.trim(packagePath);
-		final candidate = (pkg.length == 0) ? raw : (pkg + "." + raw);
-		final samePkg = getByFullName(candidate);
-		if (samePkg != null) return samePkg;
+		if (pkg.length > 0) {
+			var cur = pkg;
+			while (true) {
+				final candidate = cur + "." + raw;
+				final hit = getByFullName(candidate);
+				if (hit != null) return hit;
+				final lastDot = cur.lastIndexOf(".");
+				if (lastDot < 0) break;
+				cur = cur.substr(0, lastDot);
+			}
+		}
 
 		// Fallback: if unique short-name exists in the index, accept it.
 		final alts = getByShortName(raw);

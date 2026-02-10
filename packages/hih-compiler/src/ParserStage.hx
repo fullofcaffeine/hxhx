@@ -216,6 +216,10 @@
 		final isStatic = parts[2] == "1";
 
 		final argTypes:Map<String, String> = [];
+		// Some protocol emitters may preserve the rest marker (`...name`) only in the
+		// `argtypes` payload (and not in the raw `args` name list). Track rest names
+		// separately so we can still mark `HxFunctionArg.isRest=true` reliably.
+		final restArgsByName:Map<String, Bool> = [];
 		final argTypesPayload = parts[7];
 		if (argTypesPayload.length > 0) {
 			for (entry in argTypesPayload.split(",")) {
@@ -223,8 +227,13 @@
 				final idx = entry.indexOf(":");
 				if (idx <= 0) continue;
 				var argName = entry.substr(0, idx);
-				// Native parser encodes rest params as `...name`. Normalize for lookup.
-				if (StringTools.startsWith(argName, "...")) argName = argName.substr(3);
+				// Native parser encodes rest params as `...name`. Normalize for lookup, but also
+				// retain the rest marker for later signature building (rest-only functions are
+				// common in upstream harness code).
+				if (StringTools.startsWith(argName, "...")) {
+					argName = argName.substr(3);
+					restArgsByName.set(argName, true);
+				}
 				final ty = entry.substr(idx + 1);
 				argTypes.set(argName, ty);
 			}
@@ -241,6 +250,7 @@
 					isRest = true;
 					rawName = rawName.substr(3);
 				}
+				if (!isRest && restArgsByName.exists(rawName)) isRest = true;
 				var ty = argTypes.exists(rawName) ? argTypes.get(rawName) : "";
 				var isOptional = false;
 

@@ -56,13 +56,14 @@
 				case KUsing: "using";
 				case KAs: "as";
 				case KClass: "class";
-				case KPublic: "public";
-				case KPrivate: "private";
-				case KStatic: "static";
-				case KFunction: "function";
-				case KReturn: "return";
-				case KIf: "if";
-				case KElse: "else";
+					case KPublic: "public";
+					case KPrivate: "private";
+					case KStatic: "static";
+					case KInline: "inline";
+					case KFunction: "function";
+					case KReturn: "return";
+					case KIf: "if";
+					case KElse: "else";
 				case KSwitch: "switch";
 				case KCase: "case";
 				case KDefault: "default";
@@ -159,28 +160,39 @@
 	}
 
 	function parseSwitchPattern():HxSwitchPattern {
-		// Bring-up: support a very small pattern subset (see HxSwitchPattern docs).
-		return switch (cur.kind) {
-			case TKeyword(KNull):
-				bump();
-				PNull;
-			case TIdent("_"):
-				bump();
-				PWildcard;
-			case TString(s):
-				bump();
-				PString(s);
-			case TInt(v):
-				bump();
-				PInt(v);
-			case TIdent(name):
-				bump();
-				isUpperStart(name) ? PEnumValue(name) : PBind(name);
-			case _:
-				// Best-effort: consume one token and treat it as a wildcard.
-				bump();
-				PWildcard;
+		// Bring-up: support a very small pattern subset (see HxSwitchPattern docs),
+		// including a shallow OR pattern (`case a | b:`) used by upstream harnesses.
+		function parseAtom():HxSwitchPattern {
+			return switch (cur.kind) {
+				case TKeyword(KNull):
+					bump();
+					PNull;
+				case TIdent("_"):
+					bump();
+					PWildcard;
+				case TString(s):
+					bump();
+					PString(s);
+				case TInt(v):
+					bump();
+					PInt(v);
+				case TIdent(name):
+					bump();
+					isUpperStart(name) ? PEnumValue(name) : PBind(name);
+				case _:
+					// Best-effort: consume one token and treat it as a wildcard.
+					bump();
+					PWildcard;
+			}
 		}
+
+		final first = parseAtom();
+		var ors:Null<Array<HxSwitchPattern>> = null;
+		while (acceptOtherChar("|")) {
+			if (ors == null) ors = [first];
+			ors.push(parseAtom());
+		}
+		return ors == null ? first : POr(ors);
 	}
 
 	inline function peek():HxToken {
@@ -1036,7 +1048,7 @@
 			}
 
 			function parseSwitchExpr(stop:()->Bool):HxExpr {
-				// `switch (<expr>) { case <pat>: <expr>; ... }`
+				// `switch (<expr>) { case <pat>: <expr>; ... }` or `switch <expr> { ... }`
 				//
 				// Bring-up semantics:
 				// - Parse a small, structured subset so Stage3’s bootstrap emitter can execute
@@ -1047,14 +1059,22 @@
 
 				bump(); // `switch`
 
-				// `( <scrutinee> )`
-				expect(TLParen, "'('");
-				final scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-				// Best-effort resync to `)`.
-				if (!cur.kind.match(TRParen)) {
-					while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+				// Upstream-style code commonly omits the parentheses:
+				//   switch Sys.systemName() { ... }
+				// Haxe accepts this, so Stage3 bring-up must too.
+				var scrutinee:HxExpr;
+				if (cur.kind.match(TLParen)) {
+					bump(); // '('
+					scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					// Best-effort resync to `)`.
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+				} else {
+					// Parse until the opening brace starts the switch block.
+					scrutinee = parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
 				}
-				if (cur.kind.match(TRParen)) bump();
 
 				// `{ <cases> }`
 				if (!cur.kind.match(TLBrace)) {
@@ -1384,12 +1404,21 @@
 			case TKeyword(KSwitch):
 					// Bring-up: structured switch statement (minimal patterns).
 					bump(); // `switch`
-					expect(TLParen, "'('");
-					final scrutinee = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
-					if (!cur.kind.match(TRParen)) {
-						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
-					}
-					if (cur.kind.match(TRParen)) bump();
+					// Upstream-style code commonly omits the parentheses:
+					//   switch Sys.systemName() { ... }
+					// Haxe accepts this, so Stage3 bring-up must too.
+					final scrutinee =
+						if (cur.kind.match(TLParen)) {
+							bump(); // '('
+							final e = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+							if (!cur.kind.match(TRParen)) {
+								while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+							}
+							if (cur.kind.match(TRParen)) bump();
+							e;
+						} else {
+							parseExpr(() -> cur.kind.match(TLBrace) || cur.kind.match(TEof));
+						};
 
 					if (!cur.kind.match(TLBrace)) {
 						syncToStmtEnd();
@@ -1838,6 +1867,16 @@
 							keep = true;
 						} else if (acceptKeyword(KStatic)) {
 							isStatic = true;
+							keep = true;
+						} else if (acceptKeyword(KInline)) {
+							// Stage3 bring-up: accept `inline` as a modifier, but do not model it yet.
+							//
+							// Why
+							// - Upstream harness code uses `public static inline function ...` heavily for small helpers
+							//   (e.g. `runci.System.getDownloadPath()`).
+							// - Without recognizing `inline`, we would treat it as an identifier, fail to match
+							//   `function`, and skip the entire member, which then breaks wildcard imports
+							//   (`import runci.System.*`) and can cause runtime segfaults in the Stage3 emit-runner.
 							keep = true;
 						}
 					}

@@ -302,7 +302,7 @@ class EmitterStage {
 				// - Do not inline this as `exprToOcamlString(arg)`:
 				//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
 				//   - and it would diverge from the target runtime’s own stringification behavior.
-							"Std.string (Obj.repr ("
+							"HxRuntime.dynamic_toStdString (Obj.repr ("
 								+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 								+ "))";
 				case ECall(EField(_obj, "join"), [_sep]):
@@ -348,19 +348,19 @@ class EmitterStage {
 					final compact = StringTools.replace(t, " ", "");
 					(compact.indexOf("Array<String>") == 0)
 						? ("HxBootArray.join (" + ocamlValueIdent(name) + ") (\",\") (fun (s : string) -> s)")
-						: ("Std.string (Obj.repr (" + ocamlValueIdent(name) + "))");
+						: ("HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlValueIdent(name) + "))");
 				case EIdent(name)
 					if (tyByIdent != null
 						&& tyByIdent.get(name) != null
 						&& tyByIdent.get(name).toString() == "Array"):
-					"Std.string (Obj.repr (" + ocamlValueIdent(name) + "))";
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlValueIdent(name) + "))";
 			case _:
 				// Bring-up default: prefer *some* stringification over `<unsupported>` so
 				// upstream harness logs remain readable (and don't change meaning).
 				//
 				// Note: this uses the backend's `Std.string` implementation (Haxe semantics),
 				// not OCaml's `Stdlib.string_of_*`.
-						"Std.string (Obj.repr ("
+						"HxRuntime.dynamic_toStdString (Obj.repr ("
 							+ exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 							+ "))";
 		}
@@ -771,6 +771,12 @@ class EmitterStage {
 							case EIdent(name):
 								final t = tyForIdent(name);
 								if (StringTools.startsWith(t, "Array<")) return "HxBootArray.length (" + o + ")";
+								// Bring-up default:
+								// - In many upstream harness shapes, locals like `args` come from `Sys.args()`.
+								// - Stage3 typing does not always preserve `Array<T>` for these locals, but
+								//   treating `.length` as array length is far safer than collapsing to poison
+								//   (poison in conditions can lead to out-of-bounds access and segfaults).
+								return "HxBootArray.length (" + o + ")";
 							case _:
 						}
 					}
@@ -796,15 +802,29 @@ class EmitterStage {
 					if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
 						var modName = ocamlModuleNameFromTypePathParts(parts);
 						// If the type path is unqualified (`Util.foo()`), prefer resolving it within the
-						// current package when we know a matching emitted module exists.
+						// current package (or its parent packages) when we know a matching emitted module exists.
 						//
 						// Example:
 						// - Haxe: `package demo; class A { static function f() Util.ping(); }`
 						// - OCaml: `Demo_Util.ping ()` (not `Util.ping ()`)
+						//
+						// Upstream also resolves unqualified type names by walking up parent packages.
+						// Example:
+						// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
+						//   even without an explicit import.
 						if (parts.length == 1 && currentPackagePath != null && currentPackagePath.length > 0 && moduleNameByPkgAndClass != null) {
-							final key = currentPackagePath + ":" + parts[0];
-							final local = moduleNameByPkgAndClass.get(key);
-							if (local != null && local.length > 0) modName = local;
+							var cur = currentPackagePath;
+							while (true) {
+								final key = cur + ":" + parts[0];
+								final local = moduleNameByPkgAndClass.get(key);
+								if (local != null && local.length > 0) {
+									modName = local;
+									break;
+								}
+								final lastDot = cur.lastIndexOf(".");
+								if (lastDot < 0) break;
+								cur = cur.substr(0, lastDot);
+							}
 						}
 						modName + "." + ocamlValueIdent(field);
 					} else {
@@ -917,11 +937,61 @@ class EmitterStage {
 									+ ") ("
 									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 									+ ")";
+							// Stage 3 emit-runner bring-up: map `sys.io.File` statics used by RunCi targets to
+							// the repo-owned OCaml runtime implementation (`std/runtime/HxFile.ml`).
+							//
+							// Why
+							// - Upstream runci targets often `import sys.io.File;` and then call `File.saveContent(...)`.
+							// - The bootstrap emitter does not yet emit the full std `sys.io.File` module, so we
+							//   treat a small set of whole-file operations as intrinsics backed by `HxFile`.
+							case EField(EIdent("File"), "getContent") if (args.length == 1):
+								return "HxFile.getContent ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("File"), "saveContent") if (args.length == 2):
+								return "HxFile.saveContent ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("File"), "getBytes") if (args.length == 1):
+								return "HxFile.getBytes ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("File"), "saveBytes") if (args.length == 2):
+								return "HxFile.saveBytes ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(EIdent("File"), "copy") if (args.length == 2):
+								return "HxFile.copy ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ") ("
+									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							// Gate2 bring-up: avoid depending on the std `Xml` implementation while still compiling
+							// upstream harness code that parses remote appcasts.
+							//
+							// Stage3 emit-runner does not execute these code paths on most platforms, but it must
+							// successfully compile the RunCi harness (which references Flash target helpers).
+							case EField(EIdent("Xml"), "parse") if (args.length == 1):
+								return "(Obj.magic 0)";
 							// Path joining (haxe.io.Path), used by upstream RunCi config.
 							case EField(EIdent("Path"), "join") if (args.length == 1):
 								return "HxBootArray.join ("
 									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 									+ ") (\"/\") (fun (s : string) -> s)";
+							// Bring-up: `haxe.io.Path.normalize(path)` (used by Flash target).
+							case EField(EIdent("Path"), "normalize") if (args.length == 1):
+								return "HxFileSystem.normalize_path ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ ")";
+							// Bring-up: `haxe.io.Path.directory(path)` and `using haxe.io.Path; path.directory()`.
+							case EField(EIdent("Path"), "directory") if (args.length == 1):
+								return "Filename.dirname ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ ")";
 							// Stage 3 bring-up: string instance methods used by upstream-ish harness code.
 							//
 							// Note
@@ -933,6 +1003,10 @@ class EmitterStage {
 									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 									+ ") ("
 									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ ")";
+							case EField(obj, "directory") if (args.length == 0 && isStringExpr(obj)):
+								return "Filename.dirname ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 									+ ")";
 							case EField(obj, "toLowerCase") if (args.length == 0):
 								return "HxString.toLowerCase ("
@@ -1197,7 +1271,26 @@ class EmitterStage {
 								if (expected > args.length) missingCount = expected - args.length;
 							}
 
-							final fullArgs = args.copy();
+							var fullArgs = args.copy();
+
+							// Stage 3 bring-up: emulate upstream optional-arg "skipping" for a small set of
+							// Gate2 harness calls that intentionally pass a later argument type.
+							//
+							// Example (upstream runci):
+							// - `haxelibInstallGit(account, repo, true)` is accepted by Haxe even though the
+							//   third parameter is `?branch:String`. Haxe effectively interprets this as:
+							//     `haxelibInstallGit(account, repo, null, null, true, null)`
+							//
+							// Our bootstrap emitter doesn't model full optional-arg unification, so we special-case
+							// this shape to keep Stage3 emit-runner compiling.
+							if (sig != null && c == "Runci_System.haxelibInstallGit" && args.length == 3) {
+								switch (args[2]) {
+									case EBool(_):
+										fullArgs = [args[0], args[1], ENull, ENull, args[2], ENull];
+										missingCount = 0;
+									case _:
+								}
+							}
 							for (_ in 0...missingCount) fullArgs.push(ENull);
 
 							if (fullArgs.length == 0) {
@@ -1311,18 +1404,40 @@ class EmitterStage {
 				"(Obj.magic 0)";
 			case ETernary(cond, thenExpr, elseExpr):
 				"(if ("
-					+ exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ") then ("
-					+ exprToOcaml(thenExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ exprToOcaml(thenExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ ") else ("
-					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 					+ "))";
 			case ESwitch(scrutinee, cases):
 				// Stage 3 bring-up: lower a small structured switch expression subset to nested `if`.
 				//
 				// We intentionally implement matching in terms of `Obj.repr` + `HxRuntime.dynamic_equals`
 				// so we don't need to commit to concrete OCaml types for the scrutinee.
-				final sw = exprToOcaml(scrutinee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+				final sw = exprToOcaml(scrutinee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				function patternCond(p:HxSwitchPattern):String {
+					return switch (p) {
+						case POr(patterns):
+							if (patterns == null || patterns.length == 0) {
+								"false";
+							} else {
+								final parts = new Array<String>();
+								for (pp in patterns) parts.push("(" + patternCond(pp) + ")");
+								"(" + parts.join(" || ") + ")";
+							}
+						case PNull:
+							"(HxRuntime.is_null (Obj.repr __sw))";
+						case PWildcard, PBind(_):
+							"true";
+						case PString(v):
+							"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
+						case PInt(v):
+							"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
+						case PEnumValue(name):
+							"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
+					};
+				}
 				var chain = "(Obj.magic HxRuntime.hx_null)";
 					if (cases != null) {
 						for (i in 0...cases.length) {
@@ -1334,7 +1449,7 @@ class EmitterStage {
 									case _:
 										tyByIdent;
 								};
-							final body = exprToOcaml(c.expr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							final body = exprToOcaml(c.expr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 							final thenExpr =
 								switch (c.pattern) {
 									case PBind(name):
@@ -1342,19 +1457,7 @@ class EmitterStage {
 									case _:
 										"(" + body + ")";
 								};
-						final cond =
-							switch (c.pattern) {
-								case PNull:
-									"(HxRuntime.is_null (Obj.repr __sw))";
-								case PWildcard, PBind(_):
-									"true";
-								case PString(v):
-									"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
-								case PInt(v):
-									"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
-								case PEnumValue(name):
-									"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
-							};
+						final cond = patternCond(c.pattern);
 						chain = "(if " + cond + " then " + thenExpr + " else (" + chain + "))";
 					}
 				}
@@ -1674,12 +1777,53 @@ class EmitterStage {
 		function stmtToUnit(s:HxStmt):String {
 			return switch (s) {
 				case SBlock(ss, _pos):
-					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					stmtListToOcaml(
+						ss,
+						allowedValueIdents,
+						returnExc,
+						arityByIdent,
+						tyByIdent,
+						staticImportByIdent,
+						currentPackagePath,
+						moduleNameByPkgAndClass,
+						callSigByCallee
+					);
 				case SVar(_name, _typeHint, _init, _pos):
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
 				case SSwitch(scrutinee, cases, _pos):
-					final sw = exprToOcaml(scrutinee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+					final sw =
+						exprToOcaml(
+							scrutinee,
+							arityByIdent,
+							tyByIdent,
+							staticImportByIdent,
+							currentPackagePath,
+							moduleNameByPkgAndClass,
+							callSigByCallee
+						);
+					function patternCond(p:HxSwitchPattern):String {
+						return switch (p) {
+							case POr(patterns):
+								if (patterns == null || patterns.length == 0) {
+									"false";
+								} else {
+									final parts = new Array<String>();
+									for (pp in patterns) parts.push("(" + patternCond(pp) + ")");
+									"(" + parts.join(" || ") + ")";
+								}
+							case PNull:
+								"(HxRuntime.is_null (Obj.repr __sw))";
+							case PWildcard, PBind(_):
+								"true";
+							case PString(v):
+								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
+							case PInt(v):
+								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
+							case PEnumValue(name):
+								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
+						};
+					}
 					var chain = "()";
 					if (cases != null) {
 						for (i in 0...cases.length) {
@@ -1692,19 +1836,7 @@ class EmitterStage {
 									case _:
 										"(" + bodyUnit + ")";
 								};
-							final cond =
-								switch (c.pattern) {
-									case PNull:
-										"(HxRuntime.is_null (Obj.repr __sw))";
-									case PWildcard, PBind(_):
-										"true";
-									case PString(v):
-										"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
-									case PInt(v):
-										"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
-									case PEnumValue(name):
-										"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
-								};
+							final cond = patternCond(c.pattern);
 							chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
 						}
 					}
@@ -1718,8 +1850,26 @@ class EmitterStage {
 					final bodyUnit = stmtToUnit(body);
 					switch (iterable) {
 						case ERange(startExpr, endExpr):
-							final start = exprToOcaml(startExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
-							final end = exprToOcaml(endExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+							final start =
+								exprToOcaml(
+									startExpr,
+									arityByIdent,
+									tyByIdent,
+									staticImportByIdent,
+									currentPackagePath,
+									moduleNameByPkgAndClass,
+									callSigByCallee
+								);
+							final end =
+								exprToOcaml(
+									endExpr,
+									arityByIdent,
+									tyByIdent,
+									staticImportByIdent,
+									currentPackagePath,
+									moduleNameByPkgAndClass,
+									callSigByCallee
+								);
 							"(let __start = (" + start + ") in "
 							+ "let __end = (" + end + ") in "
 							+ "if (__end <= __start) then () else ("
@@ -2205,7 +2355,18 @@ class EmitterStage {
 
 			final members:Map<String, Bool> = new Map();
 			for (fn in HxClassDecl.getFunctions(cls)) {
-				if (HxFunctionDecl.getIsStatic(fn)) members.set(HxFunctionDecl.getName(fn), true);
+				// Stage3 bootstrap: treat all class functions as "importable" members.
+				//
+				// Why
+				// - Stage3 emission flattens class members into module-level `let` bindings.
+				// - Some native frontend bring-up paths may not perfectly preserve `static` on all
+				//   declarations (e.g. `public static inline function ...`), which would otherwise
+				//   make `import Foo.*` miss helpers and collapse them to poison.
+				//
+				// Non-goal
+				// - Correct instance method semantics. If upstream code relies on instance dispatch,
+				//   Stage3 is not the rung for it.
+				members.set(HxFunctionDecl.getName(fn), true);
 			}
 				for (field in HxClassDecl.getFields(cls)) {
 					if (HxFieldDecl.getIsStatic(field)) members.set(HxFieldDecl.getName(field), true);
