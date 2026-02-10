@@ -1005,7 +1005,7 @@ let init () : unit =
   HxType.register_class_static_fields "MacroExpandedProgram" [];
   HxType.register_class_instance_fields "MacroStage" [];
   HxType.register_class_static_fields "MacroStage" [ "expand"; "expandProgram" ];
-  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "drainNewModules"; "ensureTypeAvailable"; "index"; "loadModuleByPath"; "markResolvedAlready"; "pending"; "resolveModuleFile"; "visited" ];
+  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "index"; "loadModuleByPath"; "markResolvedAlready"; "pending"; "resolveModuleFile"; "visited" ];
   HxType.register_class_static_fields "ModuleLoader" [ "candidateModulePaths" ];
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];

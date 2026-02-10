@@ -240,13 +240,25 @@ class ResolverStage {
 	}
 
 	static function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
+		function fileExistsExactCase(path:String):Bool {
+			if (path == null || path.length == 0) return false;
+			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path)) return false;
+			final dir = Path.directory(path);
+			if (dir == null || dir.length == 0) return true;
+			final base = Path.withoutDirectory(path);
+			try {
+				for (name in sys.FileSystem.readDirectory(dir)) if (name == base) return true;
+			} catch (_:Dynamic) {}
+			return false;
+		}
+
 		final parts = modulePath.split(".");
 		if (parts.length == 0) return null;
 
 		final direct = parts.join("/") + ".hx";
 		for (cp in classPaths) {
 			final candidate = Path.join([cp, direct]);
-			if (sys.FileSystem.exists(candidate)) return candidate;
+			if (fileExistsExactCase(candidate)) return candidate;
 		}
 
 		// Heuristic: allow import of a type defined in its module file:
@@ -257,7 +269,7 @@ class ResolverStage {
 			final fallback = fallbackParts.join("/") + ".hx";
 			for (cp in classPaths) {
 				final candidate = Path.join([cp, fallback]);
-				if (sys.FileSystem.exists(candidate)) return candidate;
+				if (fileExistsExactCase(candidate)) return candidate;
 			}
 		}
 

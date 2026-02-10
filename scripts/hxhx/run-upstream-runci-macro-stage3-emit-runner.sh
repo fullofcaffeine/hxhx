@@ -37,7 +37,12 @@ fi
 # Prefer building `hxhx` from source for this rung so it always reflects the current
 # Stage3 emitter lowering logic (bootstrap snapshots can lag behind when regen is slow).
 export HXHX_FORCE_STAGE0=1
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+# Provide periodic progress so long Stage0 builds don't look "stuck".
+if [ -z "${HXHX_STAGE0_HEARTBEAT:-}" ] || [ "${HXHX_STAGE0_HEARTBEAT:-0}" = "0" ]; then
+  export HXHX_STAGE0_HEARTBEAT=30
+  export HXHX_STAGE0_HEARTBEAT_TAIL_LINES=3
+fi
+HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
 # Use the repo's committed bootstrap macro host snapshot by default so this rung stays stage0-free.
 if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
@@ -46,12 +51,26 @@ if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
 fi
 
 echo "== Gate 2 (stage3 emit runner rung): upstream tests/RunCi.hxml"
-out="$(
+echo "UPSTREAM_DIR=$UPSTREAM_DIR"
+echo "HAXE_STD_PATH=${HAXE_STD_PATH:-}"
+echo "HXHX_BIN=$HXHX_BIN"
+echo "HXHX_MACRO_HOST_EXE=${HXHX_MACRO_HOST_EXE:-}"
+
+tmp_out="$(mktemp)"
+set +e
+(
   cd "$UPSTREAM_DIR/tests"
   rm -rf out_hxhx_runci_stage3_emit_runner
-  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner 2>&1
-)"
-echo "$out"
+  "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner 2>&1 | tee "$tmp_out"
+)
+code=$?
+set -e
+out="$(cat "$tmp_out")"
+rm -f "$tmp_out"
+if [ "$code" -ne 0 ]; then
+  echo "Gate 2 (stage3 emit runner rung) failed with exit code $code" >&2
+  exit "$code"
+fi
 
 echo "$out" | grep -q "^resolved_modules="
 echo "$out" | grep -q "^stage3=ok$"

@@ -142,6 +142,25 @@ HX
 
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
   echo "$out" | grep -q "^stage3=ok$"
+
+  echo "== Stage3 regression: Sys.environment lowering (HxSys.environment)"
+  cat >"$tmpdir/src/SysEnvStage3.hx" <<'HX'
+package;
+
+class SysEnvStage3 {
+  static function main() {
+    final env = Sys.environment();
+    // Keep `env` referenced so the lowering stays present in emitted OCaml.
+    if (env == null) Sys.println("null");
+    Sys.println("ok");
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_sysenv" -cp "$tmpdir/src" -main SysEnvStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  test -f "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
+  grep -q "HxSys.environment" "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
 fi
 
 echo "== Stage1 bring-up: multi-class module selects expected class"

@@ -103,35 +103,63 @@ let normalizeImport = fun raw -> try (
 ) with
   | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57
 
-let resolveModuleFile = fun classPaths modulePath -> try let parts = HxString.split modulePath "." in (
+let resolveModuleFile = fun classPaths modulePath -> try let fileExistsExactCase = fun path -> try (
+  ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if not (HxFileSystem.exists path) || HxFileSystem.isDirectory path then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  let dir = Haxe_io_Path.directory path in (
+    ignore (if dir == Obj.magic (HxRuntime.hx_null) || HxString.length dir = 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
+    let base = Haxe_io_Path.withoutDirectory path in (
+      ignore (try let _g = ref 0 in let _g1 = HxFileSystem.readDirectory dir in while !_g < HxArray.length _g1 do ignore (let name = HxArray.get _g1 (!_g) in (
+        ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
+          ignore (_g := __new_59);
+          __new_59
+        ));
+        if HxString.equals name base then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
+      )) done with
+        | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+        | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+        | HxRuntime.Hx_return __ret_60 -> raise (HxRuntime.Hx_return __ret_60)
+        | HxRuntime.Hx_exception (__exn_v_61, __exn_tags_62) -> if true then let _hx = (__exn_v_61 : Obj.t) in (
+          ignore _hx;
+          ()
+        ) else HxRuntime.hx_throw_typed __exn_v_61 __exn_tags_62
+        | __exn_63 -> if true then let _hx = (Obj.repr __exn_63 : Obj.t) in (
+          ignore _hx;
+          ()
+        ) else raise (__exn_63));
+      false
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_64 -> Obj.obj __ret_64 in let parts = HxString.split modulePath "." in (
   ignore (if HxArray.length parts = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = HxString.toStdString (HxArray.join parts "/" (fun x -> x)) ^ ".hx" in (
     ignore (let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = HxArray.get classPaths (!_g) in (
-      ignore (let __old_58 = !_g in let __new_59 = HxInt.add __old_58 1 in (
-        ignore (_g := __new_59);
-        __new_59
+      ignore (let __old_65 = !_g in let __new_66 = HxInt.add __old_65 1 in (
+        ignore (_g := __new_66);
+        __new_66
       ));
-      let candidate = Haxe_io_Path.join (let __arr_60 = HxArray.create () in (
-        ignore (HxArray.push __arr_60 cp);
-        ignore (HxArray.push __arr_60 direct);
-        __arr_60
-      )) in if HxFileSystem.exists candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()
+      let candidate = Haxe_io_Path.join (let __arr_67 = HxArray.create () in (
+        ignore (HxArray.push __arr_67 cp);
+        ignore (HxArray.push __arr_67 direct);
+        __arr_67
+      )) in if fileExistsExactCase candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()
     )) done);
     ignore (if HxArray.length parts >= 2 then ignore (let fallbackParts = HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1) in let fallback = HxString.toStdString (HxArray.join fallbackParts "/" (fun x -> x)) ^ ".hx" in let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = HxArray.get classPaths (!_g) in (
-      ignore (let __old_61 = !_g in let __new_62 = HxInt.add __old_61 1 in (
-        ignore (_g := __new_62);
-        __new_62
+      ignore (let __old_68 = !_g in let __new_69 = HxInt.add __old_68 1 in (
+        ignore (_g := __new_69);
+        __new_69
       ));
-      let candidate = Haxe_io_Path.join (let __arr_63 = HxArray.create () in (
-        ignore (HxArray.push __arr_63 cp);
-        ignore (HxArray.push __arr_63 fallback);
-        __arr_63
-      )) in if HxFileSystem.exists candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()
+      let candidate = Haxe_io_Path.join (let __arr_70 = HxArray.create () in (
+        ignore (HxArray.push __arr_70 cp);
+        ignore (HxArray.push __arr_70 fallback);
+        __arr_70
+      )) in if fileExistsExactCase candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()
     )) done) else ());
     Obj.magic (HxRuntime.hx_null)
   )
 ) with
-  | HxRuntime.Hx_return __ret_64 -> Obj.obj __ret_64
+  | HxRuntime.Hx_return __ret_71 -> Obj.obj __ret_71
 
 let parseProjectRoots = fun classPaths roots defines -> let out = HxArray.create () in let visited = HxMap.create_string () in let tempMaybeStringMap = ref (Obj.magic ()) in (
   ignore (if defines == Obj.magic (HxRuntime.hx_null) then let __assign_15 = HxMap.create_string () in (

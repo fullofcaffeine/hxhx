@@ -1165,10 +1165,12 @@ class EmitterStage {
 							+ "let __arr : string HxBootArray.t = if __args == HxRuntime.hx_null then HxBootArray.create () else (Obj.obj __args) in "
 							+ "HxBootProcess.command (" + rawCmd + ") __arr)";
 					// Stage 3 bring-up: basic env/CWD helpers used by upstream RunCi orchestration.
-						case EField(EIdent("Sys"), "getEnv") if (args.length == 1):
-							return "(match Stdlib.Sys.getenv_opt ("
-								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-								+ ") with | Some v -> v | None -> Std.hx_null_string)";
+					case EField(EIdent("Sys"), "getEnv") if (args.length == 1):
+						return "HxSys.getEnv ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")";
+					case EField(EIdent("Sys"), "environment") if (args.length == 0):
+						return "(HxSys.environment ())";
 					case EField(EIdent("Sys"), "args") if (args.length == 0):
 						// Haxe: Sys.args() excludes argv[0].
 						return "(let __argv = Stdlib.Sys.argv in "
@@ -1176,11 +1178,13 @@ class EmitterStage {
 							+ "if __len <= 1 then HxBootArray.create () "
 							+ "else HxBootArray.of_list (Array.to_list (Array.sub __argv 1 (__len - 1))))";
 					case EField(EIdent("Sys"), "putEnv") if (args.length == 2):
-						return "((Unix.putenv ("
-							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ") ("
-							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ ")); ())";
+						// Haxe: `Sys.putEnv(name, value)` accepts null for removal.
+						// Our runtime provides the option-based API; bridge through the hx_null sentinel.
+						final rawName = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						final rawValue = exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
+						return "(let __v = Obj.repr (" + rawValue + ") in "
+							+ "let __opt : string option = if __v == HxRuntime.hx_null then None else Some (Obj.obj __v) in "
+							+ "HxSys.putEnv (" + rawName + ") __opt)";
 					case EField(EIdent("Sys"), "setCwd") if (args.length == 1):
 						return "(Stdlib.Sys.chdir ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)

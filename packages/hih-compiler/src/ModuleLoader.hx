@@ -40,6 +40,9 @@ class ModuleLoader extends LazyTypeLoader {
 	final defines:haxe.ds.StringMap<String>;
 	final index:TyperIndex;
 
+	// Directory listing cache used for exact-case path checks on case-insensitive filesystems.
+	final dirEntryCache:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>;
+
 	// Module-path based cycle/dup guard.
 	final visited:haxe.ds.StringMap<Bool>;
 
@@ -51,6 +54,7 @@ class ModuleLoader extends LazyTypeLoader {
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.index = index;
+		this.dirEntryCache = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		this.visited = new haxe.ds.StringMap<Bool>();
 		this.pending = [];
 	}
@@ -212,13 +216,32 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	function resolveModuleFile(modulePath:String):Null<String> {
+		inline function fileExistsExactCase(path:String):Bool {
+			if (path == null || path.length == 0) return false;
+			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path)) return false;
+			final dir = Path.directory(path);
+			if (dir == null || dir.length == 0) return true;
+			final base = Path.withoutDirectory(path);
+			var entries = dirEntryCache.get(dir);
+			if (entries == null) {
+				entries = new haxe.ds.StringMap<Bool>();
+				try {
+					for (name in sys.FileSystem.readDirectory(dir)) {
+						if (name != null && name.length > 0) entries.set(name, true);
+					}
+				} catch (_:Dynamic) {}
+				dirEntryCache.set(dir, entries);
+			}
+			return entries.exists(base);
+		}
+
 		final parts = modulePath.split(".");
 		if (parts.length == 0) return null;
 
 		final direct = parts.join("/") + ".hx";
 		for (cp in classPaths) {
 			final candidate = Path.join([cp, direct]);
-			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) return candidate;
+			if (fileExistsExactCase(candidate)) return candidate;
 		}
 
 		// Sub-type fallback: pack.Mod.SubType -> pack/Mod.hx
@@ -227,7 +250,7 @@ class ModuleLoader extends LazyTypeLoader {
 			final fallback = fallbackParts.join("/") + ".hx";
 			for (cp in classPaths) {
 				final candidate = Path.join([cp, fallback]);
-				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) return candidate;
+				if (fileExistsExactCase(candidate)) return candidate;
 			}
 		}
 
