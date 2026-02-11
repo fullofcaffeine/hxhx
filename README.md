@@ -158,6 +158,16 @@ Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `haxelib`, `ne
 You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 For `HXHX_GATE2_MODE=stage3_emit_runner`, the runner now defaults to bootstrap snapshots for speed; set `HXHX_FORCE_STAGE0=1` only when you intentionally want a source-built `hxhx` repro pass.
 
+Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:runci-macro-stage3-display
+```
+
+This runs a focused Gate2 Macro slice in direct Stage3 no-emit mode, skips `unit` for isolation, and exits immediately after `display` with explicit markers:
+`macro_stage=display status=ok`, `gate2_display_stage=ok`, `gate2_stage3_no_emit_direct=ok stop_after=display`.
+
 Run the dedicated non-delegating display smoke rung:
 
 ```bash

@@ -598,8 +598,22 @@ run_stage3_no_emit_direct_macro() {
   #   stage0 `haxe` to *execute* upstream `tests/RunCi.hxml`.
   #
   # This rung removes that last stage0 dependency by reproducing the Macro target sequence in bash.
+  #
+  # Optional narrowing for iteration speed:
+  # - Set `HXHX_GATE2_MACRO_STOP_AFTER=<stage>` to stop after a specific stage
+  #   (`unit`, `display`, `sourcemaps`, `nullsafety`, `misc`, `resolution`, `sys`,
+  #    `compiler_loops`, `threads`, `party`).
 
   local sys_def="Unknown"
+  local stop_after="${HXHX_GATE2_MACRO_STOP_AFTER:-}"
+  case "$stop_after" in
+    ""|unit|display|sourcemaps|nullsafety|misc|resolution|sys|compiler_loops|threads|party) ;;
+    *)
+      echo "Unknown HXHX_GATE2_MACRO_STOP_AFTER value: '$stop_after'" >&2
+      echo "Allowed: unit,display,sourcemaps,nullsafety,misc,resolution,sys,compiler_loops,threads,party" >&2
+      exit 2
+      ;;
+  esac
   case "$(uname -s)" in
     Darwin) sys_def="Mac" ;;
     Linux) sys_def="Linux" ;;
@@ -613,22 +627,50 @@ run_stage3_no_emit_direct_macro() {
   args+=("-D" "$sys_def")
 
   echo "== Gate 2 (direct): Macro stage sequence (stage3 no-emit; no stage0 RunCi harness)"
+  if [ -n "$stop_after" ]; then
+    echo "== Gate 2 (direct): stop-after stage = $stop_after"
+  fi
 
-  (
-    cd "$UPSTREAM_DIR/tests/unit"
-    PATH="$WRAP_DIR:$PATH" haxe compile-macro.hxml "${args[@]}"
-  )
+  if [ "${HXHX_GATE2_SKIP_UNIT:-0}" = "1" ]; then
+    echo "Skipping unit stage (HXHX_GATE2_SKIP_UNIT=1)"
+    echo "macro_stage=unit status=skipped"
+    if [ "$stop_after" = "unit" ]; then
+      echo "Requested stop-after=unit but unit stage is skipped (set HXHX_GATE2_SKIP_UNIT=0)." >&2
+      exit 1
+    fi
+  else
+    (
+      cd "$UPSTREAM_DIR/tests/unit"
+      PATH="$WRAP_DIR:$PATH" haxe compile-macro.hxml "${args[@]}"
+    )
+    echo "macro_stage=unit status=ok"
+    if [ "$stop_after" = "unit" ]; then
+      echo "gate2_stage3_no_emit_direct=ok stop_after=unit"
+      return 0
+    fi
+  fi
 
   (
     cd "$UPSTREAM_DIR/tests/display"
     PATH="$WRAP_DIR:$PATH" haxelib path haxeserver >/dev/null 2>&1 || true
     PATH="$WRAP_DIR:$PATH" haxe build.hxml
   )
+  echo "macro_stage=display status=ok"
+  echo "gate2_display_stage=ok"
+  if [ "$stop_after" = "display" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=display"
+    return 0
+  fi
 
   (
     cd "$UPSTREAM_DIR/tests/sourcemaps"
     PATH="$WRAP_DIR:$PATH" haxe run.hxml
   )
+  echo "macro_stage=sourcemaps status=ok"
+  if [ "$stop_after" = "sourcemaps" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=sourcemaps"
+    return 0
+  fi
 
   (
     cd "$UPSTREAM_DIR/tests/nullsafety"
@@ -637,24 +679,48 @@ run_stage3_no_emit_direct_macro() {
     echo "Js-es6 null safety:"
     PATH="$WRAP_DIR:$PATH" haxe test-js-es6.hxml
   )
+  echo "macro_stage=nullsafety status=ok"
+  if [ "$stop_after" = "nullsafety" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=nullsafety"
+    return 0
+  fi
 
   (
     cd "$UPSTREAM_DIR/tests/misc"
     PATH="$WRAP_DIR:$PATH" haxe compile.hxml
   )
+  echo "macro_stage=misc status=ok"
+  if [ "$stop_after" = "misc" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=misc"
+    return 0
+  fi
 
   (
     cd "$UPSTREAM_DIR/tests/misc/resolution"
     PATH="$WRAP_DIR:$PATH" haxe run.hxml
   )
+  echo "macro_stage=resolution status=ok"
+  if [ "$stop_after" = "resolution" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=resolution"
+    return 0
+  fi
 
   if [ "${HXHX_GATE2_FORCE_SYS:-0}" = "1" ] || [ "$(uname -s)" != "Darwin" ]; then
     (
       cd "$UPSTREAM_DIR/tests/sys"
       PATH="$WRAP_DIR:$PATH" haxe compile-macro.hxml "${args[@]}"
     )
+    echo "macro_stage=sys status=ok"
+    if [ "$stop_after" = "sys" ]; then
+      echo "gate2_stage3_no_emit_direct=ok stop_after=sys"
+      return 0
+    fi
   else
     echo "Skipping sys tests on Mac (HXHX Gate2 runner; macOS/APFS unicode filename fixtures unsupported)"
+    if [ "$stop_after" = "sys" ]; then
+      echo "Requested stop-after=sys but sys stage is skipped on this host (set HXHX_GATE2_FORCE_SYS=1 to force)." >&2
+      exit 1
+    fi
   fi
 
   if [ "$(uname -s)" = "Linux" ]; then
@@ -662,15 +728,33 @@ run_stage3_no_emit_direct_macro() {
       cd "$UPSTREAM_DIR/tests/misc/compiler_loops"
       PATH="$WRAP_DIR:$PATH" haxe run.hxml
     )
+    echo "macro_stage=compiler_loops status=ok"
+    if [ "$stop_after" = "compiler_loops" ]; then
+      echo "gate2_stage3_no_emit_direct=ok stop_after=compiler_loops"
+      return 0
+    fi
+  elif [ "$stop_after" = "compiler_loops" ]; then
+    echo "Requested stop-after=compiler_loops but compiler_loops only runs on Linux." >&2
+    exit 1
   fi
 
   (
     cd "$UPSTREAM_DIR/tests/threads"
     PATH="$WRAP_DIR:$PATH" haxe build.hxml --interp
   )
+  echo "macro_stage=threads status=ok"
+  if [ "$stop_after" = "threads" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=threads"
+    return 0
+  fi
 
   if [ "${HXHX_GATE2_SKIP_PARTY}" = "1" ]; then
     echo "Skipping party stage (HXHX Gate2 runner; set HXHX_GATE2_SKIP_PARTY=0 to enable)"
+    if [ "$stop_after" = "party" ]; then
+      echo "Requested stop-after=party but party stage is skipped (set HXHX_GATE2_SKIP_PARTY=0)." >&2
+      exit 1
+    fi
+    echo "gate2_stage3_no_emit_direct=ok stop_after=${stop_after:-none}"
     return 0
   fi
 
@@ -687,6 +771,12 @@ run_stage3_no_emit_direct_macro() {
     PATH="$WRAP_DIR:$PATH" haxelib dev tink_core .
     PATH="$WRAP_DIR:$PATH" haxe tests.hxml -w -WDeprecated --interp --macro "addMetadata('@:exclude','Futures','testDelay')"
   )
+  echo "macro_stage=party status=ok"
+  if [ "$stop_after" = "party" ]; then
+    echo "gate2_stage3_no_emit_direct=ok stop_after=party"
+    return 0
+  fi
+  echo "gate2_stage3_no_emit_direct=ok stop_after=${stop_after:-none}"
 }
 
 apply_misc_filter_if_requested() {

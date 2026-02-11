@@ -77,6 +77,25 @@ Notes:
     - Set `HXHX_FORCE_STAGE0=1` if you explicitly want to rebuild `hxhx` from source before running it.
 - `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
   to a minimal harness so we can at least prove sub-invocation spawning.
+- `HXHX_GATE2_MACRO_STOP_AFTER=<stage>` (direct mode only) stops the Macro sequence after a named stage and prints explicit markers.
+  - Supported: `unit`, `display`, `sourcemaps`, `nullsafety`, `misc`, `resolution`, `sys`, `compiler_loops`, `threads`, `party`.
+  - Useful for targeted iteration without running the full Gate2 matrix.
+
+Focused display rung (non-delegating, direct Macro sequence up to display):
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:runci-macro-stage3-display
+```
+
+Success markers:
+- `macro_stage=display status=ok`
+- `gate2_display_stage=ok`
+- `gate2_stage3_no_emit_direct=ok stop_after=display`
+
+Notes:
+- This focused rung sets `HXHX_GATE2_SKIP_UNIT=1` so it can isolate display semantics
+  without being blocked by unrelated `tests/unit` bring-up gaps.
 
 ### Bootstrap stage map (quick reference)
 
