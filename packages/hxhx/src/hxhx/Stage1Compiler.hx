@@ -230,10 +230,11 @@ class Stage1Compiler {
 		public final defines:Array<String>;
 		public final libs:Array<String>;
 		public final macros:Array<String>;
+		public final displayRequest:Null<String>;
 		public final cwd:String;
 		public final hadCmd:Bool;
 
-		function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>, cwd:String, hadCmd:Bool) {
+		function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool) {
 			this.classPaths = classPaths;
 			this.main = main;
 			this.noOutput = noOutput;
@@ -241,6 +242,7 @@ class Stage1Compiler {
 			this.defines = defines;
 			this.libs = libs;
 			this.macros = macros;
+			this.displayRequest = displayRequest;
 			this.cwd = cwd;
 			this.hadCmd = hadCmd;
 		}
@@ -256,6 +258,7 @@ class Stage1Compiler {
 			final defines = new Array<String>();
 			final libs = new Array<String>();
 			final macros = new Array<String>();
+			var displayRequest:Null<String> = null;
 			var cwd = ".";
 			var stdRoot = "";
 			var hadCmd = false;
@@ -272,6 +275,22 @@ class Stage1Compiler {
 					i += 1;
 				case "--debug" if (permissive):
 					defines.push("debug=1");
+					i += 1;
+				case "--display" if (permissive):
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --display");
+						return null;
+					}
+					displayRequest = expanded[i + 1];
+					defines.push("display=1");
+					i += 2;
+				case "--connect", "--wait" if (permissive):
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
+					i += 2;
+				case "--display-details", "--times" if (permissive):
 					i += 1;
 				case "--dce" if (permissive):
 					if (i + 1 >= expanded.length) {
@@ -423,7 +442,7 @@ class Stage1Compiler {
 			if (classPaths.length == 0) classPaths.push(".");
 			if (stdRoot == null || stdRoot.length == 0) stdRoot = inferStdRoot();
 			if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
-			return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, cwd, hadCmd);
+			return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd);
 		}
 
 	static function inferStdRoot():String {
@@ -483,6 +502,7 @@ class Stage1Compiler {
 		public static function getDefines(a:Stage1Args):Array<String> return a.defines;
 		public static function getLibs(a:Stage1Args):Array<String> return a.libs;
 		public static function getMacros(a:Stage1Args):Array<String> return a.macros;
+		public static function getDisplayRequest(a:Stage1Args):Null<String> return a.displayRequest;
 		public static function getCwd(a:Stage1Args):String return a.cwd;
 		public static function getHadCmd(a:Stage1Args):Bool return a.hadCmd;
 	}

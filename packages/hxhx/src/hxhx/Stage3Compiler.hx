@@ -493,6 +493,46 @@ class Stage3Compiler {
 		return Path.isAbsolute(path) ? Path.normalize(path) : Path.normalize(Path.join([cwd, path]));
 	}
 
+	/**
+		Infer a module/type root from a `--display <path@mode>` request.
+
+		Why
+		- Upstream display server calls often omit `-main` and rely on `--display <file@...>`.
+		- Stage3 previously treated those invocations as "missing -main", which blocked display
+		  fixture execution under non-delegating `hxhx` paths.
+
+		How
+		- Parse the file part before `@`.
+		- Resolve it against classpaths to derive a dotted module path (`src/a/b/Main.hx` -> `a.b.Main`).
+		- Fallback to file basename when classpath matching is not possible.
+	**/
+	static function inferMainFromDisplayRequest(displayRequest:String, classPaths:Array<String>, cwd:String):String {
+		if (displayRequest == null) return "";
+		final trimmed = StringTools.trim(displayRequest);
+		if (trimmed.length == 0) return "";
+
+		final at = trimmed.indexOf("@");
+		final rawPath = at == -1 ? trimmed : trimmed.substr(0, at);
+		if (rawPath.length == 0 || !StringTools.endsWith(rawPath, ".hx")) return "";
+
+		final displayAbs = absFromCwd(cwd, rawPath);
+		final displayNorm = Path.normalize(displayAbs);
+
+		for (cp in classPaths) {
+			final cpAbs = absFromCwd(cwd, cp);
+			var cpNorm = Path.normalize(cpAbs);
+			if (!StringTools.endsWith(cpNorm, "/")) cpNorm += "/";
+			if (!StringTools.startsWith(displayNorm, cpNorm)) continue;
+			var rel = displayNorm.substr(cpNorm.length);
+			if (StringTools.endsWith(rel, ".hx")) rel = rel.substr(0, rel.length - 3);
+			rel = StringTools.replace(rel, "\\", "/");
+			rel = StringTools.replace(rel, "/", ".");
+			if (rel.length > 0) return rel;
+		}
+
+		return Path.withoutExtension(Path.withoutDirectory(displayNorm));
+	}
+
 	static function inferRepoRootForScripts():String {
 		final env = Sys.getEnv("HXHX_REPO_ROOT");
 		if (env != null && env.length > 0 && sys.FileSystem.exists(env) && sys.FileSystem.isDirectory(env)) {
@@ -782,6 +822,7 @@ class Stage3Compiler {
 			// 2) positional roots (`<pack.TypeName>` args)
 			// 3) first `--macro` entrypoint's type path (before the final `.method(...)`)
 			final roots0 = new Array<String>();
+			final displayRequest = Stage1Args.getDisplayRequest(parsed);
 			if (parsed.main != null && parsed.main.length > 0) {
 				roots0.push(parsed.main);
 			} else if (parsed.roots != null && parsed.roots.length > 0) {
@@ -790,17 +831,6 @@ class Stage3Compiler {
 				final inferred = inferMainFromMacroExpr(parsed.macros[0]);
 				if (inferred.length == 0) return error("missing -main <TypeName>");
 				roots0.push(inferred);
-			} else {
-				// Some upstream `.hxml` units are "command only" (e.g. Flash's `-cmd compc ...`) and do
-				// not invoke the Haxe compiler in a way that produces a `-main`.
-				//
-				// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
-				// diagnostic runners can still traverse the rest of the multi-unit file.
-				if (Stage1Args.getHadCmd(parsed)) {
-					Sys.println("stage3=skipped_cmd_only");
-					return 0;
-				}
-				return error("missing -main <TypeName>");
 			}
 
 		// Type-only mode is intended to answer “how far does the typer get?” without requiring a
@@ -836,6 +866,24 @@ class Stage3Compiler {
 		final cwd = absFromCwd(hostCwd, parsed.cwd);
 			if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
 				return error("cwd is not a directory: " + cwd);
+			}
+
+			if (roots0.length == 0 && displayRequest != null && displayRequest.length > 0) {
+				final inferred = inferMainFromDisplayRequest(displayRequest, parsed.classPaths, cwd);
+				if (inferred.length > 0) roots0.push(inferred);
+			}
+
+			if (roots0.length == 0) {
+				// Some upstream `.hxml` units are "command only" (e.g. Flash's `-cmd compc ...`) and do
+				// not invoke the Haxe compiler in a way that produces a `-main`.
+				//
+				// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
+				// diagnostic runners can still traverse the rest of the multi-unit file.
+				if (Stage1Args.getHadCmd(parsed)) {
+					Sys.println("stage3=skipped_cmd_only");
+					return 0;
+				}
+				return error("missing -main <TypeName>");
 			}
 
 			final outAbs = absFromCwd(cwd, (outDir.length > 0 ? outDir : "out_stage3"));

@@ -76,6 +76,18 @@ Notes:
   - `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
     to a minimal harness so we can at least prove sub-invocation spawning.
 
+Dedicated display smoke rung (non-delegating Stage3 no-emit):
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:display-stage3-no-emit
+```
+
+Notes:
+
+- This validates `--display <file@mode>` request handling directly through `hxhx --hxhx-stage3 --hxhx-no-emit`.
+- It intentionally does **not** require full upstream `--wait` display server parity yet.
+
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 
 This is a local bootstrap sanity check:

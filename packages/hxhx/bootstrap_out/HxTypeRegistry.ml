@@ -815,9 +815,10 @@ let init () : unit =
     let a4 = if len > 4 then Obj.magic ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'defines' for hxhx.Stage1Args" in
     let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'libs' for hxhx.Stage1Args" in
     let a6 = if len > 6 then Obj.magic ((HxArray.get args 6)) else failwith "Type.createInstance: missing ctor arg 'macros' for hxhx.Stage1Args" in
-    let a7 = if len > 7 then Obj.obj ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'cwd' for hxhx.Stage1Args" in
-    let a8 = if len > 8 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 8)) else failwith "Type.createInstance: missing ctor arg 'hadCmd' for hxhx.Stage1Args" in
-    Obj.repr (Hxhx_Stage1Compiler.stage1args_create a0 a1 a2 a3 a4 a5 a6 a7 a8)
+    let a7 = if len > 7 then Obj.obj ((HxArray.get args 7)) else failwith "Type.createInstance: missing ctor arg 'displayRequest' for hxhx.Stage1Args" in
+    let a8 = if len > 8 then Obj.obj ((HxArray.get args 8)) else failwith "Type.createInstance: missing ctor arg 'cwd' for hxhx.Stage1Args" in
+    let a9 = if len > 9 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 9)) else failwith "Type.createInstance: missing ctor arg 'hadCmd' for hxhx.Stage1Args" in
+    Obj.repr (Hxhx_Stage1Compiler.stage1args_create a0 a1 a2 a3 a4 a5 a6 a7 a8 a9)
   );
   HxType.register_class_ctor "hxhx.Stage1Compiler" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage1Compiler.create ())
@@ -1067,14 +1068,14 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "parseFile"; "parseFileRec"; "parseFileUnits"; "splitIntoUnits"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
   HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "stripAll" ];
-  HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "hadCmd"; "libs"; "macros"; "main"; "noOutput"; "roots" ];
-  HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCwd"; "getDefines"; "getHadCmd"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getRoots"; "inferStdRoot"; "parse" ];
+  HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "displayRequest"; "hadCmd"; "libs"; "macros"; "main"; "noOutput"; "roots" ];
+  HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCwd"; "getDefines"; "getDisplayRequest"; "getHadCmd"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getRoots"; "inferStdRoot"; "parse" ];
   HxType.register_class_instance_fields "hxhx.Stage1Compiler" [];
   HxType.register_class_static_fields "hxhx.Stage1Compiler" [ "error"; "formatParseError"; "haxelibBin"; "resolveHaxelibPaths"; "run" ];
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
   HxType.register_class_static_fields "hxhx.Stage1Resolver" [ "normalizeSep"; "resolveClassPath"; "resolveMain"; "resolveModule" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "error"; "escapeOneLine"; "findBuildMacroExprs"; "findFlagValue"; "findHaxeLibrariesHxml"; "findManyFlagValues"; "formatException"; "hasFlag"; "haxelibBin"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "resolveHaxelibSpec"; "resolveHaxelibSpecFromHxml"; "resolveHaxelibSpecViaProcess"; "run"; "runOne"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "trim" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "error"; "escapeOneLine"; "findBuildMacroExprs"; "findFlagValue"; "findHaxeLibrariesHxml"; "findManyFlagValues"; "formatException"; "hasFlag"; "haxelibBin"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "resolveHaxelibSpec"; "resolveHaxelibSpecFromHxml"; "resolveHaxelibSpecViaProcess"; "run"; "runOne"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "trim" ];
   HxType.register_class_instance_fields "hxhx.TargetPresets" [];
   HxType.register_class_static_fields "hxhx.TargetPresets" [ "apply"; "applyOcaml"; "findBundledLibRoot"; "listTargets" ];
   HxType.register_class_instance_fields "hxhx._TargetPresets.ArgScan" [];

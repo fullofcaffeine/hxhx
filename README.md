@@ -119,6 +119,15 @@ npm run test:upstream:runci-macro
 Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `haxelib`, `neko`/`nekotools`, `python3`, `javac`, and a C compiler like `cc`/`clang`), and it can download external deps (e.g. `tink_core`) during the run.
 You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 
+Run the dedicated non-delegating display smoke rung:
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:display-stage3-no-emit
+```
+
+This validates `--display` request parsing/root inference (`hxhx --hxhx-stage3 --hxhx-no-emit`) without relying on upstream `--wait` server-mode parity yet.
+
 ## Two surfaces (design)
 
 - Portable (default): keep Haxe stdlib semantics and portability; the target provides `packages/reflaxe.ocaml/std/_std` overrides and runtime helpers so users can target OCaml without writing OCaml-specific code.

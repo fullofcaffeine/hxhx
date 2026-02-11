@@ -190,6 +190,15 @@ HX
   echo "$out" | grep -q "^stage3=ok$"
   test -f "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
   grep -q "HxSys.environment" "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
+
+  echo "== Stage3 regression: --display root inference + value-flag consumption"
+  cat >"$tmpdir/src/DisplayMain.hx" <<'HX'
+class DisplayMain {
+  static function main() {}
+}
+HX
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-out "$tmpdir/out_stage3_display" --connect 6000 --display "$tmpdir/src/DisplayMain.hx@0@diagnostics" -cp "$tmpdir/src" --no-output)"
+  echo "$out" | grep -q "^stage3=no_emit_ok$"
 fi
 
 echo "== Stage1 bring-up: multi-class module selects expected class"
