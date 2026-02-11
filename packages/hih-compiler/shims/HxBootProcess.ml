@@ -54,7 +54,7 @@ let safe_remove (path : string) : unit =
   try Unix.unlink path with _ -> ()
 
 let command_line_argv (cmd : string) (args : string HxBootArray.t) : string array =
-  Array.of_list ("/usr/bin/env" :: cmd :: HxBootArray.to_list args)
+  Stdlib.Array.of_list ("/usr/bin/env" :: cmd :: HxBootArray.to_list args)
 
 let run (cmd : string) (args : string HxBootArray.t) : t =
   (* Use /usr/bin/env so we resolve the command via PATH (Gate2 wrapper prepends a PATH entry). *)

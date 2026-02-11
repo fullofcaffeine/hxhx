@@ -173,7 +173,7 @@ let decode_lexer_stream (s : string) :
           else if starts_with l "err " then err := Some l
           else ())
         rest;
-      Ok (Array.of_list !toks, !err)
+      Ok (Stdlib.Array.of_list !toks, !err)
 
 let pos_of (t : token) : pos =
   match t with
@@ -198,14 +198,14 @@ let parse_module_from_tokens (src : string) (toks : token array)
     (string * string list * bool * string * bool * method_decl list * field_decl list) =
   let i = ref 0 in
   let cur () : token =
-    if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
-    else toks.(!i)
+    if !i < 0 || !i >= Stdlib.Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else Stdlib.Array.get toks !i
   in
   let bump () = i := !i + 1 in
   let peek (n : int) : token =
     let j = !i + n in
-    if j < 0 || j >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
-    else toks.(j)
+    if j < 0 || j >= Stdlib.Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else Stdlib.Array.get toks j
   in
 
   let expect_kw (k : string) =
@@ -1027,14 +1027,14 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
     (string * string list * bool * string) =
   let i = ref 0 in
   let cur () : token =
-    if !i < 0 || !i >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
-    else toks.(!i)
+    if !i < 0 || !i >= Stdlib.Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else Stdlib.Array.get toks !i
   in
   let bump () = i := !i + 1 in
   let peek (n : int) : token =
     let j = !i + n in
-    if j < 0 || j >= Array.length toks then Eof { index = 0; line = 0; col = 0 }
-    else toks.(j)
+    if j < 0 || j >= Stdlib.Array.length toks then Eof { index = 0; line = 0; col = 0 }
+    else Stdlib.Array.get toks j
   in
 
   let rec skip_until_semicolon () =

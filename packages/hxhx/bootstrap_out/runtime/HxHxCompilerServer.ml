@@ -40,9 +40,9 @@ let resolve_host (host : string) : Unix.inet_addr =
   try Unix.inet_addr_of_string host
   with _ ->
     let entry = Unix.gethostbyname host in
-    if Array.length entry.Unix.h_addr_list = 0 then
+    if Stdlib.Array.length entry.Unix.h_addr_list = 0 then
       failwith ("cannot resolve host: " ^ host)
-    else entry.Unix.h_addr_list.(0)
+    else Stdlib.Array.get entry.Unix.h_addr_list 0
 
 let send_all (sock : Unix.file_descr) (payload : string) : unit =
   let bytes = Bytes.unsafe_of_string payload in

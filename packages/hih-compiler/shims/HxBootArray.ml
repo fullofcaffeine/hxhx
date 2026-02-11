@@ -49,7 +49,7 @@ let of_list (xs : 'a list) : 'a t =
 let to_list (a : 'a t) : 'a list =
   (* `HxArray.t` is a record; the type alias lets us access the fields. *)
   let rec loop i acc =
-    if i < 0 then acc else loop (i - 1) (Obj.obj a.data.(i) :: acc)
+    if i < 0 then acc else loop (i - 1) (Obj.obj (Stdlib.Array.get a.data i) :: acc)
   in
   loop (a.length - 1) []
 

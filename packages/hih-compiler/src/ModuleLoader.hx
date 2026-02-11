@@ -224,6 +224,97 @@ class ModuleLoader extends LazyTypeLoader {
 				if (info != null) index.addClass(info);
 			}
 		}
+
+		// Keep lazily loaded modules link-safe by recursively loading their direct dependencies.
+		//
+		// Why
+		// - ResolverStage computes import closure only for the initial roots.
+		// - ModuleLoader can add additional modules during typing, but without dependency expansion
+		//   those modules may emit references to missing OCaml units (link-time failures).
+		//
+		// What
+		// - Follow explicit imports (including module-type fallback) and fully-qualified type path
+		//   references found in source bodies (e.g. `pkg.Type.member(...)`).
+		final decl = parsed.getDecl();
+		for (dep in depsForParsedModule(filtered, decl)) {
+			if (dep == null || dep.length == 0) continue;
+			if (resolveModuleFile(dep) == null) continue;
+			loadModuleByPath(dep);
+		}
+	}
+
+	static function normalizeImport(raw:String):Null<String> {
+		if (raw == null) return null;
+		var s = StringTools.trim(raw);
+		if (s.length == 0) return null;
+		if (StringTools.startsWith(s, "using ")) s = StringTools.trim(s.substr("using ".length));
+		final asIdx = s.indexOf(" as ");
+		if (asIdx >= 0) s = StringTools.trim(s.substr(0, asIdx));
+		return s.length == 0 ? null : s;
+	}
+
+	static function implicitQualifiedTypeDeps(source:String):Array<String> {
+		if (source == null || source.length == 0) return [];
+
+		final candidates = new haxe.ds.StringMap<Bool>();
+		for (line in source.split("\n")) {
+			final trimmed = StringTools.trim(line);
+			if (StringTools.startsWith(trimmed, "@:")) continue;
+
+			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
+			var pos = 0;
+			while (re.matchSub(line, pos)) {
+				final dep = re.matched(1);
+				if (dep != null && dep.length > 0) candidates.set(dep, true);
+				final mp = re.matchedPos();
+				pos = mp.pos + mp.len;
+			}
+		}
+
+		final out = new Array<String>();
+		for (dep in candidates.keys()) out.push(dep);
+		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+		return out;
+	}
+
+	function depsForParsedModule(filteredSource:String, decl:HxModuleDecl):Array<String> {
+		final out = new Array<String>();
+		final seen = new haxe.ds.StringMap<Bool>();
+
+		inline function push(dep:String):Void {
+			if (dep == null || dep.length == 0) return;
+			if (seen.exists(dep)) return;
+			seen.set(dep, true);
+			out.push(dep);
+		}
+
+		final modulePkg = HxModuleDecl.getPackagePath(decl);
+		for (rawImport in HxModuleDecl.getImports(decl)) {
+			final imp = normalizeImport(rawImport);
+			if (imp == null) continue;
+
+			final resolvedImp = {
+				final existsDirect = resolveModuleFile(imp) != null;
+				if (existsDirect) imp else {
+					final dot = imp.indexOf(".");
+					final head = dot == -1 ? imp : imp.substr(0, dot);
+					final head0 = head.length == 0 ? 0 : head.charCodeAt(0);
+					final headIsUpper = head0 >= "A".code && head0 <= "Z".code;
+					if (headIsUpper && modulePkg != null && modulePkg.length > 0 && !StringTools.startsWith(imp, modulePkg + ".")) modulePkg + "." + imp else imp;
+				}
+			}
+
+			if (StringTools.endsWith(resolvedImp, ".*")) {
+				final base = resolvedImp.substr(0, resolvedImp.length - 2);
+				if (resolveModuleFile(base) != null) push(base);
+				continue;
+			}
+
+			push(resolvedImp);
+		}
+
+		for (dep in implicitQualifiedTypeDeps(filteredSource)) push(dep);
+		return out;
 	}
 
 	function resolveModuleFile(modulePath:String):Null<String> {

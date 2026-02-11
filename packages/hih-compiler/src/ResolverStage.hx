@@ -27,6 +27,13 @@ import haxe.io.Path;
 	  or the native OCaml frontend hook (see `ParserStage` hxdoc).
 **/
 class ResolverStage {
+	static function traceResolverDepsEnabled():Bool {
+		final v = Sys.getEnv("HXHX_TRACE_RESOLVER_DEPS");
+		if (v == null) return false;
+		final s = StringTools.trim(v).toLowerCase();
+		return s == "1" || s == "true" || s == "yes";
+	}
+
 	static function resolveImplicitSamePackageTypesEnabled():Bool {
 		final v = Sys.getEnv("HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES");
 		// Default-on during bootstrapping.
@@ -76,6 +83,51 @@ class ResolverStage {
 			if (name == moduleName) continue;
 			out.push(pkg + "." + name);
 		}
+		return out;
+	}
+
+	/**
+		Best-effort extractor for fully-qualified type paths referenced directly in expressions.
+
+		Why
+		- The bootstrap resolver is still mostly import-driven.
+		- Real Haxe code frequently references types without an import, e.g.
+		  `haxeserver.HaxeServerSync.launch(...)`.
+		- In Stage3 `--hxhx-emit-full-bodies` mode, those references must still pull in the target
+		  module, otherwise OCaml link fails with `Unbound module ...`.
+
+		What
+		- Scans filtered source for dotted identifiers whose last segment looks like a type name
+		  (uppercase-leading), then returns stable-sorted unique candidates.
+
+		Gotchas
+		- This is intentionally heuristic and may over-approximate.
+		- We only enqueue dependencies that actually resolve on classpaths, which keeps false
+		  positives low enough for bring-up.
+	**/
+	static function implicitQualifiedTypeDeps(source:String):Array<String> {
+		if (source == null || source.length == 0) return [];
+
+		final candidates = new Map<String, Bool>();
+		// Skip metadata lines (`@:build(...)`, `@:autoBuild(...)`, etc.) so macro entrypoint
+		// paths do not widen the main compilation graph.
+		for (line in source.split("\n")) {
+			final trimmed = StringTools.trim(line);
+			if (StringTools.startsWith(trimmed, "@:")) continue;
+
+			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
+			var pos = 0;
+			while (re.matchSub(line, pos)) {
+				final dep = re.matched(1);
+				if (dep != null && dep.length > 0) candidates.set(dep, true);
+				final mp = re.matchedPos();
+				pos = mp.pos + mp.len;
+			}
+		}
+
+		final out = new Array<String>();
+		for (dep in candidates.keys()) out.push(dep);
+		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 		return out;
 	}
 
@@ -205,10 +257,19 @@ class ResolverStage {
 				// IMPORTANT: run the heuristic on the *filtered* source so inactive `#if` branches
 				// do not widen the module graph (and accidentally pull in platform-only modules
 				// like `unit.TestJava` during `--interp` bring-up).
+				final traceDeps = traceResolverDepsEnabled();
 				if (resolveImplicitSamePackageTypesEnabled()) {
 					for (dep in implicitSamePackageDeps(filteredSource, modulePath, decl)) {
-						if (resolveModuleFile(classPaths, dep) != null) deps.push(dep);
+						final exists = resolveModuleFile(classPaths, dep) != null;
+						if (traceDeps) Sys.println("resolver_samepkg_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+						if (exists) deps.push(dep);
 					}
+				}
+
+				for (dep in implicitQualifiedTypeDeps(filteredSource)) {
+					final exists = resolveModuleFile(classPaths, dep) != null;
+					if (traceDeps) Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+					if (exists) deps.push(dep);
 				}
 
 			// Preserve the old DFS-ish order by pushing dependencies in reverse.

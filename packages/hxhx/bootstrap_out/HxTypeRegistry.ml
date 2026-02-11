@@ -1006,8 +1006,8 @@ let init () : unit =
   HxType.register_class_static_fields "MacroExpandedProgram" [];
   HxType.register_class_instance_fields "MacroStage" [];
   HxType.register_class_static_fields "MacroStage" [ "expand"; "expandProgram" ];
-  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "index"; "loadModuleByPath"; "markResolvedAlready"; "pending"; "resolveModuleFile"; "visited" ];
-  HxType.register_class_static_fields "ModuleLoader" [ "candidateModulePaths" ];
+  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "depsForParsedModule"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "index"; "loadModuleByPath"; "markResolvedAlready"; "pending"; "resolveModuleFile"; "visited" ];
+  HxType.register_class_static_fields "ModuleLoader" [ "candidateModulePaths"; "implicitQualifiedTypeDeps"; "normalizeImport" ];
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];
   HxType.register_class_instance_fields "ParserStage" [];
@@ -1015,7 +1015,7 @@ let init () : unit =
   HxType.register_class_instance_fields "ResolvedModule" [ "filePath"; "modulePath"; "parsed" ];
   HxType.register_class_static_fields "ResolvedModule" [ "getFilePath"; "getModulePath"; "getParsed" ];
   HxType.register_class_instance_fields "ResolverStage" [];
-  HxType.register_class_static_fields "ResolverStage" [ "implicitSamePackageDeps"; "normalizeImport"; "parseProject"; "parseProjectRoots"; "resolveImplicitSamePackageTypesEnabled"; "resolveModuleFile" ];
+  HxType.register_class_static_fields "ResolverStage" [ "implicitQualifiedTypeDeps"; "implicitSamePackageDeps"; "normalizeImport"; "parseProject"; "parseProjectRoots"; "resolveImplicitSamePackageTypesEnabled"; "resolveModuleFile"; "traceResolverDepsEnabled" ];
   HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
   HxType.register_class_static_fields "StringBuf" [];
   HxType.register_class_instance_fields "TyClassEnv" [ "functions"; "getFunctions"; "getName"; "name" ];

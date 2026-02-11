@@ -165,7 +165,7 @@ class EmitterStage {
 			case "and" | "as" | "assert" | "begin" | "class" | "constraint" | "do" | "done" | "downto" | "else"
 				| "end" | "exception" | "external" | "false" | "for" | "fun" | "function" | "functor" | "if" | "in"
 				| "include" | "inherit" | "initializer" | "lazy" | "let" | "match" | "method" | "module" | "mutable"
-				| "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" | "struct" | "then"
+				| "mod" | "new" | "nonrec" | "object" | "of" | "open" | "or" | "private" | "rec" | "sig" | "struct" | "then"
 				| "to" | "true" | "try" | "type" | "val" | "virtual" | "when" | "while" | "with":
 				true;
 			case _:
@@ -2545,9 +2545,10 @@ class EmitterStage {
 					+ "let iter _ _ = ()\n"
 					+ "let count _ = 0\n"
 				);
+				}
+				// Keep bootstrap shims in the compile unit list even on repeat emits into the same out dir.
 				generatedPaths.push(shimName + ".ml");
 			}
-		}
 		{
 			// Stage 3 bring-up: a tiny "array-like" container used only by the bootstrap emitter output.
 			//
@@ -2565,16 +2566,16 @@ class EmitterStage {
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
-				generatedPaths.push(shimName + ".ml");
 			}
+			generatedPaths.push(shimName + ".ml");
 		}
 		{
 			final shimName = "HxBootProcess";
 			final shimPath = haxe.io.Path.join([outAbs, shimName + ".ml"]);
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(shimPath, readShimTemplate(shimName));
-				generatedPaths.push(shimName + ".ml");
 			}
+			generatedPaths.push(shimName + ".ml");
 		}
 				{
 					final shimName = "Reflect";
@@ -2597,8 +2598,8 @@ class EmitterStage {
 								+ "let deleteField o f = HxAnon.delete o f\n"
 								+ "let copy = HxAnon.copy\n"
 							);
-						generatedPaths.push(shimName + ".ml");
 					}
+					generatedPaths.push(shimName + ".ml");
 				}
 			{
 				final shimName = "IgnoredFixture";
@@ -2611,8 +2612,8 @@ class EmitterStage {
 						+ "let notIgnored _ = (Obj.magic 0)\n"
 						+ "let ignored _ = (Obj.magic 0)\n"
 					);
-					generatedPaths.push(shimName + ".ml");
 				}
+				generatedPaths.push(shimName + ".ml");
 			}
 			{
 				final shimName = "HxPosInfos";
@@ -2629,8 +2630,8 @@ class EmitterStage {
 						+ "  customParams : Obj.t;\n"
 						+ "}\n"
 					);
-					generatedPaths.push(shimName + ".ml");
 				}
+				generatedPaths.push(shimName + ".ml");
 		}
 		{
 			final shimName = "Haxe_Int64";
@@ -2663,8 +2664,8 @@ class EmitterStage {
 					+ "  if b = 0 then { quotient = 0; modulus = 0 } else { quotient = a / b; modulus = a mod b }\n"
 					+ "let isInt64 (_ : Obj.t) : bool = true\n"
 				);
-				generatedPaths.push(shimName + ".ml");
 			}
+			generatedPaths.push(shimName + ".ml");
 		}
 
 		final typedModules = p.getTypedModules();

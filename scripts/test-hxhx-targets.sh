@@ -191,6 +191,47 @@ HX
   test -f "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
   grep -q "HxSys.environment" "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
 
+  echo "== Stage3 regression: fully-qualified type path without import"
+  mkdir -p "$tmpdir/src/fqdep"
+  cat >"$tmpdir/src/fqdep/Dep.hx" <<'HX'
+package fqdep;
+
+class Dep {
+  public static function ping() {}
+}
+HX
+  cat >"$tmpdir/src/FqRefStage3.hx" <<'HX'
+package;
+
+class FqRefStage3 {
+  static function main() {
+    // No import on purpose: exercise `pkg.Type.member(...)` lazy module inclusion.
+    fqdep.Dep.ping();
+    Sys.println("ok");
+  }
+}
+HX
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_fqdep" -cp "$tmpdir/src" -main FqRefStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+
+  echo "== Stage3 regression: OCaml keyword escaping for emitted value names"
+  cat >"$tmpdir/src/KeywordEscapeStage3.hx" <<'HX'
+package;
+
+class KeywordEscapeStage3 {
+  static function mod(a:Int, b:Int):Int {
+    return a % b;
+  }
+
+  static function main() {
+    Sys.println(Std.string(mod(5, 2)));
+  }
+}
+HX
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_keyword_escape" -cp "$tmpdir/src" -main KeywordEscapeStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  grep -q "mod_" "$tmpdir/out_stage3_keyword_escape/KeywordEscapeStage3.ml"
+
   echo "== Stage3 regression: --display root inference"
   cat >"$tmpdir/src/DisplayMain.hx" <<'HX'
 class DisplayMain {
@@ -639,6 +680,23 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^OK$"
 echo "$out" | grep -vq "^BAD$"
 echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 regression: emit-full-bodies works on repeated --hxhx-out reuse"
+tmpreuse="$tmpdir/reuse_out"
+mkdir -p "$tmpreuse/src"
+cat >"$tmpreuse/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    var xs = [1, 2, 3];
+    trace(xs.length);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpreuse/src" -main Main --hxhx-out "$tmpreuse/out")"
+echo "$out" | grep -q "^stage3=ok$"
+grep -q "HxBootArray.length" "$tmpreuse/out/Main.ml"
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpreuse/src" -main Main --hxhx-out "$tmpreuse/out")"
+echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Stage3 bring-up: class-scope static finals bind + run"
 tmpstaticfinal="$tmpdir/static_final"
