@@ -117,28 +117,34 @@ This repo intentionally treats `hxhx` as a staged bootstrap so it can serve as a
 
 ### HXHX 1.0 progress tracker (live)
 
-This is the repo-local progress board for the `haxe.ocaml-xgv.10` epic.
+If you are not deep into compiler internals, this is the section to watch.
 
-Use `bd show <id>` to inspect any referenced bead.
+Plain-English goal for `hxhx 1.0`:
+
+- `hxhx` can act like a real Haxe compiler for Haxe `4.3.7` workloads
+- macro-heavy workflows work without delegating back to stage0 `haxe`
+- we keep clean MIT provenance rules while doing it
+
+For a full non-expert walkthrough, read:
+`docs/01-getting-started/HXHX_1_0_ROADMAP.md`
 
 ```mermaid
 flowchart LR
-  A["Stage0/Stage1 bootstrap stability"] --> B["Gate1 non-delegating unit macro"]
-  B --> C["Display parity for Gate2"]
-  C --> D["Gate2 native RunCi progression"]
-  D --> E["Replacement-ready + MIT provenance gates"]
+  A["Can build hxhx reliably"] --> B["Can run core upstream tests"]
+  B --> C["Display / IDE workflows work"]
+  C --> D["Native RunCi flow works end-to-end"]
+  D --> E["Replacement-ready + MIT guardrails"]
 ```
 
-Current checklist:
+Current checklist (human-readable):
 
-- [x] Stage0 bootstrap regeneration is observable and guarded (`haxe.ocaml-xgv.10.4`)
-- [x] Gate1 non-delegating compile+run is landed (`haxe.ocaml-xgv.10.1`)
-- [x] Display stage is reproducible in non-delegating Gate2 direct mode (`haxe.ocaml-xgv.10.3`)
-- [x] Display `--wait`/server protocol stage is landed (`haxe.ocaml-xgv.10.8`)
-- [ ] Gate2 `stage3_emit_runner` progresses past initial RunCi bootstrap (`haxe.ocaml-xgv.10.11`, in progress)
-- [ ] Core decoupling design for target-agnostic HIH lowering is documented (`haxe.ocaml-xgv.10.5`, open)
-- [ ] Repo layout normalization for clear product boundaries is landed (`haxe.ocaml-xgv.10.6`, open)
-- [ ] Epic-level replacement-ready acceptance is green (`haxe.ocaml-xgv.10`)
+- [x] Build/bootstrap pipeline is stable enough for day-to-day work (`haxe.ocaml-xgv.10.4`)
+- [x] Core upstream macro unit workload can run in non-delegating mode (`haxe.ocaml-xgv.10.1`)
+- [x] Display workflows (used by IDE/tooling paths) are reproducible in non-delegating mode (`haxe.ocaml-xgv.10.3`, `haxe.ocaml-xgv.10.8`)
+- [ ] Native `RunCi` flow still needs to move past early bootstrap/harness steps (`haxe.ocaml-xgv.10.11`, in progress)
+- [ ] Target-agnostic core design notes still need to be published (`haxe.ocaml-xgv.10.5`, open)
+- [ ] Monorepo layout cleanup is still pending (`haxe.ocaml-xgv.10.6`, open)
+- [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
 
