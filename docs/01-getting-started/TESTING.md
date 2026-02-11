@@ -88,6 +88,8 @@ Notes:
 - This validates `--display <file@mode>` request handling directly through `hxhx --hxhx-stage3 --hxhx-no-emit`.
 - It also includes a `--wait stdio` framed-protocol smoke check (non-delegating server lifecycle).
 - It intentionally does **not** require full upstream display semantic parity yet.
+- Socket server/client protocol regression coverage lives in `npm run test:hxhx-targets`
+  (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 

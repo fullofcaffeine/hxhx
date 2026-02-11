@@ -47,6 +47,11 @@ private typedef WaitModeParse = {
 	final rest:Array<String>;
 };
 
+private typedef ConnectModeParse = {
+	final connectMode:Null<String>;
+	final rest:Array<String>;
+};
+
 private typedef WaitStdioRequest = {
 	final args:Array<String>;
 	final stdinBytes:Null<Bytes>;
@@ -171,6 +176,37 @@ class Stage3Compiler {
 			i += 1;
 		}
 		return { waitMode: waitMode, rest: rest };
+	}
+
+	/**
+		Extract `--connect <mode>` from raw Stage3 args.
+
+		Why
+		- Upstream compiler-server clients can issue one-shot requests with `--connect`.
+		- Stage3 needs a non-delegating path for that request flow, especially for display-style
+		  requests that are issued against a long-lived `--wait <host:port>` server.
+
+		What
+		- Returns one optional connect mode plus all remaining args.
+		- Multiple `--connect` flags are rejected as invalid.
+	**/
+	static function parseConnectMode(args:Array<String>):ConnectModeParse {
+		final rest = new Array<String>();
+		var connectMode:Null<String> = null;
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			if (a == "--connect") {
+				if (i + 1 >= args.length) throw "missing value after --connect";
+				if (connectMode != null) throw "duplicate --connect flags are not supported";
+				connectMode = args[i + 1];
+				i += 2;
+				continue;
+			}
+			rest.push(a);
+			i += 1;
+		}
+		return { connectMode: connectMode, rest: rest };
 	}
 
 	static function findSingleFlagValue(args:Array<String>, flag:String):Null<String> {
@@ -311,6 +347,116 @@ class Stage3Compiler {
 			final request = decodeWaitStdioRequest(frame);
 			final reply = runWaitStdioRequest(baseArgs, request);
 			writeWaitStdioReply(reply);
+		}
+	}
+
+	/**
+		Run Stage3 as a persistent `--wait <host:port>` socket server.
+
+		Implementation note
+		- This path uses a small OCaml runtime bridge (`HxHxCompilerServer`) because the current
+		  bootstrap codegen does not yet support `sys.net.Socket` property access (`input`/`output`)
+		  from Stage3 Haxe code.
+		- The bridge currently focuses on display-style compiler-server requests.
+	**/
+	static function runWaitSocket(mode:String, _baseArgs:Array<String>):Int {
+		return try {
+			NativeCompilerServer.waitSocket(mode);
+		} catch (e:Dynamic) {
+			error("wait socket failed: " + Std.string(e));
+		}
+	}
+
+	static function readConnectDisplayStdin(args:Array<String>):Null<Bytes> {
+		if (!hasDefineFlag(args, "display-stdin")) return null;
+
+		final input = Sys.stdin();
+		input.bigEndian = false;
+
+		final frameLen = try {
+			input.readInt32();
+		} catch (_:Eof) {
+			return null;
+		} catch (e:Dynamic) {
+			throw "connect failed to read display-stdin frame length: " + Std.string(e);
+		}
+
+		if (frameLen <= 0) return null;
+		final frame = try {
+			input.read(frameLen);
+		} catch (_:Eof) {
+			throw "connect display-stdin frame truncated";
+		}
+		if (frame.length == 0) return null;
+		if (frame.get(0) == 0x01) return frame.sub(1, frame.length - 1);
+		return frame;
+	}
+
+	static function encodeConnectRequest(args:Array<String>, stdinBytes:Null<Bytes>):String {
+		final out = new StringBuf();
+		for (arg in args) {
+			out.add(arg);
+			out.add("\n");
+		}
+		if (stdinBytes != null) {
+			out.addChar(0x01);
+			out.add(stdinBytes.getString(0, stdinBytes.length));
+		}
+		return out.toString();
+	}
+
+	static function processConnectResponse(response:String):Bool {
+		if (response == null || response.length == 0) return false;
+		final text = response;
+		var hasError = false;
+		for (line in text.split("\n")) {
+			if (line.length == 0) continue;
+			switch (line.charCodeAt(0)) {
+				case 0x01:
+					final parts = line.split(String.fromCharCode(0x01));
+					if (parts.length > 1) {
+						final printed = parts.slice(1).join("\n");
+						if (printed.length > 0) {
+							Sys.print(printed);
+							if (!StringTools.endsWith(printed, "\n")) Sys.print("\n");
+						}
+					}
+				case 0x02:
+					hasError = true;
+				case _:
+					Sys.stderr().writeString(line + "\n");
+			}
+		}
+		Sys.stdout().flush();
+		Sys.stderr().flush();
+		return hasError;
+	}
+
+	/**
+		Execute a one-shot Stage3 `--connect <host:port>` request.
+
+		Implementation note
+		- The socket transport itself is handled by `HxHxCompilerServer.connect`.
+		- Stage3 prepares the request payload and preserves existing response formatting behavior.
+	**/
+	static function runConnect(connectMode:String, requestArgs:Array<String>):Int {
+		final stdinBytes = try {
+			readConnectDisplayStdin(requestArgs);
+		} catch (e:Dynamic) {
+			return error(Std.string(e));
+		}
+
+		final argsWithCwd = new Array<String>();
+		argsWithCwd.push("--cwd");
+		argsWithCwd.push(Sys.getCwd());
+		for (arg in requestArgs) argsWithCwd.push(arg);
+
+		final payload = encodeConnectRequest(argsWithCwd, stdinBytes);
+		try {
+			final response = NativeCompilerServer.connect(connectMode, payload);
+			return processConnectResponse(response) ? 1 : 0;
+		} catch (e:Dynamic) {
+			return error("connect failed on " + connectMode + " (" + Std.string(e) + ")");
 		}
 	}
 
@@ -1718,14 +1864,22 @@ class Stage3Compiler {
 			}
 
 			if (wait.waitMode != null) {
-				if (wait.waitMode != "stdio") {
-					return error("unsupported --wait mode: " + wait.waitMode + " (only stdio is supported in this rung)");
-				}
-				return runWaitStdio(wait.rest);
+				if (wait.waitMode == "stdio") return runWaitStdio(wait.rest);
+				return runWaitSocket(wait.waitMode, wait.rest);
+			}
+
+			final connect = try {
+				parseConnectMode(wait.rest);
+			} catch (e:Dynamic) {
+				return error(Std.string(e));
+			}
+
+			if (connect.connectMode != null) {
+				return runConnect(connect.connectMode, connect.rest);
 			}
 
 			final global = try {
-				parseGlobalStage3Flags(wait.rest);
+				parseGlobalStage3Flags(connect.rest);
 			} catch (e:Dynamic) {
 				return error(Std.string(e));
 			}
@@ -1735,7 +1889,7 @@ class Stage3Compiler {
 
 			// Single-unit fast path: keep logs identical for the common bring-up case.
 			if (units.length <= 1) {
-				return runOne(args);
+				return runOne(connect.rest);
 			}
 
 			// Multi-unit `.hxml` support: run each unit sequentially.

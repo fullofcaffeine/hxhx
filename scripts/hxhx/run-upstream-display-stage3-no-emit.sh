@@ -46,7 +46,6 @@ out="$(
   "$HXHX_BIN" \
     --hxhx-stage3 --hxhx-no-emit \
     --hxhx-out "$UPSTREAM_DIR/tests/display/out_hxhx_display_stage3_no_emit" \
-    --connect 6000 \
     --display "$DISPLAY_FILE@0@diagnostics" \
     -cp "$UPSTREAM_DIR/tests/display/src" \
     -cp "$UPSTREAM_DIR/tests/display/src-shared" \

@@ -130,6 +130,10 @@ This validates both:
 - direct `--display` request parsing/root inference (`hxhx --hxhx-stage3 --hxhx-no-emit`)
 - and `--wait stdio` frame handling (non-delegating compiler-server protocol smoke)
 
+Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:
+- `--wait stdio` framed requests
+- `--wait <host:port>` + `--connect <host:port>` roundtrip request handling
+
 ## Two surfaces (design)
 
 - Portable (default): keep Haxe stdlib semantics and portability; the target provides `packages/reflaxe.ocaml/std/_std` overrides and runtime helpers so users can target OCaml without writing OCaml-specific code.

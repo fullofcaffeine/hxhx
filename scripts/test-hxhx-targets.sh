@@ -191,13 +191,13 @@ HX
   test -f "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
   grep -q "HxSys.environment" "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
 
-  echo "== Stage3 regression: --display root inference + value-flag consumption"
+  echo "== Stage3 regression: --display root inference"
   cat >"$tmpdir/src/DisplayMain.hx" <<'HX'
 class DisplayMain {
   static function main() {}
 }
 HX
-  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-out "$tmpdir/out_stage3_display" --connect 6000 --display "$tmpdir/src/DisplayMain.hx@0@diagnostics" -cp "$tmpdir/src" --no-output)"
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-out "$tmpdir/out_stage3_display" --display "$tmpdir/src/DisplayMain.hx@0@diagnostics" -cp "$tmpdir/src" --no-output)"
   echo "$out" | grep -q "^stage3=no_emit_ok$"
 
   echo "== Stage3 regression: --wait stdio frame protocol"
@@ -262,6 +262,77 @@ finally:
 PY
   else
     echo "Skipping wait stdio regression: python3 not found on PATH."
+  fi
+
+  echo "== Stage3 regression: --wait socket + --connect roundtrip"
+  if command -v python3 >/dev/null 2>&1; then
+    HXHX_BIN_FOR_PY="$HXHX_BIN" TMPDIR_FOR_PY="$tmpdir" python3 - <<'PY'
+import os
+import socket
+import subprocess
+import time
+
+hxhx_bin = os.environ["HXHX_BIN_FOR_PY"]
+tmpdir = os.environ["TMPDIR_FOR_PY"]
+source = os.path.join(tmpdir, "src", "DisplayMain.hx")
+classpath = os.path.join(tmpdir, "src")
+out_dir = os.path.join(tmpdir, "out_stage3_wait_socket")
+
+probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+probe.bind(("127.0.0.1", 0))
+port = probe.getsockname()[1]
+probe.close()
+
+endpoint = f"127.0.0.1:{port}"
+server = subprocess.Popen(
+    [hxhx_bin, "--hxhx-stage3", "--hxhx-no-emit", "--hxhx-out", out_dir, "--wait", endpoint],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+)
+
+try:
+    last = None
+    for _ in range(40):
+        time.sleep(0.1)
+        result = subprocess.run(
+            [
+                hxhx_bin,
+                "--hxhx-stage3",
+                "--hxhx-no-emit",
+                "--hxhx-out",
+                out_dir,
+                "--connect",
+                endpoint,
+                "--display",
+                source + "@0@diagnostics",
+                "-cp",
+                classpath,
+                "--no-output",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        last = result
+        if result.returncode == 0:
+            if '[{"diagnostics":[]}]' not in result.stderr:
+                raise RuntimeError("unexpected connect payload: " + result.stderr)
+            break
+    else:
+        raise RuntimeError(
+            "connect request never succeeded (last rc=%s, stderr=%s)"
+            % (last.returncode if last else "?", last.stderr if last else "")
+        )
+finally:
+    server.terminate()
+    try:
+        server.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        server.wait(timeout=5)
+PY
+  else
+    echo "Skipping wait socket/connect regression: python3 not found on PATH."
   fi
 fi
 
