@@ -516,6 +516,7 @@ let candidateModulePaths = fun typePath packagePath imports -> try let out = HxA
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ()) else ());
+    ignore (if HxString.length (!tempString2) = 0 && HxString.indexOf (!tempString) "." 0 = -1 then ignore (HxArray.push out (!tempString)) else ());
     let seen = HxMap.create_string () in let uniq = HxArray.create () in (
       ignore (let _g = ref 0 in try while !_g < HxArray.length out do try ignore (let m = HxArray.get out (!_g) in (
         ignore (let __old_89 = !_g in let __new_90 = HxInt.add __old_89 1 in (

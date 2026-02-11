@@ -1030,6 +1030,29 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^lazy=ok$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 regression: lazy type loading in root package"
+tmprootlazy="$tmpdir/lazy_module_loading_root_pkg"
+mkdir -p "$tmprootlazy/src"
+cat >"$tmprootlazy/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    // No import for Macro. In root package, this must still resolve to Macro.hx.
+    Sys.println(Std.string(Macro.ping()));
+  }
+}
+HX
+cat >"$tmprootlazy/src/Macro.hx" <<'HX'
+class Macro {
+  public static function ping():Int {
+    return 7;
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprootlazy/src" -main Main --hxhx-out "$tmprootlazy/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^7$"
+echo "$out" | grep -q "^run=ok$"
+
 echo "== Stage3 bring-up: type-only checks full graph"
 type_only_out="$tmpdir/out_stage3_type_only"
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-type-only -cp "$ROOT/examples/hih-compiler/fixtures/src" -main demo.A --hxhx-out "$type_only_out")"

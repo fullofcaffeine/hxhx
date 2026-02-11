@@ -147,6 +147,17 @@ class ModuleLoader extends LazyTypeLoader {
 			}
 		}
 
+		// Root-package candidate.
+		//
+		// Why
+		// - In the default package (`packagePath == ""`), unqualified type references like
+		//   `Macro.getCases(...)` must still resolve lazily to `Macro.hx`.
+		// - Without this candidate, `ensureTypeAvailable("Macro", "", imports)` has no module
+		//   path to try, so Stage3 emit can fail later with `Unbound module Macro`.
+		if (pkg.length == 0 && raw.indexOf(".") == -1) {
+			out.push(raw);
+		}
+
 		// Dedupe while preserving order.
 		final seen = new haxe.ds.StringMap<Bool>();
 		final uniq = new Array<String>();
