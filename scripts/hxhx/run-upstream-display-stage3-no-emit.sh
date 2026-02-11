@@ -57,3 +57,72 @@ echo "$out"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 echo "$out" | grep -qv "import_missing 6000"
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "Skipping wait-stdio display smoke: python3 not found on PATH."
+  exit 0
+fi
+
+echo "== Upstream display wait-stdio smoke (stage3 no-emit)"
+HXHX_BIN_FOR_PY="$HXHX_BIN" UPSTREAM_DIR_FOR_PY="$UPSTREAM_DIR" python3 - <<'PY'
+import os
+import struct
+import subprocess
+import sys
+
+hxhx_bin = os.environ["HXHX_BIN_FOR_PY"]
+upstream = os.environ["UPSTREAM_DIR_FOR_PY"]
+display_file = os.path.join(upstream, "tests", "display", "src-shared", "Marker.hx")
+cp_src = os.path.join(upstream, "tests", "display", "src")
+cp_shared = os.path.join(upstream, "tests", "display", "src-shared")
+out_dir = os.path.join(upstream, "tests", "display", "out_hxhx_display_wait_stdio")
+
+args = [
+    "--display", display_file + "@0@diagnostics",
+    "-cp", cp_src,
+    "-cp", cp_shared,
+    "--no-output",
+]
+payload = ("\n".join(args) + "\n").encode("utf-8")
+frame = struct.pack("<i", len(payload)) + payload
+
+proc = subprocess.Popen(
+    [hxhx_bin, "--hxhx-stage3", "--hxhx-no-emit", "--hxhx-out", out_dir, "--wait", "stdio"],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+
+try:
+    assert proc.stdin is not None
+    assert proc.stderr is not None
+    proc.stdin.write(frame)
+    proc.stdin.flush()
+
+    header = proc.stderr.read(4)
+    if len(header) != 4:
+        raise RuntimeError("missing wait-stdio response header")
+    size = struct.unpack("<i", header)[0]
+    body = proc.stderr.read(size)
+    if len(body) != size:
+        raise RuntimeError("truncated wait-stdio response")
+
+    is_error = len(body) > 0 and body[0] == 0x02
+    text = body[1:].decode("utf-8", errors="replace") if is_error else body.decode("utf-8", errors="replace")
+    if is_error:
+        raise RuntimeError("wait-stdio response flagged error: " + text)
+    if '[{"diagnostics":[]}]' not in text:
+        raise RuntimeError("unexpected diagnostics payload: " + text)
+finally:
+    if proc.stdin is not None:
+        proc.stdin.close()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
+        raise RuntimeError("wait-stdio server did not exit after stdin close")
+    if proc.returncode != 0:
+        raise RuntimeError(f"wait-stdio server exited with code {proc.returncode}")
+
+print("wait_stdio=ok")
+PY

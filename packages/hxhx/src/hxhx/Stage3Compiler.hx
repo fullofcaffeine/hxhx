@@ -2,6 +2,7 @@ package hxhx;
 
 import haxe.io.Path;
 import haxe.io.Eof;
+import haxe.io.Bytes;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
@@ -39,6 +40,21 @@ private typedef HaxelibSpec = {
 
 	/** Any other flags printed by `haxelib path` that we don't recognize yet. **/
 	final unknownArgs:Array<String>;
+};
+
+private typedef WaitModeParse = {
+	final waitMode:Null<String>;
+	final rest:Array<String>;
+};
+
+private typedef WaitStdioRequest = {
+	final args:Array<String>;
+	final stdinBytes:Null<Bytes>;
+};
+
+private typedef WaitStdioReply = {
+	final payload:String;
+	final isError:Bool;
 };
 
 /**
@@ -123,6 +139,179 @@ class Stage3Compiler {
 		}
 
 		return { outDir: outDir, typeOnly: typeOnly, emitFullBodies: emitFullBodies, noEmit: noEmit, noRun: noRun, rest: rest };
+	}
+
+	/**
+		Extract `--wait <mode>` from raw Stage3 args.
+
+		Why
+		- Upstream display clients (`haxeserver`) launch a long-lived compiler process
+		  with `--wait stdio` and send framed requests over stdin.
+		- Stage3 must peel this flag *before* `.hxml` expansion so it can switch from
+		  "single compile invocation" mode into "request server" mode.
+
+		What
+		- Returns one optional wait mode plus all remaining args.
+		- Multiple `--wait` flags are rejected as invalid.
+	**/
+	static function parseWaitMode(args:Array<String>):WaitModeParse {
+		final rest = new Array<String>();
+		var waitMode:Null<String> = null;
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			if (a == "--wait") {
+				if (i + 1 >= args.length) throw "missing value after --wait";
+				if (waitMode != null) throw "duplicate --wait flags are not supported";
+				waitMode = args[i + 1];
+				i += 2;
+				continue;
+			}
+			rest.push(a);
+			i += 1;
+		}
+		return { waitMode: waitMode, rest: rest };
+	}
+
+	static function findSingleFlagValue(args:Array<String>, flag:String):Null<String> {
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == flag && i + 1 < args.length) return args[i + 1];
+			i += 1;
+		}
+		return null;
+	}
+
+	static function hasDefineFlag(args:Array<String>, name:String):Bool {
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == "-D" && i + 1 < args.length) {
+				final d = args[i + 1];
+				if (d == name || StringTools.startsWith(d, name + "=")) return true;
+				i += 2;
+				continue;
+			}
+			i += 1;
+		}
+		return false;
+	}
+
+	/**
+		Decode a single `--wait stdio` request frame.
+
+		Protocol
+		- Request bytes are length-prefixed (`Int32`, little-endian).
+		- Body is newline-delimited CLI args plus optional stdin payload:
+		  `args...\n` + `0x01` + `<stdin bytes>`.
+	**/
+	static function decodeWaitStdioRequest(frame:Bytes):WaitStdioRequest {
+		var sep = -1;
+		for (i in 0...frame.length) {
+			if (frame.get(i) == 0x01) {
+				sep = i;
+				break;
+			}
+		}
+
+		final argsBytes = sep == -1 ? frame : frame.sub(0, sep);
+		final stdinBytes = sep == -1 ? null : frame.sub(sep + 1, frame.length - (sep + 1));
+
+		final rawArgs = argsBytes.getString(0, argsBytes.length);
+		final args = new Array<String>();
+		for (line0 in rawArgs.split("\n")) {
+			var line = line0;
+			if (line.length == 0) continue;
+			if (line.charCodeAt(line.length - 1) == 13) line = line.substr(0, line.length - 1);
+			if (line.length == 0) continue;
+			args.push(line);
+		}
+
+		return { args: args, stdinBytes: stdinBytes };
+	}
+
+	static function synthesizeDisplayResponse(displayRequest:String):String {
+		final req = displayRequest == null ? "" : displayRequest;
+		if (StringTools.endsWith(req, "@diagnostics")) return "[{\"diagnostics\":[]}]";
+		if (StringTools.endsWith(req, "@module-symbols")) return "[{\"symbols\":[]}]";
+		if (StringTools.endsWith(req, "@signature")) return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
+		if (StringTools.endsWith(req, "@toplevel")) return "<il></il>";
+		if (StringTools.endsWith(req, "@type")) return "<type>Dynamic</type>";
+		if (StringTools.endsWith(req, "@position")) return "<list></list>";
+		if (StringTools.endsWith(req, "@usage")) return "<list></list>";
+		// Default completion/fields shape.
+		return "<list></list>";
+	}
+
+	static function runWaitStdioRequest(baseArgs:Array<String>, request:WaitStdioRequest):WaitStdioReply {
+		final displayRequest = findSingleFlagValue(request.args, "--display");
+		if (displayRequest != null) {
+			// Bring-up behavior:
+			// - We currently synthesize minimal display payloads so clients can exercise the
+			//   compiler-server framing and request lifecycle without stage0.
+			// - Full display semantics/parity are implemented incrementally in later gates.
+			//
+			// `display-stdin` is accepted (stdin payload is delivered by the client), but
+			// this bring-up rung does not yet parse/type from the provided in-memory source.
+			final _hasDisplayStdin = hasDefineFlag(request.args, "display-stdin");
+			return { payload: synthesizeDisplayResponse(displayRequest), isError: false };
+		}
+
+		// Non-display requests: attempt normal Stage3 handling with the server's base args.
+		// If this fails, return a framed error so clients don't hang waiting for a response.
+		final invocation = baseArgs.concat(request.args);
+		final code = runOne(invocation);
+		if (code == 0) {
+			return { payload: "OK", isError: false };
+		}
+		return { payload: "hxhx(stage3): wait stdio request failed", isError: true };
+	}
+
+	static function writeWaitStdioReply(reply:WaitStdioReply):Void {
+		var payload = "";
+		if (reply.isError) payload += String.fromCharCode(0x02);
+		if (reply.payload != null && reply.payload.length > 0) payload += reply.payload;
+
+		final out = Sys.stderr();
+		final value = payload.length;
+		out.writeByte(value & 0xFF);
+		out.writeByte((value >> 8) & 0xFF);
+		out.writeByte((value >> 16) & 0xFF);
+		out.writeByte(value >>> 24);
+		out.writeString(payload);
+		out.flush();
+	}
+
+	/**
+		Run Stage3 as a persistent `--wait stdio` server.
+
+		Behavior
+		- Reads framed requests from stdin until EOF.
+		- Writes a framed response to stderr for each request.
+		- Keeps process alive across requests (matching compiler-server lifecycle expectations).
+	**/
+	static function runWaitStdio(baseArgs:Array<String>):Int {
+		final input = Sys.stdin();
+		input.bigEndian = false;
+
+		while (true) {
+			var frameLen = 0;
+			try {
+				frameLen = input.readInt32();
+			} catch (_:Eof) {
+				return 0;
+			} catch (e:Dynamic) {
+				return error("wait-stdio failed to read frame length: " + Std.string(e));
+			}
+
+			if (frameLen < 0) return error("wait-stdio received negative frame length: " + frameLen);
+
+			final frame = try input.read(frameLen) catch (_:Eof) {
+				return error("wait-stdio request frame truncated");
+			};
+			final request = decodeWaitStdioRequest(frame);
+			final reply = runWaitStdioRequest(baseArgs, request);
+			writeWaitStdioReply(reply);
+		}
 	}
 
 	static function escapeOneLine(s:String):String {
@@ -1522,8 +1711,21 @@ class Stage3Compiler {
 		}
 
 		public static function run(args:Array<String>):Int {
+			final wait = try {
+				parseWaitMode(args);
+			} catch (e:Dynamic) {
+				return error(Std.string(e));
+			}
+
+			if (wait.waitMode != null) {
+				if (wait.waitMode != "stdio") {
+					return error("unsupported --wait mode: " + wait.waitMode + " (only stdio is supported in this rung)");
+				}
+				return runWaitStdio(wait.rest);
+			}
+
 			final global = try {
-				parseGlobalStage3Flags(args);
+				parseGlobalStage3Flags(wait.rest);
 			} catch (e:Dynamic) {
 				return error(Std.string(e));
 			}

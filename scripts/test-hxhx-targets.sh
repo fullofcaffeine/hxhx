@@ -199,6 +199,70 @@ class DisplayMain {
 HX
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-out "$tmpdir/out_stage3_display" --connect 6000 --display "$tmpdir/src/DisplayMain.hx@0@diagnostics" -cp "$tmpdir/src" --no-output)"
   echo "$out" | grep -q "^stage3=no_emit_ok$"
+
+  echo "== Stage3 regression: --wait stdio frame protocol"
+  if command -v python3 >/dev/null 2>&1; then
+    HXHX_BIN_FOR_PY="$HXHX_BIN" TMPDIR_FOR_PY="$tmpdir" python3 - <<'PY'
+import os
+import struct
+import subprocess
+import sys
+
+hxhx_bin = os.environ["HXHX_BIN_FOR_PY"]
+tmpdir = os.environ["TMPDIR_FOR_PY"]
+source = os.path.join(tmpdir, "src", "DisplayMain.hx")
+out_dir = os.path.join(tmpdir, "out_stage3_wait_stdio")
+
+request_args = [
+    "--display", source + "@0@diagnostics",
+    "-cp", os.path.join(tmpdir, "src"),
+    "--no-output",
+]
+payload = ("\n".join(request_args) + "\n").encode("utf-8")
+frame = struct.pack("<i", len(payload)) + payload
+
+proc = subprocess.Popen(
+    [hxhx_bin, "--hxhx-stage3", "--hxhx-no-emit", "--hxhx-out", out_dir, "--wait", "stdio"],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+
+try:
+    assert proc.stdin is not None
+    assert proc.stderr is not None
+    proc.stdin.write(frame)
+    proc.stdin.flush()
+
+    header = proc.stderr.read(4)
+    if len(header) != 4:
+        raise RuntimeError("missing wait-stdio response header")
+    size = struct.unpack("<i", header)[0]
+    body = proc.stderr.read(size)
+    if len(body) != size:
+        raise RuntimeError("truncated wait-stdio response body")
+
+    is_error = len(body) > 0 and body[0] == 0x02
+    text = body[1:].decode("utf-8", errors="replace") if is_error else body.decode("utf-8", errors="replace")
+    if is_error:
+        raise RuntimeError("wait-stdio response flagged error: " + text)
+    if '[{"diagnostics":[]}]' not in text:
+        raise RuntimeError("unexpected wait-stdio diagnostics payload: " + text)
+finally:
+    if proc.stdin is not None:
+        proc.stdin.close()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
+        raise RuntimeError("wait-stdio server did not exit after stdin close")
+    if proc.returncode != 0:
+        raise RuntimeError(f"wait-stdio server exited with code {proc.returncode}")
+PY
+  else
+    echo "Skipping wait stdio regression: python3 not found on PATH."
+  fi
 fi
 
 echo "== Stage1 bring-up: multi-class module selects expected class"

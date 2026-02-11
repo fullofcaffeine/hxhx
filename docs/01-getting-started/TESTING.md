@@ -86,7 +86,8 @@ npm run test:upstream:display-stage3-no-emit
 Notes:
 
 - This validates `--display <file@mode>` request handling directly through `hxhx --hxhx-stage3 --hxhx-no-emit`.
-- It intentionally does **not** require full upstream `--wait` display server parity yet.
+- It also includes a `--wait stdio` framed-protocol smoke check (non-delegating server lifecycle).
+- It intentionally does **not** require full upstream display semantic parity yet.
 
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 

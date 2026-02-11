@@ -126,7 +126,9 @@ bash scripts/vendor/fetch-haxe-upstream.sh
 npm run test:upstream:display-stage3-no-emit
 ```
 
-This validates `--display` request parsing/root inference (`hxhx --hxhx-stage3 --hxhx-no-emit`) without relying on upstream `--wait` server-mode parity yet.
+This validates both:
+- direct `--display` request parsing/root inference (`hxhx --hxhx-stage3 --hxhx-no-emit`)
+- and `--wait stdio` frame handling (non-delegating compiler-server protocol smoke)
 
 ## Two surfaces (design)
 
