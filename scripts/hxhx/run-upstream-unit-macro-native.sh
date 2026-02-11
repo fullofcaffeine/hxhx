@@ -88,18 +88,10 @@ if ! has_utest; then
   "$HAXELIB_BIN" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
 fi
 
-echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3 --hxhx-no-emit)"
-out="$(
-  cd "$UPSTREAM_DIR/tests/unit"
-  # Use `--hxhx-no-emit` so we execute `--macro Macro.init()` and the `onGenerate` hook, while
-  # still avoiding “false positive” success from the Stage3 bootstrap emitter (the emitted OCaml
-  # is still non-semantic and would not prove Gate1 correctness).
-  HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit compile-macro.hxml 2>&1
-)"
-echo "$out"
-
-echo "$out" | grep -q "^resolved_modules="
-echo "$out" | grep -q "^typed_modules="
-echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
-echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
-echo "$out" | grep -q "^stage3=no_emit_ok$"
+echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3 emit+build+run)"
+#
+# NOTE
+# - This is still bring-up, not a claim of full upstream Gate1 correctness.
+# - The Stage3 emitter is intentionally non-semantic in places; the goal here is to ensure we can
+#   compile and execute upstream-shaped workloads end-to-end without invoking stage0 `haxe`.
+exec bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-upstream-unit-macro-stage3-emit.sh"
