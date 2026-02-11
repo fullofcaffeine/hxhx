@@ -115,6 +115,39 @@ This repo intentionally treats `hxhx` as a staged bootstrap so it can serve as a
 4. **Gate runners (upstream behavior oracle)**  
    Validate compatibility against upstream suites (Gate1/Gate2/display) using `vendor/haxe` as the oracle.
 
+### HXHX 1.0 progress tracker (live)
+
+This is the repo-local progress board for the `haxe.ocaml-xgv.10` epic.
+
+Use `bd show <id>` to inspect any referenced bead.
+
+```mermaid
+flowchart LR
+  A["Stage0/Stage1 bootstrap stability"] --> B["Gate1 non-delegating unit macro"]
+  B --> C["Display parity for Gate2"]
+  C --> D["Gate2 native RunCi progression"]
+  D --> E["Replacement-ready + MIT provenance gates"]
+```
+
+Current checklist:
+
+- [x] Stage0 bootstrap regeneration is observable and guarded (`haxe.ocaml-xgv.10.4`)
+- [x] Gate1 non-delegating compile+run is landed (`haxe.ocaml-xgv.10.1`)
+- [x] Display stage is reproducible in non-delegating Gate2 direct mode (`haxe.ocaml-xgv.10.3`)
+- [x] Display `--wait`/server protocol stage is landed (`haxe.ocaml-xgv.10.8`)
+- [ ] Gate2 `stage3_emit_runner` progresses past initial RunCi bootstrap (`haxe.ocaml-xgv.10.11`, in progress)
+- [ ] Core decoupling design for target-agnostic HIH lowering is documented (`haxe.ocaml-xgv.10.5`, open)
+- [ ] Repo layout normalization for clear product boundaries is landed (`haxe.ocaml-xgv.10.6`, open)
+- [ ] Epic-level replacement-ready acceptance is green (`haxe.ocaml-xgv.10`)
+
+Quick status commands:
+
+```bash
+bd show haxe.ocaml-xgv.10
+bd show haxe.ocaml-xgv.10.11
+bd ready
+```
+
 Practical command map:
 
 - Build stage1 from committed bootstrap snapshot:  

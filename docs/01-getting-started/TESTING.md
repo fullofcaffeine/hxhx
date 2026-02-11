@@ -78,7 +78,7 @@ Notes:
     - Timeout/heartbeat knobs:
       - `HXHX_GATE2_RUNCI_TIMEOUT_SEC` (default `600`; set `0` to disable timeout)
       - `HXHX_GATE2_RUNCI_HEARTBEAT_SEC` (default `20`; set `0` to disable heartbeat lines)
-      - Heartbeat line format: `gate2_stage3_emit_runner_heartbeat elapsed=<sec>s subinvocations=<n>`
+      - Heartbeat line format: `gate2_stage3_emit_runner_heartbeat elapsed=<sec>s subinvocations=<n> last="<command>"`
 - `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
   to a minimal harness so we can at least prove sub-invocation spawning.
 - `HXHX_GATE2_MACRO_STOP_AFTER=<stage>` (direct mode only) stops the Macro sequence after a named stage and prints explicit markers.

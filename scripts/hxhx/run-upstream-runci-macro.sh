@@ -112,6 +112,15 @@ count_gate2_subinvocations() {
   fi
 }
 
+last_gate2_subinvocation() {
+  local wrap_log="${HXHX_GATE2_WRAP_LOG:-}"
+  if [ -n "$wrap_log" ] && [ -f "$wrap_log" ] && [ -s "$wrap_log" ]; then
+    tail -n 1 "$wrap_log"
+  else
+    echo "none"
+  fi
+}
+
 kill_process_tree() {
   local pid="$1"
   local children=""
@@ -159,7 +168,7 @@ run_with_gate2_timeout_and_heartbeat() {
         sleep "$heartbeat_sec"
         elapsed=$((elapsed + heartbeat_sec))
         if kill -0 "$cmd_pid" 2>/dev/null; then
-          echo "gate2_stage3_emit_runner_heartbeat elapsed=${elapsed}s subinvocations=$(count_gate2_subinvocations)"
+          echo "gate2_stage3_emit_runner_heartbeat elapsed=${elapsed}s subinvocations=$(count_gate2_subinvocations) last=\"$(last_gate2_subinvocation)\""
         fi
       done
     ) &
@@ -170,7 +179,7 @@ run_with_gate2_timeout_and_heartbeat() {
     sleep "$timeout_sec"
     if kill -0 "$cmd_pid" 2>/dev/null; then
       echo "1" >"$timed_out_file"
-      echo "Gate2 stage3_emit_runner timeout: ${timeout_sec}s exceeded (subinvocations=$(count_gate2_subinvocations))" >&2
+      echo "Gate2 stage3_emit_runner timeout: ${timeout_sec}s exceeded (subinvocations=$(count_gate2_subinvocations), last=\"$(last_gate2_subinvocation)\")" >&2
       kill_process_tree "$cmd_pid"
       sleep 2
       if kill -0 "$cmd_pid" 2>/dev/null; then
@@ -1042,6 +1051,9 @@ chmod +x "$WRAP_DIR/haxe"
 cat >"$WRAP_DIR/haxelib" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+if [ -n "\${HXHX_GATE2_WRAP_LOG:-}" ]; then
+  printf '%s\n' "haxelib \$*" >>"\${HXHX_GATE2_WRAP_LOG}"
+fi
 export NEKOPATH="${NEKOPATH_DIR}"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
