@@ -60,16 +60,16 @@ This is “what we validate continuously” rather than a complete list of the H
 
 | Module / Area | Status | Notes |
 |---|---:|---|
-| `Array<T>` | ✅ | `std/_std/Array.hx` + `std/runtime/HxArray.ml` |
-| `String` | ✅ | `std/_std/String.hx` + `std/runtime/HxString.ml` |
+| `Array<T>` | ✅ | `packages/reflaxe.ocaml/std/_std/Array.hx` + `packages/reflaxe.ocaml/std/runtime/HxArray.ml` |
+| `String` | ✅ | `packages/reflaxe.ocaml/std/_std/String.hx` + `packages/reflaxe.ocaml/std/runtime/HxString.ml` |
 | `haxe.io.Bytes` | ✅ | Runtime-backed (lowered in codegen) |
-| `Date` | ✅ | `std/_std/Date.hx` + `std/runtime/Date.ml` |
-| `Sys` | ✅ | `std/_std/Sys.hx` + `std/runtime/HxSys.ml` |
-| `sys.FileSystem` | ✅ | `std/_std/sys/FileSystem.hx` + `std/runtime/HxFileSystem.ml` |
+| `Date` | ✅ | `packages/reflaxe.ocaml/std/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml` |
+| `Sys` | ✅ | `packages/reflaxe.ocaml/std/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml` |
+| `sys.FileSystem` | ✅ | `packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml` |
 | `sys.io.File` | ✅ | Runtime subset exercised by fixtures/examples |
 | `haxe.ds.Map` / `haxe.ds.*` | ✅ | Runtime `HxMap.ml` + codegen lowering |
-| `EReg` | ✅ | `std/_std/EReg.hx` + `std/runtime/EReg.ml` |
-| `Math` | ✅ | `std/_std/Math.hx` + `std/runtime/Math.ml` |
+| `EReg` | ✅ | `packages/reflaxe.ocaml/std/_std/EReg.hx` + `packages/reflaxe.ocaml/std/runtime/EReg.ml` |
+| `Math` | ✅ | `packages/reflaxe.ocaml/std/_std/Math.hx` + `packages/reflaxe.ocaml/std/runtime/Math.ml` |
 
 ## OCaml-native surface (`ocaml.*`)
 

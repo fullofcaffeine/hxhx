@@ -29,10 +29,10 @@ OcamlASTPrinter (OcamlExpr → .ml text)
 
 Key files:
 
-- Lowering: `src/reflaxe/ocaml/ast/OcamlBuilder.hx`
-- OCaml AST: `src/reflaxe/ocaml/ast/OcamlExpr.hx`
-- Printing/formatting: `src/reflaxe/ocaml/ast/OcamlASTPrinter.hx`
-- Module emission + let ordering: `src/reflaxe/ocaml/OcamlCompiler.hx`
+- Lowering: `packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx`
+- OCaml AST: `packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlExpr.hx`
+- Printing/formatting: `packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlASTPrinter.hx`
+- Module emission + let ordering: `packages/reflaxe.ocaml/src/reflaxe/ocaml/OcamlCompiler.hx`
 
 ## Mental model
 
@@ -141,7 +141,7 @@ The body is a sequence expression, and we discard intermediate statement values 
 
 ### `break` / `continue`
 
-We encode loop control using exceptions declared in `std/runtime/HxRuntime.ml`:
+We encode loop control using exceptions declared in `packages/reflaxe.ocaml/std/runtime/HxRuntime.ml`:
 
 - `break` raises `HxRuntime.Hx_break`
 - `continue` raises `HxRuntime.Hx_continue`

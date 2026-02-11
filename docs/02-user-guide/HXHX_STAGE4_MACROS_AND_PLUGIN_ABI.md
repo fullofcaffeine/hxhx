@@ -66,8 +66,8 @@ Today, the OCaml target uses a bootstrap seam:
 
 - Haxe “client” API (`MacroHostClient`) is Haxe code.
 - The transport uses `sys.io.Process` to spawn and communicate with the macro host.
-- On OCaml, `sys.io.Process` is provided by the override in `std/_std/sys/io/Process.hx`, backed by
-  the runtime shim `std/runtime/HxProcess.ml`.
+- On OCaml, `sys.io.Process` is provided by the override in `packages/reflaxe.ocaml/std/_std/sys/io/Process.hx`, backed by
+  the runtime shim `packages/reflaxe.ocaml/std/runtime/HxProcess.ml`.
 
 This is intentionally a **temporary dependency** for correctness and CI stability while the
 portable OCaml-target stdlib/process APIs are still evolving.
@@ -96,7 +96,7 @@ For native shims, the recommended strategy is:
   - it defines the public name (`@:native`), arity, and Haxe-facing types,
   - and it is what the compiler core is written against.
 - Keep the shim implementation small and explicitly scoped to the target:
-  - OCaml: implemented as a `std/runtime/*.ml` module compiled/linked into the binary.
+  - OCaml: implemented as a `packages/reflaxe.ocaml/std/runtime/*.ml` module compiled/linked into the binary.
   - other native targets: provide an equivalent implementation (pure Haxe if the target supports it, otherwise a
     similarly-small target shim).
 - Use OCaml inference (`ocamlc -i`) only as a **sanity check** (and optionally to generate a human-readable `.mli`),

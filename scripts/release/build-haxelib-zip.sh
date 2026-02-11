@@ -26,11 +26,12 @@ trap cleanup EXIT
 mkdir -p "$TMP_DIR/reflaxe.ocaml"
 
 # Minimal Haxelib payload:
-# - compiler source (`src/`)
-# - stdlib surfaces + runtime (`std/`)
+# - compiler source (`packages/reflaxe.ocaml/src/`)
+# - stdlib surfaces + runtime (`packages/reflaxe.ocaml/std/`)
 # - metadata files + docs
-cp -R "src" "$TMP_DIR/reflaxe.ocaml/"
-cp -R "std" "$TMP_DIR/reflaxe.ocaml/"
+mkdir -p "$TMP_DIR/reflaxe.ocaml/packages/reflaxe.ocaml"
+cp -R "packages/reflaxe.ocaml/src" "$TMP_DIR/reflaxe.ocaml/packages/reflaxe.ocaml/"
+cp -R "packages/reflaxe.ocaml/std" "$TMP_DIR/reflaxe.ocaml/packages/reflaxe.ocaml/"
 cp "haxelib.json" "$TMP_DIR/reflaxe.ocaml/"
 cp "README.md" "$TMP_DIR/reflaxe.ocaml/"
 cp "LICENSE" "$TMP_DIR/reflaxe.ocaml/"
@@ -45,4 +46,3 @@ fi
 (cd "$TMP_DIR" && zip -qr "$ZIP_PATH" "reflaxe.ocaml")
 
 echo "Wrote: $ZIP_PATH"
-

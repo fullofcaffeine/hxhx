@@ -87,8 +87,8 @@ mkdir -p "$lib_dir"
 
 # Bundle reflaxe.ocaml (this repo) sources so `hxhx --target ocaml` can work without haxelib.
 mkdir -p "$lib_dir/reflaxe.ocaml"
-cp -R "$ROOT/src" "$lib_dir/reflaxe.ocaml/src"
-cp -R "$ROOT/std" "$lib_dir/reflaxe.ocaml/std"
+cp -R "$ROOT/packages/reflaxe.ocaml/src" "$lib_dir/reflaxe.ocaml/src"
+cp -R "$ROOT/packages/reflaxe.ocaml/std" "$lib_dir/reflaxe.ocaml/std"
 cp "$ROOT/haxelib.json" "$lib_dir/reflaxe.ocaml/haxelib.json"
 
 # Bundle reflaxe dependency sources (required for CompilerInit/ReflectCompiler macros).

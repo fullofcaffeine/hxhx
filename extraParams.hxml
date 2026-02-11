@@ -1,7 +1,7 @@
 # Reflaxe.OCaml compilation parameters (dev convenience)
 
--cp src
--cp std
+-cp packages/reflaxe.ocaml/src
+-cp packages/reflaxe.ocaml/std
 
 -lib reflaxe
 

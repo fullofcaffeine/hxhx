@@ -43,7 +43,7 @@ and nicer editor/diagnostics), not about making the compiler core more or less p
 
 This document is specifically about generating `.mli` files for **emitted user projects**.
 
-`hxhx` also has a separate concept of “native shims” (small `std/runtime/*.ml` helpers behind Haxe `extern` APIs).
+`hxhx` also has a separate concept of “native shims” (small `packages/reflaxe.ocaml/std/runtime/*.ml` helpers behind Haxe `extern` APIs).
 For those, we treat the **Haxe extern** as the interface/IDL and keep the shim replaceable per target; OCaml inference
 is at most a sanity check for the OCaml implementation.
 

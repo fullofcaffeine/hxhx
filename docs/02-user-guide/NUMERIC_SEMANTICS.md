@@ -14,8 +14,8 @@ to tests in `test/portable/`.
 We represent Haxe `Int` values as OCaml `int`, but we implement all arithmetic
 and bitwise operators through a small runtime module:
 
-- Runtime: `std/runtime/HxInt.ml`
-- Codegen lowering: `src/reflaxe/ocaml/ast/OcamlBuilder.hx`
+- Runtime: `packages/reflaxe.ocaml/std/runtime/HxInt.ml`
+- Codegen lowering: `packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx`
 
 This preserves the observable Haxe semantics while keeping the runtime
 representation ergonomic (e.g. for `Sys.println`, array indices, etc.).
@@ -44,4 +44,3 @@ Haxe `Float` maps directly to OCaml `float` (IEEE-754 double precision).
 Notes:
 - `Int` ↔ `Float` comparisons are supported by promoting `Int` to `Float` where
   Haxe allows it.
-

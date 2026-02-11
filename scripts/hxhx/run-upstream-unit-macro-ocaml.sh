@@ -97,8 +97,8 @@ echo "== Gate 1 (ocaml --interp emulation): upstream tests/unit/compile-macro.hx
     --hxhx-ocaml-interp \
     --hxhx-ocaml-out out_hxhx_unit_macro_ocaml \
     -- \
-    -cp "$ROOT/src" \
-    -cp "$ROOT/std" \
+    -cp "$ROOT/packages/reflaxe.ocaml/src" \
+    -cp "$ROOT/packages/reflaxe.ocaml/std" \
     -cp "$ROOT/test/upstream_shims" \
     -lib reflaxe \
     --macro 'nullSafety("reflaxe")' \

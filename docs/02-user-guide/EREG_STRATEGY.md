@@ -13,8 +13,8 @@ its own runtime.
 
 We implement `EReg` using OCaml’s `Str` library:
 
-- Extern surface: `std/_std/EReg.hx`
-- Runtime implementation: `std/runtime/EReg.ml`
+- Extern surface: `packages/reflaxe.ocaml/std/_std/EReg.hx`
+- Runtime implementation: `packages/reflaxe.ocaml/std/runtime/EReg.ml`
 
 ### Why `Str`
 
@@ -61,4 +61,3 @@ If/when the `Str`-based approach becomes a blocker, the planned path is:
    (e.g. PCRE via an OCaml library), likely behind a feature flag or a documented
    dependency tier.
 3. Expand portable fixtures to cover the additional semantics.
-

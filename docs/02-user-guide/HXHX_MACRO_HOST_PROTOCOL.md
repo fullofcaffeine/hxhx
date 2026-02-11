@@ -57,8 +57,8 @@ Transport:
 Implementation note (portability):
 
 - On the OCaml target, the client uses `sys.io.Process` to spawn the macro host and communicate over
-  stdin/stdout. That API is implemented by an OCaml-target override in `std/_std/sys/io/Process.hx`,
-  backed by the runtime shim `std/runtime/HxProcess.ml`.
+  stdin/stdout. That API is implemented by an OCaml-target override in `packages/reflaxe.ocaml/std/_std/sys/io/Process.hx`,
+  backed by the runtime shim `packages/reflaxe.ocaml/std/runtime/HxProcess.ml`.
 - This is a bootstrap seam for correctness and CI stability while the portable OCaml-target process APIs mature.
 - For non-OCaml builds of `hxhx` (e.g. Rust/C++ targets), an equivalent transport implementation must exist:
   either pure Haxe (preferred) or a small target-specific shim.

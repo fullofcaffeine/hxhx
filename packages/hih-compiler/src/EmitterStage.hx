@@ -989,7 +989,7 @@ class EmitterStage {
 							case EField(EIdent("runci.Config"), "isCi") if (args.length == 0):
 								return "((match Stdlib.Sys.getenv_opt \"GITHUB_ACTIONS\" with | Some v -> v | None -> \"\") = \"true\")";
 							// Stage 3 emit-runner bring-up: map `sys.FileSystem` statics used by RunCi to the
-							// repo-owned OCaml runtime implementation (`std/runtime/HxFileSystem.ml`).
+							// repo-owned OCaml runtime implementation (`packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml`).
 							//
 							// Why
 							// - Upstream `tests/runci/Config.hx` imports `sys.FileSystem` and then calls
@@ -1038,7 +1038,7 @@ class EmitterStage {
 									+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 									+ ")";
 							// Stage 3 emit-runner bring-up: map `sys.io.File` statics used by RunCi targets to
-							// the repo-owned OCaml runtime implementation (`std/runtime/HxFile.ml`).
+							// the repo-owned OCaml runtime implementation (`packages/reflaxe.ocaml/std/runtime/HxFile.ml`).
 							//
 							// Why
 							// - Upstream runci targets often `import sys.io.File;` and then call `File.saveContent(...)`.
@@ -2498,20 +2498,31 @@ class EmitterStage {
 			// - The emitted OCaml references runtime helpers like `HxRuntime.hx_null`, `HxRuntime.dynamic_equals`,
 			//   `Std.string`, and `EReg`.
 			//
-			// Provenance
-			// - These modules live in `std/runtime/*.ml` and are authored for this repo.
-			// - They are **not** copied from upstream Haxe compiler sources.
-			final runtimePaths = new Array<String>();
-			{
-				final root = inferRepoRootForShims();
-				if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
-				final runtimeSrcDir = haxe.io.Path.join([root, "std", "runtime"]);
-				if (!sys.FileSystem.exists(runtimeSrcDir) || !sys.FileSystem.isDirectory(runtimeSrcDir)) {
-					throw "stage3 emitter: missing std/runtime directory: " + runtimeSrcDir;
-				}
+				// Provenance
+				// - These modules live in `packages/reflaxe.ocaml/std/runtime/*.ml` and are authored for this repo.
+				// - They are **not** copied from upstream Haxe compiler sources.
+				final runtimePaths = new Array<String>();
+				{
+					final root = inferRepoRootForShims();
+					if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for runtime templates (set HXHX_REPO_ROOT)";
+					final runtimeCandidates = [
+						haxe.io.Path.join([root, "packages", "reflaxe.ocaml", "std", "runtime"]),
+						// Back-compat: older repo layouts used `std/runtime` at the root.
+						haxe.io.Path.join([root, "std", "runtime"]),
+					];
+					var runtimeSrcDir:Null<String> = null;
+					for (candidate in runtimeCandidates) {
+						if (candidate != null && sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) {
+							runtimeSrcDir = candidate;
+							break;
+						}
+					}
+					if (runtimeSrcDir == null) {
+						throw "stage3 emitter: missing runtime directory (expected one of):\n- " + runtimeCandidates.join("\n- ");
+					}
 
-				final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
-				if (!sys.FileSystem.exists(runtimeOutDir)) sys.FileSystem.createDirectory(runtimeOutDir);
+					final runtimeOutDir = haxe.io.Path.join([outAbs, "runtime"]);
+					if (!sys.FileSystem.exists(runtimeOutDir)) sys.FileSystem.createDirectory(runtimeOutDir);
 
 				for (name in sys.FileSystem.readDirectory(runtimeSrcDir)) {
 					if (name == null || !StringTools.endsWith(name, ".ml")) continue;
@@ -2543,8 +2554,8 @@ class EmitterStage {
 			// Why
 			// - Gate2-shaped orchestration code uses `Array` pervasively and expects mutation (`push`)
 			//   and iteration (`for (x in arr)`).
-			// - The Stage3 bootstrap emitter deliberately does **not** link the full reflaxe.ocaml
-			//   runtime (`std/runtime`), so we provide a self-contained OCaml shim here.
+				// - The Stage3 bootstrap emitter deliberately does **not** link the full reflaxe.ocaml
+				//   runtime (`packages/reflaxe.ocaml/std/runtime`), so we provide a self-contained OCaml shim here.
 			//
 			// Note
 			// - This is not Haxe-correct `Array<T>` semantics. It is a bring-up convenience to let
@@ -2662,7 +2673,7 @@ class EmitterStage {
 		// Stage 3 bring-up: avoid emitting placeholder units that shadow the repo-owned runtime.
 		//
 		// Why
-		// - We copy `std/runtime/*.ml` into `out/runtime/` and compile them as part of the Stage3 program.
+		// - We copy `packages/reflaxe.ocaml/std/runtime/*.ml` into `out/runtime/` and compile them as part of the Stage3 program.
 		// - The Stage3 typer/emitter can still produce placeholder `*.ml` units for the corresponding
 		//   Haxe std types (e.g. `haxe.CallStack`), which would overwrite the runtime `.cmi` and cause
 		//   downstream "Unbound value" errors.

@@ -121,8 +121,24 @@ You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 
 ## Two surfaces (design)
 
-- Portable (default): keep Haxe stdlib semantics and portability; the target provides `std/_std` overrides and runtime helpers so users can target OCaml without writing OCaml-specific code.
+- Portable (default): keep Haxe stdlib semantics and portability; the target provides `packages/reflaxe.ocaml/std/_std` overrides and runtime helpers so users can target OCaml without writing OCaml-specific code.
 - OCaml-native (opt-in): import `ocaml.*` for APIs that map more directly to OCaml idioms (e.g. `'a list`, `option`, `result`) while still using Haxe typing and tooling.
+
+## Repo layout (monorepo)
+
+This repo currently contains two products:
+
+- `packages/reflaxe.ocaml/`: the OCaml backend (published as `reflaxe.ocaml`).
+- `packages/hxhx/`: the `hxhx` compiler CLI/binary (Haxe-in-Haxe bring-up).
+
+Supporting components:
+
+- `packages/hih-compiler/`: internal staged compiler libraries used by `hxhx`.
+- `tools/hxhx-macro-host/`: macro host process used for Stage4 bring-up.
+- `examples/`: consumer projects and QA harnesses (compile → dune build → run).
+- `vendor/haxe/` (ignored): optional upstream checkout used as a black-box behavior oracle in CI gates.
+
+Rationale: keep backend + compiler iteration fast in one repo while making it obvious what is “shippable” (`packages/`), what is an internal tool (`tools/`), and what is a consumer workload (`examples/`).
 
 ## Docs
 

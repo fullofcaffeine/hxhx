@@ -31,7 +31,7 @@ Instead, the runtime sets a reserved sentinel value and hides it from the Haxe v
 - `Sys.command(...)` uses `Unix.create_process_env` with a filtered environment so
   child processes do not receive sentinel entries
 
-This is implemented in `std/runtime/HxSys.ml`.
+This is implemented in `packages/reflaxe.ocaml/std/runtime/HxSys.ml`.
 
 ## Tradeoffs
 

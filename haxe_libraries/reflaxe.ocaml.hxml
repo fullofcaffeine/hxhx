@@ -4,10 +4,10 @@
 # Allows projects/tests to use `-lib reflaxe.ocaml` while pointing at this repo.
 
 # Include the compiler source code (paths relative to project root via SCOPE_DIR)
--cp ${SCOPE_DIR}/src/
+-cp ${SCOPE_DIR}/packages/reflaxe.ocaml/src/
 
 # Include stdlib definitions (portable + ocaml-native surface)
--cp ${SCOPE_DIR}/std/
+-cp ${SCOPE_DIR}/packages/reflaxe.ocaml/std/
 # Target-specific overrides (std/_std) are injected conditionally by CompilerBootstrap
 # to avoid leaking OCaml-only helpers into non-OCaml compilation contexts.
 

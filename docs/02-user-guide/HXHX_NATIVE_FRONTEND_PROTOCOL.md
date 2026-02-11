@@ -2,8 +2,8 @@
 
 This document defines the **wire format** used by the “native frontend” hook in:
 
-- `std/runtime/HxHxNativeLexer.ml`
-- `std/runtime/HxHxNativeParser.ml`
+- `packages/reflaxe.ocaml/std/runtime/HxHxNativeLexer.ml`
+- `packages/reflaxe.ocaml/std/runtime/HxHxNativeParser.ml`
 
 The goal is to keep the lexer/parser in **native OCaml** initially (as suggested by upstream Haxe bootstrapping plans),
 while letting the rest of the compiler pipeline live in **Haxe**.

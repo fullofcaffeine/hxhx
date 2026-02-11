@@ -56,7 +56,7 @@ These surfaces are small-but-useful, typed wrappers over `Stdlib.*`:
 - `ocaml.StringMap<V>` / `ocaml.IntMap<V>` → `Stdlib.Map.Make(...)` instantiations (emitted as `OcamlNative*Map`)
 - `ocaml.StringSet` / `ocaml.IntSet` → `Stdlib.Set.Make(...)` instantiations (emitted as `OcamlNative*Set`)
 
-See `std/ocaml/*.hx` for the authoritative API surface.
+See `packages/reflaxe.ocaml/std/ocaml/*.hx` for the authoritative API surface.
 
 ## Extern interop
 
