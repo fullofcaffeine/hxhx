@@ -91,6 +91,21 @@ Notes:
 - Socket server/client protocol regression coverage lives in `npm run test:hxhx-targets`
   (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
+Dedicated display full-emit warm-output stress rung:
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:display-stage3-emit-stress
+```
+
+Notes:
+
+- This runs upstream `tests/display/build.hxml` repeatedly under
+  `hxhx --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run`.
+- It intentionally reuses the same `--hxhx-out` directory across iterations to catch
+  warm-output determinism/linking regressions.
+- Tune iteration count with `HXHX_DISPLAY_EMIT_STRESS_ITERS=<n>` (default: `10`).
+
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 
 This is a local bootstrap sanity check:

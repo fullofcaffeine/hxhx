@@ -141,6 +141,18 @@ This validates both:
 - direct `--display` request parsing/root inference (`hxhx --hxhx-stage3 --hxhx-no-emit`)
 - and `--wait stdio` frame handling (non-delegating compiler-server protocol smoke)
 
+Run the dedicated display full-emit warm-output stress rung:
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:display-stage3-emit-stress
+```
+
+This repeatedly runs `tests/display/build.hxml` under
+`hxhx --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run` while reusing the same
+`--hxhx-out` directory to catch warm-output determinism/linking regressions.
+Set `HXHX_DISPLAY_EMIT_STRESS_ITERS=<n>` to tune loop count (default: `10`).
+
 Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:
 - `--wait stdio` framed requests
 - `--wait <host:port>` + `--connect <host:port>` roundtrip request handling

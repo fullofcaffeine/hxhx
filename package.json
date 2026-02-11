@@ -63,6 +63,7 @@
     "test:upstream:runci-macro-stage3-typeonly": "bash scripts/hxhx/run-upstream-runci-macro-stage3-typeonly.sh",
     "test:upstream:runci-macro-stage3-no-emit": "bash scripts/hxhx/run-upstream-runci-macro-stage3-no-emit.sh",
     "test:upstream:display-stage3-no-emit": "bash scripts/hxhx/run-upstream-display-stage3-no-emit.sh",
+    "test:upstream:display-stage3-emit-stress": "bash scripts/hxhx/run-upstream-display-stage3-emit-stress.sh",
     "test:upstream:runci-macro-stage3-emit-runner": "bash scripts/hxhx/run-upstream-runci-macro-stage3-emit-runner.sh",
     "test:upstream:stage2": "bash scripts/hxhx/stage2-repro.sh",
     "test:upstream:runci-targets": "bash scripts/hxhx/run-upstream-runci-targets.sh",

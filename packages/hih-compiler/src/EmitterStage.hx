@@ -4286,6 +4286,24 @@ class EmitterStage {
 					final key = lowerKey(relPath);
 					return canonicalByLower.exists(key) ? canonicalByLower.get(key) : relPath;
 				}
+				function listExistingMlUnits():Array<String> {
+					final out = new Array<String>();
+					for (k in canonicalByLower.keys()) {
+						final rel = canonicalByLower.get(k);
+						if (rel == null || rel.length == 0) continue;
+						final base = haxe.io.Path.withoutDirectory(rel);
+						if (base == null || !StringTools.endsWith(base, ".ml")) continue;
+						// Legacy bootstrap path sometimes left an `out.ml` aggregation unit in-place.
+						// Keep Stage3 warm-output rebuilds deterministic by excluding that historical
+						// entrypoint from current per-module compile/link argv.
+						if (base == "out.ml") continue;
+						out.push(canonicalize(rel));
+					}
+					out.sort(function(a:String, b:String):Int {
+						return (a < b) ? -1 : ((a > b) ? 1 : 0);
+					});
+					return out;
+				}
 				function uniqCaseInsensitive(xs:Array<String>):Array<String> {
 					if (xs == null || xs.length <= 1) return xs;
 					final seen:Map<String, Bool> = new Map();
@@ -4300,7 +4318,8 @@ class EmitterStage {
 					return out;
 				}
 
-				final allMl = uniqCaseInsensitive(runtimePaths.concat(generatedPaths).concat(emittedModulePaths).map(canonicalize));
+				final existingMl = listExistingMlUnits();
+				final allMl = uniqCaseInsensitive(existingMl.concat(runtimePaths).concat(generatedPaths).concat(emittedModulePaths).map(canonicalize));
 				final orderedMl = uniqCaseInsensitive(ocamldepSort(allMl).map(canonicalize));
 				final orderedNoRoot = new Array<String>();
 				final rootName = rootMainPath;
