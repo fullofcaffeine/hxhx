@@ -46,12 +46,12 @@ let length (a : 'a t) : int =
   | Some a -> a.length
 
 let ensure_capacity (a : 'a t) (needed : int) : unit =
-  let current = Array.length a.data in
+  let current = Stdlib.Array.length a.data in
   if current < needed then (
     let doubled = if current = 0 then 4 else current * 2 in
     let new_cap = if doubled < needed then needed else doubled in
-    let next = Array.make new_cap hx_null in
-    if a.length > 0 then Array.blit a.data 0 next 0 a.length;
+    let next = Stdlib.Array.make new_cap hx_null in
+    if a.length > 0 then Stdlib.Array.blit a.data 0 next 0 a.length;
     a.data <- next
   )
 
@@ -62,7 +62,7 @@ let get (a : 'a t) (i : int) : 'a =
     if i < 0 || i >= a.length then
       Obj.obj hx_null
     else
-      Obj.obj a.data.(i)
+      Obj.obj (Stdlib.Array.get a.data i)
 
 let set (a : 'a t) (i : int) (v : 'a) : 'a =
   match unwrap_or_empty a with
@@ -74,11 +74,11 @@ let set (a : 'a t) (i : int) (v : 'a) : 'a =
       if i >= a.length then (
         ensure_capacity a (i + 1);
         for j = a.length to i - 1 do
-          a.data.(j) <- hx_null
+          Stdlib.Array.set a.data j hx_null
         done;
         a.length <- i + 1
       );
-      a.data.(i) <- Obj.repr v;
+      Stdlib.Array.set a.data i (Obj.repr v);
       v
     )
 
@@ -87,7 +87,7 @@ let push (a : 'a t) (v : 'a) : int =
   | None -> 0
   | Some a ->
     ensure_capacity a (a.length + 1);
-    a.data.(a.length) <- Obj.repr v;
+    Stdlib.Array.set a.data a.length (Obj.repr v);
     a.length <- a.length + 1;
     a.length
 
@@ -99,8 +99,8 @@ let pop (a : 'a t) () : 'a =
       Obj.obj hx_null
     else (
       let i = a.length - 1 in
-      let v = a.data.(i) in
-      a.data.(i) <- hx_null;
+      let v = Stdlib.Array.get a.data i in
+      Stdlib.Array.set a.data i hx_null;
       a.length <- i;
       Obj.obj v
     )
@@ -112,9 +112,9 @@ let shift (a : 'a t) () : 'a =
     if a.length = 0 then
       Obj.obj hx_null
     else (
-      let v = a.data.(0) in
-      if a.length > 1 then Array.blit a.data 1 a.data 0 (a.length - 1);
-      a.data.(a.length - 1) <- hx_null;
+      let v = Stdlib.Array.get a.data 0 in
+      if a.length > 1 then Stdlib.Array.blit a.data 1 a.data 0 (a.length - 1);
+      Stdlib.Array.set a.data (a.length - 1) hx_null;
       a.length <- a.length - 1;
       Obj.obj v
     )
@@ -124,8 +124,8 @@ let unshift (a : 'a t) (v : 'a) : unit =
   | None -> ()
   | Some a ->
     ensure_capacity a (a.length + 1);
-    if a.length > 0 then Array.blit a.data 0 a.data 1 a.length;
-    a.data.(0) <- Obj.repr v;
+    if a.length > 0 then Stdlib.Array.blit a.data 0 a.data 1 a.length;
+    Stdlib.Array.set a.data 0 (Obj.repr v);
     a.length <- a.length + 1
 
 let normalize_insert_pos (len : int) (pos : int) : int =
@@ -142,8 +142,8 @@ let insert (a : 'a t) (pos : int) (v : 'a) : unit =
   | Some a ->
     let p = normalize_insert_pos a.length pos in
     ensure_capacity a (a.length + 1);
-    if p < a.length then Array.blit a.data p a.data (p + 1) (a.length - p);
-    a.data.(p) <- Obj.repr v;
+    if p < a.length then Stdlib.Array.blit a.data p a.data (p + 1) (a.length - p);
+    Stdlib.Array.set a.data p (Obj.repr v);
     a.length <- a.length + 1
 
 let remove (a : 'a t) (x : 'a) : bool =
@@ -153,7 +153,7 @@ let remove (a : 'a t) (x : 'a) : bool =
     let rec find i =
       if i >= a.length then
         -1
-      else if Obj.obj a.data.(i) = x then
+      else if Obj.obj (Stdlib.Array.get a.data i) = x then
         i
       else
         find (i + 1)
@@ -163,8 +163,8 @@ let remove (a : 'a t) (x : 'a) : bool =
       false
     else (
       let last = a.length - 1 in
-      if idx < last then Array.blit a.data (idx + 1) a.data idx (last - idx);
-      a.data.(last) <- hx_null;
+      if idx < last then Stdlib.Array.blit a.data (idx + 1) a.data idx (last - idx);
+      Stdlib.Array.set a.data last hx_null;
       a.length <- last;
       true
     )
@@ -194,7 +194,7 @@ let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
       let out = create () in
       ensure_capacity out out_len;
       for i = 0 to out_len - 1 do
-        out.data.(i) <- a.data.(p + i)
+        Stdlib.Array.set out.data i (Stdlib.Array.get a.data (p + i))
       done;
       out.length <- out_len;
       out
@@ -217,14 +217,14 @@ let splice (a : 'a t) (pos : int) (len : int) : 'a t =
         let removed = create () in
         ensure_capacity removed l;
         for i = 0 to l - 1 do
-          removed.data.(i) <- a.data.(p + i)
+          Stdlib.Array.set removed.data i (Stdlib.Array.get a.data (p + i))
         done;
         removed.length <- l;
 
         let tail = total - (p + l) in
-        if tail > 0 then Array.blit a.data (p + l) a.data p tail;
+        if tail > 0 then Stdlib.Array.blit a.data (p + l) a.data p tail;
         for i = total - l to total - 1 do
-          a.data.(i) <- hx_null
+          Stdlib.Array.set a.data i hx_null
         done;
         a.length <- total - l;
         removed
@@ -236,7 +236,7 @@ let iter (a : 'a t) (f : 'a -> unit) : unit =
   | None -> ()
   | Some a ->
     for i = 0 to a.length - 1 do
-      f (Obj.obj a.data.(i))
+      f (Obj.obj (Stdlib.Array.get a.data i))
     done
 
 let copy (a : 'a t) : 'a t =
@@ -248,7 +248,7 @@ let copy (a : 'a t) : 'a t =
       out
     else (
       ensure_capacity out a.length;
-      Array.blit a.data 0 out.data 0 a.length;
+      Stdlib.Array.blit a.data 0 out.data 0 a.length;
       out.length <- a.length;
       out
     )
@@ -267,8 +267,8 @@ let concat (a : 'a t) (b : 'a t) : 'a t =
       out
     else (
       ensure_capacity out total;
-      if len_a > 0 then Array.blit a.data 0 out.data 0 len_a;
-      if len_b > 0 then Array.blit b.data 0 out.data len_a len_b;
+      if len_a > 0 then Stdlib.Array.blit a.data 0 out.data 0 len_a;
+      if len_b > 0 then Stdlib.Array.blit b.data 0 out.data len_a len_b;
       out.length <- total;
       out
     )
@@ -280,9 +280,9 @@ let reverse (a : 'a t) () : unit =
     let i = ref 0 in
     let j = ref (a.length - 1) in
     while !i < !j do
-      let tmp = a.data.(!i) in
-      a.data.(!i) <- a.data.(!j);
-      a.data.(!j) <- tmp;
+      let tmp = Stdlib.Array.get a.data !i in
+      Stdlib.Array.set a.data !i (Stdlib.Array.get a.data !j);
+      Stdlib.Array.set a.data !j tmp;
       i := !i + 1;
       j := !j - 1
     done
@@ -308,7 +308,7 @@ let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
       let rec loop i =
         if i >= len then
           -1
-        else if Obj.obj a.data.(i) = x then
+        else if Obj.obj (Stdlib.Array.get a.data i) = x then
           i
         else
           loop (i + 1)
@@ -340,7 +340,7 @@ let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
         let rec loop i =
           if i < 0 then
             -1
-          else if Obj.obj a.data.(i) = x then
+          else if Obj.obj (Stdlib.Array.get a.data i) = x then
             i
           else
             loop (i - 1)
@@ -359,13 +359,13 @@ let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
     if a.length = 0 then
       ""
     else if a.length = 1 then
-      to_string (Obj.obj a.data.(0))
+      to_string (Obj.obj (Stdlib.Array.get a.data 0))
     else (
       let b = Buffer.create 64 in
-      Buffer.add_string b (to_string (Obj.obj a.data.(0)));
+      Buffer.add_string b (to_string (Obj.obj (Stdlib.Array.get a.data 0)));
       for i = 1 to a.length - 1 do
         Buffer.add_string b sep;
-        Buffer.add_string b (to_string (Obj.obj a.data.(i)))
+        Buffer.add_string b (to_string (Obj.obj (Stdlib.Array.get a.data i)))
       done;
       Buffer.contents b
     )
@@ -380,8 +380,8 @@ let map (a : 'a t) (f : 'a -> 'b) : 'b t =
     else (
       ensure_capacity out a.length;
       for i = 0 to a.length - 1 do
-        let v = f (Obj.obj a.data.(i)) in
-        out.data.(i) <- Obj.repr v
+        let v = f (Obj.obj (Stdlib.Array.get a.data i)) in
+        Stdlib.Array.set out.data i (Obj.repr v)
       done;
       out.length <- a.length;
       out
@@ -396,7 +396,7 @@ let filter (a : 'a t) (f : 'a -> bool) : 'a t =
       out
     else (
       for i = 0 to a.length - 1 do
-        let v = Obj.obj a.data.(i) in
+        let v = Obj.obj (Stdlib.Array.get a.data i) in
         if f v then ignore (push out v) else ()
       done;
       out
@@ -412,13 +412,13 @@ let resize (a : 'a t) (new_len : int) : unit =
       ()
     else if new_len < a.length then (
       for i = new_len to a.length - 1 do
-        a.data.(i) <- hx_null
+        Stdlib.Array.set a.data i hx_null
       done;
       a.length <- new_len
     ) else (
       ensure_capacity a new_len;
       for i = a.length to new_len - 1 do
-        a.data.(i) <- hx_null
+        Stdlib.Array.set a.data i hx_null
       done;
       a.length <- new_len
     )
@@ -430,9 +430,9 @@ let sort (a : 'a t) (cmp : 'a -> 'a -> int) : unit =
     if a.length < 2 then
       ()
     else (
-      let slice = Array.sub a.data 0 a.length in
-      Array.sort
+      let slice = Stdlib.Array.sub a.data 0 a.length in
+      Stdlib.Array.sort
         (fun x y -> cmp (Obj.obj x) (Obj.obj y))
         slice;
-      Array.blit slice 0 a.data 0 a.length
+      Stdlib.Array.blit slice 0 a.data 0 a.length
     )

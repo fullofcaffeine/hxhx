@@ -4054,13 +4054,29 @@ class EmitterStage {
 							final to =
 								"exception HxMacroApiUnavailable of string\n"
 								+ "let __hxhx_macro_api_unavailable (f : string) : _ = raise (HxMacroApiUnavailable (\"hxhx(stage3): macro api unavailable: \" ^ f))\n"
+								+ "let __hxhx_macro_defined_value (_key : Obj.t) : Obj.t = HxRuntime.hx_null\n"
+								+ "let __hxhx_macro_defined (_key : Obj.t) : Obj.t = Obj.repr false\n"
+								+ "let __hxhx_macro_resolve_path (v : Obj.t) : Obj.t =\n"
+								+ "  let file : string = Obj.obj v in\n"
+								+ "  let resolved =\n"
+								+ "    if Sys.file_exists file then file\n"
+								+ "    else\n"
+								+ "      let in_src = Filename.concat \"src\" file in\n"
+								+ "      if Sys.file_exists in_src then in_src else file\n"
+								+ "  in\n"
+								+ "  Obj.repr resolved\n"
 								+ "let load (f : string) (nargs : int) : _ =\n"
-								+ "  match nargs with\n"
-								+ "  | 0 -> Obj.magic (fun () -> __hxhx_macro_api_unavailable f)\n"
-								+ "  | 1 -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
-								+ "  | 2 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
-								+ "  | 3 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
-								+ "  | _ -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)";
+								+ "  match (f, nargs) with\n"
+								+ "  | (\"defined_value\", 1) -> Obj.magic (fun (key : Obj.t) -> __hxhx_macro_defined_value key)\n"
+								+ "  | (\"defined\", 1) -> Obj.magic (fun (key : Obj.t) -> __hxhx_macro_defined key)\n"
+								+ "  | (\"resolve_path\", 1) -> Obj.magic (fun (file : Obj.t) -> __hxhx_macro_resolve_path file)\n"
+								+ "  | _ ->\n"
+								+ "    match nargs with\n"
+								+ "    | 0 -> Obj.magic (fun () -> __hxhx_macro_api_unavailable f)\n"
+								+ "    | 1 -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
+								+ "    | 2 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
+								+ "    | 3 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
+								+ "    | _ -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)";
 							sys.io.File.saveContent(shimPath, StringTools.replace(src, from, to));
 						}
 					}

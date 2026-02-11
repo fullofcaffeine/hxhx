@@ -22,10 +22,10 @@ let hx_unset_sentinel = "\x1e__REFlAXE_OCAML_UNSET__\x1f"
 let args () : string HxArray.t =
   let out = HxArray.create () in
   let argv = Stdlib.Sys.argv in
-  let n = Array.length argv in
+  let n = Stdlib.Array.length argv in
   let i = ref 1 in
   while !i < n do
-    ignore (HxArray.push out argv.(!i));
+    ignore (HxArray.push out (Stdlib.Array.get argv !i));
     i := !i + 1
   done;
   out
@@ -45,7 +45,7 @@ let putEnv (s : string) (v : string option) : unit =
 let env_array_filtered () : string array =
   let raw = Unix.environment () in
   let keep = ref [] in
-  Array.iter
+  Stdlib.Array.iter
     (fun entry ->
       match String.index_opt entry '=' with
       | None -> keep := entry :: !keep
@@ -53,11 +53,11 @@ let env_array_filtered () : string array =
           let v = String.sub entry (idx + 1) (String.length entry - (idx + 1)) in
           if v = hx_unset_sentinel then () else keep := entry :: !keep)
     raw;
-  Array.of_list (List.rev !keep)
+  Stdlib.Array.of_list (List.rev !keep)
 
 let environment () : string HxMap.string_map =
   let out = HxMap.create_string () in
-  Array.iter
+  Stdlib.Array.iter
     (fun entry ->
       match String.index_opt entry '=' with
       | None -> ()
@@ -96,10 +96,10 @@ let command (cmd : string) (args_opt : string HxArray.t option) : int =
   | None -> Stdlib.Sys.command cmd
   | Some args ->
       let len = HxArray.length args in
-      let argv = Array.make (len + 1) "" in
-      argv.(0) <- cmd;
+      let argv = Stdlib.Array.make (len + 1) "" in
+      Stdlib.Array.set argv 0 cmd;
       for i = 0 to len - 1 do
-        argv.(i + 1) <- HxArray.get args i
+        Stdlib.Array.set argv (i + 1) (HxArray.get args i)
       done;
       let env = env_array_filtered () in
       let pid = Unix.create_process_env cmd argv env Unix.stdin Unix.stdout Unix.stderr in

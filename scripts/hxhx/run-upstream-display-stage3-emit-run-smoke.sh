@@ -5,12 +5,7 @@ set -euo pipefail
 #
 # Goal
 # - Run upstream `tests/display/build.hxml` through Stage3 full emit *with execution enabled*.
-# - Assert we never regress to segfault-shaped failures while macro API coverage is incomplete.
-#
-# Current expectation
-# - Until full macro API/runtime parity lands, this rung may fail with a deterministic
-#   "macro api unavailable" style error.
-# - It must not fail as a segmentation fault / EXC_BAD_ACCESS.
+# - Assert the command completes with `run=ok` and does not regress to crash-shaped failures.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
@@ -56,22 +51,16 @@ if [ "$code" -eq 139 ] || rg -q "Segmentation fault|EXC_BAD_ACCESS" "$tmp_log"; 
   exit 1
 fi
 
-if [ "$code" -eq 0 ]; then
-  rg -q '^run=ok$' "$tmp_log" || {
-    echo "FAILED: emit-run exited 0 but missing run=ok marker" >&2
-    tail -n 200 "$tmp_log" >&2
-    exit 1
-  }
-  echo "display_stage3_emit_run=ok"
-  exit 0
+if [ "$code" -ne 0 ]; then
+  echo "FAILED: emit-run exited non-zero (rc=$code)" >&2
+  tail -n 200 "$tmp_log" >&2
+  exit "$code"
 fi
 
-# Bring-up allowance: deterministic, non-crash failure while macro API parity is incomplete.
-if rg -q "HxMacroApiUnavailable|macro api unavailable|built executable failed" "$tmp_log"; then
-  echo "display_stage3_emit_run=expected_noncrash_failure rc=$code"
-  exit 0
-fi
+rg -q '^run=ok$' "$tmp_log" || {
+  echo "FAILED: emit-run exited 0 but missing run=ok marker" >&2
+  tail -n 200 "$tmp_log" >&2
+  exit 1
+}
 
-echo "FAILED: unexpected non-zero exit (rc=$code) without known safe marker" >&2
-tail -n 200 "$tmp_log" >&2
-exit 1
+echo "display_stage3_emit_run=ok"

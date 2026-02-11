@@ -117,8 +117,8 @@ Notes:
 
 - This runs upstream `tests/display/build.hxml` with execution enabled
   (`hxhx --hxhx-stage3 --hxhx-emit-full-bodies`, no `--hxhx-no-run`).
-- Current bring-up expectation allows a deterministic non-crash failure while macro API parity is incomplete.
-- The runner fails hard on segfault-shaped regressions (`Segmentation fault` / `EXC_BAD_ACCESS` / rc `139`).
+- It now requires successful execution (`run=ok`) and fails on any non-zero exit.
+- It also explicitly fails hard on segfault-shaped regressions (`Segmentation fault` / `EXC_BAD_ACCESS` / rc `139`).
 
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 

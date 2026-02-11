@@ -161,7 +161,7 @@ npm run test:upstream:display-stage3-emit-run-smoke
 ```
 
 This executes the same upstream display build with run enabled and enforces a non-crash contract:
-either `run=ok` or a deterministic, explicit bring-up error. It fails hard on segfault-shaped regressions.
+it requires `run=ok` and fails on any non-zero exit. It also fails hard on segfault-shaped regressions.
 
 Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:
 - `--wait stdio` framed requests

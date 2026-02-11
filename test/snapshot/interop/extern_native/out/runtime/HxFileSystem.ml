@@ -100,5 +100,5 @@ let deleteDirectory (path : string) : unit =
 let readDirectory (path : string) : string HxArray.t =
   let out = HxArray.create () in
   let entries = Stdlib.Sys.readdir path in
-  Array.iter (fun name -> ignore (HxArray.push out name)) entries;
+  Stdlib.Array.iter (fun name -> ignore (HxArray.push out name)) entries;
   out

@@ -60,7 +60,7 @@ let hx_array_to_list (a : string HxArray.t) : string list =
   loop 0 []
 
 let spawn (cmd : string) (args : string HxArray.t) : int =
-  let argv = Array.of_list (cmd :: hx_array_to_list args) in
+  let argv = Stdlib.Array.of_list (cmd :: hx_array_to_list args) in
   let env = Unix.environment () in
 
   (* stdin pipe: parent writes -> child reads *)

@@ -99,7 +99,7 @@ let collect_groups () : (int * int) array =
       let e = Str.group_end i in
       loop (i + 1) ((b, e) :: acc)
     with _ ->
-      Array.of_list (List.rev acc)
+      Stdlib.Array.of_list (List.rev acc)
   in
   loop 0 []
 
@@ -137,27 +137,27 @@ let matched (self : t) (n : int) : string =
   match self.last with
   | None -> ""
   | Some st ->
-      if n < 0 || n >= Array.length st.groups then ""
+      if n < 0 || n >= Stdlib.Array.length st.groups then ""
       else
-        let b, e = st.groups.(n) in
+        let b, e = Stdlib.Array.get st.groups n in
         if b < 0 || e < b then "" else String.sub st.src b (e - b)
 
 let matchedLeft (self : t) () : string =
   match self.last with
   | None -> ""
   | Some st ->
-      if Array.length st.groups = 0 then ""
+      if Stdlib.Array.length st.groups = 0 then ""
       else
-        let b, _ = st.groups.(0) in
+        let b, _ = Stdlib.Array.get st.groups 0 in
         if b <= 0 then "" else String.sub st.src 0 b
 
 let matchedRight (self : t) () : string =
   match self.last with
   | None -> ""
   | Some st ->
-      if Array.length st.groups = 0 then ""
+      if Stdlib.Array.length st.groups = 0 then ""
       else
-        let _, e = st.groups.(0) in
+        let _, e = Stdlib.Array.get st.groups 0 in
         if e >= String.length st.src then ""
         else String.sub st.src e (String.length st.src - e)
 
@@ -165,9 +165,9 @@ let matchedPos (self : t) () : Obj.t =
   match self.last with
   | None -> HxRuntime.hx_null
   | Some st ->
-      if Array.length st.groups = 0 then HxRuntime.hx_null
+      if Stdlib.Array.length st.groups = 0 then HxRuntime.hx_null
       else
-        let b, e = st.groups.(0) in
+        let b, e = Stdlib.Array.get st.groups 0 in
         let o = HxAnon.create () in
         ignore (HxAnon.set o "pos" (Obj.repr b));
         ignore (HxAnon.set o "len" (Obj.repr (e - b)));
