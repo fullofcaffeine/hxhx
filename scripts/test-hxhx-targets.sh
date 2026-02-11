@@ -209,6 +209,33 @@ HX
   grep -q "Stdlib.Array.length __argv" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
   grep -q "Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
 
+  echo "== Stage3 regression: Int64 lowering avoids OCaml Int64.ofInt"
+  cat >"$tmpdir/src/Int64FpHelperStage3.hx" <<'HX'
+package;
+
+class Int64FpHelperStage3 {
+  static function main() {
+    var a = haxe.Int64.ofInt(0);
+    var b = haxe.Int64.make(1, 2);
+    // Keep mutator call-shapes present in emitted OCaml (bring-up no-op rewrite).
+    untyped a.set_low(3);
+    untyped a.set_high(4);
+    Sys.println(Std.string(a));
+    Sys.println(Std.string(b));
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_int64_fphelper" -cp "$tmpdir/src" -main Int64FpHelperStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  test -f "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
+  grep -q "Haxe_Int64.ofInt" "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
+  grep -q "Haxe_Int64.make" "$tmpdir/out_stage3_int64_fphelper/Int64FpHelperStage3.ml"
+  if rg -n "(^|[^A-Za-z0-9_])Int64\\.ofInt\\b" "$tmpdir/out_stage3_int64_fphelper" >/dev/null 2>&1; then
+    echo "Stage3 Int64 regression: found bare Int64.ofInt call in emitted OCaml output." >&2
+    exit 1
+  fi
+
   echo "== Stage3 regression: sys.io.Process constructor is async spawn"
   cat >"$tmpdir/src/ProcessSpawnStage3.hx" <<'HX'
 package;
