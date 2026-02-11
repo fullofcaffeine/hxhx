@@ -162,6 +162,8 @@ npm run test:upstream:display-stage3-emit-run-smoke
 
 This executes the same upstream display build with run enabled and enforces a non-crash contract:
 it requires `run=ok` and fails on any non-zero exit. It also fails hard on segfault-shaped regressions.
+On success it prints `display_utest_suite=ok` (validated from `-lib utest` plus a minimum
+`resolved_modules` threshold; override with `HXHX_DISPLAY_EMIT_RUN_MIN_RESOLVED` if needed).
 
 Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:
 - `--wait stdio` framed requests

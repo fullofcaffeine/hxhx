@@ -119,6 +119,9 @@ Notes:
   (`hxhx --hxhx-stage3 --hxhx-emit-full-bodies`, no `--hxhx-no-run`).
 - It now requires successful execution (`run=ok`) and fails on any non-zero exit.
 - It also explicitly fails hard on segfault-shaped regressions (`Segmentation fault` / `EXC_BAD_ACCESS` / rc `139`).
+- On success it emits `display_utest_suite=ok` after validating this is the utest workload
+  and that `resolved_modules` meets a minimum threshold (default `80`, configurable via
+  `HXHX_DISPLAY_EMIT_RUN_MIN_RESOLVED`).
 
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 

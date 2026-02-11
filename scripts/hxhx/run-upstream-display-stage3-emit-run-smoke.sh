@@ -6,11 +6,14 @@ set -euo pipefail
 # Goal
 # - Run upstream `tests/display/build.hxml` through Stage3 full emit *with execution enabled*.
 # - Assert the command completes with `run=ok` and does not regress to crash-shaped failures.
+# - Emit an explicit suite marker for bead acceptance (`display_utest_suite=ok`) by
+#   validating this is the upstream utest workload and that module coverage is non-trivial.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 OUT_NAME="${HXHX_DISPLAY_EMIT_RUN_OUT:-out_hxhx_display_stage3_emit_run}"
+MIN_RESOLVED="${HXHX_DISPLAY_EMIT_RUN_MIN_RESOLVED:-80}"
 
 if [ ! -d "$UPSTREAM_DIR/tests/display" ]; then
   echo "Skipping upstream display stage3 emit-run smoke: missing upstream Haxe repo at '$UPSTREAM_DIR'." >&2
@@ -38,6 +41,11 @@ cd "$UPSTREAM_DIR/tests/display"
 tmp_log="$(mktemp)"
 trap 'rm -f "$tmp_log"' EXIT
 
+if ! rg -q '^-lib[[:space:]]+utest$' build.hxml; then
+  echo "FAILED: tests/display/build.hxml no longer references -lib utest" >&2
+  exit 1
+fi
+
 set +e
 "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies build.hxml --hxhx-out "$OUT_NAME" >"$tmp_log" 2>&1
 code="$?"
@@ -63,4 +71,18 @@ rg -q '^run=ok$' "$tmp_log" || {
   exit 1
 }
 
+resolved_modules="$(rg -o '^resolved_modules=[0-9]+' "$tmp_log" | head -n 1 | cut -d= -f2)"
+if [ -z "$resolved_modules" ]; then
+  echo "FAILED: missing resolved_modules marker in emit-run output" >&2
+  tail -n 200 "$tmp_log" >&2
+  exit 1
+fi
+
+if [ "$resolved_modules" -lt "$MIN_RESOLVED" ]; then
+  echo "FAILED: resolved_modules=$resolved_modules below minimum $MIN_RESOLVED" >&2
+  tail -n 200 "$tmp_log" >&2
+  exit 1
+fi
+
+echo "display_utest_suite=ok resolved_modules=$resolved_modules min_resolved=$MIN_RESOLVED"
 echo "display_stage3_emit_run=ok"
