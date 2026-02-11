@@ -27,6 +27,22 @@ To run the heavier acceptance examples:
 npm run test:acceptance
 ```
 
+## Cleanup after heavy runs
+
+Long upstream/gate/bootstrap runs can leave sizeable temp/build artifacts.
+
+From repo root:
+
+```bash
+npm run clean:dry-run
+npm run clean
+npm run clean:tmp
+npm run clean:deep
+```
+
+Details and retention knobs (`HXHX_KEEP_LOGS`, `HXHX_LOG_DIR`) are documented in:
+`docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
+
 ## Upstream Haxe acceptance gates (Haxe-in-Haxe path)
 
 These are **not** part of `npm test` because they depend on:

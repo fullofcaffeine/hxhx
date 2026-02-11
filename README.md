@@ -178,6 +178,24 @@ This script is now progress-visible by default:
 - emits a Stage0 heartbeat every `20s` (`HXHX_STAGE0_HEARTBEAT`, set `0` to disable)
 - fails fast if Stage0 emit stalls (`HXHX_STAGE0_FAILFAST_SECS`, default `900`)
 - prints per-phase timings (emit/copy/verify) and copied file count
+- cleans temporary stage0 logs by default (set `HXHX_KEEP_LOGS=1` to keep them)
+
+### Artifact cleanup (recommended)
+
+Compiler/bootstrap workflows can produce large temporary outputs. Use these commands to reclaim space:
+
+```bash
+npm run clean:dry-run
+npm run clean
+npm run clean:tmp
+npm run clean:deep
+```
+
+- `clean`: repo-local transient outputs (`out*`, fixture/example outputs, etc.)
+- `clean:tmp`: stale stage0 temp logs in OS temp directories
+- `clean:deep`: includes large bootstrap `_build` caches
+
+Policy details: `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
 
 Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s path):
 

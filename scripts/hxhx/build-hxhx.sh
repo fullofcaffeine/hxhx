@@ -18,10 +18,34 @@ HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-0}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
+HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
+HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
+
+create_stage0_log_file() {
+  local prefix="$1"
+  if [ -n "$HXHX_LOG_DIR" ]; then
+    mkdir -p "$HXHX_LOG_DIR"
+    mktemp "$HXHX_LOG_DIR/${prefix}.XXXXXX.log"
+    return
+  fi
+  mktemp -t "${prefix}.XXXXXX.log"
+}
+
+cleanup_stage0_log_file() {
+  local path="$1"
+  if [ -z "$path" ] || [ ! -f "$path" ]; then
+    return
+  fi
+  if [ "$HXHX_KEEP_LOGS" = "1" ]; then
+    echo "== Stage0 build log retained: $path" >&2
+  else
+    rm -f "$path"
+  fi
+}
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
   echo "Skipping hxhx build: dune/ocamlc not found on PATH."
@@ -61,6 +85,12 @@ fi
 if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
   echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
   exit 1
+fi
+if [ "$HXHX_KEEP_LOGS" = "1" ]; then
+  echo "== Stage0 logs: retained (HXHX_KEEP_LOGS=1)" >&2
+fi
+if [ -n "$HXHX_LOG_DIR" ]; then
+  echo "== Stage0 logs directory: $HXHX_LOG_DIR" >&2
 fi
 
 (
@@ -108,7 +138,7 @@ fi
       return
     fi
 
-    log_file="$(mktemp -t hxhx-stage0-build.XXXXXX.log)"
+    log_file="$(create_stage0_log_file hxhx-stage0-build)"
     echo "== Stage0 build command: $HAXE_BIN ${haxe_args[*]}" >&2
     echo "== Stage0 build log: $log_file" >&2
     "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
@@ -127,6 +157,7 @@ fi
           kill -9 "$pid" >/dev/null 2>&1 || true
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+          cleanup_stage0_log_file "$log_file"
           exit 1
         fi
       fi
@@ -166,8 +197,10 @@ fi
     if [ "$code" != "0" ]; then
       echo "Stage0 build failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
       tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+      cleanup_stage0_log_file "$log_file"
       exit "$code"
     fi
+    cleanup_stage0_log_file "$log_file"
   }
 
   if ! run_stage0_build; then

@@ -38,6 +38,38 @@ bd sync               # Sync with git
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 
+## Artifact Hygiene (MANDATORY)
+
+This repo generates large transient artifacts during bootstrap/gate workflows. Keep disk usage under control:
+
+1. **Before heavy runs**, preview cleanup candidates:
+   ```bash
+   npm run clean:dry-run
+   ```
+2. **After heavy stage0/stage3/gate runs**, clean stale temp logs:
+   ```bash
+   npm run clean:tmp
+   ```
+3. **At end of coding session** (if code changed), run:
+   ```bash
+   npm run clean
+   ```
+4. **If disk pressure remains high** (or after repeated bootstrap regen), run:
+   ```bash
+   npm run clean:deep
+   ```
+
+**Do not remove committed bootstrap source snapshots**:
+- `packages/hxhx/bootstrap_out/*.ml` (and companion dune files)
+- `tools/hxhx-macro-host/bootstrap_out/*.ml` (and companion dune files)
+
+**Debug retention knobs**:
+- default behavior is cleanup-on-finish for stage0 logs
+- set `HXHX_KEEP_LOGS=1` to retain logs
+- set `HXHX_LOG_DIR=/path/to/logs` to retain logs in a stable directory
+
+Always run `git status --short` after cleanup to verify no tracked files were accidentally removed.
+
 ## Local Reference Repos
 
 - `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`

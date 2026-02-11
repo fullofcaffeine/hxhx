@@ -31,11 +31,35 @@ HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
+HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
+HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
 OUT_DIR="$PKG_DIR/out"
 BOOTSTRAP_DIR="$PKG_DIR/bootstrap_out"
+
+create_stage0_log_file() {
+  local prefix="$1"
+  if [ -n "$HXHX_LOG_DIR" ]; then
+    mkdir -p "$HXHX_LOG_DIR"
+    mktemp "$HXHX_LOG_DIR/${prefix}.XXXXXX.log"
+    return
+  fi
+  mktemp -t "${prefix}.XXXXXX.log"
+}
+
+cleanup_stage0_log_file() {
+  local path="$1"
+  if [ -z "$path" ] || [ ! -f "$path" ]; then
+    return
+  fi
+  if [ "$HXHX_KEEP_LOGS" = "1" ]; then
+    echo "== Stage0 emit log retained: $path"
+  else
+    rm -f "$path"
+  fi
+}
 
 if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
   echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
@@ -62,6 +86,12 @@ if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0
   echo "== Stage0 failfast: ${HXHX_STAGE0_FAILFAST_SECS}s"
 else
   echo "== Stage0 failfast: disabled"
+fi
+if [ "$HXHX_KEEP_LOGS" = "1" ]; then
+  echo "== Stage0 logs: retained (HXHX_KEEP_LOGS=1)"
+fi
+if [ -n "$HXHX_LOG_DIR" ]; then
+  echo "== Stage0 logs directory: $HXHX_LOG_DIR"
 fi
 start_ts="$(date +%s)"
 (
@@ -116,7 +146,7 @@ start_ts="$(date +%s)"
       return
     fi
 
-    log_file="$(mktemp -t hxhx-stage0-emit.XXXXXX.log)"
+    log_file="$(create_stage0_log_file hxhx-stage0-emit)"
     echo "== Stage0 emit command: $HAXE_BIN ${haxe_args[*]}"
     echo "== Stage0 emit log: $log_file"
     pid=""
@@ -137,6 +167,7 @@ start_ts="$(date +%s)"
           kill -9 "$pid" >/dev/null 2>&1 || true
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+          cleanup_stage0_log_file "$log_file"
           exit 1
         fi
       fi
@@ -194,6 +225,7 @@ start_ts="$(date +%s)"
     if [ "$code" != "0" ]; then
       echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
       tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+      cleanup_stage0_log_file "$log_file"
       exit "$code"
     fi
 
@@ -201,6 +233,7 @@ start_ts="$(date +%s)"
       echo "== Stage0 emit completed; last $HXHX_STAGE0_LOG_TAIL_LINES lines:"
       tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" || true
     fi
+    cleanup_stage0_log_file "$log_file"
   }
 
   run_stage0_emit
