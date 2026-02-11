@@ -145,18 +145,31 @@ start_ts="$(date +%s)"
         rss_probe_pid="$child_pid"
       fi
       rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      proc_state="$(ps -o state= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
+      heartbeat_suffix=""
+      if [ -n "$cpu_pct" ]; then
+        heartbeat_suffix="$heartbeat_suffix cpu=${cpu_pct}%"
+      fi
+      if [ -n "$proc_state" ]; then
+        heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
+      fi
+      if [ -n "$log_bytes" ]; then
+        heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
+      fi
       if [ -n "$rss_kb" ]; then
         rss_mb="$((rss_kb / 1024))"
         if [ -n "$child_pid" ]; then
-          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid"
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
         else
-          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid"
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid$heartbeat_suffix"
         fi
       else
         if [ -n "$child_pid" ]; then
-          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s pid=$pid child=$child_pid"
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s pid=$pid child=$child_pid$heartbeat_suffix"
         else
-          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s pid=$pid"
+          echo "== Stage0 emit heartbeat: elapsed=$((now - start_hb))s pid=$pid$heartbeat_suffix"
         fi
       fi
       if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then

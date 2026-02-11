@@ -209,6 +209,25 @@ HX
   grep -q "Stdlib.Array.length __argv" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
   grep -q "Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
 
+  echo "== Stage3 regression: sys.io.Process constructor is async spawn"
+  cat >"$tmpdir/src/ProcessSpawnStage3.hx" <<'HX'
+package;
+
+class ProcessSpawnStage3 {
+  static function main() {
+    final p = new sys.io.Process("echo", ["ok"]);
+    p.kill();
+    p.close();
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_process_spawn" -cp "$tmpdir/src" -main ProcessSpawnStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  test -f "$tmpdir/out_stage3_process_spawn/ProcessSpawnStage3.ml"
+  grep -q "HxBootProcess.spawn (\"echo\")" "$tmpdir/out_stage3_process_spawn/ProcessSpawnStage3.ml"
+  grep -q "HxBootProcess.kill (p)" "$tmpdir/out_stage3_process_spawn/ProcessSpawnStage3.ml"
+
   echo "== Stage3 regression: fully-qualified type path without import"
   mkdir -p "$tmpdir/src/fqdep"
   cat >"$tmpdir/src/fqdep/Dep.hx" <<'HX'

@@ -788,8 +788,8 @@ class EmitterStage {
 						(typePath == "Array" && args.length == 0)
 							? "HxBootArray.create ()"
 						:
-						(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && args.length == 2
-							? ("HxBootProcess.run ("
+						(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && (args.length == 2 || args.length == 3)
+							? ("HxBootProcess.spawn ("
 								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 								+ ") ("
 								+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
@@ -1208,12 +1208,15 @@ class EmitterStage {
 							+ "else \"Linux\")";
 					// Stage 3 bring-up: `sys.io.Process.exitCode()` is used pervasively by RunCi to test
 					// whether subcommands succeeded. Map it to our bootstrap shim.
-					case EField(proc, "exitCode") if (args.length == 0 && isSysIoProcessExpr(proc)):
+					case EField(proc, "exitCode") if ((args.length == 0 || args.length == 1) && isSysIoProcessExpr(proc)):
 						return "HxBootProcess.exitCode (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 					// Bring-up: `sys.io.Process.close()` exists for resource cleanup; our shim is eager
-					// and already waits + buffers outputs, so close is a no-op.
+					// and now flushes process state deterministically.
 					case EField(proc, "close") if (args.length == 0 && isSysIoProcessExpr(proc)):
 						return "HxBootProcess.close (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
+					// Bring-up: support terminating long-running server processes in RunCi orchestration.
+					case EField(proc, "kill") if (args.length == 0 && isSysIoProcessExpr(proc)):
+						return "HxBootProcess.kill (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 					// Bring-up: allow reading process output as a single string.
 					case EField(EField(proc, "stdout"), "readAll") if (args.length == 0 && isSysIoProcessExpr(proc)):
 						return "HxBootProcess.stdoutReadAll (" + exprToOcaml(proc, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
