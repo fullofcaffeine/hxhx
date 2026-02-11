@@ -73,8 +73,25 @@ Notes:
   - To run the historical “stage0 shim” harness instead, set `HXHX_GATE2_MODE=stage0_shim`.
   - `HXHX_GATE2_MODE=stage3_emit_runner` is an experimental rung: it tries to compile+run the upstream RunCi runner under the
     Stage3 bootstrap emitter (intended to run upstream `tests/RunCi.hx` unmodified once Stage3 is ready).
-  - `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
-    to a minimal harness so we can at least prove sub-invocation spawning.
+    - This runner now defaults to bootstrap snapshots for faster iteration.
+    - Set `HXHX_FORCE_STAGE0=1` if you explicitly want to rebuild `hxhx` from source before running it.
+- `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
+  to a minimal harness so we can at least prove sub-invocation spawning.
+
+### Bootstrap stage map (quick reference)
+
+Use this when you want the repo to function as a compiler-bootstrap example:
+
+- **Stage0**: external `haxe` compiles repo Haxe sources to OCaml.
+  - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
+- **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
+  - Command: `bash scripts/hxhx/build-hxhx.sh`
+- **Stage2**: stage1 builds stage2; compare behavior/codegen stability.
+  - Command: `npm run test:upstream:stage2`
+- **Gate checks**: validate against upstream behavior oracles.
+  - Gate1: `npm run test:upstream:unit-macro`
+  - Gate2: `npm run test:upstream:runci-macro`
+  - Display end-to-end smoke: `npm run test:upstream:display-stage3-emit-run-smoke`
 
 Dedicated display smoke rung (non-delegating Stage3 no-emit):
 

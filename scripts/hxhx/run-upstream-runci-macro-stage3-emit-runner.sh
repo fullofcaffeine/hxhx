@@ -34,13 +34,15 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
 fi
 
-# Prefer building `hxhx` from source for this rung so it always reflects the current
-# Stage3 emitter lowering logic (bootstrap snapshots can lag behind when regen is slow).
-export HXHX_FORCE_STAGE0=1
-# Provide periodic progress so long Stage0 builds don't look "stuck".
-if [ -z "${HXHX_STAGE0_HEARTBEAT:-}" ] || [ "${HXHX_STAGE0_HEARTBEAT:-0}" = "0" ]; then
-  export HXHX_STAGE0_HEARTBEAT=30
-  export HXHX_STAGE0_HEARTBEAT_TAIL_LINES=3
+# Default to bootstrap snapshots so this rung stays quick and stage0-free.
+# Set HXHX_FORCE_STAGE0=1 when you explicitly want a "build hxhx from source first"
+# reproducibility pass for emitter-lowering bring-up.
+if [ "${HXHX_FORCE_STAGE0:-0}" = "1" ]; then
+  # Provide periodic progress so long Stage0 builds don't look "stuck".
+  if [ -z "${HXHX_STAGE0_HEARTBEAT:-}" ] || [ "${HXHX_STAGE0_HEARTBEAT:-0}" = "0" ]; then
+    export HXHX_STAGE0_HEARTBEAT=30
+    export HXHX_STAGE0_HEARTBEAT_TAIL_LINES=3
+  fi
 fi
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
@@ -53,6 +55,7 @@ fi
 echo "== Gate 2 (stage3 emit runner rung): upstream tests/RunCi.hxml"
 echo "UPSTREAM_DIR=$UPSTREAM_DIR"
 echo "HAXE_STD_PATH=${HAXE_STD_PATH:-}"
+echo "HXHX_FORCE_STAGE0=${HXHX_FORCE_STAGE0:-0}"
 echo "HXHX_BIN=$HXHX_BIN"
 echo "HXHX_MACRO_HOST_EXE=${HXHX_MACRO_HOST_EXE:-}"
 

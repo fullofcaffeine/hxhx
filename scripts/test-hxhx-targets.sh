@@ -191,6 +191,24 @@ HX
   test -f "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
   grep -q "HxSys.environment" "$tmpdir/out_stage3_sysenv/SysEnvStage3.ml"
 
+  echo "== Stage3 regression: Sys.args lowering qualifies Stdlib.Array helpers"
+  cat >"$tmpdir/src/SysArgsStage3.hx" <<'HX'
+package;
+
+class SysArgsStage3 {
+  static function main() {
+    final args = Sys.args();
+    Sys.println(Std.string(args.length));
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_sysargs" -cp "$tmpdir/src" -main SysArgsStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  test -f "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
+  grep -q "Stdlib.Array.length __argv" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
+  grep -q "Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))" "$tmpdir/out_stage3_sysargs/SysArgsStage3.ml"
+
   echo "== Stage3 regression: fully-qualified type path without import"
   mkdir -p "$tmpdir/src/fqdep"
   cat >"$tmpdir/src/fqdep/Dep.hx" <<'HX'

@@ -1174,9 +1174,9 @@ class EmitterStage {
 					case EField(EIdent("Sys"), "args") if (args.length == 0):
 						// Haxe: Sys.args() excludes argv[0].
 						return "(let __argv = Stdlib.Sys.argv in "
-							+ "let __len = Array.length __argv in "
+							+ "let __len = Stdlib.Array.length __argv in "
 							+ "if __len <= 1 then HxBootArray.create () "
-							+ "else HxBootArray.of_list (Array.to_list (Array.sub __argv 1 (__len - 1))))";
+							+ "else HxBootArray.of_list (Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))))";
 					case EField(EIdent("Sys"), "putEnv") if (args.length == 2):
 						// Haxe: `Sys.putEnv(name, value)` accepts null for removal.
 						// Our runtime provides the option-based API; bridge through the hx_null sentinel.

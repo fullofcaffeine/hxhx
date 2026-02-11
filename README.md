@@ -102,6 +102,33 @@ bash scripts/hxhx/build-hxhx.sh
 By default this builds the bootstrap snapshot as **bytecode** (`out.bc`) for portability (some platforms/architectures can fail to native-compile the large generated OCaml units).
 To prefer a native build first, set `HXHX_BOOTSTRAP_PREFER_NATIVE=1` (it will fall back to bytecode if native fails).
 
+### Bootstrap stages (from-scratch model)
+
+This repo intentionally treats `hxhx` as a staged bootstrap so it can serve as a didactic compiler-building reference:
+
+1. **Stage0 (external compiler baseline)**  
+   Use an existing `haxe` binary to compile our Haxe sources into OCaml output.
+2. **Stage1 (first `hxhx` binary)**  
+   Build that OCaml output with `dune` into a runnable `hxhx` executable.
+3. **Stage2 (self-check)**  
+   Use stage1 `hxhx` to build the next `hxhx` and compare behavior/codegen stability.
+4. **Gate runners (upstream behavior oracle)**  
+   Validate compatibility against upstream suites (Gate1/Gate2/display) using `vendor/haxe` as the oracle.
+
+Practical command map:
+
+- Build stage1 from committed bootstrap snapshot:  
+  `bash scripts/hxhx/build-hxhx.sh`
+- Regenerate bootstrap snapshot from source (stage0 + verify):  
+  `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
+- Run stage2 reproducibility sanity rung:  
+  `npm run test:upstream:stage2`
+- Run non-delegating display end-to-end smoke:  
+  `npm run test:upstream:display-stage3-emit-run-smoke`
+
+For deeper acceptance/terminology (replacement-ready, gate definitions), see
+`docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`.
+
 Regenerate the committed `hxhx` bootstrap snapshot (maintainer workflow):
 
 ```bash
@@ -129,6 +156,7 @@ npm run test:upstream:runci-macro
 
 Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `haxelib`, `neko`/`nekotools`, `python3`, `javac`, and a C compiler like `cc`/`clang`), and it can download external deps (e.g. `tink_core`) during the run.
 You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
+For `HXHX_GATE2_MODE=stage3_emit_runner`, the runner now defaults to bootstrap snapshots for speed; set `HXHX_FORCE_STAGE0=1` only when you intentionally want a source-built `hxhx` repro pass.
 
 Run the dedicated non-delegating display smoke rung:
 
