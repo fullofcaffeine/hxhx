@@ -143,6 +143,35 @@ HX
   out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_helper" -cp "$tmpdir/src" -main MultiStage3)"
   echo "$out" | grep -q "^stage3=ok$"
 
+  echo "== Stage3 regression: module-local typedef/abstract declarations"
+  cat >"$tmpdir/src/TypeDeclStage3.hx" <<'HX'
+package;
+
+typedef Box = {
+  var value:Int;
+}
+
+abstract Flag(Int) {
+  public static inline function fromInt(v:Int):Flag {
+    return cast v;
+  }
+}
+
+class TypeDeclStage3 {
+  static function main() {
+    var b:TypeDeclStage3.Box = { value: 1 };
+    var f = TypeDeclStage3.Flag.fromInt(b.value);
+    Sys.println(Std.string(cast f));
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_typedecls" -cp "$tmpdir/src" -main TypeDeclStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Box.ml"
+  test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
+  grep -q "let fromInt" "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
+
   echo "== Stage3 regression: Sys.environment lowering (HxSys.environment)"
   cat >"$tmpdir/src/SysEnvStage3.hx" <<'HX'
 package;

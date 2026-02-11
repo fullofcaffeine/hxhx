@@ -55,14 +55,24 @@
 							// If the native protocol returns `Unknown`, scan for a matching top-level enum
 							// and treat it as the module's main provider so emission doesn't drop the unit.
 							final enumDeclsAll = scanModuleLocalHelperEnums(source, null);
+							final typedefDeclsAll = scanModuleLocalHelperTypedefs(source, null);
+							final abstractDeclsAll = scanModuleLocalHelperAbstracts(source, null);
 							if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
-								for (e in enumDeclsAll) {
-									final nm = HxClassDecl.getName(e);
-									if (nm != null && nm == expectedMainClass) {
-										main = e;
-										mainName = nm;
-										break;
+								function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
+									if (candidates == null) return false;
+									for (c in candidates) {
+										final nm = HxClassDecl.getName(c);
+										if (nm != null && nm == expectedMainClass) {
+											main = c;
+											mainName = nm;
+											return true;
+										}
 									}
+									return false;
+								}
+
+								if (!tryPickMainFrom(enumDeclsAll)) {
+									if (!tryPickMainFrom(typedefDeclsAll)) tryPickMainFrom(abstractDeclsAll);
 								}
 							}
 
@@ -71,9 +81,23 @@
 								final nm = HxClassDecl.getName(e);
 								nm != null && nm.length > 0 && nm != mainName;
 							});
+							final typedefDecls = typedefDeclsAll.filter(t -> {
+								final nm = HxClassDecl.getName(t);
+								nm != null && nm.length > 0 && nm != mainName;
+							});
+							final abstractDecls = abstractDeclsAll.filter(a -> {
+								final nm = HxClassDecl.getName(a);
+								nm != null && nm.length > 0 && nm != mainName;
+							});
 
-							if (extras.length == 0 && enumDecls.length == 0 && main == HxModuleDecl.getMainClass(nativeDecl)) return nativeDecl;
-							final classes = [main].concat(extras).concat(enumDecls);
+							if (extras.length == 0
+								&& enumDecls.length == 0
+								&& typedefDecls.length == 0
+								&& abstractDecls.length == 0
+								&& main == HxModuleDecl.getMainClass(nativeDecl)) {
+								return nativeDecl;
+							}
+							final classes = [main].concat(extras).concat(enumDecls).concat(typedefDecls).concat(abstractDecls);
 							return new HxModuleDecl(
 								HxModuleDecl.getPackagePath(nativeDecl),
 								HxModuleDecl.getImports(nativeDecl),
@@ -149,7 +173,8 @@
 		  - then find class-level `static var/final/function` declarations at brace depth 1.
 
 		Limitations
-		- Does not discover module-local `typedef` / `abstract` / `interface` types yet.
+		- This scanner only discovers module-local `class` declarations.
+		- `typedef` / `abstract` declarations are handled by dedicated scanners.
 		- Ignores field initializers (emitter stubs use `Obj.magic` placeholders).
 	**/
 	static function scanModuleLocalHelperClasses(source:String, mainClassName:Null<String>):Array<HxClassDecl> {
@@ -332,6 +357,175 @@
 			}
 
 			out.push(new HxClassDecl(enumName, false, functions, fields));
+		}
+
+		return out;
+	}
+
+	/**
+		Best-effort scanner for top-level `typedef` declarations.
+
+		Why
+		- Upstream code often references module-local typedefs via `Module.TypeAlias`.
+		- The native frontend protocol v1 only returns one top-level class declaration, so
+		  these aliases would otherwise be invisible to Stage3 emission and type indexing.
+
+		What
+		- Scans for top-level `typedef <Name> = ...;` declarations.
+		- Emits a placeholder type provider (`HxClassDecl`) with no fields/functions.
+
+		How
+		- Uses the same lightweight token scanner as other module-local helpers.
+		- Tracks brace depth and only records declarations at depth 0.
+
+		Limitations
+		- Does not model typedef structure; only the alias name is retained.
+	**/
+	static function scanModuleLocalHelperTypedefs(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+		final out = new Array<HxClassDecl>();
+		if (source == null || source.length == 0) return out;
+
+		final seen:Map<String, Bool> = new Map();
+		if (mainTypeName != null && mainTypeName.length > 0) seen.set(mainTypeName, true);
+
+		var braceDepth = 0;
+		var i = 0;
+		while (true) {
+			final t = scanNextToken(source, i);
+			i = t.nextPos;
+			if (t.text.length == 0) break;
+
+			if (!t.isIdent) {
+				if (t.text == "{") braceDepth += 1;
+				else if (t.text == "}") braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				continue;
+			}
+
+			if (braceDepth != 0) continue;
+			if (t.text != "typedef") continue;
+
+			var nameTok = scanNextToken(source, i);
+			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+
+			final typeName = nameTok.text;
+			i = nameTok.nextPos;
+			if (typeName == null || typeName.length == 0) continue;
+			if (seen.exists(typeName)) continue;
+			seen.set(typeName, true);
+
+			out.push(new HxClassDecl(typeName, false, [], []));
+		}
+
+		return out;
+	}
+
+	/**
+		Best-effort scanner for top-level non-enum `abstract` declarations.
+
+		Why
+		- Module-local abstracts are common in upstream-shaped code and can expose static
+		  helper functions that must exist as OCaml providers during Stage3 linking.
+		- The native frontend protocol v1 does not surface these declarations.
+
+		What
+		- Scans for top-level `abstract <Name>(...) { ... }` declarations.
+		- Captures static fields/functions from the abstract body using the same
+		  class-body scanner used for helper classes.
+
+		How
+		- Token-scans the source at brace depth 0.
+		- Explicitly skips top-level `enum` / `enum abstract` blocks so `enum abstract`
+		  declarations are not double-counted as regular abstracts.
+
+		Limitations
+		- Parses only static member signatures needed for bring-up stubs.
+		- Ignores non-static members and advanced abstract semantics.
+	**/
+	static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+		final out = new Array<HxClassDecl>();
+		if (source == null || source.length == 0) return out;
+
+		final seen:Map<String, Bool> = new Map();
+		if (mainTypeName != null && mainTypeName.length > 0) seen.set(mainTypeName, true);
+
+		var braceDepth = 0;
+		var i = 0;
+		while (true) {
+			final t = scanNextToken(source, i);
+			i = t.nextPos;
+			if (t.text.length == 0) break;
+
+			if (!t.isIdent) {
+				if (t.text == "{") braceDepth += 1;
+				else if (t.text == "}") braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				continue;
+			}
+
+			if (braceDepth != 0) continue;
+			if (t.text == "enum") {
+				// Skip full top-level enum blocks so `enum abstract` isn't treated as a regular abstract.
+				var enumNameTok = scanNextToken(source, i);
+				while (enumNameTok.text.length > 0 && !enumNameTok.isIdent) enumNameTok = scanNextToken(source, enumNameTok.nextPos);
+				if (!enumNameTok.isIdent || enumNameTok.text.length == 0) continue;
+
+				var isEnumAbstract = false;
+				if (enumNameTok.text == "abstract") {
+					isEnumAbstract = true;
+					enumNameTok = scanNextToken(source, enumNameTok.nextPos);
+					while (enumNameTok.text.length > 0 && !enumNameTok.isIdent) enumNameTok = scanNextToken(source, enumNameTok.nextPos);
+					if (!enumNameTok.isIdent || enumNameTok.text.length == 0) continue;
+				}
+				i = enumNameTok.nextPos;
+
+				var enumHeaderTok = scanNextToken(source, i);
+				while (enumHeaderTok.text.length > 0 && enumHeaderTok.text != "{" && enumHeaderTok.text != ";") {
+					enumHeaderTok = scanNextToken(source, enumHeaderTok.nextPos);
+				}
+				if (enumHeaderTok.text == "{") {
+					if (isEnumAbstract) {
+						final scanned = scanEnumAbstractBodyForValues(source, enumHeaderTok.nextPos);
+						i = scanned.nextPos;
+					} else {
+						final scanned = scanEnumBodyForCtors(source, enumHeaderTok.nextPos);
+						i = scanned.nextPos;
+					}
+				} else if (enumHeaderTok.text.length > 0) {
+					i = enumHeaderTok.nextPos;
+				}
+				continue;
+			}
+			if (t.text != "abstract") continue;
+
+			var nameTok = scanNextToken(source, i);
+			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+
+			final abstractName = nameTok.text;
+			i = nameTok.nextPos;
+
+			final isMain = mainTypeName != null && abstractName == mainTypeName;
+			final alreadySeen = seen.exists(abstractName);
+			final shouldRecord = !isMain && !alreadySeen;
+			if (!alreadySeen) seen.set(abstractName, true);
+
+			var fields = new Array<HxFieldDecl>();
+			var functions = new Array<HxFunctionDecl>();
+
+			var headerTok = scanNextToken(source, i);
+			while (headerTok.text.length > 0 && headerTok.text != "{" && headerTok.text != ";") {
+				headerTok = scanNextToken(source, headerTok.nextPos);
+			}
+			if (headerTok.text == "{") {
+				final scanned = scanClassBodyForStatics(source, headerTok.nextPos);
+				i = scanned.nextPos;
+				fields = scanned.fields;
+				functions = scanned.functions;
+			} else if (headerTok.text.length > 0) {
+				i = headerTok.nextPos;
+			}
+
+			if (shouldRecord) out.push(new HxClassDecl(abstractName, false, functions, fields));
 		}
 
 		return out;
