@@ -153,6 +153,16 @@ This repeatedly runs `tests/display/build.hxml` under
 `--hxhx-out` directory to catch warm-output determinism/linking regressions.
 Set `HXHX_DISPLAY_EMIT_STRESS_ITERS=<n>` to tune loop count (default: `10`).
 
+Run the dedicated display full-emit + run smoke rung:
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:display-stage3-emit-run-smoke
+```
+
+This executes the same upstream display build with run enabled and enforces a non-crash contract:
+either `run=ok` or a deterministic, explicit bring-up error. It fails hard on segfault-shaped regressions.
+
 Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:
 - `--wait stdio` framed requests
 - `--wait <host:port>` + `--connect <host:port>` roundtrip request handling

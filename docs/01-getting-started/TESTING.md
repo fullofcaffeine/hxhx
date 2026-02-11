@@ -106,6 +106,20 @@ Notes:
   warm-output determinism/linking regressions.
 - Tune iteration count with `HXHX_DISPLAY_EMIT_STRESS_ITERS=<n>` (default: `10`).
 
+Dedicated display full-emit + run smoke rung:
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+npm run test:upstream:display-stage3-emit-run-smoke
+```
+
+Notes:
+
+- This runs upstream `tests/display/build.hxml` with execution enabled
+  (`hxhx --hxhx-stage3 --hxhx-emit-full-bodies`, no `--hxhx-no-run`).
+- Current bring-up expectation allows a deterministic non-crash failure while macro API parity is incomplete.
+- The runner fails hard on segfault-shaped regressions (`Segmentation fault` / `EXC_BAD_ACCESS` / rc `139`).
+
 ### Stage 2 reproducibility rung (Stage1 builds Stage2)
 
 This is a local bootstrap sanity check:

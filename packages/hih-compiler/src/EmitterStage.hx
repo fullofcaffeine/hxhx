@@ -4033,6 +4033,39 @@ class EmitterStage {
 					} catch (_:Dynamic) {}
 				}
 
+				// Stage 3 safety: avoid segfault-shaped behavior in generated macro context wrappers.
+				//
+				// Why
+				// - Upstream display workloads execute code paths that call `haxe.macro.Context.*` wrappers.
+				// - At this bring-up rung, macro API plumbing is still placeholder-heavy.
+				// - Calling placeholder values as curried OCaml functions can crash with EXC_BAD_ACCESS.
+				//
+				// What
+				// - Rewrite the generated `Haxe_macro_Context.load` binding to return arity-aware
+				//   fail-fast closures that raise a deterministic exception instead of crashing.
+				{
+					final shimName = "Haxe_macro_Context";
+					final shimFile = shimName + ".ml";
+					final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+					if (sys.FileSystem.exists(shimPath)) {
+						final src = sys.io.File.getContent(shimPath);
+						final from = "let load (f : string) (nargs : int) : _ = Eval_vm_Context.callMacroApi (f)";
+						if (src.indexOf(from) != -1) {
+							final to =
+								"exception HxMacroApiUnavailable of string\n"
+								+ "let __hxhx_macro_api_unavailable (f : string) : _ = raise (HxMacroApiUnavailable (\"hxhx(stage3): macro api unavailable: \" ^ f))\n"
+								+ "let load (f : string) (nargs : int) : _ =\n"
+								+ "  match nargs with\n"
+								+ "  | 0 -> Obj.magic (fun () -> __hxhx_macro_api_unavailable f)\n"
+								+ "  | 1 -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
+								+ "  | 2 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
+								+ "  | 3 -> Obj.magic (fun (_ : Obj.t) (_ : Obj.t) (_ : Obj.t) -> __hxhx_macro_api_unavailable f)\n"
+								+ "  | _ -> Obj.magic (fun (_ : Obj.t) -> __hxhx_macro_api_unavailable f)";
+							sys.io.File.saveContent(shimPath, StringTools.replace(src, from, to));
+						}
+					}
+				}
+
 				// Stage 3 bring-up: upstream unit fixtures call `haxe.xml.Parser.parse(...)`, but our Stage3
 				// typing can emit a `Haxe_xml_Parser.ml` unit that only contains placeholder statics
 				// (e.g. `escapes`) and no `parse` binding.
