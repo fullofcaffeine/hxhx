@@ -157,6 +157,9 @@ npm run test:upstream:runci-macro
 Gate 2 requires additional tooling beyond Gate 1 (at least `git`, `haxelib`, `neko`/`nekotools`, `python3`, `javac`, and a C compiler like `cc`/`clang`), and it can download external deps (e.g. `tink_core`) during the run.
 You can override the upstream checkout via `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 For `HXHX_GATE2_MODE=stage3_emit_runner`, the runner now defaults to bootstrap snapshots for speed; set `HXHX_FORCE_STAGE0=1` only when you intentionally want a source-built `hxhx` repro pass.
+For long native bring-up runs, you can tune guardrails:
+- `HXHX_GATE2_RUNCI_TIMEOUT_SEC` (default `600`, set `0` to disable timeout)
+- `HXHX_GATE2_RUNCI_HEARTBEAT_SEC` (default `20`, set `0` to disable progress heartbeats)
 
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 

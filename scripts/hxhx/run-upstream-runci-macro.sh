@@ -47,6 +47,24 @@ export HXHX_GATE2_SKIP_PARTY
 : "${HXHX_GATE2_MODE:=stage0_shim}"
 export HXHX_GATE2_MODE
 
+# Stage3 emit-runner guardrails.
+#
+# These only affect:
+# - HXHX_GATE2_MODE=stage3_emit_runner
+# - HXHX_GATE2_MODE=stage3_emit_runner_minimal
+#
+# Why
+# - Native RunCi bring-up can hang for long periods while waiting on subprocesses.
+# - Explicit timeout + heartbeat makes failures diagnosable in local runs/CI logs.
+#
+# Tuning
+# - Set HXHX_GATE2_RUNCI_TIMEOUT_SEC=0 to disable timeout.
+# - Set HXHX_GATE2_RUNCI_HEARTBEAT_SEC=0 to disable heartbeat messages.
+: "${HXHX_GATE2_RUNCI_TIMEOUT_SEC:=600}"
+: "${HXHX_GATE2_RUNCI_HEARTBEAT_SEC:=20}"
+export HXHX_GATE2_RUNCI_TIMEOUT_SEC
+export HXHX_GATE2_RUNCI_HEARTBEAT_SEC
+
 # Upstream `tests/misc` includes Issue11737, which runs a networked `haxelib install hxjava`
 # in `_setup.hxml`. That makes Gate2 flaky/offline-hostile in CI.
 #
@@ -84,6 +102,104 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+count_gate2_subinvocations() {
+  local wrap_log="${HXHX_GATE2_WRAP_LOG:-}"
+  if [ -n "$wrap_log" ] && [ -f "$wrap_log" ]; then
+    wc -l <"$wrap_log" | tr -d ' '
+  else
+    echo "0"
+  fi
+}
+
+kill_process_tree() {
+  local pid="$1"
+  local children=""
+  local child=""
+  children="$(pgrep -P "$pid" 2>/dev/null || true)"
+  for child in $children; do
+    kill_process_tree "$child"
+  done
+  kill -TERM "$pid" 2>/dev/null || true
+}
+
+kill_process_tree_hard() {
+  local pid="$1"
+  local children=""
+  local child=""
+  children="$(pgrep -P "$pid" 2>/dev/null || true)"
+  for child in $children; do
+    kill_process_tree_hard "$child"
+  done
+  kill -KILL "$pid" 2>/dev/null || true
+}
+
+run_with_gate2_timeout_and_heartbeat() {
+  local timeout_sec="$1"
+  shift
+
+  if [ "${timeout_sec:-0}" -le 0 ]; then
+    "$@"
+    return $?
+  fi
+
+  "$@" &
+  local cmd_pid="$!"
+  local timed_out_file=""
+  local timeout_watcher_pid=""
+  local heartbeat_pid=""
+  timed_out_file="$(mktemp)"
+  rm -f "$timed_out_file"
+
+  if [ "${HXHX_GATE2_RUNCI_HEARTBEAT_SEC:-0}" -gt 0 ]; then
+    (
+      local elapsed=0
+      local heartbeat_sec="${HXHX_GATE2_RUNCI_HEARTBEAT_SEC}"
+      while kill -0 "$cmd_pid" 2>/dev/null; do
+        sleep "$heartbeat_sec"
+        elapsed=$((elapsed + heartbeat_sec))
+        if kill -0 "$cmd_pid" 2>/dev/null; then
+          echo "gate2_stage3_emit_runner_heartbeat elapsed=${elapsed}s subinvocations=$(count_gate2_subinvocations)"
+        fi
+      done
+    ) &
+    heartbeat_pid="$!"
+  fi
+
+  (
+    sleep "$timeout_sec"
+    if kill -0 "$cmd_pid" 2>/dev/null; then
+      echo "1" >"$timed_out_file"
+      echo "Gate2 stage3_emit_runner timeout: ${timeout_sec}s exceeded (subinvocations=$(count_gate2_subinvocations))" >&2
+      kill_process_tree "$cmd_pid"
+      sleep 2
+      if kill -0 "$cmd_pid" 2>/dev/null; then
+        kill_process_tree_hard "$cmd_pid"
+      fi
+    fi
+  ) &
+  timeout_watcher_pid="$!"
+
+  local code=0
+  wait "$cmd_pid" || code="$?"
+
+  if [ -n "$timeout_watcher_pid" ]; then
+    kill "$timeout_watcher_pid" 2>/dev/null || true
+    wait "$timeout_watcher_pid" 2>/dev/null || true
+  fi
+  if [ -n "$heartbeat_pid" ]; then
+    kill "$heartbeat_pid" 2>/dev/null || true
+    wait "$heartbeat_pid" 2>/dev/null || true
+  fi
+
+  if [ -s "$timed_out_file" ]; then
+    rm -f "$timed_out_file"
+    return 124
+  fi
+
+  rm -f "$timed_out_file"
+  return "$code"
+}
 
 if [ ! -d "$UPSTREAM_DIR/tests/runci" ] || [ ! -f "$UPSTREAM_DIR/tests/RunCi.hxml" ]; then
   echo "Skipping upstream Gate 2: missing upstream Haxe repo at '$UPSTREAM_DIR'." >&2
@@ -981,9 +1097,11 @@ case "$HXHX_GATE2_MODE" in
     ;;
   stage3_emit_runner)
     echo "== Gate 2: upstream tests/runci Macro target (native attempt: hxhx --hxhx-stage3 --hxhx-emit-full-bodies for RunCi; stage3_no_emit for sub-invocations)"
+    echo "== Gate 2: stage3_emit_runner timeout=${HXHX_GATE2_RUNCI_TIMEOUT_SEC}s heartbeat=${HXHX_GATE2_RUNCI_HEARTBEAT_SEC}s"
     ;;
   stage3_emit_runner_minimal)
     echo "== Gate 2: upstream tests/runci Macro target (stage3 emit runner minimal harness; patched RunCi; stage3_no_emit for sub-invocations)"
+    echo "== Gate 2: stage3_emit_runner timeout=${HXHX_GATE2_RUNCI_TIMEOUT_SEC}s heartbeat=${HXHX_GATE2_RUNCI_HEARTBEAT_SEC}s"
     ;;
   *)
     echo "== Gate 2: upstream tests/runci Macro target (via hxhx stage0 shim)"
@@ -1023,6 +1141,7 @@ esac
     rm -rf out_hxhx_runci_stage3_emit_runner
     set +e
     PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$HAXELIB_BIN" \
+      run_with_gate2_timeout_and_heartbeat "${HXHX_GATE2_RUNCI_TIMEOUT_SEC}" \
       "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
     code="$?"
     set -e
@@ -1041,6 +1160,9 @@ if [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stag
   if [ -f "$HXHX_GATE2_RUNCI_EXIT_FILE" ]; then
     runci_exit="$(cat "$HXHX_GATE2_RUNCI_EXIT_FILE" | tr -d ' ')"
     if [ -n "$runci_exit" ] && [ "$runci_exit" != "0" ]; then
+      if [ "$runci_exit" = "124" ]; then
+        echo "Gate2 stage3_emit_runner timed out after ${HXHX_GATE2_RUNCI_TIMEOUT_SEC}s." >&2
+      fi
       echo "Gate2 stage3_emit_runner: upstream RunCi exited with code $runci_exit." >&2
       exit "$runci_exit"
     fi
