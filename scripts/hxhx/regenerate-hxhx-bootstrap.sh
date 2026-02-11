@@ -27,7 +27,7 @@ HXHX_STAGE0_PROFILE_CLASS="${HXHX_STAGE0_PROFILE_CLASS:-}"
 HXHX_STAGE0_PROFILE_FIELD="${HXHX_STAGE0_PROFILE_FIELD:-}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
-HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-0}"
+HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
@@ -53,6 +53,16 @@ if [ ! -d "$PKG_DIR" ]; then
 fi
 
 echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
+if [ -z "${HXHX_STAGE0_HEARTBEAT}" ] || [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
+  echo "== Stage0 heartbeat: disabled (set HXHX_STAGE0_HEARTBEAT=<seconds> to enable)"
+else
+  echo "== Stage0 heartbeat: every ${HXHX_STAGE0_HEARTBEAT}s (set HXHX_STAGE0_HEARTBEAT=0 to disable)"
+fi
+if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+  echo "== Stage0 failfast: ${HXHX_STAGE0_FAILFAST_SECS}s"
+else
+  echo "== Stage0 failfast: disabled"
+fi
 start_ts="$(date +%s)"
 (
   # We only need the emitted OCaml sources for the snapshot. Running the full OCaml build step
@@ -191,13 +201,18 @@ if [ ! -d "$OUT_DIR" ]; then
 fi
 
 echo "== Updating bootstrap snapshot: $BOOTSTRAP_DIR"
+copy_start_ts="$(date +%s)"
 rm -rf "$BOOTSTRAP_DIR"
 mkdir -p "$BOOTSTRAP_DIR"
 
 # Copy everything except build artifacts and generator sources.
 (cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+copy_end_ts="$(date +%s)"
+bootstrap_files="$(find "$BOOTSTRAP_DIR" -type f | wc -l | tr -d ' ')"
+echo "== Bootstrap snapshot copy duration: $((copy_end_ts - copy_start_ts))s (files=$bootstrap_files)"
 
 echo "== Verifying bootstrap snapshot builds (dune)"
+verify_start_ts="$(date +%s)"
 (
   cd "$BOOTSTRAP_DIR"
   # NOTE: On some platforms (notably macOS/arm64), extremely large generated compilation units
@@ -207,5 +222,7 @@ echo "== Verifying bootstrap snapshot builds (dune)"
   # is sufficient to ensure the snapshot is structurally sound and runnable everywhere.
   dune build ./out.bc >/dev/null
 )
+verify_end_ts="$(date +%s)"
+echo "== Bootstrap verification duration: $((verify_end_ts - verify_start_ts))s"
 
 echo "OK: regenerated bootstrap snapshot"

@@ -102,6 +102,17 @@ bash scripts/hxhx/build-hxhx.sh
 By default this builds the bootstrap snapshot as **bytecode** (`out.bc`) for portability (some platforms/architectures can fail to native-compile the large generated OCaml units).
 To prefer a native build first, set `HXHX_BOOTSTRAP_PREFER_NATIVE=1` (it will fall back to bytecode if native fails).
 
+Regenerate the committed `hxhx` bootstrap snapshot (maintainer workflow):
+
+```bash
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
+```
+
+This script is now progress-visible by default:
+- emits a Stage0 heartbeat every `20s` (`HXHX_STAGE0_HEARTBEAT`, set `0` to disable)
+- fails fast if Stage0 emit stalls (`HXHX_STAGE0_FAILFAST_SECS`, default `900`)
+- prints per-phase timings (emit/copy/verify) and copied file count
+
 Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s path):
 
 ```bash
