@@ -869,6 +869,34 @@ out="$(HXHX_TYPER_STRICT=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-emit-
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 echo "$out" | grep -q "^unsupported_exprs_total=0$"
 
+echo "== Stage3 regression: instance field roundtrip compiles and runs"
+tmpinstfieldrun="$tmpdir/instance_field_run"
+mkdir -p "$tmpinstfieldrun/src"
+cat >"$tmpinstfieldrun/src/Main.hx" <<'HX'
+class Main {
+  var x:Int;
+
+  public function new() {
+    this.x = 41;
+  }
+
+  function ping():Int {
+    return this.x;
+  }
+
+  static function main() {
+    var m = new Main();
+    Sys.println(Std.string(m.ping()));
+  }
+}
+HX
+out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpinstfieldrun/src" -main Main --hxhx-out "$tmpinstfieldrun/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^41$"
+echo "$out" | grep -q "^run=ok$"
+grep -q "HxAnon.set (Obj.repr __hx_obj)" "$tmpinstfieldrun/out/Main.ml"
+grep -q "HxAnon.get (Obj.repr this_)" "$tmpinstfieldrun/out/Main.ml"
+
 echo "== Stage3 bring-up: imported sys.FileSystem + haxe.io.Path statics lower to runtime"
 tmpfs="$tmpdir/filesystem_path"
 mkdir -p "$tmpfs/src"

@@ -266,6 +266,7 @@ On success it prints `display_utest_suite=ok` (validated from `-lib utest` plus 
 Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:
 - `--wait stdio` framed requests
 - `--wait <host:port>` + `--connect <host:port>` roundtrip request handling
+- instance-field roundtrip in full-body mode (`this.x = ...`, `return this.x`, `new Main().ping()`) with compile+run validation
 
 ## Two surfaces (design)
 

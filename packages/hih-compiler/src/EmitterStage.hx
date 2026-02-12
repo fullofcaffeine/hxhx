@@ -67,6 +67,26 @@ private class _EmitterStageDebug {
 	}
 }
 
+private class _InstanceFieldEntry {
+	public final key:String;
+	public final fields:Array<HxFieldDecl>;
+
+	public function new(key:String, fields:Array<HxFieldDecl>) {
+		this.key = key;
+		this.fields = fields;
+	}
+}
+
+private class _InstanceMethodEntry {
+	public final key:String;
+	public final methodNames:Array<String>;
+
+	public function new(key:String, methodNames:Array<String>) {
+		this.key = key;
+		this.methodNames = methodNames;
+	}
+}
+
 class EmitterStage {
 	/**
 		The OCaml compilation unit we are currently emitting.
@@ -100,6 +120,34 @@ class EmitterStage {
 		- `exprToOcaml` consults it when lowering single-part type paths (`Int64.mul`).
 	**/
 	static var currentImportInt64:Null<String> = null;
+
+	/**
+		Per-module instance-field metadata used by Stage3 full-body emission.
+
+		Why
+		- We emit class methods as top-level OCaml functions.
+		- To make `new C(); this.x = ...; obj.x` runnable before a full object model exists,
+		  we need a small, deterministic map from Haxe type-paths to declared instance fields.
+
+		How
+		- `emitMainClass` seeds this map from parsed class declarations in the current module.
+		- `exprToOcaml` consults it for `new` lowering.
+	**/
+	static var currentInstanceFieldsByTypePath:Null<Array<_InstanceFieldEntry>> = null;
+
+	/**
+		Per-module instance-method metadata for Stage3 method-call rewriting.
+
+		Why
+		- Haxe instance calls (`obj.ping()`) are represented as `ECall(EField(obj,"ping"), ...)`.
+		- Stage3 emits functions, so we rewrite to `ping obj ...` when the member is known to be
+		  an instance method.
+
+		How
+		- `emitMainClass` seeds this map for classes in the current module.
+		- `exprToOcaml` uses it conservatively (never for type-path/static calls).
+	**/
+	static var currentInstanceMethodsByTypePath:Null<Array<_InstanceMethodEntry>> = null;
 
 	public static function emit(_:MacroExpandedModule):Void {
 		// Stub: eventually write output files / bytecode.
@@ -219,6 +267,52 @@ class EmitterStage {
 			case _:
 				null;
 		}
+	}
+
+	static function isTypePathExpr(e:HxExpr):Bool {
+		final parts = tryExtractTypePathPartsFromExpr(e);
+		return parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1]);
+	}
+
+	static function currentInstanceFieldsFor(typePath:String):Null<Array<HxFieldDecl>> {
+		if (currentInstanceFieldsByTypePath == null || typePath == null) return null;
+		final raw = StringTools.trim(typePath);
+		if (raw.length == 0) return null;
+		final fieldEntries:Array<_InstanceFieldEntry> = cast currentInstanceFieldsByTypePath;
+		for (entry in fieldEntries) if (entry.key == raw) return entry.fields;
+		final parts = raw.split(".");
+		if (parts.length == 0) return null;
+		final shortName = parts[parts.length - 1];
+		for (entry in fieldEntries) if (entry.key == shortName) return entry.fields;
+		return null;
+	}
+
+	static function currentInstanceMethodsFor(typePath:String):Null<Array<String>> {
+		if (currentInstanceMethodsByTypePath == null || typePath == null) return null;
+		final raw = StringTools.trim(typePath);
+		if (raw.length == 0) return null;
+		final methodEntries:Array<_InstanceMethodEntry> = cast currentInstanceMethodsByTypePath;
+		for (entry in methodEntries) if (entry.key == raw) return entry.methodNames;
+		final parts = raw.split(".");
+		if (parts.length == 0) return null;
+		final shortName = parts[parts.length - 1];
+		for (entry in methodEntries) if (entry.key == shortName) return entry.methodNames;
+		return null;
+	}
+
+	static function hasMethodName(methodNames:Null<Array<String>>, methodName:String):Bool {
+		if (methodNames == null || methodName == null || methodName.length == 0) return false;
+		for (name in methodNames) if (name == methodName) return true;
+		return false;
+	}
+
+	static function hasCurrentInstanceMethod(field:String):Bool {
+		if (currentInstanceMethodsByTypePath == null || field == null || field.length == 0) return false;
+		final methodEntries:Array<_InstanceMethodEntry> = cast currentInstanceMethodsByTypePath;
+		for (entry in methodEntries) {
+			if (hasMethodName(entry.methodNames, field)) return true;
+		}
+		return false;
 	}
 
 	static function escapeOcamlString(s:String):String {
@@ -822,8 +916,9 @@ class EmitterStage {
 						"(Obj.magic 0)";
 					}
 			case EThis:
-				// Stage 3 bring-up: no object semantics yet.
-				"(Obj.magic 0)";
+				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
+				// If we are outside that context, conservatively collapse to poison.
+					(tyByIdent != null && tyByIdent.get("this") != null) ? "this_" : "(Obj.magic 0)";
 			case ESuper:
 				// Stage 3 bring-up: no class hierarchy semantics yet.
 				"(Obj.magic 0)";
@@ -834,22 +929,40 @@ class EmitterStage {
 					// Bring-up: lower enum-like value tags (e.g. `Macro`) to a stable string.
 					escapeOcamlString(name);
 					case ENew(typePath, args):
-						// Stage 3 bring-up: support a tiny subset of allocations used by orchestration code.
-						//
-						// Today we special-case `sys.io.Process` so RunCi-like workloads can actually spawn
-						// the `haxe` subcommands (routed through the Gate2 wrapper).
-						(typePath == "Array" && args.length == 0)
-							? "HxBootArray.create ()"
-						:
-						(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && (args.length == 2 || args.length == 3)
-							? ("HxBootProcess.spawn ("
-								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-								+ ") ("
-								+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-								+ ")")
-								// Stage 3 bring-up: allocation + constructors are not modeled yet.
-								: "(Obj.magic 0)";
-					case EArrayComprehension(name, iterable, yieldExpr):
+					// Stage 3 bring-up: support a tiny subset of allocations used by orchestration code.
+					//
+					// Today we special-case `sys.io.Process` so RunCi-like workloads can actually spawn
+					// the `haxe` subcommands (routed through the Gate2 wrapper).
+					(typePath == "Array" && args.length == 0)
+						? "HxBootArray.create ()"
+					:
+					(typePath == "sys.io.Process" || typePath == "sys.io.Process.Process") && (args.length == 2 || args.length == 3)
+						? ("HxBootProcess.spawn ("
+							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") ("
+							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")")
+						: (function() {
+							final fields = currentInstanceFieldsFor(typePath);
+							if (fields == null) return "(Obj.magic 0)";
+							final ctorMethods = currentInstanceMethodsFor(typePath);
+							final ctorName = ocamlValueIdent("new");
+							final argCodes = args.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")");
+							final ctorCall = (hasMethodName(ctorMethods, "new"))
+								? ("ignore (" + ctorName + " (__hx_obj)" + (argCodes.length == 0 ? "" : (" " + argCodes.join(" "))) + ")")
+								: "()";
+							final initStmts = new Array<String>();
+							for (f in fields) {
+								final fieldName = HxFieldDecl.getName(f);
+								if (fieldName == null || fieldName.length == 0) continue;
+								initStmts.push("HxAnon.set (Obj.repr __hx_obj) " + escapeOcamlString(fieldName) + " HxRuntime.hx_null");
+							}
+							return "(let __hx_obj = HxAnon.create () in "
+							+ (initStmts.length == 0 ? "" : (initStmts.join("; ") + "; "))
+							+ ctorCall
+							+ "; __hx_obj)";
+						})();
+				case EArrayComprehension(name, iterable, yieldExpr):
 						// Lower `[for (x in it) e]` to a small imperative builder.
 						//
 						// Note: for now we only support array/range iterables (matching bring-up needs).
@@ -964,7 +1077,10 @@ class EmitterStage {
 							? ocamlValueIdent(field)
 							: (modName + "." + ocamlValueIdent(field));
 					} else {
-						"(Obj.magic 0)";
+						// Stage3 object bring-up: represent instance state through HxAnon maps.
+						"(Obj.magic (HxAnon.get (Obj.repr "
+							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+							+ ") " + escapeOcamlString(field) + "))";
 					}
 					case ECall(EIdent("__ocaml__"), [arg]):
 						// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
@@ -1382,6 +1498,24 @@ class EmitterStage {
 						case _:
 					}
 
+					// Stage3 object bring-up: rewrite instance-call syntax to function-call syntax.
+					//
+					// Haxe:  obj.ping(a, b)
+					// OCaml: ping obj a b
+					//
+					// We only do this when:
+					// - the member is known as an instance method in the current module, and
+					// - the receiver is not a type-path/static reference.
+					switch (callee) {
+						case EField(obj, field)
+							if (arityByIdent != null && arityByIdent.exists(field) && hasCurrentInstanceMethod(field) && !isTypePathExpr(obj)):
+							final forwarded = new Array<HxExpr>();
+							forwarded.push(obj);
+							for (a in args) forwarded.push(a);
+							return exprToOcaml(ECall(EIdent(field), forwarded), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						case _:
+					}
+
 					final c = exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
 				//
@@ -1605,6 +1739,15 @@ class EmitterStage {
 							}
 						}
 					switch (op) {
+						case "=":
+							switch (a) {
+								case EField(obj, field):
+									final objCode = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+									final rhsCode = exprToOcaml(b, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+									"(let __hx_obj = (" + objCode + ") in let __hx_v = (" + rhsCode + ") in (HxAnon.set (Obj.repr __hx_obj) " + escapeOcamlString(field) + " (Obj.repr __hx_v); __hx_v))";
+								case _:
+									"(Obj.magic 0)";
+							}
 						case "+" if (isStringExpr(a) || isStringExpr(b)):
 							"((" + exprToOcamlForConcat(a) + ") ^ (" + exprToOcamlForConcat(b) + "))";
 						case "/":
@@ -1832,7 +1975,8 @@ class EmitterStage {
 				case EEnumValue(_):
 					false;
 				case EThis:
-					true;
+					// Instance context only: static functions still collapse `this` to poison.
+					(tyByIdent == null || tyByIdent.get("this") == null);
 				case ESuper:
 					true;
 				case ENew(typePath, args):
@@ -1855,7 +1999,18 @@ class EmitterStage {
 								hasBringupPoison(args[0]) || hasBringupPoison(args[1]);
 							}
 						case _:
-							true;
+							if (currentInstanceFieldsFor(typePath) == null) {
+								true;
+							} else {
+								var poisoned = false;
+								for (a in args) {
+									if (hasBringupPoison(a)) {
+										poisoned = true;
+										break;
+									}
+								}
+								poisoned;
+							}
 					}
 				case EUnop(op, inner):
 					// Stage 3: allow a tiny subset of unary operators in return positions so bring-up
@@ -1868,10 +2023,14 @@ class EmitterStage {
 					}
 				case EBinop(op, a, b):
 					// Stage 3: allow a curated subset of operators in return positions.
-					//
-					// Important: we still collapse assignment to bring-up poison (it frequently depends
-					// on side effects + correct lvalue semantics which we don't model yet).
 					switch (op) {
+						case "=":
+							switch (a) {
+								case EField(obj, _):
+									hasBringupPoison(obj) || hasBringupPoison(b);
+								case _:
+									true;
+							}
 						case "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||" | "+" | "-" | "*" | "/" | "%":
 							hasBringupPoison(a) || hasBringupPoison(b);
 						case _:
@@ -2337,14 +2496,19 @@ class EmitterStage {
 								+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 								+ ")))";
 					case SExpr(expr, _pos):
-						// Avoid emitting invalid OCaml when we parse Haxe assignment as `EBinop("=")`.
+						// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
+						// allowing modeled instance-field assignment side effects.
 						switch (expr) {
+							case EBinop("=", EField(_, _), _):
+								"ignore ("
+								+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+								+ ")";
 							case EBinop("=", _l, _r):
 								"()";
-									case _:
-										"ignore ("
-										+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-										+ ")";
+							case _:
+								"ignore ("
+								+ returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+								+ ")";
 				}
 			}
 			}
@@ -3209,6 +3373,8 @@ class EmitterStage {
 					function emitMainClass():Null<String> {
 						final prevOcamlModule = currentOcamlModuleName;
 						final prevInt64 = currentImportInt64;
+						final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
+						final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
 						currentOcamlModuleName = mainModuleName;
 						currentImportInt64 = importInt64;
 						try {
@@ -3216,9 +3382,39 @@ class EmitterStage {
 						final parsedByName = new Map<String, HxFunctionDecl>();
 						for (fn in parsedFns) parsedByName.set(HxFunctionDecl.getName(fn), fn);
 
+						final instanceFieldsByTypePath = new Array<_InstanceFieldEntry>();
+						final instanceMethodsByTypePath = new Array<_InstanceMethodEntry>();
+						final declPkg = HxModuleDecl.getPackagePath(decl);
+						for (cls in HxModuleDecl.getClasses(decl)) {
+							final clsName = HxClassDecl.getName(cls);
+							if (clsName == null || clsName.length == 0 || clsName == "Unknown") continue;
+							final fields = new Array<HxFieldDecl>();
+							for (f in HxClassDecl.getFields(cls)) if (!HxFieldDecl.getIsStatic(f)) fields.push(f);
+							final methodNames = new Array<String>();
+							for (fn in HxClassDecl.getFunctions(cls)) {
+								if (HxFunctionDecl.getIsStatic(fn)) continue;
+								final fnName = HxFunctionDecl.getName(fn);
+								if (fnName != null && fnName.length > 0) methodNames.push(fnName);
+							}
+							instanceFieldsByTypePath.push(new _InstanceFieldEntry(clsName, fields));
+							instanceMethodsByTypePath.push(new _InstanceMethodEntry(clsName, methodNames));
+							if (declPkg != null && declPkg.length > 0) {
+								final keyPkg = declPkg + "." + clsName;
+								instanceFieldsByTypePath.push(new _InstanceFieldEntry(keyPkg, fields));
+								instanceMethodsByTypePath.push(new _InstanceMethodEntry(keyPkg, methodNames));
+							}
+						}
+						currentInstanceFieldsByTypePath = instanceFieldsByTypePath;
+						currentInstanceMethodsByTypePath = instanceMethodsByTypePath;
+
 						final typedFns = tm.getEnv().getMainClass().getFunctions();
 						final arityByName:Map<String, Int> = new Map();
-					for (tf in typedFns) arityByName.set(tf.getName(), tf.getParams().length);
+					for (tf in typedFns) {
+						final parsedFn = parsedByName.get(tf.getName());
+						final isStaticFn = parsedFn == null ? true : HxFunctionDecl.getIsStatic(parsedFn);
+						final extraThis = isStaticFn ? 0 : 1;
+						arityByName.set(tf.getName(), tf.getParams().length + extraThis);
+					}
 					final fnReturnTypesByName:Map<String, TyType> = new Map();
 					for (tf in typedFns) fnReturnTypesByName.set(tf.getName(), tf.getReturnType());
 
@@ -3230,6 +3426,7 @@ class EmitterStage {
 					for (fn in parsedFns) {
 						final fnNameRaw = HxFunctionDecl.getName(fn);
 						if (fnNameRaw == null || fnNameRaw.length == 0) continue;
+						final isStaticFn = HxFunctionDecl.getIsStatic(fn);
 					final fnArgs = HxFunctionDecl.getArgs(fn);
 					final argCount = fnArgs == null ? 0 : fnArgs.length;
 					var hasRest = false;
@@ -3238,6 +3435,7 @@ class EmitterStage {
 						hasRest = true;
 						fixedCount = argCount - 1;
 					}
+						if (!isStaticFn) fixedCount += 1;
 						final expected = fixedCount + (hasRest ? 1 : 0);
 						_EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
 						callSigByCallee.set(ocamlValueIdent(fnNameRaw), { expected: expected, fixed: fixedCount, hasRest: hasRest });
@@ -3610,16 +3808,22 @@ class EmitterStage {
 						if (name == "main") sawMain = true;
 
 						final args = tf.getParams();
-						final ocamlArgs = args.length == 0
-							? "()"
-							: args.map(a -> "(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")").join(" ");
-
 						final parsedFn = parsedByName.get(nameRaw);
+						final isStaticFn = parsedFn == null ? true : HxFunctionDecl.getIsStatic(parsedFn);
+						final headArgs = new Array<String>();
+						if (!isStaticFn) headArgs.push("(this_ : _)");
+						for (a in args) headArgs.push("(" + ocamlValueIdent(a.getName()) + " : " + ocamlTypeFromTy(a.getType()) + ")");
+						final ocamlArgs = headArgs.length == 0 ? "()" : headArgs.join(" ");
+
 						final retTy = ocamlTypeFromTy(tf.getReturnType());
 						final allowed:Map<String, Bool> = new Map();
 						final tyByIdent:Map<String, TyType> = new Map();
 						for (a in args) allowed.set(a.getName(), true);
 						for (a in args) tyByIdent.set(a.getName(), a.getType());
+						if (!isStaticFn) {
+							allowed.set("this", true);
+							tyByIdent.set("this", TyType.fromHintText("Dynamic"));
+						}
 						for (tf2 in typedFns) allowed.set(tf2.getName(), true);
 						for (f in parsedFields) if (HxFieldDecl.getIsStatic(f)) allowed.set(HxFieldDecl.getName(f), true);
 
@@ -4018,10 +4222,14 @@ class EmitterStage {
 						sys.io.File.saveContent(mlPath, out.join("\n"));
 						currentOcamlModuleName = prevOcamlModule;
 						currentImportInt64 = prevInt64;
+						currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
+						currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
 						return mainModuleName + ".ml";
 						} catch (e:Dynamic) {
 							currentOcamlModuleName = prevOcamlModule;
 							currentImportInt64 = prevInt64;
+							currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
+							currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
 							throw e;
 						}
 				}
