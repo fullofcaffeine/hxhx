@@ -1,0 +1,4 @@
+This marker tells `scripts/test-workloads.sh` that this workload is expensive.
+
+- Included in `WORKLOAD_PROFILE=full`
+- Skipped by default in `WORKLOAD_PROFILE=fast` unless explicitly selected with `WORKLOAD_FILTER`

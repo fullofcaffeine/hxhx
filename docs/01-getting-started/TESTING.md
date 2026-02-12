@@ -21,10 +21,17 @@ If you have `ocamlc` + `dune` installed, this also runs:
 - portable conformance fixtures (`test/portable/**`)
 - example apps (`examples/**`, except acceptance-only examples)
 
-To run heavier acceptance checks (acceptance-only examples + compiler-shaped workloads):
+To run heavier acceptance checks:
 
 ```bash
 npm run test:acceptance
+```
+
+By default this uses `WORKLOAD_PROFILE=fast` (developer-friendly) and skips marked heavy workloads.
+Use the full profile when you need full compiler-shaped coverage:
+
+```bash
+npm run test:acceptance:full
 ```
 
 ## Cleanup after heavy runs
@@ -250,17 +257,38 @@ These catch regressions that pure snapshot tests can’t, like:
 
 Current workload set:
 
-- `workloads/hih-workload` — Stage 1 multi-file “project compiler” workload
-- `workloads/hih-compiler` — Stage 2/3 compiler-skeleton workload
+- `workloads/hih-workload` — Stage 1 multi-file "project compiler" workload
+- `workloads/hih-compiler` — Stage 2/3 compiler-skeleton workload (marked heavy)
 
-Run only the workload layer:
+Profiles:
+
+- `fast` (default): runs non-heavy workloads only
+- `full`: runs all workloads, including heavy compiler-shaped ones
+
+Commands:
 
 ```bash
+# default acceptance path (developer-friendly)
+npm run test:acceptance
+
+# full acceptance path (includes heavy workloads)
+npm run test:acceptance:full
+
+# workload layer only (fast profile by default)
 npm run test:workloads
+
+# run only the heavy compiler workload explicitly
+WORKLOAD_PROFILE=full WORKLOAD_FILTER=hih-compiler npm run test:workloads
 ```
 
-Run a subset by name:
+Runtime controls (`scripts/test-workloads.sh`):
 
-```bash
-WORKLOAD_FILTER=hih-workload npm run test:workloads
-```
+- `WORKLOAD_PROGRESS_INTERVAL_SEC` (default `20`) prints heartbeat lines during long compile steps
+- `WORKLOAD_HEAVY_TIMEOUT_SEC` (default `600`) compile timeout budget for workloads marked with `HEAVY_WORKLOAD`
+- `WORKLOAD_TIMEOUT_SEC` overrides compile timeout budget for all workloads (`0` disables timeout)
+- `WORKLOAD_FILTER=<substring>` runs matching workloads only
+
+Runtime baseline output:
+
+- each workload prints `timing: compile=<sec> run=<sec> total=<sec>`
+- the script ends with a global summary line including profile, run/skipped counts, and total seconds

@@ -143,7 +143,8 @@ Current checklist (human-readable):
 - [x] Display workflows (used by IDE/tooling paths) are reproducible in non-delegating mode (`haxe.ocaml-xgv.10.3`, `haxe.ocaml-xgv.10.8`)
 - [ ] Native `RunCi` flow still needs to move past early bootstrap/harness steps (`haxe.ocaml-xgv.10.11`, in progress)
 - [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
-- [ ] Monorepo layout cleanup is still pending (`haxe.ocaml-xgv.10.6`, open)
+- [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
+- [ ] Heavy workload runtime budget/profile tuning is in progress (`haxe.ocaml-xgv.10.17`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
@@ -151,6 +152,7 @@ Quick status commands:
 ```bash
 bd show haxe.ocaml-xgv.10
 bd show haxe.ocaml-xgv.10.11
+bd show haxe.ocaml-xgv.10.17
 bd ready
 ```
 
@@ -196,6 +198,30 @@ npm run clean:deep
 - `clean:deep`: includes large bootstrap `_build` caches
 
 Policy details: `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
+
+### Acceptance workload profiles
+
+For compiler-shaped acceptance workloads:
+
+```bash
+# developer-friendly default (fast profile)
+npm run test:acceptance
+
+# include heavy workloads as well
+npm run test:acceptance:full
+
+# workload-only full profile with explicit heavy filter
+WORKLOAD_PROFILE=full WORKLOAD_FILTER=hih-compiler npm run test:workloads
+```
+
+Runtime controls for `scripts/test-workloads.sh`:
+
+- `WORKLOAD_PROGRESS_INTERVAL_SEC` (default `20`)
+- `WORKLOAD_HEAVY_TIMEOUT_SEC` (default `600`)
+- `WORKLOAD_TIMEOUT_SEC` (global override; `0` disables timeout)
+- `WORKLOAD_FILTER=<substring>`
+
+Each workload run now prints per-workload timing and a final summary line, which serves as the local baseline when tuning acceptance runtime.
 
 Run upstream Gate 1 (requires a local Haxe checkout; defaults to the author’s path):
 
