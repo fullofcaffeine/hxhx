@@ -236,6 +236,59 @@ HX
     exit 1
   fi
 
+  echo "== Stage3 regression: native frontend handles regex literals with quote chars"
+  cat >"$tmpdir/src/RegexLiteralStage3.hx" <<'HX'
+package;
+
+class RegexLiteralStage3 {
+  static var rx = ~/[A-Za-z0-9_."-]+/;
+
+  static function main() {
+    Sys.println(Std.string(rx.match("abc")));
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_regex_literal" -cp "$tmpdir/src" -main RegexLiteralStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+
+  echo "== Stage3 regression: native frontend accepts keyword-named function declarations"
+  cat >"$tmpdir/src/KeywordAsStage3.hx" <<'HX'
+package;
+
+class KeywordAsProvider {
+  public static inline function as<T>(obj:T, cl:Class<T>):T {
+    return obj;
+  }
+}
+
+class KeywordAsStage3 {
+  static function main() {
+    Sys.println("ok");
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_keyword_as" -cp "$tmpdir/src" -main KeywordAsStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+
+  echo "== Stage3 regression: #if lines with comment '#' still drive conditional stack"
+  cat >"$tmpdir/src/ConditionalHashCommentStage3.hx" <<'HX'
+package;
+
+class ConditionalHashCommentStage3 {
+  static function main() {
+    #if cs // issue #996 style marker should not disable #if parsing
+    cs.system.Console.WriteLine("turkey");
+    #end
+    Sys.println("ok");
+  }
+}
+HX
+
+  out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_conditional_hash_comment" -cp "$tmpdir/src" -main ConditionalHashCommentStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+
   echo "== Stage3 regression: sys.io.Process constructor is async spawn"
   cat >"$tmpdir/src/ProcessSpawnStage3.hx" <<'HX'
 package;
@@ -1124,6 +1177,50 @@ HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpxml/src" -main Main --hxhx-out "$tmpxml/out")"
 echo "$out" | grep -q "^ok$"
 echo "$out" | grep -q "^run=ok$"
+
+echo "== Stage3 regression: Xml.createElement camelCase constructor mapping links"
+tmpxmlctor="$tmpdir/xml_create_element"
+mkdir -p "$tmpxmlctor/src"
+cat >"$tmpxmlctor/src/Main.hx" <<'HX'
+class Main {
+  static function main() {
+    var xml = Xml.createElement("node");
+    Sys.println(xml.nodeName);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpxmlctor/src" -main Main --hxhx-out "$tmpxmlctor/out")"
+echo "$out" | grep -q "^stage3=ok$"
+
+echo "== Stage3 regression: unary minus on php.Const.INF lowers to a float-safe form"
+tmpphpinf="$tmpdir/php_const_inf_unary"
+mkdir -p "$tmpphpinf/src/php"
+cat >"$tmpphpinf/src/php/Const.hx" <<'HX'
+package php;
+
+class Const {
+  public static var INF:Float = 0.;
+  public static var NAN:Float = 0.;
+}
+HX
+cat >"$tmpphpinf/src/Main.hx" <<'HX'
+import php.Const;
+
+class Main {
+  static function main() {
+    var x = -Const.INF;
+    if (Math.isNaN(x)) {
+      Sys.println("nan");
+    } else {
+      Sys.println(Std.string(x));
+    }
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpphpinf/src" -main Main --hxhx-out "$tmpphpinf/out")"
+echo "$out" | grep -q "^stage3=ok$"
+test -f "$tmpphpinf/out/Main.ml"
+grep -Eq "neg_infinity|\\(-\\.(Php_Const.iNF)\\)" "$tmpphpinf/out/Main.ml"
 
 echo "== Stage3 bring-up: multi-unit .hxml via --next"
 tmpmulti="$tmpdir/multi_unit_hxml"

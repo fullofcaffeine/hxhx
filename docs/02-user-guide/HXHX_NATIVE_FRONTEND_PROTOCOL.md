@@ -86,10 +86,15 @@ tok <kind> <index> <line> <col> <len>:<payload>
 
 Where:
 
-- `<kind>` is one of: `kw`, `ident`, `string`, `sym`, `eof`
+- `<kind>` is one of: `kw`, `ident`, `string`, `regex`, `sym`, `eof`
 - `<index>` is a 0-based character index into the original source string
 - `<line>` / `<col>` are 1-based for human-friendly diagnostics
 - `<payload>` is the token text (escaped; see below)
+
+`regex` notes:
+
+- `regex` is the full Haxe regex literal text (for example `~/[A-Z."-]+/i`).
+- This avoids lexer drift on regex bodies that contain quote characters.
 
 ### AST summary records
 

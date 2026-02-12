@@ -329,6 +329,42 @@ class HxConditionalCompilation {
 		return out;
 	}
 
+	private static function stripLineCommentOutsideStrings(s:String):String {
+		if (s == null || s.length == 0) return s;
+		var i = 0;
+		var inSingle = false;
+		var inDouble = false;
+		var escaped = false;
+		while (i < s.length) {
+			final c = s.charCodeAt(i);
+			if (escaped) {
+				escaped = false;
+				i += 1;
+				continue;
+			}
+			if (c == "\\".code && (inSingle || inDouble)) {
+				escaped = true;
+				i += 1;
+				continue;
+			}
+			if (!inSingle && c == "\"".code) {
+				inDouble = !inDouble;
+				i += 1;
+				continue;
+			}
+			if (!inDouble && c == "'".code) {
+				inSingle = !inSingle;
+				i += 1;
+				continue;
+			}
+			if (!inSingle && !inDouble && c == "/".code && i + 1 < s.length && s.charCodeAt(i + 1) == "/".code) {
+				return s.substr(0, i);
+			}
+			i += 1;
+		}
+		return s;
+	}
+
 	private static function parseDirectiveLine(line:String):Null<{kind:String, expr:String}> {
 		if (line == null) return null;
 		var i = 0;
@@ -339,6 +375,7 @@ class HxConditionalCompilation {
 		while (i < line.length && isSpace(line.charCodeAt(i))) i++;
 
 		final rest = line.substr(i);
+		final restNoComment = stripLineCommentOutsideStrings(rest);
 		// This bootstrap preprocessor only supports directives that occupy the whole
 		// physical line. Haxe also allows “inline” conditional compilation like:
 		//   #if (cond) expr #else other #end(...)
@@ -349,8 +386,12 @@ class HxConditionalCompilation {
 		// Heuristic: if there's any additional `#` after the initial one, treat the
 		// line as an opaque preprocessor construct. We still blank it (so parsers
 		// never see `#` tokens), but we do not mutate the conditional stack.
-		if (rest.indexOf("#") != -1) return {kind: "opaque", expr: ""};
-		final trimmed = StringTools.trim(rest);
+		//
+		// Strip trailing `//` comment text first so cases like:
+		//   #if cs // issue #996
+		// do not get misclassified as opaque.
+		if (restNoComment.indexOf("#") != -1) return {kind: "opaque", expr: ""};
+		final trimmed = StringTools.trim(restNoComment);
 		if (StringTools.startsWith(trimmed, "if ")) return {kind: "if", expr: StringTools.trim(trimmed.substr(3))};
 		if (StringTools.startsWith(trimmed, "elseif ")) return {kind: "elseif", expr: StringTools.trim(trimmed.substr(7))};
 		if (trimmed == "else") return {kind: "else", expr: ""};

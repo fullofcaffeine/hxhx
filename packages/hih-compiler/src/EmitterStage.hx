@@ -431,9 +431,38 @@ class EmitterStage {
 				}
 			}
 
+			function isInfNanFieldExpr(expr:HxExpr):Bool {
+				return switch (expr) {
+					case EField(_, field):
+						field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
+					case ECast(inner, _):
+						isInfNanFieldExpr(inner);
+					case EUntyped(inner):
+						isInfNanFieldExpr(inner);
+					case _:
+						false;
+				}
+			}
+
+			function isPositiveInfinityFieldExpr(expr:HxExpr):Bool {
+				return switch (expr) {
+					case EField(_, field):
+						field == "iNF" || field == "INF" || field == "inf";
+					case ECast(inner, _):
+						isPositiveInfinityFieldExpr(inner);
+					case EUntyped(inner):
+						isPositiveInfinityFieldExpr(inner);
+					case _:
+						false;
+				}
+			}
+
 			function isFloatExpr(expr:HxExpr):Bool {
 				return switch (expr) {
 					case EFloat(_):
+						true;
+					case _ if (isInfNanFieldExpr(expr)):
+						// Stage 3 bring-up: INF/NAN-style constants (e.g. `php.Const.INF`) are float-typed.
 						true;
 					case EIdent(name):
 						tyForIdent(name) == "Float";
@@ -531,6 +560,8 @@ class EmitterStage {
 						"(-.(" + exprToOcamlAsFloatValue(inner) + "))";
 					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlValueIdent(name);
+					case _ if (isInfNanFieldExpr(expr)):
+						"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ") : float)";
 					case _:
 						exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				}
@@ -548,18 +579,32 @@ class EmitterStage {
 			// - This is intentionally narrow and **not** a full stdlib mapping layer.
 			// - These rewrites exist only to keep bring-up moving; Stage1/Stage4 must
 			//   eventually implement real semantics in the proper backend/runtime.
-			case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
-				"(classify_float ("
-				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") = FP_nan)";
-				case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
+				case ECall(EField(EIdent("Math"), "isNaN"), [arg]):
+					"(classify_float ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") = FP_nan)";
+					case ECall(EField(EIdent("Math"), "isFinite"), [arg]):
 				"(match classify_float ("
 				+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 				+ ") with | FP_nan | FP_infinite -> false | _ -> true)";
 				case ECall(EField(EIdent("Math"), "isInfinite"), [arg]):
-					"(classify_float ("
-					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") = FP_infinite)";
+						"(classify_float ("
+						+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+						+ ") = FP_infinite)";
+				case ECall(EField(EIdent("Std"), "isOfType"), [valueExpr, typeExpr]):
+					// Stage 3 bring-up: runtime `Std.isOfType` expects the second operand as a dynamic
+					// descriptor (`Obj.t`), so wrap whichever surface form we currently emit.
+					"Std.isOfType ("
+					+ exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") (Obj.repr ("
+					+ exprToOcaml(typeExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ "))";
+				case ECall(EField(EIdent("Array"), "wrap"), [arg]):
+					// Stage 3 bring-up: `Array.wrap(...)` appears in upstream php helpers.
+					//
+					// The bootstrap Array module does not provide this static helper yet; preserve
+					// compileability by treating it as an identity cast to the target array shape.
+					"(Obj.magic (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + "))";
 					case ECall(EField(EIdent("Math"), "abs"), [arg]):
 						// Best-effort numeric abs. Prefer float when the expression looks float-typed.
 						(isFloatExpr(arg) ? "abs_float " : (isIntExpr(arg) ? "abs " : "abs_float "))
@@ -709,6 +754,14 @@ class EmitterStage {
 				case ECall(EField(EIdent("Std"), "is"), [_v, _t]):
 					// Bring-up: type tests require RTTI/runtime; keep compilation moving.
 					"true";
+				case ECall(EField(EIdent("Std"), "string"), [arg]):
+					// Stage 3 bring-up: generated `Std.string` expects an `Obj.t`.
+					//
+					// Without this explicit `Obj.repr`, primitive-typed placeholder shims (e.g. Int64)
+					// can trigger type mismatches in upstream-shaped tests that call `Std.string(...)`.
+					"Std.string (Obj.repr ("
+					+ exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+					+ "))";
 				case ECall(EField(EIdent("Std"), "downcast"), [_value, _cls]):
 					// Bring-up: `Std.downcast` requires RTTI/class objects. We don't model those in the
 					// Stage3 emitter output yet, so collapse to `null`.
@@ -1447,27 +1500,45 @@ class EmitterStage {
 							//
 							// Our bootstrap emitter doesn't model full optional-arg unification, so we special-case
 							// this shape to keep Stage3 emit-runner compiling.
-							if (sig != null && c == "Runci_System.haxelibInstallGit" && args.length == 3) {
-								switch (args[2]) {
-									case EBool(_):
-										fullArgs = [args[0], args[1], ENull, ENull, args[2], ENull];
-										missingCount = 0;
-									case _:
+								if (sig != null && c == "Runci_System.haxelibInstallGit" && args.length == 3) {
+									switch (args[2]) {
+										case EBool(_):
+											fullArgs = [args[0], args[1], ENull, ENull, args[2], ENull];
+											missingCount = 0;
+										case _:
+									}
+								}
+								// Stage 3 bring-up: php boot checks `class_exists(name)` / `interface_exists(name)`
+								// where the second optional `autoload` arg is omitted.
+								//
+								// Some upstream extern surfaces are currently recovered without enough
+								// signature metadata in `callSigByCallee`, so we patch this known shape to avoid
+								// OCaml partial application errors during Gate1 emit runs.
+								if (sig == null
+									&& args.length == 1
+									&& (c == "Php_Global.class_exists" || c == "Php_Global.interface_exists")) {
+									fullArgs = [args[0], ENull];
+									missingCount = 0;
+								}
+								for (_ in 0...missingCount) fullArgs.push(ENull);
+
+								if (fullArgs.length == 0) {
+									final renderedCall = c + " ()";
+									(sig == null && StringTools.startsWith(c, "Php_Global."))
+										? "(Obj.magic (" + renderedCall + "))"
+										: renderedCall;
+								} else {
+									final renderedCall = c
+										+ " "
+										+ fullArgs
+											.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")")
+											.join(" ");
+									(sig == null && StringTools.startsWith(c, "Php_Global."))
+										? "(Obj.magic (" + renderedCall + "))"
+										: renderedCall;
 								}
 							}
-							for (_ in 0...missingCount) fullArgs.push(ENull);
-
-							if (fullArgs.length == 0) {
-								c + " ()";
-							} else {
-								c
-								+ " "
-								+ fullArgs
-									.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")")
-									.join(" ");
-							}
 						}
-					}
 				case EUnop(op, expr):
 				// Stage 3 expansion: support a tiny subset of unary ops so simple control-flow
 				// fixtures can become non-trivial.
@@ -1479,10 +1550,31 @@ class EmitterStage {
 						"(not ("
 						+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 						+ "))";
-					case "-":
-						(isFloatExpr(expr) ? "(-.(" : "(-(")
-						+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-						+ "))";
+						case "-":
+							switch (expr) {
+								case _ if (isPositiveInfinityFieldExpr(expr)):
+									"neg_infinity";
+								case EField(EIdent("Math"), "POSITIVE_INFINITY"):
+									"neg_infinity";
+							case _:
+								// Stage 3 bring-up: some upstream std constants are float-typed even when their
+								// parsed shape isn't reliably inferred as `Float` yet.
+								//
+									// Keep unary minus type-correct for INF/NAN-style constants used in php boot code.
+									final forceFloatUnop = isInfNanFieldExpr(expr) || switch (expr) {
+										case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY"):
+											true;
+										case _:
+											false;
+									};
+									// Prefer float unary minus only when the operand is explicitly float-ish.
+									//
+									// Defaulting unknown expressions to float (`-.`) can break integer call sites
+									// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
+									((forceFloatUnop || isFloatExpr(expr)) ? "(-.(" : "(-(")
+									+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+									+ "))";
+							}
 					case _:
 						"(Obj.magic 0)";
 				}
@@ -1684,11 +1776,22 @@ class EmitterStage {
 							.join("; ");
 					"HxBootArray.of_list [" + elems + "]";
 				case EArrayAccess(arr, idx):
-					"HxBootArray.get ("
-					+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ") ("
-					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-					+ ")";
+					// Stage 3 bring-up: Haxe `obj[key]` is used both for array indexing and dynamic
+					// string-key lookups (notably in upstream php boot helpers).
+					//
+					// Route obvious string-key access through `HxAnon.get`; keep numeric/other
+					// indexing on the array shim.
+					isStringExpr(idx)
+						? "(Obj.magic (HxAnon.get ("
+							+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") ("
+							+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")))"
+						: "HxBootArray.get ("
+							+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ") ("
+							+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+							+ ")";
 				case ERange(_start, _end):
 					// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see
 					// a range in expression position, collapse to poison.
@@ -1882,15 +1985,17 @@ class EmitterStage {
 				// - Our bootstrap emitter doesn't do full expression typing, so we add a small,
 				//   explicit coercion rule to keep OCaml typechecking.
 				if (expectedReturnType != null && expectedReturnType.toString() == "Float") {
-					function asFloatValue(e:HxExpr):String {
-						return switch (e) {
-							case EInt(v):
-								"float_of_int " + Std.string(v);
-							case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
-								"float_of_int " + ocamlValueIdent(name);
-							case _:
-								exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-						}
+						function asFloatValue(e:HxExpr):String {
+							return switch (e) {
+								case EInt(v):
+									"float_of_int " + Std.string(v);
+								case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
+									"float_of_int " + ocamlValueIdent(name);
+								case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
+									"(Obj.magic (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ") : float)";
+								case _:
+									exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+							}
 					}
 					return switch (expr) {
 						case EInt(_):
@@ -2655,6 +2760,7 @@ class EmitterStage {
 					+ "\n"
 					+ "let make (_high : int) (low : int) : t = low\n"
 					+ "let ofInt (i : int) : t = i\n"
+					+ "let fromFloat (_f : _) : _ = Obj.repr 0\n"
 					+ "let parseString (_s : string) : t = 0\n"
 					+ "let toInt (v : t) : int = v\n"
 					+ "let toStr (v : t) : string = string_of_int v\n"
@@ -2662,6 +2768,7 @@ class EmitterStage {
 					+ "let sub (a : t) (b : t) : t = a - b\n"
 					+ "let mul (a : t) (b : t) : t = a * b\n"
 					+ "let neg (a : t) : t = (-a)\n"
+					+ "let eq (_a : _) (_b : _) : bool = true\n"
 					+ "let compare (a : t) (b : t) : int = Stdlib.compare a b\n"
 					+ "let divMod (a : t) (b : t) : divmod =\n"
 					+ "  if b = 0 then { quotient = 0; modulus = 0 } else { quotient = a / b; modulus = a mod b }\n"
@@ -4055,7 +4162,8 @@ class EmitterStage {
 						final from = "let load (f : string) (nargs : int) : _ = Eval_vm_Context.callMacroApi (f)";
 						if (src.indexOf(from) != -1) {
 							final to =
-								"exception HxMacroApiUnavailable of string\n"
+								"[@@@warning \"-20\"]\n"
+								+ "exception HxMacroApiUnavailable of string\n"
 								+ "let __hxhx_macro_api_unavailable (f : string) : _ = raise (HxMacroApiUnavailable (\"hxhx(stage3): macro api unavailable: \" ^ f))\n"
 								+ "let __hxhx_macro_defined_value (_key : Obj.t) : Obj.t = HxRuntime.hx_null\n"
 								+ "let __hxhx_macro_defined (_key : Obj.t) : Obj.t = Obj.repr false\n"
@@ -4084,6 +4192,26 @@ class EmitterStage {
 						}
 					}
 				}
+				// Stage 3 macro bridge noise control:
+				// add warning-20 suppression to generated macro bridge modules where
+				// callMacroApi placeholder arity intentionally diverges during bring-up.
+				{
+					final macroShimNames = ["Haxe_macro_Compiler", "Haxe_macro_TypeTools"];
+					for (shimName in macroShimNames) {
+						final shimFile = shimName + ".ml";
+						final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+						try {
+								if (!sys.FileSystem.exists(shimPath)) continue;
+								final src = sys.io.File.getContent(shimPath);
+								if (src.indexOf("[@@@warning \"-20\"]") != -1) continue;
+								final marker = "(* Generated by hxhx(stage3) bootstrap emitter *)";
+								final patched = src.indexOf(marker) != -1
+									? StringTools.replace(src, marker, marker + "\n[@@@warning \"-20\"]")
+									: ("[@@@warning \"-20\"]\n" + src);
+								sys.io.File.saveContent(shimPath, patched);
+							} catch (_:Dynamic) {}
+						}
+					}
 
 				// Stage 3 bring-up: upstream unit fixtures call `haxe.xml.Parser.parse(...)`, but our Stage3
 				// typing can emit a `Haxe_xml_Parser.ml` unit that only contains placeholder statics
@@ -4103,16 +4231,16 @@ class EmitterStage {
 								|| StringTools.startsWith(trimmed, "let rec parse")
 								|| contents.indexOf("\nlet parse") != -1
 								|| contents.indexOf("\nlet rec parse") != -1;
-							if (!hasParse) {
-								sys.io.File.saveContent(shimPath, contents + "\n\nlet parse = (Obj.magic 0)\n");
-							}
-						} else {
-							sys.io.File.saveContent(
-								shimPath,
-								"(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n"
-								+ "[@@@warning \"-21-26\"]\n"
-								+ "let parse = (Obj.magic 0)\n"
-							);
+								if (!hasParse) {
+									sys.io.File.saveContent(shimPath, contents + "\n\nlet parse (_s : string) : _ = (Obj.magic 0)\n");
+								}
+							} else {
+								sys.io.File.saveContent(
+									shimPath,
+									"(* hxhx(stage3) bootstrap shim: haxe.xml.Parser.parse *)\n"
+									+ "[@@@warning \"-21-26\"]\n"
+									+ "let parse (_s : string) : _ = (Obj.magic 0)\n"
+								);
 							generatedPaths.push(shimFile);
 						}
 					} catch (_:Dynamic) {}
@@ -4126,19 +4254,58 @@ class EmitterStage {
 					final shimName = "Xml";
 					final shimFile = shimName + ".ml";
 					final shimPath = haxe.io.Path.join([outAbs, shimFile]);
-					if (!sys.FileSystem.exists(shimPath)) {
+					if (sys.FileSystem.exists(shimPath)) {
+						final contents = sys.io.File.getContent(shimPath);
+						final trimmed = StringTools.trim(contents);
+						final hasCreateElement =
+							StringTools.startsWith(trimmed, "let createElement")
+							|| StringTools.startsWith(trimmed, "let rec createElement")
+							|| contents.indexOf("\nlet createElement") != -1
+							|| contents.indexOf("\nlet rec createElement") != -1;
+						if (!hasCreateElement) {
+							sys.io.File.saveContent(
+								shimPath,
+								contents
+								+ "\n\n(* hxhx(stage3) bootstrap shim: Xml camelCase constructors *)\n"
+								+ "let createElement (_name : string) : _ = (Obj.magic 0)\n"
+								+ "let createPCData (_data : string) : _ = (Obj.magic 0)\n"
+								+ "let createCData (_data : string) : _ = (Obj.magic 0)\n"
+								+ "let createDocType (_data : string) : _ = (Obj.magic 0)\n"
+								+ "let createProcessingInstruction (_data : string) : _ = (Obj.magic 0)\n"
+								+ "let createComment (_data : string) : _ = (Obj.magic 0)\n"
+								+ "let createDocument () : _ = (Obj.magic 0)\n"
+							);
+						}
+					} else {
 						sys.io.File.saveContent(
 							shimPath,
 							"(* hxhx(stage3) bootstrap shim: Xml helpers *)\n"
 							+ "[@@@warning \"-21-26\"]\n"
-							+ "let createElement = (Obj.magic 0)\n"
-							+ "let createPCData = (Obj.magic 0)\n"
-							+ "let createCData = (Obj.magic 0)\n"
-							+ "let createDocType = (Obj.magic 0)\n"
-							+ "let createProcessingInstruction = (Obj.magic 0)\n"
-							+ "let createComment = (Obj.magic 0)\n"
+							+ "let createElement (_name : string) : _ = (Obj.magic 0)\n"
+							+ "let createPCData (_data : string) : _ = (Obj.magic 0)\n"
+							+ "let createCData (_data : string) : _ = (Obj.magic 0)\n"
+							+ "let createDocType (_data : string) : _ = (Obj.magic 0)\n"
+							+ "let createProcessingInstruction (_data : string) : _ = (Obj.magic 0)\n"
+							+ "let createComment (_data : string) : _ = (Obj.magic 0)\n"
+							+ "let createDocument () : _ = (Obj.magic 0)\n"
 						);
 						generatedPaths.push(shimFile);
+					}
+				}
+
+				// Stage 3 bring-up: upstream `php/Boot.hx` can emit unary minus over `php.Const.INF`
+				// through expression paths that still infer an int operator, yielding:
+				//   `(-(Php_Const.iNF))`
+				// which OCaml rejects in float contexts.
+				//
+				// Normalize this known shape to a float-safe form in the generated unit so Gate1 can
+				// keep progressing while emitter-side float inference is tightened.
+				{
+					final shimPath = haxe.io.Path.join([outAbs, "Php_Boot.ml"]);
+					if (sys.FileSystem.exists(shimPath)) {
+						final src = sys.io.File.getContent(shimPath);
+						final patched = StringTools.replace(src, "(-(Php_Const.iNF))", "(-.(Obj.magic Php_Const.iNF : float))");
+						if (patched != src) sys.io.File.saveContent(shimPath, patched);
 					}
 				}
 

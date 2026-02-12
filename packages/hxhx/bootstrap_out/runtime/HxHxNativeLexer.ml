@@ -166,6 +166,41 @@ let tokenize (src : string) : string =
     loop ()
   in
 
+  let read_regex_literal () : string =
+    (* Read Haxe regex literals in one pass so quote characters inside the regex body
+       do not get interpreted as standalone string starts by the bootstrap lexer. *)
+    let start = !idx in
+    ignore (bump ());
+    if peek 0 <> Some '/' then failwith "HxHxNativeLexer: expected '/' after '~' in regex literal";
+    ignore (bump ());
+    let in_class = ref false in
+    let escaped = ref false in
+    let closed = ref false in
+    while not !closed do
+      if eof () then failwith "HxHxNativeLexer: unterminated regex literal";
+      let c = bump () in
+      if !escaped then
+        escaped := false
+      else
+        match c with
+        | '\\' -> escaped := true
+        | '[' -> in_class := true
+        | ']' -> in_class := false
+        | '/' when not !in_class -> closed := true
+        | _ -> ()
+    done;
+    while
+      (not (eof ()))
+      &&
+      match peek 0 with
+      | Some c when is_ident_cont c -> true
+      | _ -> false
+    do
+      ignore (bump ())
+    done;
+    String.sub src start (!idx - start)
+  in
+
   let rec loop () =
     skip_ws_and_comments ();
     if eof () then (
@@ -176,6 +211,14 @@ let tokenize (src : string) : string =
       let at_line = !line in
       let at_col = !col in
       match peek 0 with
+      | Some '~' when peek 1 = Some '/' -> (
+          try
+            let s = read_regex_literal () in
+            add_tok "regex" at_idx at_line at_col s;
+            loop ()
+          with Failure msg ->
+            add_err at_idx at_line at_col msg;
+            Buffer.contents buf)
       | Some '"' -> (
           try
             let s = read_quoted_string '"' in

@@ -39,6 +39,7 @@ type token =
   | Kw of string * pos
   | Ident of string * pos
   | String of string * pos
+  | Regex of string * pos
   | Sym of char * pos
   | Eof of pos
 
@@ -150,6 +151,7 @@ let parse_tok_line (l : string) : token =
       | "kw" -> Kw (value, at)
       | "ident" -> Ident (value, at)
       | "string" -> String (value, at)
+      | "regex" -> Regex (value, at)
       | "sym" ->
           if String.length value = 0 then failwith "HxHxNativeParser: empty sym";
           Sym (value.[0], at)
@@ -180,6 +182,7 @@ let pos_of (t : token) : pos =
   | Kw (_, p) -> p
   | Ident (_, p) -> p
   | String (_, p) -> p
+  | Regex (_, p) -> p
   | Sym (_, p) -> p
   | Eof p -> p
 
@@ -221,6 +224,11 @@ let parse_module_from_tokens (src : string) (toks : token array)
     | Ident (s, _) ->
         bump ();
         s
+    | Kw ("as", _) ->
+        (* C# stdlib shim: `cs.Lib` defines `function as<T>(...)`.
+           Treat this keyword token as an identifier in declaration position. *)
+        bump ();
+        "as"
     | Kw ("new", _) ->
         (* Constructor name: `function new(...)` is tokenized as a keyword by the bootstrap lexer. *)
         bump ();
@@ -301,6 +309,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
     | Kw (s, _) -> s
     | Ident (s, _) -> s
     | String (s, _) -> "\"" ^ s ^ "\""
+    | Regex (s, _) -> s
     | Sym (c, _) -> String.make 1 c
     | Eof _ -> ""
   in
