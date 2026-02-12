@@ -142,7 +142,7 @@ Current checklist (human-readable):
 - [x] Core upstream macro unit workload can run in non-delegating mode (`haxe.ocaml-xgv.10.1`)
 - [x] Display workflows (used by IDE/tooling paths) are reproducible in non-delegating mode (`haxe.ocaml-xgv.10.3`, `haxe.ocaml-xgv.10.8`)
 - [ ] Native `RunCi` flow still needs to move past early bootstrap/harness steps (`haxe.ocaml-xgv.10.11`, in progress)
-- [ ] Target-agnostic core design notes still need to be published (`haxe.ocaml-xgv.10.5`, open)
+- [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - [ ] Monorepo layout cleanup is still pending (`haxe.ocaml-xgv.10.6`, open)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 

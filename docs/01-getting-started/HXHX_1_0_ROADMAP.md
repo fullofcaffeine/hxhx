@@ -78,13 +78,13 @@ This is the current highest-priority technical blocker for â€œreplacement-readyâ
 
 ### M4. Architecture hardening (target-agnostic core direction)
 
-Status: Open  
+Status: Done  
 Bead: `haxe.ocaml-xgv.10.5`
 
 Meaning in plain terms:
 
-- Document how to reduce OCaml-specific coupling in the HIH core over time.
-- Important for long-term portability and cleaner architecture, but not the immediate blocker for current Gate2 bring-up.
+- We published the first backend-layering design note and seam inventory: `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`.
+- This is foundational portability work for long-term architecture quality, while Gate2 RunCi remains the immediate blocker for replacement readiness.
 
 ### M5. Product boundary cleanup in monorepo
 

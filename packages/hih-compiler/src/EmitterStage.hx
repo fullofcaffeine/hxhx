@@ -149,6 +149,19 @@ class EmitterStage {
 	**/
 	static var currentInstanceMethodsByTypePath:Null<Array<_InstanceMethodEntry>> = null;
 
+	/**
+		Backend dialect seam for OCaml-coupled runtime expression snippets.
+
+		Why
+		- Stage3 currently emits OCaml text directly, but we want a clear extraction
+		  point for future non-OCaml backends.
+
+		How
+		- Keep a tiny interface here first (null checks/dynamic equality/null sentinel).
+		- Expand incrementally as additional seams are extracted.
+	*/
+	static final backendDialect:HihBackendDialect = new HihOcamlBackendDialect();
+
 	public static function emit(_:MacroExpandedModule):Void {
 		// Stub: eventually write output files / bytecode.
 	}
@@ -1851,18 +1864,18 @@ class EmitterStage {
 								"(" + parts.join(" || ") + ")";
 							}
 						case PNull:
-							"(HxRuntime.is_null (Obj.repr __sw))";
+							backendDialect.runtimeIsNull("__sw");
 						case PWildcard, PBind(_):
 							"true";
 						case PString(v):
-							"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
+							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(v));
 						case PInt(v):
-							"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
+							backendDialect.runtimeDynamicEquals("__sw", Std.string(v));
 						case PEnumValue(name):
-							"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
+							backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
 					};
 				}
-				var chain = "(Obj.magic HxRuntime.hx_null)";
+				var chain = backendDialect.dynamicNullValue();
 					if (cases != null) {
 						for (i in 0...cases.length) {
 							final c = cases[cases.length - 1 - i];
@@ -2400,15 +2413,15 @@ class EmitterStage {
 									"(" + parts.join(" || ") + ")";
 								}
 							case PNull:
-								"(HxRuntime.is_null (Obj.repr __sw))";
+								backendDialect.runtimeIsNull("__sw");
 							case PWildcard, PBind(_):
 								"true";
 							case PString(v):
-								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(v) + "))";
+								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(v));
 							case PInt(v):
-								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + Std.string(v) + "))";
+								backendDialect.runtimeDynamicEquals("__sw", Std.string(v));
 							case PEnumValue(name):
-								"(HxRuntime.dynamic_equals (Obj.repr __sw) (Obj.repr " + escapeOcamlString(name) + "))";
+								backendDialect.runtimeDynamicEquals("__sw", escapeOcamlString(name));
 						};
 					}
 						var chain = "()";
