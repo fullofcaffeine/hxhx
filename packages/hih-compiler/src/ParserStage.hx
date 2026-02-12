@@ -42,74 +42,98 @@
 			//   compiled-in `hih_native_parser` define.
 					((() -> {
 						function enrichNativeDecl(nativeDecl:HxModuleDecl):HxModuleDecl {
-							// Native protocol v1 only returns one "main" class. However, real Haxe modules
-							// commonly declare additional helper types in the same file (especially in the
-							// upstream unit/runci suites). We add a tiny, best-effort scanner to discover
-							// those additional classes and their static members so Stage3 emission can
-							// produce stub providers.
-							var main = HxModuleDecl.getMainClass(nativeDecl);
-							var mainName = HxClassDecl.getName(main);
+								// Native protocol v1 only returns one "main" class. However, real Haxe modules
+								// commonly declare additional helper types in the same file (especially in the
+								// upstream unit/runci suites). We add a tiny, best-effort scanner to discover
+								// those additional classes and their static members so Stage3 emission can
+								// produce stub providers.
+								var main = HxModuleDecl.getMainClass(nativeDecl);
+								var mainName = HxClassDecl.getName(main);
 
-							// Some upstream modules have a non-class main type (notably enums).
-							//
-							// If the native protocol returns `Unknown`, scan for a matching top-level enum
-							// and treat it as the module's main provider so emission doesn't drop the unit.
-							final enumDeclsAll = scanModuleLocalHelperEnums(source, null);
-							final typedefDeclsAll = scanModuleLocalHelperTypedefs(source, null);
-							final abstractDeclsAll = scanModuleLocalHelperAbstracts(source, null);
-							if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
-								function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
-									if (candidates == null) return false;
-									for (c in candidates) {
-										final nm = HxClassDecl.getName(c);
-										if (nm != null && nm == expectedMainClass) {
-											main = c;
-											mainName = nm;
-											return true;
+								// Some upstream modules have a non-class main type (notably enums).
+								//
+								// If the native protocol returns `Unknown`, scan for a matching top-level enum
+								// and treat it as the module's main provider so emission doesn't drop the unit.
+								final enumDeclsAll = scanModuleLocalHelperEnums(source, null);
+								final typedefDeclsAll = scanModuleLocalHelperTypedefs(source, null);
+								final abstractDeclsAll = scanModuleLocalHelperAbstracts(source, null);
+								if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
+									function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
+										if (candidates == null) return false;
+										for (c in candidates) {
+											final nm = HxClassDecl.getName(c);
+											if (nm != null && nm == expectedMainClass) {
+												main = c;
+												mainName = nm;
+												return true;
+											}
 										}
+										return false;
 									}
-									return false;
+
+									if (!tryPickMainFrom(enumDeclsAll)) {
+										if (!tryPickMainFrom(typedefDeclsAll)) tryPickMainFrom(abstractDeclsAll);
+									}
 								}
 
-								if (!tryPickMainFrom(enumDeclsAll)) {
-									if (!tryPickMainFrom(typedefDeclsAll)) tryPickMainFrom(abstractDeclsAll);
+								final existingClasses = HxModuleDecl.getClasses(nativeDecl);
+								final existingNames:Map<String, Bool> = new Map();
+								for (c in existingClasses) {
+									final nm = c == null ? null : HxClassDecl.getName(c);
+									if (nm != null && nm.length > 0) existingNames.set(nm, true);
 								}
-							}
 
-							final extras = scanModuleLocalHelperClasses(source, mainName);
-							final enumDecls = enumDeclsAll.filter(e -> {
-								final nm = HxClassDecl.getName(e);
-								nm != null && nm.length > 0 && nm != mainName;
-							});
-							final typedefDecls = typedefDeclsAll.filter(t -> {
-								final nm = HxClassDecl.getName(t);
-								nm != null && nm.length > 0 && nm != mainName;
-							});
-							final abstractDecls = abstractDeclsAll.filter(a -> {
-								final nm = HxClassDecl.getName(a);
-								nm != null && nm.length > 0 && nm != mainName;
-							});
+								function isMissingAndNotMain(c:HxClassDecl):Bool {
+									final nm = c == null ? null : HxClassDecl.getName(c);
+									return nm != null && nm.length > 0 && nm != mainName && !existingNames.exists(nm);
+								}
 
-							if (extras.length == 0
-								&& enumDecls.length == 0
-								&& typedefDecls.length == 0
-								&& abstractDecls.length == 0
-								&& main == HxModuleDecl.getMainClass(nativeDecl)) {
-								return nativeDecl;
+								final extras = new Array<HxClassDecl>();
+								for (c in scanModuleLocalHelperClasses(source, mainName)) if (isMissingAndNotMain(c)) extras.push(c);
+								final enumDecls = new Array<HxClassDecl>();
+								for (c in enumDeclsAll) if (isMissingAndNotMain(c)) enumDecls.push(c);
+								final typedefDecls = new Array<HxClassDecl>();
+								for (c in typedefDeclsAll) if (isMissingAndNotMain(c)) typedefDecls.push(c);
+								final abstractDecls = new Array<HxClassDecl>();
+								for (c in abstractDeclsAll) if (isMissingAndNotMain(c)) abstractDecls.push(c);
+
+								if (extras.length == 0
+									&& enumDecls.length == 0
+									&& typedefDecls.length == 0
+									&& abstractDecls.length == 0
+									&& main == HxModuleDecl.getMainClass(nativeDecl)) {
+									return nativeDecl;
+								}
+
+								final classes = new Array<HxClassDecl>();
+								final seen:Map<String, Bool> = new Map();
+								function pushUnique(c:HxClassDecl):Void {
+									if (c == null) return;
+									final nm = HxClassDecl.getName(c);
+									if (nm != null && nm.length > 0 && seen.exists(nm)) return;
+									classes.push(c);
+									if (nm != null && nm.length > 0) seen.set(nm, true);
+								}
+
+								pushUnique(main);
+								for (c in existingClasses) pushUnique(c);
+								for (c in extras) pushUnique(c);
+								for (c in enumDecls) pushUnique(c);
+								for (c in typedefDecls) pushUnique(c);
+								for (c in abstractDecls) pushUnique(c);
+
+								return new HxModuleDecl(
+									HxModuleDecl.getPackagePath(nativeDecl),
+									HxModuleDecl.getImports(nativeDecl),
+									main,
+									classes,
+									HxModuleDecl.getHeaderOnly(nativeDecl),
+									HxModuleDecl.getHasToplevelMain(nativeDecl)
+								);
 							}
-							final classes = [main].concat(extras).concat(enumDecls).concat(typedefDecls).concat(abstractDecls);
-							return new HxModuleDecl(
-								HxModuleDecl.getPackagePath(nativeDecl),
-								HxModuleDecl.getImports(nativeDecl),
-								main,
-								classes,
-								HxModuleDecl.getHeaderOnly(nativeDecl),
-								HxModuleDecl.getHasToplevelMain(nativeDecl)
-							);
-						}
 
 						final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
-						if (v == "1" || v == "true" || v == "yes") return new HxParser(source).parseModule(expectedMainClass);
+						if (v == "1" || v == "true" || v == "yes") return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
 						try {
 							return enrichNativeDecl(parseViaNativeHooks(source, expectedMainClass));
 						} catch (eNative:Dynamic) {
@@ -122,7 +146,7 @@
 						// This is especially useful when widening the module graph for upstream suites
 						// (e.g. enabling heuristic same-package type resolution).
 						try {
-							return new HxParser(source).parseModule(expectedMainClass);
+							return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
 						} catch (_:Dynamic) {
 							// Prefer the native error (it is usually more specific about the failure mode).
 							throw eNative;

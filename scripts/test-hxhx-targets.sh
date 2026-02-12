@@ -172,6 +172,13 @@ HX
   test -f "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
   grep -q "let fromInt" "$tmpdir/out_stage3_typedecls/TypeDeclStage3_Flag.ml"
 
+  echo "== Stage3 regression: module-local typedef/abstract declarations (forced pure parser)"
+  out="$(HIH_FORCE_HX_PARSER=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-run --hxhx-out "$tmpdir/out_stage3_typedecls_force" -cp "$tmpdir/src" -main TypeDeclStage3)"
+  echo "$out" | grep -q "^stage3=ok$"
+  test -f "$tmpdir/out_stage3_typedecls_force/TypeDeclStage3_Box.ml"
+  test -f "$tmpdir/out_stage3_typedecls_force/TypeDeclStage3_Flag.ml"
+  grep -q "let fromInt" "$tmpdir/out_stage3_typedecls_force/TypeDeclStage3_Flag.ml"
+
   echo "== Stage3 regression: Sys.environment lowering (HxSys.environment)"
   cat >"$tmpdir/src/SysEnvStage3.hx" <<'HX'
 package;
