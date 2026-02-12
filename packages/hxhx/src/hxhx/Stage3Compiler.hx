@@ -81,7 +81,7 @@ private typedef WaitStdioReply = {
 	  - `.hxml` expansion (via `Stage1Args`)
 	- Adds one internal flag:
 	  - `--hxhx-out <dir>`: where emitted `.ml` and the built executable are written
-	- Runs the Stage 2/3 pipeline from `examples/hih-compiler`:
+	- Runs the Stage 2/3 pipeline from `packages/hih-compiler` (with acceptance fixtures under `workloads/hih-compiler`):
 	  - `ResolverStage.parseProject` (transitive import closure)
 	  - `TyperStage.typeModule` (literal + identifier return typing)
 	  - `EmitterStage.emitToDir` (minimal OCaml emission + `ocamlopt` build)

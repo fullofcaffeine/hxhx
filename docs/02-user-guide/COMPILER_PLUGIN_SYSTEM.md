@@ -106,7 +106,7 @@ Design details for Stage 4 (native macro execution + ABI boundary) live in:
 - `docs/02-user-guide/HXHX_STAGE4_MACROS_AND_PLUGIN_ABI.md:1`
 
 1) **Gate 0 (repo-local acceptance examples)**:
-   - `examples/hih-compiler` grows macro stubs into real macro execution for a small subset.
+   - `workloads/hih-compiler` grows macro stubs into real macro execution for a small subset.
 
 2) **Gate 1 (upstream `tests/unit/compile-macro.hxml`)**:
    - implement the minimal macro/hook surface required for this suite to pass.

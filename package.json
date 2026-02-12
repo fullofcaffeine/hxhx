@@ -49,6 +49,7 @@
     "test:portable": "bash scripts/test-portable.sh",
     "test:snapshot": "bash scripts/test-snapshots.sh",
     "test:examples": "bash scripts/test-examples.sh",
+    "test:workloads": "bash scripts/test-workloads.sh",
     "test:hxhx-targets": "bash scripts/test-hxhx-targets.sh",
     "test:acceptance": "bash scripts/test-acceptance.sh",
     "test:upstream:unit-macro": "bash scripts/hxhx/run-upstream-unit-macro.sh",

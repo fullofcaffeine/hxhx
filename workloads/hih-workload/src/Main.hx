@@ -15,7 +15,7 @@ class Main {
 	static function main() {
 		Sys.println("stage=1");
 
-		final base = "examples/hih-workload/out/data";
+		final base = "out/data";
 		writeProject(base);
 		Sys.println("wrote=1");
 

@@ -18,6 +18,11 @@ examples/**/out/
 examples/**/out_tmp*/
 examples/**/out_stage*/
 
+# Workload build output
+workloads/**/out/
+workloads/**/out_tmp*/
+workloads/**/out_stage*/
+
 # Package build output (e.g. `packages/hxhx`)
 packages/**/out/
 packages/**/out_tmp*/

@@ -285,9 +285,10 @@ Supporting components:
 - `packages/hih-compiler/`: internal staged compiler libraries used by `hxhx`.
 - `tools/hxhx-macro-host/`: macro host process used for Stage4 bring-up.
 - `examples/`: consumer projects and QA harnesses (compile → dune build → run).
+- `workloads/`: compiler-shaped acceptance workloads (`npm run test:acceptance`).
 - `vendor/haxe/` (ignored): optional upstream checkout used as a black-box behavior oracle in CI gates.
 
-Rationale: keep backend + compiler iteration fast in one repo while making it obvious what is “shippable” (`packages/`), what is an internal tool (`tools/`), and what is a consumer workload (`examples/`).
+Rationale: keep backend + compiler iteration fast in one repo while making it obvious what is “shippable” (`packages/`), what is an internal tool (`tools/`), and what is a consumer example (`examples/`) versus a compiler-shaped acceptance workload (`workloads/`).
 
 ## Docs
 

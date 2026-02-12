@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run acceptance-only examples (heavier workloads).
-# This delegates to the existing examples runner with a filter flag.
+# Run heavier acceptance checks:
+# 1) acceptance-only examples under examples/
+# 2) compiler-shaped workloads under workloads/
 
 ONLY_ACCEPTANCE_EXAMPLES=1 bash scripts/test-examples.sh
-
+bash scripts/test-workloads.sh

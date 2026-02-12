@@ -16,7 +16,7 @@ This document is a design guide for implementing that typer in a way that:
 
 Stage 3 is “done enough” when:
 
-1) `examples/hih-compiler` can parse + resolve + **type** a meaningful subset of Haxe syntax.
+1) `workloads/hih-compiler` can parse + resolve + **type** a meaningful subset of Haxe syntax.
 2) The typer has a stable internal API that can evolve toward upstream parity:
    - module cache / incremental typing boundaries
    - error reporting with source positions
@@ -191,7 +191,7 @@ Prefer tests that match the repo layers described in `docs/02-user-guide/HAXE_IN
 
 Stage 3 acceptance recommendation:
 
-- Extend `examples/hih-compiler` so it prints a deterministic “typed summary”:
+- Extend `workloads/hih-compiler` so it prints a deterministic “typed summary”:
   - list typed functions (name + inferred/declared signature)
   - list typed locals (name + type) for a tiny fixture
 

@@ -134,6 +134,12 @@ collect_safe_candidates() {
       -print >>"$CANDIDATES" 2>/dev/null || true
   fi
 
+  if [[ -d "$ROOT/workloads" ]]; then
+    find "$ROOT/workloads" -type d \
+      \( -name out -o -name 'out_tmp*' -o -name 'out_stage*' \) \
+      -print >>"$CANDIDATES" 2>/dev/null || true
+  fi
+
   if [[ -d "$ROOT/packages" ]]; then
     find "$ROOT/packages" -type d \
       \( -name out -o -name 'out_tmp*' -o -name 'out_stage*' \) \

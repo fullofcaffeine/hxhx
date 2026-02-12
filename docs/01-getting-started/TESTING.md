@@ -21,7 +21,7 @@ If you have `ocamlc` + `dune` installed, this also runs:
 - portable conformance fixtures (`test/portable/**`)
 - example apps (`examples/**`, except acceptance-only examples)
 
-To run the heavier acceptance examples:
+To run heavier acceptance checks (acceptance-only examples + compiler-shaped workloads):
 
 ```bash
 npm run test:acceptance
@@ -243,14 +243,24 @@ These catch regressions that pure snapshot tests can’t, like:
 
 ### 3) Acceptance workloads (explicitly heavier)
 
-Some example apps are marked with an `ACCEPTANCE_ONLY` file and are skipped by default.
+`npm run test:acceptance` runs two heavier layers:
 
-Run them with:
+- acceptance-only examples under `examples/` (flagged with `ACCEPTANCE_ONLY`)
+- compiler-shaped workloads under `workloads/`
+
+Current workload set:
+
+- `workloads/hih-workload` — Stage 1 multi-file “project compiler” workload
+- `workloads/hih-compiler` — Stage 2/3 compiler-skeleton workload
+
+Run only the workload layer:
 
 ```bash
-npm run test:acceptance
+npm run test:workloads
 ```
 
-Today, the primary acceptance workload is:
+Run a subset by name:
 
-- `examples/hih-workload` — a multi-file “project compiler” that exercises parsing, type checking, and incremental rebuilds (Stage 1 toward Haxe-in-Haxe enough).
+```bash
+WORKLOAD_FILTER=hih-workload npm run test:workloads
+```

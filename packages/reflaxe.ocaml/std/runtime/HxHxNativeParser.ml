@@ -7,7 +7,7 @@
    What it does (today):
    - Calls `HxHxNativeLexer.tokenize` to obtain tokens (with positions).
    - Parses a *very small* module subset (package/import/class + detect
-     `static function main`), sufficient for `examples/hih-compiler`.
+     `static function main`), sufficient for `workloads/hih-compiler`.
    - Emits a **versioned, line-based protocol** designed for gradual expansion:
      - tokens + positions
      - minimal module “AST summary”

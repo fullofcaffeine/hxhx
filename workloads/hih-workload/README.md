@@ -15,7 +15,7 @@ Unlike unit/snapshot tests, this is intended to be **compiler-like** and
 ## How to run
 
 ```bash
-cd examples/hih-workload
+cd workloads/hih-workload
 haxe build.hxml -D ocaml_build=native
 ./out/_build/default/out.exe
 ```
@@ -25,7 +25,7 @@ haxe build.hxml -D ocaml_build=native
 This repo tracks bootstrapping in stages:
 
 1. **Stage 0**: `examples/mini-compiler` — single-file lexer/parser/evaluator.
-2. **Stage 1**: `examples/hih-workload` — multi-file compilation + incremental rebuilds.
+2. **Stage 1**: `workloads/hih-workload` — multi-file compilation + incremental rebuilds.
 3. **Stage 2 (future)**: compile a real Haxe subproject (e.g. parser) largely unmodified.
 4. **Stage 3 (future)**: compile a subset of the Haxe compiler itself.
 

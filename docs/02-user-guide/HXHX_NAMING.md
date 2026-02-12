@@ -49,9 +49,9 @@ When implemented, `hxhx --version` should report both.
 
 `hxhx` lives under `packages/hxhx` (it is a real in-repo package/tool, not “just an example”).
 
-We still keep acceptance workloads under `examples/`:
+We keep compiler-shaped acceptance workloads under `workloads/` (separate from consumer examples):
 
-- `examples/hih-workload`: Stage 1 “compiler-shaped workload”
-- `examples/hih-compiler`: Stage 2/3 “compiler skeleton”
+- `workloads/hih-workload`: Stage 1 “compiler-shaped workload”
+- `workloads/hih-compiler`: Stage 2/3 “compiler skeleton”
 
 This split keeps `examples/` focused on *consumers* and keeps `packages/` focused on *reusable buildable units*.

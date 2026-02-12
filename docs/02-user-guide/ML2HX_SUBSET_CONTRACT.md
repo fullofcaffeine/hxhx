@@ -126,7 +126,7 @@ Translator rules:
 
 This contract is meant to support staged bring-up:
 
-1. Stage 1: compiler-shaped workloads (`examples/hih-workload`)
+1. Stage 1: compiler-shaped workloads (`workloads/hih-workload`)
 2. Stage 2: reimplement a meaningful compiler subsystem
 3. Stage 3: macro execution pipeline
 4. Stage 4: production-grade Haxe-in-Haxe compiler (Haxe 4.3.7)

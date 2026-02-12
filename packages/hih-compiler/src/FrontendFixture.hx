@@ -6,7 +6,7 @@
 	  frontend behavior.
 	- Upstream `tests/misc` contains many small, focused fixtures (module
 	  resolution, metadata placement, multiple types per file, etc.).
-	- However, we do not want `examples/hih-compiler` to depend on a local
+	- However, we do not want `workloads/hih-compiler` to depend on a local
 	  checkout of the upstream repo at runtime (CI determinism).
 
 	What:

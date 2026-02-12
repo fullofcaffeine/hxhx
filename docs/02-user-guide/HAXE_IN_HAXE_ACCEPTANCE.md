@@ -52,7 +52,7 @@ Means we can use our backend to run **compiler-shaped workloads** that resemble 
 - incremental rebuilds / module cache
 - basic macro-like staging boundaries (even if macros are stubbed)
 
-In this repo, that maps to acceptance workloads in `examples/` (e.g. `hih-workload`, `hih-compiler`).
+In this repo, that maps to acceptance workloads in `workloads/` (e.g. `hih-workload`, `hih-compiler`).
 
 ### “Replacement-ready” (Phase B / 1.0 goal)
 
@@ -89,8 +89,8 @@ As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” m
 Passes when:
 
 - `npm run test:acceptance` succeeds (compile → dune build → run) for:
-  - `examples/hih-workload` (Stage 1)
-  - `examples/hih-compiler` (Stage 2 skeleton)
+  - `workloads/hih-workload` (Stage 1)
+  - `workloads/hih-compiler` (Stage 2 skeleton)
 
 This is our “always runnable” smoke coverage.
 

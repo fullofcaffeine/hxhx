@@ -195,7 +195,7 @@ def _bench_hih_workload_compile(
     """
     Compiler-shaped benchmark (Haxe typing/lowering workload).
 
-    This uses the acceptance example `examples/hih-workload`, but runs it in a
+    This uses the acceptance example `workloads/hih-workload`, but runs it in a
     fresh temp workspace per rep to reduce "incremental build" effects.
     """
 

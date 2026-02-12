@@ -11,7 +11,10 @@
 **/
 class CompilerDriver {
 	public static function run():Void {
-		final classPaths = ["examples/hih-compiler/fixtures/src"];
+		final preferredFixtureRoot = "workloads/hih-compiler/fixtures/src";
+		final legacyFixtureRoot = "examples/hih-compiler/fixtures/src";
+		final fixtureRoot = sys.FileSystem.exists(preferredFixtureRoot) ? preferredFixtureRoot : legacyFixtureRoot;
+		final classPaths = [fixtureRoot];
 		final mainModule = "demo.A";
 		final resolved = ResolverStage.parseProject(classPaths, mainModule);
 
