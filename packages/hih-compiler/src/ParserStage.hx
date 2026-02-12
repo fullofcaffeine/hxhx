@@ -1067,7 +1067,11 @@
 	**/
 			static function decodeNativeProtocol(encoded:String):HxModuleDecl {
 				final lines = encoded.split("\n").filter(l -> l.length > 0);
-				if (lines.length == 0 || lines[0] != "hxhx_frontend_v=1") {
+				if (lines.length == 0) {
+					throw "Native frontend: missing/invalid protocol header";
+				}
+				final header = lines[0];
+				if (header != "hxhx_frontend_v=1" && header != "hxhx_frontend_v=2") {
 					throw "Native frontend: missing/invalid protocol header";
 				}
 
@@ -1078,6 +1082,7 @@
 				var hasToplevelMain = false;
 				var hasStaticMain = false;
 				final methodPayloads = new Array<String>();
+				final fieldPayloads = new Array<String>();
 				final staticFinalPayloads = new Array<String>();
 				final methodBodies:Map<String, String> = [];
 				final functions = new Array<HxFunctionDecl>();
@@ -1122,6 +1127,8 @@
 								hasToplevelMain = payload == "1";
 							case "method":
 								methodPayloads.push(payload);
+							case "field":
+								fieldPayloads.push(payload);
 							case "static_final":
 								staticFinalPayloads.push(payload);
 							case "method_body":
@@ -1151,9 +1158,21 @@
 					functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
 				}
 
+				final seenFields:Map<String, Bool> = [];
+				inline function pushFieldMaybe(f:Null<HxFieldDecl>) {
+					if (f == null) return;
+					final key = f.name + "|" + (f.isStatic ? "1" : "0");
+					if (seenFields.exists(key)) return;
+					seenFields.set(key, true);
+					fields.push(f);
+				}
+
+				for (fp in fieldPayloads) {
+					pushFieldMaybe(decodeFieldPayload(fp));
+				}
+
 				for (fp in staticFinalPayloads) {
-					final f = decodeStaticFinalPayload(fp);
-					if (f != null) fields.push(f);
+					pushFieldMaybe(decodeFieldPayload(fp));
 				}
 
 				final cls = new HxClassDecl(className, hasStaticMain, functions, fields);
@@ -1286,9 +1305,8 @@
 			return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
 		}
 
-		static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
-			// v=1 extension:
-			// Payload format (after unescaping):
+		static function decodeFieldPayload(payload:String):Null<HxFieldDecl> {
+			// v=2 field payload (also accepted from v1 `ast static_final`):
 			//   name\nvis\nstatic\ntypehint\ninitexpr
 			if (payload == null || payload.length == 0) return null;
 			final lines = payload.split("\n");
@@ -1301,6 +1319,11 @@
 			final initRaw = lines.length > 4 ? lines.slice(4).join("\n") : "";
 			final init = initRaw.length > 0 ? parseReturnExprText(initRaw) : null;
 			return new HxFieldDecl(name, vis, isStatic, typeHint, init);
+		}
+
+		static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
+			// Backward-compat shim for older call sites and tests.
+			return decodeFieldPayload(payload);
 		}
 
 	static function parseReturnExprText(raw:String):HxExpr {

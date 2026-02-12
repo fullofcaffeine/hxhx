@@ -13,14 +13,16 @@
      - minimal module “AST summary”
      - parse errors (without throwing)
 
-   Protocol (v=1):
-   - First line: `hxhx_frontend_v=1`
+   Protocol:
+   - Lexer stream (from `HxHxNativeLexer`): `hxhx_frontend_v=1`
+   - Parser stream (this module output): `hxhx_frontend_v=2`
    - Token line: `tok <kind> <index> <line> <col> <len>:<payload>`
    - AST lines:
      - `ast package <len>:<payload>`
      - `ast imports <len>:<payload>`        (payload uses '|' separator for now)
      - `ast class <len>:<payload>`
      - `ast static_main 0|1`
+     - `ast field <len>:<payload>`           (payload is `name\\nvis\\nstatic\\ntypehint\\ninitexpr`)
      - `ast static_final <len>:<payload>`    (payload is `name\\nvis\\nstatic\\ntypehint\\ninitexpr`)
      - `ast method <len>:<payload>`         (payload is `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`)
    - Terminal:
@@ -1216,7 +1218,25 @@ let encode_ast_lines (package_path : string) (imports : string list)
         Printf.sprintf "ast method %d:%s" (String.length enc) enc)
       methods
   in
+  let encode_field_payload (f : field_decl) : string =
+    let vis = match f.visibility with Public -> "public" | Private -> "private" in
+    let static_s = if f.is_static then "1" else "0" in
+    let hint = match f.type_hint with None -> "" | Some s -> s in
+    let init = match f.init_expr with None -> "" | Some s -> s in
+    (* Payload format (after unescaping):
+         name\nvis\nstatic\ntypehint\ninitexpr
+
+       Why newlines:
+       - Avoids `|` collisions in the initializer expression text. *)
+    f.name ^ "\n" ^ vis ^ "\n" ^ static_s ^ "\n" ^ hint ^ "\n" ^ init
+  in
   let field_lines =
+    fields
+    |> List.map (fun (f : field_decl) ->
+           let enc = escape_payload (encode_field_payload f) in
+           Printf.sprintf "ast field %d:%s" (String.length enc) enc)
+  in
+  let static_final_lines =
     fields
     |> List.filter (fun (f : field_decl) -> f.is_static)
     |> List.map (fun (f : field_decl) ->
@@ -1251,7 +1271,8 @@ let encode_ast_lines (package_path : string) (imports : string list)
                let enc = escape_payload payload in
                Some (Printf.sprintf "ast method_body %d:%s" (String.length enc) enc))
   in
-  String.concat "\n" (base @ field_lines @ method_lines @ body_lines)
+  String.concat "\n"
+    (base @ field_lines @ static_final_lines @ method_lines @ body_lines)
 
 let encode_err_line (p : pos) (msg : string) : string =
   let enc = escape_payload msg in
@@ -1261,7 +1282,7 @@ let strip_terminal_ok (lex_stream : string) : string =
   let lines = split_non_empty_lines lex_stream in
   let kept =
     List.filter
-      (fun l -> l <> "ok")
+      (fun l -> l <> "ok" && not (starts_with l "hxhx_frontend_v="))
       lines
   in
   String.concat "\n" kept
@@ -1282,12 +1303,12 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
     | Error msg ->
         String.concat "\n"
           [
-            "hxhx_frontend_v=1";
+            "hxhx_frontend_v=2";
             encode_err_line { index = 0; line = 0; col = 0 } msg;
           ]
     | Ok ((_toks, Some _err_line)) ->
-        (* Lexer already emitted a protocol error; pass it through. *)
-        strip_terminal_ok lex_stream
+        (* Lexer already emitted a protocol error; pass it through under parser protocol header. *)
+        String.concat "\n" [ "hxhx_frontend_v=2"; strip_terminal_ok lex_stream ]
     | Ok ((toks, None)) -> (
         let base = strip_terminal_ok lex_stream in
         try
@@ -1296,6 +1317,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
           in
           String.concat "\n"
             [
+              "hxhx_frontend_v=2";
               base;
               encode_ast_lines package_path imports class_name false has_toplevel_main
                 has_static_main methods fields;
@@ -1311,13 +1333,15 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               in
               String.concat "\n"
                 [
+                  "hxhx_frontend_v=2";
                   base;
                   encode_ast_lines package_path imports class_name true has_toplevel_main
                     false [] [];
                   "ok";
                 ]
             else
-              String.concat "\n" [ base; encode_err_line p msg ]
+              String.concat "\n"
+                [ "hxhx_frontend_v=2"; base; encode_err_line p msg ]
         | _exn ->
             if header_only_enabled () then
               let package_path, imports, has_toplevel_main, class_name =
@@ -1325,6 +1349,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               in
               String.concat "\n"
                 [
+                  "hxhx_frontend_v=2";
                   base;
                   encode_ast_lines package_path imports class_name true has_toplevel_main
                     false [] [];
@@ -1334,6 +1359,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               (* Surface the failure as a parse error to keep Stage1 deterministic. *)
               String.concat "\n"
                 [
+                  "hxhx_frontend_v=2";
                   base;
                   encode_err_line { index = 0; line = 0; col = 0 }
                     "HxHxNativeParser: failed to parse module";
@@ -1341,7 +1367,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
   with exn ->
     String.concat "\n"
       [
-        "hxhx_frontend_v=1";
+        "hxhx_frontend_v=2";
         encode_err_line { index = 0; line = 0; col = 0 } (Printexc.to_string exn);
       ]
 

@@ -844,6 +844,31 @@ echo "$out" | grep -q "^2$"
 echo "$out" | grep -qE "^[;:]$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 regression: non-static class fields survive native protocol"
+tmpinstfield="$tmpdir/instance_field"
+mkdir -p "$tmpinstfield/src"
+cat >"$tmpinstfield/src/Main.hx" <<'HX'
+class Main {
+  var x:Int;
+
+  public function new() {
+    this.x = 41;
+  }
+
+  function ping() {
+    return this.x;
+  }
+
+  static function main() {
+    var m = new Main();
+    m.ping();
+  }
+}
+HX
+out="$(HXHX_TYPER_STRICT=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-emit-full-bodies -cp "$tmpinstfield/src" -main Main --hxhx-out "$tmpinstfield/out")"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
+echo "$out" | grep -q "^unsupported_exprs_total=0$"
+
 echo "== Stage3 bring-up: imported sys.FileSystem + haxe.io.Path statics lower to runtime"
 tmpfs="$tmpdir/filesystem_path"
 mkdir -p "$tmpfs/src"

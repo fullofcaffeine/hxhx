@@ -383,11 +383,18 @@ class TyperStage {
 						case EThis:
 							final c = ctx.currentClass();
 							if (c != null) {
-							final ft = c.fieldType(_field);
-							ft != null ? ft : TyType.unknown();
-						} else {
-							TyType.unknown();
-						}
+								final ft = c.fieldType(_field);
+								if (ft != null) {
+									ft;
+								} else {
+									if (isStrict()) {
+										throw new TyperError(ctx.getFilePath(), pos, "Unknown field this." + _field);
+									}
+									TyType.unknown();
+								}
+							} else {
+								TyType.unknown();
+							}
 					case _:
 						// Best-effort: infer child for locals; actual field typing depends on the index.
 						final objTy = inferExprType(obj, scope, ctx, pos);
@@ -395,7 +402,14 @@ class TyperStage {
 						final c = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 						if (c != null) {
 							final ft = c.fieldType(_field);
-							ft != null ? ft : TyType.unknown();
+							if (ft != null) {
+								ft;
+							} else {
+								if (isStrict()) {
+									throw new TyperError(ctx.getFilePath(), pos, "Unknown field " + _field + " on " + objTy.getDisplay());
+								}
+								TyType.unknown();
+							}
 						} else {
 							TyType.unknown();
 						}

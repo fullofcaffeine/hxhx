@@ -62,11 +62,16 @@ Important:
 
 ## Versioning
 
-Every output starts with a header line:
+Parser output starts with a header line:
 
 ```
-hxhx_frontend_v=1
+hxhx_frontend_v=2
 ```
+
+Notes:
+
+- The lexer-only stream (`HxHxNativeLexer.tokenize`) still uses `hxhx_frontend_v=1`.
+- The Haxe decoder accepts both v1 and v2 during bring-up.
 
 Future versions must:
 
@@ -74,7 +79,7 @@ Future versions must:
 - only add new record types or optional fields in a backward-compatible way
 - avoid changing the meaning of existing records for the same version number
 
-## Records (v=1)
+## Records (v1/v2)
 
 Records are newline-delimited. Payloads are always **single-line** due to escaping (see below).
 
@@ -107,6 +112,7 @@ ast class <len>:<payload>
 ast header_only <len>:<payload>
 ast toplevel_main <len>:<payload>
 ast static_main 0|1
+ast field <len>:<payload>
 ast static_final <len>:<payload>
 ast method <len>:<payload>
 ast method_body <len>:<payload>
@@ -125,16 +131,19 @@ Notes:
 - `ast toplevel_main` is a bootstrap hint:
   - payload is `0` or `1`
   - `1` means the module contains a toplevel `function main(...)` (no class required)
-- `ast static_final` is a bootstrap record for class-scope constants like:
+- `ast field` is the general class-field record (v2):
+  - Includes both static and non-static `var` declarations.
+  - Payload format (after unescaping):
+    - line 1: field name
+    - line 2: `public` or `private`
+    - line 3: `0` or `1` for `static`
+    - line 4: raw type hint text (may be empty)
+    - remaining text: initializer expression text (may be empty)
+- `ast static_final` is kept as a backward-compat bootstrap record for class-scope constants like:
   - `static final TRIALS = 3;`
   - `static final sep = if (cond) ";" else ":";`
   - `static final x = switch (v) { case 1: "a"; default: "b"; };`
-  Payload format (after unescaping):
-  - line 1: field name
-  - line 2: `public` or `private`
-  - line 3: `0` or `1` for `static` (currently always `1` in practice)
-  - line 4: raw type hint text (may be empty)
-  - remaining text: initializer expression text (may be empty)
+  - Payload format is identical to `ast field`.
 - `ast method` is a bootstrap record that encodes a function signature summary as a `|` separated payload:
   `name|vis|static|args|ret|retstr|retid|argtypes|retexpr`
   - `vis` is `public` or `private`

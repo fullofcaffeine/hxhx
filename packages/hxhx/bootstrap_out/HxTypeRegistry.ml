@@ -1011,7 +1011,7 @@ let init () : unit =
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];
   HxType.register_class_instance_fields "ParserStage" [];
-  HxType.register_class_static_fields "ParserStage" [ "decodeLenPayload"; "decodeMethodPayload"; "decodeNativeProtocol"; "decodeStaticFinalPayload"; "expectedMainClassFromFile"; "parse"; "parseDecInt"; "parseReturnExprText"; "parseViaNativeHooks"; "scanClassBodyForStatics"; "scanEnumAbstractBodyForValues"; "scanEnumBodyForCtors"; "scanModuleLocalHelperAbstracts"; "scanModuleLocalHelperClasses"; "scanModuleLocalHelperEnums"; "scanModuleLocalHelperTypedefs"; "scanNextToken"; "splitN"; "throwFromErrLine"; "unescapePayload" ];
+  HxType.register_class_static_fields "ParserStage" [ "decodeFieldPayload"; "decodeLenPayload"; "decodeMethodPayload"; "decodeNativeProtocol"; "decodeStaticFinalPayload"; "expectedMainClassFromFile"; "parse"; "parseDecInt"; "parseReturnExprText"; "parseViaNativeHooks"; "scanClassBodyForStatics"; "scanEnumAbstractBodyForValues"; "scanEnumBodyForCtors"; "scanModuleLocalHelperAbstracts"; "scanModuleLocalHelperClasses"; "scanModuleLocalHelperEnums"; "scanModuleLocalHelperTypedefs"; "scanNextToken"; "splitN"; "throwFromErrLine"; "unescapePayload" ];
   HxType.register_class_instance_fields "ResolvedModule" [ "filePath"; "modulePath"; "parsed" ];
   HxType.register_class_static_fields "ResolvedModule" [ "getFilePath"; "getModulePath"; "getParsed" ];
   HxType.register_class_instance_fields "ResolverStage" [];
