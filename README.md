@@ -148,7 +148,7 @@ Current checklist (human-readable):
 - [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
 - [x] Heavy-workload runtime tuning baseline landed (`haxe.ocaml-xgv.10.17`)
-- [x] Gate3 stability hardening now includes Python no-install mode and a documented Java baseline (kept opt-in for runtime cost) (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`)
+- [x] Gate3 stability hardening now includes direct-by-default Macro mode, Python no-install mode, and a documented Java baseline (kept opt-in for runtime cost) (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
