@@ -1287,13 +1287,13 @@ class File {
   public static function saveContent(path:String, content:String):Void {}
 }
 HX
-cat >"$tmpfileops/src/Main.hx" <<'HX'
+cat >"$tmpfileops/src/Main.hx" <<HX
 import sys.io.File;
 
 class Main {
   static function main() {
-    File.saveContent("hello.txt", "hi");
-    Sys.println(File.getContent("hello.txt"));
+    File.saveContent("${tmpfileops}/hello.txt", "hi");
+    Sys.println(File.getContent("${tmpfileops}/hello.txt"));
   }
 }
 HX
