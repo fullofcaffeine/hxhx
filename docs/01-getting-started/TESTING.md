@@ -209,13 +209,13 @@ Gate 3 runs additional upstream `tests/runci` targets beyond `Macro`.
 Select targets via `HXHX_GATE3_TARGETS` (comma-separated) or pass them as args:
 
 ```bash
-HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets
+HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
 Notes:
 
 - This is **not** run in CI by default (very toolchain/network dependent).
-- Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js`), `allow_skip`, and `macro_mode` (`stage0_shim`/`direct`).
+- Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js,Neko`), `allow_skip`, and `macro_mode` (`stage0_shim`/`direct`).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
 - On macOS, the upstream `Js` server stage remains enabled, but Gate 3 relaxes async timeouts (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000` by default). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
