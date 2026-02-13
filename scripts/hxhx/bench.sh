@@ -75,7 +75,7 @@ PY
   printf '%-32s avg=%6sms  best=%6sms  worst=%6sms  reps=%s\n' "$label" "$avg_ms" "$best_ms" "$worst_ms" "$reps"
 }
 
-echo "== hxhx bench (stage0 shim overhead)"
+echo "== hxhx bench (stage0 shim + builtin fast-path)"
 echo "Platform: $(uname -s) $(uname -m)"
 echo "Stage0 haxe: $("$HAXE_BIN" -version 2>/dev/null || "$HAXE_BIN" --version 2>/dev/null || echo unknown)"
 echo "Stage1 hxhx: $HXHX_BIN"
@@ -91,5 +91,8 @@ bench_one "stage0: no-output compile" \
 bench_one "stage1: no-output compile" \
   "$HXHX_BIN" -cp "$tmp_root/src" -main Main --no-output
 
+bench_one "stage1: --target ocaml-stage3" \
+  "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_stage3_builtin"
+
 echo ""
-echo "NOTE: stage1 is currently a shim delegating to stage0, so most time is stage0 compilation + wrapper overhead."
+echo "NOTE: --target ocaml still delegates to stage0, while --target ocaml-stage3 exercises the linked Stage3 backend fast-path."

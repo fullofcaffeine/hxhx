@@ -137,6 +137,23 @@ This is an optimization / integration lever:
 - more control over versioning (backend pinned to compiler build)
 - possibility of deeper integration (shared caches, structured config)
 
+## Current implementation status
+
+Current `hxhx` target presets:
+
+- `--target ocaml`
+  - kind: `both` (bundled-first, stage0 delegation today)
+  - behavior: injects `reflaxe.ocaml` wiring (`-lib`/`-cp`/init macros/defines) and delegates to stage0 `haxe`
+- `--target ocaml-stage3`
+  - kind: `builtin`
+  - behavior: runs linked `Stage3Compiler` directly (no `--library reflaxe.ocaml` requirement)
+
+Why this matters:
+
+- It is our first concrete linked-backend fast-path (`kind=builtin`) in the registry.
+- It gives a no-classpath-scan execution path for OCaml Stage3 bring-up and perf tracking.
+- It keeps the stable `--target` UX while we move from stage0 delegation to native `hxhx` execution.
+
 ## How this relates to the macro “plugin system”
 
 This registry is *not* the macro plugin system itself.

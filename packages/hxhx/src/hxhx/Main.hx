@@ -396,9 +396,9 @@ class Main {
 			return;
 		}
 
-		// Stage0 shim ergonomics: bundled/builtin backend selection.
+		// Stage0/builtin target preset selection (`--target`).
 		//
-		// This is shim-only and should never be forwarded to stage0 `haxe`.
+		// This is a shim-owned flag family and should never be forwarded to stage0 `haxe`.
 		// See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1`.
 		{
 			// Only parse shim flags in the pre-`--` section (so `hxhx -- --target ...` forwards).
@@ -416,8 +416,21 @@ class Main {
 					forwarded = forwarded.copy();
 					forwarded.splice(i, 2);
 				}
-				try forwarded = TargetPresets.apply(targetId, forwarded)
-				catch (e:Dynamic) forwarded = fatal("hxhx: " + Std.string(e));
+
+				final resolved = try {
+					TargetPresets.resolve(targetId, forwarded);
+				} catch (e:Dynamic) {
+					fatal("hxhx: " + Std.string(e));
+				};
+				forwarded = resolved.forwarded;
+
+				if (resolved.runMode == TargetPresets.RUN_MODE_BUILTIN_STAGE3) {
+					if (ocamlInterpLike) {
+						fatal("hxhx: --hxhx-ocaml-interp cannot be combined with --target " + resolved.id);
+					}
+					final code = Stage3Compiler.run(forwarded);
+					Sys.exit(code);
+				}
 			}
 
 			if (shimArgs.length == 1 && shimArgs[0] == "--hxhx-list-targets") {

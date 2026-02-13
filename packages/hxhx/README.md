@@ -80,3 +80,41 @@ Delegate to Stage 0 `haxe`:
 ```bash
 HAXE_BIN=haxe "$(bash scripts/hxhx/build-hxhx.sh)" -- compile.hxml
 ```
+
+
+## Target presets
+
+List available presets:
+
+```bash
+"$(bash scripts/hxhx/build-hxhx.sh)" --hxhx-list-targets
+```
+
+Current presets:
+
+- `--target ocaml`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
+- `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+
+Examples:
+
+```bash
+# Stage0 delegation path
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml -- compile.hxml
+
+# Linked Stage3 fast-path (no emit build)
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+```
+
+## Benchmarking target modes
+
+Use the hxhx benchmark harness to compare delegation vs linked fast-path overhead:
+
+```bash
+npm run hxhx:bench
+```
+
+This now reports:
+
+- stage0 `haxe` baseline
+- stage1 shim delegation baseline
+- builtin `--target ocaml-stage3` fast-path baseline

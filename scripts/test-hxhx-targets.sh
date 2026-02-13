@@ -62,6 +62,7 @@ rm -rf "$tmpbin"
 echo "== Listing targets"
 targets="$("$HXHX_BIN" --hxhx-list-targets)"
 echo "$targets" | grep -qx "ocaml"
+echo "$targets" | grep -qx "ocaml-stage3"
 
 echo "== Preset injects missing flags (compile smoke)"
 tmpdir="$(mktemp -d)"
@@ -106,6 +107,15 @@ HX
 
 test -f "$ROOT/out/dune"
 rm -rf "$ROOT/out"
+
+echo "== Builtin fast-path target: linked Stage3 backend without --library"
+cat >"$tmpdir/src/BuiltinMain.hx" <<'HX'
+class BuiltinMain {
+  static function main() {}
+}
+HX
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_fast")"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"

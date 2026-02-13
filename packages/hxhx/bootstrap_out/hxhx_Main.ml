@@ -507,34 +507,46 @@ let main = fun () -> try let args = HxSys.args () in (
                   ));
                   HxArray.splice (!tempArray1) i 2
                 )) else ());
-                try let __assign_111 = Hxhx_TargetPresets.apply targetId (!tempArray1) in (
-                  tempArray1 := __assign_111;
-                  __assign_111
-                ) with
-                  | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-                  | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                  | HxRuntime.Hx_return __ret_112 -> raise (HxRuntime.Hx_return __ret_112)
-                  | HxRuntime.Hx_exception (__exn_v_113, __exn_tags_114) -> if true then let e = (__exn_v_113 : Obj.t) in (
-                    ignore e;
-                    let __assign_115 = fatal ("hxhx: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)) in (
-                      tempArray1 := __assign_115;
-                      __assign_115
-                    )
-                  ) else HxRuntime.hx_throw_typed __exn_v_113 __exn_tags_114
-                  | __exn_116 -> if true then let e = (Obj.repr __exn_116 : Obj.t) in (
-                    ignore e;
-                    let __assign_117 = fatal ("hxhx: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)) in (
-                      tempArray1 := __assign_117;
-                      __assign_117
-                    )
-                  ) else raise (__exn_116)
+                let tempResolvedTarget = ref (Obj.magic ()) in (
+                  ignore (try let __assign_111 = Hxhx_TargetPresets.resolve targetId (!tempArray1) in (
+                    tempResolvedTarget := __assign_111;
+                    __assign_111
+                  ) with
+                    | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+                    | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+                    | HxRuntime.Hx_return __ret_112 -> raise (HxRuntime.Hx_return __ret_112)
+                    | HxRuntime.Hx_exception (__exn_v_113, __exn_tags_114) -> if true then let e = (__exn_v_113 : Obj.t) in (
+                      ignore e;
+                      let __assign_115 = fatal ("hxhx: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)) in (
+                        tempResolvedTarget := __assign_115;
+                        __assign_115
+                      )
+                    ) else HxRuntime.hx_throw_typed __exn_v_113 __exn_tags_114
+                    | __exn_116 -> if true then let e = (Obj.repr __exn_116 : Obj.t) in (
+                      ignore e;
+                      let __assign_117 = fatal ("hxhx: " ^ HxString.toStdString (HxRuntime.dynamic_toStdString e)) in (
+                        tempResolvedTarget := __assign_117;
+                        __assign_117
+                      )
+                    ) else raise (__exn_116));
+                  let resolved = !tempResolvedTarget in (
+                    ignore (let __assign_118 = Obj.obj (HxAnon.get resolved "forwarded") in (
+                      tempArray1 := __assign_118;
+                      __assign_118
+                    ));
+                    if HxString.equals (Obj.obj (HxAnon.get resolved "runMode")) "builtin_stage3" then ignore ((
+                      ignore (if !ocamlInterpLike then ignore (fatal ("hxhx: --hxhx-ocaml-interp cannot be combined with --target " ^ HxString.toStdString (Obj.obj (HxAnon.get resolved "id")))) else ());
+                      let code = Hxhx_Stage3Compiler.run (!tempArray1) in HxSys.exit code
+                    )) else ()
+                  )
+                )
               )
             )) else ());
             if HxArray.length (!tempArray) = 1 && HxString.equals (HxArray.get (!tempArray) 0) "--hxhx-list-targets" then ignore ((
               ignore (let _g = ref 0 in let _g1 = Hxhx_TargetPresets.listTargets () in while !_g < HxArray.length _g1 do ignore (let t = HxArray.get _g1 (!_g) in (
-                ignore (let __old_118 = !_g in let __new_119 = HxInt.add __old_118 1 in (
-                  ignore (_g := __new_119);
-                  __new_119
+                ignore (let __old_119 = !_g in let __new_120 = HxInt.add __old_119 1 in (
+                  ignore (_g := __new_120);
+                  __new_120
                 ));
                 print_endline (HxString.toStdString t)
               )) done);
@@ -561,12 +573,12 @@ let main = fun () -> try let args = HxSys.args () in (
           raise (HxRuntime.Hx_return (Obj.repr ()))
         )) else ());
         let tempString4 = ref "" in let v = HxSys.getEnv "HAXE_BIN" in (
-          ignore (if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_120 = "haxe" in (
-            tempString4 := __assign_120;
-            __assign_120
-          ) else let __assign_121 = v in (
+          ignore (if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_121 = "haxe" in (
             tempString4 := __assign_121;
             __assign_121
+          ) else let __assign_122 = v in (
+            tempString4 := __assign_122;
+            __assign_122
           ));
           ignore (if !ocamlInterpLike then ignore ((
             ignore (runOcamlInterpLike (!tempString4) (!tempArray1) (!ocamlInterpOutDir));
@@ -578,4 +590,4 @@ let main = fun () -> try let args = HxSys.args () in (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_122 -> Obj.obj __ret_122
+  | HxRuntime.Hx_return __ret_123 -> Obj.obj __ret_123

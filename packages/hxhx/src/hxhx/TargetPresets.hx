@@ -2,21 +2,30 @@ package hxhx;
 
 import haxe.io.Path;
 
+typedef ResolvedTarget = {
+	final id:String;
+	final kind:String;
+	final runMode:String;
+	final describe:String;
+	final forwarded:Array<String>;
+};
+
 /**
-	Shim-only “target preset” support for `hxhx`.
+	Shim-only and builtin target preset support for `hxhx`.
 
 	Why:
 	- Reflaxe-style backends are typically enabled by a *bundle* of flags:
 	  `-cp`/`-lib` plus macro init plus target defines (e.g. `-D ocaml_output=...`).
 	- That works, but it's verbose and easy to get wrong, especially when we're shipping
-	  `hxhx` as a single binary and want a “batteries included” experience.
+	  `hxhx` as a single binary and want a "batteries included" experience.
 	- The long-term `hxhx` goal is to become a real compiler. Until then, we still want
 	  a **stable CLI surface** for selecting the backend distribution wants to ship.
 
 	What:
 	- This class implements a minimal registry for `--target <id>` (and `--hxhx-target <id>`).
-	- In Stage0 (shim) mode, the preset works by **injecting** additional `haxe` CLI flags
-	  before delegating to the stage0 `haxe` binary.
+	- Targets can resolve to one of two run modes:
+	  - `delegate_stage0`: inject args and forward to stage0 `haxe`.
+	  - `builtin_stage3`: run the linked Stage3 backend directly.
 
 	How:
 	- Injection is intentionally conservative:
@@ -27,16 +36,52 @@ import haxe.io.Path;
 	  located relative to the `hxhx` executable (`../lib/...`) to avoid requiring `haxelib`.
 **/
 class TargetPresets {
+	public static inline var RUN_MODE_DELEGATE_STAGE0 = "delegate_stage0";
+	public static inline var RUN_MODE_BUILTIN_STAGE3 = "builtin_stage3";
+
 	public static function listTargets():Array<String> {
 		// Keep this stable: scripts/docs can rely on it.
-		return ["ocaml"];
+		return ["ocaml", "ocaml-stage3"];
+	}
+
+	/**
+		Resolve a target preset into an executable plan.
+
+		Why
+		- Stage0-friendly targets and linked builtin targets need different execution paths.
+		- We keep one stable `--target` UX while allowing the runner to choose:
+		  - delegate to stage0 (`delegate_stage0`), or
+		  - run a builtin backend directly (`builtin_stage3`).
+
+		What
+		- Returns a full target plan:
+		  - `kind`: `bundled` / `builtin` / `both`
+		  - `runMode`: execution strategy
+		  - `forwarded`: CLI args after target-specific injection/normalization
+		  - metadata fields for diagnostics/docs
+	**/
+	public static function resolve(targetId:String, forwarded:Array<String>):ResolvedTarget {
+		return switch (targetId) {
+			case "ocaml": {
+				id: "ocaml",
+				kind: "both",
+				runMode: RUN_MODE_DELEGATE_STAGE0,
+				describe: "Reflaxe OCaml backend via stage0 delegation",
+				forwarded: applyOcaml(forwarded)
+			};
+			case "ocaml-stage3": {
+				id: "ocaml-stage3",
+				kind: "builtin",
+				runMode: RUN_MODE_BUILTIN_STAGE3,
+				describe: "Linked Stage3 OCaml emitter fast-path (no --library required)",
+				forwarded: applyOcamlStage3(forwarded)
+			};
+			case _: throw "Unknown target: " + targetId;
+		}
 	}
 
 	public static function apply(targetId:String, forwarded:Array<String>):Array<String> {
-		return switch (targetId) {
-			case "ocaml": applyOcaml(forwarded);
-			case _: throw "Unknown target: " + targetId;
-		}
+		return resolve(targetId, forwarded).forwarded;
 	}
 
 	static function applyOcaml(forwarded:Array<String>):Array<String> {
@@ -90,6 +135,36 @@ class TargetPresets {
 		ArgScan.addDefineIfMissing(out, "reflaxe-target=ocaml");
 		ArgScan.addDefineIfMissing(out, "reflaxe-target-code-injection=ocaml");
 		ArgScan.addDefineIfMissing(out, "retain-untyped-meta");
+
+		return out;
+	}
+
+	/**
+		Normalize args for the linked Stage3 OCaml backend.
+
+		Why
+		- `ocaml-stage3` is the first builtin fast-path: we run `Stage3Compiler` directly,
+		  so a classpath `--library reflaxe.ocaml` lookup is unnecessary and can fail on hosts
+		  without the library installed.
+
+		What
+		- Keeps user intent additive and deterministic:
+		  - rejects conflicting explicit target defines,
+		  - strips only `reflaxe.ocaml` library wiring flags/macros,
+		  - preserves all other user-provided flags.
+	**/
+	static function applyOcamlStage3(forwarded:Array<String>):Array<String> {
+		final out = forwarded.copy();
+
+		final reflaxeTarget = ArgScan.getDefineValue(out, "reflaxe-target");
+		if (reflaxeTarget != null && reflaxeTarget != "ocaml") {
+			throw "Contradiction: --target ocaml-stage3 but -D reflaxe-target=" + reflaxeTarget;
+		}
+
+		ArgScan.stripLib(out, "reflaxe.ocaml");
+		ArgScan.stripMacro(out, "reflaxe.ocaml.CompilerInit.Start()");
+		ArgScan.stripMacro(out, "reflaxe.ReflectCompiler.Start()");
+		ArgScan.stripMacro(out, 'nullSafety("reflaxe")');
 
 		return out;
 	}
@@ -182,5 +257,27 @@ private class ArgScan {
 		args.push("-cp");
 		args.push(path);
 	}
-}
 
+	public static function stripLib(args:Array<String>, name:String):Void {
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			if ((a == "-lib" || a == "--library") && i + 1 < args.length && args[i + 1] == name) {
+				args.splice(i, 2);
+				continue;
+			}
+			i++;
+		}
+	}
+
+	public static function stripMacro(args:Array<String>, macroExpr:String):Void {
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == "--macro" && i + 1 < args.length && args[i + 1] == macroExpr) {
+				args.splice(i, 2);
+				continue;
+			}
+			i++;
+		}
+	}
+}
