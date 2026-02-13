@@ -14,13 +14,13 @@ on:
         required: false
         default: false
       macro_mode:
-        description: "Macro target mode (stage0_shim or direct)"
+        description: "Macro target mode (direct or stage0_shim)"
         type: choice
         required: false
-        default: "stage0_shim"
+        default: "direct"
         options:
-          - stage0_shim
           - direct
+          - stage0_shim
 
 concurrency:
   group: gate3-${{ github.ref }}
@@ -115,5 +115,5 @@ jobs:
           echo "HXHX_GATE3_JS_SERVER_TIMEOUT_MS=${HXHX_GATE3_JS_SERVER_TIMEOUT_MS}"
           echo "HXHX_GATE3_PYTHON_ALLOW_INSTALL=${HXHX_GATE3_PYTHON_ALLOW_INSTALL}"
           echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
-          echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE:-stage0_shim}"
+          echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE:-direct}"
           npm run test:upstream:runci-targets

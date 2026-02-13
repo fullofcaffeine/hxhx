@@ -215,15 +215,15 @@ HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 Notes:
 
 - This is **not** run in CI by default (very toolchain/network dependent).
-- Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js,Neko`), `allow_skip`, and `macro_mode` (`stage0_shim`/`direct`).
+- Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js,Neko`), `allow_skip`, and `macro_mode` (`direct` default; `stage0_shim` fallback).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
 - On macOS, the upstream `Js` server stage remains enabled, but Gate 3 relaxes async timeouts (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000` by default). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 - Python target runs default to no-install mode (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`): both `python3` and `pypy3` must already be on `PATH`. Set `HXHX_GATE3_PYTHON_ALLOW_INSTALL=1` to allow upstream installer/network fallback.
 - Java is validated as an opt-in Gate3 target (`HXHX_GATE3_TARGETS=Java`) and intentionally kept out of the default set (`Macro,Js,Neko`) to keep routine runs faster.
 - `HXHX_GATE3_MACRO_MODE` controls how Gate 3 executes the `Macro` target:
-  - `stage0_shim` (default): use the existing stage0 RunCi harness path.
-  - `direct`: route `Macro` through the non-delegating Gate 2 direct runner (`--hxhx-stage3 --hxhx-no-emit`).
+  - `direct` (default): route `Macro` through the non-delegating Gate 2 direct runner (`--hxhx-stage3 --hxhx-no-emit`).
+  - `stage0_shim`: use the historical stage0 RunCi harness path.
 - For the `Macro` target, the runner applies the same stability knobs as Gate 2:
   - `HXHX_GATE2_SKIP_PARTY=1` (default) skips `tests/party` (network-heavy).
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`

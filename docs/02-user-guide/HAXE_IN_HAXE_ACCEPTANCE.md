@@ -263,8 +263,9 @@ Passes when:
 Run a selectable subset locally via:
 
 - `HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets`
-- Optional CI dispatch: run workflow `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with `targets=Macro,Js,Neko` (or your claimed target set) and `macro_mode=stage0_shim|direct`.
-- `HXHX_GATE3_MACRO_MODE=direct` routes only the `Macro` target through the non-delegating Gate 2 direct runner while leaving other targets on the stage0-shim path (`stage0_shim` remains the default).
+- Optional CI dispatch: run workflow `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with `targets=Macro,Js,Neko` (or your claimed target set) and `macro_mode=direct|stage0_shim` (`direct` default).
+- `HXHX_GATE3_MACRO_MODE=direct` (default) routes only the `Macro` target through the non-delegating Gate 2 direct runner while leaving other targets on the stage0-shim path.
+- `HXHX_GATE3_MACRO_MODE=stage0_shim` keeps the historical stage0 RunCi harness path for `Macro` when needed for debugging/comparison.
 - Gate 3 applies a deterministic flake policy by default for `Js`: `HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3` (set count to `0` to disable).
 - On macOS, the upstream `Js` server stage remains enabled, but Gate 3 relaxes async timeouts (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000` by default). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 - Python target runs default to no-install mode (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`): both `python3` and `pypy3` must already be on `PATH`. Set `HXHX_GATE3_PYTHON_ALLOW_INSTALL=1` to allow upstream installer/network fallback.

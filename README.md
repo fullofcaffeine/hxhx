@@ -261,12 +261,12 @@ bash scripts/vendor/fetch-haxe-upstream.sh
 HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
-By default, Gate 3 keeps `Macro` on the historical stage0-shim path.
+By default, Gate 3 runs `Macro` via the non-delegating Gate 2 direct pipeline while keeping non-Macro targets on the stage0-shim path.
 
-To run only `Macro` via the non-delegating Gate 2 direct pipeline while keeping non-Macro targets unchanged, set:
+To force the historical stage0-shim harness for `Macro`, set:
 
 ```bash
-HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=direct npm run test:upstream:runci-targets
+HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run test:upstream:runci-targets
 ```
 
 An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with configurable `targets`, `allow_skip`, and `macro_mode` inputs.

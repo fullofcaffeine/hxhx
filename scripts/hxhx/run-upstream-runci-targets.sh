@@ -34,7 +34,8 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "  - Defaults upstream checkout to vendor/haxe (override with HAXE_UPSTREAM_DIR)." >&2
   echo "  - By default, missing target toolchains are treated as failures." >&2
   echo "    Set HXHX_GATE3_ALLOW_SKIP=1 to skip targets with missing deps." >&2
-  echo "    Set HXHX_GATE3_MACRO_MODE=direct to run the Macro target via the non-delegating Gate2 direct runner." >&2
+  echo "    Macro defaults to non-delegating direct mode (HXHX_GATE3_MACRO_MODE=direct)." >&2
+  echo "    Set HXHX_GATE3_MACRO_MODE=stage0_shim to use the historical stage0 RunCi harness path for Macro." >&2
   echo "    Retry defaults: HXHX_GATE3_RETRY_COUNT=1, HXHX_GATE3_RETRY_TARGETS=Js, HXHX_GATE3_RETRY_DELAY_SEC=3" >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   echo "    On macOS, Js server async timeouts are relaxed by default (HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000)." >&2
@@ -61,7 +62,7 @@ cleanup() {
 trap cleanup EXIT
 
 allow_skip="${HXHX_GATE3_ALLOW_SKIP:-0}"
-macro_mode="${HXHX_GATE3_MACRO_MODE:-stage0_shim}"
+macro_mode="${HXHX_GATE3_MACRO_MODE:-direct}"
 case "$macro_mode" in
   stage0_shim|direct) ;;
   *)
@@ -620,7 +621,7 @@ for tok in $TARGETS_RAW; do
   done
 done
 
-echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (Macro mode: ${macro_mode}; non-Macro via hxhx stage0 shim)"
+echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (Macro mode: ${macro_mode}; Macro direct by default, non-Macro via hxhx stage0 shim)"
 echo "== Gate 3 retry policy: count=${retry_count} targets=${retry_targets_raw} delay=${retry_delay_sec}s"
 echo "== Gate 3 Python policy: install_fallback=${python_allow_install} (0=no-install default, 1=allow upstream installer)"
 
