@@ -34,6 +34,7 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "  - Defaults upstream checkout to vendor/haxe (override with HAXE_UPSTREAM_DIR)." >&2
   echo "  - By default, missing target toolchains are treated as failures." >&2
   echo "    Set HXHX_GATE3_ALLOW_SKIP=1 to skip targets with missing deps." >&2
+  echo "    Set HXHX_GATE3_MACRO_MODE=direct to run the Macro target via the non-delegating Gate2 direct runner." >&2
   exit 2
 fi
 
@@ -54,6 +55,14 @@ cleanup() {
 trap cleanup EXIT
 
 allow_skip="${HXHX_GATE3_ALLOW_SKIP:-0}"
+macro_mode="${HXHX_GATE3_MACRO_MODE:-stage0_shim}"
+case "$macro_mode" in
+  stage0_shim|direct) ;;
+  *)
+    echo "Unknown HXHX_GATE3_MACRO_MODE: $macro_mode (expected stage0_shim or direct)." >&2
+    exit 2
+    ;;
+esac
 
 die_or_skip() {
   local msg="$1"
@@ -492,7 +501,7 @@ for tok in $TARGETS_RAW; do
   done
 done
 
-echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (via hxhx stage0 shim)"
+echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (Macro mode: ${macro_mode}; non-Macro via hxhx stage0 shim)"
 
 want_macro_patches=0
 for t in "${targets[@]}"; do
@@ -542,22 +551,41 @@ for target in "${targets[@]}"; do
 
   start="$(date +%s)"
   set +e
-  (
-    cd "$UPSTREAM_DIR/tests"
-    if [ -n "${STAGE0_STD_PATH:-}" ]; then
-      export HAXE_STD_PATH="${STAGE0_STD_PATH}"
-    fi
-    TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
-  )
+  t_lower="$(echo "$target" | tr '[:upper:]' '[:lower:]')"
+  if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
+    (
+      cd "$ROOT"
+      HAXE_UPSTREAM_DIR="$UPSTREAM_DIR_ORIG" \
+      HXHX_GATE2_MODE=stage3_no_emit_direct \
+      HXHX_GATE2_SKIP_PARTY="${HXHX_GATE2_SKIP_PARTY}" \
+      bash "$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"
+    )
+  else
+    (
+      cd "$UPSTREAM_DIR/tests"
+      if [ -n "${STAGE0_STD_PATH:-}" ]; then
+        export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+      fi
+      TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+    )
+  fi
   code="$?"
   set -e
   end="$(date +%s)"
   dt="$((end - start))"
 
   if [ "$code" -eq 0 ]; then
-    summary+=("$target: PASS (${dt}s)")
+    if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
+      summary+=("$target: PASS (${dt}s, mode=direct)")
+    else
+      summary+=("$target: PASS (${dt}s)")
+    fi
   else
-    summary+=("$target: FAIL (${dt}s, exit $code)")
+    if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
+      summary+=("$target: FAIL (${dt}s, exit $code, mode=direct)")
+    else
+      summary+=("$target: FAIL (${dt}s, exit $code)")
+    fi
     failures=1
     if [ "${HXHX_GATE3_FAIL_FAST:-0}" = "1" ]; then
       break

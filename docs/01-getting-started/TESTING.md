@@ -217,6 +217,9 @@ Notes:
 - This is **not** run in CI by default (very toolchain/network dependent).
 - Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js`) and `allow_skip`.
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
+- `HXHX_GATE3_MACRO_MODE` controls how Gate 3 executes the `Macro` target:
+  - `stage0_shim` (default): use the existing stage0 RunCi harness path.
+  - `direct`: route `Macro` through the non-delegating Gate 2 direct runner (`--hxhx-stage3 --hxhx-no-emit`).
 - For the `Macro` target, the runner applies the same stability knobs as Gate 2:
   - `HXHX_GATE2_SKIP_PARTY=1` (default) skips `tests/party` (network-heavy).
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`
