@@ -272,7 +272,7 @@ An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`G
 
 Gate 3 also applies a deterministic flake policy by default for `Js`: retry once (`HXHX_GATE3_RETRY_COUNT=1`) with a 3s delay.
 Tune with `HXHX_GATE3_RETRY_COUNT`, `HXHX_GATE3_RETRY_TARGETS`, and `HXHX_GATE3_RETRY_DELAY_SEC` (set count to `0` to disable).
-On macOS, the upstream `tests/runci/targets/Js` server stage is skipped by default (known async timeout flake); set `HXHX_GATE3_FORCE_JS_SERVER=1` to force it.
+On macOS, Gate 3 keeps the JS server stage enabled but relaxes async timeouts by default (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000`). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 

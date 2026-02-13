@@ -37,6 +37,8 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Set HXHX_GATE3_MACRO_MODE=direct to run the Macro target via the non-delegating Gate2 direct runner." >&2
   echo "    Retry defaults: HXHX_GATE3_RETRY_COUNT=1, HXHX_GATE3_RETRY_TARGETS=Js, HXHX_GATE3_RETRY_DELAY_SEC=3" >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
+  echo "    On macOS, Js server async timeouts are relaxed by default (HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000)." >&2
+  echo "    Set HXHX_GATE3_FORCE_JS_SERVER=1 to run without timeout patches (debug mode)." >&2
   exit 2
 fi
 
@@ -86,6 +88,16 @@ retry_delay_sec="$retry_delay_raw"
 
 retry_targets_raw="${HXHX_GATE3_RETRY_TARGETS:-Js}"
 retry_targets_normalized="$(echo "$retry_targets_raw" | tr ',' ' ')"
+
+js_server_timeout_raw="${HXHX_GATE3_JS_SERVER_TIMEOUT_MS:-60000}"
+case "$js_server_timeout_raw" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_GATE3_JS_SERVER_TIMEOUT_MS: $js_server_timeout_raw (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+js_server_timeout_ms="$js_server_timeout_raw"
+export HXHX_GATE3_JS_SERVER_TIMEOUT_MS="$js_server_timeout_ms"
 
 should_retry_target() {
   local target_lower="$1"
@@ -256,7 +268,8 @@ PY
 }
 
 
-patch_runci_js_skip_server_on_macos() {
+
+patch_runci_js_server_timeouts_on_macos() {
   if [ "$(uname -s)" != "Darwin" ]; then
     return 0
   fi
@@ -264,41 +277,50 @@ patch_runci_js_skip_server_on_macos() {
     return 0
   fi
 
-  local js_target="$UPSTREAM_DIR/tests/runci/targets/Js.hx"
-  [ -f "$js_target" ] || return 0
+  local test_builder="$UPSTREAM_DIR/tests/server/src/utils/macro/TestBuilder.macro.hx"
+  local test_case="$UPSTREAM_DIR/tests/server/src/TestCase.hx"
+  [ -f "$test_builder" ] || return 0
+  [ -f "$test_case" ] || return 0
 
   python3 - <<'PY'
 import os
+import re
 
-path = os.environ["UPSTREAM_DIR"] + "/tests/runci/targets/Js.hx"
-with open(path, "r", encoding="utf-8") as f:
-    src = f.read()
+root = os.environ["UPSTREAM_DIR"]
+timeout = os.environ["HXHX_GATE3_JS_SERVER_TIMEOUT_MS"]
+tb_path = root + "/tests/server/src/utils/macro/TestBuilder.macro.hx"
+tc_path = root + "/tests/server/src/TestCase.hx"
+marker = "HXHX Gate runner: relaxed Js server timeouts on macOS"
 
-if "HXHX Gate runner; macOS Node server timeout" in src:
-    raise SystemExit(0)
+with open(tb_path, "r", encoding="utf-8") as f:
+    tb_src = f.read()
+if marker not in tb_src:
+    base_line = "$i{asyncName}.setTimeout(20000);"
+    replaced_line = "$i{asyncName}.setTimeout(" + timeout + ");"
+    if base_line in tb_src:
+        tb_src = tb_src.replace(base_line, "// " + marker + "\n\t\t\t\t" + replaced_line, 1)
+    else:
+        tb_src = re.sub(
+            r'\$i\{asyncName\}\.setTimeout\(\d+\);',
+            "// " + marker + "\n\t\t\t\t" + replaced_line,
+            tb_src,
+            count=1
+        )
+    with open(tb_path, "w", encoding="utf-8") as f:
+        f.write(tb_src)
 
-needle = (
-    "\t\tchangeDirectory(serverDir);\n"
-    "\t\trunCommand(\"haxe\", [\"build.hxml\"]);\n"
-    "\t\trunCommand(\"node\", [\"test.js\"]);\n"
-)
-
-if needle not in src:
-    raise SystemExit(0)
-
-replacement = (
-    "\t\tif (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_GATE3_FORCE_JS_SERVER\") != \"1\") {\n"
-    "\t\t\tinfoMsg(\"Skipping JS server stage on Mac (HXHX Gate runner; macOS Node server timeout flake, set HXHX_GATE3_FORCE_JS_SERVER=1 to enable)\");\n"
-    "\t\t} else {\n"
-    "\t\t\tchangeDirectory(serverDir);\n"
-    "\t\t\trunCommand(\"haxe\", [\"build.hxml\"]);\n"
-    "\t\t\trunCommand(\"node\", [\"test.js\"]);\n"
-    "\t\t}\n"
-)
-
-src = src.replace(needle, replacement)
-with open(path, "w", encoding="utf-8") as f:
-    f.write(src)
+with open(tc_path, "r", encoding="utf-8") as f:
+    tc_src = f.read()
+if marker not in tc_src:
+    needle = "public function setup(async:utest.Async) {\n"
+    if needle in tc_src:
+        tc_src = tc_src.replace(
+            needle,
+            needle + "\t\t// " + marker + "\n\t\tasync.setTimeout(" + timeout + ");\n",
+            1
+        )
+        with open(tc_path, "w", encoding="utf-8") as f:
+            f.write(tc_src)
 PY
 }
 patch_runci_skip_utest_install_if_present() {
@@ -601,7 +623,7 @@ if [ "$want_macro_patches" = "1" ]; then
   need_cmd python3 "patch upstream runci to reduce network dependency for Macro target"
 fi
 if [ "$want_js_patches" = "1" ] && [ "$(uname -s)" = "Darwin" ] && [ "${HXHX_GATE3_FORCE_JS_SERVER:-0}" != "1" ]; then
-  need_cmd python3 "patch upstream runci Js target to skip flaky macOS server stage"
+  need_cmd python3 "patch upstream runci Js/server async timeouts for macOS stability"
 fi
 
 (
@@ -612,7 +634,7 @@ fi
   export UPSTREAM_DIR
   patch_runci_skip_sys_on_macos
   if [ "$want_js_patches" = "1" ]; then
-    patch_runci_js_skip_server_on_macos
+    patch_runci_js_server_timeouts_on_macos
   fi
 
   if [ "$want_macro_patches" = "1" ]; then
