@@ -101,6 +101,9 @@ bash scripts/hxhx/build-hxhx.sh
 
 By default this builds the bootstrap snapshot as **bytecode** (`out.bc`) for portability (some platforms/architectures can fail to native-compile the large generated OCaml units).
 To prefer a native build first, set `HXHX_BOOTSTRAP_PREFER_NATIVE=1` (it will fall back to bytecode if native fails).
+The stage0-free bootstrap build runs in `packages/hxhx/bootstrap_work/` (a local workspace)
+so committed snapshot files remain sharded and small in `bootstrap_out/`.
+
 
 ### Bootstrap stages (from-scratch model)
 
@@ -181,6 +184,7 @@ This script is now progress-visible by default:
 - fails fast if Stage0 emit stalls (`HXHX_STAGE0_FAILFAST_SECS`, default `900`)
 - prints per-phase timings (emit/copy/verify) and copied file count
 - cleans temporary stage0 logs by default (set `HXHX_KEEP_LOGS=1` to keep them)
+- shards oversized bootstrap OCaml units into deterministic `<Module>.ml.partNNN` chunks + `<Module>.ml.parts` manifest files so no tracked bootstrap file exceeds GitHub's 50MB warning threshold
 
 ### Artifact cleanup (recommended)
 

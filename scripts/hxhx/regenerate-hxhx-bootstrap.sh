@@ -12,6 +12,9 @@ set -euo pipefail
 # - Emits `packages/hxhx` via stage0 `haxe` + `reflaxe.ocaml` (emit-only; no dune build).
 # - Copies the generated OCaml sources (excluding `_build/` and `_gen_hx/`) into:
 #     packages/hxhx/bootstrap_out/
+# - Automatically shards oversized generated OCaml units into deterministic
+#   `<Module>.ml.partNNN` chunk files + `<Module>.ml.parts` manifests to avoid tracked files above
+#   GitHub's 50MB warning threshold.
 #
 # Notes
 # - Maintainer-only script: it requires stage0 `haxe`.
@@ -38,6 +41,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
 OUT_DIR="$PKG_DIR/out"
 BOOTSTRAP_DIR="$PKG_DIR/bootstrap_out"
+BOOTSTRAP_VERIFY_DIR="${HXHX_BOOTSTRAP_VERIFY_DIR:-$PKG_DIR/bootstrap_verify}"
 
 create_stage0_log_file() {
   local prefix="$1"
@@ -253,14 +257,24 @@ mkdir -p "$BOOTSTRAP_DIR"
 
 # Copy everything except build artifacts and generator sources.
 (cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+
+echo "== Sharding oversized bootstrap OCaml units (max ${HXHX_BOOTSTRAP_SHARD_MAX_BYTES:-50000000}B)"
+bash "$ROOT/scripts/hxhx/shard-bootstrap-ml.sh" "$BOOTSTRAP_DIR"
+
 copy_end_ts="$(date +%s)"
 bootstrap_files="$(find "$BOOTSTRAP_DIR" -type f | wc -l | tr -d ' ')"
 echo "== Bootstrap snapshot copy duration: $((copy_end_ts - copy_start_ts))s (files=$bootstrap_files)"
 
-echo "== Verifying bootstrap snapshot builds (dune)"
+echo "== Verifying bootstrap snapshot builds (hydrate + dune)"
 verify_start_ts="$(date +%s)"
+rm -rf "$BOOTSTRAP_VERIFY_DIR"
+mkdir -p "$BOOTSTRAP_VERIFY_DIR"
+(cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_VERIFY_DIR" && tar -xf -)
+if find "$BOOTSTRAP_VERIFY_DIR" -maxdepth 1 -type f -name "*.ml.parts" | grep -q .; then
+  bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_VERIFY_DIR"
+fi
 (
-  cd "$BOOTSTRAP_DIR"
+  cd "$BOOTSTRAP_VERIFY_DIR"
   # NOTE: On some platforms (notably macOS/arm64), extremely large generated compilation units
   # can cause native `ocamlopt` assembly failures (e.g. "fixup value out of range").
   #
@@ -268,6 +282,7 @@ verify_start_ts="$(date +%s)"
   # is sufficient to ensure the snapshot is structurally sound and runnable everywhere.
   dune build ./out.bc >/dev/null
 )
+rm -rf "$BOOTSTRAP_VERIFY_DIR"
 verify_end_ts="$(date +%s)"
 echo "== Bootstrap verification duration: $((verify_end_ts - verify_start_ts))s"
 

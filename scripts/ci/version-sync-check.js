@@ -69,6 +69,34 @@ function extractHxmlDefine(path, defineName) {
   return m ? m[1] : null
 }
 
+function bytesToMiB(bytes) {
+  return (bytes / (1024 * 1024)).toFixed(2)
+}
+
+function checkTrackedFileSizes(maxBytes) {
+  const tooLarge = []
+  for (const path of gitTrackedAll()) {
+    let stat
+    try {
+      stat = fs.statSync(path)
+    } catch (_) {
+      continue
+    }
+    if (!stat.isFile()) continue
+    if (stat.size > maxBytes) {
+      tooLarge.push([path, stat.size])
+    }
+  }
+
+  if (tooLarge.length === 0) return
+
+  tooLarge.sort((a, b) => b[1] - a[1])
+  const maxReport = 20
+  const lines = tooLarge.slice(0, maxReport).map(([path, size]) => `- ${path} (${bytesToMiB(size)}MB)`)
+  const suffix = tooLarge.length > maxReport ? `\n- ... (${tooLarge.length - maxReport} more)` : ''
+  fail(`tracked file size guardrail exceeded (> ${bytesToMiB(maxBytes)}MB):\n${lines.join('\n')}${suffix}`)
+}
+
 function main() {
   const pkg = readJson('package.json')
   const lock = readJson('package-lock.json')
@@ -161,6 +189,11 @@ function main() {
       }
     }
     if (process.exitCode) break
+  }
+
+  if (!process.exitCode) {
+    // Keep tracked files under the GitHub warning threshold to avoid noisy CI/push output.
+    checkTrackedFileSizes(50 * 1024 * 1024)
   }
 
   if (process.exitCode) return

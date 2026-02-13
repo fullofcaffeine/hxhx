@@ -27,6 +27,10 @@ workloads/**/out_stage*/
 packages/**/out/
 packages/**/out_tmp*/
 packages/**/out_stage*/
+packages/**/bootstrap_out/_build/
+packages/**/bootstrap_out/*.install
+packages/**/bootstrap_work/
+packages/**/bootstrap_verify/
 
 # Tools build output
 tools/**/out/

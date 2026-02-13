@@ -39,6 +39,9 @@ HXHX_BOOTSTRAP_PREFER_NATIVE=1 HXHX_STAGE0_PREFER_NATIVE=1 bash scripts/hxhx/bui
 By default, `scripts/hxhx/build-hxhx.sh` builds from the committed OCaml snapshot under
 `packages/hxhx/bootstrap_out/` so CI can build `hxhx` without requiring a stage0 `haxe`
 binary on PATH.
+During this path, the script copies `bootstrap_out` into `packages/hxhx/bootstrap_work/`,
+rehydrates any sharded modules there, and runs `dune` in that workspace.
+
 
 To regenerate the snapshot (requires stage0 `haxe`):
 
@@ -56,6 +59,7 @@ Notes:
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
 - If you run a compilation server, you can pass `HAXE_CONNECT=<port>` to reuse it.
+- Oversized generated bootstrap units are automatically sharded into deterministic `<Module>.ml.partNNN` chunks + `<Module>.ml.parts` manifest files to stay below GitHub's 50MB warning threshold.
 
 If you need to rebuild `hxhx` from stage0 source (instead of the committed `bootstrap_out`), use:
 

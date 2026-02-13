@@ -141,6 +141,8 @@ collect_safe_candidates() {
   add_path_if_exists "$ROOT/tmp_stat_portable.txt"
   add_path_if_exists "$ROOT/test/upstream_min_repro"
   add_path_if_exists "$ROOT/packages/hxhx/out"
+  add_path_if_exists "$ROOT/packages/hxhx/bootstrap_work"
+  add_path_if_exists "$ROOT/packages/hxhx/bootstrap_verify"
   add_path_if_exists "$ROOT/tools/hxhx-macro-host/out"
 
   if [[ -d "$ROOT" ]]; then

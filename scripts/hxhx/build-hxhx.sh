@@ -24,6 +24,7 @@ HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
+BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-$HXHX_DIR/bootstrap_work}"
 
 create_stage0_log_file() {
   local prefix="$1"
@@ -58,8 +59,16 @@ if [ ! -d "$HXHX_DIR" ]; then
 fi
 
 if [ -z "$HXHX_FORCE_STAGE0" ] && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP_DIR/dune" ]; then
+  rm -rf "$BOOTSTRAP_BUILD_DIR"
+  mkdir -p "$BOOTSTRAP_BUILD_DIR"
+  (cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_BUILD_DIR" && tar -xf -)
+
+  if find "$BOOTSTRAP_BUILD_DIR" -maxdepth 1 -type f -name "*.ml.parts" | grep -q .; then
+    bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_BUILD_DIR"
+  fi
+
   (
-    cd "$BOOTSTRAP_DIR"
+    cd "$BOOTSTRAP_BUILD_DIR"
     if [ "${HXHX_BOOTSTRAP_PREFER_NATIVE:-0}" = "1" ]; then
       dune build ./out.exe || dune build ./out.bc
     else
@@ -67,8 +76,8 @@ if [ -z "$HXHX_FORCE_STAGE0" ] && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP_DI
     fi
   )
 
-  BIN_EXE="$BOOTSTRAP_DIR/_build/default/out.exe"
-  BIN_BC="$BOOTSTRAP_DIR/_build/default/out.bc"
+  BIN_EXE="$BOOTSTRAP_BUILD_DIR/_build/default/out.exe"
+  BIN_BC="$BOOTSTRAP_BUILD_DIR/_build/default/out.bc"
   if [ -f "$BIN_EXE" ]; then
     echo "$BIN_EXE"
     exit 0
