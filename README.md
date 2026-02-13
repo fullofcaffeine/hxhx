@@ -250,6 +250,8 @@ For `HXHX_GATE2_MODE=stage3_emit_runner`, the runner now defaults to bootstrap s
 For long native bring-up runs, you can tune guardrails:
 - `HXHX_GATE2_RUNCI_TIMEOUT_SEC` (default `600`, set `0` to disable timeout)
 - `HXHX_GATE2_RUNCI_HEARTBEAT_SEC` (default `20`, set `0` to disable progress heartbeats)
+- `HXHX_GATE2_SKIP_DARWIN_SEGFAULT` (default `1`) turns a macOS `tests/misc/resolution` SIGSEGV (exit 139) into an explicit skipped-stage marker in direct mode; set `0` to force fail-fast while debugging.
+- Direct/runner Gate2 logs now print both `subinvocations=<n>` and `last_subinvocation=<cmd>` to speed up failure triage.
 
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 

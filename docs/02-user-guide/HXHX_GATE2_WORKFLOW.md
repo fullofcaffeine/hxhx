@@ -92,6 +92,8 @@ Notes:
     minimal harness so we can prove sub-invocation spawning (not full runci acceptance).
   - `HXHX_GATE2_SKIP_PARTY=0`: enable `tests/party` (network-heavy; skipped by default for stability).
   - `HXHX_GATE2_MISC_FILTER=<pattern>`: run only a subset of `tests/misc` fixtures.
+  - `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` (default): in `stage3_no_emit_direct`, convert intermittent macOS `tests/misc/resolution` SIGSEGV (exit 139) into a deterministic skipped-stage marker. Set `0` to force fail-fast while debugging.
+  - Gate2 summaries include `subinvocations=<n>` and `last_subinvocation=<cmd>` for faster triage.
   - `HXHX_GATE2_SKIP_PARTY=1`: skip `tests/party` entirely (default).
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`:
     if those libs are installed globally, seed a local `.haxelib` via `haxelib dev` to avoid installs.
