@@ -66,15 +66,14 @@ Meaning in plain terms:
 
 ### M3. Native RunCi orchestration progression
 
-Status: In progress  
-Bead: `haxe.ocaml-xgv.10.11`
+Status: Done  
+Beads: `haxe.ocaml-xgv.10.11`, `haxe.ocaml-xgv.10.22`
 
 Meaning in plain terms:
 
-- We can compile and launch upstream `RunCi` in native Stage3 mode.
-- Remaining gap: it still stalls early in some flows and does not yet complete the full expected macro-stage journey reliably.
-
-This is the current highest-priority technical blocker for “replacement-ready” confidence.
+- The non-delegating Gate2 direct rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`) now runs end-to-end with stable stage markers.
+- Runner diagnostics now include `subinvocations=<n>` and `last_subinvocation=<cmd>` for faster triage.
+- On macOS, intermittent `tests/misc/resolution` SIGSEGV can be handled deterministically via `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` (default).
 
 ### M4. Architecture hardening (target-agnostic core direction)
 
@@ -88,7 +87,7 @@ Meaning in plain terms:
 
 ### M5. Product boundary cleanup in monorepo
 
-Status: Open  
+Status: Done  
 Bead: `haxe.ocaml-xgv.10.6`
 
 Meaning in plain terms:
@@ -109,7 +108,7 @@ Meaning in plain terms:
 
 ```bash
 bd show haxe.ocaml-xgv.10
-bd show haxe.ocaml-xgv.10.11
+bd show haxe.ocaml-xgv.10.23
 bd ready
 ```
 
@@ -146,4 +145,4 @@ It is a concrete engineering bar tied to:
 - explicit reproducible commands,
 - and explicit MIT-provenance constraints.
 
-As we close remaining blockers (especially native RunCi progression), this document and `README.md` should be updated in the same change so non-experts can follow the journey.
+As we close remaining blockers (especially Linux baseline non-delegating confirmations and distribution/performance gates), this document and `README.md` should be updated in the same change so non-experts can follow the journey.
