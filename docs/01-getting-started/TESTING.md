@@ -217,6 +217,8 @@ Notes:
 - This is **not** run in CI by default (very toolchain/network dependent).
 - Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js`), `allow_skip`, and `macro_mode` (`stage0_shim`/`direct`).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
+- Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
+- On macOS, the upstream `Js` server stage is skipped by default (known async timeout flake); set `HXHX_GATE3_FORCE_JS_SERVER=1` to force it.
 - `HXHX_GATE3_MACRO_MODE` controls how Gate 3 executes the `Macro` target:
   - `stage0_shim` (default): use the existing stage0 RunCi harness path.
   - `direct`: route `Macro` through the non-delegating Gate 2 direct runner (`--hxhx-stage3 --hxhx-no-emit`).

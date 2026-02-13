@@ -270,6 +270,10 @@ HXHX_GATE3_TARGETS="Macro,Js" HXHX_GATE3_MACRO_MODE=direct npm run test:upstream
 
 An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with configurable `targets`, `allow_skip`, and `macro_mode` inputs.
 
+Gate 3 also applies a deterministic flake policy by default for `Js`: retry once (`HXHX_GATE3_RETRY_COUNT=1`) with a 3s delay.
+Tune with `HXHX_GATE3_RETRY_COUNT`, `HXHX_GATE3_RETRY_TARGETS`, and `HXHX_GATE3_RETRY_DELAY_SEC` (set count to `0` to disable).
+On macOS, the upstream `tests/runci/targets/Js` server stage is skipped by default (known async timeout flake); set `HXHX_GATE3_FORCE_JS_SERVER=1` to force it.
+
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 
 ```bash

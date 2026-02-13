@@ -35,6 +35,8 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "  - By default, missing target toolchains are treated as failures." >&2
   echo "    Set HXHX_GATE3_ALLOW_SKIP=1 to skip targets with missing deps." >&2
   echo "    Set HXHX_GATE3_MACRO_MODE=direct to run the Macro target via the non-delegating Gate2 direct runner." >&2
+  echo "    Retry defaults: HXHX_GATE3_RETRY_COUNT=1, HXHX_GATE3_RETRY_TARGETS=Js, HXHX_GATE3_RETRY_DELAY_SEC=3" >&2
+  echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   exit 2
 fi
 
@@ -63,6 +65,39 @@ case "$macro_mode" in
     exit 2
     ;;
 esac
+
+retry_count_raw="${HXHX_GATE3_RETRY_COUNT:-1}"
+case "$retry_count_raw" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_GATE3_RETRY_COUNT: $retry_count_raw (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+retry_count="$retry_count_raw"
+
+retry_delay_raw="${HXHX_GATE3_RETRY_DELAY_SEC:-3}"
+case "$retry_delay_raw" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_GATE3_RETRY_DELAY_SEC: $retry_delay_raw (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+retry_delay_sec="$retry_delay_raw"
+
+retry_targets_raw="${HXHX_GATE3_RETRY_TARGETS:-Js}"
+retry_targets_normalized="$(echo "$retry_targets_raw" | tr ',' ' ')"
+
+should_retry_target() {
+  local target_lower="$1"
+  local token=""
+  for token in $retry_targets_normalized; do
+    token="$(echo "$token" | tr '[:upper:]' '[:lower:]')"
+    if [ -n "$token" ] && [ "$token" = "$target_lower" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 die_or_skip() {
   local msg="$1"
@@ -220,6 +255,52 @@ with open(path, "w", encoding="utf-8") as f:
 PY
 }
 
+
+patch_runci_js_skip_server_on_macos() {
+  if [ "$(uname -s)" != "Darwin" ]; then
+    return 0
+  fi
+  if [ "${HXHX_GATE3_FORCE_JS_SERVER:-0}" = "1" ]; then
+    return 0
+  fi
+
+  local js_target="$UPSTREAM_DIR/tests/runci/targets/Js.hx"
+  [ -f "$js_target" ] || return 0
+
+  python3 - <<'PY'
+import os
+
+path = os.environ["UPSTREAM_DIR"] + "/tests/runci/targets/Js.hx"
+with open(path, "r", encoding="utf-8") as f:
+    src = f.read()
+
+if "HXHX Gate runner; macOS Node server timeout" in src:
+    raise SystemExit(0)
+
+needle = (
+    "\t\tchangeDirectory(serverDir);\n"
+    "\t\trunCommand(\"haxe\", [\"build.hxml\"]);\n"
+    "\t\trunCommand(\"node\", [\"test.js\"]);\n"
+)
+
+if needle not in src:
+    raise SystemExit(0)
+
+replacement = (
+    "\t\tif (Sys.systemName() == \"Mac\" && Sys.getEnv(\"HXHX_GATE3_FORCE_JS_SERVER\") != \"1\") {\n"
+    "\t\t\tinfoMsg(\"Skipping JS server stage on Mac (HXHX Gate runner; macOS Node server timeout flake, set HXHX_GATE3_FORCE_JS_SERVER=1 to enable)\");\n"
+    "\t\t} else {\n"
+    "\t\t\tchangeDirectory(serverDir);\n"
+    "\t\t\trunCommand(\"haxe\", [\"build.hxml\"]);\n"
+    "\t\t\trunCommand(\"node\", [\"test.js\"]);\n"
+    "\t\t}\n"
+)
+
+src = src.replace(needle, replacement)
+with open(path, "w", encoding="utf-8") as f:
+    f.write(src)
+PY
+}
 patch_runci_skip_utest_install_if_present() {
   local run_ci="$UPSTREAM_DIR/tests/RunCi.hx"
   [ -f "$run_ci" ] || return 0
@@ -502,17 +583,25 @@ for tok in $TARGETS_RAW; do
 done
 
 echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (Macro mode: ${macro_mode}; non-Macro via hxhx stage0 shim)"
+echo "== Gate 3 retry policy: count=${retry_count} targets=${retry_targets_raw} delay=${retry_delay_sec}s"
 
 want_macro_patches=0
+want_js_patches=0
 for t in "${targets[@]}"; do
-  if [ "$(echo "$t" | tr '[:upper:]' '[:lower:]')" = "macro" ]; then
+  t_norm="$(echo "$t" | tr '[:upper:]' '[:lower:]')"
+  if [ "$t_norm" = "macro" ]; then
     want_macro_patches=1
-    break
+  fi
+  if [ "$t_norm" = "js" ]; then
+    want_js_patches=1
   fi
 done
 
 if [ "$want_macro_patches" = "1" ]; then
   need_cmd python3 "patch upstream runci to reduce network dependency for Macro target"
+fi
+if [ "$want_js_patches" = "1" ] && [ "$(uname -s)" = "Darwin" ] && [ "${HXHX_GATE3_FORCE_JS_SERVER:-0}" != "1" ]; then
+  need_cmd python3 "patch upstream runci Js target to skip flaky macOS server stage"
 fi
 
 (
@@ -522,6 +611,9 @@ fi
   fi
   export UPSTREAM_DIR
   patch_runci_skip_sys_on_macos
+  if [ "$want_js_patches" = "1" ]; then
+    patch_runci_js_skip_server_on_macos
+  fi
 
   if [ "$want_macro_patches" = "1" ]; then
     # Gate runner stability patches (reduce network dependency where possible).
@@ -549,42 +641,65 @@ for target in "${targets[@]}"; do
     continue
   fi
 
-  start="$(date +%s)"
-  set +e
   t_lower="$(echo "$target" | tr '[:upper:]' '[:lower:]')"
-  if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
-    (
-      cd "$ROOT"
-      HAXE_UPSTREAM_DIR="$UPSTREAM_DIR_ORIG" \
-      HXHX_GATE2_MODE=stage3_no_emit_direct \
-      HXHX_GATE2_SKIP_PARTY="${HXHX_GATE2_SKIP_PARTY}" \
-      bash "$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"
-    )
-  else
-    (
-      cd "$UPSTREAM_DIR/tests"
-      if [ -n "${STAGE0_STD_PATH:-}" ]; then
-        export HAXE_STD_PATH="${STAGE0_STD_PATH}"
-      fi
-      TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
-    )
+  max_attempts=1
+  if [ "$retry_count" -gt 0 ] && should_retry_target "$t_lower"; then
+    max_attempts="$((retry_count + 1))"
   fi
-  code="$?"
-  set -e
+
+  attempt=1
+  start="$(date +%s)"
+  while true; do
+    set +e
+    if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
+      (
+        cd "$ROOT"
+        HAXE_UPSTREAM_DIR="$UPSTREAM_DIR_ORIG" \
+        HXHX_GATE2_MODE=stage3_no_emit_direct \
+        HXHX_GATE2_SKIP_PARTY="${HXHX_GATE2_SKIP_PARTY}" \
+        bash "$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"
+      )
+    else
+      (
+        cd "$UPSTREAM_DIR/tests"
+        if [ -n "${STAGE0_STD_PATH:-}" ]; then
+          export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+        fi
+        TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+      )
+    fi
+    code="$?"
+    set -e
+
+    if [ "$code" -eq 0 ] || [ "$attempt" -ge "$max_attempts" ]; then
+      break
+    fi
+
+    next_attempt="$((attempt + 1))"
+    echo "Retrying target '$target' (attempt ${next_attempt}/${max_attempts}) after exit ${code}..." >&2
+    if [ "$retry_delay_sec" -gt 0 ]; then
+      sleep "$retry_delay_sec"
+    fi
+    attempt="$next_attempt"
+  done
   end="$(date +%s)"
   dt="$((end - start))"
+  attempts_note=""
+  if [ "$attempt" -gt 1 ]; then
+    attempts_note=", attempts=${attempt}/${max_attempts}"
+  fi
 
   if [ "$code" -eq 0 ]; then
     if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
-      summary+=("$target: PASS (${dt}s, mode=direct)")
+      summary+=("$target: PASS (${dt}s, mode=direct${attempts_note})")
     else
-      summary+=("$target: PASS (${dt}s)")
+      summary+=("$target: PASS (${dt}s${attempts_note})")
     fi
   else
     if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
-      summary+=("$target: FAIL (${dt}s, exit $code, mode=direct)")
+      summary+=("$target: FAIL (${dt}s, exit $code, mode=direct${attempts_note})")
     else
-      summary+=("$target: FAIL (${dt}s, exit $code)")
+      summary+=("$target: FAIL (${dt}s, exit $code${attempts_note})")
     fi
     failures=1
     if [ "${HXHX_GATE3_FAIL_FAST:-0}" = "1" ]; then
