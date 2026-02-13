@@ -215,7 +215,7 @@ HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets
 Notes:
 
 - This is **not** run in CI by default (very toolchain/network dependent).
-- Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js`) and `allow_skip`.
+- Optional manual CI workflow: `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with inputs for `targets` (default `Macro,Js`), `allow_skip`, and `macro_mode` (`stage0_shim`/`direct`).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - `HXHX_GATE3_MACRO_MODE` controls how Gate 3 executes the `Macro` target:
   - `stage0_shim` (default): use the existing stage0 RunCi harness path.

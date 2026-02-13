@@ -263,7 +263,7 @@ Passes when:
 Run a selectable subset locally via:
 
 - `HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets`
-- Optional CI dispatch: run workflow `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with `targets=Macro,Js` (or your claimed target set).
+- Optional CI dispatch: run workflow `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with `targets=Macro,Js` (or your claimed target set) and `macro_mode=stage0_shim|direct`.
 - `HXHX_GATE3_MACRO_MODE=direct` routes only the `Macro` target through the non-delegating Gate 2 direct runner while leaving other targets on the stage0-shim path (`stage0_shim` remains the default).
 
 If we claim “full replacement”, this implies passing the same set of targets upstream CI runs (JS, Neko, HL, JVM/Java,

@@ -268,7 +268,7 @@ To run only `Macro` via the non-delegating Gate 2 direct pipeline while keeping 
 HXHX_GATE3_TARGETS="Macro,Js" HXHX_GATE3_MACRO_MODE=direct npm run test:upstream:runci-targets
 ```
 
-An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with configurable targets and allow-skip behavior.
+An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with configurable `targets`, `allow_skip`, and `macro_mode` inputs.
 
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 

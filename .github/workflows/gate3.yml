@@ -13,6 +13,14 @@ on:
         type: boolean
         required: false
         default: false
+      macro_mode:
+        description: "Macro target mode (stage0_shim or direct)"
+        type: choice
+        required: false
+        default: "stage0_shim"
+        options:
+          - stage0_shim
+          - direct
 
 concurrency:
   group: gate3-${{ github.ref }}
@@ -93,8 +101,10 @@ jobs:
         env:
           HXHX_GATE3_TARGETS: ${{ inputs.targets }}
           HXHX_GATE3_ALLOW_SKIP: ${{ inputs.allow_skip && '1' || '0' }}
+          HXHX_GATE3_MACRO_MODE: ${{ inputs.macro_mode }}
         run: |
           set -euo pipefail
           echo "HXHX_GATE3_TARGETS=${HXHX_GATE3_TARGETS:-Macro,Js}"
           echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
+          echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE:-stage0_shim}"
           npm run test:upstream:runci-targets
