@@ -264,7 +264,8 @@ Passes when:
 Run a selectable subset locally via:
 
 - `HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets`
-- Optional CI dispatch: run workflow `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with `targets=Macro,Js,Neko` (or your claimed target set) and `macro_mode=direct|stage0_shim` (`direct` default).
+- CI cadence: weekly Linux baseline via `.github/workflows/gate3.yml` with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
+- Optional CI dispatch: same workflow with manual overrides (`targets`, `allow_skip`, `macro_mode=direct|stage0_shim`).
 - `HXHX_GATE3_MACRO_MODE=direct` (default) routes only the `Macro` target through the non-delegating Gate 2 direct runner while leaving other targets on the stage0-shim path.
 - `HXHX_GATE3_MACRO_MODE=stage0_shim` keeps the historical stage0 RunCi harness path for `Macro` when needed for debugging/comparison.
 - Gate 3 applies a deterministic flake policy by default for `Js`: `HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3` (set count to `0` to disable).

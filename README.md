@@ -269,7 +269,7 @@ To force the historical stage0-shim harness for `Macro`, set:
 HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run test:upstream:runci-targets
 ```
 
-An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with configurable `targets`, `allow_skip`, and `macro_mode` inputs.
+Gate 3 CI (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`) and also supports manual `workflow_dispatch` overrides for `targets`, `allow_skip`, and `macro_mode`.
 Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedule (Linux baseline) and remains manually triggerable via `run_upstream_macro`.
 
 Gate 3 also applies a deterministic flake policy by default for `Js`: retry once (`HXHX_GATE3_RETRY_COUNT=1`) with a 3s delay.

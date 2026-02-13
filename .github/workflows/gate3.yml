@@ -21,6 +21,9 @@ on:
         options:
           - direct
           - stage0_shim
+  schedule:
+    # Weekly baseline for replacement-readiness targets without affecting PR CI.
+    - cron: "0 11 * * 2"
 
 concurrency:
   group: gate3-${{ github.ref }}
@@ -35,7 +38,7 @@ env:
 
 jobs:
   upstream_runci_targets:
-    name: Upstream runci targets (${{ inputs.targets }})
+    name: Upstream runci targets (${{ inputs.targets || 'Macro,Js,Neko' }})
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -100,9 +103,9 @@ jobs:
 
       - name: Run Gate3 runci target matrix
         env:
-          HXHX_GATE3_TARGETS: ${{ inputs.targets }}
+          HXHX_GATE3_TARGETS: ${{ inputs.targets || 'Macro,Js,Neko' }}
           HXHX_GATE3_ALLOW_SKIP: ${{ inputs.allow_skip && '1' || '0' }}
-          HXHX_GATE3_MACRO_MODE: ${{ inputs.macro_mode }}
+          HXHX_GATE3_MACRO_MODE: ${{ inputs.macro_mode || 'direct' }}
           HXHX_GATE3_RETRY_COUNT: "1"
           HXHX_GATE3_RETRY_TARGETS: "Js"
           HXHX_GATE3_JS_SERVER_TIMEOUT_MS: "60000"
