@@ -238,6 +238,8 @@ bash scripts/vendor/fetch-haxe-upstream.sh
 npm run test:upstream:unit-macro
 ```
 
+Gate 1 CI (`.github/workflows/gate1.yml`) runs weekly on Linux and remains manually triggerable via `workflow_dispatch` + `run_upstream_unit_macro=true`.
+
 Run upstream Gate 2 (runci Macro target; heavier and more tool-dependent):
 
 ```bash

@@ -75,6 +75,7 @@ Notes:
   resolver + typer + macro-host plumbing without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline remains available as:
     `npm run test:upstream:unit-macro-stage0`
+  - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
   That document also clarifies what we mean by “compile Haxe” and how Stage0→Stage2 bootstrapping works.

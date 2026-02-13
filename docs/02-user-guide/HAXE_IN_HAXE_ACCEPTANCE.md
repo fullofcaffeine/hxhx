@@ -77,6 +77,7 @@ As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” m
 - Gate 1 (`npm run test:upstream:unit-macro`): defaults to a **native/non-delegating bring-up rung**
   (Stage3 `--hxhx-no-emit`), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline is still available as: `npm run test:upstream:unit-macro-stage0`.
+  - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml` + manual `workflow_dispatch` override.
 - Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
   - An experimental rung exists (`stage3_emit_runner`) which now compiles+runs the upstream `tests/RunCi.hxml`
     under the Stage3 bootstrap emitter, but it does not yet execute the full Macro orchestration loop faithfully.
