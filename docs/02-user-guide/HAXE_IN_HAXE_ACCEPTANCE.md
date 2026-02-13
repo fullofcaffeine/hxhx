@@ -263,6 +263,7 @@ Passes when:
 Run a selectable subset locally via:
 
 - `HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets`
+- Optional CI dispatch: run workflow `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with `targets=Macro,Js` (or your claimed target set).
 
 If we claim “full replacement”, this implies passing the same set of targets upstream CI runs (JS, Neko, HL, JVM/Java,
 Python, Lua, PHP, C#, C++/hxcpp, etc.), which may require external toolchains.

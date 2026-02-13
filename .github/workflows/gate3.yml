@@ -1,0 +1,100 @@
+name: Gate 3 (HXHX)
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Comma-separated upstream runci targets (e.g. Macro,Js)"
+        type: string
+        required: false
+        default: "Macro,Js"
+      allow_skip:
+        description: "Skip targets when host dependencies are missing"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: gate3-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  upstream_runci_targets:
+    name: Upstream runci targets (${{ inputs.targets }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      # Keep Gate3 deterministic by default; party is network-heavy and flaky.
+      HXHX_GATE2_SKIP_PARTY: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (OCaml + Neko + JDK + Python)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            ocaml dune ocaml-findlib \
+            neko \
+            python3 \
+            default-jdk \
+            build-essential
+          dune --version
+          ocamlc -version
+          neko -version || true
+          javac -version
+          python3 --version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Run Gate3 runci target matrix
+        env:
+          HXHX_GATE3_TARGETS: ${{ inputs.targets }}
+          HXHX_GATE3_ALLOW_SKIP: ${{ inputs.allow_skip && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          echo "HXHX_GATE3_TARGETS=${HXHX_GATE3_TARGETS:-Macro,Js}"
+          echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
+          npm run test:upstream:runci-targets

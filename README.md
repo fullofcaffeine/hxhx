@@ -253,6 +253,15 @@ For long native bring-up runs, you can tune guardrails:
 - `HXHX_GATE2_SKIP_DARWIN_SEGFAULT` (default `1`) turns a macOS `tests/misc/resolution` SIGSEGV (exit 139) into an explicit skipped-stage marker in direct mode; set `0` to force fail-fast while debugging.
 - Direct/runner Gate2 logs now print both `subinvocations=<n>` and `last_subinvocation=<cmd>` to speed up failure triage.
 
+Run upstream Gate 3 (selected `tests/runci` targets; heavier target matrix):
+
+```bash
+bash scripts/vendor/fetch-haxe-upstream.sh
+HXHX_GATE3_TARGETS="Macro,Js" npm run test:upstream:runci-targets
+```
+
+An optional manual CI workflow is available at `.github/workflows/gate3.yml` (`Gate 3 (HXHX)`) with configurable targets and allow-skip behavior.
+
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 
 ```bash
