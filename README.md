@@ -148,6 +148,7 @@ Current checklist (human-readable):
 - [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
 - [x] Heavy-workload runtime tuning baseline landed (`haxe.ocaml-xgv.10.17`)
+- [x] Gate3 stability hardening now includes Python no-install mode and a documented Java baseline (kept opt-in for runtime cost) (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
@@ -274,6 +275,7 @@ Gate 3 also applies a deterministic flake policy by default for `Js`: retry once
 Tune with `HXHX_GATE3_RETRY_COUNT`, `HXHX_GATE3_RETRY_TARGETS`, and `HXHX_GATE3_RETRY_DELAY_SEC` (set count to `0` to disable).
 On macOS, Gate 3 keeps the JS server stage enabled but relaxes async timeouts by default (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000`). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 Python target runs default to no-install mode (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`): both `python3` and `pypy3` must already be on `PATH`. Set `HXHX_GATE3_PYTHON_ALLOW_INSTALL=1` to allow upstream installer/network fallback.
+Java is validated as an opt-in Gate3 target (`HXHX_GATE3_TARGETS=Java`, local baseline about 2 minutes) but stays out of the default target set for now to keep routine runs fast.
 
 Run a focused Gate2 display rung (non-delegating Macro sequence, stop after display stage):
 
