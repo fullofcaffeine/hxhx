@@ -88,7 +88,8 @@ npm run test:upstream:runci-macro
 
 Notes:
 
-- This is **not** run in GitHub Actions CI by default (it is network-heavy and relies on external toolchains).
+- This is **not** part of PR/push CI by default (it is network-heavy and relies on external toolchains).
+  A Linux baseline run is executed weekly in `.github/workflows/gate2.yml`, and it remains manually triggerable via `workflow_dispatch` + `run_upstream_macro=true`.
 - Host toolchain requirements and macOS sys-stage caveats are documented in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
 - Debugging: set `HXHX_GATE2_MISC_FILTER=<pattern>` to run only a subset of `tests/misc` fixtures.
 - By default this uses a **non-delegating** Gate 2 mode (`HXHX_GATE2_MODE=stage3_no_emit_direct`): it runs the same stage

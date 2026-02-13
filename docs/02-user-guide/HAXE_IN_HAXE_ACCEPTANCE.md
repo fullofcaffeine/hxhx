@@ -219,6 +219,7 @@ This is the point where we’re no longer “just a compiler”: we’re a compi
 In this repo, Gate 2 is exercised via:
 
 - `npm run test:upstream:runci-macro` (wraps `scripts/hxhx/run-upstream-runci-macro.sh`)
+  - CI cadence: weekly Linux baseline in `.github/workflows/gate2.yml` + manual `workflow_dispatch` override.
 
 Today, `npm run test:upstream:runci-macro` defaults to a **non-delegating** Gate 2 mode:
 
