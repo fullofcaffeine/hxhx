@@ -6,6 +6,8 @@ let init () : unit =
   ignore (HxType.class_ "CompilerDriver");
   ignore (HxType.class_ "EmitterStage");
   ignore (HxType.class_ "FrontendFixture");
+  ignore (HxType.class_ "HihBackendDialect");
+  ignore (HxType.class_ "HihOcamlBackendDialect");
   ignore (HxType.class_ "HxClassDecl");
   ignore (HxType.class_ "HxConditionalCompilation");
   ignore (HxType.class_ "HxDefineMap");
@@ -547,6 +549,9 @@ let init () : unit =
     let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'expectHasStaticMain' for FrontendFixture" in
     Obj.repr (FrontendFixture.create a0 a1 a2 a3 a4)
   );
+  HxType.register_class_ctor "HihOcamlBackendDialect" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (HihOcamlBackendDialect.create ())
+  );
   HxType.register_class_ctor "HxClassDecl" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for HxClassDecl" in
@@ -915,6 +920,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "CompilerDriver" (fun () -> Obj.repr (CompilerDriver.__empty ()));
   HxType.register_class_empty_ctor "EmitterStage" (fun () -> Obj.repr (EmitterStage.__empty ()));
   HxType.register_class_empty_ctor "FrontendFixture" (fun () -> Obj.repr (FrontendFixture.__empty ()));
+  HxType.register_class_empty_ctor "HihOcamlBackendDialect" (fun () -> Obj.repr (HihOcamlBackendDialect.__empty ()));
   HxType.register_class_empty_ctor "HxClassDecl" (fun () -> Obj.repr (HxClassDecl.__empty ()));
   HxType.register_class_empty_ctor "HxConditionalCompilation" (fun () -> Obj.repr (HxConditionalCompilation.__empty ()));
   HxType.register_class_empty_ctor "HxDefineMap" (fun () -> Obj.repr (HxDefineMap.__empty ()));
@@ -987,9 +993,13 @@ let init () : unit =
   HxType.register_class_instance_fields "CompilerDriver" [];
   HxType.register_class_static_fields "CompilerDriver" [ "run" ];
   HxType.register_class_instance_fields "EmitterStage" [];
-  HxType.register_class_static_fields "EmitterStage" [ "constFoldString"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentOcamlModuleName"; "emit"; "emitToDir"; "escapeOcamlIdentPart"; "escapeOcamlString"; "exprToOcaml"; "exprToOcamlString"; "hasCurrentInstanceMethod"; "hasMethodName"; "isOcamlKeyword"; "isTypePathExpr"; "isUpperStart"; "lowerFirst"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlTypeFromTy"; "ocamlValueIdent"; "returnExprToOcaml"; "stmtListToOcaml"; "tryExtractTypePathPartsFromExpr"; "upperFirst" ];
+  HxType.register_class_static_fields "EmitterStage" [ "backendDialect"; "constFoldString"; "currentImportInt64"; "currentInstanceFieldsByTypePath"; "currentInstanceFieldsFor"; "currentInstanceMethodsByTypePath"; "currentInstanceMethodsFor"; "currentOcamlModuleName"; "emit"; "emitToDir"; "escapeOcamlIdentPart"; "escapeOcamlString"; "exprToOcaml"; "exprToOcamlString"; "hasCurrentInstanceMethod"; "hasMethodName"; "isOcamlKeyword"; "isTypePathExpr"; "isUpperStart"; "lowerFirst"; "ocamlModuleNameFromTypePath"; "ocamlModuleNameFromTypePathParts"; "ocamlTypeFromTy"; "ocamlValueIdent"; "returnExprToOcaml"; "stmtListToOcaml"; "tryExtractTypePathPartsFromExpr"; "upperFirst" ];
   HxType.register_class_instance_fields "FrontendFixture" [ "expectHasStaticMain"; "expectMainClassName"; "expectPackagePath"; "getExpectHasStaticMain"; "getExpectMainClassName"; "getExpectPackagePath"; "getLabel"; "getSource"; "label"; "source" ];
   HxType.register_class_static_fields "FrontendFixture" [];
+  HxType.register_class_instance_fields "HihBackendDialect" [ "dynamicNullValue"; "runtimeDynamicEquals"; "runtimeIsNull" ];
+  HxType.register_class_static_fields "HihBackendDialect" [];
+  HxType.register_class_instance_fields "HihOcamlBackendDialect" [ "dynamicNullValue"; "runtimeDynamicEquals"; "runtimeIsNull" ];
+  HxType.register_class_static_fields "HihOcamlBackendDialect" [];
   HxType.register_class_instance_fields "HxClassDecl" [ "fields"; "functions"; "hasStaticMain"; "name" ];
   HxType.register_class_static_fields "HxClassDecl" [ "getFields"; "getFunctions"; "getHasStaticMain"; "getName" ];
   HxType.register_class_instance_fields "HxConditionalCompilation" [];
@@ -1140,6 +1150,8 @@ let init () : unit =
   HxType.register_class_tags "CompilerDriver" [ "CompilerDriver" ];
   HxType.register_class_tags "EmitterStage" [ "EmitterStage" ];
   HxType.register_class_tags "FrontendFixture" [ "FrontendFixture" ];
+  HxType.register_class_tags "HihBackendDialect" [ "HihBackendDialect" ];
+  HxType.register_class_tags "HihOcamlBackendDialect" [ "HihBackendDialect"; "HihOcamlBackendDialect" ];
   HxType.register_class_tags "HxClassDecl" [ "HxClassDecl" ];
   HxType.register_class_tags "HxConditionalCompilation" [ "HxConditionalCompilation" ];
   HxType.register_class_tags "HxDefineMap" [ "HxDefineMap" ];

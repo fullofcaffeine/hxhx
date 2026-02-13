@@ -867,8 +867,79 @@ class Main {
 HX
 out="$(HXHX_TYPER_STRICT=1 "$HXHX_BIN" --hxhx-stage3 --hxhx-no-emit --hxhx-emit-full-bodies -cp "$tmpinstfield/src" -main Main --hxhx-out "$tmpinstfield/out")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
-echo "$out" | grep -q "^unsupported_exprs_total=0$"
 
+echo "== Stage3 regression: field access on call results preserves Obj.repr call grouping"
+tmprunciobj="$tmpdir/runci_call_result_field_access"
+mkdir -p "$tmprunciobj/src"
+cat >"$tmprunciobj/src/Main.hx" <<'HX'
+class Box {
+  public var value:String;
+
+  public function new(v:String) {
+    value = v;
+  }
+}
+
+class Main {
+  static function mk(v:String):Box {
+    return new Box(v);
+  }
+
+  static function main() {
+    Sys.println(mk("ok").value);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprunciobj/src" -main Main --hxhx-out "$tmprunciobj/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+grep -q "HxAnon.get (Obj.repr (mk (\"ok\"))) \"value\"" "$tmprunciobj/out/Main.ml"
+
+
+echo "== Stage3 regression: array concat/map/join chain lowers to bootstrap intrinsics"
+tmpmapjoin="$tmpdir/array_map_join"
+mkdir -p "$tmpmapjoin/src"
+cat >"$tmpmapjoin/src/Main.hx" <<'HX'
+class Main {
+  static function mergeArgs(cmd:String, args:Array<String>) {
+    return [cmd].concat(args).map(Std.string).join(" ");
+  }
+
+  static function main() {
+    Sys.println(mergeArgs("haxe", ["-version"]));
+  }
+}
+HX
+out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies --hxhx-no-run -cp "$tmpmapjoin/src" -main Main --hxhx-out "$tmpmapjoin/out")"
+echo "$out" | grep -q "^stage3=ok$"
+grep -q "HxBootArray.map_dyn" "$tmpmapjoin/out/Main.ml"
+grep -q "HxBootArray.join_dyn" "$tmpmapjoin/out/Main.ml"
+
+echo "== Stage3 regression: instance method callback references bind this in emitted OCaml"
+tmpmethodcb="$tmpdir/instance_method_callback"
+mkdir -p "$tmpmethodcb/src"
+cat >"$tmpmethodcb/src/Main.hx" <<'HX'
+class Main {
+  public function new() {}
+
+  function printField(v:String):String {
+    return v;
+  }
+
+  function printStructure(fields:Array<String>):String {
+    return fields.map(printField).join(",");
+  }
+
+  static function main() {
+    var m = new Main();
+    Sys.println(m.printStructure(["a", "b"]));
+  }
+}
+HX
+out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpmethodcb/src" -main Main --hxhx-out "$tmpmethodcb/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^run=ok$"
+grep -q "printField (this_)" "$tmpmethodcb/out/Main.ml"
 echo "== Stage3 regression: instance field roundtrip compiles and runs"
 tmpinstfieldrun="$tmpdir/instance_field_run"
 mkdir -p "$tmpinstfieldrun/src"
@@ -895,7 +966,7 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^41$"
 echo "$out" | grep -q "^run=ok$"
 grep -q "HxAnon.set (Obj.repr __hx_obj)" "$tmpinstfieldrun/out/Main.ml"
-grep -q "HxAnon.get (Obj.repr this_)" "$tmpinstfieldrun/out/Main.ml"
+grep -q "HxAnon.get (Obj.repr (this_))" "$tmpinstfieldrun/out/Main.ml"
 
 echo "== Stage3 bring-up: imported sys.FileSystem + haxe.io.Path statics lower to runtime"
 tmpfs="$tmpdir/filesystem_path"

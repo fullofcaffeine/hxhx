@@ -59,6 +59,28 @@ let copy (a : 'a t) : 'a t =
 let concat (a : 'a t) (b : 'a t) : 'a t =
   HxArray.concat a b
 
+(* Stage3 emit-runner bridge for dynamic callbacks.
+
+   Why
+   - Upstream RunCi lowers some callback expressions through dynamic field lookups
+     (for example `quoteWinArg.bind(null, true)`), so bootstrap emission sees them as
+     dynamic values instead of statically typed `'a -> 'b` functions.
+
+   What
+   - Accept callback as `Obj.t` and bridge into `HxArray.map`.
+
+   How
+   - Coerce the array payload + callback to dynamic forms and delegate.
+*)
+let map_dyn (a : 'a t) (f : Obj.t) : Obj.t t =
+  let arr : Obj.t t = Obj.magic a in
+  let fn : Obj.t -> Obj.t = Obj.obj f in
+  HxArray.map arr fn
+
+(* Stage3 emit-runner bridge for Array.join with dynamic payloads. *)
+let join_dyn (a : Obj.t t) (sep : string) : string =
+  HxArray.join a sep (fun v -> HxRuntime.dynamic_toStdString (Obj.repr v))
+
 let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
   (* Stage3 emit-runner bring-up: we sometimes end up joining arrays that are *meant* to be
      `Array<String>` but contain poison/null-ish values due to incomplete stdlib semantics.
@@ -70,4 +92,4 @@ let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
      Using `dynamic_toStdString` here keeps the runner alive and lets Gate2 surface the next
      missing semantic as a deterministic error instead of a hard crash. *)
   ignore to_string;
-  HxArray.join a sep (fun v -> HxRuntime.dynamic_toStdString (Obj.repr v))
+  join_dyn (Obj.magic a) sep

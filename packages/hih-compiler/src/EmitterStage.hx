@@ -628,6 +628,26 @@ class EmitterStage {
 					}
 				}
 
+			function isLikelyArrayExpr(expr:HxExpr):Bool {
+				return switch (expr) {
+					case EArrayDecl(_):
+						true;
+					case EIdent(name):
+						final t = tyForIdent(name);
+						t == "Array" || StringTools.startsWith(t, "Array<");
+					case ECall(EField(inner, "toArray"), []):
+						isLikelyArrayExpr(inner);
+					case ECall(EField(inner, "copy"), []):
+						isLikelyArrayExpr(inner);
+					case ECall(EField(inner, "concat"), [_]):
+						isLikelyArrayExpr(inner);
+					case ECall(EField(inner, "map"), [_]):
+						isLikelyArrayExpr(inner);
+					case _:
+						false;
+				}
+			}
+
 				function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
 					final out = new Map<String, TyType>();
 					if (ty != null) {
@@ -904,7 +924,14 @@ class EmitterStage {
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 				case EIdent(name):
-					if (tyByIdent != null && tyByIdent.get(name) != null) {
+					if (hasCurrentInstanceMethod(name) && tyByIdent != null && tyByIdent.get("this") != null) {
+						// Instance-method value reference (e.g. `fields.map(printField)` inside an
+						// instance method) must capture `this`.
+						//
+						// Emit a partially-applied function (`printField this_`) so OCaml sees the same
+						// callback arity as Haxe's bound-method semantics.
+						ocamlValueIdent(name) + " (this_)";
+					} else if (tyByIdent != null && tyByIdent.get(name) != null) {
 						// Bound identifier (parameter / local / bring-up-allowed static field).
 						ocamlValueIdent(name);
 					} else if (arityByIdent != null && arityByIdent.exists(name)) {
@@ -1091,9 +1118,9 @@ class EmitterStage {
 							: (modName + "." + ocamlValueIdent(field));
 					} else {
 						// Stage3 object bring-up: represent instance state through HxAnon maps.
-						"(Obj.magic (HxAnon.get (Obj.repr "
-							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-							+ ") " + escapeOcamlString(field) + "))";
+						"(Obj.magic (HxAnon.get (Obj.repr ("
+											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+											+ ")) " + escapeOcamlString(field) + "))";
 					}
 					case ECall(EIdent("__ocaml__"), [arg]):
 						// Stage 3 bring-up escape hatch: embed raw OCaml expression text.
@@ -1141,17 +1168,21 @@ class EmitterStage {
 				// In this bring-up emitter we don't implement real default-arg semantics; we simply
 				// append `(Obj.magic 0)` for any missing arguments when the callee is a known in-module
 				// identifier and the call provides fewer args than the declaration.
-				final missing =
-						switch (callee) {
-						case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
-							final expected = arityByIdent.get(name);
-							(expected != null && expected > args.length) ? (expected - args.length) : 0;
-						case EField(EThis, name) if (arityByIdent != null && arityByIdent.exists(name)):
-							final expected = arityByIdent.get(name);
-							(expected != null && expected > args.length) ? (expected - args.length) : 0;
-						case _:
-							0;
-					}
+					final missing =
+							switch (callee) {
+							case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
+								final expectedRaw = arityByIdent.get(name);
+								final expected = (hasCurrentInstanceMethod(name) && tyByIdent != null && tyByIdent.get("this") != null)
+									? (expectedRaw - 1)
+									: expectedRaw;
+								expected > args.length ? (expected - args.length) : 0;
+							case EField(EThis, name) if (arityByIdent != null && arityByIdent.exists(name)):
+								final expectedRaw = arityByIdent.get(name);
+								final expected = expectedRaw - 1;
+								expected > args.length ? (expected - args.length) : 0;
+							case _:
+								0;
+						}
 
 					// Special-case a tiny slice of `Sys` I/O so bring-up server binaries can function
 					// before the full runtime is modeled.
@@ -1466,48 +1497,68 @@ class EmitterStage {
 							switch (obj) {
 								case EArrayDecl(_):
 									return "HxBootArray.concat ("
-										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 										+ ") ("
-										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 										+ ")";
 								case EIdent(name):
 									final t = tyForIdent(name);
 									if (StringTools.startsWith(t, "Array<")) {
 										return "HxBootArray.concat ("
-											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 											+ ") ("
-											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 											+ ")";
 									}
 								case _:
 							}
-							case EField(obj, "join") if (args.length == 1):
-								switch (obj) {
-									case EIdent(name):
-										final t = tyForIdent(name);
-										if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
-											return "HxBootArray.join ("
-												+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-												+ ") ("
-												+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-												+ ") (fun (s : string) -> s)";
-										}
-									case ECall(EField(EIdent(name), "toArray"), []):
-										// Common upstream shape:
-										//   `rest.toArray().join(sep)`
-										//
-										// We lower rest params to `Array<T>` and `toArray()` to identity, so treat this as
-										// `rest.join(sep)` when the type is `Array<String>`.
-										final t = tyForIdent(name);
-										if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
-											return "HxBootArray.join ("
-												+ exprToOcaml(EIdent(name), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-												+ ") ("
-												+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-												+ ") (fun (s : string) -> s)";
-										}
-									case _:
-								}
+						case EField(obj, "map") if (args.length == 1):
+							// Stage3 emit-runner: treat array `map` calls as runtime intrinsics so
+							// OCaml sees a direct function call instead of dynamic-field invocation
+							// with warning-as-error over-application.
+							if (isLikelyArrayExpr(obj)) {
+								return "HxBootArray.map_dyn (Obj.magic ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ ")) (Obj.repr ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ "))";
+							}
+						case EField(obj, "join") if (args.length == 1):
+							switch (obj) {
+								case EIdent(name):
+									final t = tyForIdent(name);
+									if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
+										return "HxBootArray.join ("
+											+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+											+ ") ("
+											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+											+ ") (fun (s : string) -> s)";
+									}
+								case ECall(EField(EIdent(name), "toArray"), []):
+									// Common upstream shape:
+									//   `rest.toArray().join(sep)`
+									//
+									// We lower rest params to `Array<T>` and `toArray()` to identity, so treat this as
+									// `rest.join(sep)` when the type is `Array<String>`.
+									final t = tyForIdent(name);
+									if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
+										return "HxBootArray.join ("
+											+ exprToOcaml(EIdent(name), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+											+ ") ("
+											+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+											+ ") (fun (s : string) -> s)";
+									}
+								case _:
+							}
+							// Stage3 emit-runner: fallback for array-like receivers where type
+							// inference did not preserve `Array<String>` shape through chained calls.
+							if (isLikelyArrayExpr(obj)) {
+								return "HxBootArray.join_dyn (Obj.magic ("
+									+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ ")) ("
+									+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+									+ ")";
+							}
 						case _:
 					}
 
@@ -1530,6 +1581,20 @@ class EmitterStage {
 					}
 
 					final c = exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+						// Stage3 emit-runner: normalize `haxe.SysTools.quoteWinArg.bind(null, true)`
+						// into a first-class unary callback so OCaml does not compile the dynamic
+						// `bind` invocation path (which otherwise becomes warning-as-error over-application).
+						if (c == "(Obj.magic (HxAnon.get (Obj.repr (Haxe_SysTools.quoteWinArg)) \"bind\"))" && args.length == 2) {
+							final isEscapeMetaTrue = switch (args[1]) {
+								case EBool(true):
+									true;
+								case _:
+									false;
+							};
+							if (isEscapeMetaTrue) {
+								return "(fun __arg -> Haxe_SysTools.quoteWinArg (__arg) (true))";
+							}
+						}
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
 				//
 				// Why
@@ -1655,6 +1720,15 @@ class EmitterStage {
 										case _:
 									}
 								}
+									// Stage 3 Gate2 emit-runner: upstream `runci.System.runSysTest` calls
+									// `getDisplayCmd(cmd, args, null)` while our bootstrap parser currently recovers
+									// `getDisplayCmd` as an instance method shape (`this_`, `cmd`, `args`).
+									//
+									// Normalize the 3-arg static-looking call into the recovered instance signature.
+									if ((c == "getDisplayCmd" || c == "Runci_System.getDisplayCmd") && args.length >= 2) {
+										fullArgs = [ENull, ECall(EField(EIdent("Std"), "string"), [args[0]]), args[1]];
+										missingCount = 0;
+									}
 								// Stage 3 bring-up: php boot checks `class_exists(name)` / `interface_exists(name)`
 								// where the second optional `autoload` arg is omitted.
 								//
@@ -1670,7 +1744,17 @@ class EmitterStage {
 								for (_ in 0...missingCount) fullArgs.push(ENull);
 
 								if (fullArgs.length == 0) {
-									final renderedCall = c + " ()";
+									var appendUnit = true;
+									switch (callee) {
+										case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
+											if (hasCurrentInstanceMethod(name) && tyByIdent != null && tyByIdent.get("this") != null && arityByIdent.get(name) <= 1) {
+												appendUnit = false;
+											}
+										case EField(EThis, name) if (arityByIdent != null && arityByIdent.exists(name)):
+											if (arityByIdent.get(name) <= 1) appendUnit = false;
+										case _:
+									}
+									final renderedCall = appendUnit ? (c + " ()") : c;
 									(sig == null && StringTools.startsWith(c, "Php_Global."))
 										? "(Obj.magic (" + renderedCall + "))"
 										: renderedCall;
@@ -4012,6 +4096,20 @@ class EmitterStage {
 								final e = exprWorklist.pop();
 								if (e == null) continue;
 								switch (e) {
+									case EIdent(name):
+										// Function values (e.g. `map(printField)`) also create ordering
+										// dependencies between module-local functions.
+										//
+										// Without this edge, SCC ordering can emit the caller before the callee,
+										// yielding "Unbound value" in OCaml when the function value is referenced.
+										if (name != null && name.length > 0 && restIndexByName.exists(name)) {
+											final j = restIndexByName.get(name);
+											if (j != null && j != i && seenStamp[j] != stamp) {
+												seenStamp[j] = stamp;
+												edges[i].push(j);
+												revEdges[j].push(i);
+											}
+										}
 									case ECall(callee, args):
 										var calleeName:Null<String> = null;
 										switch (callee) {
@@ -4047,6 +4145,16 @@ class EmitterStage {
 										if (scrutinee != null) exprWorklist.push(scrutinee);
 										if (cases != null) for (c in cases) if (c != null && c.expr != null) exprWorklist.push(c.expr);
 									case ENew(_typePath, args):
+										// `ENew` lowers through the class constructor helper (`new_`) in Stage3.
+										// Register a dependency on `new` so SCC ordering keeps the callee available.
+										if (restIndexByName.exists("new")) {
+											final j = restIndexByName.get("new");
+											if (j != null && j != i && seenStamp[j] != stamp) {
+												seenStamp[j] = stamp;
+												edges[i].push(j);
+												revEdges[j].push(i);
+											}
+										}
 										if (args != null) for (a in args) if (a != null) exprWorklist.push(a);
 									case EUnop(_op, expr):
 										if (expr != null) exprWorklist.push(expr);

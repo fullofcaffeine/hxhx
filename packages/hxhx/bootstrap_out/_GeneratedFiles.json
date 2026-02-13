@@ -88,6 +88,8 @@
 		"HxDefaultValue.ml",
 		"HxConditionalCompilation.ml",
 		"HxClassDecl.ml",
+		"HihOcamlBackendDialect.ml",
+		"HihBackendDialect.ml",
 		"FrontendFixture.ml",
 		"EnumValue.ml",
 		"EmitterStage.ml",

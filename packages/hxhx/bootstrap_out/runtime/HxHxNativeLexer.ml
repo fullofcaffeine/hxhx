@@ -8,7 +8,7 @@
 
    What it does (today):
    - Implements a tiny lexer for a very small Haxe subset used by
-     `examples/hih-compiler`.
+     `workloads/hih-compiler`.
    - Returns tokens in a **versioned, line-based protocol** so Haxe code can
      decode them without an OCaml<->Haxe data-marshalling layer yet.
    - Each token includes a start position (index/line/column) to support
