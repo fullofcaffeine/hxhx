@@ -42,19 +42,24 @@ bd sync               # Sync with git
 
 This repo generates large transient artifacts during bootstrap/gate workflows. Keep disk usage under control:
 
-1. **Before heavy runs**, preview cleanup candidates:
+1. **Before heavy runs**, preview cleanup candidates (largest-first):
    ```bash
-   npm run clean:dry-run
+   npm run clean:dry-run -- --verbose
    ```
 2. **After heavy stage0/stage3/gate runs**, clean stale temp logs:
    ```bash
    npm run clean:tmp
    ```
-3. **At end of coding session** (if code changed), run:
+3. **If cleanup output needs diagnosis**, run verbose cleanup:
+   ```bash
+   npm run clean:tmp:verbose
+   npm run clean:verbose
+   ```
+4. **At end of coding session** (if code changed), run:
    ```bash
    npm run clean
    ```
-4. **If disk pressure remains high** (or after repeated bootstrap regen), run:
+5. **If disk pressure remains high** (or after repeated bootstrap regen), run:
    ```bash
    npm run clean:deep
    ```

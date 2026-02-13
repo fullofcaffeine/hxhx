@@ -14,6 +14,8 @@ npm run clean:dry-run
 npm run clean
 npm run clean:tmp
 npm run clean:deep
+npm run clean:verbose
+npm run clean:tmp:verbose
 ```
 
 Command behavior:
@@ -22,6 +24,8 @@ Command behavior:
 - `clean`: remove repo-local transient outputs.
 - `clean:tmp`: remove stale stage0 temp logs from OS temp dirs.
 - `clean:deep`: includes heavier bootstrap caches (`bootstrap_out/_build`).
+- `clean:verbose`: safe cleanup with full largest-first candidate listing, per-delete progress, and actual reclaimed size.
+- `clean:tmp:verbose`: same reporting focused on stale stage0 temp logs.
 
 ## Artifact classes
 
@@ -74,9 +78,9 @@ HXHX_KEEP_LOGS=1 HXHX_LOG_DIR="$PWD/.tmp/hxhx-logs" bash scripts/hxhx/build-hxhx
 
 ## Suggested cadence
 
-- After heavy gate/build runs: `npm run clean:tmp`
-- End of normal dev session: `npm run clean`
-- When disk pressure is high: `npm run clean:deep`
+- After heavy gate/build runs: `npm run clean:tmp` (or `npm run clean:tmp:verbose` when diagnosing disk usage).
+- End of normal dev session: `npm run clean`.
+- When disk pressure is high: `npm run clean:deep`.
 
 ## Guardrails
 

@@ -191,11 +191,14 @@ npm run clean:dry-run
 npm run clean
 npm run clean:tmp
 npm run clean:deep
+npm run clean:verbose
+npm run clean:tmp:verbose
 ```
 
 - `clean`: repo-local transient outputs (`out*`, fixture/example outputs, etc.)
 - `clean:tmp`: stale stage0 temp logs in OS temp directories
 - `clean:deep`: includes large bootstrap `_build` caches
+- `clean:verbose` / `clean:tmp:verbose`: largest-first candidate listing + per-delete progress + actual reclaimed size report
 
 Policy details: `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
 

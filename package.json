@@ -22,6 +22,8 @@
     "clean:deep": "bash scripts/dev/clean-artifacts.sh --deep --yes",
     "clean:tmp": "bash scripts/dev/clean-artifacts.sh --tmp-only",
     "clean:dry-run": "bash scripts/dev/clean-artifacts.sh --safe --dry-run",
+    "clean:verbose": "bash scripts/dev/clean-artifacts.sh --safe --verbose",
+    "clean:tmp:verbose": "bash scripts/dev/clean-artifacts.sh --tmp-only --verbose",
     "test:printer": "haxe test/ocaml_ast_printer_test.hxml",
     "test:m2": "haxe test/m2_integration_test.hxml",
     "test:m3": "haxe test/m3_integration_test.hxml",

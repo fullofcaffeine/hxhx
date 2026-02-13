@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: bash scripts/dev/clean-artifacts.sh [--safe|--deep|--tmp-only] [--dry-run] [--older-than <duration>] [--yes]
+Usage: bash scripts/dev/clean-artifacts.sh [--safe|--deep|--tmp-only] [--dry-run] [--older-than <duration>] [--yes] [--verbose] [--max-sample <n>]
 
 Modes:
   --safe       Remove repo-local transient build/test artifacts (default).
@@ -14,6 +14,8 @@ Flags:
   --dry-run            Print candidates and estimated reclaim size without deleting.
   --older-than <dur>   Age threshold for temp-log cleanup (default: 24h). Formats: 90m, 12h, 7d.
   --yes                Skip interactive confirmation for deep mode.
+  --verbose            Print all candidates (largest first) and per-delete progress.
+  --max-sample <n>     Number of candidates to preview when not verbose (default: 20).
   -h, --help           Show this help.
 USAGE
 }
@@ -64,6 +66,8 @@ MODE="safe"
 DRY_RUN=0
 YES=0
 OLDER_THAN="24h"
+VERBOSE=0
+MAX_SAMPLE=20
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -90,6 +94,17 @@ while [[ $# -gt 0 ]]; do
     --yes)
       YES=1
       ;;
+    --verbose)
+      VERBOSE=1
+      ;;
+    --max-sample)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --max-sample" >&2
+        exit 1
+      fi
+      MAX_SAMPLE="$2"
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -103,10 +118,16 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+if ! [[ "$MAX_SAMPLE" =~ ^[0-9]+$ ]] || [[ "$MAX_SAMPLE" -lt 1 ]]; then
+  echo "Invalid --max-sample value: $MAX_SAMPLE (expected positive integer)" >&2
+  exit 1
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CANDIDATES="$(mktemp -t hxhx-clean-candidates.XXXXXX)"
 UNIQUE_CANDIDATES="$(mktemp -t hxhx-clean-candidates-uniq.XXXXXX)"
-trap 'rm -f "$CANDIDATES" "$UNIQUE_CANDIDATES"' EXIT
+SIZE_REPORT="$(mktemp -t hxhx-clean-size-report.XXXXXX)"
+trap 'rm -f "$CANDIDATES" "$UNIQUE_CANDIDATES" "$SIZE_REPORT"' EXIT
 
 add_path_if_exists() {
   local path="$1"
@@ -243,17 +264,44 @@ total_kb=0
 while IFS= read -r path; do
   if [[ -e "$path" ]]; then
     path_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
-    if [[ -n "$path_kb" ]]; then
-      total_kb=$((total_kb + path_kb))
+    if [[ -z "$path_kb" ]]; then
+      path_kb=0
     fi
+    total_kb=$((total_kb + path_kb))
+    printf '%s\t%s\n' "$path_kb" "$path" >>"$SIZE_REPORT"
   fi
 done <"$UNIQUE_CANDIDATES"
+
+print_candidates() {
+  if [[ ! -s "$SIZE_REPORT" ]]; then
+    return
+  fi
+  if [[ "$VERBOSE" -eq 1 ]]; then
+    echo "Candidates (largest first):"
+    while IFS=$'\t' read -r kb path; do
+      echo "  - $(human_from_kb "$kb")  $path"
+    done < <(sort -nr "$SIZE_REPORT")
+    return
+  fi
+
+  echo "Sample candidates (largest first):"
+  shown=0
+  while IFS=$'\t' read -r kb path; do
+    echo "  - $(human_from_kb "$kb")  $path"
+    shown=$((shown + 1))
+    if [[ "$shown" -ge "$MAX_SAMPLE" ]]; then
+      break
+    fi
+  done < <(sort -nr "$SIZE_REPORT")
+  if [[ "$count" -gt "$MAX_SAMPLE" ]]; then
+    echo "  ... and $((count - MAX_SAMPLE)) more (use --verbose to list all)"
+  fi
+}
 
 echo "Cleanup mode: $MODE"
 echo "Candidates: $count"
 echo "Estimated reclaim: $(human_from_kb "$total_kb")"
-echo "Sample candidates:"
-head -n 20 "$UNIQUE_CANDIDATES"
+print_candidates
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "Dry-run only; no files deleted."
@@ -274,12 +322,23 @@ if [[ "$MODE" == "deep" && "$YES" -ne 1 ]]; then
 fi
 
 deleted=0
+deleted_kb=0
 while IFS= read -r path; do
   if [[ -e "$path" ]]; then
+    path_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
+    if [[ -z "$path_kb" ]]; then
+      path_kb=0
+    fi
+    if [[ "$VERBOSE" -eq 1 ]]; then
+      next="$(($deleted + 1))"
+      echo "[$next/$count] deleting $(human_from_kb "$path_kb"): $path"
+    fi
     rm -rf "$path"
     deleted=$((deleted + 1))
+    deleted_kb=$((deleted_kb + path_kb))
   fi
 done <"$UNIQUE_CANDIDATES"
 
 echo "Deleted: $deleted"
+echo "Actual reclaimed: $(human_from_kb "$deleted_kb")"
 echo "Cleanup complete."
