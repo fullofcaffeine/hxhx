@@ -39,6 +39,8 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   echo "    On macOS, Js server async timeouts are relaxed by default (HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000)." >&2
   echo "    Set HXHX_GATE3_FORCE_JS_SERVER=1 to run without timeout patches (debug mode)." >&2
+  echo "    Python runs default to no-install mode (HXHX_GATE3_PYTHON_ALLOW_INSTALL=0); require both python3 and pypy3." >&2
+  echo "    Set HXHX_GATE3_PYTHON_ALLOW_INSTALL=1 to allow upstream installer/network fallback." >&2
   exit 2
 fi
 
@@ -67,6 +69,17 @@ case "$macro_mode" in
     exit 2
     ;;
 esac
+
+python_allow_install_raw="${HXHX_GATE3_PYTHON_ALLOW_INSTALL:-0}"
+case "$python_allow_install_raw" in
+  0|1)
+    ;;
+  *)
+    echo "Invalid HXHX_GATE3_PYTHON_ALLOW_INSTALL: $python_allow_install_raw (expected 0 or 1)." >&2
+    exit 2
+    ;;
+esac
+python_allow_install="$python_allow_install_raw"
 
 retry_count_raw="${HXHX_GATE3_RETRY_COUNT:-1}"
 case "$retry_count_raw" in
@@ -491,6 +504,9 @@ preflight_target() {
       ;;
     python)
       need_cmd python3 "Python target tests"
+      if [ "$python_allow_install" != "1" ] && ! command -v pypy3 >/dev/null 2>&1; then
+        die_or_skip "Missing 'pypy3' on PATH (Python target no-install mode). Install pypy3 or set HXHX_GATE3_PYTHON_ALLOW_INSTALL=1 to allow upstream installer/network fallback."
+      fi
       ;;
     java|jvm)
       need_cmd javac "JVM/Java target tests"
@@ -606,6 +622,7 @@ done
 
 echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (Macro mode: ${macro_mode}; non-Macro via hxhx stage0 shim)"
 echo "== Gate 3 retry policy: count=${retry_count} targets=${retry_targets_raw} delay=${retry_delay_sec}s"
+echo "== Gate 3 Python policy: install_fallback=${python_allow_install} (0=no-install default, 1=allow upstream installer)"
 
 want_macro_patches=0
 want_js_patches=0
