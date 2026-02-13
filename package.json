@@ -80,7 +80,8 @@
     "test:upstream:runci-targets": "bash scripts/hxhx/run-upstream-runci-targets.sh",
     "hxhx:dist": "bash scripts/hxhx/build-dist.sh",
     "hxhx:bench": "bash scripts/hxhx/bench.sh",
-    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:filestat && npm run test:m6:string && npm run test:m8:aliases && npm run test:m8:collisions && npm run test:m8:dune && npm run test:m13:mli && npm run test:m13:mli-all && npm run test:m13:dune-lib && npm run test:m13:dune-exes && npm run test:m13:sourcemap && npm run test:m14:hih-forin && npm run test:portable && npm run test:snapshot && npm run test:examples && npm run test:hxhx-targets"
+    "test": "npm run test:printer && npm run test:m2 && npm run test:m3 && npm run test:m4:enum && npm run test:m4:ocaml-native && npm run test:m5:class && npm run test:m5:guardrails && npm run test:m6:runtime && npm run test:m6:exceptions && npm run test:m6:bytes && npm run test:m6:array && npm run test:m6:map && npm run test:m6:sys-env && npm run test:m6:filestat && npm run test:m6:string && npm run test:m8:aliases && npm run test:m8:collisions && npm run test:m8:dune && npm run test:m13:mli && npm run test:m13:mli-all && npm run test:m13:dune-lib && npm run test:m13:dune-exes && npm run test:m13:sourcemap && npm run test:m14:hih-forin && npm run test:portable && npm run test:snapshot && npm run test:examples && npm run test:hxhx-targets",
+    "test:hxhx:builtin-target-smoke": "bash scripts/hxhx/run-builtin-target-smoke.sh"
   },
   "release": {
     "branches": [

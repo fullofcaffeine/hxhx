@@ -148,7 +148,7 @@ Current checklist (human-readable):
 - [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
 - [x] Heavy-workload runtime tuning baseline landed (`haxe.ocaml-xgv.10.17`)
-- [x] Gate1/Gate2/Gate3 cadence hardening now includes direct-by-default Macro mode, Python no-install mode, Java baseline documentation, and weekly Linux scheduled baselines (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`)
+- [x] Gate1/Gate2/Gate3 cadence hardening now includes direct-by-default Macro mode, Python no-install mode, Java baseline documentation, weekly Linux scheduled baselines, and builtin fast-path smoke coverage (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`, `haxe.ocaml-xgv.10.37`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
@@ -263,6 +263,12 @@ bash scripts/vendor/fetch-haxe-upstream.sh
 HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
+Run the linked builtin fast-path smoke (delegated vs builtin target path):
+
+```bash
+npm run test:hxhx:builtin-target-smoke
+```
+
 By default, Gate 3 runs `Macro` via the non-delegating Gate 2 direct pipeline while keeping non-Macro targets on the stage0-shim path.
 
 To force the historical stage0-shim harness for `Macro`, set:
@@ -272,6 +278,7 @@ HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run tes
 ```
 
 Gate 3 CI (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`) and also supports manual `workflow_dispatch` overrides for `targets`, `allow_skip`, and `macro_mode`.
+Builtin fast-path smoke CI (`.github/workflows/gate3-builtin.yml`) also runs weekly on Linux and supports manual `workflow_dispatch` (`reps`).
 Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedule (Linux baseline) and remains manually triggerable via `run_upstream_macro`.
 
 Gate 3 also applies a deterministic flake policy by default for `Js`: retry once (`HXHX_GATE3_RETRY_COUNT=1`) with a 3s delay.

@@ -214,11 +214,18 @@ Select targets via `HXHX_GATE3_TARGETS` (comma-separated) or pass them as args:
 HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
+Run the linked builtin target smoke (delegated `--target ocaml` vs builtin `--target ocaml-stage3`):
+
+```bash
+npm run test:hxhx:builtin-target-smoke
+```
+
 Notes:
 
 - This is **not** part of PR/push CI by default (very toolchain/network dependent).
 - Gate 3 CI workflow (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
   It is also manually triggerable with `workflow_dispatch` inputs for `targets`, `allow_skip`, and `macro_mode`.
+- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs weekly on Linux and is manually triggerable with `workflow_dispatch` (`reps` input).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
 - On macOS, the upstream `Js` server stage remains enabled, but Gate 3 relaxes async timeouts (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000` by default). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
