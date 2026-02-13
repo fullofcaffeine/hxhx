@@ -144,18 +144,18 @@ Current checklist (human-readable):
 - [x] Build/bootstrap pipeline is stable enough for day-to-day work (`haxe.ocaml-xgv.10.4`)
 - [x] Core upstream macro unit workload can run in non-delegating mode (`haxe.ocaml-xgv.10.1`)
 - [x] Display workflows (used by IDE/tooling paths) are reproducible in non-delegating mode (`haxe.ocaml-xgv.10.3`, `haxe.ocaml-xgv.10.8`)
-- [ ] Native `RunCi` flow still needs to move past early bootstrap/harness steps (`haxe.ocaml-xgv.10.11`, in progress)
+- [x] Native `RunCi` direct flow now runs end-to-end with stable stage markers (`haxe.ocaml-xgv.10.11`, `haxe.ocaml-xgv.10.22`)
 - [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
-- [ ] Heavy workload runtime budget/profile tuning is in progress (`haxe.ocaml-xgv.10.17`)
+- [x] Heavy-workload runtime tuning baseline landed (`haxe.ocaml-xgv.10.17`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
 
 ```bash
 bd show haxe.ocaml-xgv.10
-bd show haxe.ocaml-xgv.10.11
-bd show haxe.ocaml-xgv.10.17
+bd show haxe.ocaml-xgv.2
+bd show haxe.ocaml-xgv.3
 bd ready
 ```
 

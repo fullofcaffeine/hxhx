@@ -83,7 +83,7 @@ Bead: `haxe.ocaml-xgv.10.5`
 Meaning in plain terms:
 
 - We published the first backend-layering design note and seam inventory: `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`.
-- This is foundational portability work for long-term architecture quality, while Gate2 RunCi remains the immediate blocker for replacement readiness.
+- This is foundational portability work for long-term architecture quality and reduces risk as replacement criteria close out.
 
 ### M5. Product boundary cleanup in monorepo
 
@@ -95,7 +95,18 @@ Meaning in plain terms:
 - Keep monorepo, but make product boundaries clearer (`hxhx` vs backend internals vs examples/tools).
 - This improves contributor onboarding and future split options.
 
-### M6. Replacement-ready acceptance
+### M6. Gate3 stability hardening (real-world CI behavior)
+
+Status: Done  
+Beads: `haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`
+
+Meaning in plain terms:
+
+- Gate3 `Js` now has deterministic retry controls (`HXHX_GATE3_RETRY_*`) for transient flake handling.
+- On macOS, `Js` server stage stays enabled by default, with deterministic timeout relaxation (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS`) instead of skipping the stage.
+- A debug escape hatch remains available (`HXHX_GATE3_FORCE_JS_SERVER=1`).
+
+### M7. Replacement-ready acceptance
 
 Status: Open  
 Bead: `haxe.ocaml-xgv.10`
@@ -108,7 +119,8 @@ Meaning in plain terms:
 
 ```bash
 bd show haxe.ocaml-xgv.10
-bd show haxe.ocaml-xgv.10.23
+bd show haxe.ocaml-xgv.2
+bd show haxe.ocaml-xgv.3
 bd ready
 ```
 
