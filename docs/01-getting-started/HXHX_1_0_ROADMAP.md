@@ -98,7 +98,7 @@ Meaning in plain terms:
 ### M6. Gate3 stability hardening (real-world CI behavior)
 
 Status: Done  
-Beads: `haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`
+Beads: `haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`
 
 Meaning in plain terms:
 
@@ -107,6 +107,7 @@ Meaning in plain terms:
 - Macro target now defaults to non-delegating direct execution (`HXHX_GATE3_MACRO_MODE=direct`) in Gate3 runners/CI.
 - Python runs now default to no-install behavior (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`) so local validation does not implicitly mutate host package state.
 - Java target has a validated baseline run and is intentionally kept opt-in (not in default `Macro,Js,Neko`) to keep common Gate3 runs fast.
+- Gate2 and Gate3 now have weekly Linux scheduled baselines in CI, while PR/push CI remains fast.
 - A debug escape hatch remains available (`HXHX_GATE3_FORCE_JS_SERVER=1`).
 
 ### M7. Replacement-ready acceptance
