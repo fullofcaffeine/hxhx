@@ -42,7 +42,7 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
 # Stage3 relies on an explicit std root.
 #

@@ -43,7 +43,7 @@ if [ -z "${HAXE_STD_PATH:-}" ]; then
   exit 0
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
 echo "== Gate 2 (stage3 type-only rung): upstream tests/RunCi.hxml"
 out="$(

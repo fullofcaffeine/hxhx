@@ -274,7 +274,7 @@ trim_ws() {
   fi
 
   if [ "$WANT_STAGE3" -eq 1 ]; then
-    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
     STD_ROOT="$(resolve_std_root)"
     if [ -z "$STD_ROOT" ]; then
       echo "hxhx(stage3) macro host build requires a Haxe std root." >&2

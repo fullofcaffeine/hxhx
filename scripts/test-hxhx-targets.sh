@@ -13,7 +13,14 @@ if ! command -v ocamlopt >/dev/null 2>&1; then
 fi
 
 echo "== Building hxhx"
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+HXHX_BIN_RAW="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN="$(printf "%s\n" "$HXHX_BIN_RAW" | tail -n 1)"
+if [ "$HXHX_BIN_RAW" != "$HXHX_BIN" ]; then
+  echo "Regression: build-hxhx.sh must print only the binary path on stdout." >&2
+  echo "build-hxhx.sh stdout was:" >&2
+  printf "%s\n" "$HXHX_BIN_RAW" >&2
+  exit 1
+fi
 if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   echo "Missing built executable from build-hxhx.sh (expected a path to an .exe)." >&2
   exit 1

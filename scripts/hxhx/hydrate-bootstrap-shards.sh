@@ -71,7 +71,7 @@ hydrate_manifest() {
   fi
 
   mv "$tmp" "$target"
-  echo "[hydrate-bootstrap] hydrated: $target (${out_count} parts)"
+  echo "[hydrate-bootstrap] hydrated: $target (${out_count} parts)" >&2
 }
 
 manifests=()
@@ -86,7 +86,7 @@ EOF_MANIFESTS
 done
 
 if [ "${#manifests[@]}" -eq 0 ]; then
-  echo "[hydrate-bootstrap] no manifests found"
+  echo "[hydrate-bootstrap] no manifests found" >&2
   exit 0
 fi
 

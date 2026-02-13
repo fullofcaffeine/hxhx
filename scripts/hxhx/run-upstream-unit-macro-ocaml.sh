@@ -58,7 +58,7 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
 # Gate 1 depends on `-lib utest`. Upstream CI pins utest; match the pin so fixture content stays stable.
 UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"

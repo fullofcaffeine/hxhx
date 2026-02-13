@@ -945,10 +945,10 @@ if [ -z "${HXHX_BIN:-}" ]; then
     elif [ -f "$stage0_bc" ]; then
       HXHX_BIN="$stage0_bc"
     else
-      HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+      HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
     fi
   else
-    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+    HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
   fi
 fi
 

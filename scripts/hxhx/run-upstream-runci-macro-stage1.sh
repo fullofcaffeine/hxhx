@@ -36,7 +36,7 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
 # Stage1 bring-up relies on an explicit std root. Prefer upstream `std/` for deterministic resolution.
 if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then

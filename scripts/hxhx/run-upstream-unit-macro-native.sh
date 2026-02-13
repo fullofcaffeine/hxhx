@@ -57,7 +57,7 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
 if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   # Gate1's `compile-macro.hxml` runs `--macro Macro.init()`.
