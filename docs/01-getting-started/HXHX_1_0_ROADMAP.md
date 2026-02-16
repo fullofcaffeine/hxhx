@@ -114,12 +114,13 @@ Meaning in plain terms:
 
 ### M7. Replacement-ready acceptance
 
-Status: Open  
-Bead: `haxe.ocaml-xgv.10`
+Status: In progress  
+Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`
 
 Meaning in plain terms:
 
 - All required gates and operational quality bars are green enough to claim practical replacement-readiness for targeted scope.
+- We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
 
 ## Fast “where are we now?” commands
 

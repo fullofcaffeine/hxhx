@@ -152,6 +152,7 @@ Current checklist (human-readable):
 - [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
 - [x] Heavy-workload runtime tuning baseline landed (`haxe.ocaml-xgv.10.17`)
 - [x] Gate1/Gate2/Gate3 cadence hardening now includes direct-by-default Macro mode, Python no-install mode, Java baseline documentation, weekly Linux scheduled baselines, and builtin fast-path smoke coverage (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`, `haxe.ocaml-xgv.10.37`, `haxe.ocaml-xgv.10.38`)
+- [x] M7 now has an explicit bundle runner (`fast`/`full`) so replacement-readiness is measurable with one command (`haxe.ocaml-xgv.10.40`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
@@ -173,6 +174,10 @@ Practical command map:
   `npm run test:upstream:stage2`
 - Run non-delegating display end-to-end smoke:  
   `npm run test:upstream:display-stage3-emit-run-smoke`
+- Run replacement-ready bundle (fast):  
+  `npm run test:upstream:replacement-ready`
+- Run replacement-ready bundle (full):  
+  `npm run test:upstream:replacement-ready:full`
 
 For deeper acceptance/terminology (replacement-ready, gate definitions), see
 `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`.
@@ -283,6 +288,7 @@ HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run tes
 Gate 3 CI (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`) and also supports manual `workflow_dispatch` overrides for `targets`, `allow_skip`, and `macro_mode`.
 Builtin fast-path smoke CI (`.github/workflows/gate3-builtin.yml`) also runs weekly on Linux and supports manual `workflow_dispatch` (`reps`).
 Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedule (Linux baseline) and remains manually triggerable via `run_upstream_macro`.
+M7 bundle workflow (`.github/workflows/gate-m7.yml`) is manually triggerable and runs the one-command replacement bundle (`fast` or `full`) with strict-skip control.
 
 Gate 3 also applies a deterministic flake policy by default for `Js`: retry once (`HXHX_GATE3_RETRY_COUNT=1`) with a 3s delay.
 Tune with `HXHX_GATE3_RETRY_COUNT`, `HXHX_GATE3_RETRY_TARGETS`, and `HXHX_GATE3_RETRY_DELAY_SEC` (set count to `0` to disable).

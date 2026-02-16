@@ -1,0 +1,97 @@
+name: Gate M7 (HXHX Replacement Bundle)
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Replacement bundle profile"
+        type: choice
+        required: false
+        default: "fast"
+        options:
+          - fast
+          - full
+      strict:
+        description: "Fail if any upstream gate is skipped"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: gate-m7-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  replacement_bundle:
+    name: Replacement bundle (${{ inputs.profile || 'fast' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y \
+            ocaml dune ocaml-findlib \
+            neko \
+            python3 pypy3 \
+            default-jdk \
+            build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Run M7 replacement-ready bundle
+        env:
+          HXHX_M7_PROFILE: ${{ inputs.profile || 'fast' }}
+          HXHX_M7_STRICT: ${{ inputs.strict && '1' || '0' }}
+          HXHX_GATE3_TARGET_TIMEOUT_SEC: "3600"
+          HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS: "1800"
+        run: |
+          set -euo pipefail
+          echo "HXHX_M7_PROFILE=${HXHX_M7_PROFILE}"
+          echo "HXHX_M7_STRICT=${HXHX_M7_STRICT}"
+          npm run -s test:upstream:replacement-ready

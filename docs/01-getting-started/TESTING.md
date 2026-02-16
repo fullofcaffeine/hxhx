@@ -241,6 +241,31 @@ Notes:
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`
     seed the local `.haxelib` repo from globally installed libs to avoid network installs when possible.
 
+### M7 replacement-ready bundle
+
+Use one command to run a curated replacement-readiness bundle with a clear PASS/FAIL summary:
+
+```bash
+npm run test:upstream:replacement-ready
+```
+
+Profiles:
+
+- `fast` (default): `ci:guards`, `test:hxhx-targets`, focused Gate2 display rung, builtin target smoke.
+- `full`: includes `fast` plus Gate1 unit-macro, Gate2 runci Macro, and Gate3 runci targets.
+
+Examples:
+
+```bash
+# Full bundle
+HXHX_M7_PROFILE=full npm run test:upstream:replacement-ready
+
+# Full bundle, strict mode (fails on skipped upstream checks)
+HXHX_M7_PROFILE=full HXHX_M7_STRICT=1 npm run test:upstream:replacement-ready
+```
+
+The manual workflow `.github/workflows/gate-m7.yml` runs the same bundle with inputs for `profile` and `strict`.
+
 ## Layers
 
 ### 1) “Build the backend” checks (fast, no dune required)
