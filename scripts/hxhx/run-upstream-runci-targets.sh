@@ -37,6 +37,8 @@ if [ -z "$TARGETS_RAW" ]; then
   echo "    Macro defaults to non-delegating direct mode (HXHX_GATE3_MACRO_MODE=direct)." >&2
   echo "    Set HXHX_GATE3_MACRO_MODE=stage0_shim to use the historical stage0 RunCi harness path for Macro." >&2
   echo "    Retry defaults: HXHX_GATE3_RETRY_COUNT=1, HXHX_GATE3_RETRY_TARGETS=Js, HXHX_GATE3_RETRY_DELAY_SEC=3" >&2
+  echo "    Long-run observability: HXHX_GATE3_TARGET_HEARTBEAT_SEC=20 (set 0 to disable)." >&2
+  echo "    Optional per-target timeout: HXHX_GATE3_TARGET_TIMEOUT_SEC=0 (disabled by default)." >&2
   echo "    Set HXHX_GATE3_RETRY_COUNT=0 to disable retries." >&2
   echo "    On macOS, Js server async timeouts are relaxed by default (HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000)." >&2
   echo "    Set HXHX_GATE3_FORCE_JS_SERVER=1 to run without timeout patches (debug mode)." >&2
@@ -112,6 +114,24 @@ case "$js_server_timeout_raw" in
 esac
 js_server_timeout_ms="$js_server_timeout_raw"
 export HXHX_GATE3_JS_SERVER_TIMEOUT_MS="$js_server_timeout_ms"
+
+target_heartbeat_raw="${HXHX_GATE3_TARGET_HEARTBEAT_SEC:-20}"
+case "$target_heartbeat_raw" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_GATE3_TARGET_HEARTBEAT_SEC: $target_heartbeat_raw (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+target_heartbeat_sec="$target_heartbeat_raw"
+
+target_timeout_raw="${HXHX_GATE3_TARGET_TIMEOUT_SEC:-0}"
+case "$target_timeout_raw" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_GATE3_TARGET_TIMEOUT_SEC: $target_timeout_raw (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+target_timeout_sec="$target_timeout_raw"
 
 should_retry_target() {
   local target_lower="$1"
@@ -625,6 +645,8 @@ echo "== Gate 3: upstream tests/runci targets (${targets[*]}) (Macro mode: ${mac
 echo "== Gate 3 retry policy: count=${retry_count} targets=${retry_targets_raw} delay=${retry_delay_sec}s"
 echo "== Gate 3 Python policy: install_fallback=${python_allow_install} (0=no-install default, 1=allow upstream installer)"
 
+echo "== Gate 3 target watch: heartbeat=${target_heartbeat_sec}s timeout=${target_timeout_sec}s (0 disables each)"
+
 want_macro_patches=0
 want_js_patches=0
 for t in "${targets[@]}"; do
@@ -672,6 +694,104 @@ fi
 failures=0
 summary=()
 
+run_target_attempt() {
+  local target="$1"
+  local t_lower="$2"
+
+  if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
+    (
+      cd "$ROOT"
+      HAXE_UPSTREAM_DIR="$UPSTREAM_DIR_ORIG" \
+      HXHX_GATE2_MODE=stage3_no_emit_direct \
+      HXHX_GATE2_SKIP_PARTY="${HXHX_GATE2_SKIP_PARTY}" \
+      bash "$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"
+    )
+  else
+    (
+      cd "$UPSTREAM_DIR/tests"
+      if [ -n "${STAGE0_STD_PATH:-}" ]; then
+        export HAXE_STD_PATH="${STAGE0_STD_PATH}"
+      fi
+      TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
+    )
+  fi
+}
+
+run_target_attempt_with_watch() {
+  local target="$1"
+  local t_lower="$2"
+  local attempt="$3"
+  local max_attempts="$4"
+  local heartbeat_pid=""
+  local timeout_pid=""
+  local target_pid=""
+  local timeout_marker=""
+  local code=0
+
+  if [ "$target_timeout_sec" -gt 0 ]; then
+    timeout_marker="$(mktemp)"
+  fi
+
+  set +e
+  run_target_attempt "$target" "$t_lower" &
+  target_pid="$!"
+
+  if [ "$target_heartbeat_sec" -gt 0 ]; then
+    (
+      local elapsed=0
+      while kill -0 "$target_pid" 2>/dev/null; do
+        sleep "$target_heartbeat_sec"
+        elapsed=$((elapsed + target_heartbeat_sec))
+        if kill -0 "$target_pid" 2>/dev/null; then
+          echo "gate3_target_heartbeat target=${target} attempt=${attempt}/${max_attempts} elapsed=${elapsed}s"
+        fi
+      done
+    ) &
+    heartbeat_pid="$!"
+  fi
+
+  if [ "$target_timeout_sec" -gt 0 ]; then
+    (
+      sleep "$target_timeout_sec"
+      if kill -0 "$target_pid" 2>/dev/null; then
+        echo "Gate3 target timeout: target=${target} attempt=${attempt}/${max_attempts} exceeded ${target_timeout_sec}s." >&2
+        if [ -n "$timeout_marker" ]; then
+          printf 'timeout\n' >"$timeout_marker"
+        fi
+        kill "$target_pid" 2>/dev/null || true
+        sleep 2
+        if kill -0 "$target_pid" 2>/dev/null; then
+          kill -9 "$target_pid" 2>/dev/null || true
+        fi
+      fi
+    ) &
+    timeout_pid="$!"
+  fi
+
+  wait "$target_pid"
+  code="$?"
+  set -e
+
+  if [ -n "$heartbeat_pid" ]; then
+    kill "$heartbeat_pid" 2>/dev/null || true
+    wait "$heartbeat_pid" 2>/dev/null || true
+  fi
+
+  if [ -n "$timeout_pid" ]; then
+    kill "$timeout_pid" 2>/dev/null || true
+    wait "$timeout_pid" 2>/dev/null || true
+  fi
+
+  if [ -n "$timeout_marker" ]; then
+    if [ -s "$timeout_marker" ]; then
+      code=124
+    fi
+    rm -f "$timeout_marker"
+  fi
+
+  return "$code"
+}
+
 for target in "${targets[@]}"; do
   echo ""
   echo "== Target: $target"
@@ -690,26 +810,11 @@ for target in "${targets[@]}"; do
   attempt=1
   start="$(date +%s)"
   while true; do
-    set +e
-    if [ "$t_lower" = "macro" ] && [ "$macro_mode" = "direct" ]; then
-      (
-        cd "$ROOT"
-        HAXE_UPSTREAM_DIR="$UPSTREAM_DIR_ORIG" \
-        HXHX_GATE2_MODE=stage3_no_emit_direct \
-        HXHX_GATE2_SKIP_PARTY="${HXHX_GATE2_SKIP_PARTY}" \
-        bash "$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"
-      )
+    if run_target_attempt_with_watch "$target" "$t_lower" "$attempt" "$max_attempts"; then
+      code=0
     else
-      (
-        cd "$UPSTREAM_DIR/tests"
-        if [ -n "${STAGE0_STD_PATH:-}" ]; then
-          export HAXE_STD_PATH="${STAGE0_STD_PATH}"
-        fi
-        TEST="$target" PATH="$WRAP_DIR:$PATH" "$STAGE0_HAXE" RunCi.hxml
-      )
+      code="$?"
     fi
-    code="$?"
-    set -e
 
     if [ "$code" -eq 0 ] || [ "$attempt" -ge "$max_attempts" ]; then
       break

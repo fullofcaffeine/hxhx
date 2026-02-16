@@ -228,6 +228,7 @@ Notes:
 - Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs weekly on Linux and is manually triggerable with `workflow_dispatch` (`reps` input).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
+- Long-run observability/guardrails: `HXHX_GATE3_TARGET_HEARTBEAT_SEC=20` prints periodic progress (set `0` to disable) and `HXHX_GATE3_TARGET_TIMEOUT_SEC=0` controls per-target timeout (set a non-zero value to fail hard hangs). The weekly CI baseline sets `HXHX_GATE3_TARGET_TIMEOUT_SEC=3600`.
 - On macOS, the upstream `Js` server stage remains enabled, but Gate 3 relaxes async timeouts (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000` by default). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 - Python target runs default to no-install mode (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`): both `python3` and `pypy3` must already be on `PATH`. Set `HXHX_GATE3_PYTHON_ALLOW_INSTALL=1` to allow upstream installer/network fallback.
 - Java is validated as an opt-in Gate3 target (`HXHX_GATE3_TARGETS=Java`) and intentionally kept out of the default set (`Macro,Js,Neko`) to keep routine runs faster.

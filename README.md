@@ -148,7 +148,7 @@ Current checklist (human-readable):
 - [x] Target-agnostic core design notes are now published (`haxe.ocaml-xgv.10.5`) — see `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - [x] Monorepo layout cleanup is complete (`haxe.ocaml-xgv.10.6`)
 - [x] Heavy-workload runtime tuning baseline landed (`haxe.ocaml-xgv.10.17`)
-- [x] Gate1/Gate2/Gate3 cadence hardening now includes direct-by-default Macro mode, Python no-install mode, Java baseline documentation, weekly Linux scheduled baselines, and builtin fast-path smoke coverage (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`, `haxe.ocaml-xgv.10.37`)
+- [x] Gate1/Gate2/Gate3 cadence hardening now includes direct-by-default Macro mode, Python no-install mode, Java baseline documentation, weekly Linux scheduled baselines, and builtin fast-path smoke coverage (`haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`, `haxe.ocaml-xgv.10.37`, `haxe.ocaml-xgv.10.38`)
 - [ ] Final “replacement-ready” epic acceptance still pending (`haxe.ocaml-xgv.10`)
 
 Quick status commands:
@@ -283,6 +283,10 @@ Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedul
 
 Gate 3 also applies a deterministic flake policy by default for `Js`: retry once (`HXHX_GATE3_RETRY_COUNT=1`) with a 3s delay.
 Tune with `HXHX_GATE3_RETRY_COUNT`, `HXHX_GATE3_RETRY_TARGETS`, and `HXHX_GATE3_RETRY_DELAY_SEC` (set count to `0` to disable).
+For long runs, Gate3 also exposes per-target observability controls:
+- `HXHX_GATE3_TARGET_HEARTBEAT_SEC` (default `20`; set `0` to disable heartbeat lines)
+- `HXHX_GATE3_TARGET_TIMEOUT_SEC` (default `0`; disabled, set to fail hung targets explicitly)
+The weekly CI baseline sets `HXHX_GATE3_TARGET_TIMEOUT_SEC=3600` so hard hangs fail with a clear timeout marker.
 On macOS, Gate 3 keeps the JS server stage enabled but relaxes async timeouts by default (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS=60000`). Set `HXHX_GATE3_FORCE_JS_SERVER=1` to run without timeout patches (debug mode).
 Python target runs default to no-install mode (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`): both `python3` and `pypy3` must already be on `PATH`. Set `HXHX_GATE3_PYTHON_ALLOW_INSTALL=1` to allow upstream installer/network fallback.
 Java is validated as an opt-in Gate3 target (`HXHX_GATE3_TARGETS=Java`, local baseline about 2 minutes) but stays out of the default target set for now to keep routine runs fast.

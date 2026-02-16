@@ -98,11 +98,12 @@ Meaning in plain terms:
 ### M6. Gate3 stability hardening (real-world CI behavior)
 
 Status: Done  
-Beads: `haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`, `haxe.ocaml-xgv.10.37`
+Beads: `haxe.ocaml-xgv.10.28`, `haxe.ocaml-xgv.10.29`, `haxe.ocaml-xgv.10.31`, `haxe.ocaml-xgv.10.32`, `haxe.ocaml-xgv.10.33`, `haxe.ocaml-xgv.10.34`, `haxe.ocaml-xgv.10.35`, `haxe.ocaml-xgv.10.36`, `haxe.ocaml-xgv.10.37`, `haxe.ocaml-xgv.10.38`
 
 Meaning in plain terms:
 
 - Gate3 `Js` now has deterministic retry controls (`HXHX_GATE3_RETRY_*`) for transient flake handling.
+- Gate3 long-running targets now emit periodic heartbeat lines (`HXHX_GATE3_TARGET_HEARTBEAT_SEC`) and support explicit per-target timeouts (`HXHX_GATE3_TARGET_TIMEOUT_SEC`) so CI runs do not look hung.
 - On macOS, `Js` server stage stays enabled by default, with deterministic timeout relaxation (`HXHX_GATE3_JS_SERVER_TIMEOUT_MS`) instead of skipping the stage.
 - Macro target now defaults to non-delegating direct execution (`HXHX_GATE3_MACRO_MODE=direct`) in Gate3 runners/CI.
 - Python runs now default to no-install behavior (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`) so local validation does not implicitly mutate host package state.
