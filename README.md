@@ -101,6 +101,9 @@ bash scripts/hxhx/build-hxhx.sh
 
 By default this builds the bootstrap snapshot as **bytecode** (`out.bc`) for portability (some platforms/architectures can fail to native-compile the large generated OCaml units).
 To prefer a native build first, set `HXHX_BOOTSTRAP_PREFER_NATIVE=1` (it will fall back to bytecode if native fails).
+Bootstrap build observability knobs:
+- `HXHX_BOOTSTRAP_HEARTBEAT` (default `20`) prints periodic dune-build heartbeats; set `0` to disable.
+- `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS` (default `0`) sets an optional hard timeout for bootstrap dune builds.
 The stage0-free bootstrap build runs in `packages/hxhx/bootstrap_work/` (a local workspace)
 so committed snapshot files remain sharded and small in `bootstrap_out/`.
 

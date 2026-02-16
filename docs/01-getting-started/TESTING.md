@@ -136,6 +136,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
+  - Observability knobs: `HXHX_BOOTSTRAP_HEARTBEAT=20` (default; set `0` to disable) and `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS=0` (optional timeout).
 - **Stage2**: stage1 builds stage2; compare behavior/codegen stability.
   - Command: `npm run test:upstream:stage2`
 - **Gate checks**: validate against upstream behavior oracles.

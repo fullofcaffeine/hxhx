@@ -20,6 +20,8 @@ HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
 HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
 HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
+HXHX_BOOTSTRAP_HEARTBEAT="${HXHX_BOOTSTRAP_HEARTBEAT:-20}"
+HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS="${HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
@@ -48,6 +50,20 @@ cleanup_stage0_log_file() {
   fi
 }
 
+case "$HXHX_BOOTSTRAP_HEARTBEAT" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_BOOTSTRAP_HEARTBEAT: $HXHX_BOOTSTRAP_HEARTBEAT (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS: $HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
   echo "Skipping hxhx build: dune/ocamlc not found on PATH." >&2
   exit 0
@@ -57,6 +73,93 @@ if [ ! -d "$HXHX_DIR" ]; then
   echo "Missing hxhx package directory: $HXHX_DIR" >&2
   exit 1
 fi
+
+run_bootstrap_dune_build() {
+  local target="$1"
+  local heartbeat_sec="$HXHX_BOOTSTRAP_HEARTBEAT"
+  local timeout_sec="$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS"
+
+  if [ "$heartbeat_sec" = "0" ] && [ "$timeout_sec" = "0" ]; then
+    dune build "$target"
+    return
+  fi
+
+  dune build "$target" &
+  local pid="$!"
+  local heartbeat_pid=""
+  local timeout_pid=""
+  local timeout_marker=""
+  local start_hb
+  local code=0
+
+  start_hb="$(date +%s)"
+
+  if [ "$timeout_sec" != "0" ]; then
+    timeout_marker="$(mktemp -t hxhx-bootstrap-timeout.XXXXXX)"
+  fi
+
+  if [ "$heartbeat_sec" != "0" ]; then
+    (
+      local elapsed=0
+      local rss_kb=""
+      local rss_mb=0
+      while kill -0 "$pid" >/dev/null 2>&1; do
+        sleep "$heartbeat_sec" || true
+        elapsed="$(( $(date +%s) - start_hb ))"
+        if kill -0 "$pid" >/dev/null 2>&1; then
+          rss_kb="$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
+          if [ -n "$rss_kb" ]; then
+            rss_mb="$((rss_kb / 1024))"
+            echo "== Bootstrap dune heartbeat: target=$target elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid" >&2
+          else
+            echo "== Bootstrap dune heartbeat: target=$target elapsed=${elapsed}s pid=$pid" >&2
+          fi
+        fi
+      done
+    ) &
+    heartbeat_pid="$!"
+  fi
+
+  if [ "$timeout_sec" != "0" ]; then
+    (
+      sleep "$timeout_sec"
+      if kill -0 "$pid" >/dev/null 2>&1; then
+        echo "Bootstrap dune build timed out after ${timeout_sec}s (target=$target)." >&2
+        printf 'timeout\n' >"$timeout_marker"
+        kill "$pid" >/dev/null 2>&1 || true
+        sleep 2
+        if kill -0 "$pid" >/dev/null 2>&1; then
+          kill -9 "$pid" >/dev/null 2>&1 || true
+        fi
+      fi
+    ) &
+    timeout_pid="$!"
+  fi
+
+  set +e
+  wait "$pid"
+  code="$?"
+  set -e
+
+  if [ -n "$heartbeat_pid" ]; then
+    kill "$heartbeat_pid" >/dev/null 2>&1 || true
+    wait "$heartbeat_pid" >/dev/null 2>&1 || true
+  fi
+
+  if [ -n "$timeout_pid" ]; then
+    kill "$timeout_pid" >/dev/null 2>&1 || true
+    wait "$timeout_pid" >/dev/null 2>&1 || true
+  fi
+
+  if [ -n "$timeout_marker" ]; then
+    if [ -s "$timeout_marker" ]; then
+      code=124
+    fi
+    rm -f "$timeout_marker"
+  fi
+
+  return "$code"
+}
 
 if [ -z "$HXHX_FORCE_STAGE0" ] && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP_DIR/dune" ]; then
   rm -rf "$BOOTSTRAP_BUILD_DIR"
@@ -69,10 +172,29 @@ if [ -z "$HXHX_FORCE_STAGE0" ] && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP_DI
 
   (
     cd "$BOOTSTRAP_BUILD_DIR"
+    if [ "$HXHX_BOOTSTRAP_HEARTBEAT" != "0" ] || [ "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" != "0" ]; then
+      echo "== Bootstrap dune watch: heartbeat=${HXHX_BOOTSTRAP_HEARTBEAT}s timeout=${HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS}s" >&2
+    fi
     if [ "${HXHX_BOOTSTRAP_PREFER_NATIVE:-0}" = "1" ]; then
-      dune build ./out.exe || dune build ./out.bc
+      if run_bootstrap_dune_build ./out.exe; then
+        :
+      else
+        code="$?"
+        if [ "$code" -eq 124 ]; then
+          exit "$code"
+        fi
+        run_bootstrap_dune_build ./out.bc
+      fi
     else
-      dune build ./out.bc || dune build ./out.exe
+      if run_bootstrap_dune_build ./out.bc; then
+        :
+      else
+        code="$?"
+        if [ "$code" -eq 124 ]; then
+          exit "$code"
+        fi
+        run_bootstrap_dune_build ./out.exe
+      fi
     fi
   )
 
