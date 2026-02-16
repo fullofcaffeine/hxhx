@@ -957,6 +957,7 @@ out="$($HXHX_BIN --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpmethodcb/src" -m
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 grep -q "printField (this_)" "$tmpmethodcb/out/Main.ml"
+
 echo "== Stage3 regression: instance field roundtrip compiles and runs"
 tmpinstfieldrun="$tmpdir/instance_field_run"
 mkdir -p "$tmpinstfieldrun/src"

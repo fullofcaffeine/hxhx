@@ -157,6 +157,7 @@ Notes:
 - It also includes a `--wait stdio` framed-protocol smoke check (non-delegating server lifecycle).
 - It intentionally does **not** require full upstream display semantic parity yet.
 - Socket server/client protocol regression coverage lives in `npm run test:hxhx-targets`
+- Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
   (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
 Dedicated display full-emit warm-output stress rung:

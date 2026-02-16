@@ -1172,13 +1172,18 @@ class EmitterStage {
 							switch (callee) {
 							case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
 								final expectedRaw = arityByIdent.get(name);
-								final expected = (hasCurrentInstanceMethod(name) && tyByIdent != null && tyByIdent.get("this") != null)
-									? (expectedRaw - 1)
-									: expectedRaw;
+								final isInstance = hasCurrentInstanceMethod(name);
+								final callerHasThis = (tyByIdent != null && tyByIdent.get("this") != null);
+								final receiverIsForwarded = isInstance && args.length >= expectedRaw;
+								final expected =
+									(isInstance && callerHasThis && !receiverIsForwarded)
+										? (expectedRaw - 1)
+										: expectedRaw;
 								expected > args.length ? (expected - args.length) : 0;
 							case EField(EThis, name) if (arityByIdent != null && arityByIdent.exists(name)):
 								final expectedRaw = arityByIdent.get(name);
-								final expected = expectedRaw - 1;
+								final receiverIsForwarded = args.length >= expectedRaw;
+								final expected = receiverIsForwarded ? expectedRaw : (expectedRaw - 1);
 								expected > args.length ? (expected - args.length) : 0;
 							case _:
 								0;
@@ -1579,8 +1584,46 @@ class EmitterStage {
 							return exprToOcaml(ECall(EIdent(field), forwarded), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 						case _:
 					}
+					final instanceCallName = switch (callee) {
+						case EIdent(name) if (hasCurrentInstanceMethod(name)):
+							name;
+						case EField(EThis, name) if (hasCurrentInstanceMethod(name)):
+							name;
+						case _:
+							null;
+					};
 
-					final c = exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					final receiverAlreadyForwarded = if (instanceCallName != null && args.length > 0) {
+						if (arityByIdent != null && arityByIdent.exists(instanceCallName)) {
+							args.length >= arityByIdent.get(instanceCallName);
+						} else {
+							// Fallback for bring-up paths where typed arity is unavailable:
+							// if the first argument looks like an object receiver and at least one
+							// additional argument exists, treat this as an already-forwarded call.
+							switch (args[0]) {
+								case EThis:
+									true;
+								case EIdent(_) | EField(_, _):
+									args.length > 1;
+								case _:
+									false;
+							}
+						}
+					} else {
+						false;
+					};
+
+					final c = if (instanceCallName != null) {
+						if (receiverAlreadyForwarded) {
+							ocamlValueIdent(instanceCallName);
+						} else if (tyByIdent != null && tyByIdent.get("this") != null) {
+							ocamlValueIdent(instanceCallName) + " (this_)";
+						} else {
+							ocamlValueIdent(instanceCallName);
+						}
+					} else {
+						exprToOcaml(callee, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+					};
 						// Stage3 emit-runner: normalize `haxe.SysTools.quoteWinArg.bind(null, true)`
 						// into a first-class unary callback so OCaml does not compile the dynamic
 						// `bind` invocation path (which otherwise becomes warning-as-error over-application).

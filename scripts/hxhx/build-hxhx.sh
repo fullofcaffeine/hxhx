@@ -30,12 +30,14 @@ BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-$HXHX_DIR/bootstrap_work}"
 
 create_stage0_log_file() {
   local prefix="$1"
+  local template=""
   if [ -n "$HXHX_LOG_DIR" ]; then
     mkdir -p "$HXHX_LOG_DIR"
-    mktemp "$HXHX_LOG_DIR/${prefix}.XXXXXX.log"
-    return
+    template="${HXHX_LOG_DIR%/}/${prefix}.XXXXXX"
+  else
+    template="${TMPDIR:-/tmp}/${prefix}.XXXXXX"
   fi
-  mktemp -t "${prefix}.XXXXXX.log"
+  mktemp "$template"
 }
 
 cleanup_stage0_log_file() {
