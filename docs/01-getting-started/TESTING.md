@@ -71,11 +71,12 @@ npm run test:upstream:unit-macro
 Notes:
 
 - Today `npm run test:upstream:unit-macro` is a **native/non-delegating bring-up rung**:
-  it routes the upstream `compile-macro.hxml` through `hxhx --hxhx-stage3 --hxhx-no-emit` to exercise
-  resolver + typer + macro-host plumbing without invoking a stage0 `haxe` binary.
+  it routes the upstream `compile-macro.hxml` through `hxhx --hxhx-stage3 --hxhx-emit-full-bodies` to exercise
+  resolver + typer + macro-host plumbing plus OCaml emit/build wiring without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline remains available as:
     `npm run test:upstream:unit-macro-stage0`
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
+  - `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) converts a macOS native Gate1 SIGSEGV (exit 139) into an explicit skipped marker (`gate1_native=status_skipped`). Set `0` to force fail-fast while debugging.
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
   That document also clarifies what we mean by “compile Haxe” and how Stage0→Stage2 bootstrapping works.

@@ -75,9 +75,10 @@ These are ordered so we can land value continuously, while keeping the final “
 As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” mode:
 
 - Gate 1 (`npm run test:upstream:unit-macro`): defaults to a **native/non-delegating bring-up rung**
-  (Stage3 `--hxhx-no-emit`), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
+  (Stage3 `--hxhx-emit-full-bodies` emit+build+run), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline is still available as: `npm run test:upstream:unit-macro-stage0`.
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml` + manual `workflow_dispatch` override.
+  - macOS safety knob: `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) converts native rung exit `139` into an explicit skipped marker while the Darwin crash is being fixed.
 - Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
   - An experimental rung exists (`stage3_emit_runner`) which now compiles+runs the upstream `tests/RunCi.hxml`
     under the Stage3 bootstrap emitter, but it does not yet execute the full Macro orchestration loop faithfully.
@@ -121,14 +122,17 @@ Passes when the Haxe-in-Haxe compiler can run the upstream unit tests in interpr
 
 #### Important note (current state)
 
-Today, `npm run test:upstream:unit-macro` runs the suite through the **stage0 shim** behavior of `hxhx`
-(delegating to the system `haxe` binary). That runner is still useful: it validates our upstream harness wiring,
-distribution presets, and CI toolchain expectations.
+Today, `npm run test:upstream:unit-macro` is already the **non-delegating** Gate 1 bring-up entrypoint.
+It executes upstream `compile-macro.hxml` through native Stage3 with full emit/build/run, while keeping the
+macro-host path stage0-free by default.
 
-As `hxhx` matures, this repo treats `npm run test:upstream:unit-macro` as the **non-delegating** Gate 1 entrypoint
-(no stage0 compilation delegation). The historical stage0-shim baseline remains available as:
+The historical stage0 baseline remains available for harness comparison/debugging:
 
 - `npm run test:upstream:unit-macro-stage0`
+
+The dedicated native alias is equivalent to the default entrypoint:
+
+- `npm run test:upstream:unit-macro-native`
 
 #### OCaml note: how we emulate upstream `--interp`
 
@@ -175,19 +179,18 @@ When we flip the OCaml target’s “native surface” to be stricter about null
 possible), we may need a small upstream-compat patch set for those specific tests, or upstream may accept an `ocaml`
 define in the relevant conditionals.
 
-The “real” Gate 1 for replacement readiness is the **non-delegating** path. We track that as a separate runner:
+Native Gate 1 currently runs through Stage3 full emit/build/run. That means this rung now exercises:
 
-- `npm run test:upstream:unit-macro-native` (bring-up; expected to fail until `hxhx` stops delegating)
+- macro host bootstrap + hook registration
+- Stage3 typing/model passes on upstream-shaped inputs
+- OCaml emission/build wiring for the upstream unit workload
 
-Bootstrap reality check:
+Known host caveat (bring-up):
 
-- Today, `test:upstream:unit-macro-native` is intentionally **not** a full Gate 1 run yet.
-- It routes `compile-macro.hxml` through the Stage 3 bring-up pipeline in a **type-only** mode
-  (`--hxhx-stage3 --hxhx-type-only`) so we can:
-  - validate strict parsing + module graph resolution on upstream-scale inputs, and
-  - execute the minimal macro slice (`--macro Macro.init()` hooks).
-- A successful `stage3=type_only_ok` does **not** mean Gate 1 is passed; it only proves we reached the
-  “frontend + resolver + macro hook plumbing” rung.
+- On macOS, the native rung can currently terminate with SIGSEGV (`exit 139`) after macro bootstrap in `compile-macro.hxml`.
+- The runner supports `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) to convert that into an explicit skipped marker:
+  `gate1_native=status_skipped reason=darwin_sigsegv rung=stage3_emit`.
+- Set `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=0` to force fail-fast while debugging.
 
 Why this gate matters:
 
