@@ -67,7 +67,7 @@ if [ "$PROFILE" = "full" ] && [ "$STRICT" = "1" ]; then
   fi
 
   missing=0
-  for cmd in dune ocamlc git haxe haxelib python3 javac node neko nekotools pypy3; do
+  for cmd in dune ocamlc git haxe haxelib python3 javac node neko pypy3; do
     if ! need_cmd "$cmd"; then
       missing=1
     fi
