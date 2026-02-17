@@ -1806,7 +1806,32 @@ class EmitterStage {
 								}
 								for (_ in 0...missingCount) fullArgs.push(ENull);
 
-								if (fullArgs.length == 0) {
+								final renderedArgs = fullArgs.map(a ->
+									"(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")"
+								);
+								final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
+
+								if (isHxAnonDynamicCall) {
+									// Stage3 emit-runner hardening: dynamic-field call targets lowered through
+									// `HxAnon.get` frequently trigger Warning 20 in OCaml when inference picks a
+									// unit-arg closure shape and the call site supplies positional arguments.
+									//
+									// Emit explicit arity casts for common call arities so OCaml treats these
+									// as intentional dynamic calls (matching Stage3 bring-up semantics) rather
+									// than "ignored extra argument" over-application.
+									if (renderedArgs.length == 0) {
+										"(Obj.magic ((Obj.magic (" + c + ") : unit -> Obj.t) ()))";
+									} else if (renderedArgs.length <= 5) {
+										var fnTy = "Obj.t";
+										for (_ in 0...renderedArgs.length) fnTy = "Obj.t -> " + fnTy;
+										var renderedCall = "((Obj.magic (" + c + ") : " + fnTy + ")";
+										for (argCode in renderedArgs) renderedCall += " (Obj.repr " + argCode + ")";
+										renderedCall += ")";
+										"(Obj.magic " + renderedCall + ")";
+									} else {
+										c + " " + renderedArgs.join(" ");
+									}
+								} else if (renderedArgs.length == 0) {
 									var appendUnit = true;
 									switch (callee) {
 										case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
@@ -1822,11 +1847,7 @@ class EmitterStage {
 										? "(Obj.magic (" + renderedCall + "))"
 										: renderedCall;
 								} else {
-									final renderedCall = c
-										+ " "
-										+ fullArgs
-											.map(a -> "(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")")
-											.join(" ");
+									final renderedCall = c + " " + renderedArgs.join(" ");
 									(sig == null && StringTools.startsWith(c, "Php_Global."))
 										? "(Obj.magic (" + renderedCall + "))"
 										: renderedCall;
