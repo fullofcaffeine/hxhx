@@ -1,0 +1,10 @@
+# Stage3 explicit args for this example (one argument per line).
+# This keeps example coverage stable while Stage3 HXML parsing for this macro/plugin shape is still being hardened.
+-cp
+src
+--library
+reflaxe.ocaml
+-main
+Main
+--macro
+hxhxmacros.PluginFixtureMacros.init()

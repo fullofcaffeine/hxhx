@@ -37,6 +37,13 @@ let unwrap_or_empty (a : 'a t) : 'a t option =
   else
     Some (Obj.obj o)
 
+let unwrap_optional_int (v : int) (default : int) : int =
+  let raw : Obj.t = Obj.magic v in
+  if raw == hx_null then
+    default
+  else
+    v
+
 let create () : 'a t =
   { data = [||]; length = 0 }
 
@@ -181,6 +188,7 @@ let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
   | None -> create ()
   | Some a ->
     let len = a.length in
+    let end_ = unwrap_optional_int end_ len in
     let p = normalize_slice_pos len pos in
     let e =
       let raw = if end_ < 0 then len + end_ else end_ in
@@ -301,6 +309,7 @@ let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
   | None -> -1
   | Some a ->
     let len = a.length in
+    let fromIndex = unwrap_optional_int fromIndex 0 in
     let start = normalize_index_of_from len fromIndex in
     if start >= len then
       -1
@@ -330,6 +339,7 @@ let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
   | None -> -1
   | Some a ->
     let len = a.length in
+    let fromIndex = unwrap_optional_int fromIndex (len - 1) in
     if len = 0 then
       -1
     else (

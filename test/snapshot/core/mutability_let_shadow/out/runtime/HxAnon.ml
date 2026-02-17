@@ -59,14 +59,31 @@ let get (o : Obj.t) (field : string) : Obj.t =
     match Hashtbl.find_opt tbl field with
     | Some v -> v
     | None -> HxRuntime.hx_null
-  else if Obj.is_block o && Obj.tag o = Obj.string_tag && field = "cca" then
-    (* Support `StringTools.fastCodeAt()` / `unsafeCodeAt()` which call
-       `untyped s.cca(i)` on targets without a dedicated implementation.
+  else if Obj.is_block o && Obj.size o = 2 && Obj.field o 0 != marker && Obj.is_int (Obj.field o 1) then
+    let a : Obj.t HxArray.t = Obj.obj o in
+    (match field with
+    | "iterator" -> Obj.repr (fun () -> HxIterator.of_array a)
+    | "length" -> Obj.repr (HxArray.length a)
+    | "indexOf" -> Obj.repr (fun (x : Obj.t) (fromIndex : int) -> HxArray.indexOf a x fromIndex)
+    | "lastIndexOf" -> Obj.repr (fun (x : Obj.t) (fromIndex : int) -> HxArray.lastIndexOf a x fromIndex)
+    | "slice" -> Obj.repr (fun (pos : int) (end_ : int) -> HxArray.slice a pos end_)
+    | _ -> HxRuntime.hx_null)
+  else if Obj.is_block o && Obj.tag o = Obj.string_tag then
+    (* Support String method dispatch through dynamic-field lookup.
 
-       Strings are not anonymous objects, but they do have a well-known
-       "fast code at" primitive. We surface it as a callable field. *)
+       Stage3 bring-up still routes a subset of `s.method(...)` calls through
+       `HxAnon.get (Obj.repr s) "method"`.
+
+       Keep these bridges small and explicit so missing methods fail with `null`
+       rather than segfaulting via non-callable values. *)
     let s : string = Obj.obj o in
-    Obj.repr (fun (i : int) -> HxString.cca s i)
+    (match field with
+    | "cca" -> Obj.repr (fun (i : int) -> HxString.cca s i)
+    | "indexOf" -> Obj.repr (fun (sub : string) (startIndex : int) -> HxString.indexOf s sub startIndex)
+    | "lastIndexOf" -> Obj.repr (fun (sub : string) (startIndex : int) -> HxString.lastIndexOf s sub startIndex)
+    | "substr" -> Obj.repr (fun (pos : int) (len : int) -> HxString.substr s pos len)
+    | "substring" -> Obj.repr (fun (startIndex : int) (endIndex : int) -> HxString.substring s startIndex endIndex)
+    | _ -> HxRuntime.hx_null)
   else
     HxRuntime.hx_null
 

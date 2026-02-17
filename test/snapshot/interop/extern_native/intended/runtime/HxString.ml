@@ -89,9 +89,17 @@ let starts_with_at (s : string) (sub : string) (i : int) : bool =
     in
     loop 0
 
+let unwrap_optional_int (v : int) (default : int) : int =
+  let raw : Obj.t = Obj.magic v in
+  if raw == HxRuntime.hx_null then
+    default
+  else
+    v
+
 let indexOf (s : string) (sub : string) (startIndex : int) : int =
   let slen = String.length s in
   let nlen = String.length sub in
+  let startIndex = unwrap_optional_int startIndex 0 in
   if startIndex > slen then
     -1
   else if nlen = 0 then
@@ -113,6 +121,7 @@ let indexOf (s : string) (sub : string) (startIndex : int) : int =
 let lastIndexOf (s : string) (sub : string) (startIndex : int) : int =
   let slen = String.length s in
   let nlen = String.length sub in
+  let startIndex = unwrap_optional_int startIndex slen in
   if nlen = 0 then (
     let idx = if startIndex < 0 then slen else startIndex in
     if idx > slen then slen else idx
@@ -164,6 +173,7 @@ let split (s : string) (delimiter : string) : string HxArray.t =
 
 let substr (s : string) (pos : int) (len : int) : string =
   let slen = String.length s in
+  let len = unwrap_optional_int len (-1) in
   let p =
     if pos < 0 then
       let raw = slen + pos in
@@ -184,6 +194,7 @@ let substr (s : string) (pos : int) (len : int) : string =
 
 let substring (s : string) (startIndex : int) (endIndex : int) : string =
   let slen = String.length s in
+  let endIndex = unwrap_optional_int endIndex slen in
   let s0 = if startIndex < 0 then 0 else startIndex in
   let e0 =
     if endIndex < 0 then 0 else if endIndex > slen then slen else endIndex

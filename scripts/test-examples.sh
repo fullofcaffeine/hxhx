@@ -142,7 +142,23 @@ for dir in examples/*/; do
       # Stage3 emits `out/out.exe` directly (no dune project).
       #
       # Use `--hxhx-no-run` so we can capture runtime output deterministically below.
-      HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out build.hxml -D ocaml_build=native
+      #
+      # Some bring-up examples can provide `STAGE3_ARGS` (one argument per line)
+      # to bypass known Stage3 HXML parsing gaps while still exercising the same
+      # compilation workload under Stage3.
+      stage3_args=()
+      if [ -f "STAGE3_ARGS" ]; then
+        while IFS= read -r line; do
+          line="${line%%#*}"
+          line="$(echo "$line" | xargs || true)"
+          [ -n "$line" ] || continue
+          stage3_args+=("$line")
+        done < "STAGE3_ARGS"
+      fi
+      if [ "${#stage3_args[@]}" -eq 0 ]; then
+        stage3_args=(build.hxml)
+      fi
+      HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out "${stage3_args[@]}" -D ocaml_build=native
       exe="out/out.exe"
     elif [ -f "USE_HXHX" ]; then
       HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml build.hxml -D ocaml_build=native

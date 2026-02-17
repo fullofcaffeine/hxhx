@@ -117,6 +117,13 @@ let hx_match (self : t) (s : string) : bool =
     false
 
 let matchSub (self : t) (s : string) (pos : int) (len : int) : bool =
+  (* Optional `Int` parameters can be padded with `hx_null` by the backend to
+     avoid partial application. Normalize that sentinel to the Haxe default
+     (`-1`) before doing integer arithmetic. *)
+  let len =
+    let raw : Obj.t = Obj.magic len in
+    if raw == HxRuntime.hx_null then -1 else len
+  in
   let limit =
     if len < 0 then String.length s else min (String.length s) (pos + len)
   in
