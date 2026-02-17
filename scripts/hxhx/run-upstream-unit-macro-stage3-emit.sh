@@ -21,8 +21,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 
-# Keep Stage3 emit deterministic while full-body emitter coverage for widened closure is still incomplete.
-# (No-emit/type-only rungs run widening-enabled.)
+# Keep Stage3 emit deterministic while widened emit-run still has a native runtime crash path
+# on Darwin (tracked in haxe.ocaml-kun). No-emit/type-only rungs remain widening-enabled.
 : "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=0}"
 export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES
 

@@ -27,10 +27,14 @@
 private typedef EmitterCallSig = {
 	/** Total OCaml parameters after lowering (includes the rest-array parameter when present). */
 	final expected:Int;
+	/** Required OCaml parameters after lowering (receiver + non-optional params). */
+	final required:Int;
 	/** Number of fixed (non-rest) parameters. */
 	final fixed:Int;
 	/** Whether the final parameter is a lowered rest-args array. */
 	final hasRest:Bool;
+	/** Whether this lowered call expects a synthetic receiver parameter. */
+	final needsReceiver:Bool;
 }
 
 private class _EmitterStageDebug {
@@ -47,10 +51,17 @@ private class _EmitterStageDebug {
 		- Gated by `HXHX_TRACE_CALLSIG=1`.
 		- Written to stderr so it doesn't perturb tests that assert stdout output.
 	**/
-	public static function traceCallSig(modName:String, fnName:String, args:Array<HxFunctionArg>, fixed:Int, hasRest:Bool):Void {
+	public static function traceCallSig(
+		modName:String,
+		fnName:String,
+		args:Array<HxFunctionArg>,
+		required:Int,
+		fixed:Int,
+		hasRest:Bool,
+		needsReceiver:Bool
+	):Void {
 		final enabled = Sys.getEnv("HXHX_TRACE_CALLSIG");
 		if (enabled != "1" && enabled != "true" && enabled != "yes") return;
-		if (!hasRest) return;
 		try {
 			final parts = new Array<String>();
 			if (args != null) {
@@ -61,7 +72,8 @@ private class _EmitterStageDebug {
 				}
 			}
 			Sys.stderr().writeString(
-				"callsig " + modName + "." + fnName + " fixed=" + fixed + " hasRest=" + (hasRest ? "1" : "0") + " args=[" + parts.join(",") + "]\n"
+				"callsig " + modName + "." + fnName + " required=" + required + " fixed=" + fixed + " hasRest=" + (hasRest ? "1" : "0")
+					+ " needsReceiver=" + (needsReceiver ? "1" : "0") + " args=[" + parts.join(",") + "]\n"
 			);
 		} catch (_:Dynamic) {}
 	}
@@ -1712,13 +1724,21 @@ class EmitterStage {
 
 							c + " " + argCodes.join(" ");
 						} else {
+							var fullArgs = args.copy();
+
+							// Stage3 widened-closure hardening: some parsed std extern surfaces recover
+							// callable members as receiver-style functions (`this_` + args). When call-sites use
+							// qualified form (`Module.fn(a, b)`), prepend a synthetic receiver sentinel so
+							// OCaml sees the expected arity instead of a partial application.
+							if (sig != null && sig.needsReceiver && fullArgs.length < sig.required && c.indexOf(".") != -1) {
+								fullArgs.insert(0, ENull);
+							}
+
 							var missingCount = missing;
 							if (missingCount == 0 && sig != null) {
 								final expected = sig.expected;
-								if (expected > args.length) missingCount = expected - args.length;
-								}
-	
-								var fullArgs = args.copy();
+								if (expected > fullArgs.length) missingCount = expected - fullArgs.length;
+							}
 
 								// Stage 3 bring-up: upstream often passes `pos` as the last argument to APIs declared
 								// as `(required..., ?msg:String, ?pos:haxe.PosInfos)`, relying on Haxe's optional-arg
@@ -3344,6 +3364,7 @@ class EmitterStage {
 
 							final fnArgs = HxFunctionDecl.getArgs(fn);
 							final argCount = fnArgs == null ? 0 : fnArgs.length;
+							final needsReceiver = !HxFunctionDecl.getIsStatic(fn);
 							// Robust rest detection:
 							// - In valid Haxe syntax, the rest arg (if present) is the *last* parameter.
 							// - During bring-up, we prefer a rule that can't be confused by accidental rest
@@ -3353,19 +3374,40 @@ class EmitterStage {
 							if (argCount > 0 && HxFunctionArg.getIsRest(fnArgs[argCount - 1])) {
 								hasRest = true;
 								fixedCount = argCount - 1;
+							}
+
+							var requiredCount = 0;
+							for (i in 0...fixedCount) {
+								final a = fnArgs[i];
+								final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
+									case Default(_): true;
+									case _: false;
+								};
+								if (!HxFunctionArg.getIsOptional(a) && !hasDefault) requiredCount += 1;
+							}
+
+							if (needsReceiver) {
+								fixedCount += 1;
+								requiredCount += 1;
+							}
+
+							final expected = fixedCount + (hasRest ? 1 : 0);
+							_EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
+							final sig0:EmitterCallSig = {
+								expected: expected,
+								required: requiredCount,
+								fixed: fixedCount,
+								hasRest: hasRest,
+								needsReceiver: needsReceiver
+							};
+							final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
+							globalCallSigByCallee.set(key0, sig0);
+							final aliasShorts = aliasShortsByTarget.get(modName);
+							if (aliasShorts != null) {
+								for (short in aliasShorts) {
+									globalCallSigByCallee.set(short + "." + ocamlValueIdent(fnNameRaw), sig0);
 								}
-	
-								final expected = fixedCount + (hasRest ? 1 : 0);
-								_EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
-								final sig0:EmitterCallSig = { expected: expected, fixed: fixedCount, hasRest: hasRest };
-								final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
-								globalCallSigByCallee.set(key0, sig0);
-								final aliasShorts = aliasShortsByTarget.get(modName);
-								if (aliasShorts != null) {
-									for (short in aliasShorts) {
-										globalCallSigByCallee.set(short + "." + ocamlValueIdent(fnNameRaw), sig0);
-									}
-								}
+							}
 							}
 						}
 					}
@@ -3575,10 +3617,31 @@ class EmitterStage {
 						hasRest = true;
 						fixedCount = argCount - 1;
 					}
-						if (!isStaticFn) fixedCount += 1;
+
+					var requiredCount = 0;
+					for (i in 0...fixedCount) {
+						final a = fnArgs[i];
+						final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
+							case Default(_): true;
+							case _: false;
+						};
+						if (!HxFunctionArg.getIsOptional(a) && !hasDefault) requiredCount += 1;
+					}
+
+						if (!isStaticFn) {
+							fixedCount += 1;
+							requiredCount += 1;
+						}
 						final expected = fixedCount + (hasRest ? 1 : 0);
-						_EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, fixedCount, hasRest);
-						callSigByCallee.set(ocamlValueIdent(fnNameRaw), { expected: expected, fixed: fixedCount, hasRest: hasRest });
+						final needsReceiver = !isStaticFn;
+						_EmitterStageDebug.traceCallSig(mainModuleName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
+						callSigByCallee.set(ocamlValueIdent(fnNameRaw), {
+							expected: expected,
+							required: requiredCount,
+							fixed: fixedCount,
+							hasRest: hasRest,
+							needsReceiver: needsReceiver
+						});
 					}
 
 			// Best-effort `import Foo.Bar.*` support:
