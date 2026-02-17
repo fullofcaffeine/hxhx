@@ -21,7 +21,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 
-# Keep Gate1 deterministic and avoid the known Darwin-only widening crash.
+# Keep Stage3 emit deterministic while full-body emitter coverage for widened closure is still incomplete.
+# (No-emit/type-only rungs run widening-enabled.)
 : "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=0}"
 export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES
 
@@ -72,33 +73,21 @@ if ! has_utest; then
 fi
 
 echo "== Gate 1 (stage3 emit rung): upstream tests/unit/compile-macro.hxml"
-attempt=1
-max_attempts=2
-while true; do
-  set +e
-  out="$(
-    cd "$UPSTREAM_DIR/tests/unit"
-    rm -rf out_hxhx_unit_macro_stage3_emit
-    HAXELIB_BIN="$HAXELIB_BIN" \
-      "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
-  )"
-  code="$?"
-  set -e
-  echo "$out"
+set +e
+out="$(
+  cd "$UPSTREAM_DIR/tests/unit"
+  rm -rf out_hxhx_unit_macro_stage3_emit
+  HAXELIB_BIN="$HAXELIB_BIN" \
+    "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
+)"
+code="$?"
+set -e
+echo "$out"
 
-  if [ "$code" = "0" ]; then
-    break
-  fi
-
-  if [ "$code" = "139" ] && [ "$(uname -s)" = "Darwin" ] && [ "$attempt" -lt "$max_attempts" ]; then
-    echo "Retrying stage3 emit rung after Darwin SIGSEGV (attempt $attempt/$max_attempts)." >&2
-    attempt=$((attempt + 1))
-    continue
-  fi
-
+if [ "$code" != "0" ]; then
   echo "FAILED: hxhx stage3 emit rung exited with code $code" >&2
   exit "$code"
-done
+fi
 
 grep -q "^macro_run\\[0\\]=ok$" <<<"$out"
 grep -q "^hook_onGenerate\\[0\\]=ok$" <<<"$out"

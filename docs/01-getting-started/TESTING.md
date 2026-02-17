@@ -76,7 +76,7 @@ Notes:
   - The historical stage0-shim baseline remains available as:
     `npm run test:upstream:unit-macro-stage0`
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
-  - Gate1 unit-macro rungs now pin `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` by default for deterministic cross-host behavior (including macOS). Set `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1` only when you intentionally want to debug heuristic graph widening.
+  - Gate1 unit-macro rungs now fail fast across hosts (including macOS) with no Darwin-specific retry fallback. `stage3 no-emit` and `stage3 type-only` run with `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`; `stage3 emit` stays at `0` until widened full-body emitter coverage is stable.
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
   That document also clarifies what we mean by “compile Haxe” and how Stage0→Stage2 bootstrapping works.

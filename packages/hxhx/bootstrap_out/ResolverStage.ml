@@ -38,7 +38,7 @@ let implicitSamePackageDeps = fun source modulePath decl -> try let pkg = HxModu
       tempMaybeString := __assign_5;
       __assign_5
     ));
-    let candidates = HxMap.create_string () in let addMatches = fun re -> let pos = ref 0 in while EReg.matchSub re source (!pos) (Obj.magic (HxRuntime.hx_null)) do ignore (let name = EReg.matched re 1 in (
+    let candidates = HxMap.create_string () in let addMatches = fun re -> let pos = ref 0 in while EReg.matchSub re source (!pos) (-1) do ignore (let name = EReg.matched re 1 in (
       ignore (if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then ignore (HxMap.set_string candidates name true) else ());
       let mp = EReg.matchedPos re () in let __assign_6 = HxInt.add (Obj.obj (HxAnon.get mp "pos")) (Obj.obj (HxAnon.get mp "len")) in (
         pos := __assign_6;
@@ -91,7 +91,7 @@ let implicitQualifiedTypeDeps = fun source -> try (
       ));
       let trimmed = StringTools.trim line in (
         ignore (if StringTools.startsWith trimmed "@:" then raise (HxRuntime.Hx_continue) else ());
-        let re = EReg.create "\\b(([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Z][A-Za-z0-9_]*)\\b" "g" in let pos = ref 0 in while EReg.matchSub re line (!pos) (Obj.magic (HxRuntime.hx_null)) do ignore (let dep = EReg.matched re 1 in (
+        let re = EReg.create "\\b(([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Z][A-Za-z0-9_]*)\\b" "g" in let pos = ref 0 in while EReg.matchSub re line (!pos) (-1) do ignore (let dep = EReg.matched re 1 in (
           ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 then ignore (HxMap.set_string candidates dep true) else ());
           let mp = EReg.matchedPos re () in let __assign_18 = HxInt.add (Obj.obj (HxAnon.get mp "pos")) (Obj.obj (HxAnon.get mp "len")) in (
             pos := __assign_18;

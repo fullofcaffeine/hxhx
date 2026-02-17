@@ -248,7 +248,7 @@ npm run test:upstream:unit-macro
 ```
 
 Gate 1 CI (`.github/workflows/gate1.yml`) runs weekly on Linux and remains manually triggerable via `workflow_dispatch` + `run_upstream_unit_macro=true`.
-For Gate 1 unit-macro rungs, resolver widening is pinned to `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` by default for deterministic cross-host behavior. Set `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1` only for local heuristic-debug runs.
+Gate 1 unit-macro rungs fail fast by default with no Darwin-specific retry fallback. `stage3 no-emit` and `stage3 type-only` run with resolver widening enabled (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`), while `stage3 emit` remains pinned to `0` until widened full-body emitter coverage is stable.
 
 Run upstream Gate 2 (runci Macro target; heavier and more tool-dependent):
 

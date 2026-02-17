@@ -21,8 +21,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 
-# Keep Gate1 unit-macro closure deterministic and avoid known Darwin crash widening.
-: "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=0}"
+# Gate1 now runs widening-enabled by default.
+: "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=1}"
 export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES
 
 if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
@@ -88,30 +88,18 @@ if ! has_utest; then
 fi
 
 echo "== Gate 1 (stage3 type-only rung): upstream tests/unit/compile-macro.hxml"
-attempt=1
-max_attempts=2
-while true; do
-  set +e
-  out="$(
-    cd "$UPSTREAM_DIR/tests/unit"
-    HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_typeonly 2>&1
-  )"
-  code="$?"
-  set -e
-  echo "$out"
+set +e
+out="$(
+  cd "$UPSTREAM_DIR/tests/unit"
+  HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" --hxhx-stage3 --hxhx-type-only compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_typeonly 2>&1
+)"
+code="$?"
+set -e
+echo "$out"
 
-  if [ "$code" = "0" ]; then
-    break
-  fi
-
-  if [ "$code" = "139" ] && [ "$(uname -s)" = "Darwin" ] && [ "$attempt" -lt "$max_attempts" ]; then
-    echo "Retrying stage3 type-only rung after Darwin SIGSEGV (attempt $attempt/$max_attempts)." >&2
-    attempt=$((attempt + 1))
-    continue
-  fi
-
+if [ "$code" != "0" ]; then
   echo "FAILED: hxhx stage3 type-only rung exited with code $code" >&2
   exit "$code"
-done
+fi
 
 grep -q "^stage3=type_only_ok$" <<<"$out"

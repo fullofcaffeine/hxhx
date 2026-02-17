@@ -61,7 +61,7 @@ class ResolverStage {
 		final candidates = new Map<String, Bool>();
 		function addMatches(re:EReg):Void {
 			var pos = 0;
-			while (re.matchSub(source, pos)) {
+			while (re.matchSub(source, pos, -1)) {
 				final name = re.matched(1);
 				if (name != null && name.length > 0) candidates.set(name, true);
 				final mp = re.matchedPos();
@@ -117,7 +117,7 @@ class ResolverStage {
 
 			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
 			var pos = 0;
-			while (re.matchSub(line, pos)) {
+			while (re.matchSub(line, pos, -1)) {
 				final dep = re.matched(1);
 				if (dep != null && dep.length > 0) candidates.set(dep, true);
 				final mp = re.matchedPos();

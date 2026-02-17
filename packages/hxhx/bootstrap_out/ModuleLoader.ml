@@ -640,7 +640,7 @@ let implicitQualifiedTypeDeps = fun source -> try (
       ));
       let trimmed = StringTools.trim line in (
         ignore (if StringTools.startsWith trimmed "@:" then raise (HxRuntime.Hx_continue) else ());
-        let re = EReg.create "\\b(([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Z][A-Za-z0-9_]*)\\b" "g" in let pos = ref 0 in while EReg.matchSub re line (!pos) (Obj.magic (HxRuntime.hx_null)) do ignore (let dep = EReg.matched re 1 in (
+        let re = EReg.create "\\b(([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Z][A-Za-z0-9_]*)\\b" "g" in let pos = ref 0 in while EReg.matchSub re line (!pos) (-1) do ignore (let dep = EReg.matched re 1 in (
           ignore (if dep != Obj.magic (HxRuntime.hx_null) && HxString.length dep > 0 then ignore (HxMap.set_string candidates dep true) else ());
           let mp = EReg.matchedPos re () in let __assign_117 = HxInt.add (Obj.obj (HxAnon.get mp "pos")) (Obj.obj (HxAnon.get mp "len")) in (
             pos := __assign_117;
