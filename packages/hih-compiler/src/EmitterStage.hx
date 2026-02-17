@@ -1810,8 +1810,34 @@ class EmitterStage {
 									"(" + exprToOcaml(a, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee) + ")"
 								);
 								final isHxAnonDynamicCall = c.indexOf("HxAnon.get") != -1;
+								final isContextLoadFlattenedCall = c == "Haxe_macro_Context.load" && renderedArgs.length > 2;
+								final isContextLoadFollowupCall = StringTools.startsWith(c, "Haxe_macro_Context.load ") && renderedArgs.length > 0;
 
-								if (isHxAnonDynamicCall) {
+								if (isContextLoadFlattenedCall || isContextLoadFollowupCall) {
+									// Stage3 macro bring-up: parsed call shapes can represent
+									// `Context.load(name, nargs)(...)` either as a flattened single call or as a
+									// follow-up call where `c` already includes `load name nargs`.
+									// Both forms can trigger OCaml Warning 20 over-application.
+									//
+									// Rebuild the two-step callable form explicitly and cast by the observed
+									// tail arity to keep this warning-clean while preserving bring-up behavior.
+									final loadCall = isContextLoadFlattenedCall
+										? (c + " " + renderedArgs[0] + " " + renderedArgs[1])
+										: c;
+									final tailArgs = isContextLoadFlattenedCall
+										? renderedArgs.slice(2)
+										: renderedArgs;
+									if (tailArgs.length <= 5) {
+										var fnTy = "Obj.t";
+										for (_ in 0...tailArgs.length) fnTy = "Obj.t -> " + fnTy;
+										var renderedCall = "((Obj.magic (" + loadCall + ") : " + fnTy + ")";
+										for (argCode in tailArgs) renderedCall += " (Obj.repr " + argCode + ")";
+										renderedCall += ")";
+										"(Obj.magic " + renderedCall + ")";
+									} else {
+										loadCall + " " + tailArgs.join(" ");
+									}
+								} else if (isHxAnonDynamicCall) {
 									// Stage3 emit-runner hardening: dynamic-field call targets lowered through
 									// `HxAnon.get` frequently trigger Warning 20 in OCaml when inference picks a
 									// unit-arg closure shape and the call site supplies positional arguments.
