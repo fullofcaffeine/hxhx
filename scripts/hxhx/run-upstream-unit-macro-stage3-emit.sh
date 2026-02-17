@@ -96,6 +96,6 @@ grep -q "^run=ok$" <<<"$out"
 # Keep the bring-up emitter output warning-clean under strict dune setups.
 # These warnings frequently become hard errors under `-warn-error` in real projects.
 if grep -E -q "Warning 21 \\[nonreturning-statement\\]|Warning 26 \\[unused-var\\]" <<<"$out"; then
-  echo "Stage3 emit rung produced OCaml warnings (21/26). Tighten EmitterStage lowering." >&2
+  echo "Stage3 emit rung produced OCaml warnings (20/21/26). Tighten EmitterStage lowering." >&2
   exit 1
 fi
