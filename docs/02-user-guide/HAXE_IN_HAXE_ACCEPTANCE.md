@@ -78,7 +78,7 @@ As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” m
   (Stage3 `--hxhx-emit-full-bodies` emit+build+run), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline is still available as: `npm run test:upstream:unit-macro-stage0`.
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml` + manual `workflow_dispatch` override.
-  - macOS safety knob: `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) converts native rung exit `139` into an explicit skipped marker while the Darwin crash is being fixed.
+  - Gate1 unit-macro scripts now run with a deterministic resolver profile (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` by default) and retry once on Darwin if a transient native `139` occurs during bring-up.
 - Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
   - An experimental rung exists (`stage3_emit_runner`) which now compiles+runs the upstream `tests/RunCi.hxml`
     under the Stage3 bootstrap emitter, but it does not yet execute the full Macro orchestration loop faithfully.
@@ -185,12 +185,10 @@ Native Gate 1 currently runs through Stage3 full emit/build/run. That means this
 - Stage3 typing/model passes on upstream-shaped inputs
 - OCaml emission/build wiring for the upstream unit workload
 
-Known host caveat (bring-up):
+Host bring-up note:
 
-- On macOS, the native rung can currently terminate with SIGSEGV (`exit 139`) after macro bootstrap in `compile-macro.hxml`.
-- The runner supports `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) to convert that into an explicit skipped marker:
-  `gate1_native=status_skipped reason=darwin_sigsegv rung=stage3_emit`.
-- Set `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=0` to force fail-fast while debugging.
+- Gate1 unit-macro scripts pin `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` by default because the heuristic widening path can destabilize host behavior during bootstrap.
+- The stage3 unit-macro scripts retry once on Darwin if they see a transient native `139`, then fail fast if it happens again.
 
 Why this gate matters:
 

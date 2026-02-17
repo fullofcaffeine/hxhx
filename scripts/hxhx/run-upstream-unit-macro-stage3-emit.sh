@@ -21,6 +21,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 
+# Keep Gate1 deterministic and avoid the known Darwin-only widening crash.
+: "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=0}"
+export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES
+
 if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
   echo "Skipping upstream Gate 1 (stage3 emit): missing upstream Haxe repo at '$UPSTREAM_DIR'." >&2
   echo "Set HAXE_UPSTREAM_DIR to your local Haxe checkout." >&2
@@ -68,29 +72,42 @@ if ! has_utest; then
 fi
 
 echo "== Gate 1 (stage3 emit rung): upstream tests/unit/compile-macro.hxml"
-set +e
-out="$(
-  cd "$UPSTREAM_DIR/tests/unit"
-  rm -rf out_hxhx_unit_macro_stage3_emit
-  HAXELIB_BIN="$HAXELIB_BIN" \
-    "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
-)"
-code="$?"
-set -e
-echo "$out"
-if [ "$code" != "0" ]; then
+attempt=1
+max_attempts=2
+while true; do
+  set +e
+  out="$(
+    cd "$UPSTREAM_DIR/tests/unit"
+    rm -rf out_hxhx_unit_macro_stage3_emit
+    HAXELIB_BIN="$HAXELIB_BIN" \
+      "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
+  )"
+  code="$?"
+  set -e
+  echo "$out"
+
+  if [ "$code" = "0" ]; then
+    break
+  fi
+
+  if [ "$code" = "139" ] && [ "$(uname -s)" = "Darwin" ] && [ "$attempt" -lt "$max_attempts" ]; then
+    echo "Retrying stage3 emit rung after Darwin SIGSEGV (attempt $attempt/$max_attempts)." >&2
+    attempt=$((attempt + 1))
+    continue
+  fi
+
   echo "FAILED: hxhx stage3 emit rung exited with code $code" >&2
   exit "$code"
-fi
+done
 
-echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
-echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
-echo "$out" | grep -q "^stage3=ok$"
-echo "$out" | grep -q "^run=ok$"
+grep -q "^macro_run\\[0\\]=ok$" <<<"$out"
+grep -q "^hook_onGenerate\\[0\\]=ok$" <<<"$out"
+grep -q "^stage3=ok$" <<<"$out"
+grep -q "^run=ok$" <<<"$out"
 
 # Keep the bring-up emitter output warning-clean under strict dune setups.
 # These warnings frequently become hard errors under `-warn-error` in real projects.
-if echo "$out" | grep -E -q "Warning 21 \\[nonreturning-statement\\]|Warning 26 \\[unused-var\\]"; then
+if grep -E -q "Warning 21 \\[nonreturning-statement\\]|Warning 26 \\[unused-var\\]" <<<"$out"; then
   echo "Stage3 emit rung produced OCaml warnings (21/26). Tighten EmitterStage lowering." >&2
   exit 1
 fi

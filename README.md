@@ -248,7 +248,7 @@ npm run test:upstream:unit-macro
 ```
 
 Gate 1 CI (`.github/workflows/gate1.yml`) runs weekly on Linux and remains manually triggerable via `workflow_dispatch` + `run_upstream_unit_macro=true`.
-For local macOS bring-up, `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) turns native rung exit `139` into an explicit skipped marker; set `0` to force fail-fast while debugging.
+For Gate 1 unit-macro rungs, resolver widening is pinned to `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` by default for deterministic cross-host behavior. Set `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1` only for local heuristic-debug runs.
 
 Run upstream Gate 2 (runci Macro target; heavier and more tool-dependent):
 

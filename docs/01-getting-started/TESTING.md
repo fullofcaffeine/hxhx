@@ -76,7 +76,7 @@ Notes:
   - The historical stage0-shim baseline remains available as:
     `npm run test:upstream:unit-macro-stage0`
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
-  - `HXHX_GATE1_SKIP_DARWIN_SEGFAULT=1` (default) converts a macOS native Gate1 SIGSEGV (exit 139) into an explicit skipped marker (`gate1_native=status_skipped`). Set `0` to force fail-fast while debugging.
+  - Gate1 unit-macro rungs now pin `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` by default for deterministic cross-host behavior (including macOS). Set `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1` only when you intentionally want to debug heuristic graph widening.
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
   That document also clarifies what we mean by “compile Haxe” and how Stage0→Stage2 bootstrapping works.
