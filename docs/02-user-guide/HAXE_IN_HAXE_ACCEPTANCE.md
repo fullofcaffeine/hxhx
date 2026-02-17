@@ -234,6 +234,7 @@ Other useful modes:
 - `HXHX_GATE2_MODE=stage0_shim`: historical baseline (execute upstream `RunCi.hxml` via stage0 `haxe`, with wrappers).
 - `HXHX_GATE2_MODE=stage3_emit_runner`: experimental rung that compiles+executes upstream `tests/RunCi.hx` under the Stage3
   bootstrap emitter (goal: run it unmodified and route sub-invocations through Stage3 `--no-emit`).
+  - This rung fails on OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`).
 - `HXHX_GATE2_MODE=stage3_emit_runner_minimal`: bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree* to a
   minimal harness so we can prove sub-invocation spawning (not full runci acceptance).
 

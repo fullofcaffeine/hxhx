@@ -80,7 +80,7 @@ echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=skipped$"
 
 # Keep the bring-up emitter output warning-clean under strict dune setups.
-if echo "$out" | grep -E -q "Warning 21 \\[nonreturning-statement\\]|Warning 26 \\[unused-var\\]"; then
-  echo "Stage3 emit runner rung produced OCaml warnings (21/26). Tighten EmitterStage lowering." >&2
+if echo "$out" | grep -E -q "Warning 20 \\[ignored-extra-argument\\]|Warning 21 \\[nonreturning-statement\\]|Warning 26 \\[unused-var\\]"; then
+  echo "Stage3 emit runner rung produced OCaml warnings (20/21/26). Tighten EmitterStage lowering." >&2
   exit 1
 fi

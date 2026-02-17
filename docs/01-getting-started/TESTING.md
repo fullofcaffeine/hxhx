@@ -101,6 +101,7 @@ Notes:
   - `HXHX_GATE2_MODE=stage3_emit_runner` is an experimental rung: it tries to compile+run the upstream RunCi runner under the
     Stage3 bootstrap emitter (intended to run upstream `tests/RunCi.hx` unmodified once Stage3 is ready).
     - This runner now defaults to bootstrap snapshots for faster iteration.
+    - This runner treats OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`) as hard failures.
     - Set `HXHX_FORCE_STAGE0=1` if you explicitly want to rebuild `hxhx` from source before running it.
     - Timeout/heartbeat knobs:
       - `HXHX_GATE2_RUNCI_TIMEOUT_SEC` (default `600`; set `0` to disable timeout)
