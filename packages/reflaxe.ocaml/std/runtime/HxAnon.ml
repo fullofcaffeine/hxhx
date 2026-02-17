@@ -59,6 +59,12 @@ let get (o : Obj.t) (field : string) : Obj.t =
     match Hashtbl.find_opt tbl field with
     | Some v -> v
     | None -> HxRuntime.hx_null
+  else if Obj.is_block o && Obj.size o = 2 && Obj.field o 0 != marker && Obj.is_int (Obj.field o 1) then
+    let a : Obj.t HxArray.t = Obj.obj o in
+    (match field with
+    | "iterator" -> Obj.repr (fun () -> HxIterator.of_array a)
+    | "length" -> Obj.repr (HxArray.length a)
+    | _ -> HxRuntime.hx_null)
   else if Obj.is_block o && Obj.tag o = Obj.string_tag && field = "cca" then
     (* Support `StringTools.fastCodeAt()` / `unsafeCodeAt()` which call
        `untyped s.cca(i)` on targets without a dedicated implementation.

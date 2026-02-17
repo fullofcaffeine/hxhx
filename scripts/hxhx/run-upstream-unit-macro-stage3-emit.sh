@@ -21,9 +21,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_UPSTREAM="$ROOT/vendor/haxe"
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$DEFAULT_UPSTREAM}"
 
-# Keep Stage3 emit deterministic while widened emit-run still has a native runtime crash path
-# on Darwin (tracked in haxe.ocaml-kun). No-emit/type-only rungs remain widening-enabled.
-: "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=0}"
+# Gate1 now runs widening-enabled by default.
+: "${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:=1}"
 export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES
 
 if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then

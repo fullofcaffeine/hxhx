@@ -78,7 +78,7 @@ As of **2026-02-08**, the repo is in “bootstrap + upstream harness wiring” m
   (Stage3 `--hxhx-emit-full-bodies` emit+build+run), intended to surface missing frontend/macro ABI behavior without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline is still available as: `npm run test:upstream:unit-macro-stage0`.
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml` + manual `workflow_dispatch` override.
-  - Gate1 unit-macro scripts now fail fast on non-zero exits across hosts. `stage3 no-emit` and `stage3 type-only` run widening-enabled (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`), while `stage3 emit` is currently pinned to `0`; widened emit-run still has a Darwin native runtime crash path (tracked in `haxe.ocaml-kun`).
+  - Gate1 unit-macro scripts now fail fast on non-zero exits across hosts, and all Stage3 rungs (`no-emit`, `type-only`, `emit`) run widening-enabled (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`).
 - Gate 2 (`npm run test:upstream:runci-macro`): defaults to a **non-delegating** rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`).
   - An experimental rung exists (`stage3_emit_runner`) which now compiles+runs the upstream `tests/RunCi.hxml`
     under the Stage3 bootstrap emitter, but it does not yet execute the full Macro orchestration loop faithfully.
@@ -187,7 +187,7 @@ Native Gate 1 currently runs through Stage3 full emit/build/run. That means this
 
 Host bring-up note:
 
-- Gate1 unit-macro scripts keep widening semantics exercised in routine runs for `stage3 no-emit` and `stage3 type-only` (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`). `stage3 emit` remains pinned to `0`; widened emit-run still has a Darwin native runtime crash path (tracked in `haxe.ocaml-kun`).
+- Gate1 unit-macro scripts keep widening semantics exercised in routine runs for all Stage3 rungs (`no-emit`, `type-only`, `emit`) via `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`.
 - Stage3 unit-macro scripts no longer apply a Darwin-specific retry fallback; non-zero exits fail fast.
 
 Why this gate matters:
