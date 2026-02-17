@@ -96,7 +96,7 @@ Current presets:
 - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
 - `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
 - `--target js-native`: linked Stage3 JS backend path (currently a fail-fast placeholder on emit; useful today for `--hxhx-no-emit` coverage).
-- Legacy Flash/AS3 presets are intentionally unsupported in `hxhx` (`--target flash|swf|as3` fails fast with a clear message).
+- Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
 Examples:
 

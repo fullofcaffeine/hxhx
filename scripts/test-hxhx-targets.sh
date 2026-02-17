@@ -80,6 +80,18 @@ if "$HXHX_BIN" --target as3 >"$legacy_log" 2>&1; then
 fi
 grep -q 'Target "as3" is not supported in hxhx' "$legacy_log"
 grep -q "Legacy Flash/AS3 targets are intentionally unsupported" "$legacy_log"
+if "$HXHX_BIN" --swf "$legacy_log.swf" >"$legacy_log" 2>&1; then
+  echo "Expected --swf to fail with unsupported-target message." >&2
+  exit 1
+fi
+grep -q 'Target "flash" is not supported in this implementation' "$legacy_log"
+grep -q "Legacy Flash/AS3 targets are intentionally unsupported" "$legacy_log"
+if "$HXHX_BIN" --as3 "$legacy_log.as3" >"$legacy_log" 2>&1; then
+  echo "Expected --as3 to fail with unsupported-target message." >&2
+  exit 1
+fi
+grep -q 'Target "as3" is not supported in this implementation' "$legacy_log"
+grep -q "Legacy Flash/AS3 targets are intentionally unsupported" "$legacy_log"
 
 echo "== Preset injects missing flags (compile smoke)"
 tmpdir="$(mktemp -d)"

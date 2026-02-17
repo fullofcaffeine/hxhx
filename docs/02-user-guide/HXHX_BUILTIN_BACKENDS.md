@@ -156,6 +156,8 @@ Current `hxhx` target presets:
   - status: current bring-up placeholder (no-emit/type/macro flow works; emit path intentionally fails fast until JS backend implementation lands)
 - `--target flash|swf|as3`
   - status: intentionally unsupported in `hxhx` (fails fast with a clear message)
+- raw legacy target flags (`--swf`, `--as3`)
+  - status: intentionally unsupported in `hxhx` (fails fast with the same message)
 
 Why this matters:
 

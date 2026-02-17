@@ -87,6 +87,19 @@ class Main {
 		return false;
 	}
 
+	static function findUnsupportedLegacyTarget(args:Array<String>):Null<String> {
+		for (a in args) {
+			switch (a) {
+				case "-swf", "--swf":
+					return "flash";
+				case "-as3", "--as3":
+					return "as3";
+				case _:
+			}
+		}
+		return null;
+	}
+
 	static function sanitizeName(name:String):String {
 		final out = new StringBuf();
 		final s = name == null ? "" : name;
@@ -438,6 +451,11 @@ class Main {
 				for (t in TargetPresets.listTargets()) Sys.println(t);
 				return;
 			}
+		}
+
+		final unsupportedLegacyTarget = findUnsupportedLegacyTarget(forwarded);
+		if (unsupportedLegacyTarget != null) {
+			fatal('hxhx: Target "' + unsupportedLegacyTarget + '" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported.');
 		}
 
 		// Compatibility note:
