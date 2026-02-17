@@ -77,6 +77,7 @@ Notes:
     `npm run test:upstream:unit-macro-stage0`
   - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
   - Gate1 unit-macro rungs now fail fast across hosts (including macOS), and all Stage3 rungs (`no-emit`, `type-only`, `emit`) run with `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`.
+  - The Stage3 `emit` rung fails on OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`).
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
 - “Replacement-ready” acceptance is defined in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
   That document also clarifies what we mean by “compile Haxe” and how Stage0→Stage2 bootstrapping works.

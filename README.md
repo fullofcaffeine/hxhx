@@ -249,6 +249,7 @@ npm run test:upstream:unit-macro
 
 Gate 1 CI (`.github/workflows/gate1.yml`) runs weekly on Linux and remains manually triggerable via `workflow_dispatch` + `run_upstream_unit_macro=true`.
 Gate 1 unit-macro rungs fail fast by default with no Darwin-specific retry fallback, and all Stage3 rungs (`no-emit`, `type-only`, `emit`) run with resolver widening enabled (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`).
+The Stage3 `emit` rung also enforces a warning-clean baseline for OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`); any of these warnings fails the gate.
 
 Run upstream Gate 2 (runci Macro target; heavier and more tool-dependent):
 

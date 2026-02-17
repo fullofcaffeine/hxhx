@@ -189,6 +189,7 @@ Host bring-up note:
 
 - Gate1 unit-macro scripts keep widening semantics exercised in routine runs for all Stage3 rungs (`no-emit`, `type-only`, `emit`) via `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`.
 - Stage3 unit-macro scripts no longer apply a Darwin-specific retry fallback; non-zero exits fail fast.
+- Stage3 `emit` enforces warning cleanliness for OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`); any hit is treated as a gate failure.
 
 Why this gate matters:
 
