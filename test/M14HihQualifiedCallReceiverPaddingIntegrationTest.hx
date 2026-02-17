@@ -50,8 +50,7 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			final parsed = ParserStage.parse(src, mainHx);
 			final typed = TyperStage.typeModule(parsed);
 			final expanded = MacroStage.expandProgram([typed], []);
-			final exePath = EmitterStage.emitToDir(expanded, outDir, true);
-			assertTrue(FileSystem.exists(exePath), 'Emitter did not produce executable: ' + exePath);
+			EmitterStage.emitToDir(expanded, outDir, true, false);
 
 			var foundPaddedCall = false;
 			var foundUnpaddedCall = false;

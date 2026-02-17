@@ -2835,7 +2835,7 @@ class EmitterStage {
 		}
 
 	/**
-		Emit a minimal OCaml program for the typed module and build it as a native executable.
+		Emit a minimal OCaml program for the typed module and optionally build it as a native executable.
 
 		Why
 		- This is the smallest “compiler-shaped” slice we can validate early:
@@ -2843,17 +2843,16 @@ class EmitterStage {
 		  drive *some* codegen all the way to a runnable binary.
 
 		What
-		- Writes two files into `outDir`:
-		  - `out.ml`: generated OCaml source
-		  - `out.exe`: compiled executable (name chosen for CI simplicity)
-		- Returns the path to `out.exe`.
+		- Always writes generated OCaml sources into `outDir` (including module units + runtime).
+		- When `buildExecutable=true` (default), also produces `out.exe` and returns its path.
+		- When `buildExecutable=false`, skips `ocamlopt` and returns the expected `out.exe` path for callers that only validate emitted source shape.
 
 		How
 		- Extracts function signatures from the typed environment and return
 		  expressions from the parsed AST (we only support simple return shapes).
-		- Builds using `ocamlopt` (override via `OCAMLOPT` env var).
+		- Builds using `ocamlopt` (override via `OCAMLOPT` env var) when `buildExecutable=true`.
 	**/
-		public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false):String {
+		public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true):String {
 			if (outDir == null || StringTools.trim(outDir).length == 0) throw "stage3 emitter: missing outDir";
 			final outAbs = haxe.io.Path.normalize(outDir);
 			if (!sys.FileSystem.exists(outAbs)) sys.FileSystem.createDirectory(outAbs);
@@ -4924,6 +4923,8 @@ class EmitterStage {
 		try {
 			if (sys.FileSystem.exists(exePath)) sys.FileSystem.deleteFile(exePath);
 		} catch (_:Dynamic) {}
+
+		if (!buildExecutable) return exePath;
 
 		final ocamlopt = {
 			final v = Sys.getEnv("OCAMLOPT");
