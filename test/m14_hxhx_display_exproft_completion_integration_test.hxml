@@ -1,0 +1,6 @@
+-cp test
+-cp packages/hxhx/src
+-cp packages/hih-compiler/src
+
+-main M14HxhxDisplayExprOfCompletionIntegrationTest
+--interp

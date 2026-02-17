@@ -265,31 +265,15 @@ class Stage3Compiler {
 		return { args: args, stdinBytes: stdinBytes };
 	}
 
-	static function synthesizeDisplayResponse(displayRequest:String):String {
-		final req = displayRequest == null ? "" : displayRequest;
-		if (StringTools.endsWith(req, "@diagnostics")) return "[{\"diagnostics\":[]}]";
-		if (StringTools.endsWith(req, "@module-symbols")) return "[{\"symbols\":[]}]";
-		if (StringTools.endsWith(req, "@signature")) return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
-		if (StringTools.endsWith(req, "@toplevel")) return "<il></il>";
-		if (StringTools.endsWith(req, "@type")) return "<type>Dynamic</type>";
-		if (StringTools.endsWith(req, "@position")) return "<list></list>";
-		if (StringTools.endsWith(req, "@usage")) return "<list></list>";
-		// Default completion/fields shape.
-		return "<list></list>";
+	static function synthesizeDisplayResponse(displayRequest:String, displaySource:String):String {
+		return DisplayResponseSynthesizer.synthesize(displayRequest, displaySource);
 	}
 
 	static function runWaitStdioRequest(baseArgs:Array<String>, request:WaitStdioRequest):WaitStdioReply {
 		final displayRequest = findSingleFlagValue(request.args, "--display");
 		if (displayRequest != null) {
-			// Bring-up behavior:
-			// - We currently synthesize minimal display payloads so clients can exercise the
-			//   compiler-server framing and request lifecycle without stage0.
-			// - Full display semantics/parity are implemented incrementally in later gates.
-			//
-			// `display-stdin` is accepted (stdin payload is delivered by the client), but
-			// this bring-up rung does not yet parse/type from the provided in-memory source.
-			final _hasDisplayStdin = hasDefineFlag(request.args, "display-stdin");
-			return { payload: synthesizeDisplayResponse(displayRequest), isError: false };
+			final displaySource = DisplayResponseSynthesizer.readDisplaySource(displayRequest, request.stdinBytes);
+			return { payload: synthesizeDisplayResponse(displayRequest, displaySource), isError: false };
 		}
 
 		// Non-display requests: attempt normal Stage3 handling with the server's base args.
