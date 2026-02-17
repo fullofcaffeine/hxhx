@@ -444,9 +444,35 @@
 				} else if (k == KSuper) {
 					bump();
 					ESuper;
-					} else if (k == KNew) {
-						bump();
-						final typePath = readDottedPath();
+				} else if (k == KNew) {
+					bump();
+					final typePath = readDottedPath();
+					// Optional constructor type arguments: `new Foo<Bar,Baz>(...)`.
+					//
+					// Without consuming `<...>` here, the expression parser treats `<`/`>` as
+					// binary operators and drifts into nonsense AST like:
+					//   (new Foo) < ("Bar") > (...)
+					//
+					// Stage3 only needs the allocated runtime shape, so we intentionally drop
+					// generic constructor type arguments in this bootstrap parser.
+					if (isOtherChar("<")) {
+						var angleDepth = 0;
+						while (true) {
+							switch (cur.kind) {
+								case TOther(c) if (c == "<".code):
+									angleDepth += 1;
+									bump();
+								case TOther(c) if (c == ">".code):
+									angleDepth -= 1;
+									bump();
+									if (angleDepth <= 0) break;
+								case TEof:
+									break;
+								case _:
+									bump();
+							}
+						}
+					}
 					// `new Foo(...)` always takes parens; keep parsing permissive in case upstream-ish code
 					// contains partially-supported constructs.
 					if (!cur.kind.match(TLParen)) {
@@ -457,26 +483,26 @@
 						if (cur.kind.match(TRParen)) {
 							bump();
 							ENew(typePath, args);
-							} else {
-								while (true) {
-									final arg = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
-									args.push(arg);
-									if (cur.kind.match(TComma)) {
-										bump();
-										continue;
-									}
-									expect(TRParen, "')'");
-									break;
+						} else {
+							while (true) {
+								final arg = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+								args.push(arg);
+								if (cur.kind.match(TComma)) {
+									bump();
+									continue;
 								}
-								ENew(typePath, args);
+								expect(TRParen, "')'");
+								break;
 							}
+							ENew(typePath, args);
 						}
-					} else {
-						// Best-effort: capture the keyword as a string.
-						final raw = keywordText(k);
-						bump();
-						EUnsupported(raw);
 					}
+				} else {
+					// Best-effort: capture the keyword as a string.
+					final raw = keywordText(k);
+					bump();
+					EUnsupported(raw);
+				}
 			case TString(s):
 				bump();
 				parseInterpolatedStringExpr(s);
