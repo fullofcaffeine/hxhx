@@ -41,7 +41,7 @@ fi
 # freshly built host to a stable temp path so the rest of this script remains
 # deterministic.
 macrohost_tmp="$(mktemp -d)"
-trap 'rm -f "${mini_hxml:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
+trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
 HXHX_MACRO_HOST_EXE_STABLE="$macrohost_tmp/hxhx-macro-host"
 cp "$HXHX_MACRO_HOST_EXE" "$HXHX_MACRO_HOST_EXE_STABLE"
 chmod +x "$HXHX_MACRO_HOST_EXE_STABLE"
@@ -63,6 +63,23 @@ echo "== Listing targets"
 targets="$("$HXHX_BIN" --hxhx-list-targets)"
 echo "$targets" | grep -qx "ocaml"
 echo "$targets" | grep -qx "ocaml-stage3"
+echo "$targets" | grep -qx "js"
+echo "$targets" | grep -qx "js-native"
+
+echo "== Unsupported legacy target presets fail fast"
+legacy_log="$(mktemp)"
+if "$HXHX_BIN" --target flash >"$legacy_log" 2>&1; then
+  echo "Expected --target flash to fail with unsupported-target message." >&2
+  exit 1
+fi
+grep -q 'Target "flash" is not supported in hxhx' "$legacy_log"
+grep -q "Legacy Flash/AS3 targets are intentionally unsupported" "$legacy_log"
+if "$HXHX_BIN" --target as3 >"$legacy_log" 2>&1; then
+  echo "Expected --target as3 to fail with unsupported-target message." >&2
+  exit 1
+fi
+grep -q 'Target "as3" is not supported in hxhx' "$legacy_log"
+grep -q "Legacy Flash/AS3 targets are intentionally unsupported" "$legacy_log"
 
 echo "== Preset injects missing flags (compile smoke)"
 tmpdir="$(mktemp -d)"
@@ -116,6 +133,22 @@ class BuiltinMain {
 HX
 out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_fast")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
+
+echo "== Builtin fast-path target: linked JS backend preset (no-emit)"
+cat >"$tmpdir/src/JsNativeMain.hx" <<'HX'
+class JsNativeMain {
+  static function main() {}
+}
+HX
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_fast")"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
+
+echo "== Builtin fast-path target: linked JS backend fails loud until implemented"
+if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_emit" >"$tmpdir/js_native_emit.log" 2>&1; then
+  echo "Expected js-native emit to fail until backend implementation lands." >&2
+  exit 1
+fi
+grep -q "JS native backend is not implemented yet" "$tmpdir/js_native_emit.log"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"

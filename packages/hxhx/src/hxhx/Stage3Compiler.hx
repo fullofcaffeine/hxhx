@@ -6,6 +6,10 @@ import haxe.io.Bytes;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
+import backend.BackendContext;
+import backend.IBackend;
+import backend.js.JsBackend;
+import backend.ocaml.OcamlStage3Backend;
 
 private typedef HaxelibSpec = {
 	/**
@@ -106,8 +110,9 @@ class Stage3Compiler {
 		return false;
 	}
 
-	static function parseGlobalStage3Flags(args:Array<String>):{ outDir:String, typeOnly:Bool, emitFullBodies:Bool, noEmit:Bool, noRun:Bool, rest:Array<String> } {
+	static function parseGlobalStage3Flags(args:Array<String>):{ outDir:String, backendId:String, typeOnly:Bool, emitFullBodies:Bool, noEmit:Bool, noRun:Bool, rest:Array<String> } {
 		var outDir = "";
+		var backendId = "ocaml-stage3";
 		var typeOnly = false;
 		var emitFullBodies = false;
 		var noEmit = false;
@@ -124,6 +129,12 @@ class Stage3Compiler {
 						throw "missing value after --hxhx-out";
 					}
 					outDir = args[i + 1];
+					i += 2;
+				case "--hxhx-backend":
+					if (i + 1 >= args.length) {
+						throw "missing value after --hxhx-backend";
+					}
+					backendId = args[i + 1];
 					i += 2;
 				case "--hxhx-type-only":
 					typeOnly = true;
@@ -143,7 +154,31 @@ class Stage3Compiler {
 			}
 		}
 
-		return { outDir: outDir, typeOnly: typeOnly, emitFullBodies: emitFullBodies, noEmit: noEmit, noRun: noRun, rest: rest };
+		return { outDir: outDir, backendId: backendId, typeOnly: typeOnly, emitFullBodies: emitFullBodies, noEmit: noEmit, noRun: noRun, rest: rest };
+	}
+
+	/**
+		Resolve a Stage3 builtin backend implementation by ID.
+
+		Why
+		- `hxhx --target <id>` now routes builtin targets through one Stage3 execution path.
+		- We need an explicit mapping from target IDs to backend implementations.
+
+		What
+		- Supports:
+		  - `ocaml-stage3` (existing linked OCaml backend)
+		  - `js-native` (placeholder backend for non-delegating JS target wiring)
+
+		How
+		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
+	**/
+	static function resolveBuiltinBackend(backendId:String):IBackend {
+		return switch (backendId) {
+			case "ocaml-stage3": new OcamlStage3Backend();
+			case "js-native": new JsBackend();
+			case _:
+				throw "unknown Stage3 backend: " + backendId;
+		}
 	}
 
 	/**
@@ -1094,6 +1129,7 @@ class Stage3Compiler {
 				return error(Std.string(e));
 			}
 			final outDir = g.outDir;
+			final backendId = g.backendId;
 			var typeOnly = g.typeOnly;
 			var emitFullBodies = g.emitFullBodies;
 			var noEmit = g.noEmit;
@@ -1749,6 +1785,12 @@ class Stage3Compiler {
 			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
 		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
+		final backend = try {
+			resolveBuiltinBackend(backendId);
+		} catch (e:Dynamic) {
+			closeMacroSession();
+			return error("backend setup failed: " + Std.string(e));
+		};
 
 			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
@@ -1760,6 +1802,10 @@ class Stage3Compiler {
 			// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
 			// coverage without being blocked by the bootstrap emitter/codegen.
 			if (noEmit) {
+				if (!backend.capabilities().supportsNoEmit) {
+					closeMacroSession();
+					return error("backend does not support --hxhx-no-emit: " + backend.id());
+				}
 				var headerOnlyCount = 0;
 				var unsupportedExprsTotal = 0;
 				var unsupportedFilesCount = 0;
@@ -1818,14 +1864,21 @@ class Stage3Compiler {
 				return 0;
 			}
 
-			final exe = try EmitterStage.emitToDir(expanded, outAbs, emitFullBodies) catch (e:Dynamic) {
+			final emitted = try {
+				final context = new BackendContext(outAbs, null, parsed.main, emitFullBodies, true, definesMap);
+				backend.emit(expanded, context);
+			} catch (e:Dynamic) {
 				closeMacroSession();
 				return error("emit failed: " + Std.string(e));
-			}
+			};
 
 		Sys.println("stage3=ok");
 		Sys.println("outDir=" + outAbs);
-		Sys.println("exe=" + exe);
+		if (emitted.builtExecutable) {
+			Sys.println("exe=" + emitted.entryPath);
+		} else {
+			Sys.println("artifact=" + emitted.entryPath);
+		}
 
 		closeMacroSession();
 
@@ -1834,7 +1887,12 @@ class Stage3Compiler {
 			return 0;
 		}
 
-		final code = Sys.command(exe, []);
+		if (!emitted.builtExecutable) {
+			Sys.println("run=skipped_non_executable_backend");
+			return 0;
+		}
+
+		final code = Sys.command(emitted.entryPath, []);
 		if (code != 0) return error("built executable failed with exit code " + code);
 		Sys.println("run=ok");
 			return 0;
@@ -1884,6 +1942,10 @@ class Stage3Compiler {
 			for (idx in 0...units.length) {
 				final u = units[idx];
 				final unitArgs = new Array<String>();
+				if (global.backendId != null && global.backendId.length > 0) {
+					unitArgs.push("--hxhx-backend");
+					unitArgs.push(global.backendId);
+				}
 				if (global.typeOnly) unitArgs.push("--hxhx-type-only");
 				if (global.noEmit) unitArgs.push("--hxhx-no-emit");
 				if (global.noRun) unitArgs.push("--hxhx-no-run");

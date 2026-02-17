@@ -147,12 +147,22 @@ Current `hxhx` target presets:
 - `--target ocaml-stage3`
   - kind: `builtin`
   - behavior: runs linked `Stage3Compiler` directly (no `--library reflaxe.ocaml` requirement)
+- `--target js`
+  - kind: `bundled`
+  - behavior: delegates to stage0 `haxe` and injects `--js out.js` when no explicit output target is present
+- `--target js-native`
+  - kind: `builtin`
+  - behavior: routes through linked Stage3 backend dispatch with backend ID `js-native`
+  - status: current bring-up placeholder (no-emit/type/macro flow works; emit path intentionally fails fast until JS backend implementation lands)
+- `--target flash|swf|as3`
+  - status: intentionally unsupported in `hxhx` (fails fast with a clear message)
 
 Why this matters:
 
 - It is our first concrete linked-backend fast-path (`kind=builtin`) in the registry.
 - It gives a no-classpath-scan execution path for OCaml Stage3 bring-up and perf tracking.
 - It keeps the stable `--target` UX while we move from stage0 delegation to native `hxhx` execution.
+- The JS presets establish the target surface now (`js` delegated + `js-native` builtin) so CI and Gate wiring can evolve without hidden fallbacks.
 
 ## How this relates to the macro “plugin system”
 

@@ -41,7 +41,7 @@ class TargetPresets {
 
 	public static function listTargets():Array<String> {
 		// Keep this stable: scripts/docs can rely on it.
-		return ["ocaml", "ocaml-stage3"];
+		return ["ocaml", "ocaml-stage3", "js", "js-native"];
 	}
 
 	/**
@@ -61,7 +61,8 @@ class TargetPresets {
 		  - metadata fields for diagnostics/docs
 	**/
 	public static function resolve(targetId:String, forwarded:Array<String>):ResolvedTarget {
-		return switch (targetId) {
+		final normalizedId = targetId == null ? "" : targetId.toLowerCase();
+		return switch (normalizedId) {
 			case "ocaml": {
 				id: "ocaml",
 				kind: "both",
@@ -76,12 +77,33 @@ class TargetPresets {
 				describe: "Linked Stage3 OCaml emitter fast-path (no --library required)",
 				forwarded: applyOcamlStage3(forwarded)
 			};
-			case _: throw "Unknown target: " + targetId;
+			case "js": {
+				id: "js",
+				kind: "bundled",
+				runMode: RUN_MODE_DELEGATE_STAGE0,
+				describe: "JavaScript target via stage0 delegation",
+				forwarded: applyJs(forwarded)
+			};
+			case "js-native": {
+				id: "js-native",
+				kind: "builtin",
+				runMode: RUN_MODE_BUILTIN_STAGE3,
+				describe: "Linked Stage3 JS backend fast-path (non-delegating, bring-up)",
+				forwarded: applyJsNative(forwarded)
+			};
+			case "flash", "swf", "as3":
+				throw unsupportedLegacyTargetMessage(normalizedId);
+			case _:
+				throw "Unknown target: " + targetId + " (run --hxhx-list-targets for supported presets)";
 		}
 	}
 
 	public static function apply(targetId:String, forwarded:Array<String>):Array<String> {
 		return resolve(targetId, forwarded).forwarded;
+	}
+
+	static function unsupportedLegacyTargetMessage(targetId:String):String {
+		return 'Target "' + targetId + '" is not supported in hxhx. Legacy Flash/AS3 targets are intentionally unsupported in this implementation.';
 	}
 
 	static function applyOcaml(forwarded:Array<String>):Array<String> {
@@ -170,6 +192,55 @@ class TargetPresets {
 	}
 
 	/**
+		Normalize args for delegated JS target selection.
+
+		Why
+		- `--target js` should be a convenient preset, but must not silently conflict with
+		  explicit non-JS target flags.
+		- For compilation runs without an explicit target output, upstream `haxe` requires a
+		  concrete target flag, so we provide a deterministic default output path.
+
+		What
+		- Fails fast on contradictory explicit target flags.
+		- Adds `--js out.js` only when:
+		  - no explicit target was selected, and
+		  - caller did not request `--no-output` / `--hxhx-no-emit`.
+	**/
+	static function applyJs(forwarded:Array<String>):Array<String> {
+		final out = forwarded.copy();
+		final explicitTargets = ArgScan.listExplicitTargets(out);
+		for (target in explicitTargets) {
+			if (target != "js") {
+				throw "Contradiction: --target js but explicit target flag selects " + target;
+			}
+		}
+		if (explicitTargets.length == 0 && !ArgScan.hasNoOutputLike(out)) {
+			out.push("--js");
+			out.push("out.js");
+		}
+		return out;
+	}
+
+	/**
+		Normalize args for the linked Stage3 JS backend.
+
+		Why
+		- `js-native` is a builtin Stage3 target path. We still enforce the same contradiction
+		  checks and deterministic default output behavior as delegated `--target js`.
+		- We seed `-D js-es=5` as the default compatibility baseline unless the user already
+		  provided an explicit `js-es` define.
+
+		What
+		- Applies JS target normalization.
+		- Adds `-D js-es=5` when missing.
+	**/
+	static function applyJsNative(forwarded:Array<String>):Array<String> {
+		final out = applyJs(forwarded);
+		ArgScan.addDefineIfMissing(out, "js-es=5");
+		return out;
+	}
+
+	/**
 		Attempt to locate a bundled lib root for dist artifacts.
 
 		Expected dist layout:
@@ -197,6 +268,73 @@ class TargetPresets {
 }
 
 private class ArgScan {
+	public static function hasNoOutputLike(args:Array<String>):Bool {
+		return args.indexOf("--no-output") != -1 || args.indexOf("--hxhx-no-emit") != -1;
+	}
+
+	public static function hasTargetFlag(args:Array<String>, targetId:String):Bool {
+		final desired = targetId == null ? "" : targetId;
+		return firstExplicitTarget(args) == desired;
+	}
+
+	public static function firstExplicitTarget(args:Array<String>):Null<String> {
+		final all = listExplicitTargets(args);
+		return all.length == 0 ? null : all[0];
+	}
+
+	public static function listExplicitTargets(args:Array<String>):Array<String> {
+		final out = new Array<String>();
+		var i = 0;
+		while (i < args.length) {
+			final a = args[i];
+			switch (a) {
+				case "-js", "--js":
+					out.push("js");
+				case "-lua", "--lua":
+					out.push("lua");
+				case "-python", "--python":
+					out.push("python");
+				case "-php", "--php":
+					out.push("php");
+				case "-neko", "--neko":
+					out.push("neko");
+				case "-cpp", "--cpp":
+					out.push("cpp");
+				case "-cs", "--cs":
+					out.push("cs");
+				case "-java", "--java":
+					out.push("java");
+				case "-jvm", "--jvm":
+					out.push("jvm");
+				case "-hl", "--hl":
+					out.push("hl");
+				case "-swf", "--swf":
+					out.push("swf");
+				case "-as3", "--as3":
+					out.push("as3");
+				case "-xml", "--xml":
+					out.push("xml");
+				case "--interp":
+					out.push("interp");
+				case "--run":
+					out.push("run");
+				case _:
+			}
+			i += consumesValue(a) ? 2 : 1;
+		}
+		return out;
+	}
+
+	static function consumesValue(flag:String):Bool {
+		return switch (flag) {
+			case "-js" | "--js" | "-lua" | "--lua" | "-python" | "--python" | "-php" | "--php" | "-neko" | "--neko" | "-cpp" | "--cpp" | "-cs" | "--cs" | "-java" | "--java" | "-jvm" | "--jvm" | "-hl" | "--hl" | "-swf"
+				| "--swf" | "-as3" | "--as3" | "-xml" | "--xml" | "--run":
+				true;
+			case _:
+				false;
+		}
+	}
+
 	public static function hasLib(args:Array<String>, name:String):Bool {
 		var i = 0;
 		while (i < args.length) {

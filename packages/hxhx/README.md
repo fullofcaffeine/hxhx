@@ -94,6 +94,9 @@ Current presets:
 
 - `--target ocaml`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
 - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+- `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
+- `--target js-native`: linked Stage3 JS backend path (currently a fail-fast placeholder on emit; useful today for `--hxhx-no-emit` coverage).
+- Legacy Flash/AS3 presets are intentionally unsupported in `hxhx` (`--target flash|swf|as3` fails fast with a clear message).
 
 Examples:
 
@@ -103,6 +106,12 @@ Examples:
 
 # Linked Stage3 fast-path (no emit build)
 "$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+
+# Stage0 JS preset
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js -- -cp src -main Main
+
+# Linked Stage3 JS preset (current bring-up rung)
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js-native --hxhx-no-emit -cp src -main Main
 ```
 
 ## Benchmarking target modes

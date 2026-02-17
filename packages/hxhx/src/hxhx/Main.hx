@@ -428,7 +428,8 @@ class Main {
 					if (ocamlInterpLike) {
 						fatal("hxhx: --hxhx-ocaml-interp cannot be combined with --target " + resolved.id);
 					}
-					final code = Stage3Compiler.run(forwarded);
+					final stage3Args = ["--hxhx-backend", resolved.id].concat(forwarded);
+					final code = Stage3Compiler.run(stage3Args);
 					Sys.exit(code);
 				}
 			}

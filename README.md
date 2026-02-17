@@ -389,7 +389,7 @@ Rationale: keep backend + compiler iteration fast in one repo while making it ob
 - [Imperative → OCaml Lowering](docs/02-user-guide/IMPERATIVE_TO_OCAML_LOWERING.md) — how mutation/loops/blocks are lowered in portable vs OCaml-native surfaces.
 - [Compatibility Matrix](docs/02-user-guide/COMPATIBILITY_MATRIX.md) — what works today (portable vs `ocaml.*`) and known limitations.
 - [OCaml Tooling: Source Maps](docs/02-user-guide/OCAML_TOOLING_SOURCE_MAPS.md) — map OCaml compiler errors back to Haxe positions.
-- [HXHX Builtin Backends](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md) — design + current `--target` presets (`ocaml`, `ocaml-stage3`) for bundled vs builtin backend execution.
+- [HXHX Builtin Backends](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md) — design + current `--target` presets (`ocaml`, `ocaml-stage3`, `js`, `js-native`) for bundled vs builtin backend execution, with legacy Flash/AS3 presets explicitly unsupported.
 - [OCaml Interop: Labelled Args](docs/02-user-guide/OCAML_INTEROP_LABELLED_ARGS.md) — how to express `~label:` / `?label:` extern callsites from Haxe.
 - [OCaml-native Mode](docs/02-user-guide/OCAML_NATIVE_MODE.md) — when/why to use `ocaml.*` and how the surface maps to `Stdlib`.
 - [Optional `.mli` Generation](docs/02-user-guide/OCAML_TOOLING_MLI.md) — `.mli` inference via `ocamlc -i` for better OCaml tooling UX.
