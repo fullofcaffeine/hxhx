@@ -255,6 +255,7 @@ Profiles:
 
 - `fast` (default): `ci:guards`, `test:hxhx-targets`, focused Gate2 display rung, builtin target smoke.
 - `full`: includes `fast` plus Gate1 unit-macro, Gate2 runci Macro, and Gate3 runci targets.
+  - Host-aware default for Gate3 targets in this bundle: Linux=`Macro,Js,Neko`, macOS=`Macro,Neko` (override with `HXHX_GATE3_TARGETS=...`).
 
 Examples:
 

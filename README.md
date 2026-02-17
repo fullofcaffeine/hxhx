@@ -178,6 +178,7 @@ Practical command map:
   `npm run test:upstream:replacement-ready`
 - Run replacement-ready bundle (full):  
   `npm run test:upstream:replacement-ready:full`
+  - Host-aware default Gate3 target set inside this bundle: Linux=`Macro,Js,Neko`, macOS=`Macro,Neko` (override with `HXHX_GATE3_TARGETS=...`).
 
 For deeper acceptance/terminology (replacement-ready, gate definitions), see
 `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`.

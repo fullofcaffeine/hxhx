@@ -49,6 +49,13 @@ case "$STRICT" in
 esac
 
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$ROOT/vendor/haxe}"
+HOST_OS="$(uname -s)"
+if [ "$HOST_OS" = "Darwin" ]; then
+  M7_GATE3_TARGETS_DEFAULT="Macro,Neko"
+else
+  M7_GATE3_TARGETS_DEFAULT="Macro,Js,Neko"
+fi
+GATE3_TARGETS="${HXHX_GATE3_TARGETS:-$M7_GATE3_TARGETS_DEFAULT}"
 
 need_cmd() {
   local cmd="$1"
@@ -153,12 +160,16 @@ add_checks_full() {
   add_checks_fast
   run_check "gate1-unit-macro" "cd '$ROOT' && npm run -s test:upstream:unit-macro"
   run_check "gate2-runci-macro" "cd '$ROOT' && npm run -s test:upstream:runci-macro"
-  run_check "gate3-runci-targets" "cd '$ROOT' && HXHX_GATE3_TARGETS='${HXHX_GATE3_TARGETS:-Macro,Js,Neko}' npm run -s test:upstream:runci-targets"
+  run_check "gate3-runci-targets" "cd '$ROOT' && HXHX_GATE3_TARGETS='${GATE3_TARGETS}' npm run -s test:upstream:runci-targets"
 }
 
 echo "== HXHX replacement-ready bundle"
 echo "profile=$PROFILE strict=$STRICT fail_fast=$FAIL_FAST dry_run=$DRY_RUN"
 echo "upstream_dir=$UPSTREAM_DIR"
+echo "gate3_targets=$GATE3_TARGETS"
+if [ "$HOST_OS" = "Darwin" ] && [ -z "${HXHX_GATE3_TARGETS:-}" ]; then
+  echo "note: using Darwin default Gate3 target set (Macro,Neko). Set HXHX_GATE3_TARGETS to override."
+fi
 
 if [ "$PROFILE" = "full" ]; then
   add_checks_full
