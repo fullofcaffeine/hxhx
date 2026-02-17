@@ -261,32 +261,32 @@ class DisplayResponseSynthesizer {
 	static function extractArgTypeHintFromSegment(source:String, tokens:Array<DisplayToken>, segmentStart:Int, segmentEnd:Int):String {
 		if (segmentStart >= segmentEnd) return "";
 
-		var depthParen = 0;
-		var depthBrace = 0;
-		var depthBracket = 0;
-		var depthAngle = 0;
+		var depthParenOuter = 0;
+		var depthBraceOuter = 0;
+		var depthBracketOuter = 0;
+		var depthAngleOuter = 0;
 		var colonIndex = -1;
 		for (tokenIndex in segmentStart...segmentEnd) {
 			final token = tokens[tokenIndex];
 			switch (token.text) {
 				case "(":
-					depthParen += 1;
+					depthParenOuter += 1;
 				case ")":
-					if (depthParen > 0) depthParen -= 1;
+					if (depthParenOuter > 0) depthParenOuter -= 1;
 				case "{":
-					depthBrace += 1;
+					depthBraceOuter += 1;
 				case "}":
-					if (depthBrace > 0) depthBrace -= 1;
+					if (depthBraceOuter > 0) depthBraceOuter -= 1;
 				case "[":
-					depthBracket += 1;
+					depthBracketOuter += 1;
 				case "]":
-					if (depthBracket > 0) depthBracket -= 1;
+					if (depthBracketOuter > 0) depthBracketOuter -= 1;
 				case "<":
-					depthAngle += 1;
+					depthAngleOuter += 1;
 				case ">":
-					if (depthAngle > 0) depthAngle -= 1;
+					if (depthAngleOuter > 0) depthAngleOuter -= 1;
 				case ":":
-					if (depthParen == 0 && depthBrace == 0 && depthBracket == 0 && depthAngle == 0) {
+					if (depthParenOuter == 0 && depthBraceOuter == 0 && depthBracketOuter == 0 && depthAngleOuter == 0) {
 						colonIndex = tokenIndex;
 						break;
 					}
@@ -298,32 +298,32 @@ class DisplayResponseSynthesizer {
 		if (colonIndex < 0 || colonIndex + 1 >= segmentEnd) return "";
 		final typeStartIndex = colonIndex + 1;
 
-		depthParen = 0;
-		depthBrace = 0;
-		depthBracket = 0;
-		depthAngle = 0;
+		var depthParenInner = 0;
+		var depthBraceInner = 0;
+		var depthBracketInner = 0;
+		var depthAngleInner = 0;
 		var typeEndIndex = segmentEnd;
 		for (tokenIndex in typeStartIndex...segmentEnd) {
 			final token = tokens[tokenIndex];
 			switch (token.text) {
 				case "(":
-					depthParen += 1;
+					depthParenInner += 1;
 				case ")":
-					if (depthParen > 0) depthParen -= 1;
+					if (depthParenInner > 0) depthParenInner -= 1;
 				case "{":
-					depthBrace += 1;
+					depthBraceInner += 1;
 				case "}":
-					if (depthBrace > 0) depthBrace -= 1;
+					if (depthBraceInner > 0) depthBraceInner -= 1;
 				case "[":
-					depthBracket += 1;
+					depthBracketInner += 1;
 				case "]":
-					if (depthBracket > 0) depthBracket -= 1;
+					if (depthBracketInner > 0) depthBracketInner -= 1;
 				case "<":
-					depthAngle += 1;
+					depthAngleInner += 1;
 				case ">":
-					if (depthAngle > 0) depthAngle -= 1;
+					if (depthAngleInner > 0) depthAngleInner -= 1;
 				case "=":
-					if (depthParen == 0 && depthBrace == 0 && depthBracket == 0 && depthAngle == 0) {
+					if (depthParenInner == 0 && depthBraceInner == 0 && depthBracketInner == 0 && depthAngleInner == 0) {
 						typeEndIndex = tokenIndex;
 						break;
 					}

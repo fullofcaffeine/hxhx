@@ -13,7 +13,10 @@ if ! command -v ocamlopt >/dev/null 2>&1; then
 fi
 
 echo "== Building hxhx"
-HXHX_BIN_RAW="$("$ROOT/scripts/hxhx/build-hxhx.sh")"
+HXHX_BIN_RAW="$(
+  HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-1}" \
+  "$ROOT/scripts/hxhx/build-hxhx.sh"
+)"
 HXHX_BIN="$(printf "%s\n" "$HXHX_BIN_RAW" | tail -n 1)"
 if [ "$HXHX_BIN_RAW" != "$HXHX_BIN" ]; then
   echo "Regression: build-hxhx.sh must print only the binary path on stdout." >&2
@@ -41,7 +44,7 @@ fi
 # freshly built host to a stable temp path so the rest of this script remains
 # deterministic.
 macrohost_tmp="$(mktemp -d)"
-trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
+trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}" "${strict_log:-}" "${strict_sep_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
 HXHX_MACRO_HOST_EXE_STABLE="$macrohost_tmp/hxhx-macro-host"
 cp "$HXHX_MACRO_HOST_EXE" "$HXHX_MACRO_HOST_EXE_STABLE"
 chmod +x "$HXHX_MACRO_HOST_EXE_STABLE"
@@ -128,6 +131,27 @@ class Util {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeMain.hx" <<'HX'
+class JsNativeMain {
+  static function main() {
+    var sum = 0;
+    for (i in 0...3) {
+      sum = sum + i;
+    }
+    if (sum > 0) {
+      sum = sum + sum;
+    }
+    Sys.println("js-native:" + sum);
+  }
+}
+HX
+
+cat >"$tmpdir/src/StrictCliMain.hx" <<'HX'
+class StrictCliMain {
+  static function main() {}
+}
+HX
+
 (
   cd "$ROOT"
   rm -rf out
@@ -146,21 +170,59 @@ HX
 out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_fast")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
+echo "== Strict CLI mode: rejects hxhx-only flags"
+strict_log="$(mktemp)"
+if "$HXHX_BIN" --hxhx-strict-cli --target js -cp "$tmpdir/src" -main JsNativeMain --no-output >"$strict_log" 2>&1; then
+  echo "Expected strict CLI mode to reject --target." >&2
+  exit 1
+fi
+grep -q "strict CLI mode rejects non-upstream flag: --target" "$strict_log"
+
+if "$HXHX_BIN" --hxhx-strict-cli --hxhx-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain >"$strict_log" 2>&1; then
+  echo "Expected strict CLI mode to reject --hxhx-stage3." >&2
+  exit 1
+fi
+grep -q "strict CLI mode rejects non-upstream flag: --hxhx-stage3" "$strict_log"
+
+echo "== Strict CLI mode: allows upstream-style flags"
+"$HXHX_BIN" --hxhx-strict-cli --js "$tmpdir/strict_cli_ok.js" -cp "$tmpdir/src" -main StrictCliMain --no-output >/dev/null
+
+echo "== Strict CLI mode: ignores forwarded args after --"
+strict_sep_log="$(mktemp)"
+"$HXHX_BIN" --hxhx-strict-cli -- --target js >"$strict_sep_log" 2>&1 || true
+if grep -q "strict CLI mode rejects non-upstream flag" "$strict_sep_log"; then
+  echo "Strict CLI mode should not parse args after -- separator." >&2
+  exit 1
+fi
+grep -q -- "--target" "$strict_sep_log"
+
+echo "== Strict CLI mode: keeps legacy unsupported target errors explicit"
+if "$HXHX_BIN" --hxhx-strict-cli --swf "$tmpdir/strict_legacy.swf" >"$strict_log" 2>&1; then
+  echo "Expected --swf to remain unsupported in strict mode." >&2
+  exit 1
+fi
+grep -q 'Target "flash" is not supported in this implementation' "$strict_log"
+
 echo "== Builtin fast-path target: linked JS backend preset (no-emit)"
-cat >"$tmpdir/src/JsNativeMain.hx" <<'HX'
-class JsNativeMain {
-  static function main() {}
-}
-HX
 out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_fast")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
-echo "== Builtin fast-path target: linked JS backend fails loud until implemented"
-if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_emit" >"$tmpdir/js_native_emit.log" 2>&1; then
-  echo "Expected js-native emit to fail until backend implementation lands." >&2
-  exit 1
-fi
-grep -q "JS native backend is not implemented yet" "$tmpdir/js_native_emit.log"
+echo "== Builtin fast-path target: linked JS backend emits and runs"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_emit/main.js" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_emit")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_emit/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native:6$"
+test -f "$tmpdir/out_js_native_emit/main.js"
+
+echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"
+mkdir -p "$tmpdir/workdir"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js rel/main.js --cwd "$tmpdir/workdir" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_rel")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/workdir/rel/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native:6$"
+test -f "$tmpdir/workdir/rel/main.js"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"

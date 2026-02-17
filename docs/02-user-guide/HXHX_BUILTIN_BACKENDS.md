@@ -153,18 +153,22 @@ Current `hxhx` target presets:
 - `--target js-native`
   - kind: `builtin`
   - behavior: routes through linked Stage3 backend dispatch with backend ID `js-native`
-  - status: current bring-up placeholder (no-emit/type/macro flow works; emit path intentionally fails fast until JS backend implementation lands)
+  - status: MVP non-delegating JS emitter is enabled (constrained subset; emits one JS file artifact and Stage3 runs it via `node` when available)
 - `--target flash|swf|as3`
   - status: intentionally unsupported in `hxhx` (fails fast with a clear message)
 - raw legacy target flags (`--swf`, `--as3`)
   - status: intentionally unsupported in `hxhx` (fails fast with the same message)
+- `--hxhx-strict-cli`
+  - status: available
+  - behavior: enforces upstream-style CLI surface by rejecting hxhx-only flags (`--target`, `--hxhx-*`), while preserving normal extension mode when the flag is omitted
 
 Why this matters:
 
 - It is our first concrete linked-backend fast-path (`kind=builtin`) in the registry.
 - It gives a no-classpath-scan execution path for OCaml Stage3 bring-up and perf tracking.
 - It keeps the stable `--target` UX while we move from stage0 delegation to native `hxhx` execution.
-- The JS presets establish the target surface now (`js` delegated + `js-native` builtin) so CI and Gate wiring can evolve without hidden fallbacks.
+- The JS presets now cover both delegated (`js`) and non-delegating MVP (`js-native`) paths so CI and Gate wiring can evolve without hidden fallbacks.
+- Strict CLI mode provides an explicit upstream-compatibility interface without removing hxhx extension workflows.
 
 ## How this relates to the macro “plugin system”
 

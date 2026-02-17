@@ -167,7 +167,7 @@ class Stage3Compiler {
 		What
 		- Supports:
 		  - `ocaml-stage3` (existing linked OCaml backend)
-		  - `js-native` (placeholder backend for non-delegating JS target wiring)
+		  - `js-native` (MVP non-delegating JS backend)
 
 		How
 		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
@@ -265,6 +265,34 @@ class Stage3Compiler {
 			i += 1;
 		}
 		return false;
+	}
+
+	static function findJsOutputFileHint(args:Array<String>):Null<String> {
+		final expanded = Stage1Args.expandHxmlArgs(args);
+		if (expanded == null) return null;
+		var i = 0;
+		while (i < expanded.length) {
+			final a = expanded[i];
+			switch (a) {
+				case "-js", "--js":
+					if (i + 1 < expanded.length) return expanded[i + 1];
+					return null;
+				case _:
+			}
+			i += 1;
+		}
+		return null;
+	}
+
+	static function canRunNode():Bool {
+		try {
+			final p = new sys.io.Process("node", ["--version"]);
+			final code = p.exitCode();
+			p.close();
+			return code == 0;
+		} catch (_:Dynamic) {
+			return false;
+		}
 	}
 
 	/**
@@ -1135,6 +1163,7 @@ class Stage3Compiler {
 			var noEmit = g.noEmit;
 			var noRun = g.noRun;
 			final rest = g.rest;
+			final jsOutputHintRaw = findJsOutputFileHint(rest);
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
 		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
@@ -1144,8 +1173,11 @@ class Stage3Compiler {
 			if (parsed == null) return 2;
 			// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
 			// we emulate this by enabling the full-body emission rung.
-			final sawInterp = parsed.defines != null && parsed.defines.indexOf("interp=1") != -1;
-			emitFullBodies = emitFullBodies || sawInterp;
+		final sawInterp = parsed.defines != null && parsed.defines.indexOf("interp=1") != -1;
+		emitFullBodies = emitFullBodies || sawInterp;
+		if (backendId == "js-native") {
+			emitFullBodies = true;
+		}
 
 			// Respect upstream `--no-output` by treating it as “no emit” in bring-up.
 			//
@@ -1369,7 +1401,11 @@ class Stage3Compiler {
 		// - ResolverStage will use this map to strip inactive `#if` branches before parsing.
 		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
-		definesMap.set("ocaml", "1");
+		if (backendId == "js-native") {
+			definesMap.set("js", "1");
+		} else {
+			definesMap.set("ocaml", "1");
+		}
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}
@@ -1785,11 +1821,14 @@ class Stage3Compiler {
 			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
 		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
-		final backend = try {
-			resolveBuiltinBackend(backendId);
-		} catch (e:Dynamic) {
-			closeMacroSession();
-			return error("backend setup failed: " + Std.string(e));
+		final backendCaps = switch (backendId) {
+			case "ocaml-stage3":
+				new OcamlStage3Backend().capabilities();
+			case "js-native":
+				new JsBackend().capabilities();
+			case _:
+				closeMacroSession();
+				return error("backend setup failed: unknown Stage3 backend: " + backendId);
 		};
 
 			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
@@ -1802,9 +1841,9 @@ class Stage3Compiler {
 			// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
 			// coverage without being blocked by the bootstrap emitter/codegen.
 			if (noEmit) {
-				if (!backend.capabilities().supportsNoEmit) {
+				if (!backendCaps.supportsNoEmit) {
 					closeMacroSession();
-					return error("backend does not support --hxhx-no-emit: " + backend.id());
+					return error("backend does not support --hxhx-no-emit: " + backendId);
 				}
 				var headerOnlyCount = 0;
 				var unsupportedExprsTotal = 0;
@@ -1865,8 +1904,20 @@ class Stage3Compiler {
 			}
 
 			final emitted = try {
-				final context = new BackendContext(outAbs, null, parsed.main, emitFullBodies, true, definesMap);
-				backend.emit(expanded, context);
+				final outputFileHint = if (backendCaps.supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
+					Path.isAbsolute(jsOutputHintRaw) ? Path.normalize(jsOutputHintRaw) : absFromCwd(cwd, jsOutputHintRaw);
+				} else {
+					null;
+				}
+				final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, backendCaps.supportsBuildExecutable, definesMap);
+				switch (backendId) {
+					case "ocaml-stage3":
+						new OcamlStage3Backend().emit(expanded, context);
+					case "js-native":
+						new JsBackend().emit(expanded, context);
+					case _:
+						throw "unknown Stage3 backend: " + backendId;
+				}
 			} catch (e:Dynamic) {
 				closeMacroSession();
 				return error("emit failed: " + Std.string(e));
@@ -1888,6 +1939,16 @@ class Stage3Compiler {
 		}
 
 		if (!emitted.builtExecutable) {
+			if (backendId == "js-native") {
+				if (!canRunNode()) {
+					Sys.println("run=skipped_node_missing");
+					return 0;
+				}
+				final jsCode = Sys.command("node", [emitted.entryPath]);
+				if (jsCode != 0) return error("node run failed with exit code " + jsCode);
+				Sys.println("run=ok");
+				return 0;
+			}
 			Sys.println("run=skipped_non_executable_backend");
 			return 0;
 		}

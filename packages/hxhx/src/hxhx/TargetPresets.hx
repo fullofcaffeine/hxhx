@@ -88,7 +88,7 @@ class TargetPresets {
 				id: "js-native",
 				kind: "builtin",
 				runMode: RUN_MODE_BUILTIN_STAGE3,
-				describe: "Linked Stage3 JS backend fast-path (non-delegating, bring-up)",
+				describe: "Linked Stage3 JS backend fast-path (non-delegating MVP)",
 				forwarded: applyJsNative(forwarded)
 			};
 			case "flash", "swf", "as3":
