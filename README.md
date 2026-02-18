@@ -380,6 +380,7 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
 - js-native array-comprehension lowering smoke (`[for (...) ...]` for range + array iterables)
 - js-native range-expression lowering smoke (`var items = 1...5` + `for (v in items)` roundtrip)
 - js-native statement-level try/catch + throw/rethrow smoke (`caught:boom|rethrow:boom`)
+- js-native ordered multi-catch typed dispatch smoke (`string:boom|int:7|dynamic2:true`)
 - optional local fast path: set `HXHX_BIN=packages/hxhx/out/_build/default/out.bc` to skip rebuilding `hxhx` for each script rerun
 - source-level Stage3 receiver-call regression (`other.add(n)` arity shape) is covered by `npm run test:m14:hih-emitter-receiver-call` (no stage0 bootstrap rebuild required)
 

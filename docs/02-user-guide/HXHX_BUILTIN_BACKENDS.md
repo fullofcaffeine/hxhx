@@ -213,6 +213,7 @@ Supported today (covered by `scripts/test-hxhx-targets.sh`):
 
 - statement-level `switch` lowering over enum-like tags (`Build`, `Run`, etc.) via Stage3 `HxSwitchPattern`
 - statement-level `try/catch` + `throw` (including nested rethrow flow in smoke fixture)
+- ordered multi-catch dispatch for common typed hints (`Int`, `Float`, `Bool`, `String`, `Array`, `Dynamic`) with fallback rethrow when no catch matches
 - basic reflection helpers through a lightweight JS prelude:
   - `Type.resolveClass(name)`
   - `Type.getClassName(cls)`
@@ -223,7 +224,7 @@ Supported today (covered by `scripts/test-hxhx-targets.sh`):
 
 Known unsupported semantics (explicit fail-fast behavior):
 
-- full typed multi-catch semantics (`catch (e:SomeType)` dispatch) in Stage3 JS emitter
+- full Haxe class/interface typed-catch semantics (`catch (e:SomeType)` with exact runtime type matching beyond primitive/common builtins)
 - full Haxe enum runtime/model parity (constructors with parameters, exact enum index semantics)
 - full Haxe `Type` API parity beyond the helpers above
 

@@ -1,5 +1,7 @@
 package backend.js;
 
+import StringTools;
+
 /**
 	Statement-to-JS lowering for `js-native` MVP.
 
@@ -67,6 +69,57 @@ class JsStmtEmitter {
 		}
 	}
 
+	static function normalizeCatchType(typeHint:String):String {
+		if (typeHint == null) return "";
+		var hint = StringTools.trim(typeHint);
+		if (hint.length == 0) return "";
+		hint = StringTools.replace(hint, " ", "");
+		hint = StringTools.replace(hint, "\t", "");
+		hint = StringTools.replace(hint, "\n", "");
+		hint = StringTools.replace(hint, "\r", "");
+		while (StringTools.startsWith(hint, "Null<") && StringTools.endsWith(hint, ">")) {
+			hint = hint.substr(5, hint.length - 6);
+		}
+		final genericAt = hint.indexOf("<");
+		if (genericAt >= 0) hint = hint.substr(0, genericAt);
+		return hint;
+	}
+
+	static function simpleTypeName(fullName:String):String {
+		if (fullName == null || fullName.length == 0) return "";
+		final parts = fullName.split(".");
+		return parts[parts.length - 1];
+	}
+
+	static function emitCatchCondition(typeHint:String, errRef:String):String {
+		final normalized = normalizeCatchType(typeHint);
+		if (normalized.length == 0 || normalized == "Dynamic" || normalized == "Any") return "true";
+
+		return switch (normalized) {
+			case "String" | "StdTypes.String":
+				"(typeof " + errRef + " === \"string\" || " + errRef + " instanceof String)";
+			case "Bool" | "StdTypes.Bool":
+				"(typeof " + errRef + " === \"boolean\")";
+			case "Int" | "StdTypes.Int":
+				"(typeof " + errRef + " === \"number\" && ((" + errRef + " | 0) === " + errRef + "))";
+			case "Float" | "StdTypes.Float":
+				"(typeof " + errRef + " === \"number\")";
+			case "Array" | "StdTypes.Array":
+				"Array.isArray(" + errRef + ")";
+			default:
+				final simple = simpleTypeName(normalized);
+				final normalizedQuoted = JsNameMangler.quoteString(normalized);
+				final simpleQuoted = JsNameMangler.quoteString(simple);
+				"(" + errRef + " != null && typeof " + errRef + " === \"object\" && ("
+				+ errRef + ".__hx_name === " + normalizedQuoted
+				+ " || " + errRef + ".__hx_name === " + simpleQuoted
+				+ " || (" + errRef + ".constructor != null && ("
+				+ errRef + ".constructor.__hx_name === " + normalizedQuoted
+				+ " || " + errRef + ".constructor.__hx_name === " + simpleQuoted
+				+ "))))";
+		}
+	}
+
 	static function emitTry(
 		writer:JsWriter,
 		tryBody:HxStmt,
@@ -83,10 +136,23 @@ class JsStmtEmitter {
 		if (catches == null || catches.length == 0) {
 			writer.writeln("throw __hx_err;");
 		} else {
-			final first = catches[0];
-			final bind = scope.declareLocal(first.name);
-			writer.writeln("var " + bind + " = __hx_err;");
-			emitStmtBlockContent(writer, first.body, scope);
+			for (i in 0...catches.length) {
+				final c = catches[i];
+				final head = i == 0 ? "if" : "else if";
+				final condition = emitCatchCondition(c.typeHint, "__hx_err");
+				writer.writeln(head + " (" + condition + ") {");
+				writer.pushIndent();
+				final bind = scope.declareLocal(c.name);
+				writer.writeln("var " + bind + " = __hx_err;");
+				emitStmtBlockContent(writer, c.body, scope);
+				writer.popIndent();
+				writer.writeln("}");
+			}
+			writer.writeln("else {");
+			writer.pushIndent();
+			writer.writeln("throw __hx_err;");
+			writer.popIndent();
+			writer.writeln("}");
 		}
 
 		writer.popIndent();

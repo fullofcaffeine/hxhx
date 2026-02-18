@@ -23,6 +23,8 @@ class M14HihTryThrowStmtIntegrationTest {
 			+ '  static function main() {\n'
 			+ '    try {\n'
 			+ '      throw "boom";\n'
+			+ '    } catch (message:String) {\n'
+			+ '      Sys.println(message);\n'
 			+ '    } catch (err:Dynamic) {\n'
 			+ '      Sys.println(err);\n'
 			+ '    }\n'
@@ -36,8 +38,11 @@ class M14HihTryThrowStmtIntegrationTest {
 
 		switch (body[0]) {
 			case STry(tryBody, catches, _):
-				assertTrue(catches.length == 1, "expected one catch block");
-				assertTrue(catches[0].name == "err", "catch variable name should be parsed");
+				assertTrue(catches.length == 2, "expected two catch blocks");
+				assertTrue(catches[0].name == "message", "first catch variable name should be parsed");
+				assertTrue(catches[0].typeHint == "String", "first catch type hint should be parsed");
+				assertTrue(catches[1].name == "err", "second catch variable name should be parsed");
+				assertTrue(catches[1].typeHint == "Dynamic", "second catch type hint should be parsed");
 				switch (tryBody) {
 					case SBlock(stmts, _):
 						assertTrue(stmts.length == 1, "try block should contain one statement");

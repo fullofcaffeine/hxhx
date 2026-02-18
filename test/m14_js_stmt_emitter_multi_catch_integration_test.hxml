@@ -1,0 +1,4 @@
+-cp test
+-cp packages/hih-compiler/src
+-main M14JsStmtEmitterMultiCatchIntegrationTest
+--interp

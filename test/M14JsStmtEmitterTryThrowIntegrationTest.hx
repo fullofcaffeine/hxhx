@@ -31,7 +31,9 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 		assertContains(js, "try {", "try statement should emit try block");
 		assertContains(js, "throw \"boom\";", "throw statement should emit throw expression");
 		assertContains(js, "} catch (__hx_err) {", "try statement should emit catch block");
+		assertContains(js, "if (true) {", "dynamic catch should be treated as a catch-all clause");
 		assertContains(js, "var err = __hx_err;", "catch block should bind catch variable");
 		assertContains(js, "console.log(err);", "catch body should emit contained statements");
+		assertContains(js, "throw __hx_err;", "catch dispatch should preserve fallback rethrow");
 	}
 }

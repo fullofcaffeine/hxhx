@@ -302,6 +302,42 @@ class JsNativeTryCatchMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeMultiCatchMain.hx" <<'HX'
+class JsNativeMultiCatchMain {
+  static function main() {
+    var out = [];
+
+    try {
+      throw "boom";
+    } catch (code:Int) {
+      out.push("int");
+    } catch (msg:String) {
+      out.push("string:" + msg);
+    } catch (other:Dynamic) {
+      out.push("dynamic:" + other);
+    }
+
+    try {
+      throw 7;
+    } catch (code:Int) {
+      out.push("int:" + code);
+    } catch (msg:String) {
+      out.push("string2:" + msg);
+    }
+
+    try {
+      throw true;
+    } catch (msg:String) {
+      out.push("string3");
+    } catch (other:Dynamic) {
+      out.push("dynamic2:" + other);
+    }
+
+    Sys.println(out.join("|"));
+  }
+}
+HX
+
 cat >"$tmpdir/src/StrictCliMain.hx" <<'HX'
 class StrictCliMain {
   static function main() {}
@@ -456,6 +492,14 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_trycatch/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^caught:boom|rethrow:boom$"
 test -f "$tmpdir/out_js_trycatch/main.js"
+
+echo "== Builtin fast-path target: js-native ordered multi-catch dispatch"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_multicatch/main.js" -cp "$tmpdir/src" -main JsNativeMultiCatchMain --hxhx-out "$tmpdir/out_js_multicatch")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_multicatch/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^string:boom|int:7|dynamic2:true$"
+test -f "$tmpdir/out_js_multicatch/main.js"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"

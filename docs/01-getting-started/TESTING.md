@@ -166,6 +166,7 @@ Notes:
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
 - Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.
 - JS statement lowering coverage for try/catch + throw is in `npm run test:m14:js-stmt-try-throw`.
+- JS statement multi-catch dispatch lowering coverage is in `npm run test:m14:js-stmt-multi-catch`.
 - JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and
   `npm run test:m14:js-expr-range` and `npm run test:m14:js-expr-array-comprehension` and
   `npm run test:m14:js-expr-switch`.
