@@ -269,8 +269,10 @@ Run a selectable subset locally via:
 
 - `HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets`
 - `npm run test:hxhx:builtin-target-smoke` (linked fast-path sentinel: compares delegated `--target ocaml` vs builtin `--target ocaml-stage3` on the same tiny workload)
+- `HXHX_BUILTIN_SMOKE_OCAML=0 HXHX_BUILTIN_SMOKE_JS_NATIVE=1 npm run test:hxhx:builtin-target-smoke` (linked `js-native` emit+run smoke lane only)
 - CI cadence: weekly Linux baseline via `.github/workflows/gate3.yml` with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
-- Builtin target smoke cadence: weekly Linux baseline via `.github/workflows/gate3-builtin.yml` (manual dispatch supports `reps`).
+- Builtin target smoke cadence: weekly Linux baseline via `.github/workflows/gate3-builtin.yml` (manual dispatch supports `reps`, `run_js_native`).
+- PR/push CI includes `JS-native smoke` (`.github/workflows/ci.yml`) so non-delegating `--target js-native` emit+run stays continuously checked.
 - Optional CI dispatch: same workflow with manual overrides (`targets`, `allow_skip`, `macro_mode=direct|stage0_shim`).
 - `HXHX_GATE3_MACRO_MODE=direct` (default) routes only the `Macro` target through the non-delegating Gate 2 direct runner while leaving other targets on the stage0-shim path.
 - `HXHX_GATE3_MACRO_MODE=stage0_shim` keeps the historical stage0 RunCi harness path for `Macro` when needed for debugging/comparison.

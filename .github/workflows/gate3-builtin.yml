@@ -8,6 +8,11 @@ on:
         type: string
         required: false
         default: "1"
+      run_js_native:
+        description: "Include js-native emit+run smoke lane"
+        type: boolean
+        required: false
+        default: false
   schedule:
     # Weekly Linux smoke for linked builtin target path.
     - cron: "0 12 * * 3"
@@ -25,7 +30,7 @@ env:
 
 jobs:
   builtin_target_smoke:
-    name: Builtin target smoke (ocaml-stage3)
+    name: Builtin target smoke (ocaml-stage3 + optional js-native)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -78,7 +83,9 @@ jobs:
       - name: Run builtin target smoke
         env:
           HXHX_BUILTIN_SMOKE_REPS: ${{ inputs.reps || '1' }}
+          HXHX_BUILTIN_SMOKE_JS_NATIVE: ${{ inputs.run_js_native && '1' || '0' }}
         run: |
           set -euo pipefail
           echo "HXHX_BUILTIN_SMOKE_REPS=${HXHX_BUILTIN_SMOKE_REPS}"
+          echo "HXHX_BUILTIN_SMOKE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_JS_NATIVE}"
           npm run test:hxhx:builtin-target-smoke

@@ -5,18 +5,47 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 REPS_RAW="${HXHX_BUILTIN_SMOKE_REPS:-1}"
+OCAML_LANE_RAW="${HXHX_BUILTIN_SMOKE_OCAML:-1}"
+JS_NATIVE_LANE_RAW="${HXHX_BUILTIN_SMOKE_JS_NATIVE:-0}"
 
-case "$REPS_RAW" in
-  ''|*[!0-9]*)
-    echo "Invalid HXHX_BUILTIN_SMOKE_REPS: $REPS_RAW (expected positive integer)." >&2
-    exit 2
-    ;;
-esac
-if [ "$REPS_RAW" -le 0 ]; then
-  echo "Invalid HXHX_BUILTIN_SMOKE_REPS: $REPS_RAW (expected positive integer)." >&2
+parse_bool() {
+  local name="$1"
+  local raw="$2"
+  local norm
+  norm="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  case "$norm" in
+    1|true|yes|on) echo "1" ;;
+    0|false|no|off|'') echo "0" ;;
+    *)
+      echo "Invalid ${name}: ${raw} (expected one of: 0/1, true/false, yes/no, on/off)." >&2
+      exit 2
+      ;;
+  esac
+}
+
+OCAML_LANE="$(parse_bool HXHX_BUILTIN_SMOKE_OCAML "$OCAML_LANE_RAW")"
+JS_NATIVE_LANE="$(parse_bool HXHX_BUILTIN_SMOKE_JS_NATIVE "$JS_NATIVE_LANE_RAW")"
+
+if [ "$OCAML_LANE" != "1" ] && [ "$JS_NATIVE_LANE" != "1" ]; then
+  echo "Nothing to run: both HXHX_BUILTIN_SMOKE_OCAML and HXHX_BUILTIN_SMOKE_JS_NATIVE are disabled." >&2
   exit 2
 fi
-REPS="$REPS_RAW"
+
+if [ "$OCAML_LANE" = "1" ]; then
+  case "$REPS_RAW" in
+    ''|*[!0-9]*)
+      echo "Invalid HXHX_BUILTIN_SMOKE_REPS: $REPS_RAW (expected positive integer)." >&2
+      exit 2
+      ;;
+  esac
+  if [ "$REPS_RAW" -le 0 ]; then
+    echo "Invalid HXHX_BUILTIN_SMOKE_REPS: $REPS_RAW (expected positive integer)." >&2
+    exit 2
+  fi
+  REPS="$REPS_RAW"
+else
+  REPS=0
+fi
 
 if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
   echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
@@ -26,8 +55,12 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   echo "Missing dune/ocamlc on PATH (required to build hxhx)." >&2
   exit 1
 fi
-if ! command -v python3 >/dev/null 2>&1; then
+if [ "$OCAML_LANE" = "1" ] && ! command -v python3 >/dev/null 2>&1; then
   echo "Missing python3 on PATH (required for timing)." >&2
+  exit 1
+fi
+if [ "$JS_NATIVE_LANE" = "1" ] && ! command -v node >/dev/null 2>&1; then
+  echo "Missing node on PATH (required to run js-native smoke)." >&2
   exit 1
 fi
 
@@ -37,6 +70,29 @@ if [ -z "$HXHX_BIN" ]; then
 fi
 if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   echo "Failed to locate built hxhx binary." >&2
+  exit 1
+fi
+
+ensure_target_available() {
+  local target="$1"
+  local targets=""
+  if ! targets="$("$HXHX_BIN" --hxhx-list-targets 2>/dev/null)"; then
+    return 1
+  fi
+  printf '%s\n' "$targets" | grep -qx "$target"
+}
+
+if [ "$JS_NATIVE_LANE" = "1" ] && ! ensure_target_available "js-native"; then
+  echo "Current hxhx build does not expose js-native preset; rebuilding from source (HXHX_FORCE_STAGE0=1)." >&2
+  HXHX_BIN="$(HAXE_BIN="$HAXE_BIN" HXHX_FORCE_STAGE0=1 "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+  if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+    echo "Failed to rebuild hxhx binary with HXHX_FORCE_STAGE0=1." >&2
+    exit 1
+  fi
+fi
+
+if [ "$JS_NATIVE_LANE" = "1" ] && ! ensure_target_available "js-native"; then
+  echo "hxhx binary does not support --target js-native after rebuild attempt." >&2
   exit 1
 fi
 
@@ -90,35 +146,102 @@ class Main {
 }
 HX
 
+cat > "$tmpdir/src/JsNativeMain.hx" <<'HX'
+class JsNativeMain {
+  static function main() {
+    var sum = 0;
+    for (i in 0...4) {
+      sum += i;
+    }
+    Sys.println("js-native-smoke:" + sum);
+  }
+}
+HX
+
 delegate_total=0
 builtin_total=0
 
 echo "== builtin target smoke (delegated vs builtin)"
 echo "hxhx_bin=$HXHX_BIN"
-echo "reps=$REPS"
+echo "ocaml_lane=$OCAML_LANE"
+echo "js_native_lane=$JS_NATIVE_LANE"
 
-for i in $(seq 1 "$REPS"); do
-  delegate_ms="$(run_timed delegated "$HXHX_BIN" --target ocaml -- -cp "$tmpdir/src" -main Main --no-output -D ocaml_no_build -D "ocaml_output=$tmpdir/out_delegate")"
-  builtin_ms="$(run_timed builtin "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main Main --hxhx-out "$tmpdir/out_builtin")"
+if [ "$OCAML_LANE" = "1" ]; then
+  echo "reps=$REPS"
+  for i in $(seq 1 "$REPS"); do
+    delegate_ms="$(run_timed delegated "$HXHX_BIN" --target ocaml -- -cp "$tmpdir/src" -main Main --no-output -D ocaml_no_build -D "ocaml_output=$tmpdir/out_delegate")"
+    builtin_ms="$(run_timed builtin "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main Main --hxhx-out "$tmpdir/out_builtin")"
 
-  delegate_total=$((delegate_total + delegate_ms))
-  builtin_total=$((builtin_total + builtin_ms))
+    delegate_total=$((delegate_total + delegate_ms))
+    builtin_total=$((builtin_total + builtin_ms))
 
-  echo "rep=${i} delegated_ms=${delegate_ms} builtin_ms=${builtin_ms}"
-done
+    echo "rep=${i} delegated_ms=${delegate_ms} builtin_ms=${builtin_ms}"
+  done
 
-delegate_avg=$((delegate_total / REPS))
-builtin_avg=$((builtin_total / REPS))
+  delegate_avg=$((delegate_total / REPS))
+  builtin_avg=$((builtin_total / REPS))
 
-speedup="n/a"
-if [ "$builtin_avg" -gt 0 ]; then
-  speedup="$(python3 - <<PY
+  speedup="n/a"
+  if [ "$builtin_avg" -gt 0 ]; then
+    speedup="$(python3 - <<PY
 print(f"{${delegate_avg}/${builtin_avg}:.2f}x")
 PY
 )"
+  fi
+
+  echo "delegate_avg_ms=${delegate_avg}"
+  echo "builtin_avg_ms=${builtin_avg}"
+  echo "delegate_over_builtin_speedup=${speedup}"
+else
+  echo "delegate_avg_ms=skipped"
+  echo "builtin_avg_ms=skipped"
+  echo "delegate_over_builtin_speedup=skipped"
 fi
 
-echo "delegate_avg_ms=${delegate_avg}"
-echo "builtin_avg_ms=${builtin_avg}"
-echo "delegate_over_builtin_speedup=${speedup}"
+if [ "$JS_NATIVE_LANE" = "1" ]; then
+  echo "== js-native emit+run smoke"
+  js_artifact="$tmpdir/out_js_native/main.js"
+  if ! js_out="$("$HXHX_BIN" --target js-native --js "$js_artifact" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native" 2>&1)"; then
+    echo "builtin_target_smoke=fail" >&2
+    echo "mode=js-native" >&2
+    printf '%s\n' "$js_out" >&2
+    exit 1
+  fi
+  printf '%s\n' "$js_out"
+  if ! printf '%s\n' "$js_out" | grep -q '^stage3=ok$'; then
+    echo "builtin_target_smoke=fail" >&2
+    echo "mode=js-native" >&2
+    echo "Expected stage3=ok marker in js-native output." >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$js_out" | grep -q "^artifact=${js_artifact}$"; then
+    echo "builtin_target_smoke=fail" >&2
+    echo "mode=js-native" >&2
+    echo "Expected artifact marker for js-native output path." >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$js_out" | grep -q '^run=ok$'; then
+    echo "builtin_target_smoke=fail" >&2
+    echo "mode=js-native" >&2
+    echo "Expected run=ok marker in js-native output." >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$js_out" | grep -q '^js-native-smoke:6$'; then
+    echo "builtin_target_smoke=fail" >&2
+    echo "mode=js-native" >&2
+    echo "Expected js-native runtime output marker." >&2
+    exit 1
+  fi
+  if [ ! -f "$js_artifact" ]; then
+    echo "builtin_target_smoke=fail" >&2
+    echo "mode=js-native" >&2
+    echo "Expected emitted JS artifact at: $js_artifact" >&2
+    exit 1
+  fi
+  echo "js_native_artifact=${js_artifact}"
+  echo "js_native_smoke=ok"
+else
+  echo "js_native_smoke=skipped"
+fi
+
 echo "builtin_target_smoke=ok"

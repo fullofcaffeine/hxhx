@@ -280,6 +280,12 @@ Run the linked builtin fast-path smoke (delegated vs builtin target path):
 npm run test:hxhx:builtin-target-smoke
 ```
 
+Run the dedicated JS-native emit+run lane only:
+
+```bash
+HXHX_BUILTIN_SMOKE_OCAML=0 HXHX_BUILTIN_SMOKE_JS_NATIVE=1 npm run test:hxhx:builtin-target-smoke
+```
+
 By default, Gate 3 runs `Macro` via the non-delegating Gate 2 direct pipeline while keeping non-Macro targets on the stage0-shim path.
 
 To force the historical stage0-shim harness for `Macro`, set:
@@ -289,7 +295,8 @@ HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run tes
 ```
 
 Gate 3 CI (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`) and also supports manual `workflow_dispatch` overrides for `targets`, `allow_skip`, and `macro_mode`.
-Builtin fast-path smoke CI (`.github/workflows/gate3-builtin.yml`) also runs weekly on Linux and supports manual `workflow_dispatch` (`reps`).
+Builtin fast-path smoke CI (`.github/workflows/gate3-builtin.yml`) also runs weekly on Linux and supports manual `workflow_dispatch` (`reps`, `run_js_native`).
+PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job that runs the linked non-delegating `--target js-native` emit+run lane.
 Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedule (Linux baseline) and remains manually triggerable via `run_upstream_macro`.
 M7 bundle workflow (`.github/workflows/gate-m7.yml`) is manually triggerable and runs the one-command replacement bundle (`fast` or `full`) with strict-skip control.
 
