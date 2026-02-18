@@ -227,6 +227,16 @@
 		return peek3().kind;
 	}
 
+	inline function nextIsAdjacentOther(code:Int):Bool {
+		final next = peek();
+		return switch (next.kind) {
+			case TOther(c) if (c == code):
+				next.pos.getIndex() == cur.pos.getIndex() + 1;
+			case _:
+				false;
+		}
+	}
+
 	function fail<T>(message:String):T {
 		throw new HxParseError(message, cur.pos);
 	}
@@ -845,6 +855,16 @@
 					}
 					if (cur.kind.match(TOther("]".code))) bump();
 					e = EArrayAccess(e, index);
+				case TOther(c) if ((c == "+".code || c == "-".code) && nextIsAdjacentOther(c)):
+					// Bring-up lowering: treat postfix increment/decrement as compound assignment.
+					//
+					// Scope
+					// - This intentionally models statement-style usage (`i++`, `i--`) used in loops.
+					// - Expression-level old/new value distinction is deferred.
+					final op = (c == "+".code) ? "+=" : "-=";
+					bump();
+					bump();
+					e = EBinop(op, e, EInt(1));
 				case _:
 					break;
 			}
@@ -895,6 +915,16 @@
 			case TKeyword(k) if (k == KUntyped):
 				bump();
 				EUntyped(parseUnaryExpr(stop));
+			case TOther(c) if ((c == "+".code || c == "-".code) && nextIsAdjacentOther(c)):
+				// Bring-up lowering: treat prefix increment/decrement as compound assignment.
+				//
+				// Scope
+				// - This intentionally models loop-style usage (`++i`, `--i`) needed by js-native.
+				// - Expression-level old/new value distinction is deferred.
+				final op = (c == "+".code) ? "+=" : "-=";
+				bump();
+				bump();
+				EBinop(op, parseUnaryExpr(stop), EInt(1));
 			case TOther(c) if (c == "!".code || c == "-".code || c == "+".code):
 				final op = String.fromCharCode(c);
 				bump();

@@ -179,6 +179,30 @@ class JsNativeCompoundAssignMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeIncDecMain.hx" <<'HX'
+class JsNativeIncDecMain {
+  static function main() {
+    var i = 0;
+    while (i < 4) {
+      i++;
+    }
+
+    var j = 4;
+    while (j > 1) {
+      --j;
+    }
+
+    var k = 1;
+    k++;
+    ++k;
+    k--;
+    --k;
+
+    Sys.println("js-native-incdec:" + i + ":" + j + ":" + k);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
 class JsNativeEnumReflectionMain {
   static function main() {
@@ -307,6 +331,14 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_compound/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native-compound:6:3$"
 test -f "$tmpdir/out_js_native_compound/main.js"
+
+echo "== Builtin fast-path target: js-native increment/decrement expressions"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_incdec/main.js" -cp "$tmpdir/src" -main JsNativeIncDecMain --hxhx-out "$tmpdir/out_js_native_incdec")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_incdec/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-incdec:4:1:1$"
+test -f "$tmpdir/out_js_native_incdec/main.js"
 
 echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"
 mkdir -p "$tmpdir/workdir"

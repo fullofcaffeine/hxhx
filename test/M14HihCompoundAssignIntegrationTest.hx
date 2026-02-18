@@ -19,9 +19,17 @@ class M14HihCompoundAssignIntegrationTest {
 		final src = 'class Main {\n'
 			+ '  static function main() {\n'
 			+ '    var acc:Int = 1;\n'
+			+ '    var a:Int = 1;\n'
+			+ '    var b:Int = 2;\n'
+			+ '    var x = a + +b;\n'
 			+ '    acc += 5;\n'
+			+ '    acc -= 1;\n'
 			+ '    acc <<= 1;\n'
 			+ '    acc >>>= 1;\n'
+			+ '    acc++;\n'
+			+ '    ++acc;\n'
+			+ '    acc--;\n'
+			+ '    --acc;\n'
 			+ '  }\n'
 			+ '}\n';
 
@@ -36,26 +44,34 @@ class M14HihCompoundAssignIntegrationTest {
 		}
 		if (parsedMain == null) throw "missing parsed main()";
 
-		var sawPlusEq = false;
+		var plusEqCount = 0;
+		var minusEqCount = 0;
 		var sawShiftLeftEq = false;
 		var sawUnsignedShiftRightEq = false;
+		var sawBinaryPlusUnaryPlus = false;
 		for (stmt in HxFunctionDecl.getBody(parsedMain)) {
 			switch (stmt) {
 				case SExpr(EBinop(op, EIdent("acc"), _), _):
 					switch (op) {
 						case "+=":
-							sawPlusEq = true;
+							plusEqCount += 1;
+						case "-=":
+							minusEqCount += 1;
 						case "<<=":
 							sawShiftLeftEq = true;
 						case ">>>=":
 							sawUnsignedShiftRightEq = true;
 						case _:
 					}
+				case SVar("x", _, EBinop("+", EIdent("a"), EUnop("+", EIdent("b"))), _):
+					sawBinaryPlusUnaryPlus = true;
 				case _:
 			}
 		}
 
-		assertTrue(sawPlusEq, "parser should keep '+=' as EBinop");
+		assertTrue(plusEqCount == 3, "parser should lower explicit '+=' plus '++' forms to '+='");
+		assertTrue(minusEqCount == 3, "parser should lower explicit '-=' plus '--' forms to '-='");
+		assertTrue(sawBinaryPlusUnaryPlus, "parser should keep 'a + +b' as binary-plus with unary-plus rhs");
 		assertTrue(sawShiftLeftEq, "parser should keep '<<=' as EBinop");
 		assertTrue(sawUnsignedShiftRightEq, "parser should keep '>>>=' as EBinop");
 
