@@ -96,6 +96,8 @@ Current presets:
 - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
 - `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
 - `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
+  - currently covered: enum-tag switch lowering + basic `Type` reflection helpers (`resolveClass`, `getClassName`, `enumConstructor`, `enumIndex`, `enumParameters`)
+  - currently explicit unsupported: try/catch + throw/rethrow lowering (fails fast with a clear unsupported marker)
 - Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
 Examples:

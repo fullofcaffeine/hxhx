@@ -91,8 +91,65 @@ class JsBackend implements IBackend {
 		};
 	}
 
-	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>):Void {
+	static function simpleName(fullName:String):String {
+		final parts = fullName == null ? [] : fullName.split(".");
+		return parts.length == 0 ? fullName : parts[parts.length - 1];
+	}
+
+	static function emitRuntimePrelude(writer:JsWriter):Void {
+		writer.writeln("var __hx_classes = Object.create(null);");
+		writer.writeln("var Type = {");
+		writer.pushIndent();
+		writer.writeln("resolveClass: function (name) {");
+		writer.pushIndent();
+		writer.writeln("return Object.prototype.hasOwnProperty.call(__hx_classes, name) ? __hx_classes[name] : null;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("getClassName: function (cls) {");
+		writer.pushIndent();
+		writer.writeln("return (cls && cls.__hx_name != null) ? String(cls.__hx_name) : null;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("enumConstructor: function (value) {");
+		writer.pushIndent();
+		writer.writeln("if (value == null) return null;");
+		writer.writeln("if (typeof value === \"string\") return value;");
+		writer.writeln("if (typeof value === \"object\" && value.__hx_ctor != null) return String(value.__hx_ctor);");
+		writer.writeln("return null;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("enumIndex: function (value) {");
+		writer.pushIndent();
+		writer.writeln("if (value == null) return -1;");
+		writer.writeln("if (typeof value === \"number\") return value | 0;");
+		writer.writeln("if (typeof value === \"string\") return 0;");
+		writer.writeln("if (typeof value === \"object\" && typeof value.__hx_index === \"number\") return value.__hx_index | 0;");
+		writer.writeln("return -1;");
+		writer.popIndent();
+		writer.writeln("},");
+		writer.writeln("enumParameters: function (value) {");
+		writer.pushIndent();
+		writer.writeln("if (value != null && typeof value === \"object\" && Array.isArray(value.__hx_params)) return value.__hx_params.slice();");
+		writer.writeln("return [];");
+		writer.popIndent();
+		writer.writeln("}");
+		writer.popIndent();
+		writer.writeln("};");
+	}
+
+	static function emitClass(
+		writer:JsWriter,
+		unit:JsClassUnit,
+		classRefs:haxe.ds.StringMap<String>,
+		simpleNameRefs:haxe.ds.StringMap<String>
+	):Void {
 		writer.writeln("var " + unit.jsRef + " = {};");
+		writer.writeln(unit.jsRef + ".__hx_name = " + JsNameMangler.quoteString(unit.fullName) + ";");
+		writer.writeln("__hx_classes[" + JsNameMangler.quoteString(unit.fullName) + "] = " + unit.jsRef + ";");
+		final simple = simpleName(unit.fullName);
+		if (simpleNameRefs.get(simple) == unit.jsRef) {
+			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
+		}
 		final staticScope = new JsFunctionScope(classRefs);
 
 		for (field in HxClassDecl.getFields(unit.decl)) {
@@ -148,8 +205,10 @@ class JsBackend implements IBackend {
 			writer.writeln("\"use strict\";");
 		}
 
+		emitRuntimePrelude(writer);
+
 		for (unit in classes.units) {
-			emitClass(writer, unit, classes.bySimpleName);
+			emitClass(writer, unit, classes.bySimpleName, classes.bySimpleName);
 		}
 
 		final mainRef = resolveMainRef(context.mainModule, classes.bySimpleName, classes.byFullName);

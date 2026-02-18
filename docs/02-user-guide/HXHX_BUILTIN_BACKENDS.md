@@ -162,6 +162,28 @@ Current `hxhx` target presets:
   - status: available
   - behavior: enforces upstream-style CLI surface by rejecting hxhx-only flags (`--target`, `--hxhx-*`), while preserving normal extension mode when the flag is omitted
 
+### `js-native` semantics snapshot (MVP)
+
+Supported today (covered by `scripts/test-hxhx-targets.sh`):
+
+- statement-level `switch` lowering over enum-like tags (`Build`, `Run`, etc.) via Stage3 `HxSwitchPattern`
+- basic reflection helpers through a lightweight JS prelude:
+  - `Type.resolveClass(name)`
+  - `Type.getClassName(cls)`
+  - `Type.enumConstructor(value)`
+  - `Type.enumIndex(value)` (best-effort)
+  - `Type.enumParameters(value)` (best-effort)
+- single-file emit artifact + Stage3 run markers (`stage3=ok`, `artifact=...`, `run=ok`)
+
+Known unsupported semantics (explicit fail-fast behavior):
+
+- full try/catch + throw/rethrow lowering in the Stage3 JS emitter
+  - the fixture `JsNativeTryCatchMain` is intentionally expected to fail with
+    `js-native MVP does not support expression kind: EUnsupported(throw)` so
+    unsupported behavior remains visible in CI/logs
+- full Haxe enum runtime/model parity (constructors with parameters, exact enum index semantics)
+- full Haxe `Type` API parity beyond the helpers above
+
 Why this matters:
 
 - It is our first concrete linked-backend fast-path (`kind=builtin`) in the registry.

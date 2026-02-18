@@ -44,7 +44,7 @@ fi
 # freshly built host to a stable temp path so the rest of this script remains
 # deterministic.
 macrohost_tmp="$(mktemp -d)"
-trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}" "${strict_log:-}" "${strict_sep_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
+trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}" "${strict_log:-}" "${strict_sep_log:-}" "${trycatch_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
 HXHX_MACRO_HOST_EXE_STABLE="$macrohost_tmp/hxhx-macro-host"
 cp "$HXHX_MACRO_HOST_EXE" "$HXHX_MACRO_HOST_EXE_STABLE"
 chmod +x "$HXHX_MACRO_HOST_EXE_STABLE"
@@ -146,6 +146,48 @@ class JsNativeMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
+class JsNativeEnumReflectionMain {
+  static function main() {
+    var mode = Run;
+    var label = "none";
+    switch (mode) {
+      case Build:
+        label = "build";
+      case Run:
+        label = "run";
+      default:
+        label = "other";
+    }
+
+    var cls = Type.resolveClass("JsNativeEnumReflectionMain");
+    Sys.println("enum-switch:" + label);
+    Sys.println("class-name:" + Type.getClassName(cls));
+    Sys.println("enum-ctor:" + Type.enumConstructor(mode));
+    Sys.println("enum-params:" + Type.enumParameters(mode).length);
+  }
+}
+HX
+
+cat >"$tmpdir/src/JsNativeTryCatchMain.hx" <<'HX'
+class JsNativeTryCatchMain {
+  static function main() {
+    var msg = "start";
+    try {
+      throw "boom";
+    } catch (err:Dynamic) {
+      msg = "caught:" + err;
+      try {
+        throw err;
+      } catch (inner:Dynamic) {
+        msg = msg + "|rethrow:" + inner;
+      }
+    }
+    Sys.println(msg);
+  }
+}
+HX
+
 cat >"$tmpdir/src/StrictCliMain.hx" <<'HX'
 class StrictCliMain {
   static function main() {}
@@ -223,6 +265,25 @@ echo "$out" | grep -q "^artifact=$tmpdir/workdir/rel/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native:6$"
 test -f "$tmpdir/workdir/rel/main.js"
+
+echo "== Builtin fast-path target: js-native enum-switch + basic reflection helpers"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_enum_reflect/main.js" -cp "$tmpdir/src" -main JsNativeEnumReflectionMain --hxhx-out "$tmpdir/out_js_enum_reflect")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_enum_reflect/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^enum-switch:run$"
+echo "$out" | grep -q "^class-name:JsNativeEnumReflectionMain$"
+echo "$out" | grep -q "^enum-ctor:Run$"
+echo "$out" | grep -q "^enum-params:0$"
+test -f "$tmpdir/out_js_enum_reflect/main.js"
+
+echo "== Builtin fast-path target: js-native try/catch throw/rethrow is explicit unsupported"
+trycatch_log="$(mktemp)"
+if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_trycatch/main.js" -cp "$tmpdir/src" -main JsNativeTryCatchMain --hxhx-out "$tmpdir/out_js_trycatch" >"$trycatch_log" 2>&1; then
+  echo "Expected js-native try/catch throw/rethrow fixture to fail with explicit unsupported marker." >&2
+  exit 1
+fi
+grep -q "js-native MVP does not support expression kind: EUnsupported(throw)" "$trycatch_log"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"

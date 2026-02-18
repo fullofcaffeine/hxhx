@@ -367,6 +367,8 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
 - `--wait stdio` framed requests
 - `--wait <host:port>` + `--connect <host:port>` roundtrip request handling
 - instance-field roundtrip in full-body mode (`this.x = ...`, `return this.x`, `new Main().ping()`) with compile+run validation
+- js-native enum-switch + basic reflection helper smoke (`Type.resolveClass`, `Type.getClassName`, `Type.enumConstructor`, `Type.enumParameters`)
+- explicit js-native unsupported marker coverage for try/catch throw/rethrow lowering (`EUnsupported(throw)` fail-fast)
 - source-level Stage3 receiver-call regression (`other.add(n)` arity shape) is covered by `npm run test:m14:hih-emitter-receiver-call` (no stage0 bootstrap rebuild required)
 
 ## Two surfaces (design)
