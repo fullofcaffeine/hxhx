@@ -260,6 +260,16 @@ class JsNativeSwitchExprMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeArrayComprehensionMain.hx" <<'HX'
+class JsNativeArrayComprehensionMain {
+  static function main() {
+    var doubled = [for (i in 0...4) i * 2];
+    var shifted = [for (value in doubled) value + 1];
+    Sys.println("js-native-arr-comp:" + shifted.length + ":" + shifted[0] + ":" + shifted[3]);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeTryCatchMain.hx" <<'HX'
 class JsNativeTryCatchMain {
   static function main() {
@@ -409,6 +419,14 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_switch_expr/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native-switch-expr:2:b-ok$"
 test -f "$tmpdir/out_js_switch_expr/main.js"
+
+echo "== Builtin fast-path target: js-native array comprehensions"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_arr_comp/main.js" -cp "$tmpdir/src" -main JsNativeArrayComprehensionMain --hxhx-out "$tmpdir/out_js_arr_comp")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_arr_comp/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-arr-comp:4:1:7$"
+test -f "$tmpdir/out_js_arr_comp/main.js"
 
 echo "== Builtin fast-path target: js-native try/catch throw/rethrow is explicit unsupported"
 trycatch_log="$(mktemp)"

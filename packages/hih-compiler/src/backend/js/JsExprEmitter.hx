@@ -75,8 +75,8 @@ class JsExprEmitter {
 				unsupported("ETryCatchRaw");
 			case ERange(_, _):
 				unsupported("ERange");
-			case EArrayComprehension(_, _, _):
-				unsupported("EArrayComprehension");
+			case EArrayComprehension(name, iterable, yieldExpr):
+				emitArrayComprehension(name, iterable, yieldExpr, scope);
 			case ENew(typePath, args):
 				emitNew(typePath, args, scope);
 			case EUnsupported(raw):
@@ -175,6 +175,36 @@ class JsExprEmitter {
 		}
 		final nested = nestedScope(scope, lambdaLocals);
 		return "function(" + params.join(", ") + ") { return " + emit(body, nested) + "; }";
+	}
+
+	static function emitArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr, scope:JsEmitScope):String {
+		final out = new Array<String>();
+		final iterName = "__arr_comp_" + JsNameMangler.identifier(name);
+		final iterLocals = new haxe.ds.StringMap<String>();
+		iterLocals.set(name, iterName);
+		final iterScope = nestedScope(scope, iterLocals);
+
+		out.push("(function () {");
+		out.push("var __arr_comp_out = [];");
+
+		switch (iterable) {
+			case ERange(startExpr, endExpr):
+				out.push("var __arr_comp_start = " + emit(startExpr, scope) + ";");
+				out.push("var __arr_comp_end = " + emit(endExpr, scope) + ";");
+				out.push("for (var " + iterName + " = __arr_comp_start; " + iterName + " < __arr_comp_end; " + iterName + "++) {");
+				out.push("__arr_comp_out.push(" + emit(yieldExpr, iterScope) + ");");
+				out.push("}");
+			case _:
+				out.push("var __arr_comp_iter = " + emit(iterable, scope) + ";");
+				out.push("for (var __arr_comp_i = 0; __arr_comp_i < __arr_comp_iter.length; __arr_comp_i++) {");
+				out.push("var " + iterName + " = __arr_comp_iter[__arr_comp_i];");
+				out.push("__arr_comp_out.push(" + emit(yieldExpr, iterScope) + ");");
+				out.push("}");
+		}
+
+		out.push("return __arr_comp_out;");
+		out.push("})()");
+		return out.join(" ");
 	}
 
 	static function emitSwitchExpr(

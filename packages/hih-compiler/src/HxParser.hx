@@ -702,7 +702,22 @@
 				acceptKeyword(KFinal);
 				final name = readIdent("comprehension variable name");
 				expect(TKeyword(KIn), "'in'");
-				final iterable = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+
+				inline function isTripleDotStart():Bool {
+					return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+				}
+
+				// Match `for (i in start...end)` in comprehensions (same bring-up shape as statement for-in).
+				final startExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof) || isTripleDotStart());
+				var iterable:HxExpr = startExpr;
+				if (isTripleDotStart()) {
+					expect(TDot, "'.'");
+					expect(TDot, "'.'");
+					expect(TDot, "'.'");
+					final endExpr = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					iterable = ERange(startExpr, endExpr);
+				}
+
 				expect(TRParen, "')'");
 				final yieldExpr = parseExpr(() -> cur.kind.match(TOther("]".code)) || cur.kind.match(TEof));
 				if (cur.kind.match(TOther("]".code))) bump();
