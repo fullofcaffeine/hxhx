@@ -77,8 +77,8 @@ class JsExprEmitter {
 				unsupported("ERange");
 			case EArrayComprehension(_, _, _):
 				unsupported("EArrayComprehension");
-			case ENew(_, _):
-				unsupported("ENew");
+			case ENew(typePath, args):
+				emitNew(typePath, args, scope);
 			case EUnsupported(raw):
 				unsupported("EUnsupported(" + raw + ")");
 		}
@@ -108,6 +108,36 @@ class JsExprEmitter {
 		final calleeJs = emit(callee, scope);
 		final argsJs = args.map(a -> emit(a, scope)).join(", ");
 		return calleeJs + "(" + argsJs + ")";
+	}
+
+	static function resolveTypePath(typePath:String, scope:JsEmitScope):Null<String> {
+		if (typePath == null || typePath.length == 0) return null;
+		if (scope != null) {
+			final direct = scope.resolveClassRef(typePath);
+			if (direct != null) return direct;
+			final parts = typePath.split(".");
+			if (parts.length > 0) {
+				final simple = scope.resolveClassRef(parts[parts.length - 1]);
+				if (simple != null) return simple;
+			}
+		}
+		return null;
+	}
+
+	static function emitNew(typePath:String, args:Array<HxExpr>, scope:JsEmitScope):String {
+		final argsJs = args.map(a -> emit(a, scope)).join(", ");
+		switch (typePath) {
+			case "Array":
+				if (args.length == 0) return "[]";
+				return "new Array(" + argsJs + ")";
+			case _:
+		}
+
+		final ctor = resolveTypePath(typePath, scope);
+		if (ctor == null) {
+			unsupported("ENew(" + typePath + ")");
+		}
+		return "new " + ctor + "(" + argsJs + ")";
 	}
 
 	static function emitBinop(op:String, left:HxExpr, right:HxExpr, scope:JsEmitScope):String {

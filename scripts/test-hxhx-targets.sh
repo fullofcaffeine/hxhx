@@ -203,6 +203,17 @@ class JsNativeIncDecMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeNewArrayMain.hx" <<'HX'
+class JsNativeNewArrayMain {
+  static function main() {
+    var xs = new Array<Int>();
+    xs.push(7);
+    xs.push(9);
+    Sys.println("js-native-new-array:" + xs.length + ":" + xs[0] + ":" + xs[1]);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
 class JsNativeEnumReflectionMain {
   static function main() {
@@ -339,6 +350,14 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_incdec/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native-incdec:4:1:1$"
 test -f "$tmpdir/out_js_native_incdec/main.js"
+
+echo "== Builtin fast-path target: js-native new Array() expressions"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_new_array/main.js" -cp "$tmpdir/src" -main JsNativeNewArrayMain --hxhx-out "$tmpdir/out_js_native_new_array")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_new_array/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-new-array:2:7:9$"
+test -f "$tmpdir/out_js_native_new_array/main.js"
 
 echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"
 mkdir -p "$tmpdir/workdir"
