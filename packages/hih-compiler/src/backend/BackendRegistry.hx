@@ -79,9 +79,15 @@ class BackendRegistry {
 		dynamicRegistrations.push(spec);
 	}
 
-	public static function registerProvider(provider:ITargetBackendProvider):Int {
+	public static function registerProvider(provider:Dynamic):Int {
 		if (provider == null) return 0;
-		final regs = provider.registrations();
+		final regs:Array<BackendRegistrationSpec> = #if reflaxe
+			{
+				cast provider.registrations(provider)();
+			}
+		#else
+			cast provider.registrations();
+		#end
 		if (regs == null || regs.length == 0) return 0;
 		for (reg in regs) register(reg);
 		return regs.length;

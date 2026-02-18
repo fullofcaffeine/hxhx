@@ -12,20 +12,25 @@ if ! command -v ocamlopt >/dev/null 2>&1; then
   echo "Skipping hxhx Stage3 tests: ocamlopt not found on PATH."
 fi
 
-echo "== Building hxhx"
-HXHX_BIN_RAW="$(
-  HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-1}" \
-  "$ROOT/scripts/hxhx/build-hxhx.sh"
-)"
-HXHX_BIN="$(printf "%s\n" "$HXHX_BIN_RAW" | tail -n 1)"
-if [ "$HXHX_BIN_RAW" != "$HXHX_BIN" ]; then
-  echo "Regression: build-hxhx.sh must print only the binary path on stdout." >&2
-  echo "build-hxhx.sh stdout was:" >&2
-  printf "%s\n" "$HXHX_BIN_RAW" >&2
-  exit 1
+HXHX_BIN="${HXHX_BIN:-}"
+if [ -n "$HXHX_BIN" ]; then
+  echo "== Using prebuilt hxhx binary: $HXHX_BIN"
+else
+  echo "== Building hxhx"
+  HXHX_BIN_RAW="$(
+    HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-1}" \
+    "$ROOT/scripts/hxhx/build-hxhx.sh"
+  )"
+  HXHX_BIN="$(printf "%s\n" "$HXHX_BIN_RAW" | tail -n 1)"
+  if [ "$HXHX_BIN_RAW" != "$HXHX_BIN" ]; then
+    echo "Regression: build-hxhx.sh must print only the binary path on stdout." >&2
+    echo "build-hxhx.sh stdout was:" >&2
+    printf "%s\n" "$HXHX_BIN_RAW" >&2
+    exit 1
+  fi
 fi
 if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
-  echo "Missing built executable from build-hxhx.sh (expected a path to an .exe)." >&2
+  echo "Missing hxhx executable (set HXHX_BIN or allow build-hxhx.sh to produce one)." >&2
   exit 1
 fi
 

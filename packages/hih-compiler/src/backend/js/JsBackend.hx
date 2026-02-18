@@ -7,7 +7,6 @@ import backend.EmitResult;
 import backend.GenIrProgram;
 import backend.IBackend;
 import backend.ITargetBackendProvider;
-import backend.ITargetCore;
 import backend.TargetDescriptor;
 import backend.TargetCoreBackend;
 
@@ -93,12 +92,17 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 		return delegate.capabilities();
 	}
 
-	public static function targetCore():ITargetCore {
+	public static function targetCore():JsTargetCore {
 		return new JsTargetCore();
 	}
 
+	public static function emitBridge(backend:JsBackend, program:GenIrProgram, context:BackendContext):EmitResult {
+		return backend.emit(program, context);
+	}
+
 	public function new() {
-		delegate = new TargetCoreBackend(descriptor(), targetCore());
+		final core = targetCore();
+		delegate = new TargetCoreBackend(descriptor(), function(program, context) return core.emit(program, context));
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
@@ -106,11 +110,18 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 	}
 
 	public function registrations():Array<BackendRegistrationSpec> {
+		return providerRegistrations();
+	}
+
+	public static function providerRegistrations():Array<BackendRegistrationSpec> {
 		final provided = providerDescriptor();
 		return [
 			{
 				descriptor: provided,
-				create: function() return new TargetCoreBackend(provided, targetCore())
+				create: function() {
+					final core = targetCore();
+					return new TargetCoreBackend(provided, function(program, context) return core.emit(program, context));
+				}
 			}
 		];
 	}

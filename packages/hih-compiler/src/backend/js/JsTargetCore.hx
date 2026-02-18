@@ -51,8 +51,9 @@ class JsTargetCore implements ITargetCore {
 		final bySimpleName = new haxe.ds.StringMap<String>();
 		final byFullName = new haxe.ds.StringMap<String>();
 		final units = new Array<JsClassUnit>();
+		final typedModules:Array<TypedModule> = program.getTypedModules();
 
-		for (typed in program.getTypedModules()) {
+		for (typed in typedModules) {
 			final pm = typed.getParsed();
 			final decl = pm.getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
@@ -212,4 +213,3 @@ class JsTargetCore implements ITargetCore {
 		return new EmitResult(outputPath, [new EmitArtifact("entry_js", outputPath)], false);
 	}
 }
-

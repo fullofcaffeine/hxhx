@@ -42,4 +42,3 @@ class OcamlTargetCore implements ITargetCore {
 		);
 	}
 }
-

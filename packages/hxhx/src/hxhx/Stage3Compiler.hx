@@ -7,9 +7,11 @@ import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
 import backend.BackendContext;
+import backend.EmitResult;
 import backend.BackendRegistry;
-import backend.IBackend;
-import backend.ITargetBackendProvider;
+import backend.TargetCoreBackend;
+import backend.js.JsBackend;
+import backend.ocaml.OcamlStage3Backend;
 
 private typedef HaxelibSpec = {
 	/**
@@ -172,8 +174,31 @@ class Stage3Compiler {
 		How
 		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
 	**/
-	static function resolveBuiltinBackend(backendId:String):IBackend {
+	static function resolveBuiltinBackend(backendId:String):Dynamic {
 		return BackendRegistry.requireForTarget(backendId);
+	}
+
+	static function emitWithBackend(backendId:String, backend:Dynamic, expanded:Dynamic, context:BackendContext):EmitResult {
+		#if reflaxe
+		if (Std.isOfType(backend, TargetCoreBackend)) {
+			return TargetCoreBackend.emitBridge(cast backend, expanded, context);
+		}
+		if (Std.isOfType(backend, JsBackend)) {
+			return JsBackend.emitBridge(cast backend, expanded, context);
+		}
+		if (Std.isOfType(backend, OcamlStage3Backend)) {
+			return OcamlStage3Backend.emitBridge(cast backend, expanded, context);
+		}
+		final emitFn:Dynamic = Reflect.field(backend, "emit");
+		if (emitFn == null) throw "backend missing emit() method: " + backendId;
+		try {
+			return cast emitFn(backend, expanded, context);
+		} catch (_:Dynamic) {
+			return cast emitFn(expanded, context);
+		}
+		#else
+		return cast backend.emit(expanded, context);
+		#end
 	}
 
 	/**
@@ -1022,21 +1047,32 @@ class Stage3Compiler {
 		var totalRegistered = 0;
 
 		for (typePath in providerTypes) {
+			if (typePath == "backend.js.JsBackend") {
+				final regs = JsBackend.providerRegistrations();
+				for (reg in regs) BackendRegistry.register(reg);
+				totalRegistered += regs.length;
+				if (trace) Sys.println("backend_provider[" + typePath + "]=" + regs.length);
+				continue;
+			}
+
 			final cls = Type.resolveClass(typePath);
 			if (cls == null) throw "backend provider type not found: " + typePath;
-
-			final instance = try {
-				Type.createInstance(cls, []);
-			} catch (e:Dynamic) {
-				throw "backend provider type could not be instantiated (" + typePath + "): " + Std.string(e);
+			var registered = 0;
+			final staticRegsFn = Reflect.field(cls, "providerRegistrations");
+			if (staticRegsFn != null) {
+				final regs:Array<backend.BackendRegistrationSpec> = cast Reflect.callMethod(cls, staticRegsFn, []);
+				if (regs != null) {
+					for (reg in regs) BackendRegistry.register(reg);
+					registered = regs.length;
+				}
+			} else {
+				final instance = try {
+					Type.createInstance(cls, []);
+				} catch (e:Dynamic) {
+					throw "backend provider type could not be instantiated (" + typePath + "): " + Std.string(e);
+				}
+				registered = BackendRegistry.registerProvider(instance);
 			}
-
-			if (!Std.isOfType(instance, ITargetBackendProvider)) {
-				throw "backend provider type does not implement backend.ITargetBackendProvider: " + typePath;
-			}
-
-			final provider:ITargetBackendProvider = cast instance;
-			final registered = BackendRegistry.registerProvider(provider);
 			totalRegistered += registered;
 			if (trace) {
 				Sys.println("backend_provider[" + typePath + "]=" + registered);
@@ -1929,15 +1965,22 @@ class Stage3Compiler {
 				closeMacroSession();
 				return error("backend setup failed: " + Std.string(e));
 			}
+			final selected = BackendRegistry.descriptorForTarget(backendId);
 			if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
-				final selected = BackendRegistry.descriptorForTarget(backendId);
 				if (selected == null) {
 					Sys.println("backend_selected_impl=<unknown>");
 				} else {
 					Sys.println("backend_selected_impl=" + selected.implId);
 				}
 			}
-			final backendCaps = backend.capabilities();
+			if (selected == null) {
+				closeMacroSession();
+				return error("backend descriptor not found after selection: " + backendId);
+			}
+			final backendCaps = selected.capabilities;
+			final supportsNoEmit:Bool = backendCaps.supportsNoEmit == true;
+			final supportsCustomOutputFile:Bool = backendCaps.supportsCustomOutputFile == true;
+			final supportsBuildExecutable:Bool = backendCaps.supportsBuildExecutable == true;
 
 			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
@@ -1949,7 +1992,7 @@ class Stage3Compiler {
 			// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
 			// coverage without being blocked by the bootstrap emitter/codegen.
 			if (noEmit) {
-				if (!backendCaps.supportsNoEmit) {
+				if (!supportsNoEmit) {
 					closeMacroSession();
 					return error("backend does not support --hxhx-no-emit: " + backendId);
 				}
@@ -2012,13 +2055,13 @@ class Stage3Compiler {
 			}
 
 			final emitted = try {
-				final outputFileHint = if (backendCaps.supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
+				final outputFileHint = if (supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
 					Path.isAbsolute(jsOutputHintRaw) ? Path.normalize(jsOutputHintRaw) : absFromCwd(cwd, jsOutputHintRaw);
 				} else {
 					null;
 				}
-				final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, backendCaps.supportsBuildExecutable, definesMap);
-				backend.emit(expanded, context);
+				final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, supportsBuildExecutable, definesMap);
+				emitWithBackend(backendId, backend, expanded, context);
 			} catch (e:Dynamic) {
 				closeMacroSession();
 				return error("emit failed: " + Std.string(e));

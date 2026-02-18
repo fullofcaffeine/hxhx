@@ -19,11 +19,15 @@ package backend;
 **/
 class TargetCoreBackend implements IBackend {
 	final backendDescriptor:TargetDescriptor;
-	final targetCore:ITargetCore;
+	final emitImpl:GenIrProgram->BackendContext->EmitResult;
 
-	public function new(backendDescriptor:TargetDescriptor, targetCore:ITargetCore) {
+	public static function emitBridge(backend:TargetCoreBackend, program:GenIrProgram, context:BackendContext):EmitResult {
+		return backend.emit(program, context);
+	}
+
+	public function new(backendDescriptor:TargetDescriptor, emitImpl:GenIrProgram->BackendContext->EmitResult) {
 		this.backendDescriptor = backendDescriptor;
-		this.targetCore = targetCore;
+		this.emitImpl = emitImpl;
 	}
 
 	public function id():String {
@@ -39,7 +43,6 @@ class TargetCoreBackend implements IBackend {
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
-		return targetCore.emit(program, context);
+		return emitImpl(program, context);
 	}
 }
-

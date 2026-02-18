@@ -4,7 +4,6 @@ import backend.BackendCapabilities;
 import backend.BackendContext;
 import backend.EmitResult;
 import backend.GenIrProgram;
-import backend.ITargetCore;
 import backend.IBackend;
 import backend.TargetDescriptor;
 import backend.TargetCoreBackend;
@@ -69,12 +68,17 @@ class OcamlStage3Backend implements IBackend {
 		return delegate.capabilities();
 	}
 
-	public static function targetCore():ITargetCore {
+	public static function targetCore():OcamlTargetCore {
 		return new OcamlTargetCore();
 	}
 
+	public static function emitBridge(backend:OcamlStage3Backend, program:GenIrProgram, context:BackendContext):EmitResult {
+		return backend.emit(program, context);
+	}
+
 	public function new() {
-		delegate = new TargetCoreBackend(descriptor(), targetCore());
+		final core = targetCore();
+		delegate = new TargetCoreBackend(descriptor(), function(program, context) return core.emit(program, context));
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {

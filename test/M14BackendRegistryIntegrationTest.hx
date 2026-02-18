@@ -1,8 +1,5 @@
 import backend.BackendRegistry;
-import backend.BackendContext;
 import backend.BackendRegistrationSpec;
-import backend.EmitResult;
-import backend.GenIrProgram;
 import backend.ITargetBackendProvider;
 import backend.TargetCoreBackend;
 
@@ -59,18 +56,6 @@ class M14BackendRegistryIntegrationTest {
 	}
 }
 
-private class _M14NoopCore implements backend.ITargetCore {
-	public function new() {}
-
-	public function coreId():String {
-		return "m14.noop.core";
-	}
-
-	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
-		throw "noop core should not emit in this test";
-	}
-}
-
 private class _M14PluginProvider implements ITargetBackendProvider {
 	public function new() {}
 
@@ -95,7 +80,10 @@ private class _M14PluginProvider implements ITargetBackendProvider {
 		return [
 			{
 				descriptor: descriptor,
-				create: function() return new TargetCoreBackend(descriptor, new _M14NoopCore())
+				create: function() return new TargetCoreBackend(
+					descriptor,
+					function(_program, _context) throw "noop core should not emit in this test"
+				)
 			}
 		];
 	}

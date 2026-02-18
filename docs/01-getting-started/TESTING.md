@@ -166,6 +166,8 @@ Notes:
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
 - `npm run test:hxhx-targets` now also validates the runtime delegation guard:
   `HXHX_FORBID_STAGE0=1` must block shim delegation while still allowing builtin Stage3 targets.
+- For quicker local reruns after a successful build, you can reuse an existing binary:
+  `HXHX_BIN=packages/hxhx/out/_build/default/out.bc npm run test:hxhx-targets`.
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.
