@@ -86,6 +86,7 @@ Optional flags:
 Linked Stage3 backends (`ocaml-stage3`, `js-native`) are now selected through a canonical builtin backend registry (`packages/hih-compiler/src/backend/BackendRegistry.hx`) with explicit descriptors (`TargetDescriptor`) and compatibility requirements (`TargetRequirements`).
 Stage3 backend input is now named as a codegen contract (`GenIrProgram` v0 alias), and builtin backends now split emission into reusable target-core pilots (`packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx`, `packages/hih-compiler/src/backend/js/JsTargetCore.hx`) to support plugin→builtin promotion without codegen rewrites.
 The registry also has a dynamic provider seam (`registerProvider`) so plugin wrappers can participate in the same deterministic precedence model as builtins.
+Stage3 loads provider declarations per request from `HXHX_BACKEND_PROVIDERS` / `-D hxhx_backend_provider=...` before backend resolution, and falls back to builtin registrations when none are declared.
 
 ### Naming: `hih-*` vs `hxhx`
 

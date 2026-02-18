@@ -9,6 +9,7 @@ import hxhx.macro.MacroHostClient.MacroHostSession;
 import backend.BackendContext;
 import backend.BackendRegistry;
 import backend.IBackend;
+import backend.ITargetBackendProvider;
 
 private typedef HaxelibSpec = {
 	/**
@@ -955,8 +956,100 @@ class Stage3Compiler {
 		return out;
 	}
 
-		static function isBuiltinMacroExpr(expr:String):Bool {
-			final e = trim(expr);
+	/**
+		Collect dynamic backend provider entrypoint type names for this Stage3 request.
+
+		Why
+		- Plugin/bundled targets need a request-scoped way to contribute backend registrations
+		  before Stage3 resolves `--hxhx-backend`.
+		- We support both process-level and compile-level declarations so callers can wire
+		  providers from CI scripts or `-D` flags.
+
+		Supported declarations
+		- `HXHX_BACKEND_PROVIDERS=TypeA;TypeB`
+		- `-D hxhx_backend_provider=TypeA`
+		- `-D hxhx_backend_providers=TypeA;TypeB`
+		- `-D hxhx.backend.provider=TypeA`
+
+		How
+		- Parse delimited values (`;` or `,`) and dedupe while preserving order.
+	**/
+	static function collectBackendProviderTypeNames(rawDefines:Array<String>):Array<String> {
+		final out = parseDelimitedList(Sys.getEnv("HXHX_BACKEND_PROVIDERS"));
+		if (rawDefines == null) return out;
+
+		inline function pushUnique(values:Array<String>):Void {
+			for (v in values) if (out.indexOf(v) == -1) out.push(v);
+		}
+
+		for (raw in rawDefines) {
+			final def = trim(raw);
+			if (def.length == 0) continue;
+			final eq = def.indexOf("=");
+			final name = eq == -1 ? def : trim(def.substr(0, eq));
+			final supportsProviderDecl = name == "hxhx_backend_provider"
+				|| name == "hxhx_backend_providers"
+				|| name == "hxhx.backend.provider";
+			if (!supportsProviderDecl) continue;
+			if (eq == -1 || eq + 1 >= def.length) continue;
+			pushUnique(parseDelimitedList(def.substr(eq + 1)));
+		}
+
+		return out;
+	}
+
+	/**
+		Load request-scoped dynamic backend providers into the canonical Stage3 registry.
+
+		Why
+		- Stage3 backend resolution should not rely on test-only direct calls to
+		  `BackendRegistry.registerProvider(...)`.
+		- We need deterministic fallback behavior: each request starts from builtin-only
+		  registrations, then applies explicit provider declarations.
+
+		How
+		- Clear previous dynamic registrations at the start of every request.
+		- Resolve provider type names from env/defines, instantiate each provider, and register it.
+		- Any configuration/instantiation failure is treated as a hard setup error.
+	**/
+	static function loadDynamicBackendProviders(rawDefines:Array<String>):Void {
+		BackendRegistry.clearDynamicRegistrations();
+		final providerTypes = collectBackendProviderTypeNames(rawDefines);
+		if (providerTypes.length == 0) return;
+
+		final trace = isTrueEnv("HXHX_TRACE_BACKEND_PROVIDERS");
+		providerTypes.sort(function(a, b) return a < b ? -1 : (a > b ? 1 : 0));
+		var totalRegistered = 0;
+
+		for (typePath in providerTypes) {
+			final cls = Type.resolveClass(typePath);
+			if (cls == null) throw "backend provider type not found: " + typePath;
+
+			final instance = try {
+				Type.createInstance(cls, []);
+			} catch (e:Dynamic) {
+				throw "backend provider type could not be instantiated (" + typePath + "): " + Std.string(e);
+			}
+
+			if (!Std.isOfType(instance, ITargetBackendProvider)) {
+				throw "backend provider type does not implement backend.ITargetBackendProvider: " + typePath;
+			}
+
+			final provider:ITargetBackendProvider = cast instance;
+			final registered = BackendRegistry.registerProvider(provider);
+			totalRegistered += registered;
+			if (trace) {
+				Sys.println("backend_provider[" + typePath + "]=" + registered);
+			}
+		}
+
+		if (trace) {
+			Sys.println("backend_provider_total=" + totalRegistered);
+		}
+	}
+
+			static function isBuiltinMacroExpr(expr:String):Bool {
+				final e = trim(expr);
 			// Builtins compiled into the macro host binary (and/or treated as "no-op builtins" during bring-up).
 			//
 			// Why
@@ -1811,17 +1904,40 @@ class Stage3Compiler {
 
 		// Collect generated modules after hooks.
 		final generated = new Array<MacroExpandedModule.GeneratedOcamlModule>();
-		for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
-			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
-		}
-		final expanded = MacroStage.expandProgram(typedModules, generated);
-		final backend = try {
-			resolveBuiltinBackend(backendId);
-		} catch (e:Dynamic) {
-			closeMacroSession();
-			return error("backend setup failed: " + Std.string(e));
-		}
-		final backendCaps = backend.capabilities();
+			for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
+				generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
+			}
+			final expanded = MacroStage.expandProgram(typedModules, generated);
+			final providerDefines = allDefines.copy();
+			for (name in hxhx.macro.MacroState.listDefineNames()) {
+				final value = hxhx.macro.MacroState.definedValue(name);
+				if (value == null || value.length == 0 || value == "1") {
+					providerDefines.push(name);
+				} else {
+					providerDefines.push(name + "=" + value);
+				}
+			}
+			try {
+				loadDynamicBackendProviders(providerDefines);
+			} catch (e:Dynamic) {
+				closeMacroSession();
+				return error("backend provider setup failed: " + Std.string(e));
+			}
+			final backend = try {
+				resolveBuiltinBackend(backendId);
+			} catch (e:Dynamic) {
+				closeMacroSession();
+				return error("backend setup failed: " + Std.string(e));
+			}
+			if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
+				final selected = BackendRegistry.descriptorForTarget(backendId);
+				if (selected == null) {
+					Sys.println("backend_selected_impl=<unknown>");
+				} else {
+					Sys.println("backend_selected_impl=" + selected.implId);
+				}
+			}
+			final backendCaps = backend.capabilities();
 
 			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {

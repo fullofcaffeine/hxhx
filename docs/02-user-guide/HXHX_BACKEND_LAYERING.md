@@ -114,6 +114,7 @@ Pilot status:
 - `packages/hih-compiler/src/backend/js/JsTargetCore.hx` now applies the same pattern for JS.
 - `OcamlStage3Backend` and `JsBackend` now delegate emission to their target-core classes, proving wrapper/core separation without behavior changes.
 - `BackendRegistry` now supports a dynamic provider seam (`register`, `registerProvider`, `clearDynamicRegistrations`) so plugin wrappers can join builtin resolution without custom selection paths.
+- `Stage3Compiler` now loads provider declarations per request (`HXHX_BACKEND_PROVIDERS` / `-D hxhx_backend_provider=...`) before resolving `--hxhx-backend`, so fallback to builtins stays deterministic when no providers are declared.
 
 ## Why this helps immediately
 

@@ -119,6 +119,15 @@ Dynamic registration notes:
   the same precedence logic as builtins.
 - Selection rule remains global and deterministic: higher `priority` wins, then `implId`
   lexical tie-break.
+- Stage3 now resolves dynamic providers per request (before backend selection) from:
+  - `HXHX_BACKEND_PROVIDERS=TypeA;TypeB`
+  - `-D hxhx_backend_provider=TypeA`
+  - `-D hxhx_backend_providers=TypeA;TypeB`
+  - `-D hxhx.backend.provider=TypeA`
+- Fallback behavior is explicit: if no provider declarations are present, Stage3 uses builtin
+  registrations only (`BackendRegistry.clearDynamicRegistrations()` runs per request).
+- Optional diagnostics: `HXHX_TRACE_BACKEND_SELECTION=1` prints selected `implId`, and
+  `HXHX_TRACE_BACKEND_PROVIDERS=1` prints provider registration counts.
 
 ### Injection rules (important for predictable UX)
 

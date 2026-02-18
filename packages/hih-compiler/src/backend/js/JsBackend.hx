@@ -2,9 +2,11 @@ package backend.js;
 
 import backend.BackendCapabilities;
 import backend.BackendContext;
+import backend.BackendRegistrationSpec;
 import backend.EmitResult;
 import backend.GenIrProgram;
 import backend.IBackend;
+import backend.ITargetBackendProvider;
 import backend.ITargetCore;
 import backend.TargetDescriptor;
 import backend.TargetCoreBackend;
@@ -29,11 +31,13 @@ import backend.TargetCoreBackend;
 	- Keep output deterministic and readable.
 	- Keep unsupported behavior explicit (throws with actionable error).
 **/
-class JsBackend implements IBackend {
+class JsBackend implements IBackend implements ITargetBackendProvider {
 	public static inline var TARGET_ID = "js-native";
 	public static inline var IMPL_ID = "builtin/js-native";
 	public static inline var ABI_VERSION = 1;
 	public static inline var PRIORITY = 100;
+	public static inline var PROVIDER_IMPL_ID = "provider/js-native-wrapper";
+	public static inline var PROVIDER_PRIORITY = 200;
 
 	final delegate:TargetCoreBackend;
 
@@ -52,6 +56,22 @@ class JsBackend implements IBackend {
 			abiVersion: ABI_VERSION,
 			priority: PRIORITY,
 			description: "Native JS backend (MVP)",
+			capabilities: capabilitiesStatic(),
+			requires: {
+				genIrVersion: 1,
+				macroApiVersion: 1,
+				hostCaps: ["filesystem", "process", "node"]
+			}
+		};
+	}
+
+	public static function providerDescriptor():TargetDescriptor {
+		return {
+			id: TARGET_ID,
+			implId: PROVIDER_IMPL_ID,
+			abiVersion: ABI_VERSION,
+			priority: PROVIDER_PRIORITY,
+			description: "JS backend provider wrapper (dynamic)",
 			capabilities: capabilitiesStatic(),
 			requires: {
 				genIrVersion: 1,
@@ -83,5 +103,15 @@ class JsBackend implements IBackend {
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		return delegate.emit(program, context);
+	}
+
+	public function registrations():Array<BackendRegistrationSpec> {
+		final provided = providerDescriptor();
+		return [
+			{
+				descriptor: provided,
+				create: function() return new TargetCoreBackend(provided, targetCore())
+			}
+		];
 	}
 }

@@ -257,7 +257,13 @@ fi
 grep -q 'Target "flash" is not supported in this implementation' "$strict_log"
 
 echo "== Builtin fast-path target: linked JS backend preset (no-emit)"
-out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_fast")"
+out="$(HXHX_TRACE_BACKEND_SELECTION=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_fast")"
+echo "$out" | grep -q "^backend_selected_impl=builtin/js-native$"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
+
+echo "== Builtin fast-path target: dynamic provider entrypoint can override backend selection"
+out="$(HXHX_TRACE_BACKEND_SELECTION=1 HXHX_BACKEND_PROVIDERS=backend.js.JsBackend HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_provider")"
+echo "$out" | grep -q "^backend_selected_impl=provider/js-native-wrapper$"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Builtin fast-path target: linked JS backend emits and runs"
