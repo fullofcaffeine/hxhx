@@ -41,6 +41,7 @@
 		var cur:HxToken;
 		var peeked1:Null<HxToken> = null;
 		var peeked2:Null<HxToken> = null;
+		var peeked3:Null<HxToken> = null;
 		var capturedReturnStringLiteral:String = "";
 
 		static function keywordText(k:HxKeyword):String {
@@ -153,7 +154,8 @@
 		if (peeked1 != null) {
 			cur = peeked1;
 			peeked1 = peeked2;
-			peeked2 = null;
+			peeked2 = peeked3;
+			peeked3 = null;
 		} else {
 			cur = lex.next();
 		}
@@ -206,12 +208,23 @@
 		return peeked2;
 	}
 
+	inline function peek3():HxToken {
+		if (peeked1 == null) peeked1 = lex.next();
+		if (peeked2 == null) peeked2 = lex.next();
+		if (peeked3 == null) peeked3 = lex.next();
+		return peeked3;
+	}
+
 	inline function peekKind():HxTokenKind {
 		return peek().kind;
 	}
 
 	inline function peekKind2():HxTokenKind {
 		return peek2().kind;
+	}
+
+	inline function peekKind3():HxTokenKind {
+		return peek3().kind;
 	}
 
 	function fail<T>(message:String):T {
@@ -765,7 +778,7 @@
 
 	static function binopPrec(op:String):Int {
 		return switch (op) {
-			case "=": 1;
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=": 1;
 			case "?": 2;
 			case "||": 2;
 			case "|": 2;
@@ -782,8 +795,17 @@
 		}
 	}
 
+	static function isAssignmentBinop(op:String):Bool {
+		return switch (op) {
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
+				true;
+			case _:
+				false;
+		}
+	}
+
 	static function isRightAssoc(op:String):Bool {
-		return op == "=";
+		return isAssignmentBinop(op);
 	}
 
 	function parsePostfixExpr(stop:()->Bool):HxExpr {
@@ -900,6 +922,14 @@
 					false;
 			}
 		}
+		inline function next3IsOther(code:Int):Bool {
+			return switch (peekKind3()) {
+				case TOther(c) if (c == code):
+					true;
+				case _:
+					false;
+			}
+		}
 		return switch (cur.kind) {
 			case TOther(c):
 				switch (c) {
@@ -909,32 +939,44 @@
 						nextIsOther("=".code) ? {op: "!=", len: 2} : null;
 					case "<".code:
 						if (nextIsOther("<".code)) {
-							{op: "<<", len: 2};
+							next2IsOther("=".code) ? {op: "<<=", len: 3} : {op: "<<", len: 2};
 						} else {
 							nextIsOther("=".code) ? {op: "<=", len: 2} : {op: "<", len: 1};
 						}
 					case ">".code:
 						if (nextIsOther(">".code)) {
-							next2IsOther(">".code) ? {op: ">>>", len: 3} : {op: ">>", len: 2};
+							if (next2IsOther(">".code)) {
+								next3IsOther("=".code) ? {op: ">>>=", len: 4} : {op: ">>>", len: 3};
+							} else {
+								next2IsOther("=".code) ? {op: ">>=", len: 3} : {op: ">>", len: 2};
+							}
 						} else {
 							nextIsOther("=".code) ? {op: ">=", len: 2} : {op: ">", len: 1};
 						}
 					case "&".code:
-						nextIsOther("&".code) ? {op: "&&", len: 2} : {op: "&", len: 1};
+						if (nextIsOther("&".code)) {
+							{op: "&&", len: 2};
+						} else {
+							nextIsOther("=".code) ? {op: "&=", len: 2} : {op: "&", len: 1};
+						}
 					case "|".code:
-						nextIsOther("|".code) ? {op: "||", len: 2} : {op: "|", len: 1};
+						if (nextIsOther("|".code)) {
+							{op: "||", len: 2};
+						} else {
+							nextIsOther("=".code) ? {op: "|=", len: 2} : {op: "|", len: 1};
+						}
 					case "^".code:
-						{op: "^", len: 1};
+						nextIsOther("=".code) ? {op: "^=", len: 2} : {op: "^", len: 1};
 					case "+".code:
-						{op: "+", len: 1};
+						nextIsOther("=".code) ? {op: "+=", len: 2} : {op: "+", len: 1};
 					case "-".code:
-						{op: "-", len: 1};
+						nextIsOther("=".code) ? {op: "-=", len: 2} : {op: "-", len: 1};
 					case "*".code:
-						{op: "*", len: 1};
+						nextIsOther("=".code) ? {op: "*=", len: 2} : {op: "*", len: 1};
 					case "/".code:
-						{op: "/", len: 1};
+						nextIsOther("=".code) ? {op: "/=", len: 2} : {op: "/", len: 1};
 					case "%".code:
-						{op: "%", len: 1};
+						nextIsOther("=".code) ? {op: "%=", len: 2} : {op: "%", len: 1};
 					case _:
 						null;
 				}
@@ -1064,8 +1106,8 @@
 			// In `a = cond ? x : y`, the ternary binds to the *right-hand side* of the assignment.
 			// Our parser handles `?:` after binary parsing, so we patch up this common shape here.
 			e = switch (e) {
-				case EBinop("=", left, right):
-					EBinop("=", left, ETernary(right, thenExpr, elseExpr));
+				case EBinop(op, left, right) if (isAssignmentBinop(op)):
+					EBinop(op, left, ETernary(right, thenExpr, elseExpr));
 				case _:
 					ETernary(e, thenExpr, elseExpr);
 			}

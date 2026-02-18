@@ -158,6 +158,27 @@ class JsNativeMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeCompoundAssignMain.hx" <<'HX'
+class JsNativeCompoundAssignMain {
+  static function main() {
+    var acc = 1;
+    acc += 5;
+    acc *= 2;
+    acc -= 3;
+    acc <<= 1;
+    acc >>= 2;
+    acc |= 8;
+    acc ^= 3;
+    acc &= 15;
+
+    var unsigned = -1;
+    unsigned >>>= 30;
+
+    Sys.println("js-native-compound:" + acc + ":" + unsigned);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
 class JsNativeEnumReflectionMain {
   static function main() {
@@ -278,6 +299,14 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_emit/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native:6$"
 test -f "$tmpdir/out_js_native_emit/main.js"
+
+echo "== Builtin fast-path target: js-native compound assignment expressions"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_compound/main.js" -cp "$tmpdir/src" -main JsNativeCompoundAssignMain --hxhx-out "$tmpdir/out_js_native_compound")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_compound/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-compound:6:3$"
+test -f "$tmpdir/out_js_native_compound/main.js"
 
 echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"
 mkdir -p "$tmpdir/workdir"

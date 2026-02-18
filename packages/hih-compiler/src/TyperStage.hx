@@ -38,6 +38,15 @@ class TyperStage {
 		return c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(raw);
 	}
 
+	static function isAssignmentBinop(op:String):Bool {
+		return switch (op) {
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
+				true;
+			case _:
+				false;
+		}
+	}
+
 	/**
 		Type a parsed module into a minimal `TypedModule`.
 
@@ -591,26 +600,26 @@ class TyperStage {
 				}
 			case EBinop(op, a, b):
 				switch (op) {
-					case "=":
+					case _ if (isAssignmentBinop(op)):
 						// Assignment as expression.
-								final rhs = inferExprType(b, scope, ctx, pos);
-								switch (a) {
-								case EIdent(name):
-									final sym = scope.resolveSymbol(name);
-									if (sym != null) {
-										final u = TyType.unify(sym.getType(), rhs);
-										if (u == null) {
-											// Bootstrap: don't fail hard on complex types (generics, abstracts, etc.).
-											// Keep typing moving by widening to Dynamic.
-											sym.setType(TyType.fromHintText("Dynamic"));
-											rhs;
-										} else {
-											sym.setType(u);
-											rhs;
-										}
+						final rhs = inferExprType(b, scope, ctx, pos);
+						switch (a) {
+							case EIdent(name):
+								final sym = scope.resolveSymbol(name);
+								if (sym != null) {
+									final u = TyType.unify(sym.getType(), rhs);
+									if (u == null) {
+										// Bootstrap: don't fail hard on complex types (generics, abstracts, etc.).
+										// Keep typing moving by widening to Dynamic.
+										sym.setType(TyType.fromHintText("Dynamic"));
+										rhs;
 									} else {
+										sym.setType(u);
 										rhs;
 									}
+								} else {
+									rhs;
+								}
 							case _:
 								// Field assignment typing needs class env (future stage).
 								inferExprType(a, scope, ctx, pos);
