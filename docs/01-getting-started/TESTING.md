@@ -164,6 +164,8 @@ Notes:
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
+- JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and
+  `npm run test:m14:js-expr-switch`.
 - `npm run test:hxhx-targets` now also validates the runtime delegation guard:
   `HXHX_FORBID_STAGE0=1` must block shim delegation while still allowing builtin Stage3 targets.
 - For quicker local reruns after a successful build, you can reuse an existing binary:

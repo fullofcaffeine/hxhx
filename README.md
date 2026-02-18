@@ -376,6 +376,7 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
 - `--wait <host:port>` + `--connect <host:port>` roundtrip request handling
 - instance-field roundtrip in full-body mode (`this.x = ...`, `return this.x`, `new Main().ping()`) with compile+run validation
 - js-native enum-switch + basic reflection helper smoke (`Type.resolveClass`, `Type.getClassName`, `Type.enumConstructor`, `Type.enumParameters`)
+- js-native switch-expression lowering smoke (`switch (...) { case ...: ... }` with OR/bind patterns)
 - explicit js-native unsupported marker coverage for try/catch throw/rethrow lowering (`EUnsupported(throw)` fail-fast)
 - optional local fast path: set `HXHX_BIN=packages/hxhx/out/_build/default/out.bc` to skip rebuilding `hxhx` for each script rerun
 - source-level Stage3 receiver-call regression (`other.add(n)` arity shape) is covered by `npm run test:m14:hih-emitter-receiver-call` (no stage0 bootstrap rebuild required)

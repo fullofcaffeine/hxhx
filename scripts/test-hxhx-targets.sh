@@ -237,6 +237,29 @@ class JsNativeEnumReflectionMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeSwitchExprMain.hx" <<'HX'
+class JsNativeSwitchExprMain {
+  static function main() {
+    var mode = "b";
+    var picked = switch (mode) {
+      case "a":
+        1;
+      case "b" | "c":
+        2;
+      default:
+        9;
+    };
+
+    var bound = switch (mode) {
+      case value:
+        value + "-ok";
+    };
+
+    Sys.println("js-native-switch-expr:" + picked + ":" + bound);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeTryCatchMain.hx" <<'HX'
 class JsNativeTryCatchMain {
   static function main() {
@@ -378,6 +401,14 @@ echo "$out" | grep -q "^class-name:JsNativeEnumReflectionMain$"
 echo "$out" | grep -q "^enum-ctor:Run$"
 echo "$out" | grep -q "^enum-params:0$"
 test -f "$tmpdir/out_js_enum_reflect/main.js"
+
+echo "== Builtin fast-path target: js-native switch expressions"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_switch_expr/main.js" -cp "$tmpdir/src" -main JsNativeSwitchExprMain --hxhx-out "$tmpdir/out_js_switch_expr")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_switch_expr/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-switch-expr:2:b-ok$"
+test -f "$tmpdir/out_js_switch_expr/main.js"
 
 echo "== Builtin fast-path target: js-native try/catch throw/rethrow is explicit unsupported"
 trycatch_log="$(mktemp)"

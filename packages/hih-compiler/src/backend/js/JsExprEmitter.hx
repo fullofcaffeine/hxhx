@@ -67,8 +67,8 @@ class JsExprEmitter {
 				emit(inner, scope);
 			case EUntyped(inner):
 				emit(inner, scope);
-			case ESwitch(_, _):
-				unsupported("ESwitch");
+			case ESwitch(scrutinee, cases):
+				emitSwitchExpr(scrutinee, cases, scope);
 			case ESwitchRaw(_):
 				unsupported("ESwitchRaw");
 			case ETryCatchRaw(_):
@@ -175,5 +175,38 @@ class JsExprEmitter {
 		}
 		final nested = nestedScope(scope, lambdaLocals);
 		return "function(" + params.join(", ") + ") { return " + emit(body, nested) + "; }";
+	}
+
+	static function emitSwitchExpr(
+		scrutinee:HxExpr,
+		cases:Array<{ pattern:HxSwitchPattern, expr:HxExpr }>,
+		scope:JsEmitScope
+	):String {
+		final out = new Array<String>();
+		out.push("(function () {");
+		out.push("var __sw = " + emit(scrutinee, scope) + ";");
+
+		var isFirst = true;
+		for (c in cases) {
+			final lowered = JsSwitchPatternLowering.lower(c.pattern, "__sw");
+			final head = isFirst ? "if" : "else if";
+
+			var branchScope = scope;
+			var bindPrefix = "";
+			if (lowered.bindName != null) {
+				final locals = new haxe.ds.StringMap<String>();
+				final bindSafe = "__sw_bind_" + JsNameMangler.identifier(lowered.bindName);
+				locals.set(lowered.bindName, bindSafe);
+				branchScope = nestedScope(scope, locals);
+				bindPrefix = "var " + bindSafe + " = __sw; ";
+			}
+
+			out.push(head + " (" + lowered.cond + ") { " + bindPrefix + "return " + emit(c.expr, branchScope) + "; }");
+			isFirst = false;
+		}
+
+		out.push("return null;");
+		out.push("})()");
+		return out.join(" ");
 	}
 }

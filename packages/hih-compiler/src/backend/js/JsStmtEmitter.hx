@@ -101,7 +101,7 @@ class JsStmtEmitter {
 
 		var isFirst = true;
 		for (c in cases) {
-			final lowered = lowerPattern(c.pattern, scrutineeVar);
+			final lowered = JsSwitchPatternLowering.lower(c.pattern, scrutineeVar);
 			final head = isFirst ? "if" : "else if";
 			writer.writeln(head + " (" + lowered.cond + ") {");
 			writer.pushIndent();
@@ -113,30 +113,6 @@ class JsStmtEmitter {
 			writer.popIndent();
 			writer.writeln("}");
 			isFirst = false;
-		}
-	}
-
-	static function lowerPattern(pattern:HxSwitchPattern, scrutineeVar:String):{ cond:String, bindName:Null<String> } {
-		return switch (pattern) {
-			case PNull:
-				{ cond: scrutineeVar + " == null", bindName: null };
-			case PWildcard:
-				{ cond: "true", bindName: null };
-			case PString(value):
-				{ cond: scrutineeVar + " === " + JsNameMangler.quoteString(value), bindName: null };
-			case PInt(value):
-				{ cond: scrutineeVar + " === " + Std.string(value), bindName: null };
-			case PEnumValue(name):
-				{ cond: scrutineeVar + " === " + JsNameMangler.quoteString(name), bindName: null };
-			case PBind(name):
-				{ cond: "true", bindName: name };
-			case POr(patterns):
-				final parts = new Array<String>();
-				for (p in patterns) {
-					final lowered = lowerPattern(p, scrutineeVar);
-					parts.push("(" + lowered.cond + ")");
-				}
-				{ cond: parts.length == 0 ? "false" : parts.join(" || "), bindName: null };
 		}
 	}
 }
