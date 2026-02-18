@@ -87,6 +87,35 @@ class Main {
 		return false;
 	}
 
+	static function findUnsupportedLegacyTarget(args:Array<String>):Null<String> {
+		for (a in args) {
+			switch (a) {
+				case "-swf", "--swf":
+					return "flash";
+				case "-as3", "--as3":
+					return "as3";
+				case _:
+			}
+		}
+		return null;
+	}
+
+	static function isStrictCliDisallowedFlag(flag:String):Bool {
+		if (flag == null || flag.length == 0) return false;
+		if (flag == "--target" || flag == "--hxhx-target") return true;
+		if (StringTools.startsWith(flag, "--hxhx-") && flag != "--hxhx-strict-cli") return true;
+		return false;
+	}
+
+	static function validateStrictCliShimArgs(shimArgs:Array<String>):Void {
+		for (a in shimArgs) {
+			if (isStrictCliDisallowedFlag(a)) {
+				fatal("hxhx: strict CLI mode rejects non-upstream flag: " + a
+					+ " (remove --hxhx-strict-cli to use hxhx extensions)");
+			}
+		}
+	}
+
 	static function sanitizeName(name:String):String {
 		final out = new StringBuf();
 		final s = name == null ? "" : name;
@@ -253,6 +282,23 @@ class Main {
 			return;
 		}
 
+		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
+		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
+		final sep = args.indexOf("--");
+		final shimArgs = sep == -1 ? args : args.slice(0, sep);
+		// Always allocate a fresh array for `forwarded` so subsequent splice/rewrite steps
+		// cannot accidentally mutate `args` (which would break shim-flag parsing).
+		//
+		// This matters in practice because `hxhx` is compiled by our own OCaml backend,
+		// and early bring-up semantics are intentionally conservative about mutability.
+		var forwarded = sep == -1 ? args.copy() : args.slice(sep + 1);
+
+		final strictCliMode = shimArgs.indexOf("--hxhx-strict-cli") != -1;
+		if (strictCliMode) {
+			validateStrictCliShimArgs(shimArgs);
+			if (sep == -1) forwarded = stripAll(forwarded, "--hxhx-strict-cli");
+		}
+
 		// Stage 4 (bring-up): macro host RPC selftest.
 		//
 		// This is *not* a user-facing Haxe CLI flag. It exists so CI can validate
@@ -312,17 +358,6 @@ class Main {
 			final code = Stage3Compiler.run(args.slice(1));
 			Sys.exit(code);
 		}
-
-		// Pass-through: everything after `--` is forwarded; if no `--` exists, forward args as-is.
-		// This lets us use: `hxhx -- compile-macro.hxml` while still allowing direct `hxhx compile.hxml`.
-		final sep = args.indexOf("--");
-		final shimArgs = sep == -1 ? args : args.slice(0, sep);
-		// Always allocate a fresh array for `forwarded` so subsequent splice/rewrite steps
-		// cannot accidentally mutate `args` (which would break shim-flag parsing).
-		//
-		// This matters in practice because `hxhx` is compiled by our own OCaml backend,
-		// and early bring-up semantics are intentionally conservative about mutability.
-		var forwarded = sep == -1 ? args.copy() : args.slice(sep + 1);
 
 		// Shim-only run mode: emulate `--interp` by compiling to OCaml native and running the produced binary.
 		//
@@ -428,7 +463,8 @@ class Main {
 					if (ocamlInterpLike) {
 						fatal("hxhx: --hxhx-ocaml-interp cannot be combined with --target " + resolved.id);
 					}
-					final code = Stage3Compiler.run(forwarded);
+					final stage3Args = ["--hxhx-backend", resolved.id].concat(forwarded);
+					final code = Stage3Compiler.run(stage3Args);
 					Sys.exit(code);
 				}
 			}
@@ -437,6 +473,11 @@ class Main {
 				for (t in TargetPresets.listTargets()) Sys.println(t);
 				return;
 			}
+		}
+
+		final unsupportedLegacyTarget = findUnsupportedLegacyTarget(forwarded);
+		if (unsupportedLegacyTarget != null) {
+			fatal('hxhx: Target "' + unsupportedLegacyTarget + '" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported.');
 		}
 
 		// Compatibility note:
@@ -448,6 +489,7 @@ class Main {
 			Sys.println("Usage:");
 			Sys.println("  hxhx [haxe args...]");
 			Sys.println("  hxhx --target <id> [haxe args...]");
+			Sys.println("  hxhx --hxhx-strict-cli [haxe args...]");
 			Sys.println("  hxhx --hxhx-parse <File.hx>");
 			Sys.println("  hxhx --hxhx-selftest");
 			Sys.println("  hxhx --hxhx-list-targets");
@@ -457,6 +499,7 @@ class Main {
 			Sys.println("");
 			Sys.println("Notes:");
 			Sys.println("  - `--version` and `--help` are forwarded to stage0 `haxe` for compatibility.");
+			Sys.println("  - `--hxhx-strict-cli` rejects non-upstream flags (e.g. --target, --hxhx-stage3).");
 			Sys.println("  - Use `--hxhx-help` for this shim help.");
 			return;
 		}

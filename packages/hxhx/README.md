@@ -94,6 +94,9 @@ Current presets:
 
 - `--target ocaml`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
 - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+- `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
+- `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
+- Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
 Examples:
 
@@ -103,6 +106,29 @@ Examples:
 
 # Linked Stage3 fast-path (no emit build)
 "$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+
+# Stage0 JS preset
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js -- -cp src -main Main
+
+# Linked Stage3 JS preset (no-emit diagnostics)
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js-native --hxhx-no-emit -cp src -main Main
+
+# Linked Stage3 JS preset (MVP emit + run)
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js-native --js out/main.js -cp src -main Main
+```
+
+## Strict CLI compatibility mode
+
+Use `--hxhx-strict-cli` to enforce an upstream-style Haxe CLI surface:
+
+- rejects hxhx-only flags like `--target` and `--hxhx-stage3`
+- allows upstream-style flags like `--js`, `-cp`, `-main`, `-D`, `--no-output`
+- only validates arguments **before** `--` (anything after `--` is forwarded verbatim)
+
+Example:
+
+```bash
+"$(bash scripts/hxhx/build-hxhx.sh)" --hxhx-strict-cli --js out/main.js -cp src -main Main --no-output
 ```
 
 ## Benchmarking target modes

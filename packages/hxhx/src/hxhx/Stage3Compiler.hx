@@ -6,6 +6,10 @@ import haxe.io.Bytes;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
+import backend.BackendContext;
+import backend.IBackend;
+import backend.js.JsBackend;
+import backend.ocaml.OcamlStage3Backend;
 
 private typedef HaxelibSpec = {
 	/**
@@ -106,8 +110,9 @@ class Stage3Compiler {
 		return false;
 	}
 
-	static function parseGlobalStage3Flags(args:Array<String>):{ outDir:String, typeOnly:Bool, emitFullBodies:Bool, noEmit:Bool, noRun:Bool, rest:Array<String> } {
+	static function parseGlobalStage3Flags(args:Array<String>):{ outDir:String, backendId:String, typeOnly:Bool, emitFullBodies:Bool, noEmit:Bool, noRun:Bool, rest:Array<String> } {
 		var outDir = "";
+		var backendId = "ocaml-stage3";
 		var typeOnly = false;
 		var emitFullBodies = false;
 		var noEmit = false;
@@ -124,6 +129,12 @@ class Stage3Compiler {
 						throw "missing value after --hxhx-out";
 					}
 					outDir = args[i + 1];
+					i += 2;
+				case "--hxhx-backend":
+					if (i + 1 >= args.length) {
+						throw "missing value after --hxhx-backend";
+					}
+					backendId = args[i + 1];
 					i += 2;
 				case "--hxhx-type-only":
 					typeOnly = true;
@@ -143,7 +154,31 @@ class Stage3Compiler {
 			}
 		}
 
-		return { outDir: outDir, typeOnly: typeOnly, emitFullBodies: emitFullBodies, noEmit: noEmit, noRun: noRun, rest: rest };
+		return { outDir: outDir, backendId: backendId, typeOnly: typeOnly, emitFullBodies: emitFullBodies, noEmit: noEmit, noRun: noRun, rest: rest };
+	}
+
+	/**
+		Resolve a Stage3 builtin backend implementation by ID.
+
+		Why
+		- `hxhx --target <id>` now routes builtin targets through one Stage3 execution path.
+		- We need an explicit mapping from target IDs to backend implementations.
+
+		What
+		- Supports:
+		  - `ocaml-stage3` (existing linked OCaml backend)
+		  - `js-native` (MVP non-delegating JS backend)
+
+		How
+		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
+	**/
+	static function resolveBuiltinBackend(backendId:String):IBackend {
+		return switch (backendId) {
+			case "ocaml-stage3": new OcamlStage3Backend();
+			case "js-native": new JsBackend();
+			case _:
+				throw "unknown Stage3 backend: " + backendId;
+		}
 	}
 
 	/**
@@ -232,6 +267,34 @@ class Stage3Compiler {
 		return false;
 	}
 
+	static function findJsOutputFileHint(args:Array<String>):Null<String> {
+		final expanded = Stage1Args.expandHxmlArgs(args);
+		if (expanded == null) return null;
+		var i = 0;
+		while (i < expanded.length) {
+			final a = expanded[i];
+			switch (a) {
+				case "-js", "--js":
+					if (i + 1 < expanded.length) return expanded[i + 1];
+					return null;
+				case _:
+			}
+			i += 1;
+		}
+		return null;
+	}
+
+	static function canRunNode():Bool {
+		try {
+			final p = new sys.io.Process("node", ["--version"]);
+			final code = p.exitCode();
+			p.close();
+			return code == 0;
+		} catch (_:Dynamic) {
+			return false;
+		}
+	}
+
 	/**
 		Decode a single `--wait stdio` request frame.
 
@@ -265,31 +328,15 @@ class Stage3Compiler {
 		return { args: args, stdinBytes: stdinBytes };
 	}
 
-	static function synthesizeDisplayResponse(displayRequest:String):String {
-		final req = displayRequest == null ? "" : displayRequest;
-		if (StringTools.endsWith(req, "@diagnostics")) return "[{\"diagnostics\":[]}]";
-		if (StringTools.endsWith(req, "@module-symbols")) return "[{\"symbols\":[]}]";
-		if (StringTools.endsWith(req, "@signature")) return "{\"signatures\":[],\"activeSignature\":0,\"activeParameter\":0}";
-		if (StringTools.endsWith(req, "@toplevel")) return "<il></il>";
-		if (StringTools.endsWith(req, "@type")) return "<type>Dynamic</type>";
-		if (StringTools.endsWith(req, "@position")) return "<list></list>";
-		if (StringTools.endsWith(req, "@usage")) return "<list></list>";
-		// Default completion/fields shape.
-		return "<list></list>";
+	static function synthesizeDisplayResponse(displayRequest:String, displaySource:String):String {
+		return DisplayResponseSynthesizer.synthesize(displayRequest, displaySource);
 	}
 
 	static function runWaitStdioRequest(baseArgs:Array<String>, request:WaitStdioRequest):WaitStdioReply {
 		final displayRequest = findSingleFlagValue(request.args, "--display");
 		if (displayRequest != null) {
-			// Bring-up behavior:
-			// - We currently synthesize minimal display payloads so clients can exercise the
-			//   compiler-server framing and request lifecycle without stage0.
-			// - Full display semantics/parity are implemented incrementally in later gates.
-			//
-			// `display-stdin` is accepted (stdin payload is delivered by the client), but
-			// this bring-up rung does not yet parse/type from the provided in-memory source.
-			final _hasDisplayStdin = hasDefineFlag(request.args, "display-stdin");
-			return { payload: synthesizeDisplayResponse(displayRequest), isError: false };
+			final displaySource = DisplayResponseSynthesizer.readDisplaySource(displayRequest, request.stdinBytes);
+			return { payload: synthesizeDisplayResponse(displayRequest, displaySource), isError: false };
 		}
 
 		// Non-display requests: attempt normal Stage3 handling with the server's base args.
@@ -1110,11 +1157,13 @@ class Stage3Compiler {
 				return error(Std.string(e));
 			}
 			final outDir = g.outDir;
+			final backendId = g.backendId;
 			var typeOnly = g.typeOnly;
 			var emitFullBodies = g.emitFullBodies;
 			var noEmit = g.noEmit;
 			var noRun = g.noRun;
 			final rest = g.rest;
+			final jsOutputHintRaw = findJsOutputFileHint(rest);
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
 		// *attempt* upstream-ish hxmls (e.g. Gate1 `compile-macro.hxml`) without failing immediately on
@@ -1124,8 +1173,11 @@ class Stage3Compiler {
 			if (parsed == null) return 2;
 			// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
 			// we emulate this by enabling the full-body emission rung.
-			final sawInterp = parsed.defines != null && parsed.defines.indexOf("interp=1") != -1;
-			emitFullBodies = emitFullBodies || sawInterp;
+		final sawInterp = parsed.defines != null && parsed.defines.indexOf("interp=1") != -1;
+		emitFullBodies = emitFullBodies || sawInterp;
+		if (backendId == "js-native") {
+			emitFullBodies = true;
+		}
 
 			// Respect upstream `--no-output` by treating it as “no emit” in bring-up.
 			//
@@ -1349,7 +1401,11 @@ class Stage3Compiler {
 		// - ResolverStage will use this map to strip inactive `#if` branches before parsing.
 		final definesMap = HxDefineMap.fromRawDefines(allDefines);
 		definesMap.set("sys", "1");
-		definesMap.set("ocaml", "1");
+		if (backendId == "js-native") {
+			definesMap.set("js", "1");
+		} else {
+			definesMap.set("ocaml", "1");
+		}
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
 		}
@@ -1765,6 +1821,15 @@ class Stage3Compiler {
 			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
 		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
+		final backendCaps = switch (backendId) {
+			case "ocaml-stage3":
+				new OcamlStage3Backend().capabilities();
+			case "js-native":
+				new JsBackend().capabilities();
+			case _:
+				closeMacroSession();
+				return error("backend setup failed: unknown Stage3 backend: " + backendId);
+		};
 
 			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
@@ -1776,6 +1841,10 @@ class Stage3Compiler {
 			// Diagnostic rung: stop after macros + typing so we can iterate Stage4 macro model and Stage3 typer
 			// coverage without being blocked by the bootstrap emitter/codegen.
 			if (noEmit) {
+				if (!backendCaps.supportsNoEmit) {
+					closeMacroSession();
+					return error("backend does not support --hxhx-no-emit: " + backendId);
+				}
 				var headerOnlyCount = 0;
 				var unsupportedExprsTotal = 0;
 				var unsupportedFilesCount = 0;
@@ -1834,14 +1903,33 @@ class Stage3Compiler {
 				return 0;
 			}
 
-			final exe = try EmitterStage.emitToDir(expanded, outAbs, emitFullBodies) catch (e:Dynamic) {
+			final emitted = try {
+				final outputFileHint = if (backendCaps.supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
+					Path.isAbsolute(jsOutputHintRaw) ? Path.normalize(jsOutputHintRaw) : absFromCwd(cwd, jsOutputHintRaw);
+				} else {
+					null;
+				}
+				final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, backendCaps.supportsBuildExecutable, definesMap);
+				switch (backendId) {
+					case "ocaml-stage3":
+						new OcamlStage3Backend().emit(expanded, context);
+					case "js-native":
+						new JsBackend().emit(expanded, context);
+					case _:
+						throw "unknown Stage3 backend: " + backendId;
+				}
+			} catch (e:Dynamic) {
 				closeMacroSession();
 				return error("emit failed: " + Std.string(e));
-			}
+			};
 
 		Sys.println("stage3=ok");
 		Sys.println("outDir=" + outAbs);
-		Sys.println("exe=" + exe);
+		if (emitted.builtExecutable) {
+			Sys.println("exe=" + emitted.entryPath);
+		} else {
+			Sys.println("artifact=" + emitted.entryPath);
+		}
 
 		closeMacroSession();
 
@@ -1850,7 +1938,22 @@ class Stage3Compiler {
 			return 0;
 		}
 
-		final code = Sys.command(exe, []);
+		if (!emitted.builtExecutable) {
+			if (backendId == "js-native") {
+				if (!canRunNode()) {
+					Sys.println("run=skipped_node_missing");
+					return 0;
+				}
+				final jsCode = Sys.command("node", [emitted.entryPath]);
+				if (jsCode != 0) return error("node run failed with exit code " + jsCode);
+				Sys.println("run=ok");
+				return 0;
+			}
+			Sys.println("run=skipped_non_executable_backend");
+			return 0;
+		}
+
+		final code = Sys.command(emitted.entryPath, []);
 		if (code != 0) return error("built executable failed with exit code " + code);
 		Sys.println("run=ok");
 			return 0;
@@ -1900,6 +2003,10 @@ class Stage3Compiler {
 			for (idx in 0...units.length) {
 				final u = units[idx];
 				final unitArgs = new Array<String>();
+				if (global.backendId != null && global.backendId.length > 0) {
+					unitArgs.push("--hxhx-backend");
+					unitArgs.push(global.backendId);
+				}
 				if (global.typeOnly) unitArgs.push("--hxhx-type-only");
 				if (global.noEmit) unitArgs.push("--hxhx-no-emit");
 				if (global.noRun) unitArgs.push("--hxhx-no-run");
