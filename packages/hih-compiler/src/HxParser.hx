@@ -1624,21 +1624,6 @@
 					// Parse the following statement now that metadata is consumed.
 					parseStmt(stop);
 				case TKeyword(KTry):
-					// Stage 3 bring-up: parse `try { ... } catch (...) { ... }` as a statement *body*.
-					//
-					// Why
-					// - The upstream `tests/RunCi.hx` harness wraps most of its work in try/catch and
-					//   exits on CommandFailure. Treating `try` as unsupported collapses the entire
-					//   suite body to `(Obj.magic 0)`, which prevents Gate2 stage3_emit_runner from
-					//   executing orchestration code (and from spawning wrapped sub-invocations).
-					//
-					// Bring-up semantics (intentionally incomplete)
-					// - We parse and keep the `try` body so its statements are available to the typer
-					//   and bootstrap emitter.
-					// - We still *skip* catch blocks (do not model exception binding/flow yet).
-					//
-					// This is a pragmatic rung: it unlocks RunCi orchestration while we separately
-					// track real exception semantics (throw + typed catches).
 					bump();
 
 					final tryBody:HxStmt =
@@ -1656,19 +1641,42 @@
 							parseStmt(stop);
 						};
 
-					// Skip one or more `catch (...) { ... }` blocks.
+					final catches = new Array<{ name:String, typeHint:String, body:HxStmt }>();
 					while (acceptKeyword(KCatch)) {
+						var catchName = "e";
+						var catchTypeHint = "";
 						if (cur.kind.match(TLParen)) {
 							bump();
-							try skipBalancedParens() catch (_:Dynamic) {}
+							switch (cur.kind) {
+								case TIdent(_):
+									catchName = readIdent("catch variable name");
+								case _:
+									// Best-effort fallback for malformed catch signatures.
+							}
+							if (cur.kind.match(TColon)) {
+								bump();
+								catchTypeHint = readTypeHintText(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+							}
+							if (!cur.kind.match(TRParen)) {
+								while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+							}
+							if (cur.kind.match(TRParen)) bump();
 						}
-						if (cur.kind.match(TLBrace)) {
+						final catchBody:HxStmt = if (cur.kind.match(TLBrace)) {
 							bump();
-							try skipBalancedBraces() catch (_:Dynamic) {}
-						}
+							final stmts = new Array<HxStmt>();
+							while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
+								stmts.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+							}
+							if (cur.kind.match(TRBrace)) bump();
+							SBlock(stmts, pos);
+						} else {
+							parseStmt(stop);
+						};
+						catches.push({ name: catchName, typeHint: catchTypeHint, body: catchBody });
 					}
 
-					tryBody;
+					STry(tryBody, catches, pos);
 				case TKeyword(KWhile):
 					// Bring-up: consume `while (...) stmt` as unsupported, but skip its body so we
 					// can keep parsing subsequent statements.
@@ -1770,11 +1778,10 @@
 					}
 					SExpr(EUnsupported("do"), pos);
 				case TKeyword(KThrow):
-					// Bring-up: parse and skip `throw <expr>;`.
 					bump();
-					parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+					final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
 					syncToStmtEnd();
-					SExpr(EUnsupported("throw"), pos);
+					SThrow(thrown, pos);
 				case TKeyword(KBreak):
 					bump();
 					syncToStmtEnd();

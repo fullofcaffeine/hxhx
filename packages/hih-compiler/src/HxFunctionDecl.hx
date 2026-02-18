@@ -62,6 +62,14 @@ class HxFunctionDecl {
 							final r2 = find([elseBranch]);
 							if (r2 != null) return r2;
 						}
+					case STry(tryBody, catches, _):
+						final rt = find([tryBody]);
+						if (rt != null) return rt;
+						for (c in catches) {
+							final rc = find([c.body]);
+							if (rc != null) return rc;
+						}
+					case SThrow(_, _):
 					case _:
 				}
 			}

@@ -50,6 +50,8 @@ class JsStmtEmitter {
 					writer.popIndent();
 					writer.writeln("}");
 				}
+			case STry(tryBody, catches, _):
+				emitTry(writer, tryBody, catches, scope);
 			case SForIn(name, iterable, body, _):
 				emitForIn(writer, name, iterable, body, scope);
 			case SSwitch(scrutinee, cases, _):
@@ -58,9 +60,37 @@ class JsStmtEmitter {
 				writer.writeln("return;");
 			case SReturn(expr, _):
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+			case SThrow(expr, _):
+				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SExpr(expr, _):
 				writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 		}
+	}
+
+	static function emitTry(
+		writer:JsWriter,
+		tryBody:HxStmt,
+		catches:Array<{ name:String, typeHint:String, body:HxStmt }>,
+		scope:JsFunctionScope
+	):Void {
+		writer.writeln("try {");
+		writer.pushIndent();
+		emitStmtBlockContent(writer, tryBody, scope);
+		writer.popIndent();
+		writer.writeln("} catch (__hx_err) {");
+		writer.pushIndent();
+
+		if (catches == null || catches.length == 0) {
+			writer.writeln("throw __hx_err;");
+		} else {
+			final first = catches[0];
+			final bind = scope.declareLocal(first.name);
+			writer.writeln("var " + bind + " = __hx_err;");
+			emitStmtBlockContent(writer, first.body, scope);
+		}
+
+		writer.popIndent();
+		writer.writeln("}");
 	}
 
 	static function emitForIn(writer:JsWriter, name:String, iterable:HxExpr, body:HxStmt, scope:JsFunctionScope):Void {

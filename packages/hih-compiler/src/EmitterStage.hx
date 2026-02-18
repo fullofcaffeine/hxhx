@@ -2585,6 +2585,10 @@ class EmitterStage {
 					case SVar(_name, _typeHint, _init, _pos):
 						// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 						"()";
+					case STry(tryBody, _catches, _pos):
+						stmtToUnit(tryBody, tyCtx);
+					case SThrow(_expr, _pos):
+						"()";
 					case SSwitch(scrutinee, cases, _pos):
 						final sw =
 							exprToOcaml(
@@ -4233,6 +4237,13 @@ class EmitterStage {
 									case SForIn(_name, iterable, body, _):
 										if (iterable != null) exprWorklist.push(iterable);
 										if (body != null) stmtWorklist.push(body);
+									case STry(tryBody, catches, _):
+										if (tryBody != null) stmtWorklist.push(tryBody);
+										if (catches != null) {
+											for (c in catches) if (c != null && c.body != null) stmtWorklist.push(c.body);
+										}
+									case SThrow(expr, _):
+										if (expr != null) exprWorklist.push(expr);
 									case SSwitch(scrutinee, cases, _):
 										if (scrutinee != null) exprWorklist.push(scrutinee);
 										if (cases != null) for (c in cases) if (c != null && c.body != null) stmtWorklist.push(c.body);

@@ -212,6 +212,7 @@ Current `hxhx` target presets:
 Supported today (covered by `scripts/test-hxhx-targets.sh`):
 
 - statement-level `switch` lowering over enum-like tags (`Build`, `Run`, etc.) via Stage3 `HxSwitchPattern`
+- statement-level `try/catch` + `throw` (including nested rethrow flow in smoke fixture)
 - basic reflection helpers through a lightweight JS prelude:
   - `Type.resolveClass(name)`
   - `Type.getClassName(cls)`
@@ -222,10 +223,7 @@ Supported today (covered by `scripts/test-hxhx-targets.sh`):
 
 Known unsupported semantics (explicit fail-fast behavior):
 
-- full try/catch + throw/rethrow lowering in the Stage3 JS emitter
-  - the fixture `JsNativeTryCatchMain` is intentionally expected to fail with
-    `js-native MVP does not support expression kind: EUnsupported(throw)` so
-    unsupported behavior remains visible in CI/logs
+- full typed multi-catch semantics (`catch (e:SomeType)` dispatch) in Stage3 JS emitter
 - full Haxe enum runtime/model parity (constructors with parameters, exact enum index semantics)
 - full Haxe `Type` API parity beyond the helpers above
 

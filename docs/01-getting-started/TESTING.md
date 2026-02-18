@@ -164,6 +164,8 @@ Notes:
 - Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
 - OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
 - JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
+- Statement-level parser coverage for try/catch + throw is in `npm run test:m14:hih-try-throw-stmt`.
+- JS statement lowering coverage for try/catch + throw is in `npm run test:m14:js-stmt-try-throw`.
 - JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and
   `npm run test:m14:js-expr-range` and `npm run test:m14:js-expr-array-comprehension` and
   `npm run test:m14:js-expr-switch`.

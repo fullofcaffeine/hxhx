@@ -648,6 +648,11 @@ class Stage3Compiler {
 					case SForIn(_name, iterable, body, _pos):
 						collectUnsupportedExprRawInExpr(iterable, out, max);
 						collectUnsupportedExprRawInStmt(body, out, max);
+					case STry(tryBody, catches, _pos):
+						collectUnsupportedExprRawInStmt(tryBody, out, max);
+						for (c in catches) collectUnsupportedExprRawInStmt(c.body, out, max);
+					case SThrow(expr, _pos):
+						collectUnsupportedExprRawInExpr(expr, out, max);
 					case SSwitch(scrutinee, cases, _pos):
 						collectUnsupportedExprRawInExpr(scrutinee, out, max);
 						for (c in cases) collectUnsupportedExprRawInStmt(c.body, out, max);
@@ -682,6 +687,12 @@ class Stage3Compiler {
 						countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(thenBranch) + (elseBranch == null ? 0 : countUnsupportedExprsInStmt(elseBranch));
 					case SForIn(_name, iterable, body, _pos):
 						countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
+					case STry(tryBody, catches, _pos):
+						var c = countUnsupportedExprsInStmt(tryBody);
+						for (cc in catches) c += countUnsupportedExprsInStmt(cc.body);
+						c;
+					case SThrow(expr, _pos):
+						countUnsupportedExprsInExpr(expr);
 					case SSwitch(scrutinee, cases, _pos):
 						var c = countUnsupportedExprsInExpr(scrutinee);
 						for (cc in cases) c += countUnsupportedExprsInStmt(cc.body);

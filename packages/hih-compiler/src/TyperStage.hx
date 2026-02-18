@@ -207,6 +207,12 @@ class TyperStage {
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(thenBranch);
 					if (elseBranch != null) typeStmt(elseBranch);
+				case STry(tryBody, catches, _):
+					typeStmt(tryBody);
+					for (c in catches) {
+						scope.declareLocal(c.name, TyType.fromHintText("Dynamic"));
+						typeStmt(c.body);
+					}
 					case SForIn(name, iterable, body, pos):
 						// Bring-up: type-check the iterable expression and bind the loop variable.
 						//
@@ -262,6 +268,8 @@ class TyperStage {
 					unifyInto(t.isUnknown() ? TyType.fromHintText("Dynamic") : t, pos);
 				case SExpr(e, pos):
 					inferExprType(e, scope, ctx, pos);
+				case SThrow(expr, pos):
+					inferExprType(expr, scope, ctx, pos);
 			}
 		}
 

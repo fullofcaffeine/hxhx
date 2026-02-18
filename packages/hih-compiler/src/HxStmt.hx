@@ -105,6 +105,40 @@ enum HxStmt {
 	**/
 	SSwitch(scrutinee:HxExpr, cases:Array<{ pattern:HxSwitchPattern, body:HxStmt }>, pos:HxPos);
 
+	/**
+		Try/catch statement: `try stmt catch(name[:Type]) stmt ...`.
+
+		Why
+		- Upstream-shaped orchestration code relies on exception flow for control-plane
+		  behavior (command wrappers, cleanup paths, retry handoffs).
+		- js-native needs a structured statement form so emitted JS can preserve runtime
+		  control flow instead of failing with unsupported markers.
+
+		What
+		- Stores the try body and an ordered catch list.
+		- Each catch stores:
+		  - catch variable name,
+		  - optional type hint text (kept for parity tracking),
+		  - catch body statement.
+
+		How (bring-up semantics)
+		- Typing currently treats catch variables as `Dynamic`.
+		- Non-js Stage3 emitters may still use permissive lowering while bring-up evolves.
+	**/
+	STry(
+		tryBody:HxStmt,
+		catches:Array<{ name:String, typeHint:String, body:HxStmt }>,
+		pos:HxPos
+	);
+
+	/**
+		Throw statement: `throw expr;`.
+
+		Why
+		- Needed to preserve exception control flow in statement-level try/catch handling.
+	**/
+	SThrow(expr:HxExpr, pos:HxPos);
+
 	SReturnVoid(pos:HxPos);
 	SReturn(expr:HxExpr, pos:HxPos);
 	SExpr(expr:HxExpr, pos:HxPos);

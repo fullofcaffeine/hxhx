@@ -49,7 +49,7 @@ fi
 # freshly built host to a stable temp path so the rest of this script remains
 # deterministic.
 macrohost_tmp="$(mktemp -d)"
-trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}" "${strict_log:-}" "${strict_sep_log:-}" "${trycatch_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
+trap 'rm -f "${mini_hxml:-}" "${legacy_log:-}" "${strict_log:-}" "${strict_sep_log:-}"; rm -rf "${tmpdir:-}" "$macrohost_tmp"' EXIT
 HXHX_MACRO_HOST_EXE_STABLE="$macrohost_tmp/hxhx-macro-host"
 cp "$HXHX_MACRO_HOST_EXE" "$HXHX_MACRO_HOST_EXE_STABLE"
 chmod +x "$HXHX_MACRO_HOST_EXE_STABLE"
@@ -449,13 +449,13 @@ echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native-range-expr:4:10$"
 test -f "$tmpdir/out_js_range_expr/main.js"
 
-echo "== Builtin fast-path target: js-native try/catch throw/rethrow is explicit unsupported"
-trycatch_log="$(mktemp)"
-if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_trycatch/main.js" -cp "$tmpdir/src" -main JsNativeTryCatchMain --hxhx-out "$tmpdir/out_js_trycatch" >"$trycatch_log" 2>&1; then
-  echo "Expected js-native try/catch throw/rethrow fixture to fail with explicit unsupported marker." >&2
-  exit 1
-fi
-grep -q "js-native MVP does not support expression kind: EUnsupported(throw)" "$trycatch_log"
+echo "== Builtin fast-path target: js-native try/catch throw/rethrow"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_trycatch/main.js" -cp "$tmpdir/src" -main JsNativeTryCatchMain --hxhx-out "$tmpdir/out_js_trycatch")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_trycatch/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^caught:boom|rethrow:boom$"
+test -f "$tmpdir/out_js_trycatch/main.js"
 
 echo "== Stage1 bring-up: --no-output parse+resolve (no stage0)"
 out="$("$HXHX_BIN" --hxhx-stage1 --std "$tmpdir/fake_std" --class-path "$tmpdir/src" --main Main --no-output -D stage1_test=1 --library reflaxe.ocaml --macro 'trace(\"ignored\")')"

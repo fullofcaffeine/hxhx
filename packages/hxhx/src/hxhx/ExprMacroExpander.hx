@@ -184,6 +184,16 @@ class ExprMacroExpander {
 						final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 						final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
 						(rIt != iterable || rBody != body) ? SForIn(name, rIt, rBody, pos) : s;
+					case STry(tryBody, catches, pos):
+						final rTry = rewriteStmt(tryBody, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+						var changed = rTry != tryBody;
+						final outCatches = new Array<{name:String, typeHint:String, body:HxStmt}>();
+						for (c in catches) {
+							final rBody = rewriteStmt(c.body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+							if (rBody != c.body) changed = true;
+							outCatches.push({name: c.name, typeHint: c.typeHint, body: rBody});
+						}
+						changed ? STry(rTry, outCatches, pos) : s;
 					case SSwitch(scrutinee, cases, pos):
 						final rScrutinee = rewriteExpr(scrutinee, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 						var changed = rScrutinee != scrutinee;
@@ -199,6 +209,9 @@ class ExprMacroExpander {
 				case SReturn(e, pos):
 					final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 					re != e ? SReturn(re, pos) : s;
+			case SThrow(e, pos):
+				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				re != e ? SThrow(re, pos) : s;
 			case SExpr(e, pos):
 				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				re != e ? SExpr(re, pos) : s;
