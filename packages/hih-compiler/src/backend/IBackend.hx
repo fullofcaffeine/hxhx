@@ -13,7 +13,8 @@ package backend;
 	- `id()`: stable backend identifier used by target presets/dispatch.
 	- `describe()`: human-readable short description for diagnostics.
 	- `capabilities()`: explicit capability flags consumed by driver logic.
-	- `emit(...)`: perform target emission/build and return structured artifacts.
+	- `emit(...)`: perform target emission/build from the Stage3 codegen IR contract (`GenIrProgram`)
+	  and return structured artifacts.
 
 	How
 	- Keep this interface focused on Stage3 use-cases.
@@ -23,6 +24,5 @@ interface IBackend {
 	public function id():String;
 	public function describe():String;
 	public function capabilities():BackendCapabilities;
-	public function emit(program:MacroExpandedProgram, context:BackendContext):EmitResult;
+	public function emit(program:GenIrProgram, context:BackendContext):EmitResult;
 }
-

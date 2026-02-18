@@ -1,5 +1,6 @@
 package hxhx;
 
+import backend.BackendRegistry;
 import haxe.io.Path;
 
 typedef ResolvedTarget = {
@@ -70,13 +71,15 @@ class TargetPresets {
 				describe: "Reflaxe OCaml backend via stage0 delegation",
 				forwarded: applyOcaml(forwarded)
 			};
-			case "ocaml-stage3": {
-				id: "ocaml-stage3",
-				kind: "builtin",
-				runMode: RUN_MODE_BUILTIN_STAGE3,
-				describe: "Linked Stage3 OCaml emitter fast-path (no --library required)",
-				forwarded: applyOcamlStage3(forwarded)
-			};
+			case "ocaml-stage3":
+				ensureBuiltinBackendRegistered("ocaml-stage3");
+				{
+					id: "ocaml-stage3",
+					kind: "builtin",
+					runMode: RUN_MODE_BUILTIN_STAGE3,
+					describe: "Linked Stage3 OCaml emitter fast-path (no --library required)",
+					forwarded: applyOcamlStage3(forwarded)
+				};
 			case "js": {
 				id: "js",
 				kind: "bundled",
@@ -84,13 +87,15 @@ class TargetPresets {
 				describe: "JavaScript target via stage0 delegation",
 				forwarded: applyJs(forwarded)
 			};
-			case "js-native": {
-				id: "js-native",
-				kind: "builtin",
-				runMode: RUN_MODE_BUILTIN_STAGE3,
-				describe: "Linked Stage3 JS backend fast-path (non-delegating MVP)",
-				forwarded: applyJsNative(forwarded)
-			};
+			case "js-native":
+				ensureBuiltinBackendRegistered("js-native");
+				{
+					id: "js-native",
+					kind: "builtin",
+					runMode: RUN_MODE_BUILTIN_STAGE3,
+					describe: "Linked Stage3 JS backend fast-path (non-delegating MVP)",
+					forwarded: applyJsNative(forwarded)
+				};
 			case "flash", "swf", "as3":
 				throw unsupportedLegacyTargetMessage(normalizedId);
 			case _:
@@ -104,6 +109,12 @@ class TargetPresets {
 
 	static function unsupportedLegacyTargetMessage(targetId:String):String {
 		return 'Target "' + targetId + '" is not supported in hxhx. Legacy Flash/AS3 targets are intentionally unsupported in this implementation.';
+	}
+
+	static function ensureBuiltinBackendRegistered(targetId:String):Void {
+		if (BackendRegistry.descriptorForTarget(targetId) == null) {
+			throw 'Target "' + targetId + '" is not available in this hxhx build (missing builtin backend registration).';
+		}
 	}
 
 	static function applyOcaml(forwarded:Array<String>):Array<String> {

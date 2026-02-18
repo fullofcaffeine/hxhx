@@ -161,6 +161,11 @@ Notes:
 - It intentionally does **not** require full upstream display semantic parity yet.
 - Socket server/client protocol regression coverage lives in `npm run test:hxhx-targets`
 - Stage3 receiver-call over-application regression (`other.add(n)` should not become `add (this_) (other) (n)`) is covered by `npm run test:m14:hih-emitter-receiver-call` (source-level, no Stage0 rebuild needed).
+- Backend registry descriptor/selection regression coverage is in `npm run test:m14:backend-registry`.
+- OCaml target-core wrapper wiring regression coverage is in `npm run test:m14:target-core-wiring`.
+- JS target-core wrapper wiring regression coverage is in `npm run test:m14:js-target-core-wiring`.
+- `npm run test:hxhx-targets` now also validates the runtime delegation guard:
+  `HXHX_FORBID_STAGE0=1` must block shim delegation while still allowing builtin Stage3 targets.
   (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
 Dedicated display full-emit warm-output stress rung:

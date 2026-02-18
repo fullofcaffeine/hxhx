@@ -2,16 +2,12 @@ package backend.js;
 
 import backend.BackendCapabilities;
 import backend.BackendContext;
-import backend.EmitArtifact;
 import backend.EmitResult;
+import backend.GenIrProgram;
 import backend.IBackend;
-import haxe.io.Path;
-
-private typedef JsClassUnit = {
-	final fullName:String;
-	final jsRef:String;
-	final decl:HxClassDecl;
-};
+import backend.ITargetCore;
+import backend.TargetDescriptor;
+import backend.TargetCoreBackend;
 
 /**
 	Stage3 JS backend MVP (`js-native`).
@@ -34,17 +30,38 @@ private typedef JsClassUnit = {
 	- Keep unsupported behavior explicit (throws with actionable error).
 **/
 class JsBackend implements IBackend {
-	public function new() {}
+	public static inline var TARGET_ID = "js-native";
+	public static inline var IMPL_ID = "builtin/js-native";
+	public static inline var ABI_VERSION = 1;
+	public static inline var PRIORITY = 100;
+
+	final delegate:TargetCoreBackend;
 
 	public function id():String {
-		return "js-native";
+		return delegate.id();
 	}
 
 	public function describe():String {
-		return "Native JS backend (MVP)";
+		return delegate.describe();
 	}
 
-	public function capabilities():BackendCapabilities {
+	public static function descriptor():TargetDescriptor {
+		return {
+			id: TARGET_ID,
+			implId: IMPL_ID,
+			abiVersion: ABI_VERSION,
+			priority: PRIORITY,
+			description: "Native JS backend (MVP)",
+			capabilities: capabilitiesStatic(),
+			requires: {
+				genIrVersion: 1,
+				macroApiVersion: 1,
+				hostCaps: ["filesystem", "process", "node"]
+			}
+		};
+	}
+
+	static function capabilitiesStatic():BackendCapabilities {
 		return {
 			supportsNoEmit: true,
 			supportsBuildExecutable: false,
@@ -52,176 +69,19 @@ class JsBackend implements IBackend {
 		};
 	}
 
-	static function ensureDirectory(path:String):Void {
-		if (path == null || path.length == 0) return;
-		if (sys.FileSystem.exists(path)) return;
-		final parent = Path.directory(path);
-		if (parent != null && parent.length > 0 && parent != path) ensureDirectory(parent);
-		sys.FileSystem.createDirectory(path);
+	public function capabilities():BackendCapabilities {
+		return delegate.capabilities();
 	}
 
-	static function collectClassUnits(program:MacroExpandedProgram):{ units:Array<JsClassUnit>, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String> } {
-		final bySimpleName = new haxe.ds.StringMap<String>();
-		final byFullName = new haxe.ds.StringMap<String>();
-		final units = new Array<JsClassUnit>();
-
-		for (typed in program.getTypedModules()) {
-			final pm = typed.getParsed();
-			final decl = pm.getDecl();
-			final pkg = HxModuleDecl.getPackagePath(decl);
-			for (cls in HxModuleDecl.getClasses(decl)) {
-				final className = HxClassDecl.getName(cls);
-				final fullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-				if (byFullName.exists(fullName)) continue;
-				final jsRef = JsNameMangler.classVarName(fullName);
-				byFullName.set(fullName, jsRef);
-				if (!bySimpleName.exists(className)) bySimpleName.set(className, jsRef);
-				units.push({
-					fullName: fullName,
-					jsRef: jsRef,
-					decl: cls
-				});
-			}
-		}
-
-		return {
-			units: units,
-			bySimpleName: bySimpleName,
-			byFullName: byFullName
-		};
+	public static function targetCore():ITargetCore {
+		return new JsTargetCore();
 	}
 
-	static function simpleName(fullName:String):String {
-		final parts = fullName == null ? [] : fullName.split(".");
-		return parts.length == 0 ? fullName : parts[parts.length - 1];
+	public function new() {
+		delegate = new TargetCoreBackend(descriptor(), targetCore());
 	}
 
-	static function emitRuntimePrelude(writer:JsWriter):Void {
-		writer.writeln("var __hx_classes = Object.create(null);");
-		writer.writeln("var Type = {");
-		writer.pushIndent();
-		writer.writeln("resolveClass: function (name) {");
-		writer.pushIndent();
-		writer.writeln("return Object.prototype.hasOwnProperty.call(__hx_classes, name) ? __hx_classes[name] : null;");
-		writer.popIndent();
-		writer.writeln("},");
-		writer.writeln("getClassName: function (cls) {");
-		writer.pushIndent();
-		writer.writeln("return (cls && cls.__hx_name != null) ? String(cls.__hx_name) : null;");
-		writer.popIndent();
-		writer.writeln("},");
-		writer.writeln("enumConstructor: function (value) {");
-		writer.pushIndent();
-		writer.writeln("if (value == null) return null;");
-		writer.writeln("if (typeof value === \"string\") return value;");
-		writer.writeln("if (typeof value === \"object\" && value.__hx_ctor != null) return String(value.__hx_ctor);");
-		writer.writeln("return null;");
-		writer.popIndent();
-		writer.writeln("},");
-		writer.writeln("enumIndex: function (value) {");
-		writer.pushIndent();
-		writer.writeln("if (value == null) return -1;");
-		writer.writeln("if (typeof value === \"number\") return value | 0;");
-		writer.writeln("if (typeof value === \"string\") return 0;");
-		writer.writeln("if (typeof value === \"object\" && typeof value.__hx_index === \"number\") return value.__hx_index | 0;");
-		writer.writeln("return -1;");
-		writer.popIndent();
-		writer.writeln("},");
-		writer.writeln("enumParameters: function (value) {");
-		writer.pushIndent();
-		writer.writeln("if (value != null && typeof value === \"object\" && Array.isArray(value.__hx_params)) return value.__hx_params.slice();");
-		writer.writeln("return [];");
-		writer.popIndent();
-		writer.writeln("}");
-		writer.popIndent();
-		writer.writeln("};");
-	}
-
-	static function emitClass(
-		writer:JsWriter,
-		unit:JsClassUnit,
-		classRefs:haxe.ds.StringMap<String>,
-		simpleNameRefs:haxe.ds.StringMap<String>
-	):Void {
-		writer.writeln("var " + unit.jsRef + " = {};");
-		writer.writeln(unit.jsRef + ".__hx_name = " + JsNameMangler.quoteString(unit.fullName) + ";");
-		writer.writeln("__hx_classes[" + JsNameMangler.quoteString(unit.fullName) + "] = " + unit.jsRef + ";");
-		final simple = simpleName(unit.fullName);
-		if (simpleNameRefs.get(simple) == unit.jsRef) {
-			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
-		}
-		final staticScope = new JsFunctionScope(classRefs);
-
-		for (field in HxClassDecl.getFields(unit.decl)) {
-			if (!HxFieldDecl.getIsStatic(field)) continue;
-			final suffix = JsNameMangler.propertySuffix(HxFieldDecl.getName(field));
-			final init = HxFieldDecl.getInit(field);
-			final value = init == null ? "null" : JsExprEmitter.emit(init, staticScope.exprScope());
-			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
-		}
-
-		for (fn in HxClassDecl.getFunctions(unit.decl)) {
-			if (!HxFunctionDecl.getIsStatic(fn)) continue;
-
-			final fnScope = new JsFunctionScope(classRefs);
-			final params = new Array<String>();
-			for (a in HxFunctionDecl.getArgs(fn)) {
-				params.push(fnScope.declareLocal(HxFunctionArg.getName(a)));
-			}
-
-			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
-			writer.writeln(unit.jsRef + suffix + " = function(" + params.join(", ") + ") {");
-			writer.pushIndent();
-			JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
-			writer.popIndent();
-			writer.writeln("};");
-		}
-	}
-
-	static function resolveMainRef(main:String, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):Null<String> {
-		if (main == null || main.length == 0) return null;
-
-		final direct = byFullName.get(main);
-		if (direct != null) return direct;
-
-		final parts = main.split(".");
-		if (parts.length == 0) return null;
-		return bySimpleName.get(parts[parts.length - 1]);
-	}
-
-	public function emit(program:MacroExpandedProgram, context:BackendContext):EmitResult {
-		final hint = context.outputFileHint;
-		final outputPath = (hint != null && hint.length > 0) ? hint : Path.join([context.outputDir, "out.js"]);
-		final outputDir = Path.directory(outputPath);
-		if (outputDir != null && outputDir.length > 0) ensureDirectory(outputDir);
-
-		final classes = collectClassUnits(program);
-		final writer = new JsWriter();
-		final jsClassic = context.hasDefine("js-classic");
-
-		if (!jsClassic) {
-			writer.writeln("(function () {");
-			writer.pushIndent();
-			writer.writeln("\"use strict\";");
-		}
-
-		emitRuntimePrelude(writer);
-
-		for (unit in classes.units) {
-			emitClass(writer, unit, classes.bySimpleName, classes.bySimpleName);
-		}
-
-		final mainRef = resolveMainRef(context.mainModule, classes.bySimpleName, classes.byFullName);
-		if (mainRef != null) {
-			writer.writeln(mainRef + JsNameMangler.propertySuffix("main") + "();");
-		}
-
-		if (!jsClassic) {
-			writer.popIndent();
-			writer.writeln("})();");
-		}
-
-		sys.io.File.saveContent(outputPath, writer.toString());
-		return new EmitResult(outputPath, [new EmitArtifact("entry_js", outputPath)], false);
+	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
+		return delegate.emit(program, context);
 	}
 }

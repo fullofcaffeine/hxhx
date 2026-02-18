@@ -18,6 +18,11 @@ For this project, `hxhx 1.0` means:
 3. We keep strict MIT-oriented provenance discipline (no copied upstream compiler/test sources in this repo).
 4. The path to release is reproducible in CI and understandable by contributors.
 
+Scope lock for release naming:
+
+- `hxhx 1.0` is **core-first**: stage0-free runtime path, macro/plugin baseline, and production support for the explicitly supported targets.
+- Additional non-legacy upstream targets land in follow-up waves (`1.1+`) instead of blocking the core `1.0` label.
+
 This is tracked primarily under epic: `haxe.ocaml-xgv.10`.
 
 ## How to read progress

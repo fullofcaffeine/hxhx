@@ -76,28 +76,49 @@ Compatibility note:
 
 If we discover a conflict, we can rename to `--hxhx-target` without changing the underlying registry design.
 
-## Registry interface (minimum viable)
+## Registry interface (implemented)
 
-The registry is a mapping from a short target name to an activation strategy.
+Builtin Stage3 backend registration now uses explicit metadata + factory contracts in code:
 
-Each entry must define:
+- `packages/hih-compiler/src/backend/TargetDescriptor.hx`
+  - `id`: target ID (`ocaml-stage3`, `js-native`, ...)
+  - `implId`: implementation ID (`builtin/js-native`, ...)
+  - `abiVersion`, `priority`, `description`
+  - `capabilities` (`supportsNoEmit`, `supportsBuildExecutable`, `supportsCustomOutputFile`)
+  - `requires` (`genIrVersion`, `macroApiVersion`, `hostCaps`)
+- `packages/hih-compiler/src/backend/BackendRegistry.hx`
+  - canonical source of builtin backend registrations
+  - deterministic resolution (`priority` first, then `implId` tie-break)
+  - typed entrypoints:
+    - `listDescriptors()`
+    - `supportedTargetIds()`
+    - `descriptorForTarget(id)`
+    - `requireForTarget(id)`
+    - dynamic/provider seam:
+      - `register(spec)`
+      - `registerProvider(provider)`
+      - `clearDynamicRegistrations()`
 
-- `id`: the CLI name (e.g. `ocaml`, `elixir`)
-- `kind`: `bundled` | `builtin` | `both`
-- `inject(haxeArgs)`: how to expand `--target <id>` into concrete flags
-- `validate(haxeArgs)`: best-effort checks for missing required config
+Current builtin registrations are declared by:
 
-Pseudo-Haxe (sketch):
+- `packages/hih-compiler/src/backend/ocaml/OcamlStage3Backend.hx`
+- `packages/hih-compiler/src/backend/js/JsBackend.hx`
 
-```haxe
-typedef BackendActivation = {
-  final id:String;
-  final kind:String; // "bundled" | "builtin" | "both"
-  final describe:String;
-  function inject(args:Array<String>):Array<String>;
-  function validate(args:Array<String>):Null<String>; // error message, or null if ok
-}
-```
+Current codegen contract + target-core pilot:
+
+- `packages/hih-compiler/src/backend/GenIrProgram.hx` defines the Stage3 backend input contract (`GenIR` v0 alias).
+- `packages/hih-compiler/src/backend/ITargetCore.hx` defines reusable target-core emission.
+- `packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx` and `packages/hih-compiler/src/backend/js/JsTargetCore.hx`
+  are current promotion pilots used by builtin wrappers.
+
+`hxhx` target presets (`packages/hxhx/src/hxhx/TargetPresets.hx`) now verify that builtin preset IDs are registered in this canonical registry.
+
+Dynamic registration notes:
+
+- Dynamic registrations are intended for plugin/bundled wrappers that should participate in
+  the same precedence logic as builtins.
+- Selection rule remains global and deterministic: higher `priority` wins, then `implId`
+  lexical tie-break.
 
 ### Injection rules (important for predictable UX)
 
@@ -109,6 +130,21 @@ When `--target <id>` is used, injection follows these rules:
   print an error explaining the conflict.
 
 This keeps `--target` as “a preset”, not a separate parallel configuration system.
+
+## Stage0 delegation guard (runtime policy switch)
+
+To enforce native-path-only invocations in CI or release validation flows, use:
+
+```bash
+HXHX_FORBID_STAGE0=1 hxhx ...
+```
+
+Behavior:
+
+- any path that would delegate to stage0 `haxe` fails fast with a clear error
+- linked builtin Stage3 targets (`--target ocaml-stage3`, `--target js-native`) remain allowed
+
+This lets gates explicitly prove “no stage0 delegation” for selected workflows without removing shim compatibility for other development paths.
 
 ## How bundling works (without static linking)
 

@@ -66,6 +66,55 @@ Minimal proof-of-concept extraction (no behavior change):
 
 This is intentionally small: it proves the extraction shape without changing emitted OCaml semantics.
 
+## Backend contract rung (current implementation)
+
+To reduce backend-selection drift, builtin Stage3 targets now share a canonical registry contract:
+
+- `packages/hih-compiler/src/backend/TargetDescriptor.hx`
+- `packages/hih-compiler/src/backend/TargetRequirements.hx`
+- `packages/hih-compiler/src/backend/GenIrProgram.hx`
+- `packages/hih-compiler/src/backend/BackendRegistry.hx`
+
+This registry is now the source of truth for:
+
+- backend identity (`id`, `implId`)
+- compatibility requirements (`genIrVersion`, `macroApiVersion`, `hostCaps`)
+- deterministic precedence (`priority`)
+- Stage3 capability flags (`supportsNoEmit`, `supportsBuildExecutable`, `supportsCustomOutputFile`)
+- codegen input contract naming (`GenIrProgram` v0 alias)
+
+`Stage3Compiler` resolves backends through `BackendRegistry.requireForTarget(...)` rather than hardcoded switch branches.
+
+## Target promotion shape (plugin → native without rewrite)
+
+The intended long-term pattern for Reflaxe targets is:
+
+1. **Target Core**
+   Pure codegen module: `TargetCore.emit(GenIR, cfg, host) -> EmitResult`.
+2. **Plugin wrapper**
+   Library/macro activation that feeds the same Target Core.
+3. **Builtin wrapper**
+   Linked backend implementation that feeds the same Target Core.
+
+Practical outcome:
+
+- “promoting” a target from plugin mode to builtin mode becomes a packaging/loading change,
+  not a full codegen rewrite.
+- `reflaxe.ocaml` can remain useful both as:
+  - a standalone backend for external workflows, and
+  - a native `hxhx` backend implementation path.
+
+This promotion lifecycle is why we keep extracting backend contracts now, even while OCaml bootstrap is still the main host substrate.
+
+Pilot status:
+
+- `packages/hih-compiler/src/backend/ITargetCore.hx` defines the reusable target-core contract.
+- `packages/hih-compiler/src/backend/TargetCoreBackend.hx` is the generic wrapper adapter (`TargetDescriptor` + `ITargetCore` -> `IBackend`).
+- `packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx` is the first concrete target-core pilot.
+- `packages/hih-compiler/src/backend/js/JsTargetCore.hx` now applies the same pattern for JS.
+- `OcamlStage3Backend` and `JsBackend` now delegate emission to their target-core classes, proving wrapper/core separation without behavior changes.
+- `BackendRegistry` now supports a dynamic provider seam (`register`, `registerProvider`, `clearDynamicRegistrations`) so plugin wrappers can join builtin resolution without custom selection paths.
+
 ## Why this helps immediately
 
 - Makes OCaml coupling visible and reviewable.

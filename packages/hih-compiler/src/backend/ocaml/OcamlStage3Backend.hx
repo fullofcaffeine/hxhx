@@ -2,9 +2,12 @@ package backend.ocaml;
 
 import backend.BackendCapabilities;
 import backend.BackendContext;
-import backend.EmitArtifact;
 import backend.EmitResult;
+import backend.GenIrProgram;
+import backend.ITargetCore;
 import backend.IBackend;
+import backend.TargetDescriptor;
+import backend.TargetCoreBackend;
 
 /**
 	OCaml Stage3 backend adapter.
@@ -23,17 +26,38 @@ import backend.IBackend;
 	- Any OCaml-specific emission logic remains in `EmitterStage` for now.
 **/
 class OcamlStage3Backend implements IBackend {
-	public function new() {}
+	public static inline var TARGET_ID = "ocaml-stage3";
+	public static inline var IMPL_ID = "builtin/ocaml-stage3";
+	public static inline var ABI_VERSION = 1;
+	public static inline var PRIORITY = 100;
+
+	final delegate:TargetCoreBackend;
 
 	public function id():String {
-		return "ocaml-stage3";
+		return delegate.id();
 	}
 
 	public function describe():String {
-		return "Linked Stage3 OCaml emitter";
+		return delegate.describe();
 	}
 
-	public function capabilities():BackendCapabilities {
+	public static function descriptor():TargetDescriptor {
+		return {
+			id: TARGET_ID,
+			implId: IMPL_ID,
+			abiVersion: ABI_VERSION,
+			priority: PRIORITY,
+			description: "Linked Stage3 OCaml emitter",
+			capabilities: capabilitiesStatic(),
+			requires: {
+				genIrVersion: 1,
+				macroApiVersion: 1,
+				hostCaps: ["filesystem", "process", "ocaml", "dune"]
+			}
+		};
+	}
+
+	static function capabilitiesStatic():BackendCapabilities {
 		return {
 			supportsNoEmit: true,
 			supportsBuildExecutable: true,
@@ -41,15 +65,19 @@ class OcamlStage3Backend implements IBackend {
 		};
 	}
 
-	public function emit(program:MacroExpandedProgram, context:BackendContext):EmitResult {
-		final entryPath = EmitterStage.emitToDir(program, context.outputDir, context.emitFullBodies, context.buildExecutable);
-		return new EmitResult(
-			entryPath,
-			[
-				new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath)
-			],
-			context.buildExecutable
-		);
+	public function capabilities():BackendCapabilities {
+		return delegate.capabilities();
+	}
+
+	public static function targetCore():ITargetCore {
+		return new OcamlTargetCore();
+	}
+
+	public function new() {
+		delegate = new TargetCoreBackend(descriptor(), targetCore());
+	}
+
+	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
+		return delegate.emit(program, context);
 	}
 }
-

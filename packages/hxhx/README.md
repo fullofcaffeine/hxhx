@@ -100,6 +100,11 @@ Current presets:
   - currently explicit unsupported: try/catch + throw/rethrow lowering (fails fast with a clear unsupported marker)
 - Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
+Delegation guard:
+
+- Set `HXHX_FORBID_STAGE0=1` to fail any invocation path that would delegate to stage0 `haxe`.
+- Linked Stage3 builtins (`ocaml-stage3`, `js-native`) remain allowed under this guard.
+
 Examples:
 
 ```bash

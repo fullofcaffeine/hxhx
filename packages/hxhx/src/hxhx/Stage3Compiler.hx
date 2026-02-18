@@ -7,9 +7,8 @@ import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
 import backend.BackendContext;
+import backend.BackendRegistry;
 import backend.IBackend;
-import backend.js.JsBackend;
-import backend.ocaml.OcamlStage3Backend;
 
 private typedef HaxelibSpec = {
 	/**
@@ -173,12 +172,7 @@ class Stage3Compiler {
 		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
 	**/
 	static function resolveBuiltinBackend(backendId:String):IBackend {
-		return switch (backendId) {
-			case "ocaml-stage3": new OcamlStage3Backend();
-			case "js-native": new JsBackend();
-			case _:
-				throw "unknown Stage3 backend: " + backendId;
-		}
+		return BackendRegistry.requireForTarget(backendId);
 	}
 
 	/**
@@ -1821,15 +1815,13 @@ class Stage3Compiler {
 			generated.push({ name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name) });
 		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
-		final backendCaps = switch (backendId) {
-			case "ocaml-stage3":
-				new OcamlStage3Backend().capabilities();
-			case "js-native":
-				new JsBackend().capabilities();
-			case _:
-				closeMacroSession();
-				return error("backend setup failed: unknown Stage3 backend: " + backendId);
-		};
+		final backend = try {
+			resolveBuiltinBackend(backendId);
+		} catch (e:Dynamic) {
+			closeMacroSession();
+			return error("backend setup failed: " + Std.string(e));
+		}
+		final backendCaps = backend.capabilities();
 
 			// Bring-up diagnostics: dump HXHX_* defines again after hooks.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
@@ -1910,14 +1902,7 @@ class Stage3Compiler {
 					null;
 				}
 				final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, backendCaps.supportsBuildExecutable, definesMap);
-				switch (backendId) {
-					case "ocaml-stage3":
-						new OcamlStage3Backend().emit(expanded, context);
-					case "js-native":
-						new JsBackend().emit(expanded, context);
-					case _:
-						throw "unknown Stage3 backend: " + backendId;
-				}
+				backend.emit(expanded, context);
 			} catch (e:Dynamic) {
 				closeMacroSession();
 				return error("emit failed: " + Std.string(e));

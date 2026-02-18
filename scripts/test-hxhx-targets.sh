@@ -96,6 +96,13 @@ fi
 grep -q 'Target "as3" is not supported in this implementation' "$legacy_log"
 grep -q "Legacy Flash/AS3 targets are intentionally unsupported" "$legacy_log"
 
+echo "== Stage0 delegation guard: blocks shim delegation"
+if HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --version >"$legacy_log" 2>&1; then
+  echo "Expected HXHX_FORBID_STAGE0=1 to block stage0 passthrough (--version)." >&2
+  exit 1
+fi
+grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$legacy_log"
+
 echo "== Preset injects missing flags (compile smoke)"
 tmpdir="$(mktemp -d)"
 
@@ -210,6 +217,10 @@ class BuiltinMain {
 }
 HX
 out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_fast")"
+echo "$out" | grep -q "^stage3=no_emit_ok$"
+
+echo "== Stage0 delegation guard: builtin target path remains allowed"
+out="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_guard")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Strict CLI mode: rejects hxhx-only flags"

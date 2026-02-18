@@ -83,6 +83,9 @@ Optional flags:
 ## hxhx (Haxe-in-Haxe) bring-up
 
 `hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is a **stage0 shim** that delegates to a system `haxe`, but it already provides a place to hang acceptance tests and bootstrapping gates.
+Linked Stage3 backends (`ocaml-stage3`, `js-native`) are now selected through a canonical builtin backend registry (`packages/hih-compiler/src/backend/BackendRegistry.hx`) with explicit descriptors (`TargetDescriptor`) and compatibility requirements (`TargetRequirements`).
+Stage3 backend input is now named as a codegen contract (`GenIrProgram` v0 alias), and builtin backends now split emission into reusable target-core pilots (`packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx`, `packages/hih-compiler/src/backend/js/JsTargetCore.hx`) to support plugin→builtin promotion without codegen rewrites.
+The registry also has a dynamic provider seam (`registerProvider`) so plugin wrappers can participate in the same deterministic precedence model as builtins.
 
 ### Naming: `hih-*` vs `hxhx`
 
@@ -362,6 +365,9 @@ Quick target-preset smoke checks:
 HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
 "$HXHX_BIN" --target ocaml -- -cp src -main Main --no-output
 "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+
+# Optional hard guard: fail if this invocation would delegate to stage0 `haxe`.
+HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
 ```
 
 Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, including:

@@ -32,6 +32,17 @@ class Main {
 		return getDefineValue(args, name) != null;
 	}
 
+	static function isTrueEnv(name:String):Bool {
+		final raw = Sys.getEnv(name);
+		if (raw == null) return false;
+		switch (raw.toLowerCase()) {
+			case "1", "true", "yes", "on":
+				return true;
+			case _:
+				return false;
+		}
+	}
+
 	static function getDefineValue(args:Array<String>, name:String):Null<String> {
 		var i = 0;
 		while (i < args.length) {
@@ -496,6 +507,7 @@ class Main {
 			Sys.println("");
 			Sys.println("Environment:");
 			Sys.println("  HAXE_BIN  Path to stage0 `haxe` (default: haxe)");
+			Sys.println("  HXHX_FORBID_STAGE0  Set to 1/true to fail any stage0 delegation path");
 			Sys.println("");
 			Sys.println("Notes:");
 			Sys.println("  - `--version` and `--help` are forwarded to stage0 `haxe` for compatibility.");
@@ -508,10 +520,18 @@ class Main {
 			final v = Sys.getEnv("HAXE_BIN");
 			(v == null || v.length == 0) ? "haxe" : v;
 		}
+		final forbidStage0Delegation = isTrueEnv("HXHX_FORBID_STAGE0");
 
 		if (ocamlInterpLike) {
+			if (forbidStage0Delegation) {
+				fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids --hxhx-ocaml-interp because this path delegates to stage0 `haxe`.");
+			}
 			runOcamlInterpLike(haxeBin, forwarded, ocamlInterpOutDir);
 			return;
+		}
+
+		if (forbidStage0Delegation) {
+			fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids stage0 delegation for this invocation. Use --hxhx-stage3 or a builtin target preset (for example: --target ocaml-stage3 / --target js-native).");
 		}
 
 		final code = Sys.command(haxeBin, forwarded);
