@@ -835,8 +835,36 @@
 
 	function parsePostfixExpr(stop:()->Bool):HxExpr {
 		var e = parsePrimaryExpr();
+
+		inline function isTripleDotAhead():Bool {
+			return cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+		}
+
 		while (!stop()) {
 			switch (cur.kind) {
+				case TDot if (isTripleDotAhead()):
+					// Expression-level range: `start...end`.
+					//
+					// Why
+					// - For-in and comprehension parsers already special-case ranges, but plain expression
+					//   forms like `var items = 1...5` should also parse and lower in js-native.
+					// - Without this branch, the first dot is interpreted as field access and fails with
+					//   “Expected field name”.
+					bump();
+					bump();
+					bump();
+					final right = parseExpr(() ->
+						stop()
+						|| cur.kind.match(TComma)
+						|| cur.kind.match(TRParen)
+						|| cur.kind.match(TRBrace)
+						|| cur.kind.match(TSemicolon)
+						|| cur.kind.match(TEof)
+						|| cur.kind.match(TKeyword(KCase))
+						|| cur.kind.match(TKeyword(KDefault))
+						|| cur.kind.match(TOther("]".code))
+					);
+					e = ERange(e, right);
 				case TDot:
 					bump();
 					final field = readIdent("field name");

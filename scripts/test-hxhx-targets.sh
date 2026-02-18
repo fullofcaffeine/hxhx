@@ -270,6 +270,19 @@ class JsNativeArrayComprehensionMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeRangeExprMain.hx" <<'HX'
+class JsNativeRangeExprMain {
+  static function main() {
+    var items = 1...5;
+    var sum = 0;
+    for (value in items) {
+      sum += value;
+    }
+    Sys.println("js-native-range-expr:" + items.length + ":" + sum);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeTryCatchMain.hx" <<'HX'
 class JsNativeTryCatchMain {
   static function main() {
@@ -427,6 +440,14 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_arr_comp/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native-arr-comp:4:1:7$"
 test -f "$tmpdir/out_js_arr_comp/main.js"
+
+echo "== Builtin fast-path target: js-native range expressions"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_range_expr/main.js" -cp "$tmpdir/src" -main JsNativeRangeExprMain --hxhx-out "$tmpdir/out_js_range_expr")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_range_expr/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-range-expr:4:10$"
+test -f "$tmpdir/out_js_range_expr/main.js"
 
 echo "== Builtin fast-path target: js-native try/catch throw/rethrow is explicit unsupported"
 trycatch_log="$(mktemp)"
