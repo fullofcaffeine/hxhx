@@ -128,6 +128,43 @@ CANDIDATES="$(mktemp -t hxhx-clean-candidates.XXXXXX)"
 UNIQUE_CANDIDATES="$(mktemp -t hxhx-clean-candidates-uniq.XXXXXX)"
 SIZE_REPORT="$(mktemp -t hxhx-clean-size-report.XXXXXX)"
 trap 'rm -f "$CANDIDATES" "$UNIQUE_CANDIDATES" "$SIZE_REPORT"' EXIT
+GIT_AVAILABLE=0
+if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  GIT_AVAILABLE=1
+fi
+
+to_repo_relative() {
+  local path="$1"
+  if [[ "$path" == "$ROOT" ]]; then
+    echo "."
+    return 0
+  fi
+  if [[ "$path" == "$ROOT/"* ]]; then
+    echo "${path#"$ROOT/"}"
+    return 0
+  fi
+  return 1
+}
+
+is_tracked_path() {
+  local path="$1"
+  if [[ "$GIT_AVAILABLE" -ne 1 ]]; then
+    return 1
+  fi
+  local rel
+  rel="$(to_repo_relative "$path")" || return 1
+  git -C "$ROOT" ls-files -- "$rel" | grep -Fxq "$rel"
+}
+
+dir_has_tracked_entries() {
+  local path="$1"
+  if [[ "$GIT_AVAILABLE" -ne 1 || ! -d "$path" ]]; then
+    return 1
+  fi
+  local rel
+  rel="$(to_repo_relative "$path")" || return 1
+  [[ -n "$(git -C "$ROOT" ls-files -- "$rel")" ]]
+}
 
 add_path_if_exists() {
   local path="$1"
@@ -325,6 +362,7 @@ fi
 
 deleted=0
 deleted_kb=0
+skipped_tracked=0
 while IFS= read -r path; do
   if [[ -e "$path" ]]; then
     path_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
@@ -335,6 +373,35 @@ while IFS= read -r path; do
       next="$(($deleted + 1))"
       echo "[$next/$count] deleting $(human_from_kb "$path_kb"): $path"
     fi
+    if [[ "$MODE" != "tmp-only" && -d "$path" ]] && dir_has_tracked_entries "$path"; then
+      rel_path="$(to_repo_relative "$path")"
+      if [[ "$VERBOSE" -eq 1 ]]; then
+        echo "  preserving tracked contents via git clean: $path"
+      fi
+      git -C "$ROOT" clean -fdx -- "$rel_path" >/dev/null 2>&1 || true
+      after_kb="$(du -sk "$path" 2>/dev/null | awk '{print $1}')"
+      if [[ -z "$after_kb" ]]; then
+        after_kb=0
+      fi
+      reclaimed_kb=$((path_kb - after_kb))
+      if [[ "$reclaimed_kb" -lt 0 ]]; then
+        reclaimed_kb=0
+      fi
+      if [[ "$reclaimed_kb" -gt 0 ]]; then
+        deleted=$((deleted + 1))
+        deleted_kb=$((deleted_kb + reclaimed_kb))
+      fi
+      continue
+    fi
+
+    if is_tracked_path "$path"; then
+      if [[ "$VERBOSE" -eq 1 ]]; then
+        echo "  skipping tracked path: $path"
+      fi
+      skipped_tracked=$((skipped_tracked + 1))
+      continue
+    fi
+
     rm -rf "$path"
     deleted=$((deleted + 1))
     deleted_kb=$((deleted_kb + path_kb))
@@ -342,5 +409,8 @@ while IFS= read -r path; do
 done <"$UNIQUE_CANDIDATES"
 
 echo "Deleted: $deleted"
+if [[ "$skipped_tracked" -gt 0 ]]; then
+  echo "Skipped tracked paths: $skipped_tracked"
+fi
 echo "Actual reclaimed: $(human_from_kb "$deleted_kb")"
 echo "Cleanup complete."

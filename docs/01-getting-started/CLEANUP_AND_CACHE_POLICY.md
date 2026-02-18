@@ -21,7 +21,7 @@ npm run clean:tmp:verbose
 Command behavior:
 
 - `clean:dry-run`: preview what would be removed in safe mode.
-- `clean`: remove repo-local transient outputs.
+- `clean`: remove repo-local transient outputs (while preserving tracked placeholders such as fixture `out/.gitignore` files).
 - `clean:tmp`: remove stale stage0 temp logs from OS temp dirs.
 - `clean:deep`: includes heavier bootstrap caches (`bootstrap_out/_build`).
 - `clean:verbose`: safe cleanup with full largest-first candidate listing, per-delete progress, and actual reclaimed size.

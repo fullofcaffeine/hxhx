@@ -213,6 +213,7 @@ npm run clean:tmp:verbose
 - `clean:tmp`: stale stage0 temp logs in OS temp directories
 - `clean:deep`: includes large bootstrap `_build` caches
 - `clean:verbose` / `clean:tmp:verbose`: largest-first candidate listing + per-delete progress + actual reclaimed size report
+- safe clean preserves tracked placeholders (for example fixture `out/.gitignore`) while removing untracked/ignored contents in those directories
 
 Policy details: `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
 
