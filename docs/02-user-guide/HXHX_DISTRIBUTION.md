@@ -97,6 +97,11 @@ This reports:
 
 - `haxe --version` vs `hxhx --version`
 - `haxe --no-output` compile vs `hxhx --no-output` compile
+- linked Stage3 OCaml fast-path: `--target ocaml-stage3 --hxhx-no-emit`
+- linked Stage3 JS emit throughput row: `--target js-native --hxhx-no-run --js ...`
+
+If the selected `hxhx` binary does not expose `js-native`, the harness reports that row as `skipped`.
+Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild (`HXHX_FORCE_STAGE0=1`) and measure the js-native row.
 
 As `hxhx` becomes a real compiler (stops delegating), this benchmark suite should be expanded and the acceptance gates should include real-world workloads (upstream `tests/runci`, macro-heavy projects, and curated external repos).
 

@@ -21,6 +21,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 reps="${HXHX_BENCH_REPS:-10}"
+force_js_rebuild="${HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE:-0}"
 
 HXHX_BIN="${HXHX_BIN:-}"
 if [ -z "$HXHX_BIN" ]; then
@@ -29,6 +30,34 @@ fi
 if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   echo "Missing hxhx stage1 binary (set HXHX_BIN or ensure build-hxhx.sh works)." >&2
   exit 1
+fi
+
+target_available() {
+  local target="$1"
+  local targets=""
+  if ! targets="$("$HXHX_BIN" --hxhx-list-targets 2>/dev/null)"; then
+    return 1
+  fi
+  printf '%s\n' "$targets" | grep -qx "$target"
+}
+
+js_native_available=1
+if ! target_available "js-native"; then
+  if [ "$force_js_rebuild" = "1" ]; then
+    echo "WARN: current hxhx binary does not expose js-native; attempting source rebuild (HXHX_FORCE_STAGE0=1)." >&2
+    HXHX_BIN="$(HAXE_BIN="$HAXE_BIN" HXHX_FORCE_STAGE0=1 "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+    if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+      echo "WARN: source rebuild failed; js-native benchmark row will be reported as skipped." >&2
+      js_native_available=0
+    elif ! target_available "js-native"; then
+      echo "WARN: rebuilt hxhx binary still does not expose js-native; js-native benchmark row will be reported as skipped." >&2
+      js_native_available=0
+    fi
+  else
+    echo "WARN: current hxhx binary does not expose js-native; benchmark row will be reported as skipped." >&2
+    echo "      Set HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1 to rebuild from source and measure js-native." >&2
+    js_native_available=0
+  fi
 fi
 
 tmp_root="$(mktemp -d)"
@@ -75,6 +104,12 @@ PY
   printf '%-32s avg=%6sms  best=%6sms  worst=%6sms  reps=%s\n' "$label" "$avg_ms" "$best_ms" "$worst_ms" "$reps"
 }
 
+bench_skip() {
+  local label="$1"
+  local reason="$2"
+  printf '%-32s skipped  reason=%s\n' "$label" "$reason"
+}
+
 echo "== hxhx bench (stage0 shim + builtin fast-path)"
 echo "Platform: $(uname -s) $(uname -m)"
 echo "Stage0 haxe: $("$HAXE_BIN" -version 2>/dev/null || "$HAXE_BIN" --version 2>/dev/null || echo unknown)"
@@ -94,5 +129,12 @@ bench_one "stage1: no-output compile" \
 bench_one "stage1: --target ocaml-stage3" \
   "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_stage3_builtin"
 
+if [ "$js_native_available" = "1" ]; then
+  bench_one "stage1: --target js-native emit" \
+    "$HXHX_BIN" --target js-native --js "$tmp_root/out_js_native/main.js" --hxhx-no-run -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_js_native"
+else
+  bench_skip "stage1: --target js-native emit" "target_unavailable"
+fi
+
 echo ""
-echo "NOTE: --target ocaml still delegates to stage0, while --target ocaml-stage3 exercises the linked Stage3 backend fast-path."
+echo "NOTE: --target ocaml still delegates to stage0, while --target ocaml-stage3 and --target js-native exercise linked Stage3 backend paths."

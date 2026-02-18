@@ -27,6 +27,21 @@ stage0: no-output compile        avg=   135ms  best=   104ms  worst=   185ms  re
 stage1: no-output compile        avg=   139ms  best=   108ms  worst=   201ms  reps=10
 ```
 
+## Harness row additions (2026-02-18)
+
+The benchmark harness now always includes:
+
+- `stage1: --target ocaml-stage3`
+- `stage1: --target js-native emit`
+
+When a selected `hxhx` binary does not expose `js-native`, the JS row is still recorded as a sample result in skipped form:
+
+```
+stage1: --target js-native emit  skipped  reason=target_unavailable
+```
+
+Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and capture numeric js-native results on hosts where the current binary lacks that target.
+
 ## How to update
 
 When updating this file, include:
@@ -35,4 +50,3 @@ When updating this file, include:
 - commit SHA
 - host toolchain versions
 - full benchmark output block
-

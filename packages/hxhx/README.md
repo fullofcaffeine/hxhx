@@ -146,3 +146,7 @@ This now reports:
 - stage0 `haxe` baseline
 - stage1 shim delegation baseline
 - builtin `--target ocaml-stage3` fast-path baseline
+- builtin `--target js-native` emit baseline (`--hxhx-no-run` to isolate emitter/startup cost)
+
+If the selected `hxhx` binary does not expose `js-native`, the harness reports that row as skipped.
+Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and include the js-native row.
