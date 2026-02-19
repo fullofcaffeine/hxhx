@@ -12,3 +12,4 @@ module Int64 = Haxe_Int64
 module Int64Helper = Haxe_Int64Helper
 module NativeStackTrace = Haxe_NativeStackTrace
 module SysTools = Haxe_SysTools
+module ValueException = Haxe_ValueException

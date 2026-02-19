@@ -2,6 +2,7 @@
 set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
   echo "Skipping examples: dune/ocamlc not found on PATH."
@@ -158,10 +159,10 @@ for dir in examples/*/; do
       if [ "${#stage3_args[@]}" -eq 0 ]; then
         stage3_args=(build.hxml)
       fi
-      HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out "${stage3_args[@]}" -D ocaml_build=native
+      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out "${stage3_args[@]}" -D ocaml_build=native
       exe="out/out.exe"
     elif [ -f "USE_HXHX" ]; then
-      HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml build.hxml -D ocaml_build=native
+      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml build.hxml -D ocaml_build=native
       exe="out/_build/default/out.exe"
     else
       "$HAXE_BIN" build.hxml -D ocaml_build=native

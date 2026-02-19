@@ -42,57 +42,110 @@ let create = fun name2 visibility2 isStatic2 args2 returnTypeHint2 body2 returnS
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""; visibility = Obj.magic (); isStatic = false; args = Obj.magic (); returnTypeHint = ""; body = Obj.magic (); returnStringLiteral = "" } : t)
 
-let getFirstReturnExpr = fun self () -> let find = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (let __assign_8 = fun stmts -> try let _g = ref 0 in (
-    ignore (while !_g < HxArray.length stmts do ignore (let s = HxArray.get stmts (!_g) in (
-      ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
-        ignore (_g := __new_10);
-        __new_10
-      ));
-      match s with
-        | HxStmt.SBlock (_p0, _p1) -> ignore (let _g2 = _p0 in (
-          ignore _p1;
-          let ss = _g2 in let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) ss)) in if r != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r)) else ()
-        ))
-        | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g2 = _p0 in let _g1 = _p1 in let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
-          ignore _p3;
-          ignore _g2;
-          let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g3) in let r1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_11 = HxArray.create () in (
-            ignore (HxArray.push __arr_11 thenBranch);
-            __arr_11
-          )))) in (
-            ignore (if r1 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r1)) else ());
-            if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (let r2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_12 = HxArray.create () in (
-              ignore (HxArray.push __arr_12 elseBranch);
-              __arr_12
-            )))) in if r2 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r2)) else ()) else ()
-          )
-        ))
-        | HxStmt.SReturnVoid _p0 -> ignore ((
-          ignore _p0;
-          raise (HxRuntime.Hx_return (Obj.repr (HxExpr.EUnsupported "<return-void>")))
-        ))
-        | HxStmt.SReturn (_p0, _p1) -> ignore (let _g2 = _p0 in (
-          ignore _p1;
-          let e = _g2 in raise (HxRuntime.Hx_return (Obj.repr e))
-        ))
-        | _ -> ignore ()
-    )) done);
-    Obj.magic (HxRuntime.hx_null)
-  ) with
-    | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13 in (
-    find := __assign_8;
-    __assign_8
-  ));
-  let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (self.body))) in let tempResult = ref (Obj.magic ()) in (
-    ignore (if r == Obj.magic (HxRuntime.hx_null) then let __assign_14 = HxExpr.EUnsupported "<no-return>" in (
-      tempResult := __assign_14;
-      __assign_14
-    ) else let __assign_15 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" r) in (
-      tempResult := __assign_15;
-      __assign_15
+let getFirstReturnExpr = fun self () -> (
+  ignore self;
+  let find = ref (Obj.magic (HxRuntime.hx_null)) in (
+    ignore (let __assign_8 = fun stmts -> try let _g = ref 0 in (
+      ignore (while !_g < HxArray.length stmts do ignore (let s = HxArray.get stmts (!_g) in (
+        ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
+          ignore (_g := __new_10);
+          __new_10
+        ));
+        match s with
+          | HxStmt.SBlock (_p0, _p1) -> ignore (let _g2 = _p0 in (
+            ignore _p1;
+            let ss = _g2 in let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) ss)) in if r != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r)) else ()
+          ))
+          | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g2 = _p0 in let _g1 = _p1 in let _g3 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
+            ignore _p3;
+            ignore _g2;
+            let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g3) in let r1 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_11 = HxArray.create () in (
+              ignore (HxArray.push __arr_11 thenBranch);
+              __arr_11
+            )))) in (
+              ignore (if r1 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r1)) else ());
+              if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (let r2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_12 = HxArray.create () in (
+                ignore (HxArray.push __arr_12 elseBranch);
+                __arr_12
+              )))) in if r2 != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r2)) else ()) else ()
+            )
+          ))
+          | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g2 = _p0 in let _g1 = _p1 in (
+            ignore _p2;
+            ignore _g2;
+            let body2 = _g1 in let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_13 = HxArray.create () in (
+              ignore (HxArray.push __arr_13 body2);
+              __arr_13
+            )))) in if r != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r)) else ()
+          ))
+          | HxStmt.SDoWhile (_p0, _p1, _p2) -> ignore (let _g2 = _p0 in let _g1 = _p1 in (
+            ignore _p2;
+            let body2 = _g2 in (
+              ignore _g1;
+              let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_14 = HxArray.create () in (
+                ignore (HxArray.push __arr_14 body2);
+                __arr_14
+              )))) in if r != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr r)) else ()
+            )
+          ))
+          | HxStmt.STry (_p0, _p1, _p2) -> ignore (let _g2 = _p0 in let _g1 = _p1 in (
+            ignore _p2;
+            let tryBody = _g2 in let catches = _g1 in let rt = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_15 = HxArray.create () in (
+              ignore (HxArray.push __arr_15 tryBody);
+              __arr_15
+            )))) in (
+              ignore (if rt != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr rt)) else ());
+              let _g4 = ref 0 in while !_g4 < HxArray.length catches do ignore (let c = HxArray.get catches (!_g4) in (
+                ignore (let __old_16 = !_g4 in let __new_17 = HxInt.add __old_16 1 in (
+                  ignore (_g4 := __new_17);
+                  __new_17
+                ));
+                let rc = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (let __arr_18 = HxArray.create () in (
+                  ignore (HxArray.push __arr_18 (Obj.obj (HxAnon.get c "body")));
+                  __arr_18
+                )))) in if rc != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr rc)) else ()
+              )) done
+            )
+          ))
+          | HxStmt.SBreak _p0 -> ignore ((
+            ignore _p0;
+            ()
+          ))
+          | HxStmt.SContinue _p0 -> ignore ((
+            ignore _p0;
+            ()
+          ))
+          | HxStmt.SThrow (_p0, _p1) -> ignore ((
+            ignore _p0;
+            ignore _p1;
+            ()
+          ))
+          | HxStmt.SReturnVoid _p0 -> ignore ((
+            ignore _p0;
+            raise (HxRuntime.Hx_return (Obj.repr (HxExpr.EUnsupported "<return-void>")))
+          ))
+          | HxStmt.SReturn (_p0, _p1) -> ignore (let _g2 = _p0 in (
+            ignore _p1;
+            let e = _g2 in raise (HxRuntime.Hx_return (Obj.repr e))
+          ))
+          | _ -> ignore ()
+      )) done);
+      Obj.magic (HxRuntime.hx_null)
+    ) with
+      | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19 in (
+      find := __assign_8;
+      __assign_8
     ));
-    !tempResult
+    let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (self.body))) in let tempResult = ref (Obj.magic ()) in (
+      ignore (if r == Obj.magic (HxRuntime.hx_null) then let __assign_20 = HxExpr.EUnsupported "<no-return>" in (
+        tempResult := __assign_20;
+        __assign_20
+      ) else let __assign_21 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" r) in (
+        tempResult := __assign_21;
+        __assign_21
+      ));
+      !tempResult
+    )
   )
 )
 

@@ -9,6 +9,7 @@ import hxhx.macro.MacroHostClient.MacroHostSession;
 import backend.BackendContext;
 import backend.EmitResult;
 import backend.BackendRegistry;
+import backend.BackendDispatchBoundary;
 import backend.GenIrBoundary;
 import backend.GenIrProgram;
 import backend.IBackend;
@@ -210,19 +211,20 @@ class Stage3Compiler {
 	static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
 		final expandedProgram = GenIrBoundary.requireProgram(expanded);
 		#if reflaxe
-		if (Std.isOfType(backend, JsBackend)) {
-			final jsBackend:JsBackend = cast backend;
+		final backendDispatchValue = BackendDispatchBoundary.asDispatchValue(backend);
+		if (Std.isOfType(backendDispatchValue, JsBackend)) {
+			final jsBackend = BackendDispatchBoundary.requireJsBackend(backendDispatchValue);
 			return JsBackend.emitBridge(jsBackend, expandedProgram, context);
 		}
-		if (Std.isOfType(backend, OcamlStage3Backend)) {
-			final ocamlBackend:OcamlStage3Backend = cast backend;
+		if (Std.isOfType(backendDispatchValue, OcamlStage3Backend)) {
+			final ocamlBackend = BackendDispatchBoundary.requireOcamlBackend(backendDispatchValue);
 			return OcamlStage3Backend.emitBridge(ocamlBackend, expandedProgram, context);
 		}
-		if (Std.isOfType(backend, TargetCoreBackend)) {
-			final targetCoreBackend:TargetCoreBackend = cast backend;
+		if (Std.isOfType(backendDispatchValue, TargetCoreBackend)) {
+			final targetCoreBackend = BackendDispatchBoundary.requireTargetCoreBackend(backendDispatchValue);
 			return TargetCoreBackend.emitBridge(targetCoreBackend, expandedProgram, context);
 		}
-		final backendReflect:Dynamic = cast backend;
+		final backendReflect:Dynamic = backendDispatchValue;
 		final emitFn = Reflect.field(backendReflect, "emit");
 		if (emitFn == null)
 			throw "backend missing emit() method: " + backendId;

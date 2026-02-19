@@ -24,182 +24,179 @@ let run = fun () -> let preferredFixtureRoot = "workloads/hih-compiler/fixtures/
   let classPaths = let __arr_3 = HxArray.create () in (
     ignore (HxArray.push __arr_3 (!tempString));
     __arr_3
-  ) in let mainModule = "demo.A" in let resolved = ResolverStage.parseProject classPaths mainModule in (
-    ignore (ResolvedModule.create);
-    let root = HxArray.get resolved 0 in let ast = ResolvedModule.getParsed root in let decl = ParsedModule.getDecl ast () in let pkg = HxModuleDecl.getPackagePath decl in let imports = HxModuleDecl.getImports decl in let mainClass = HxModuleDecl.getMainClass decl in (
-      ignore (print_endline "parse=ok");
-      ignore (print_endline ("modules=" ^ string_of_int (HxArray.length resolved)));
-      ignore (print_endline ("main=" ^ HxString.toStdString mainModule));
-      ignore (print_endline ("mainFile=" ^ HxString.toStdString (ResolvedModule.getFilePath root)));
-      let tempString1 = ref "" in (
-        ignore (if HxString.length pkg = 0 then let __assign_4 = "<none>" in (
-          tempString1 := __assign_4;
-          __assign_4
-        ) else let __assign_5 = pkg in (
-          tempString1 := __assign_5;
-          __assign_5
+  ) in let mainModule = "demo.A" in let resolved = ResolverStage.parseProject classPaths mainModule in let root = HxArray.get resolved 0 in let ast = ResolvedModule.getParsed root in let decl = ParsedModule.getDecl ast () in let pkg = HxModuleDecl.getPackagePath decl in let imports = HxModuleDecl.getImports decl in let mainClass = HxModuleDecl.getMainClass decl in (
+    ignore (print_endline "parse=ok");
+    ignore (print_endline ("modules=" ^ string_of_int (HxArray.length resolved)));
+    ignore (print_endline ("main=" ^ HxString.toStdString mainModule));
+    ignore (print_endline ("mainFile=" ^ HxString.toStdString (ResolvedModule.getFilePath root)));
+    let tempString1 = ref "" in (
+      ignore (if HxString.length pkg = 0 then let __assign_4 = "<none>" in (
+        tempString1 := __assign_4;
+        __assign_4
+      ) else let __assign_5 = pkg in (
+        tempString1 := __assign_5;
+        __assign_5
+      ));
+      ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
+      ignore (print_endline ("imports=" ^ string_of_int (HxArray.length imports)));
+      ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName mainClass)));
+      let tempString2 = ref "" in (
+        ignore (if HxClassDecl.getHasStaticMain mainClass then let __assign_6 = "yes" in (
+          tempString2 := __assign_6;
+          __assign_6
+        ) else let __assign_7 = "no" in (
+          tempString2 := __assign_7;
+          __assign_7
         ));
-        ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
-        ignore (print_endline ("imports=" ^ string_of_int (HxArray.length imports)));
-        ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName mainClass)));
-        let tempString2 = ref "" in (
-          ignore (if HxClassDecl.getHasStaticMain mainClass then let __assign_6 = "yes" in (
-            tempString2 := __assign_6;
-            __assign_6
-          ) else let __assign_7 = "no" in (
-            tempString2 := __assign_7;
-            __assign_7
-          ));
-          ignore (print_endline ("hasStaticMain=" ^ HxString.toStdString (!tempString2)));
-          let fns = HxClassDecl.getFunctions mainClass in (
-            ignore (print_endline ("functions=" ^ string_of_int (HxArray.length fns)));
-            ignore (let _g = ref 0 in while !_g < HxArray.length fns do ignore (let fn = HxArray.get fns (!_g) in (
-              ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-                ignore (_g := __new_9);
-                __new_9
-              ));
-              let tempString3 = ref "" in (
-                ignore (let _g2 = HxFunctionDecl.getVisibility fn in match _g2 with
-                  | HxVisibility.Public -> let __assign_10 = "public" in (
-                    tempString3 := __assign_10;
-                    __assign_10
-                  )
-                  | HxVisibility.Private -> let __assign_11 = "private" in (
-                    tempString3 := __assign_11;
-                    __assign_11
+        ignore (print_endline ("hasStaticMain=" ^ HxString.toStdString (!tempString2)));
+        let fns = HxClassDecl.getFunctions mainClass in (
+          ignore (print_endline ("functions=" ^ string_of_int (HxArray.length fns)));
+          ignore (let _g = ref 0 in while !_g < HxArray.length fns do ignore (let fn = HxArray.get fns (!_g) in (
+            ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
+              ignore (_g := __new_9);
+              __new_9
+            ));
+            let tempString3 = ref "" in (
+              ignore (let _g2 = HxFunctionDecl.getVisibility fn in match _g2 with
+                | HxVisibility.Public -> let __assign_10 = "public" in (
+                  tempString3 := __assign_10;
+                  __assign_10
+                )
+                | HxVisibility.Private -> let __assign_11 = "private" in (
+                  tempString3 := __assign_11;
+                  __assign_11
+                ));
+              let vis = !tempString3 in let retHint = HxFunctionDecl.getReturnTypeHint fn in let tempString4 = ref "" in (
+                ignore (if HxString.length retHint = 0 then let __assign_12 = "<none>" in (
+                  tempString4 := __assign_12;
+                  __assign_12
+                ) else let __assign_13 = retHint in (
+                  tempString4 := __assign_13;
+                  __assign_13
+                ));
+                let ret = !tempString4 in let retStrLit = HxFunctionDecl.getReturnStringLiteral fn in let tempString5 = ref "" in (
+                  ignore (if HxString.length retStrLit = 0 then let __assign_14 = "<none>" in (
+                    tempString5 := __assign_14;
+                    __assign_14
+                  ) else let __assign_15 = retStrLit in (
+                    tempString5 := __assign_15;
+                    __assign_15
                   ));
-                let vis = !tempString3 in let retHint = HxFunctionDecl.getReturnTypeHint fn in let tempString4 = ref "" in (
-                  ignore (if HxString.length retHint = 0 then let __assign_12 = "<none>" in (
-                    tempString4 := __assign_12;
-                    __assign_12
-                  ) else let __assign_13 = retHint in (
-                    tempString4 := __assign_13;
-                    __assign_13
-                  ));
-                  let ret = !tempString4 in let retStrLit = HxFunctionDecl.getReturnStringLiteral fn in let tempString5 = ref "" in (
-                    ignore (if HxString.length retStrLit = 0 then let __assign_14 = "<none>" in (
-                      tempString5 := __assign_14;
-                      __assign_14
-                    ) else let __assign_15 = retStrLit in (
-                      tempString5 := __assign_15;
-                      __assign_15
+                  let retStr = !tempString5 in let args = HxFunctionDecl.getArgs fn in let tempString6 = ref "" in (
+                    ignore (if HxFunctionDecl.getIsStatic fn then let __assign_16 = "yes" in (
+                      tempString6 := __assign_16;
+                      __assign_16
+                    ) else let __assign_17 = "no" in (
+                      tempString6 := __assign_17;
+                      __assign_17
                     ));
-                    let retStr = !tempString5 in let args = HxFunctionDecl.getArgs fn in let tempString6 = ref "" in (
-                      ignore (if HxFunctionDecl.getIsStatic fn then let __assign_16 = "yes" in (
-                        tempString6 := __assign_16;
-                        __assign_16
-                      ) else let __assign_17 = "no" in (
-                        tempString6 := __assign_17;
-                        __assign_17
+                    print_endline ((((((((((("fn=" ^ HxString.toStdString (HxFunctionDecl.getName fn)) ^ " static=") ^ HxString.toStdString (!tempString6)) ^ " vis=") ^ HxString.toStdString vis) ^ " args=") ^ string_of_int (HxArray.length args)) ^ " ret=") ^ HxString.toStdString ret) ^ " retStr=") ^ HxString.toStdString retStr)
+                  )
+                )
+              )
+            )
+          )) done);
+          ignore (try (
+            ignore (ResolverStage.parseProject classPaths "demo.B");
+            print_endline "missing_import=fail"
+          ) with
+            | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
+            | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
+            | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
+            | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "String" then let _hx = (Obj.obj __exn_v_19 : string) in (
+              ignore _hx;
+              print_endline "missing_import=ok"
+            ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
+            | __exn_21 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_21) : string) in (
+              ignore _hx;
+              print_endline "missing_import=ok"
+            ) else raise (__exn_21));
+          let upstreamShaped = let __arr_22 = HxArray.create () in (
+            ignore (HxArray.push __arr_22 (FrontendFixture.create "tests/misc/resolution/projects/spec/pack/Mod.hx" (HxArray.join (let __arr_23 = HxArray.create () in (
+              ignore (HxArray.push __arr_23 "package pack;");
+              ignore (HxArray.push __arr_23 "@:build(Macro.build()) class Mod {}");
+              ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ModSubType {}");
+              __arr_23
+            )) "\n" (fun x -> x)) "pack" "Mod" false));
+            ignore (HxArray.push __arr_22 (FrontendFixture.create "tests/misc/resolution/projects/spec/pack/ModWithStatic.hx" (HxArray.join (let __arr_24 = HxArray.create () in (
+              ignore (HxArray.push __arr_24 "package pack;");
+              ignore (HxArray.push __arr_24 "");
+              ignore (HxArray.push __arr_24 "class ModWithStatic {");
+              ignore (HxArray.push __arr_24 "  public static function TheStatic() return \"pack.ModWithStatic.TheStatic function\";");
+              ignore (HxArray.push __arr_24 "}");
+              ignore (HxArray.push __arr_24 "");
+              ignore (HxArray.push __arr_24 "@:build(Macro.build())");
+              ignore (HxArray.push __arr_24 "class TheStatic {}");
+              __arr_24
+            )) "\n" (fun x -> x)) "pack" "ModWithStatic" false));
+            __arr_22
+          ) in (
+            ignore (let _g = ref 0 in while !_g < HxArray.length upstreamShaped do ignore (let case_ = HxArray.get upstreamShaped (!_g) in (
+              ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+                ignore (_g := __new_26);
+                __new_26
+              ));
+              let label = FrontendFixture.getLabel case_ () in let src = FrontendFixture.getSource case_ () in let parsed = ParsedModule.getDecl (ParserStage.parse src label) () in let parsedPkg = HxModuleDecl.getPackagePath parsed in let parsedMain = HxModuleDecl.getMainClass parsed in (
+                ignore (if not (HxString.equals parsedPkg (FrontendFixture.getExpectPackagePath case_ ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package mismatch") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                ignore (if not (HxString.equals (HxClassDecl.getName parsedMain) (FrontendFixture.getExpectMainClassName case_ ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class mismatch") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                ignore (if HxClassDecl.getHasStaticMain parsedMain <> FrontendFixture.getExpectHasStaticMain case_ () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main mismatch") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                ignore (if HxString.indexOf label "ModWithStatic" 0 >= 0 then ignore (let tempArray = ref (Obj.magic ()) in (
+                  ignore (let _this = HxClassDecl.getFunctions parsedMain in let _g2 = let __arr_27 = HxArray.create () in __arr_27 in (
+                    ignore (let _g1 = ref 0 in let _g3 = _this in while !_g1 < HxArray.length _g3 do ignore (let v = HxArray.get _g3 (!_g1) in (
+                      ignore (let __old_28 = !_g1 in let __new_29 = HxInt.add __old_28 1 in (
+                        ignore (_g1 := __new_29);
+                        __new_29
                       ));
-                      print_endline ((((((((((("fn=" ^ HxString.toStdString (HxFunctionDecl.getName fn)) ^ " static=") ^ HxString.toStdString (!tempString6)) ^ " vis=") ^ HxString.toStdString vis) ^ " args=") ^ string_of_int (HxArray.length args)) ^ " ret=") ^ HxString.toStdString ret) ^ " retStr=") ^ HxString.toStdString retStr)
+                      if HxString.equals (HxFunctionDecl.getName v) "TheStatic" then ignore (HxArray.push _g2 v) else ()
+                    )) done);
+                    let __assign_30 = _g2 in (
+                      tempArray := __assign_30;
+                      __assign_30
+                    )
+                  ));
+                  let found = !tempArray in (
+                    ignore (if HxArray.length found <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": expected 1 TheStatic function") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                    let retStr = HxFunctionDecl.getReturnStringLiteral (HxArray.get found 0) in if not (HxString.equals retStr "pack.ModWithStatic.TheStatic function") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": TheStatic return differs") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()
+                  )
+                )) else ());
+                let haxeDecl = HxParser.parseModule (HxParser.create src) (Obj.magic (HxRuntime.hx_null)) in (
+                  ignore (if not (HxString.equals (HxModuleDecl.getPackagePath haxeDecl) parsedPkg) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                  let haxeImports = HxModuleDecl.getImports haxeDecl in let parsedImports = HxModuleDecl.getImports parsed in (
+                    ignore (if HxArray.length haxeImports <> HxArray.length parsedImports then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": import count differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                    ignore (let _g2 = ref 0 in let _g1 = HxArray.length haxeImports in while !_g2 < _g1 do ignore (let i = let __old_31 = !_g2 in let __new_32 = HxInt.add __old_31 1 in (
+                      ignore (_g2 := __new_32);
+                      __old_31
+                    ) in if not (HxString.equals (HxArray.get haxeImports i) (HxArray.get parsedImports i)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": import differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()) done);
+                    let haxeMain = HxModuleDecl.getMainClass haxeDecl in (
+                      ignore (if not (HxString.equals (HxClassDecl.getName haxeMain) (HxClassDecl.getName parsedMain)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                      ignore (if HxClassDecl.getHasStaticMain haxeMain <> HxClassDecl.getHasStaticMain parsedMain then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                      let haxeFns = HxClassDecl.getFunctions haxeMain in let parsedFns = HxClassDecl.getFunctions parsedMain in (
+                        ignore (if HxArray.length haxeFns <> HxArray.length parsedFns then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function count differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
+                        let _g2 = ref 0 in let _g1 = HxArray.length haxeFns in while !_g2 < _g1 do ignore (let i = let __old_33 = !_g2 in let __new_34 = HxInt.add __old_33 1 in (
+                          ignore (_g2 := __new_34);
+                          __old_33
+                        ) in if not (HxString.equals (HxFunctionDecl.getName (HxArray.get haxeFns i)) (HxFunctionDecl.getName (HxArray.get parsedFns i))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function name differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()) done
+                      )
                     )
                   )
                 )
               )
             )) done);
-            ignore (try (
-              ignore (ResolverStage.parseProject classPaths "demo.B");
-              print_endline "missing_import=fail"
-            ) with
-              | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
-              | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-              | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
-              | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if true then let _hx = (__exn_v_19 : Obj.t) in (
-                ignore _hx;
-                print_endline "missing_import=ok"
-              ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
-              | __exn_21 -> if true then let _hx = (Obj.repr __exn_21 : Obj.t) in (
-                ignore _hx;
-                print_endline "missing_import=ok"
-              ) else raise (__exn_21));
-            let upstreamShaped = let __arr_22 = HxArray.create () in (
-              ignore (HxArray.push __arr_22 (FrontendFixture.create "tests/misc/resolution/projects/spec/pack/Mod.hx" (HxArray.join (let __arr_23 = HxArray.create () in (
-                ignore (HxArray.push __arr_23 "package pack;");
-                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class Mod {}");
-                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ModSubType {}");
-                __arr_23
-              )) "\n" (fun x -> x)) "pack" "Mod" false));
-              ignore (HxArray.push __arr_22 (FrontendFixture.create "tests/misc/resolution/projects/spec/pack/ModWithStatic.hx" (HxArray.join (let __arr_24 = HxArray.create () in (
-                ignore (HxArray.push __arr_24 "package pack;");
-                ignore (HxArray.push __arr_24 "");
-                ignore (HxArray.push __arr_24 "class ModWithStatic {");
-                ignore (HxArray.push __arr_24 "  public static function TheStatic() return \"pack.ModWithStatic.TheStatic function\";");
-                ignore (HxArray.push __arr_24 "}");
-                ignore (HxArray.push __arr_24 "");
-                ignore (HxArray.push __arr_24 "@:build(Macro.build())");
-                ignore (HxArray.push __arr_24 "class TheStatic {}");
-                __arr_24
-              )) "\n" (fun x -> x)) "pack" "ModWithStatic" false));
-              __arr_22
-            ) in (
-              ignore (let _g = ref 0 in while !_g < HxArray.length upstreamShaped do ignore (let case_ = HxArray.get upstreamShaped (!_g) in (
-                ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
-                  ignore (_g := __new_26);
-                  __new_26
-                ));
-                let label = FrontendFixture.getLabel case_ () in let src = FrontendFixture.getSource case_ () in let parsed = ParsedModule.getDecl (ParserStage.parse src label) () in let parsedPkg = HxModuleDecl.getPackagePath parsed in let parsedMain = HxModuleDecl.getMainClass parsed in (
-                  ignore (if not (HxString.equals parsedPkg (FrontendFixture.getExpectPackagePath case_ ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package mismatch") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                  ignore (if not (HxString.equals (HxClassDecl.getName parsedMain) (FrontendFixture.getExpectMainClassName case_ ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class mismatch") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                  ignore (if HxClassDecl.getHasStaticMain parsedMain <> FrontendFixture.getExpectHasStaticMain case_ () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main mismatch") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                  ignore (if HxString.indexOf label "ModWithStatic" 0 >= 0 then ignore (let tempArray = ref (Obj.magic ()) in (
-                    ignore (let _this = HxClassDecl.getFunctions parsedMain in let _g2 = let __arr_27 = HxArray.create () in __arr_27 in (
-                      ignore (let _g1 = ref 0 in let _g3 = _this in while !_g1 < HxArray.length _g3 do ignore (let v = HxArray.get _g3 (!_g1) in (
-                        ignore (let __old_28 = !_g1 in let __new_29 = HxInt.add __old_28 1 in (
-                          ignore (_g1 := __new_29);
-                          __new_29
-                        ));
-                        if HxString.equals (HxFunctionDecl.getName v) "TheStatic" then ignore (HxArray.push _g2 v) else ()
-                      )) done);
-                      let __assign_30 = _g2 in (
-                        tempArray := __assign_30;
-                        __assign_30
-                      )
-                    ));
-                    let found = !tempArray in (
-                      ignore (if HxArray.length found <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": expected 1 TheStatic function") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                      let retStr = HxFunctionDecl.getReturnStringLiteral (HxArray.get found 0) in if not (HxString.equals retStr "pack.ModWithStatic.TheStatic function") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": TheStatic return differs") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()
-                    )
-                  )) else ());
-                  let haxeDecl = HxParser.parseModule (HxParser.create src) (Obj.magic (HxRuntime.hx_null)) in (
-                    ignore (if not (HxString.equals (HxModuleDecl.getPackagePath haxeDecl) parsedPkg) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                    let haxeImports = HxModuleDecl.getImports haxeDecl in let parsedImports = HxModuleDecl.getImports parsed in (
-                      ignore (if HxArray.length haxeImports <> HxArray.length parsedImports then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": import count differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                      ignore (let _g2 = ref 0 in let _g1 = HxArray.length haxeImports in while !_g2 < _g1 do ignore (let i = let __old_31 = !_g2 in let __new_32 = HxInt.add __old_31 1 in (
-                        ignore (_g2 := __new_32);
-                        __old_31
-                      ) in if not (HxString.equals (HxArray.get haxeImports i) (HxArray.get parsedImports i)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": import differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()) done);
-                      let haxeMain = HxModuleDecl.getMainClass haxeDecl in (
-                        ignore (if not (HxString.equals (HxClassDecl.getName haxeMain) (HxClassDecl.getName parsedMain)) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                        ignore (if HxClassDecl.getHasStaticMain haxeMain <> HxClassDecl.getHasStaticMain parsedMain then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                        let haxeFns = HxClassDecl.getFunctions haxeMain in let parsedFns = HxClassDecl.getFunctions parsedMain in (
-                          ignore (if HxArray.length haxeFns <> HxArray.length parsedFns then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function count differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                          let _g2 = ref 0 in let _g1 = HxArray.length haxeFns in while !_g2 < _g1 do ignore (let i = let __old_33 = !_g2 in let __new_34 = HxInt.add __old_33 1 in (
-                            ignore (_g2 := __new_34);
-                            __old_33
-                          ) in if not (HxString.equals (HxFunctionDecl.getName (HxArray.get haxeFns i)) (HxFunctionDecl.getName (HxArray.get parsedFns i))) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": function name differs (native vs haxe)") (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ()) done
-                        )
-                      )
-                    )
-                  )
-                )
-              )) done);
-              let typed = TyperStage.typeModule ast in (
-                ignore (print_endline "typer=ok");
-                let typedFns = TyClassEnv.getFunctions (TyModuleEnv.getMainClass (TypedModule.getEnv typed ()) ()) () in (
-                  ignore (print_endline ("typed_functions=" ^ string_of_int (HxArray.length typedFns)));
-                  ignore (let _g = ref 0 in while !_g < HxArray.length typedFns do ignore (let tf = HxArray.get typedFns (!_g) in (
-                    ignore (let __old_35 = !_g in let __new_36 = HxInt.add __old_35 1 in (
-                      ignore (_g := __new_36);
-                      __new_36
-                    ));
-                    print_endline ((((((((("typed_fn=" ^ HxString.toStdString (TyFunctionEnv.getName tf ())) ^ " args=") ^ string_of_int (HxArray.length (TyFunctionEnv.getParams tf ()))) ^ " locals=") ^ string_of_int (HxArray.length (TyFunctionEnv.getLocals tf ()))) ^ " ret=") ^ HxString.toStdString (TyType.toString (TyFunctionEnv.getReturnType tf ()) ())) ^ " retExpr=") ^ HxString.toStdString (TyType.toString (TyFunctionEnv.getReturnExprType tf ()) ()))
-                  )) done);
-                  let expanded = MacroStage.expand typed (let __arr_37 = HxArray.create () in __arr_37) in (
-                    ignore (print_endline "macros=stub");
-                    ignore (EmitterStage.emit expanded);
-                    print_endline "emit=stub"
-                  )
+            let typed = TyperStage.typeModule ast in (
+              ignore (print_endline "typer=ok");
+              let typedFns = TyClassEnv.getFunctions (TyModuleEnv.getMainClass (TypedModule.getEnv typed ()) ()) () in (
+                ignore (print_endline ("typed_functions=" ^ string_of_int (HxArray.length typedFns)));
+                ignore (let _g = ref 0 in while !_g < HxArray.length typedFns do ignore (let tf = HxArray.get typedFns (!_g) in (
+                  ignore (let __old_35 = !_g in let __new_36 = HxInt.add __old_35 1 in (
+                    ignore (_g := __new_36);
+                    __new_36
+                  ));
+                  print_endline ((((((((("typed_fn=" ^ HxString.toStdString (TyFunctionEnv.getName tf ())) ^ " args=") ^ string_of_int (HxArray.length (TyFunctionEnv.getParams tf ()))) ^ " locals=") ^ string_of_int (HxArray.length (TyFunctionEnv.getLocals tf ()))) ^ " ret=") ^ HxString.toStdString (TyType.toString (TyFunctionEnv.getReturnType tf ()) ())) ^ " retExpr=") ^ HxString.toStdString (TyType.toString (TyFunctionEnv.getReturnExprType tf ()) ()))
+                )) done);
+                let expanded = MacroStage.expand typed (let __arr_37 = HxArray.create () in __arr_37) in (
+                  ignore (print_endline "macros=stub");
+                  ignore (EmitterStage.emit expanded);
+                  print_endline "emit=stub"
                 )
               )
             )

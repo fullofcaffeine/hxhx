@@ -7,7 +7,13 @@ type hxstmt =
 | SVar of string * string * Obj.t * HxPos.t
 | SIf of HxExpr.hxexpr * hxstmt * Obj.t * HxPos.t
 | SForIn of string * HxExpr.hxexpr * hxstmt * HxPos.t
+| SWhile of HxExpr.hxexpr * hxstmt * HxPos.t
+| SDoWhile of hxstmt * HxExpr.hxexpr * HxPos.t
 | SSwitch of HxExpr.hxexpr * Obj.t HxArray.t * HxPos.t
+| STry of hxstmt * Obj.t HxArray.t * HxPos.t
+| SBreak of HxPos.t
+| SContinue of HxPos.t
+| SThrow of HxExpr.hxexpr * HxPos.t
 | SReturnVoid of HxPos.t
 | SReturn of HxExpr.hxexpr * HxPos.t
 | SExpr of HxExpr.hxexpr * HxPos.t

@@ -217,10 +217,12 @@ jobs:
         env:
           HXHX_BUILTIN_SMOKE_OCAML: "0"
           HXHX_BUILTIN_SMOKE_JS_NATIVE: "1"
+          HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE: "1"
         run: |
           set -euo pipefail
           echo "HXHX_BUILTIN_SMOKE_OCAML=${HXHX_BUILTIN_SMOKE_OCAML}"
           echo "HXHX_BUILTIN_SMOKE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_JS_NATIVE}"
+          echo "HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE}"
           npm run test:hxhx:builtin-target-smoke
 
   test:

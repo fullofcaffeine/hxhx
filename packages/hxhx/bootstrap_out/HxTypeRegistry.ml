@@ -48,12 +48,35 @@ let init () : unit =
   ignore (HxType.class_ "_EmitterStage._InstanceMethodEntry");
   ignore (HxType.class_ "_HxConditionalCompilation.ExprLexer");
   ignore (HxType.class_ "_HxConditionalCompilation.ExprParser");
+  ignore (HxType.class_ "backend.BackendContext");
+  ignore (HxType.class_ "backend.BackendDispatchBoundary");
+  ignore (HxType.class_ "backend.BackendRegistry");
+  ignore (HxType.class_ "backend.EmitArtifact");
+  ignore (HxType.class_ "backend.EmitResult");
+  ignore (HxType.class_ "backend.GenIrBoundary");
+  ignore (HxType.class_ "backend.IBackend");
+  ignore (HxType.class_ "backend.ITargetBackendProvider");
+  ignore (HxType.class_ "backend.ITargetCore");
+  ignore (HxType.class_ "backend.TargetCoreBackend");
+  ignore (HxType.class_ "backend.js.JsBackend");
+  ignore (HxType.class_ "backend.js.JsExprEmitter");
+  ignore (HxType.class_ "backend.js.JsFunctionScope");
+  ignore (HxType.class_ "backend.js.JsNameMangler");
+  ignore (HxType.class_ "backend.js.JsStmtEmitter");
+  ignore (HxType.class_ "backend.js.JsSwitchPatternLowering");
+  ignore (HxType.class_ "backend.js.JsTargetCore");
+  ignore (HxType.class_ "backend.js.JsWriter");
+  ignore (HxType.class_ "backend.ocaml.OcamlStage3Backend");
+  ignore (HxType.class_ "backend.ocaml.OcamlTargetCore");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
+  ignore (HxType.class_ "haxe.ValueException");
   ignore (HxType.class_ "haxe.io.BytesBuffer");
   ignore (HxType.class_ "haxe.io.FPHelper");
   ignore (HxType.class_ "haxe.io.Input");
   ignore (HxType.class_ "haxe.io.Output");
+  ignore (HxType.class_ "hxhx.BackendProviderResolver");
+  ignore (HxType.class_ "hxhx.DisplayResponseSynthesizer");
   ignore (HxType.class_ "hxhx.ExprMacroExpander");
   ignore (HxType.class_ "hxhx.Hxml");
   ignore (HxType.class_ "hxhx.Main");
@@ -89,7 +112,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
   HxType.register_enum_ctors "HxExpr" [ "ENull"; "EBool"; "EString"; "EInt"; "EFloat"; "EEnumValue"; "EThis"; "ESuper"; "EIdent"; "EField"; "ECall"; "ELambda"; "ETryCatchRaw"; "ESwitchRaw"; "ESwitch"; "ENew"; "EUnop"; "EBinop"; "ETernary"; "EAnon"; "EArrayComprehension"; "EArrayDecl"; "EArrayAccess"; "ERange"; "ECast"; "EUntyped"; "EUnsupported" ];
   HxType.register_enum_ctors "HxKeyword" [ "KPackage"; "KImport"; "KUsing"; "KAs"; "KClass"; "KPublic"; "KPrivate"; "KStatic"; "KInline"; "KFunction"; "KReturn"; "KIf"; "KElse"; "KSwitch"; "KCase"; "KDefault"; "KTry"; "KCatch"; "KThrow"; "KWhile"; "KDo"; "KFor"; "KIn"; "KBreak"; "KContinue"; "KUntyped"; "KCast"; "KVar"; "KFinal"; "KNew"; "KThis"; "KSuper"; "KTrue"; "KFalse"; "KNull" ];
-  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SSwitch"; "SReturnVoid"; "SReturn"; "SExpr" ];
+  HxType.register_enum_ctors "HxStmt" [ "SBlock"; "SVar"; "SIf"; "SForIn"; "SWhile"; "SDoWhile"; "SSwitch"; "STry"; "SBreak"; "SContinue"; "SThrow"; "SReturnVoid"; "SReturn"; "SExpr" ];
   HxType.register_enum_ctors "HxSwitchPattern" [ "PNull"; "PWildcard"; "PString"; "PInt"; "PEnumValue"; "PBind"; "POr" ];
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
@@ -382,12 +405,49 @@ let init () : unit =
     let a3 = if len > 3 then Obj.magic ((HxArray.get args 3)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SForIn" in
     Obj.repr (HxStmt.SForIn (a0, a1, a2, a3))
   );
+  HxType.register_enum_ctor "HxStmt" "SWhile" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'cond' for HxStmt.SWhile" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SWhile" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SWhile" in
+    Obj.repr (HxStmt.SWhile (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxStmt" "SDoWhile" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'body' for HxStmt.SDoWhile" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'cond' for HxStmt.SDoWhile" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SDoWhile" in
+    Obj.repr (HxStmt.SDoWhile (a0, a1, a2))
+  );
   HxType.register_enum_ctor "HxStmt" "SSwitch" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'scrutinee' for HxStmt.SSwitch" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'cases' for HxStmt.SSwitch" in
     let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SSwitch" in
     Obj.repr (HxStmt.SSwitch (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxStmt" "STry" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'tryBody' for HxStmt.STry" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'catches' for HxStmt.STry" in
+    let a2 = if len > 2 then Obj.magic ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.STry" in
+    Obj.repr (HxStmt.STry (a0, a1, a2))
+  );
+  HxType.register_enum_ctor "HxStmt" "SBreak" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SBreak" in
+    Obj.repr (HxStmt.SBreak a0)
+  );
+  HxType.register_enum_ctor "HxStmt" "SContinue" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SContinue" in
+    Obj.repr (HxStmt.SContinue a0)
+  );
+  HxType.register_enum_ctor "HxStmt" "SThrow" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expr' for HxStmt.SThrow" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SThrow" in
+    Obj.repr (HxStmt.SThrow (a0, a1))
   );
   HxType.register_enum_ctor "HxStmt" "SReturnVoid" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -794,6 +854,78 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'defines' for _HxConditionalCompilation.ExprParser" in
     Obj.repr (HxConditionalCompilation.exprparser_create a0 a1)
   );
+  HxType.register_class_ctor "backend.BackendContext" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'outputDir' for backend.BackendContext" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'outputFileHint' for backend.BackendContext" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'mainModule' for backend.BackendContext" in
+    let a3 = if len > 3 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'emitFullBodies' for backend.BackendContext" in
+    let a4 = if len > 4 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 4)) else failwith "Type.createInstance: missing ctor arg 'buildExecutable' for backend.BackendContext" in
+    let a5 = if len > 5 then Obj.magic ((HxArray.get args 5)) else failwith "Type.createInstance: missing ctor arg 'defines' for backend.BackendContext" in
+    Obj.repr (Backend_BackendContext.create a0 a1 a2 a3 a4 a5)
+  );
+  HxType.register_class_ctor "backend.BackendDispatchBoundary" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_BackendDispatchBoundary.create ())
+  );
+  HxType.register_class_ctor "backend.BackendRegistry" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_BackendRegistry.create ())
+  );
+  HxType.register_class_ctor "backend.EmitArtifact" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'kind' for backend.EmitArtifact" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'path' for backend.EmitArtifact" in
+    Obj.repr (Backend_EmitArtifact.create a0 a1)
+  );
+  HxType.register_class_ctor "backend.EmitResult" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'entryPath' for backend.EmitResult" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'artifacts' for backend.EmitResult" in
+    let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'builtExecutable' for backend.EmitResult" in
+    Obj.repr (Backend_EmitResult.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "backend.GenIrBoundary" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_GenIrBoundary.create ())
+  );
+  HxType.register_class_ctor "backend.TargetCoreBackend" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'backendDescriptor' for backend.TargetCoreBackend" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createInstance: missing ctor arg 'emitImpl' for backend.TargetCoreBackend" in
+    Obj.repr (Backend_TargetCoreBackend.create a0 a1)
+  );
+  HxType.register_class_ctor "backend.js.JsBackend" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_js_JsBackend.create ())
+  );
+  HxType.register_class_ctor "backend.js.JsExprEmitter" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_js_JsExprEmitter.create ())
+  );
+  HxType.register_class_ctor "backend.js.JsFunctionScope" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'classRefs' for backend.js.JsFunctionScope" in
+    Obj.repr (Backend_js_JsFunctionScope.create a0)
+  );
+  HxType.register_class_ctor "backend.js.JsNameMangler" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_js_JsNameMangler.create ())
+  );
+  HxType.register_class_ctor "backend.js.JsStmtEmitter" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_js_JsStmtEmitter.create ())
+  );
+  HxType.register_class_ctor "backend.js.JsSwitchPatternLowering" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_js_JsSwitchPatternLowering.create ())
+  );
+  HxType.register_class_ctor "backend.js.JsTargetCore" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_js_JsTargetCore.create ())
+  );
+  HxType.register_class_ctor "backend.js.JsWriter" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else Obj.magic HxRuntime.hx_null in
+    Obj.repr (Backend_js_JsWriter.create a0)
+  );
+  HxType.register_class_ctor "backend.ocaml.OcamlStage3Backend" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_OcamlStage3Backend.create ())
+  );
+  HxType.register_class_ctor "backend.ocaml.OcamlTargetCore" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_OcamlTargetCore.create ())
+  );
   HxType.register_class_ctor "haxe.Exception" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'message' for haxe.Exception" in
@@ -803,6 +935,13 @@ let init () : unit =
   );
   HxType.register_class_ctor "haxe.NativeStackTrace" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_NativeStackTrace.create ())
+  );
+  HxType.register_class_ctor "haxe.ValueException" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'value' for haxe.ValueException" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else Obj.magic HxRuntime.hx_null in
+    let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
+    Obj.repr (Haxe_ValueException.create a0 a1 a2)
   );
   HxType.register_class_ctor "haxe.io.BytesBuffer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_BytesBuffer.create ())
@@ -815,6 +954,12 @@ let init () : unit =
   );
   HxType.register_class_ctor "haxe.io.Output" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_Output.create ())
+  );
+  HxType.register_class_ctor "hxhx.BackendProviderResolver" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_BackendProviderResolver.create ())
+  );
+  HxType.register_class_ctor "hxhx.DisplayResponseSynthesizer" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_DisplayResponseSynthesizer.create ())
   );
   HxType.register_class_ctor "hxhx.ExprMacroExpander" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_ExprMacroExpander.create ())
@@ -961,12 +1106,32 @@ let init () : unit =
   HxType.register_class_empty_ctor "_EmitterStage._InstanceMethodEntry" (fun () -> Obj.repr (EmitterStage._instancemethodentry___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprLexer" (fun () -> Obj.repr (HxConditionalCompilation.exprlexer___empty ()));
   HxType.register_class_empty_ctor "_HxConditionalCompilation.ExprParser" (fun () -> Obj.repr (HxConditionalCompilation.exprparser___empty ()));
+  HxType.register_class_empty_ctor "backend.BackendContext" (fun () -> Obj.repr (Backend_BackendContext.__empty ()));
+  HxType.register_class_empty_ctor "backend.BackendDispatchBoundary" (fun () -> Obj.repr (Backend_BackendDispatchBoundary.__empty ()));
+  HxType.register_class_empty_ctor "backend.BackendRegistry" (fun () -> Obj.repr (Backend_BackendRegistry.__empty ()));
+  HxType.register_class_empty_ctor "backend.EmitArtifact" (fun () -> Obj.repr (Backend_EmitArtifact.__empty ()));
+  HxType.register_class_empty_ctor "backend.EmitResult" (fun () -> Obj.repr (Backend_EmitResult.__empty ()));
+  HxType.register_class_empty_ctor "backend.GenIrBoundary" (fun () -> Obj.repr (Backend_GenIrBoundary.__empty ()));
+  HxType.register_class_empty_ctor "backend.TargetCoreBackend" (fun () -> Obj.repr (Backend_TargetCoreBackend.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsBackend" (fun () -> Obj.repr (Backend_js_JsBackend.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsExprEmitter" (fun () -> Obj.repr (Backend_js_JsExprEmitter.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsFunctionScope" (fun () -> Obj.repr (Backend_js_JsFunctionScope.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsNameMangler" (fun () -> Obj.repr (Backend_js_JsNameMangler.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsStmtEmitter" (fun () -> Obj.repr (Backend_js_JsStmtEmitter.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsSwitchPatternLowering" (fun () -> Obj.repr (Backend_js_JsSwitchPatternLowering.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsTargetCore" (fun () -> Obj.repr (Backend_js_JsTargetCore.__empty ()));
+  HxType.register_class_empty_ctor "backend.js.JsWriter" (fun () -> Obj.repr (Backend_js_JsWriter.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.OcamlStage3Backend" (fun () -> Obj.repr (Backend_ocaml_OcamlStage3Backend.__empty ()));
+  HxType.register_class_empty_ctor "backend.ocaml.OcamlTargetCore" (fun () -> Obj.repr (Backend_ocaml_OcamlTargetCore.__empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
+  HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.BytesBuffer" (fun () -> Obj.repr (Haxe_io_BytesBuffer.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Input" (fun () -> Obj.repr (Haxe_io_Input.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Output" (fun () -> Obj.repr (Haxe_io_Output.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.BackendProviderResolver" (fun () -> Obj.repr (Hxhx_BackendProviderResolver.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.DisplayResponseSynthesizer" (fun () -> Obj.repr (Hxhx_DisplayResponseSynthesizer.__empty ()));
   HxType.register_class_empty_ctor "hxhx.ExprMacroExpander" (fun () -> Obj.repr (Hxhx_ExprMacroExpander.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Hxml" (fun () -> Obj.repr (Hxhx_Hxml.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Main" (fun () -> Obj.repr (Hxhx_Main.__empty ()));
@@ -1018,8 +1183,8 @@ let init () : unit =
   HxType.register_class_static_fields "HxModuleDecl" [ "getClasses"; "getHasToplevelMain"; "getHeaderOnly"; "getImports"; "getMainClass"; "getPackagePath" ];
   HxType.register_class_instance_fields "HxParseError" [ "message"; "pos"; "toString" ];
   HxType.register_class_static_fields "HxParseError" [];
-  HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "bump"; "capturedReturnStringLiteral"; "consumeBinop"; "cur"; "expect"; "fail"; "isOtherChar"; "lex"; "parseAnonExpr"; "parseArrayDeclExpr"; "parseBinaryExpr"; "parseClassMembers"; "parseExpr"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseInterpolatedStringExpr"; "parseModule"; "parsePostfixExpr"; "parsePrimaryExpr"; "parseReturnStmt"; "parseStmt"; "parseSwitchExpr"; "parseSwitchPattern"; "parseTryCatchExpr"; "parseUnaryExpr"; "parseVarStmt"; "peek"; "peek2"; "peekBinop"; "peekKind"; "peekKind2"; "peeked1"; "peeked2"; "readDottedPath"; "readIdent"; "readImportPath"; "readTypeHintText"; "skipBalancedBraces"; "skipBalancedParens"; "syncToStmtEnd" ];
-  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "debugBodyLabel"; "isRightAssoc"; "isUpperStart"; "keywordText"; "parseExprText"; "parseFunctionBodyText" ];
+  HxType.register_class_instance_fields "HxParser" [ "acceptKeyword"; "acceptOtherChar"; "bump"; "capturedReturnStringLiteral"; "consumeBinop"; "cur"; "expect"; "fail"; "isOtherChar"; "lex"; "nextIsAdjacentOther"; "parseAnonExpr"; "parseArrayDeclExpr"; "parseBinaryExpr"; "parseClassMembers"; "parseExpr"; "parseFunctionBodyStatements"; "parseFunctionBodyStatementsBestEffort"; "parseFunctionDecl"; "parseInterpolatedStringExpr"; "parseModule"; "parsePostfixExpr"; "parsePrimaryExpr"; "parseReturnStmt"; "parseStmt"; "parseSwitchExpr"; "parseSwitchPattern"; "parseTryCatchExpr"; "parseUnaryExpr"; "parseVarStmt"; "peek"; "peek2"; "peek3"; "peekBinop"; "peekKind"; "peekKind2"; "peekKind3"; "peeked1"; "peeked2"; "peeked3"; "readDottedPath"; "readIdent"; "readImportPath"; "readTypeHintText"; "skipBalancedBraces"; "skipBalancedParens"; "syncToStmtEnd" ];
+  HxType.register_class_static_fields "HxParser" [ "binopPrec"; "debugBodyLabel"; "isAssignmentBinop"; "isRightAssoc"; "isUpperStart"; "keywordText"; "parseExprText"; "parseFunctionBodyText" ];
   HxType.register_class_instance_fields "HxPos" [ "column"; "getColumn"; "getIndex"; "getLine"; "index"; "line"; "toString" ];
   HxType.register_class_static_fields "HxPos" [ "unknown" ];
   HxType.register_class_instance_fields "HxToken" [ "kind"; "pos" ];
@@ -1069,7 +1234,7 @@ let init () : unit =
   HxType.register_class_instance_fields "TyperIndexBuild" [];
   HxType.register_class_static_fields "TyperIndexBuild" [ "classFullName"; "classFullNameInModule"; "expectedModuleNameFromFile"; "fromResolvedModule" ];
   HxType.register_class_instance_fields "TyperStage" [];
-  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "inferExprType"; "inferReturnType"; "isStrict"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
+  HxType.register_class_static_fields "TyperStage" [ "arrayElementType"; "inferExprType"; "inferReturnType"; "isAssignmentBinop"; "isStrict"; "typeFromHintInContext"; "typeFunction"; "typeModule"; "typeResolvedModule" ];
   HxType.register_class_instance_fields "_EmitterStage._EmitterStageDebug" [];
   HxType.register_class_static_fields "_EmitterStage._EmitterStageDebug" [ "traceCallSig" ];
   HxType.register_class_instance_fields "_EmitterStage._InstanceFieldEntry" [ "fields"; "key" ];
@@ -1080,10 +1245,52 @@ let init () : unit =
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprLexer" [];
   HxType.register_class_instance_fields "_HxConditionalCompilation.ExprParser" [ "bump"; "cur"; "definedValue"; "defines"; "lex"; "parse"; "parseAnd"; "parseIdentTail"; "parseOr"; "parsePrimary"; "parseStringLit"; "parseUnary" ];
   HxType.register_class_static_fields "_HxConditionalCompilation.ExprParser" [];
+  HxType.register_class_instance_fields "backend.BackendContext" [ "buildExecutable"; "defineValue"; "defines"; "emitFullBodies"; "hasDefine"; "mainModule"; "outputDir"; "outputFileHint" ];
+  HxType.register_class_static_fields "backend.BackendContext" [];
+  HxType.register_class_instance_fields "backend.BackendDispatchBoundary" [];
+  HxType.register_class_static_fields "backend.BackendDispatchBoundary" [ "asDispatchValue"; "requireJsBackend"; "requireOcamlBackend"; "requireTargetCoreBackend" ];
+  HxType.register_class_instance_fields "backend.BackendRegistry" [];
+  HxType.register_class_static_fields "backend.BackendRegistry" [ "allRegistrations"; "builtinRegistrations"; "clearDynamicRegistrations"; "createForTarget"; "descriptorForTarget"; "dynamicRegistrations"; "listDescriptors"; "register"; "registerProvider"; "requireForTarget"; "sortedForTarget"; "supportedTargetIds" ];
+  HxType.register_class_instance_fields "backend.EmitArtifact" [ "kind"; "path" ];
+  HxType.register_class_static_fields "backend.EmitArtifact" [];
+  HxType.register_class_instance_fields "backend.EmitResult" [ "artifacts"; "builtExecutable"; "entryPath" ];
+  HxType.register_class_static_fields "backend.EmitResult" [];
+  HxType.register_class_instance_fields "backend.GenIrBoundary" [];
+  HxType.register_class_static_fields "backend.GenIrBoundary" [ "asBackendProgram"; "requireProgram" ];
+  HxType.register_class_instance_fields "backend.IBackend" [ "capabilities"; "describe"; "emit"; "id" ];
+  HxType.register_class_static_fields "backend.IBackend" [];
+  HxType.register_class_instance_fields "backend.ITargetBackendProvider" [ "registrations" ];
+  HxType.register_class_static_fields "backend.ITargetBackendProvider" [];
+  HxType.register_class_instance_fields "backend.ITargetCore" [ "coreId"; "emit" ];
+  HxType.register_class_static_fields "backend.ITargetCore" [];
+  HxType.register_class_instance_fields "backend.TargetCoreBackend" [ "backendDescriptor"; "capabilities"; "describe"; "emit"; "emitImpl"; "id" ];
+  HxType.register_class_static_fields "backend.TargetCoreBackend" [ "emitBridge" ];
+  HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
+  HxType.register_class_static_fields "backend.js.JsBackend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "providerDescriptor"; "providerRegistrations"; "targetCore" ];
+  HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];
+  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitLambda"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "nestedScope"; "resolveIdent"; "resolveTypePath"; "unsupported" ];
+  HxType.register_class_instance_fields "backend.js.JsFunctionScope" [ "classRefs"; "declareLocal"; "exprScope"; "freshTemp"; "locals"; "reserve"; "resolveClassRef"; "resolveLocal"; "tempCounter"; "used" ];
+  HxType.register_class_static_fields "backend.js.JsFunctionScope" [];
+  HxType.register_class_instance_fields "backend.js.JsNameMangler" [];
+  HxType.register_class_static_fields "backend.js.JsNameMangler" [ "classVarName"; "identifier"; "isReserved"; "propertySuffix"; "quoteString" ];
+  HxType.register_class_instance_fields "backend.js.JsStmtEmitter" [];
+  HxType.register_class_static_fields "backend.js.JsStmtEmitter" [ "emitCatchCondition"; "emitForIn"; "emitFunctionBody"; "emitStmt"; "emitStmtBlockContent"; "emitSwitch"; "emitTry"; "normalizeCatchType"; "simpleTypeName" ];
+  HxType.register_class_instance_fields "backend.js.JsSwitchPatternLowering" [];
+  HxType.register_class_static_fields "backend.js.JsSwitchPatternLowering" [ "lower" ];
+  HxType.register_class_instance_fields "backend.js.JsTargetCore" [ "coreId"; "emit" ];
+  HxType.register_class_static_fields "backend.js.JsTargetCore" [ "collectClassUnits"; "emitClass"; "emitRuntimePrelude"; "ensureDirectory"; "resolveMainRef"; "simpleName" ];
+  HxType.register_class_instance_fields "backend.js.JsWriter" [ "indent"; "out"; "popIndent"; "pushIndent"; "toString"; "unit"; "writeln" ];
+  HxType.register_class_static_fields "backend.js.JsWriter" [];
+  HxType.register_class_instance_fields "backend.ocaml.OcamlStage3Backend" [ "capabilities"; "delegate"; "describe"; "emit"; "id" ];
+  HxType.register_class_static_fields "backend.ocaml.OcamlStage3Backend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "targetCore" ];
+  HxType.register_class_instance_fields "backend.ocaml.OcamlTargetCore" [ "coreId"; "emit" ];
+  HxType.register_class_static_fields "backend.ocaml.OcamlTargetCore" [];
   HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
+  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
+  HxType.register_class_static_fields "haxe.ValueException" [];
   HxType.register_class_instance_fields "haxe.io.BytesBuffer" [ "add"; "addByte"; "addBytes"; "addDouble"; "addFloat"; "addInt32"; "addInt64"; "addString"; "b"; "getBytes"; "get_length" ];
   HxType.register_class_static_fields "haxe.io.BytesBuffer" [];
   HxType.register_class_instance_fields "haxe.io.FPHelper" [];
@@ -1092,12 +1299,16 @@ let init () : unit =
   HxType.register_class_static_fields "haxe.io.Input" [];
   HxType.register_class_instance_fields "haxe.io.Output" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "haxe.io.Output" [];
+  HxType.register_class_instance_fields "hxhx.BackendProviderResolver" [];
+  HxType.register_class_static_fields "hxhx.BackendProviderResolver" [ "knownProviderRegistrations"; "providerRegistrations"; "registrationsForType"; "requireProvider" ];
+  HxType.register_class_instance_fields "hxhx.DisplayResponseSynthesizer" [];
+  HxType.register_class_static_fields "hxhx.DisplayResponseSynthesizer" [ "compactWhitespace"; "countArgumentIndexBeforeToken"; "extractArgTypeHintFromSegment"; "extractExprOfInner"; "findCallNameBeforeParen"; "findFunctionArgTypeHint"; "findMatchingCloseToken"; "findTypedefStructBody"; "formatCompletionList"; "isIdentContinue"; "isIdentStart"; "parseDisplayRequestQuery"; "parseStrictInt"; "parseStructFieldNames"; "readDisplaySource"; "stripTypePath"; "synthesize"; "synthesizeExprOfStructCompletion"; "tokenizeDisplaySource"; "xmlEscape" ];
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
   HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteExprOrNull"; "rewriteStmt"; "shortenCall" ];
   HxType.register_class_instance_fields "hxhx.Hxml" [];
   HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "parseFile"; "parseFileRec"; "parseFileUnits"; "splitIntoUnits"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
-  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "stripAll" ];
+  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
   HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "displayRequest"; "hadCmd"; "libs"; "macros"; "main"; "noOutput"; "roots" ];
   HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCwd"; "getDefines"; "getDisplayRequest"; "getHadCmd"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getRoots"; "inferStdRoot"; "parse" ];
   HxType.register_class_instance_fields "hxhx.Stage1Compiler" [];
@@ -1105,13 +1316,13 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.Stage1Resolver" [];
   HxType.register_class_static_fields "hxhx.Stage1Resolver" [ "normalizeSep"; "resolveClassPath"; "resolveMain"; "resolveModule" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
-  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findBuildMacroExprs"; "findFlagValue"; "findHaxeLibrariesHxml"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasDefineFlag"; "hasFlag"; "haxelibBin"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "readConnectDisplayStdin"; "resolveHaxelibSpec"; "resolveHaxelibSpecFromHxml"; "resolveHaxelibSpecViaProcess"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "trim"; "writeWaitStdioReply" ];
+  HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "canRunNode"; "collectBackendProviderTypeNames"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "emitWithBackend"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findBuildMacroExprs"; "findFlagValue"; "findHaxeLibrariesHxml"; "findJsOutputFileHint"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasDefineFlag"; "hasFlag"; "haxelibBin"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "readConnectDisplayStdin"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "resolveHaxelibSpecFromHxml"; "resolveHaxelibSpecViaProcess"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "trim"; "writeWaitStdioReply" ];
   HxType.register_class_instance_fields "hxhx.TargetPresets" [];
-  HxType.register_class_static_fields "hxhx.TargetPresets" [ "apply"; "applyOcaml"; "applyOcamlStage3"; "findBundledLibRoot"; "listTargets"; "resolve" ];
+  HxType.register_class_static_fields "hxhx.TargetPresets" [ "apply"; "applyJs"; "applyJsNative"; "applyOcaml"; "applyOcamlStage3"; "ensureBuiltinBackendRegistered"; "findBundledLibRoot"; "listTargets"; "resolve"; "unsupportedLegacyTargetMessage" ];
   HxType.register_class_instance_fields "hxhx._TargetPresets.ArgScan" [];
-  HxType.register_class_static_fields "hxhx._TargetPresets.ArgScan" [ "addCpIfExists"; "addDefineIfMissing"; "addMacroIfMissing"; "getDefineValue"; "hasDefine"; "hasLib"; "hasMacro"; "stripLib"; "stripMacro" ];
+  HxType.register_class_static_fields "hxhx._TargetPresets.ArgScan" [ "addCpIfExists"; "addDefineIfMissing"; "addMacroIfMissing"; "consumesValue"; "firstExplicitTarget"; "getDefineValue"; "hasDefine"; "hasLib"; "hasMacro"; "hasNoOutputLike"; "hasTargetFlag"; "listExplicitTargets"; "stripLib"; "stripMacro" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroHostClient" [];
-  HxType.register_class_static_fields "hxhx.macro.MacroHostClient" [ "connect"; "getType"; "openSession"; "resolveMacroHostExe"; "resolveMacroHostExePath"; "run"; "runAll"; "selftest" ];
+  HxType.register_class_static_fields "hxhx.macro.MacroHostClient" [ "connect"; "getType"; "openSession"; "resolveMacroHostExe"; "resolveMacroHostExePath"; "run"; "runAll"; "selftest"; "withClient"; "withSession" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroHostSession" [ "client"; "close"; "expandExpr"; "run"; "runHook" ];
   HxType.register_class_static_fields "hxhx.macro.MacroHostSession" [];
   HxType.register_class_instance_fields "hxhx.macro.MacroProtocol" [];
@@ -1141,6 +1352,7 @@ let init () : unit =
   HxType.register_class_instance_fields "sys.io._Stdio.OcamlStdioOutput" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "stream"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioOutput" [];
   HxType.register_class_super "ModuleLoader" (HxType.class_ "LazyTypeLoader");
+  HxType.register_class_super "haxe.ValueException" (HxType.class_ "haxe.Exception");
   HxType.register_class_super "sys.io.FileInput" (HxType.class_ "haxe.io.Input");
   HxType.register_class_super "sys.io.FileOutput" (HxType.class_ "haxe.io.Output");
   HxType.register_class_super "sys.io._Process.OcamlProcessInput" (HxType.class_ "haxe.io.Input");
@@ -1196,11 +1408,32 @@ let init () : unit =
   HxType.register_class_tags "_EnumValue.EnumValue_Impl_" [ "_EnumValue.EnumValue_Impl_" ];
   HxType.register_class_tags "_HxConditionalCompilation.ExprLexer" [ "_HxConditionalCompilation.ExprLexer" ];
   HxType.register_class_tags "_HxConditionalCompilation.ExprParser" [ "_HxConditionalCompilation.ExprParser" ];
+  HxType.register_class_tags "backend.BackendContext" [ "backend.BackendContext" ];
+  HxType.register_class_tags "backend.BackendDispatchBoundary" [ "backend.BackendDispatchBoundary" ];
+  HxType.register_class_tags "backend.BackendRegistry" [ "backend.BackendRegistry" ];
+  HxType.register_class_tags "backend.EmitArtifact" [ "backend.EmitArtifact" ];
+  HxType.register_class_tags "backend.EmitResult" [ "backend.EmitResult" ];
+  HxType.register_class_tags "backend.GenIrBoundary" [ "backend.GenIrBoundary" ];
+  HxType.register_class_tags "backend.IBackend" [ "backend.IBackend" ];
+  HxType.register_class_tags "backend.ITargetBackendProvider" [ "backend.ITargetBackendProvider" ];
+  HxType.register_class_tags "backend.ITargetCore" [ "backend.ITargetCore" ];
+  HxType.register_class_tags "backend.TargetCoreBackend" [ "backend.IBackend"; "backend.TargetCoreBackend" ];
+  HxType.register_class_tags "backend.js.JsBackend" [ "backend.IBackend"; "backend.ITargetBackendProvider"; "backend.js.JsBackend" ];
+  HxType.register_class_tags "backend.js.JsExprEmitter" [ "backend.js.JsExprEmitter" ];
+  HxType.register_class_tags "backend.js.JsFunctionScope" [ "backend.js.JsFunctionScope" ];
+  HxType.register_class_tags "backend.js.JsNameMangler" [ "backend.js.JsNameMangler" ];
+  HxType.register_class_tags "backend.js.JsStmtEmitter" [ "backend.js.JsStmtEmitter" ];
+  HxType.register_class_tags "backend.js.JsSwitchPatternLowering" [ "backend.js.JsSwitchPatternLowering" ];
+  HxType.register_class_tags "backend.js.JsTargetCore" [ "backend.ITargetCore"; "backend.js.JsTargetCore" ];
+  HxType.register_class_tags "backend.js.JsWriter" [ "backend.js.JsWriter" ];
+  HxType.register_class_tags "backend.ocaml.OcamlStage3Backend" [ "backend.IBackend"; "backend.ocaml.OcamlStage3Backend" ];
+  HxType.register_class_tags "backend.ocaml.OcamlTargetCore" [ "backend.ITargetCore"; "backend.ocaml.OcamlTargetCore" ];
   HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
   HxType.register_class_tags "haxe.IMap" [ "haxe.IMap" ];
   HxType.register_class_tags "haxe.Int64Helper" [ "haxe.Int64Helper" ];
   HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
   HxType.register_class_tags "haxe.SysTools" [ "haxe.SysTools" ];
+  HxType.register_class_tags "haxe.ValueException" [ "haxe.Exception"; "haxe.ValueException" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.Constructible_Impl_" [ "haxe._Constraints.Constructible_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.FlatEnum_Impl_" [ "haxe._Constraints.FlatEnum_Impl_" ];
@@ -1228,6 +1461,8 @@ let init () : unit =
   HxType.register_class_tags "haxe.iterators.StringIterator" [ "haxe.iterators.StringIterator" ];
   HxType.register_class_tags "haxe.iterators.StringIteratorUnicode" [ "haxe.iterators.StringIteratorUnicode" ];
   HxType.register_class_tags "haxe.iterators.StringKeyValueIterator" [ "haxe.iterators.StringKeyValueIterator" ];
+  HxType.register_class_tags "hxhx.BackendProviderResolver" [ "hxhx.BackendProviderResolver" ];
+  HxType.register_class_tags "hxhx.DisplayResponseSynthesizer" [ "hxhx.DisplayResponseSynthesizer" ];
   HxType.register_class_tags "hxhx.ExprMacroExpander" [ "hxhx.ExprMacroExpander" ];
   HxType.register_class_tags "hxhx.Hxml" [ "hxhx.Hxml" ];
   HxType.register_class_tags "hxhx.Main" [ "hxhx.Main" ];

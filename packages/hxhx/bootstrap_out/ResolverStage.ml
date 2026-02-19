@@ -127,29 +127,29 @@ let normalizeImport = fun raw -> try (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let s = ref (StringTools.trim raw) in (
     ignore (if HxString.length (!s) = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    ignore (if StringTools.startsWith (!s) "using " then ignore (let __assign_70 = StringTools.trim (HxString.substr (!s) (HxString.length "using ") (-1)) in (
-      s := __assign_70;
-      __assign_70
+    ignore (if StringTools.startsWith (!s) "using " then ignore (let __assign_72 = StringTools.trim (HxString.substr (!s) (HxString.length "using ") (-1)) in (
+      s := __assign_72;
+      __assign_72
     )) else ());
     let asIdx = HxString.indexOf (!s) " as " 0 in (
-      ignore (if asIdx >= 0 then ignore (let __assign_71 = StringTools.trim (HxString.substr (!s) 0 asIdx) in (
-        s := __assign_71;
-        __assign_71
+      ignore (if asIdx >= 0 then ignore (let __assign_73 = StringTools.trim (HxString.substr (!s) 0 asIdx) in (
+        s := __assign_73;
+        __assign_73
       )) else ());
       let tempResult = ref (Obj.magic ()) in (
-        ignore (if HxString.length (!s) = 0 then let __assign_72 = Obj.magic (HxRuntime.hx_null) in (
-          tempResult := __assign_72;
-          __assign_72
-        ) else let __assign_73 = !s in (
-          tempResult := __assign_73;
-          __assign_73
+        ignore (if HxString.length (!s) = 0 then let __assign_74 = Obj.magic (HxRuntime.hx_null) in (
+          tempResult := __assign_74;
+          __assign_74
+        ) else let __assign_75 = !s in (
+          tempResult := __assign_75;
+          __assign_75
         ));
         !tempResult
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74
+  | HxRuntime.Hx_return __ret_76 -> Obj.obj __ret_76
 
 let resolveModuleFile = fun classPaths modulePath -> try let fileExistsExactCase = fun path -> try (
   ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -158,56 +158,62 @@ let resolveModuleFile = fun classPaths modulePath -> try let fileExistsExactCase
     ignore (if dir == Obj.magic (HxRuntime.hx_null) || HxString.length dir = 0 then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
     let base = Haxe_io_Path.withoutDirectory path in (
       ignore (try let _g = ref 0 in let _g1 = HxFileSystem.readDirectory dir in while !_g < HxArray.length _g1 do ignore (let name = HxArray.get _g1 (!_g) in (
-        ignore (let __old_75 = !_g in let __new_76 = HxInt.add __old_75 1 in (
-          ignore (_g := __new_76);
-          __new_76
+        ignore (let __old_77 = !_g in let __new_78 = HxInt.add __old_77 1 in (
+          ignore (_g := __new_78);
+          __new_78
         ));
         if HxString.equals name base then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
       )) done with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_77 -> raise (HxRuntime.Hx_return __ret_77)
-        | HxRuntime.Hx_exception (__exn_v_78, __exn_tags_79) -> if true then let _hx = (__exn_v_78 : Obj.t) in (
+        | HxRuntime.Hx_return __ret_79 -> raise (HxRuntime.Hx_return __ret_79)
+        | HxRuntime.Hx_exception (__exn_v_80, __exn_tags_81) -> if HxRuntime.tags_has __exn_tags_81 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_80) : Haxe_io_Error.error) in (
           ignore _hx;
           ()
-        ) else HxRuntime.hx_throw_typed __exn_v_78 __exn_tags_79
-        | __exn_80 -> if true then let _hx = (Obj.repr __exn_80 : Obj.t) in (
+        ) else if HxRuntime.tags_has __exn_tags_81 "String" then let _hx = (Obj.obj __exn_v_80 : string) in (
           ignore _hx;
           ()
-        ) else raise (__exn_80));
+        ) else HxRuntime.hx_throw_typed __exn_v_80 __exn_tags_81
+        | __exn_82 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_82)) : Haxe_io_Error.error) in (
+          ignore _hx;
+          ()
+        ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_82) : string) in (
+          ignore _hx;
+          ()
+        ) else raise (__exn_82));
       false
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_81 -> Obj.obj __ret_81 in let parts = HxString.split modulePath "." in (
+  | HxRuntime.Hx_return __ret_83 -> Obj.obj __ret_83 in let parts = HxString.split modulePath "." in (
   ignore (if HxArray.length parts = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = HxString.toStdString (HxArray.join parts "/" (fun x -> x)) ^ ".hx" in (
     ignore (let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = HxArray.get classPaths (!_g) in (
-      ignore (let __old_82 = !_g in let __new_83 = HxInt.add __old_82 1 in (
-        ignore (_g := __new_83);
-        __new_83
+      ignore (let __old_84 = !_g in let __new_85 = HxInt.add __old_84 1 in (
+        ignore (_g := __new_85);
+        __new_85
       ));
-      let candidate = Haxe_io_Path.join (let __arr_84 = HxArray.create () in (
-        ignore (HxArray.push __arr_84 cp);
-        ignore (HxArray.push __arr_84 direct);
-        __arr_84
+      let candidate = Haxe_io_Path.join (let __arr_86 = HxArray.create () in (
+        ignore (HxArray.push __arr_86 cp);
+        ignore (HxArray.push __arr_86 direct);
+        __arr_86
       )) in if fileExistsExactCase candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()
     )) done);
     ignore (if HxArray.length parts >= 2 then ignore (let fallbackParts = HxArray.slice parts 0 (HxInt.sub (HxArray.length parts) 1) in let fallback = HxString.toStdString (HxArray.join fallbackParts "/" (fun x -> x)) ^ ".hx" in let _g = ref 0 in while !_g < HxArray.length classPaths do ignore (let cp = HxArray.get classPaths (!_g) in (
-      ignore (let __old_85 = !_g in let __new_86 = HxInt.add __old_85 1 in (
-        ignore (_g := __new_86);
-        __new_86
+      ignore (let __old_87 = !_g in let __new_88 = HxInt.add __old_87 1 in (
+        ignore (_g := __new_88);
+        __new_88
       ));
-      let candidate = Haxe_io_Path.join (let __arr_87 = HxArray.create () in (
-        ignore (HxArray.push __arr_87 cp);
-        ignore (HxArray.push __arr_87 fallback);
-        __arr_87
+      let candidate = Haxe_io_Path.join (let __arr_89 = HxArray.create () in (
+        ignore (HxArray.push __arr_89 cp);
+        ignore (HxArray.push __arr_89 fallback);
+        __arr_89
       )) in if fileExistsExactCase candidate then raise (HxRuntime.Hx_return (Obj.repr candidate)) else ()
     )) done) else ());
     Obj.magic (HxRuntime.hx_null)
   )
 ) with
-  | HxRuntime.Hx_return __ret_88 -> Obj.obj __ret_88
+  | HxRuntime.Hx_return __ret_90 -> Obj.obj __ret_90
 
 let parseProjectRoots = fun classPaths roots defines -> let out = HxArray.create () in let visited = HxMap.create_string () in let tempMaybeStringMap = ref (Obj.magic ()) in (
   ignore (if defines == Obj.magic (HxRuntime.hx_null) then let __assign_26 = HxMap.create_string () in (
@@ -248,96 +254,114 @@ let parseProjectRoots = fun classPaths roots defines -> let out = HxArray.create
             | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
             | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
             | HxRuntime.Hx_return __ret_33 -> raise (HxRuntime.Hx_return __ret_33)
-            | HxRuntime.Hx_exception (__exn_v_34, __exn_tags_35) -> if true then let _hx = (__exn_v_34 : Obj.t) in (
+            | HxRuntime.Hx_exception (__exn_v_34, __exn_tags_35) -> if HxRuntime.tags_has __exn_tags_35 "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_34) : Haxe_io_Error.error) in (
+              ignore _hx;
+              let __assign_37 = Obj.magic (HxRuntime.hx_null) in (
+                tempMaybeString := __assign_37;
+                __assign_37
+              )
+            ) else if HxRuntime.tags_has __exn_tags_35 "String" then let _hx = (Obj.obj __exn_v_34 : string) in (
               ignore _hx;
               let __assign_36 = Obj.magic (HxRuntime.hx_null) in (
                 tempMaybeString := __assign_36;
                 __assign_36
               )
             ) else HxRuntime.hx_throw_typed __exn_v_34 __exn_tags_35
-            | __exn_37 -> if true then let _hx = (Obj.repr __exn_37 : Obj.t) in (
+            | __exn_38 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let _hx = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_38)) : Haxe_io_Error.error) in (
               ignore _hx;
-              let __assign_38 = Obj.magic (HxRuntime.hx_null) in (
-                tempMaybeString := __assign_38;
-                __assign_38
+              let __assign_40 = Obj.magic (HxRuntime.hx_null) in (
+                tempMaybeString := __assign_40;
+                __assign_40
               )
-            ) else raise (__exn_37));
+            ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_38) : string) in (
+              ignore _hx;
+              let __assign_39 = Obj.magic (HxRuntime.hx_null) in (
+                tempMaybeString := __assign_39;
+                __assign_39
+              )
+            ) else raise (__exn_38));
           let source = !tempMaybeString in (
             ignore (if source == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("import_unreadable " ^ HxString.toStdString filePath)) ["Dynamic"; "String"]) else ());
             let tempMaybeStringMap1 = ref (Obj.magic ()) in let tempBool = ref false in (
-              ignore (if modulePath != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith modulePath "haxe.macro." then let __assign_39 = true in (
-                tempBool := __assign_39;
-                __assign_39
-              ) else if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then let __assign_40 = false in (
-                tempBool := __assign_40;
-                __assign_40
-              ) else let __assign_41 = HxString.indexOf filePath "/haxe/macro/" 0 <> -1 || HxString.indexOf filePath "\\haxe\\macro\\" 0 <> -1 in (
+              ignore (if modulePath != Obj.magic (HxRuntime.hx_null) && StringTools.startsWith modulePath "haxe.macro." then let __assign_41 = true in (
                 tempBool := __assign_41;
                 __assign_41
+              ) else if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then let __assign_42 = false in (
+                tempBool := __assign_42;
+                __assign_42
+              ) else let __assign_43 = HxString.indexOf filePath "/haxe/macro/" 0 <> -1 || HxString.indexOf filePath "\\haxe\\macro\\" 0 <> -1 in (
+                tempBool := __assign_43;
+                __assign_43
               ));
               ignore (if !tempBool then let m = cloneDefines (!tempMaybeStringMap) in (
                 ignore (if not (HxMap.exists_string m "macro") then ignore (HxMap.set_string m "macro" "1") else ());
                 ignore (if not (HxMap.exists_string m "eval") then ignore (HxMap.set_string m "eval" "1") else ());
-                let __assign_42 = m in (
-                  tempMaybeStringMap1 := __assign_42;
-                  __assign_42
+                let __assign_44 = m in (
+                  tempMaybeStringMap1 := __assign_44;
+                  __assign_44
                 )
-              ) else let __assign_43 = !tempMaybeStringMap in (
-                tempMaybeStringMap1 := __assign_43;
-                __assign_43
+              ) else let __assign_45 = !tempMaybeStringMap in (
+                tempMaybeStringMap1 := __assign_45;
+                __assign_45
               ));
               let effectiveDefines = !tempMaybeStringMap1 in let filteredSource = HxConditionalCompilation.filterSource source effectiveDefines in let tempParsedModule = ref (Obj.magic ()) in (
-                ignore (try let __assign_44 = ParserStage.parse filteredSource filePath in (
-                  tempParsedModule := __assign_44;
-                  __assign_44
+                ignore (try let __assign_46 = ParserStage.parse filteredSource filePath in (
+                  tempParsedModule := __assign_46;
+                  __assign_46
                 ) with
                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-                  | HxRuntime.Hx_return __ret_45 -> raise (HxRuntime.Hx_return __ret_45)
-                  | HxRuntime.Hx_exception (__exn_v_46, __exn_tags_47) -> if true then let e = (__exn_v_46 : Obj.t) in (
+                  | HxRuntime.Hx_return __ret_47 -> raise (HxRuntime.Hx_return __ret_47)
+                  | HxRuntime.Hx_exception (__exn_v_48, __exn_tags_49) -> if HxRuntime.tags_has __exn_tags_49 "HxParseError" then let e = (Obj.obj __exn_v_48 : HxParseError.t) in (
                     ignore e;
-                    HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString e))) ["Dynamic"; "String"]
-                  ) else HxRuntime.hx_throw_typed __exn_v_46 __exn_tags_47
-                  | __exn_48 -> if true then let e = (Obj.repr __exn_48 : Obj.t) in (
+                    HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString (e.message))) ["Dynamic"; "String"]
+                  ) else if HxRuntime.tags_has __exn_tags_49 "String" then let e = (Obj.obj __exn_v_48 : string) in (
                     ignore e;
-                    HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString e))) ["Dynamic"; "String"]
-                  ) else raise (__exn_48));
+                    HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString e)) ["Dynamic"; "String"]
+                  ) else HxRuntime.hx_throw_typed __exn_v_48 __exn_tags_49
+                  | __exn_50 -> if HxRuntime.tags_has ["OcamlExn"] "HxParseError" then let e = (Obj.obj (Obj.repr __exn_50) : HxParseError.t) in (
+                    ignore e;
+                    HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString (e.message))) ["Dynamic"; "String"]
+                  ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_50) : string) in (
+                    ignore e;
+                    HxType.hx_throw_typed_rtti (Obj.repr ((("parse_failed " ^ HxString.toStdString filePath) ^ ": ") ^ HxString.toStdString e)) ["Dynamic"; "String"]
+                  ) else raise (__exn_50));
                 let parsed = !tempParsedModule in (
                   ignore (HxArray.push out (ResolvedModule.create modulePath filePath parsed));
                   let decl = ParsedModule.getDecl parsed () in let modulePkg = HxModuleDecl.getPackagePath decl in let deps = HxArray.create () in (
                     ignore (let _g = ref 0 in let _g1 = HxModuleDecl.getImports decl in try while !_g < HxArray.length _g1 do try ignore (let rawImport = HxArray.get _g1 (!_g) in (
-                      ignore (let __old_49 = !_g in let __new_50 = HxInt.add __old_49 1 in (
-                        ignore (_g := __new_50);
-                        __new_50
+                      ignore (let __old_51 = !_g in let __new_52 = HxInt.add __old_51 1 in (
+                        ignore (_g := __new_52);
+                        __new_52
                       ));
                       let imp = normalizeImport rawImport in (
                         ignore (if imp == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_continue) else ());
                         let tempMaybeString1 = ref (Obj.magic ()) in (
-                          ignore (let existsDirect = resolveModuleFile classPaths imp != Obj.magic (HxRuntime.hx_null) in if existsDirect then let __assign_51 = imp in (
-                            tempMaybeString1 := __assign_51;
-                            __assign_51
+                          ignore (let existsDirect = resolveModuleFile classPaths imp != Obj.magic (HxRuntime.hx_null) in if existsDirect then let __assign_53 = imp in (
+                            tempMaybeString1 := __assign_53;
+                            __assign_53
                           ) else let dot = HxString.indexOf imp "." 0 in let tempMaybeString2 = ref (Obj.magic ()) in (
-                            ignore (if dot = -1 then let __assign_52 = imp in (
-                              tempMaybeString2 := __assign_52;
-                              __assign_52
-                            ) else let __assign_53 = HxString.substr imp 0 dot in (
-                              tempMaybeString2 := __assign_53;
-                              __assign_53
+                            ignore (if dot = -1 then let __assign_54 = imp in (
+                              tempMaybeString2 := __assign_54;
+                              __assign_54
+                            ) else let __assign_55 = HxString.substr imp 0 dot in (
+                              tempMaybeString2 := __assign_55;
+                              __assign_55
                             ));
                             let head = !tempMaybeString2 in let tempMaybeNumber = ref (HxRuntime.hx_null) in (
-                              ignore (if HxString.length head = 0 then let __assign_54 = Obj.repr 0 in (
-                                tempMaybeNumber := __assign_54;
-                                __assign_54
-                              ) else let __assign_55 = HxString.charCodeAt head 0 in (
-                                tempMaybeNumber := __assign_55;
-                                __assign_55
+                              ignore (if HxString.length head = 0 then let __assign_56 = Obj.repr 0 in (
+                                tempMaybeNumber := __assign_56;
+                                __assign_56
+                              ) else let __assign_57 = HxString.charCodeAt head 0 in (
+                                tempMaybeNumber := __assign_57;
+                                __assign_57
                               ));
-                              let head0 = !tempMaybeNumber in let headIsUpper = (let __nullable_56 = head0 in let __nullable_57 = 65 in if __nullable_56 == HxRuntime.hx_null then false else Obj.obj __nullable_56 >= __nullable_57) && (let __nullable_58 = head0 in let __nullable_59 = 90 in if __nullable_58 == HxRuntime.hx_null then false else Obj.obj __nullable_58 <= __nullable_59) in if headIsUpper && modulePkg != Obj.magic (HxRuntime.hx_null) && HxString.length modulePkg > 0 && not (StringTools.startsWith imp (HxString.toStdString modulePkg ^ ".")) then let __assign_60 = (HxString.toStdString modulePkg ^ ".") ^ HxString.toStdString imp in (
-                                tempMaybeString1 := __assign_60;
-                                __assign_60
-                              ) else let __assign_61 = imp in (
-                                tempMaybeString1 := __assign_61;
-                                __assign_61
+                              let head0 = !tempMaybeNumber in let headIsUpper = (let __nullable_58 = head0 in let __nullable_59 = 65 in if __nullable_58 == HxRuntime.hx_null then false else Obj.obj __nullable_58 >= __nullable_59) && (let __nullable_60 = head0 in let __nullable_61 = 90 in if __nullable_60 == HxRuntime.hx_null then false else Obj.obj __nullable_60 <= __nullable_61) in if headIsUpper && modulePkg != Obj.magic (HxRuntime.hx_null) && HxString.length modulePkg > 0 && not (StringTools.startsWith imp (HxString.toStdString modulePkg ^ ".")) then let __assign_62 = (HxString.toStdString modulePkg ^ ".") ^ HxString.toStdString imp in (
+                                tempMaybeString1 := __assign_62;
+                                __assign_62
+                              ) else let __assign_63 = imp in (
+                                tempMaybeString1 := __assign_63;
+                                __assign_63
                               )
                             )
                           ));
@@ -355,18 +379,18 @@ let parseProjectRoots = fun classPaths roots defines -> let out = HxArray.create
                       | HxRuntime.Hx_break -> ());
                     let traceDeps = traceResolverDepsEnabled () in (
                       ignore (if resolveImplicitSamePackageTypesEnabled () then ignore (let _g = ref 0 in let _g1 = implicitSamePackageDeps filteredSource modulePath decl in while !_g < HxArray.length _g1 do ignore (let dep = HxArray.get _g1 (!_g) in (
-                        ignore (let __old_62 = !_g in let __new_63 = HxInt.add __old_62 1 in (
-                          ignore (_g := __new_63);
-                          __new_63
+                        ignore (let __old_64 = !_g in let __new_65 = HxInt.add __old_64 1 in (
+                          ignore (_g := __new_65);
+                          __new_65
                         ));
                         let exists = resolveModuleFile classPaths dep != Obj.magic (HxRuntime.hx_null) in (
                           ignore (if traceDeps then ignore (let tempString = ref "" in (
-                            ignore (if exists then let __assign_64 = "1" in (
-                              tempString := __assign_64;
-                              __assign_64
-                            ) else let __assign_65 = "0" in (
-                              tempString := __assign_65;
-                              __assign_65
+                            ignore (if exists then let __assign_66 = "1" in (
+                              tempString := __assign_66;
+                              __assign_66
+                            ) else let __assign_67 = "0" in (
+                              tempString := __assign_67;
+                              __assign_67
                             ));
                             print_endline ((((("resolver_samepkg_dep module=" ^ HxString.toStdString modulePath) ^ " dep=") ^ HxString.toStdString dep) ^ " exists=") ^ HxString.toStdString (!tempString))
                           )) else ());
@@ -374,18 +398,18 @@ let parseProjectRoots = fun classPaths roots defines -> let out = HxArray.create
                         )
                       )) done) else ());
                       ignore (let _g = ref 0 in let _g1 = implicitQualifiedTypeDeps filteredSource in while !_g < HxArray.length _g1 do ignore (let dep = HxArray.get _g1 (!_g) in (
-                        ignore (let __old_66 = !_g in let __new_67 = HxInt.add __old_66 1 in (
-                          ignore (_g := __new_67);
-                          __new_67
+                        ignore (let __old_68 = !_g in let __new_69 = HxInt.add __old_68 1 in (
+                          ignore (_g := __new_69);
+                          __new_69
                         ));
                         let exists = resolveModuleFile classPaths dep != Obj.magic (HxRuntime.hx_null) in (
                           ignore (if traceDeps then ignore (let tempString1 = ref "" in (
-                            ignore (if exists then let __assign_68 = "1" in (
-                              tempString1 := __assign_68;
-                              __assign_68
-                            ) else let __assign_69 = "0" in (
-                              tempString1 := __assign_69;
-                              __assign_69
+                            ignore (if exists then let __assign_70 = "1" in (
+                              tempString1 := __assign_70;
+                              __assign_70
+                            ) else let __assign_71 = "0" in (
+                              tempString1 := __assign_71;
+                              __assign_71
                             ));
                             print_endline ((((("resolver_qualified_dep module=" ^ HxString.toStdString modulePath) ^ " dep=") ^ HxString.toStdString dep) ^ " exists=") ^ HxString.toStdString (!tempString1))
                           )) else ());

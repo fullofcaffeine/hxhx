@@ -13,36 +13,106 @@ let argscan_create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx._Ta
 
 let argscan___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx._TargetPresets.ArgScan" } : argscan_t)
 
+let argscan_hasNoOutputLike = fun args -> HxArray.indexOf args "--no-output" 0 <> -1 || HxArray.indexOf args "--hxhx-no-emit" 0 <> -1
+
+let argscan_consumesValue = fun flag -> let tempResult = ref false in (
+  ignore (match flag with
+    | "--as3" | "--cpp" | "--cs" | "--hl" | "--java" | "--js" | "--jvm" | "--lua" | "--neko" | "--php" | "--python" | "--run" | "--swf" | "--xml" | "-as3" | "-cpp" | "-cs" | "-hl" | "-java" | "-js" | "-jvm" | "-lua" | "-neko" | "-php" | "-python" | "-swf" | "-xml" -> let __assign_8 = true in (
+      tempResult := __assign_8;
+      __assign_8
+    )
+    | _ -> let __assign_7 = false in (
+      tempResult := __assign_7;
+      __assign_7
+    ));
+  !tempResult
+)
+
+let argscan_listExplicitTargets = fun args -> let out = HxArray.create () in let i = ref 0 in (
+  ignore (while !i < HxArray.length args do ignore (let a = HxArray.get args (!i) in (
+    ignore (match a with
+      | "--as3" | "-as3" -> ignore (HxArray.push out "as3")
+      | "--cpp" | "-cpp" -> ignore (HxArray.push out "cpp")
+      | "--cs" | "-cs" -> ignore (HxArray.push out "cs")
+      | "--hl" | "-hl" -> ignore (HxArray.push out "hl")
+      | "--interp" -> ignore (HxArray.push out "interp")
+      | "--java" | "-java" -> ignore (HxArray.push out "java")
+      | "--js" | "-js" -> ignore (HxArray.push out "js")
+      | "--jvm" | "-jvm" -> ignore (HxArray.push out "jvm")
+      | "--lua" | "-lua" -> ignore (HxArray.push out "lua")
+      | "--neko" | "-neko" -> ignore (HxArray.push out "neko")
+      | "--php" | "-php" -> ignore (HxArray.push out "php")
+      | "--python" | "-python" -> ignore (HxArray.push out "python")
+      | "--run" -> ignore (HxArray.push out "run")
+      | "--swf" | "-swf" -> ignore (HxArray.push out "swf")
+      | "--xml" | "-xml" -> ignore (HxArray.push out "xml")
+      | _ -> ignore ());
+    let tempRight = ref 0 in (
+      ignore (if argscan_consumesValue a then let __assign_5 = 2 in (
+        tempRight := __assign_5;
+        __assign_5
+      ) else let __assign_6 = 1 in (
+        tempRight := __assign_6;
+        __assign_6
+      ));
+      i := HxInt.add (!i) (!tempRight)
+    )
+  )) done);
+  out
+)
+
+let argscan_firstExplicitTarget = fun args -> let all = argscan_listExplicitTargets args in let tempResult = ref (Obj.magic ()) in (
+  ignore (if HxArray.length all = 0 then let __assign_3 = Obj.magic (HxRuntime.hx_null) in (
+    tempResult := __assign_3;
+    __assign_3
+  ) else let __assign_4 = HxArray.get all 0 in (
+    tempResult := __assign_4;
+    __assign_4
+  ));
+  !tempResult
+)
+
+let argscan_hasTargetFlag = fun args targetId -> let tempString = ref "" in (
+  ignore (if targetId == Obj.magic (HxRuntime.hx_null) then let __assign_1 = "" in (
+    tempString := __assign_1;
+    __assign_1
+  ) else let __assign_2 = targetId in (
+    tempString := __assign_2;
+    __assign_2
+  ));
+  HxString.equals (argscan_firstExplicitTarget args) (!tempString)
+)
+
 let argscan_hasLib = fun args name -> try let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let a = HxArray.get args (!i) in (
     ignore (if (HxString.equals a "-lib" || HxString.equals a "--library") && HxInt.add (!i) 1 < HxArray.length args && HxString.equals (HxArray.get args (HxInt.add (!i) 1)) name then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-    let __old_1 = !i in let __new_2 = HxInt.add __old_1 1 in (
-      ignore (i := __new_2);
-      __old_1
+    let __old_9 = !i in let __new_10 = HxInt.add __old_9 1 in (
+      ignore (i := __new_10);
+      __old_9
     )
   )) done);
   false
 ) with
-  | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
+  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
 let argscan_hasMacro = fun args macroExpr -> try let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore ((
     ignore (if HxString.equals (HxArray.get args (!i)) "--macro" && HxInt.add (!i) 1 < HxArray.length args && HxString.equals (HxArray.get args (HxInt.add (!i) 1)) macroExpr then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
-    let __old_4 = !i in let __new_5 = HxInt.add __old_4 1 in (
-      ignore (i := __new_5);
-      __old_4
+    let __old_12 = !i in let __new_13 = HxInt.add __old_12 1 in (
+      ignore (i := __new_13);
+      __old_12
     )
   )) done);
   false
 ) with
-  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6
+  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
 let argscan_addMacroIfMissing = fun args macroExpr -> try (
   ignore (if argscan_hasMacro args macroExpr then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (HxArray.push args "--macro");
   HxArray.push args macroExpr
 ) with
-  | HxRuntime.Hx_return __ret_7 -> Obj.obj __ret_7
+  | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
 let argscan_getDefineValue = fun args name -> try let i = ref 0 in (
   ignore (try while !i < HxArray.length args do try ignore (let a = HxArray.get args (!i) in (
@@ -52,32 +122,32 @@ let argscan_getDefineValue = fun args name -> try let i = ref 0 in (
       ignore (i := HxInt.add (!i) 2);
       raise (HxRuntime.Hx_continue)
     )) else ());
-    let __old_11 = !i in let __new_12 = HxInt.add __old_11 1 in (
-      ignore (i := __new_12);
-      __old_11
+    let __old_19 = !i in let __new_20 = HxInt.add __old_19 1 in (
+      ignore (i := __new_20);
+      __old_19
     )
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   Obj.magic (HxRuntime.hx_null)
 ) with
-  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
+  | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21
 
 let argscan_hasDefine = fun args name -> argscan_getDefineValue args name != Obj.magic (HxRuntime.hx_null)
 
 let argscan_addDefineIfMissing = fun args define -> try let eq = HxString.indexOf define "=" 0 in let tempString = ref "" in (
-  ignore (if eq = -1 then let __assign_8 = define in (
-    tempString := __assign_8;
-    __assign_8
-  ) else let __assign_9 = HxString.substr define 0 eq in (
-    tempString := __assign_9;
-    __assign_9
+  ignore (if eq = -1 then let __assign_16 = define in (
+    tempString := __assign_16;
+    __assign_16
+  ) else let __assign_17 = HxString.substr define 0 eq in (
+    tempString := __assign_17;
+    __assign_17
   ));
   ignore (if argscan_hasDefine args (!tempString) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (HxArray.push args "-D");
   HxArray.push args define
 ) with
-  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
+  | HxRuntime.Hx_return __ret_18 -> Obj.obj __ret_18
 
 let argscan_addCpIfExists = fun args path -> try (
   ignore (if not (HxFileSystem.exists path) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
@@ -85,16 +155,16 @@ let argscan_addCpIfExists = fun args path -> try (
   ignore (HxArray.push args "-cp");
   HxArray.push args path
 ) with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
+  | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
 let argscan_stripLib = fun args name -> let i = ref 0 in try while !i < HxArray.length args do try ignore (let a = HxArray.get args (!i) in (
   ignore (if (HxString.equals a "-lib" || HxString.equals a "--library") && HxInt.add (!i) 1 < HxArray.length args && HxString.equals (HxArray.get args (HxInt.add (!i) 1)) name then ignore ((
     ignore (HxArray.splice args (!i) 2);
     raise (HxRuntime.Hx_continue)
   )) else ());
-  let __old_15 = !i in let __new_16 = HxInt.add __old_15 1 in (
-    ignore (i := __new_16);
-    __old_15
+  let __old_23 = !i in let __new_24 = HxInt.add __old_23 1 in (
+    ignore (i := __new_24);
+    __old_23
   )
 )) with
   | HxRuntime.Hx_continue -> () done with
@@ -105,9 +175,9 @@ let argscan_stripMacro = fun args macroExpr -> let i = ref 0 in try while !i < H
     ignore (HxArray.splice args (!i) 2);
     raise (HxRuntime.Hx_continue)
   )) else ());
-  let __old_17 = !i in let __new_18 = HxInt.add __old_17 1 in (
-    ignore (i := __new_18);
-    __old_17
+  let __old_25 = !i in let __new_26 = HxInt.add __old_25 1 in (
+    ignore (i := __new_26);
+    __old_25
   )
 )) with
   | HxRuntime.Hx_continue -> () done with
@@ -130,8 +200,14 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.TargetPresets" } : t)
 let listTargets = fun () -> let __arr_1 = HxArray.create () in (
   ignore (HxArray.push __arr_1 "ocaml");
   ignore (HxArray.push __arr_1 "ocaml-stage3");
+  ignore (HxArray.push __arr_1 "js");
+  ignore (HxArray.push __arr_1 "js-native");
   __arr_1
 )
+
+let unsupportedLegacyTargetMessage = fun targetId -> ("Target \"" ^ HxString.toStdString targetId) ^ "\" is not supported in hxhx. Legacy Flash/AS3 targets are intentionally unsupported in this implementation."
+
+let ensureBuiltinBackendRegistered = fun targetId -> if Backend_BackendRegistry.descriptorForTarget targetId == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (("Target \"" ^ HxString.toStdString targetId) ^ "\" is not available in this hxhx build (missing builtin backend registration).")) ["Dynamic"; "String"]) else ()
 
 let applyOcamlStage3 = fun forwarded -> let out = HxArray.copy forwarded in let reflaxeTarget = argscan_getDefineValue out "reflaxe-target" in (
   ignore (if reflaxeTarget != Obj.magic (HxRuntime.hx_null) && not (HxString.equals reflaxeTarget "ocaml") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Contradiction: --target ocaml-stage3 but -D reflaxe-target=" ^ HxString.toStdString reflaxeTarget)) ["Dynamic"; "String"]) else ());
@@ -142,62 +218,82 @@ let applyOcamlStage3 = fun forwarded -> let out = HxArray.copy forwarded in let 
   out
 )
 
+let applyJs = fun forwarded -> let out = HxArray.copy forwarded in let explicitTargets = argscan_listExplicitTargets out in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length explicitTargets do ignore (let target = HxArray.get explicitTargets (!_g) in (
+    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+      ignore (_g := __new_17);
+      __new_17
+    ));
+    if not (HxString.equals target "js") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Contradiction: --target js but explicit target flag selects " ^ HxString.toStdString target)) ["Dynamic"; "String"]) else ()
+  )) done);
+  ignore (if HxArray.length explicitTargets = 0 && not (argscan_hasNoOutputLike out) then ignore ((
+    ignore (HxArray.push out "--js");
+    HxArray.push out "out.js"
+  )) else ());
+  out
+)
+
+let applyJsNative = fun forwarded -> let out = applyJs forwarded in (
+  ignore (argscan_addDefineIfMissing out "js-es=5");
+  out
+)
+
 let findBundledLibRoot = fun () -> try try let exe = HxSys.programPath () in (
   ignore (if exe == Obj.magic (HxRuntime.hx_null) || HxString.length exe = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let abs = HxFileSystem.fullPath exe in let root = Haxe_io_Path.directory (Haxe_io_Path.directory abs) in let libRoot = Haxe_io_Path.join (let __arr_10 = HxArray.create () in (
-    ignore (HxArray.push __arr_10 root);
-    ignore (HxArray.push __arr_10 "lib");
-    __arr_10
+  let abs = HxFileSystem.fullPath exe in let root = Haxe_io_Path.directory (Haxe_io_Path.directory abs) in let libRoot = Haxe_io_Path.join (let __arr_18 = HxArray.create () in (
+    ignore (HxArray.push __arr_18 root);
+    ignore (HxArray.push __arr_18 "lib");
+    __arr_18
   )) in (
-    ignore (if not (HxFileSystem.exists (Haxe_io_Path.join (let __arr_11 = HxArray.create () in (
-      ignore (HxArray.push __arr_11 libRoot);
-      ignore (HxArray.push __arr_11 "reflaxe");
-      ignore (HxArray.push __arr_11 "src");
-      __arr_11
+    ignore (if not (HxFileSystem.exists (Haxe_io_Path.join (let __arr_19 = HxArray.create () in (
+      ignore (HxArray.push __arr_19 libRoot);
+      ignore (HxArray.push __arr_19 "reflaxe");
+      ignore (HxArray.push __arr_19 "src");
+      __arr_19
     )))) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    ignore (if not (HxFileSystem.exists (Haxe_io_Path.join (let __arr_12 = HxArray.create () in (
-      ignore (HxArray.push __arr_12 libRoot);
-      ignore (HxArray.push __arr_12 "reflaxe.ocaml");
-      ignore (HxArray.push __arr_12 "src");
-      __arr_12
+    ignore (if not (HxFileSystem.exists (Haxe_io_Path.join (let __arr_20 = HxArray.create () in (
+      ignore (HxArray.push __arr_20 libRoot);
+      ignore (HxArray.push __arr_20 "reflaxe.ocaml");
+      ignore (HxArray.push __arr_20 "src");
+      __arr_20
     )))) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     raise (HxRuntime.Hx_return (Obj.repr libRoot))
   )
 ) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-  | HxRuntime.Hx_return __ret_13 -> raise (HxRuntime.Hx_return __ret_13)
-  | HxRuntime.Hx_exception (__exn_v_14, __exn_tags_15) -> if true then let _hx = (__exn_v_14 : Obj.t) in (
+  | HxRuntime.Hx_return __ret_21 -> raise (HxRuntime.Hx_return __ret_21)
+  | HxRuntime.Hx_exception (__exn_v_22, __exn_tags_23) -> if HxRuntime.tags_has __exn_tags_23 "String" then let _hx = (Obj.obj __exn_v_22 : string) in (
     ignore _hx;
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-  ) else HxRuntime.hx_throw_typed __exn_v_14 __exn_tags_15
-  | __exn_16 -> if true then let _hx = (Obj.repr __exn_16 : Obj.t) in (
+  ) else HxRuntime.hx_throw_typed __exn_v_22 __exn_tags_23
+  | __exn_24 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_24) : string) in (
     ignore _hx;
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-  ) else raise (__exn_16) with
-  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
+  ) else raise (__exn_24) with
+  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
 
 let applyOcaml = fun forwarded -> let out = HxArray.copy forwarded in let reflaxeTarget = argscan_getDefineValue out "reflaxe-target" in (
   ignore (if reflaxeTarget != Obj.magic (HxRuntime.hx_null) && not (HxString.equals reflaxeTarget "ocaml") then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("Contradiction: --target ocaml but -D reflaxe-target=" ^ HxString.toStdString reflaxeTarget)) ["Dynamic"; "String"]) else ());
   let hasLib = argscan_hasLib out "reflaxe.ocaml" in let hasInitMacro = argscan_hasMacro out "reflaxe.ocaml.CompilerInit.Start()" in (
-    ignore (if not (hasLib) && not (hasInitMacro) then ignore (let bundled = findBundledLibRoot () in if bundled != Obj.magic (HxRuntime.hx_null) then ignore (let reflaxeRoot = Haxe_io_Path.join (let __arr_6 = HxArray.create () in (
-      ignore (HxArray.push __arr_6 bundled);
-      ignore (HxArray.push __arr_6 "reflaxe");
-      __arr_6
-    )) in let ocamlRoot = Haxe_io_Path.join (let __arr_7 = HxArray.create () in (
-      ignore (HxArray.push __arr_7 bundled);
-      ignore (HxArray.push __arr_7 "reflaxe.ocaml");
-      __arr_7
+    ignore (if not (hasLib) && not (hasInitMacro) then ignore (let bundled = findBundledLibRoot () in if bundled != Obj.magic (HxRuntime.hx_null) then ignore (let reflaxeRoot = Haxe_io_Path.join (let __arr_12 = HxArray.create () in (
+      ignore (HxArray.push __arr_12 bundled);
+      ignore (HxArray.push __arr_12 "reflaxe");
+      __arr_12
+    )) in let ocamlRoot = Haxe_io_Path.join (let __arr_13 = HxArray.create () in (
+      ignore (HxArray.push __arr_13 bundled);
+      ignore (HxArray.push __arr_13 "reflaxe.ocaml");
+      __arr_13
     )) in (
-      ignore (argscan_addCpIfExists out (Haxe_io_Path.join (let __arr_8 = HxArray.create () in (
-        ignore (HxArray.push __arr_8 reflaxeRoot);
-        ignore (HxArray.push __arr_8 "src");
-        __arr_8
+      ignore (argscan_addCpIfExists out (Haxe_io_Path.join (let __arr_14 = HxArray.create () in (
+        ignore (HxArray.push __arr_14 reflaxeRoot);
+        ignore (HxArray.push __arr_14 "src");
+        __arr_14
       ))));
-      ignore (argscan_addCpIfExists out (Haxe_io_Path.join (let __arr_9 = HxArray.create () in (
-        ignore (HxArray.push __arr_9 ocamlRoot);
-        ignore (HxArray.push __arr_9 "src");
-        __arr_9
+      ignore (argscan_addCpIfExists out (Haxe_io_Path.join (let __arr_15 = HxArray.create () in (
+        ignore (HxArray.push __arr_15 ocamlRoot);
+        ignore (HxArray.push __arr_15 "src");
+        __arr_15
       ))));
       ignore (argscan_addMacroIfMissing out "nullSafety(\"reflaxe\")");
       ignore (argscan_addMacroIfMissing out "reflaxe.ReflectCompiler.Start()");
@@ -217,32 +313,70 @@ let applyOcaml = fun forwarded -> let out = HxArray.copy forwarded in let reflax
   )
 )
 
-let resolve = fun targetId forwarded -> let tempResult = ref (Obj.magic ()) in (
-  ignore (match targetId with
-    | "ocaml" -> let __assign_2 = let __anon_3 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_3 "id" (Obj.repr "ocaml"));
-      ignore (HxAnon.set __anon_3 "kind" (Obj.repr "both"));
-      ignore (HxAnon.set __anon_3 "runMode" (Obj.repr "delegate_stage0"));
-      ignore (HxAnon.set __anon_3 "describe" (Obj.repr "Reflaxe OCaml backend via stage0 delegation"));
-      ignore (HxAnon.set __anon_3 "forwarded" (Obj.repr (applyOcaml forwarded)));
-      __anon_3
-    ) in (
-      tempResult := __assign_2;
-      __assign_2
-    )
-    | "ocaml-stage3" -> let __assign_4 = let __anon_5 = HxAnon.create () in (
-      ignore (HxAnon.set __anon_5 "id" (Obj.repr "ocaml-stage3"));
-      ignore (HxAnon.set __anon_5 "kind" (Obj.repr "builtin"));
-      ignore (HxAnon.set __anon_5 "runMode" (Obj.repr "builtin_stage3"));
-      ignore (HxAnon.set __anon_5 "describe" (Obj.repr "Linked Stage3 OCaml emitter fast-path (no --library required)"));
-      ignore (HxAnon.set __anon_5 "forwarded" (Obj.repr (applyOcamlStage3 forwarded)));
-      __anon_5
-    ) in (
-      tempResult := __assign_4;
-      __assign_4
-    )
-    | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("Unknown target: " ^ HxString.toStdString targetId)) ["Dynamic"; "String"]);
-  !tempResult
+let resolve = fun targetId forwarded -> let tempString = ref "" in (
+  ignore (if targetId == Obj.magic (HxRuntime.hx_null) then let __assign_2 = "" in (
+    tempString := __assign_2;
+    __assign_2
+  ) else let __assign_3 = HxString.toLowerCase targetId () in (
+    tempString := __assign_3;
+    __assign_3
+  ));
+  let tempResult = ref (Obj.magic ()) in (
+    ignore (match !tempString with
+      | "as3" | "flash" | "swf" -> HxType.hx_throw_typed_rtti (Obj.repr (unsupportedLegacyTargetMessage (!tempString))) ["Dynamic"; "String"]
+      | "js" -> let __assign_4 = let __anon_5 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_5 "id" (Obj.repr "js"));
+        ignore (HxAnon.set __anon_5 "kind" (Obj.repr "bundled"));
+        ignore (HxAnon.set __anon_5 "runMode" (Obj.repr "delegate_stage0"));
+        ignore (HxAnon.set __anon_5 "describe" (Obj.repr "JavaScript target via stage0 delegation"));
+        ignore (HxAnon.set __anon_5 "forwarded" (Obj.repr (applyJs forwarded)));
+        __anon_5
+      ) in (
+        tempResult := __assign_4;
+        __assign_4
+      )
+      | "js-native" -> (
+        ignore (ensureBuiltinBackendRegistered "js-native");
+        let __assign_6 = let __anon_7 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_7 "id" (Obj.repr "js-native"));
+          ignore (HxAnon.set __anon_7 "kind" (Obj.repr "builtin"));
+          ignore (HxAnon.set __anon_7 "runMode" (Obj.repr "builtin_stage3"));
+          ignore (HxAnon.set __anon_7 "describe" (Obj.repr "Linked Stage3 JS backend fast-path (non-delegating MVP)"));
+          ignore (HxAnon.set __anon_7 "forwarded" (Obj.repr (applyJsNative forwarded)));
+          __anon_7
+        ) in (
+          tempResult := __assign_6;
+          __assign_6
+        )
+      )
+      | "ocaml" -> let __assign_8 = let __anon_9 = HxAnon.create () in (
+        ignore (HxAnon.set __anon_9 "id" (Obj.repr "ocaml"));
+        ignore (HxAnon.set __anon_9 "kind" (Obj.repr "both"));
+        ignore (HxAnon.set __anon_9 "runMode" (Obj.repr "delegate_stage0"));
+        ignore (HxAnon.set __anon_9 "describe" (Obj.repr "Reflaxe OCaml backend via stage0 delegation"));
+        ignore (HxAnon.set __anon_9 "forwarded" (Obj.repr (applyOcaml forwarded)));
+        __anon_9
+      ) in (
+        tempResult := __assign_8;
+        __assign_8
+      )
+      | "ocaml-stage3" -> (
+        ignore (ensureBuiltinBackendRegistered "ocaml-stage3");
+        let __assign_10 = let __anon_11 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_11 "id" (Obj.repr "ocaml-stage3"));
+          ignore (HxAnon.set __anon_11 "kind" (Obj.repr "builtin"));
+          ignore (HxAnon.set __anon_11 "runMode" (Obj.repr "builtin_stage3"));
+          ignore (HxAnon.set __anon_11 "describe" (Obj.repr "Linked Stage3 OCaml emitter fast-path (no --library required)"));
+          ignore (HxAnon.set __anon_11 "forwarded" (Obj.repr (applyOcamlStage3 forwarded)));
+          __anon_11
+        ) in (
+          tempResult := __assign_10;
+          __assign_10
+        )
+      )
+      | _ -> HxType.hx_throw_typed_rtti (Obj.repr (("Unknown target: " ^ HxString.toStdString targetId) ^ " (run --hxhx-list-targets for supported presets)")) ["Dynamic"; "String"]);
+    !tempResult
+  )
 )
 
 let apply = fun targetId forwarded -> Obj.obj (HxAnon.get (resolve targetId forwarded) "forwarded")

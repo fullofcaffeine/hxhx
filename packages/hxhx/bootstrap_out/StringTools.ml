@@ -40,3 +40,27 @@ let rtrim = fun s -> try let l = HxString.length s in let r = ref 0 in (
 let trim = fun s -> ltrim (rtrim s)
 
 let replace = fun s sub by -> HxArray.join (HxString.split s sub) by (fun x -> x)
+
+let hex = fun n digits -> let n = ref n in let s = ref "" in let hexChars = "0123456789ABCDEF" in (
+  ignore ((
+    ignore ((
+      ignore (let __assign_12 = HxString.toStdString (HxString.charAt hexChars (HxInt.logand (!n) 15)) ^ HxString.toStdString (!s) in (
+        s := __assign_12;
+        __assign_12
+      ));
+      n := HxInt.ushr (!n) 4
+    ));
+    while !n > 0 do ignore ((
+      ignore (let __assign_12 = HxString.toStdString (HxString.charAt hexChars (HxInt.logand (!n) 15)) ^ HxString.toStdString (!s) in (
+        s := __assign_12;
+        __assign_12
+      ));
+      n := HxInt.ushr (!n) 4
+    )) done
+  ));
+  ignore (if digits != HxRuntime.hx_null then ignore (while let __nullable_13 = HxString.length (!s) in let __nullable_14 = digits in if __nullable_14 == HxRuntime.hx_null then false else __nullable_13 < Obj.obj __nullable_14 do ignore (let __assign_15 = "0" ^ HxString.toStdString (!s) in (
+    s := __assign_15;
+    __assign_15
+  )) done) else ());
+  !s
+)
