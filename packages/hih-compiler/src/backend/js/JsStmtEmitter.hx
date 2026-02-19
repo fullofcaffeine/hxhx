@@ -52,6 +52,18 @@ class JsStmtEmitter {
 					writer.popIndent();
 					writer.writeln("}");
 				}
+			case SWhile(cond, body, _):
+				writer.writeln("while (" + JsExprEmitter.emit(cond, scope.exprScope()) + ") {");
+				writer.pushIndent();
+				emitStmtBlockContent(writer, body, scope);
+				writer.popIndent();
+				writer.writeln("}");
+			case SDoWhile(body, cond, _):
+				writer.writeln("do {");
+				writer.pushIndent();
+				emitStmtBlockContent(writer, body, scope);
+				writer.popIndent();
+				writer.writeln("} while (" + JsExprEmitter.emit(cond, scope.exprScope()) + ");");
 			case STry(tryBody, catches, _):
 				emitTry(writer, tryBody, catches, scope);
 			case SForIn(name, iterable, body, _):
@@ -64,6 +76,10 @@ class JsStmtEmitter {
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SThrow(expr, _):
 				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
+			case SExpr(EUnsupported("break"), _):
+				writer.writeln("break;");
+			case SExpr(EUnsupported("continue"), _):
+				writer.writeln("continue;");
 			case SExpr(expr, _):
 				writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 		}

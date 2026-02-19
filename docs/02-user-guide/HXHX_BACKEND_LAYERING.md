@@ -85,6 +85,44 @@ This registry is now the source of truth for:
 
 `Stage3Compiler` resolves backends through `BackendRegistry.requireForTarget(...)` rather than hardcoded switch branches.
 
+## GenIR boundary decision (`haxe.ocaml-3b7`)
+
+Chosen path (near-term): **Approach B** from the design options, with a strict cast policy.
+
+- Keep backend dispatch APIs statically typed:
+  - `IBackend.emit(program:GenIrProgram, context:BackendContext):EmitResult`
+  - `ITargetCore.emit(program:GenIrProgram, context:BackendContext):EmitResult`
+- Keep target-core implementations (`OcamlTargetCore`, `JsTargetCore`) free of `program` boundary casts.
+- Keep provider registration behind one explicit reflective boundary:
+  - `BackendRegistry.registerProvider(regs)`
+
+Allowed cast boundaries (narrow and documented):
+
+- Shared backend GenIR boundary helper:
+  - `packages/hih-compiler/src/backend/GenIrBoundary.hx`
+  - `GenIrBoundary.requireProgram(program:Dynamic):GenIrProgram`
+- Stage3 provider reflection bridge when loading provider static methods by type name
+  (`Reflect.callMethod` result cast to `Array<BackendRegistrationSpec>`).
+- Stage3 reflaxe bridge dispatch for known backend wrapper types in `emitWithBackend(...)`.
+
+Not allowed:
+
+- local `program:Dynamic`/`cast program` helpers duplicated inside target-core codegen classes.
+- spreading `GenIrProgram` recovery casts through backend emitters.
+
+Medium-term roadmap:
+
+1. Replace reflective provider static call with an explicitly typed adapter path.
+2. Replace `GenIrProgram` typedef alias with a concrete wrapper value once backend IR extraction is ready.
+3. Keep a single enforcement check in CI so regressions are caught before bootstrap OCaml type-check.
+
+Validation matrix for this boundary:
+
+```bash
+haxe -cp packages/hxhx/src -cp packages/hih-compiler/src -cp packages/reflaxe.ocaml/src -cp packages/reflaxe.ocaml/std -main hxhx.Main --no-output -D hih_native_parser
+npm run -s test:hxhx:builtin-target-smoke
+```
+
 ## Target promotion shape (plugin → native without rewrite)
 
 The intended long-term pattern for Reflaxe targets is:

@@ -9,6 +9,9 @@ import hxhx.macro.MacroHostClient.MacroHostSession;
 import backend.BackendContext;
 import backend.EmitResult;
 import backend.BackendRegistry;
+import backend.GenIrBoundary;
+import backend.GenIrProgram;
+import backend.IBackend;
 import backend.TargetCoreBackend;
 import backend.js.JsBackend;
 import backend.ocaml.OcamlStage3Backend;
@@ -66,6 +69,13 @@ private typedef WaitStdioRequest = {
 private typedef WaitStdioReply = {
 	final payload:String;
 	final isError:Bool;
+};
+
+private typedef BuildFieldPayloadItem = {
+	final name:String;
+	final kind:String;
+	final isStatic:Bool;
+	final visibility:String;
 };
 
 /**
@@ -174,30 +184,31 @@ class Stage3Compiler {
 		How
 		- Fail fast on unknown IDs so callers never silently delegate or run the wrong backend.
 	**/
-	static function resolveBuiltinBackend(backendId:String):Dynamic {
+	static function resolveBuiltinBackend(backendId:String):IBackend {
 		return BackendRegistry.requireForTarget(backendId);
 	}
 
-	static function emitWithBackend(backendId:String, backend:Dynamic, expanded:Dynamic, context:BackendContext):EmitResult {
+static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
+		final expandedProgram = GenIrBoundary.requireProgram(expanded);
 		#if reflaxe
-		if (Std.isOfType(backend, TargetCoreBackend)) {
-			return TargetCoreBackend.emitBridge(cast backend, expanded, context);
+		final backendDyn:Dynamic = cast backend;
+		if (Std.isOfType(backendDyn, JsBackend)) {
+			final jsBackend:JsBackend = cast backendDyn;
+			return JsBackend.emitBridge(jsBackend, expandedProgram, context);
 		}
-		if (Std.isOfType(backend, JsBackend)) {
-			return JsBackend.emitBridge(cast backend, expanded, context);
+		if (Std.isOfType(backendDyn, OcamlStage3Backend)) {
+			final ocamlBackend:OcamlStage3Backend = cast backendDyn;
+			return OcamlStage3Backend.emitBridge(ocamlBackend, expandedProgram, context);
 		}
-		if (Std.isOfType(backend, OcamlStage3Backend)) {
-			return OcamlStage3Backend.emitBridge(cast backend, expanded, context);
+		if (Std.isOfType(backendDyn, TargetCoreBackend)) {
+			final targetCoreBackend:TargetCoreBackend = cast backendDyn;
+			return TargetCoreBackend.emitBridge(targetCoreBackend, expandedProgram, context);
 		}
-		final emitFn:Dynamic = Reflect.field(backend, "emit");
+		final emitFn = Reflect.field(backendDyn, "emit");
 		if (emitFn == null) throw "backend missing emit() method: " + backendId;
-		try {
-			return cast emitFn(backend, expanded, context);
-		} catch (_:Dynamic) {
-			return cast emitFn(expanded, context);
-		}
+		return cast Reflect.callMethod(backendDyn, emitFn, [expanded, context]);
 		#else
-		return cast backend.emit(expanded, context);
+		return backend.emit(expandedProgram, context);
 		#end
 	}
 
@@ -310,7 +321,9 @@ class Stage3Compiler {
 			final code = p.exitCode();
 			p.close();
 			return code == 0;
-		} catch (_:Dynamic) {
+		} catch (_:haxe.io.Error) {
+			return false;
+		} catch (_:String) {
 			return false;
 		}
 	}
@@ -398,13 +411,15 @@ class Stage3Compiler {
 
 		while (true) {
 			var frameLen = 0;
-			try {
-				frameLen = input.readInt32();
-			} catch (_:Eof) {
-				return 0;
-			} catch (e:Dynamic) {
-				return error("wait-stdio failed to read frame length: " + Std.string(e));
-			}
+				try {
+					frameLen = input.readInt32();
+				} catch (_:Eof) {
+					return 0;
+				} catch (e:haxe.io.Error) {
+					return error("wait-stdio failed to read frame length: " + Std.string(e));
+				} catch (e:String) {
+					return error("wait-stdio failed to read frame length: " + e);
+				}
 
 			if (frameLen < 0) return error("wait-stdio received negative frame length: " + frameLen);
 
@@ -429,8 +444,8 @@ class Stage3Compiler {
 	static function runWaitSocket(mode:String, _baseArgs:Array<String>):Int {
 		return try {
 			NativeCompilerServer.waitSocket(mode);
-		} catch (e:Dynamic) {
-			error("wait socket failed: " + Std.string(e));
+		} catch (e:String) {
+			error("wait socket failed: " + e);
 		}
 	}
 
@@ -444,8 +459,10 @@ class Stage3Compiler {
 			input.readInt32();
 		} catch (_:Eof) {
 			return null;
-		} catch (e:Dynamic) {
+		} catch (e:haxe.io.Error) {
 			throw "connect failed to read display-stdin frame length: " + Std.string(e);
+		} catch (e:String) {
+			throw "connect failed to read display-stdin frame length: " + e;
 		}
 
 		if (frameLen <= 0) return null;
@@ -509,8 +526,8 @@ class Stage3Compiler {
 	static function runConnect(connectMode:String, requestArgs:Array<String>):Int {
 		final stdinBytes = try {
 			readConnectDisplayStdin(requestArgs);
-		} catch (e:Dynamic) {
-			return error(Std.string(e));
+		} catch (e:String) {
+			return error(e);
 		}
 
 		final argsWithCwd = new Array<String>();
@@ -519,13 +536,13 @@ class Stage3Compiler {
 		for (arg in requestArgs) argsWithCwd.push(arg);
 
 		final payload = encodeConnectRequest(argsWithCwd, stdinBytes);
-		try {
-			final response = NativeCompilerServer.connect(connectMode, payload);
-			return processConnectResponse(response) ? 1 : 0;
-		} catch (e:Dynamic) {
-			return error("connect failed on " + connectMode + " (" + Std.string(e) + ")");
+			try {
+				final response = NativeCompilerServer.connect(connectMode, payload);
+				return processConnectResponse(response) ? 1 : 0;
+			} catch (e:String) {
+				return error("connect failed on " + connectMode + " (" + e + ")");
+			}
 		}
-	}
 
 	static function escapeOneLine(s:String):String {
 		if (s == null) return "";
@@ -645,6 +662,12 @@ class Stage3Compiler {
 						collectUnsupportedExprRawInExpr(cond, out, max);
 						collectUnsupportedExprRawInStmt(thenBranch, out, max);
 						if (elseBranch != null) collectUnsupportedExprRawInStmt(elseBranch, out, max);
+					case SWhile(cond, body, _pos):
+						collectUnsupportedExprRawInExpr(cond, out, max);
+						collectUnsupportedExprRawInStmt(body, out, max);
+					case SDoWhile(body, cond, _pos):
+						collectUnsupportedExprRawInStmt(body, out, max);
+						collectUnsupportedExprRawInExpr(cond, out, max);
 					case SForIn(_name, iterable, body, _pos):
 						collectUnsupportedExprRawInExpr(iterable, out, max);
 						collectUnsupportedExprRawInStmt(body, out, max);
@@ -685,6 +708,10 @@ class Stage3Compiler {
 						countUnsupportedExprsInExpr(init);
 					case SIf(cond, thenBranch, elseBranch, _pos):
 						countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(thenBranch) + (elseBranch == null ? 0 : countUnsupportedExprsInStmt(elseBranch));
+					case SWhile(cond, body, _pos):
+						countUnsupportedExprsInExpr(cond) + countUnsupportedExprsInStmt(body);
+					case SDoWhile(body, cond, _pos):
+						countUnsupportedExprsInStmt(body) + countUnsupportedExprsInExpr(cond);
 					case SForIn(_name, iterable, body, _pos):
 						countUnsupportedExprsInExpr(iterable) + countUnsupportedExprsInStmt(body);
 					case STry(tryBody, catches, _pos):
@@ -729,39 +756,12 @@ class Stage3Compiler {
 		return v == "1" || v == "true" || v == "yes";
 	}
 
-		static function formatException(e:Dynamic):String {
-			if (Std.isOfType(e, String)) return cast e;
-
-			try {
-				// Special-case structured errors we throw from the bootstrap pipeline.
-				// On the OCaml target, `Std.string(object)` can degrade to `<object>`,
-				// so we format these explicitly.
-				if (Std.isOfType(e, TyperError)) {
-					final te:TyperError = cast e;
-					// Use accessors to avoid OCaml `-opaque` record-label issues.
-					final p = te.getPos();
-					final line = p == null ? 0 : p.getLine();
-					final col = p == null ? 0 : p.getColumn();
-					return te.getFilePath() + ":" + line + ":" + col + ": " + te.getMessage();
-				}
-
-				final msg = Std.string(e);
-				final debug = Sys.getEnv("HXHX_DEBUG_EXN");
-				if (debug == "1" || debug == "true" || debug == "yes") {
-					// Avoid `haxe.CallStack` on OCaml (it can create dune dependency cycles).
-					var details = "typeof=" + Std.string(Type.typeof(e));
-					final cls = Type.getClass(e);
-					if (cls != null) details += ";class=" + Type.getClassName(cls);
-					final fields = Reflect.fields(e);
-					if (fields != null && fields.length > 0) details += ";fields=" + fields.join(",");
-					if (Reflect.hasField(e, "message")) details += ";message=" + Std.string(Reflect.field(e, "message"));
-					return msg + " :: " + details;
-				}
-				return msg;
-			} catch (_:Dynamic) {
-				return Std.string(e);
-			}
-		}
+	static function formatException(e:TyperError):String {
+		final p = e.getPos();
+		final line = p == null ? 0 : p.getLine();
+		final col = p == null ? 0 : p.getColumn();
+		return e.getFilePath() + ":" + line + ":" + col + ": " + e.getMessage();
+	}
 
 	static function haxelibBin():String {
 		final v = Sys.getEnv("HAXELIB_BIN");
@@ -955,9 +955,9 @@ class Stage3Compiler {
 		final prog = Sys.programPath();
 		if (prog == null || prog.length == 0) return "";
 
-		final abs = try sys.FileSystem.fullPath(prog) catch (_:Dynamic) prog;
-		var dir = try haxe.io.Path.directory(abs) catch (_:Dynamic) "";
-		if (dir == null || dir.length == 0) return "";
+			final abs = try sys.FileSystem.fullPath(prog) catch (_:String) prog;
+			var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
+			if (dir == null || dir.length == 0) return "";
 
 		// Walk upwards a few levels looking for `scripts/hxhx/build-hxhx-macro-host.sh`.
 		for (_ in 0...10) {
@@ -1060,33 +1060,24 @@ class Stage3Compiler {
 		for (typePath in providerTypes) {
 			if (typePath == "backend.js.JsBackend") {
 				final regs = JsBackend.providerRegistrations();
-				for (reg in regs) BackendRegistry.register(reg);
-				totalRegistered += regs.length;
-				if (trace) Sys.println("backend_provider[" + typePath + "]=" + regs.length);
+				final registered = BackendRegistry.registerProvider(regs);
+				totalRegistered += registered;
+				if (trace) Sys.println("backend_provider[" + typePath + "]=" + registered);
 				continue;
 			}
 
 			final cls = Type.resolveClass(typePath);
 			if (cls == null) throw "backend provider type not found: " + typePath;
-			var registered = 0;
 			final staticRegsFn = Reflect.field(cls, "providerRegistrations");
 			if (staticRegsFn != null) {
 				final regs:Array<backend.BackendRegistrationSpec> = cast Reflect.callMethod(cls, staticRegsFn, []);
-				if (regs != null) {
-					for (reg in regs) BackendRegistry.register(reg);
-					registered = regs.length;
+				final registered = BackendRegistry.registerProvider(regs);
+				totalRegistered += registered;
+				if (trace) {
+					Sys.println("backend_provider[" + typePath + "]=" + registered);
 				}
 			} else {
-				final instance = try {
-					Type.createInstance(cls, []);
-				} catch (e:Dynamic) {
-					throw "backend provider type could not be instantiated (" + typePath + "): " + Std.string(e);
-				}
-				registered = BackendRegistry.registerProvider(instance);
-			}
-			totalRegistered += registered;
-			if (trace) {
-				Sys.println("backend_provider[" + typePath + "]=" + registered);
+				throw "backend provider type must expose static providerRegistrations(): " + typePath;
 			}
 		}
 
@@ -1251,7 +1242,7 @@ class Stage3Compiler {
 	static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
 		final decl = pm.getDecl();
 		final cls = HxModuleDecl.getMainClass(decl);
-		final items = new Array<Dynamic>();
+		final items = new Array<BuildFieldPayloadItem>();
 
 		for (fn in HxClassDecl.getFunctions(cls)) {
 			items.push({
@@ -1274,12 +1265,12 @@ class Stage3Compiler {
 		final parts = new Array<String>();
 		parts.push(hxhx.macro.MacroProtocol.encodeLen("c", Std.string(items.length)));
 		for (i in 0...items.length) {
-			final it = items[i];
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("n" + i, Std.string(Reflect.field(it, "name"))));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("k" + i, Std.string(Reflect.field(it, "kind"))));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("s" + i, (Reflect.field(it, "isStatic") == true) ? "1" : "0"));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("v" + i, Std.string(Reflect.field(it, "visibility"))));
-		}
+				final it = items[i];
+				parts.push(hxhx.macro.MacroProtocol.encodeLen("n" + i, it.name));
+				parts.push(hxhx.macro.MacroProtocol.encodeLen("k" + i, it.kind));
+				parts.push(hxhx.macro.MacroProtocol.encodeLen("s" + i, it.isStatic ? "1" : "0"));
+				parts.push(hxhx.macro.MacroProtocol.encodeLen("v" + i, it.visibility));
+			}
 		return parts.join(" ");
 	}
 
@@ -1287,8 +1278,8 @@ class Stage3Compiler {
 			// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 			final g = try {
 				parseGlobalStage3Flags(args);
-			} catch (e:Dynamic) {
-				return error(Std.string(e));
+			} catch (e:String) {
+				return error(e);
 			}
 			final outDir = g.outDir;
 			final backendId = g.backendId;
@@ -1383,7 +1374,7 @@ class Stage3Compiler {
 			}
 		}
 
-		final hostCwd = try Sys.getCwd() catch (_:Dynamic) ".";
+		final hostCwd = try Sys.getCwd() catch (_:String) ".";
 		final cwd = absFromCwd(hostCwd, parsed.cwd);
 			if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
 				return error("cwd is not a directory: " + cwd);
@@ -1487,9 +1478,9 @@ class Stage3Compiler {
 					for (e in exprMacros) if (entrypoints.indexOf(e) == -1) entrypoints.push(e);
 					final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
 					Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
-				} catch (e:Dynamic) {
-					return error("macro host auto-build failed: " + Std.string(e));
-				}
+					} catch (e:String) {
+						return error("macro host auto-build failed: " + e);
+					}
 			}
 
 				// Stage 4 bring-up slice: support CLI `--macro` by routing expressions to the macro host.
@@ -1502,10 +1493,10 @@ class Stage3Compiler {
 						for (i in 0...libMacros.length) Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
 					}
 					for (i in 0...parsed.macros.length) Sys.println("macro_run[" + i + "]=" + macroSession.run(parsed.macros[i]));
-				} catch (e:Dynamic) {
-					closeMacroSession();
-					return error("macro failed: " + Std.string(e));
-				}
+					} catch (e:String) {
+						closeMacroSession();
+						return error("macro failed: " + e);
+					}
 
 			// Bring-up diagnostics: dump HXHX_* defines set by macros so tests can assert macro effects.
 			for (name in hxhx.macro.MacroState.listDefineNames()) {
@@ -1545,10 +1536,13 @@ class Stage3Compiler {
 		}
 
 		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());
-		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots, definesMap) catch (e:Dynamic) {
-				closeMacroSession();
-				return error("resolve failed: " + formatException(e));
-			}
+		final resolved = try ResolverStage.parseProjectRoots(classPaths, roots, definesMap) catch (e:TyperError) {
+					closeMacroSession();
+					return error("resolve failed: " + formatException(e));
+				} catch (e:String) {
+					closeMacroSession();
+					return error("resolve failed: " + e);
+				}
 		if (resolved.length == 0) return error("resolver returned an empty module graph");
 		Sys.println("resolved_modules=" + resolved.length);
 
@@ -1580,16 +1574,16 @@ class Stage3Compiler {
 						for (e in buildExprsAll) if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1) entrypoints.push(e);
 						final exe = buildMacroHostExe(repoRoot, macroHostClassPaths, entrypoints);
 						Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
-					} catch (e:Dynamic) {
-						return error("macro host auto-build failed (build macros): " + Std.string(e));
+					} catch (e:String) {
+						return error("macro host auto-build failed (build macros): " + e);
 					}
 				}
 
 				try {
 					macroSession = MacroHostClient.openSession();
-				} catch (e:Dynamic) {
+				} catch (e:String) {
 					closeMacroSession();
-					return error("macro host required for @:build, but could not be started: " + Std.string(e));
+					return error("macro host required for @:build, but could not be started: " + e);
 				}
 			}
 
@@ -1615,10 +1609,10 @@ class Stage3Compiler {
 					try {
 						// The macro effect is communicated via reverse RPC `compiler.emitBuildFields`.
 						Sys.println("build_macro_run[" + modulePath + "][" + i + "]=" + macroSession.run(expr));
-					} catch (e:Dynamic) {
-						closeMacroSession();
-						return error("build macro failed: " + modulePath + ": " + Std.string(e));
-					}
+						} catch (e:String) {
+							closeMacroSession();
+							return error("build macro failed: " + modulePath + ": " + e);
+						}
 				}
 
 				final snippets = hxhx.macro.MacroState.listBuildFields(modulePath);
@@ -1628,10 +1622,10 @@ class Stage3Compiler {
 					continue;
 				}
 
-				final gen = try parseGeneratedMembers(snippets) catch (e:Dynamic) {
-					closeMacroSession();
-					return error("build fields parse failed: " + modulePath + ": " + Std.string(e));
-				}
+					final gen = try parseGeneratedMembers(snippets) catch (e:String) {
+						closeMacroSession();
+						return error("build fields parse failed: " + modulePath + ": " + e);
+					}
 
 				final oldDecl = pm.getDecl();
 				final oldCls = HxModuleDecl.getMainClass(oldDecl);
@@ -1804,11 +1798,14 @@ class Stage3Compiler {
 					final typed = TyperStage.typeResolvedModule(m, typerIndex, moduleLoader);
 					if (ResolvedModule.getFilePath(m) == rootFilePath) rootTyped = typed;
 					typedCount += 1;
-				} catch (e:Dynamic) {
+				} catch (e:TyperError) {
 					closeMacroSession();
 					return error(
 						"type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e)
 					);
+				} catch (e:String) {
+					closeMacroSession();
+					return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + e);
 				}
 				// Incorporate any newly loaded modules into the worklist.
 				for (nm in moduleLoader.drainNewModules()) {
@@ -1844,9 +1841,9 @@ class Stage3Compiler {
 				for (i in 0...hooks.length) {
 					try {
 						macroSession.runHook("afterTyping", hooks[i]);
-					} catch (e:Dynamic) {
+					} catch (e:String) {
 						closeMacroSession();
-						return error("afterTyping hook failed: " + Std.string(e));
+						return error("afterTyping hook failed: " + e);
 					}
 					Sys.println("hook_afterTyping[" + i + "]=ok");
 				}
@@ -1857,9 +1854,9 @@ class Stage3Compiler {
 				for (i in 0...hooks.length) {
 					try {
 						macroSession.runHook("onGenerate", hooks[i]);
-					} catch (e:Dynamic) {
+					} catch (e:String) {
 						closeMacroSession();
-						return error("onGenerate hook failed: " + Std.string(e));
+						return error("onGenerate hook failed: " + e);
 					}
 					Sys.println("hook_onGenerate[" + i + "]=ok");
 				}
@@ -1870,9 +1867,9 @@ class Stage3Compiler {
 				for (i in 0...hooks.length) {
 					try {
 						macroSession.runHook("afterGenerate", hooks[i]);
-					} catch (e:Dynamic) {
+					} catch (e:String) {
 						closeMacroSession();
-						return error("afterGenerate hook failed: " + Std.string(e));
+						return error("afterGenerate hook failed: " + e);
 					}
 					Sys.println("hook_afterGenerate[" + i + "]=ok");
 				}
@@ -1900,9 +1897,12 @@ class Stage3Compiler {
 			cursor += 1;
 			try {
 				typedModules.push(TyperStage.typeResolvedModule(m, typerIndex, moduleLoader));
-			} catch (e:Dynamic) {
+			} catch (e:TyperError) {
 				closeMacroSession();
 				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatException(e));
+			} catch (e:String) {
+				closeMacroSession();
+				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + e);
 			}
 			for (nm in moduleLoader.drainNewModules()) {
 				resolvedForTyping.push(nm);
@@ -1915,9 +1915,9 @@ class Stage3Compiler {
 			for (i in 0...hooks.length) {
 				try {
 					macroSession.runHook("afterTyping", hooks[i]);
-				} catch (e:Dynamic) {
+				} catch (e:String) {
 					closeMacroSession();
-					return error("afterTyping hook failed: " + Std.string(e));
+					return error("afterTyping hook failed: " + e);
 				}
 				Sys.println("hook_afterTyping[" + i + "]=ok");
 			}
@@ -1928,9 +1928,9 @@ class Stage3Compiler {
 			for (i in 0...hooks.length) {
 				try {
 					macroSession.runHook("onGenerate", hooks[i]);
-				} catch (e:Dynamic) {
+				} catch (e:String) {
 					closeMacroSession();
-					return error("onGenerate hook failed: " + Std.string(e));
+					return error("onGenerate hook failed: " + e);
 				}
 				Sys.println("hook_onGenerate[" + i + "]=ok");
 			}
@@ -1941,9 +1941,9 @@ class Stage3Compiler {
 			for (i in 0...hooks.length) {
 				try {
 					macroSession.runHook("afterGenerate", hooks[i]);
-				} catch (e:Dynamic) {
+				} catch (e:String) {
 					closeMacroSession();
-					return error("afterGenerate hook failed: " + Std.string(e));
+					return error("afterGenerate hook failed: " + e);
 				}
 				Sys.println("hook_afterGenerate[" + i + "]=ok");
 			}
@@ -1966,15 +1966,15 @@ class Stage3Compiler {
 			}
 			try {
 				loadDynamicBackendProviders(providerDefines);
-			} catch (e:Dynamic) {
+			} catch (e:String) {
 				closeMacroSession();
-				return error("backend provider setup failed: " + Std.string(e));
+				return error("backend provider setup failed: " + e);
 			}
 			final backend = try {
 				resolveBuiltinBackend(backendId);
-			} catch (e:Dynamic) {
+			} catch (e:String) {
 				closeMacroSession();
-				return error("backend setup failed: " + Std.string(e));
+				return error("backend setup failed: " + e);
 			}
 			final selected = BackendRegistry.descriptorForTarget(backendId);
 			if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
@@ -2065,18 +2065,19 @@ class Stage3Compiler {
 				return 0;
 			}
 
-			final emitted = try {
+			var emitted = new EmitResult("", [], false);
+			try {
 				final outputFileHint = if (supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
 					Path.isAbsolute(jsOutputHintRaw) ? Path.normalize(jsOutputHintRaw) : absFromCwd(cwd, jsOutputHintRaw);
 				} else {
 					null;
 				}
 				final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, supportsBuildExecutable, definesMap);
-				emitWithBackend(backendId, backend, expanded, context);
-			} catch (e:Dynamic) {
+				emitted = emitWithBackend(backendId, backend, cast expanded, context);
+			} catch (e:String) {
 				closeMacroSession();
-				return error("emit failed: " + Std.string(e));
-			};
+				return error("emit failed: " + e);
+			}
 
 		Sys.println("stage3=ok");
 		Sys.println("outDir=" + outAbs);
@@ -2117,8 +2118,8 @@ class Stage3Compiler {
 		public static function run(args:Array<String>):Int {
 			final wait = try {
 				parseWaitMode(args);
-			} catch (e:Dynamic) {
-				return error(Std.string(e));
+			} catch (e:String) {
+				return error(e);
 			}
 
 			if (wait.waitMode != null) {
@@ -2128,19 +2129,19 @@ class Stage3Compiler {
 
 			final connect = try {
 				parseConnectMode(wait.rest);
-			} catch (e:Dynamic) {
-				return error(Std.string(e));
+			} catch (e:String) {
+				return error(e);
 			}
 
 			if (connect.connectMode != null) {
 				return runConnect(connect.connectMode, connect.rest);
 			}
 
-			final global = try {
-				parseGlobalStage3Flags(connect.rest);
-			} catch (e:Dynamic) {
-				return error(Std.string(e));
-			}
+		final global = try {
+			parseGlobalStage3Flags(connect.rest);
+		} catch (e:String) {
+			return error(e);
+		}
 
 			final units = Hxml.expandArgsToUnits(global.rest);
 			if (units == null) return error("failed to expand .hxml args (multi-unit)");

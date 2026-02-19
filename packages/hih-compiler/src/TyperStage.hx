@@ -207,6 +207,12 @@ class TyperStage {
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(thenBranch);
 					if (elseBranch != null) typeStmt(elseBranch);
+				case SWhile(cond, body, pos):
+					inferExprType(cond, scope, ctx, pos);
+					typeStmt(body);
+				case SDoWhile(body, cond, pos):
+					typeStmt(body);
+					inferExprType(cond, scope, ctx, pos);
 				case STry(tryBody, catches, _):
 					typeStmt(tryBody);
 					for (c in catches) {

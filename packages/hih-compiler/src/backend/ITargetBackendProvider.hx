@@ -1,7 +1,7 @@
 package backend;
 
 /**
-	Dynamic backend provider contract.
+	Runtime backend provider contract.
 
 	Why
 	- Plugin/bundled backend layers need a way to register target backends at runtime
@@ -17,4 +17,3 @@ package backend;
 interface ITargetBackendProvider {
 	public function registrations():Array<BackendRegistrationSpec>;
 }
-

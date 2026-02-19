@@ -180,6 +180,14 @@ class ExprMacroExpander {
 						final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
 						final rElse = elseBranch == null ? null : rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
 						(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
+					case SWhile(cond, body, pos):
+						final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+						final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+						(rCond != cond || rBody != body) ? SWhile(rCond, rBody, pos) : s;
+					case SDoWhile(body, cond, pos):
+						final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+						final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+						(rBody != body || rCond != cond) ? SDoWhile(rBody, rCond, pos) : s;
 					case SForIn(name, iterable, body, pos):
 						final rIt = rewriteExpr(iterable, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 						final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);

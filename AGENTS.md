@@ -291,6 +291,15 @@ When fixing a bug, add a regression test when it fits the repo’s testing layer
 
 If a regression test is not feasible (nondeterministic behavior, too expensive for CI, etc.), document why in the bead.
 
+## Type Safety Rule (`Any`/`Dynamic`)
+
+`Any` and `Dynamic` are forbidden by default.
+
+- Use concrete, domain-specific types whenever possible.
+- Only use `Any` or `Dynamic` at unavoidable runtime boundaries (interop/protocol/reflection/exception boundaries).
+- When `Any`/`Dynamic` is truly necessary, keep it tightly scoped, convert to a typed structure immediately, and document why it is required (hxdoc or bead note).
+- Do not propagate `Any`/`Dynamic` through internal compiler/core APIs.
+
 This repo should be a **world-class, didactic example** of building a compiler backend with **Haxe + Reflaxe** that produces **idiomatic target-language code** (OCaml in this repo; the principles should also read well for targets like Rust).
 
 - For any **vital** or **complex** class/function, write a verbose hxdoc explaining:

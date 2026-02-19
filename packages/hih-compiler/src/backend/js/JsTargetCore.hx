@@ -3,6 +3,7 @@ package backend.js;
 import backend.BackendContext;
 import backend.EmitArtifact;
 import backend.EmitResult;
+import backend.GenIrBoundary;
 import backend.GenIrProgram;
 import backend.ITargetCore;
 import haxe.io.Path;
@@ -183,7 +184,8 @@ class JsTargetCore implements ITargetCore {
 		final outputDir = Path.directory(outputPath);
 		if (outputDir != null && outputDir.length > 0) ensureDirectory(outputDir);
 
-		final classes = collectClassUnits(program);
+		final typedProgram = GenIrBoundary.requireProgram(program);
+		final classes = collectClassUnits(typedProgram);
 		final writer = new JsWriter();
 		final jsClassic = context.hasDefine("js-classic");
 

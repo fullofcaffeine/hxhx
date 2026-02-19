@@ -62,7 +62,7 @@ class CompilerDriver {
 		try {
 			ResolverStage.parseProject(classPaths, "demo.B");
 			Sys.println("missing_import=fail");
-		} catch (_:Dynamic) {
+		} catch (_:String) {
 			Sys.println("missing_import=ok");
 		}
 

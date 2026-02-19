@@ -182,7 +182,13 @@ class ResolverStage {
 			final filePath = resolveModuleFile(classPaths, modulePath);
 			if (filePath == null) throw "import_missing " + modulePath;
 
-			final source = try sys.io.File.getContent(filePath) catch (_:Dynamic) null;
+			final source = try {
+				sys.io.File.getContent(filePath);
+			} catch (_:haxe.io.Error) {
+				null;
+			} catch (_:String) {
+				null;
+			}
 			if (source == null) throw "import_unreadable " + filePath;
 
 			// Apply conditional compilation filtering so inactive `#if` branches don't affect
@@ -208,8 +214,12 @@ class ResolverStage {
 				: definesMap;
 			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
 
-			final parsed = try ParserStage.parse(filteredSource, filePath) catch (e:Dynamic) {
-				throw "parse_failed " + filePath + ": " + Std.string(e);
+			final parsed = try {
+				ParserStage.parse(filteredSource, filePath);
+			} catch (e:HxParseError) {
+				throw "parse_failed " + filePath + ": " + e.message;
+			} catch (e:String) {
+				throw "parse_failed " + filePath + ": " + e;
 			}
 			out.push(new ResolvedModule(modulePath, filePath, parsed));
 
@@ -309,7 +319,7 @@ class ResolverStage {
 			final base = Path.withoutDirectory(path);
 			try {
 				for (name in sys.FileSystem.readDirectory(dir)) if (name == base) return true;
-			} catch (_:Dynamic) {}
+			} catch (_:haxe.io.Error) {} catch (_:String) {}
 			return false;
 		}
 

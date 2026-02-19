@@ -203,6 +203,44 @@ class JsNativeIncDecMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeLoopControlMain.hx" <<'HX'
+class JsNativeLoopControlMain {
+  static function main() {
+    var i = 0;
+    var acc = 0;
+
+    while (i < 6) {
+      i++;
+      if (i == 2) continue;
+      if (i == 5) break;
+      acc += i;
+    }
+
+    Sys.println("js-native-loop-control:" + i + ":" + acc);
+  }
+}
+HX
+
+cat >"$tmpdir/src/JsNativeDoWhileMain.hx" <<'HX'
+class JsNativeDoWhileMain {
+  static function main() {
+    var i = 0;
+    var sum = 0;
+    do {
+      i++;
+      sum += i;
+    } while (i < 3);
+
+    var once = 0;
+    do {
+      once++;
+    } while (false);
+
+    Sys.println("js-native-do-while:" + i + ":" + sum + ":" + once);
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeNewArrayMain.hx" <<'HX'
 class JsNativeNewArrayMain {
   static function main() {
@@ -422,7 +460,7 @@ out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdi
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_compound/main.js$"
 echo "$out" | grep -q "^run=ok$"
-echo "$out" | grep -q "^js-native-compound:6:3$"
+echo "$out" | grep -q "^js-native-compound:15:3$"
 test -f "$tmpdir/out_js_native_compound/main.js"
 
 echo "== Builtin fast-path target: js-native increment/decrement expressions"
@@ -432,6 +470,22 @@ echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_incdec/main.js$"
 echo "$out" | grep -q "^run=ok$"
 echo "$out" | grep -q "^js-native-incdec:4:1:1$"
 test -f "$tmpdir/out_js_native_incdec/main.js"
+
+echo "== Builtin fast-path target: js-native break/continue loop control"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_loop_control/main.js" -cp "$tmpdir/src" -main JsNativeLoopControlMain --hxhx-out "$tmpdir/out_js_native_loop_control")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_loop_control/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-loop-control:5:8$"
+test -f "$tmpdir/out_js_native_loop_control/main.js"
+
+echo "== Builtin fast-path target: js-native do/while loops"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_do_while/main.js" -cp "$tmpdir/src" -main JsNativeDoWhileMain --hxhx-out "$tmpdir/out_js_native_do_while")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_do_while/main.js$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native-do-while:3:6:1$"
+test -f "$tmpdir/out_js_native_do_while/main.js"
 
 echo "== Builtin fast-path target: js-native new Array() expressions"
 out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_new_array/main.js" -cp "$tmpdir/src" -main JsNativeNewArrayMain --hxhx-out "$tmpdir/out_js_native_new_array")"

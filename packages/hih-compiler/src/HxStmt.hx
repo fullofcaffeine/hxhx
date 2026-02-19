@@ -83,6 +83,37 @@ enum HxStmt {
 	SForIn(name:String, iterable:HxExpr, body:HxStmt, pos:HxPos);
 
 	/**
+		While loop: `while (cond) body`.
+
+		Why
+		- Core language parity requires statement-level while loops.
+		- js-native coverage (and many real projects) uses `while` for index-style loops.
+
+		What
+		- Stores the loop condition expression and loop body statement.
+
+		How (bring-up semantics)
+		- The typer checks `cond` and types `body` in function scope.
+		- Backend emitters lower this to native loop constructs for supported targets.
+	**/
+	SWhile(cond:HxExpr, body:HxStmt, pos:HxPos);
+
+	/**
+		Do/while loop: `do body while (cond);`.
+
+		Why
+		- This is part of core Haxe loop syntax and appears in real-world code.
+		- js-native parity needs explicit support rather than collapsing to unsupported markers.
+
+		What
+		- Stores the loop body statement and loop condition expression.
+
+		How (bring-up semantics)
+		- Backend emitters preserve "run body at least once" behavior.
+	**/
+	SDoWhile(body:HxStmt, cond:HxExpr, pos:HxPos);
+
+	/**
 		Switch statement (Stage 3 bring-up).
 
 		Why

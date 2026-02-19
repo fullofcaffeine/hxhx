@@ -3,6 +3,7 @@ package backend.ocaml;
 import backend.BackendContext;
 import backend.EmitArtifact;
 import backend.EmitResult;
+import backend.GenIrBoundary;
 import backend.GenIrProgram;
 import backend.ITargetCore;
 
@@ -32,7 +33,8 @@ class OcamlTargetCore implements ITargetCore {
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
-		final entryPath = EmitterStage.emitToDir(program, context.outputDir, context.emitFullBodies, context.buildExecutable);
+		final typedProgram = GenIrBoundary.requireProgram(program);
+		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable);
 		return new EmitResult(
 			entryPath,
 			[

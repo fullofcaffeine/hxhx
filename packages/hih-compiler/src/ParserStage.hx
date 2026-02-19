@@ -134,24 +134,30 @@
 
 						final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
 						if (v == "1" || v == "true" || v == "yes") return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
+						function fallbackAfterNativeFailure(nativeError:String):HxModuleDecl {
+							final strict = Sys.getEnv("HIH_NATIVE_PARSER_STRICT");
+							if (strict == "1" || strict == "true" || strict == "yes") throw nativeError;
+
+							// Fallback: the pure-Haxe frontend is slower, but it can unblock bring-up when the
+							// native lexer/parser cannot yet handle an upstream-shaped input.
+							//
+							// This is especially useful when widening the module graph for upstream suites
+							// (e.g. enabling heuristic same-package type resolution).
+							try {
+								return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
+							} catch (_:HxParseError) {
+								// Prefer the native error (it is usually more specific about the failure mode).
+								throw nativeError;
+							} catch (_:String) {
+								// Prefer the native error (it is usually more specific about the failure mode).
+								throw nativeError;
+							}
+						}
 						try {
 							return enrichNativeDecl(parseViaNativeHooks(source, expectedMainClass));
-						} catch (eNative:Dynamic) {
-						final strict = Sys.getEnv("HIH_NATIVE_PARSER_STRICT");
-						if (strict == "1" || strict == "true" || strict == "yes") throw eNative;
-
-					// Fallback: the pure-Haxe frontend is slower, but it can unblock bring-up when the
-					// native lexer/parser cannot yet handle an upstream-shaped input.
-					//
-						// This is especially useful when widening the module graph for upstream suites
-						// (e.g. enabling heuristic same-package type resolution).
-						try {
-							return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
-						} catch (_:Dynamic) {
-							// Prefer the native error (it is usually more specific about the failure mode).
-							throw eNative;
+						} catch (eNative:String) {
+							return fallbackAfterNativeFailure(eNative);
 						}
-				}
 				})());
 			#else
 				new HxParser(source).parseModule(expectedMainClass);
@@ -1270,7 +1276,7 @@
 					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
 						try {
 							Sys.println("body_parse_have=" + name + " len=" + methodBodySrc.length);
-						} catch (_:Dynamic) {}
+						} catch (_:haxe.io.Error) {} catch (_:String) {}
 					}
 					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_SRC") == "1") {
 						try {
@@ -1278,7 +1284,7 @@
 							final max = 300;
 							final shown = oneLine.length > max ? (oneLine.substr(0, max) + "...") : oneLine;
 							Sys.println("body_parse_src=" + name + " " + shown);
-						} catch (_:Dynamic) {}
+						} catch (_:haxe.io.Error) {} catch (_:String) {}
 					}
 				// Best-effort: recover a structured statement list from the raw source slice.
 					//
@@ -1290,11 +1296,19 @@
 				HxParser.debugBodyLabel = name;
 				try {
 					outBody = HxParser.parseFunctionBodyText(methodBodySrc);
-				} catch (e:Dynamic) {
+				} catch (e:HxParseError) {
 					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
 						try {
-							Sys.println("body_parse_fail=" + name + " err=" + Std.string(e));
-						} catch (_:Dynamic) {}
+							Sys.println("body_parse_fail=" + name + " err=" + e.message);
+						} catch (_:haxe.io.Error) {} catch (_:String) {}
+					}
+					// Fall back to the summary-only body.
+					outBody = body;
+				} catch (e:String) {
+					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
+						try {
+							Sys.println("body_parse_fail=" + name + " err=" + e);
+						} catch (_:haxe.io.Error) {} catch (_:String) {}
 					}
 					// Fall back to the summary-only body.
 					outBody = body;
@@ -1425,7 +1439,10 @@
 		// Fallback: try to parse a small field/call chain (e.g. `Util.ping()`).
 		return try {
 			HxParser.parseExprText(s);
-		} catch (_:Dynamic) {
+		} catch (_:HxParseError) {
+			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
+			EUnsupported(s);
+		} catch (_:String) {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
 			EUnsupported(s);
 		}

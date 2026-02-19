@@ -58,13 +58,8 @@ class Stage1Compiler {
 		return paths;
 	}
 
-	static function formatParseError(e:Dynamic):String {
-		// Prefer structured parse errors when available.
-		if (Std.isOfType(e, HxParseError)) {
-			final pe:HxParseError = cast e;
-			return pe.toString();
-		}
-		return Std.string(e);
+	static function formatParseError(e:HxParseError):String {
+		return e.toString();
 	}
 
 	public static function run(args:Array<String>):Int {
@@ -95,8 +90,8 @@ class Stage1Compiler {
 			for (lib in parsed.libs) {
 				try {
 					for (p in resolveHaxelibPaths(lib)) classPaths.push(p);
-				} catch (e:Dynamic) {
-					return error("failed to resolve -lib " + lib + ": " + Std.string(e));
+				} catch (e:String) {
+					return error("failed to resolve -lib " + lib + ": " + e);
 				}
 			}
 		}
@@ -104,7 +99,11 @@ class Stage1Compiler {
 		final resolved = Stage1Resolver.resolveMain(classPaths, parsed.main, parsed.cwd);
 		if (resolved == null) return 2;
 
-		final source = try sys.io.File.getContent(resolved.path) catch (_:Dynamic) null;
+		final source = try sys.io.File.getContent(resolved.path) catch (_:haxe.io.Error) {
+			null;
+		} catch (_:String) {
+			null;
+		}
 		if (source == null) return error("failed to read: " + resolved.path);
 
 		final definesMap = HxDefineMap.fromRawDefines(parsed.defines);
@@ -116,8 +115,10 @@ class Stage1Compiler {
 
 		final decl = try {
 			ParserStage.parse(filteredSource, resolved.path).getDecl();
-		} catch (e:Dynamic) {
+		} catch (e:HxParseError) {
 			return error("parse failed: " + formatParseError(e));
+		} catch (e:String) {
+			return error("parse failed: " + e);
 		}
 		if ((decl.packagePath ?? "") != resolved.packagePath) {
 			return error('package mismatch for "' + parsed.main + '": expected "' + resolved.packagePath + '" but parsed "' + (decl.packagePath ?? "") + '"');
@@ -177,7 +178,11 @@ class Stage1Compiler {
 				return error("import_missing " + imp);
 			}
 
-			final impSrc = try sys.io.File.getContent(impResolved.path) catch (_:Dynamic) null;
+			final impSrc = try sys.io.File.getContent(impResolved.path) catch (_:haxe.io.Error) {
+				null;
+			} catch (_:String) {
+				null;
+			}
 			if (impSrc == null) {
 				return error("import_unreadable " + impResolved.path);
 			}
@@ -185,8 +190,10 @@ class Stage1Compiler {
 			final impDecl = try {
 				final filteredImp = HxConditionalCompilation.filterSource(impSrc, definesMap);
 				ParserStage.parse(filteredImp, impResolved.path).getDecl();
-			} catch (e:Dynamic) {
+			} catch (e:HxParseError) {
 				return error('parse failed for import "' + imp + '": ' + formatParseError(e));
+			} catch (e:String) {
+				return error('parse failed for import "' + imp + '": ' + e);
 			}
 
 			// Some modules have no `class` keyword at all (typedef/enum/abstract-only),
@@ -457,7 +464,8 @@ class Stage1Compiler {
 				final candidate = haxe.io.Path.normalize(haxe.io.Path.join([haxePath, "std"]));
 				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) return candidate;
 			}
-		} catch (_:Dynamic) {}
+		} catch (_:haxe.io.Error) {
+		} catch (_:String) {}
 		return "";
 	}
 

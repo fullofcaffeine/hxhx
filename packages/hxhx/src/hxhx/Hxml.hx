@@ -146,7 +146,11 @@ class Hxml {
 		}
 		seen.set(norm, true);
 
-		final content = try sys.io.File.getContent(norm) catch (_:Dynamic) null;
+		final content = try sys.io.File.getContent(norm) catch (_:haxe.io.Error) {
+			null;
+		} catch (_:String) {
+			null;
+		}
 		if (content == null) {
 			Sys.println("hxhx(stage1): failed to read hxml: " + norm);
 			seen.remove(norm);

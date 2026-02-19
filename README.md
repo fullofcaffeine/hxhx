@@ -85,8 +85,9 @@ Optional flags:
 `hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is a **stage0 shim** that delegates to a system `haxe`, but it already provides a place to hang acceptance tests and bootstrapping gates.
 Linked Stage3 backends (`ocaml-stage3`, `js-native`) are now selected through a canonical builtin backend registry (`packages/hih-compiler/src/backend/BackendRegistry.hx`) with explicit descriptors (`TargetDescriptor`) and compatibility requirements (`TargetRequirements`).
 Stage3 backend input is now named as a codegen contract (`GenIrProgram` v0 alias), and builtin backends now split emission into reusable target-core pilots (`packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx`, `packages/hih-compiler/src/backend/js/JsTargetCore.hx`) to support plugin→builtin promotion without codegen rewrites.
-The registry also has a dynamic provider seam (`registerProvider`) so plugin wrappers can participate in the same deterministic precedence model as builtins.
+The registry also has a provider seam (`registerProvider(regs)`) so plugin wrappers can participate in the same deterministic precedence model as builtins.
 Stage3 loads provider declarations per request from `HXHX_BACKEND_PROVIDERS` / `-D hxhx_backend_provider=...` before backend resolution, and falls back to builtin registrations when none are declared.
+`GenIrProgram` cast policy is now explicit: target-core emitters stay fully typed; boundary recovery uses shared helper `packages/hih-compiler/src/backend/GenIrBoundary.hx`, with additional casts only at narrow Stage3 reflection/bridge seams. See `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`.
 
 ### Naming: `hih-*` vs `hxhx`
 
@@ -379,6 +380,8 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
 - js-native switch-expression lowering smoke (`switch (...) { case ...: ... }` with OR/bind patterns)
 - js-native array-comprehension lowering smoke (`[for (...) ...]` for range + array iterables)
 - js-native range-expression lowering smoke (`var items = 1...5` + `for (v in items)` roundtrip)
+- js-native loop-control smoke (`while` + `continue` + `break` in the same function)
+- js-native do/while smoke (`do { ... } while (...)` including false-once condition)
 - js-native statement-level try/catch + throw/rethrow smoke (`caught:boom|rethrow:boom`)
 - js-native ordered multi-catch typed dispatch smoke (`string:boom|int:7|dynamic2:true`)
 - optional local fast path: set `HXHX_BIN=packages/hxhx/out/_build/default/out.bc` to skip rebuilding `hxhx` for each script rerun

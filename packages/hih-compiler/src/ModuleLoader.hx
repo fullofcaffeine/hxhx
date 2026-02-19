@@ -182,7 +182,13 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		}
 
-		final source = try sys.io.File.getContent(filePath) catch (_:Dynamic) null;
+		final source = try {
+			sys.io.File.getContent(filePath);
+		} catch (_:haxe.io.Error) {
+			null;
+		} catch (_:String) {
+			null;
+		}
 		if (source == null) {
 			if (trace) Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
 			return;
@@ -209,7 +215,13 @@ class ModuleLoader extends LazyTypeLoader {
 			})()
 			: defines;
 		final filtered = HxConditionalCompilation.filterSource(source, effectiveDefines);
-		final parsed = try ParserStage.parse(filtered, filePath) catch (_:Dynamic) null;
+		final parsed = try {
+			ParserStage.parse(filtered, filePath);
+		} catch (_:HxParseError) {
+			null;
+		} catch (_:String) {
+			null;
+		}
 		if (parsed == null) {
 			if (trace) Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
 			return;
@@ -331,7 +343,7 @@ class ModuleLoader extends LazyTypeLoader {
 					for (name in sys.FileSystem.readDirectory(dir)) {
 						if (name != null && name.length > 0) entries.set(name, true);
 					}
-				} catch (_:Dynamic) {}
+				} catch (_:haxe.io.Error) {} catch (_:String) {}
 				dirEntryCache.set(dir, entries);
 			}
 			return entries.exists(base);

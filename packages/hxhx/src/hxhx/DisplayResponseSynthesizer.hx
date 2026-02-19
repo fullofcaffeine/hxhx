@@ -100,12 +100,14 @@ class DisplayResponseSynthesizer {
 		if (query.sourcePath == null || query.sourcePath.length == 0) return "";
 		if (!sys.FileSystem.exists(query.sourcePath)) return "";
 		if (sys.FileSystem.isDirectory(query.sourcePath)) return "";
-		return try {
-			sys.io.File.getContent(query.sourcePath);
-		} catch (_:Dynamic) {
-			"";
+			return try {
+				sys.io.File.getContent(query.sourcePath);
+			} catch (_:haxe.io.Error) {
+				"";
+			} catch (_:String) {
+				"";
+			}
 		}
-	}
 
 	static inline function isIdentStart(code:Int):Bool {
 		return (code >= "A".code && code <= "Z".code) || (code >= "a".code && code <= "z".code) || code == "_".code;

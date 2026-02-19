@@ -152,7 +152,7 @@ class Main {
 		if (p == null || p.length == 0) return "";
 		try {
 			return sys.FileSystem.fullPath(p);
-		} catch (_:Dynamic) {
+		} catch (_:String) {
 			return p;
 		}
 	}
@@ -161,15 +161,15 @@ class Main {
 		if (path == null || path.length == 0) return;
 		if (!sys.FileSystem.exists(path)) return;
 		if (!sys.FileSystem.isDirectory(path)) {
-			try sys.FileSystem.deleteFile(path) catch (_:Dynamic) {}
+			try sys.FileSystem.deleteFile(path) catch (_:String) {}
 			return;
 		}
-		final entries = try sys.FileSystem.readDirectory(path) catch (_:Dynamic) [];
+		final entries = try sys.FileSystem.readDirectory(path) catch (_:String) [];
 		for (name in entries) {
 			if (name == null || name.length == 0) continue;
 			rmrf(haxe.io.Path.join([path, name]));
 		}
-		try sys.FileSystem.deleteDirectory(path) catch (_:Dynamic) {}
+		try sys.FileSystem.deleteDirectory(path) catch (_:String) {}
 	}
 
 	/**
@@ -269,7 +269,7 @@ class Main {
 			if (sys.FileSystem.exists(outAbs)) {
 				rmrf(outAbs);
 			}
-		} catch (_:Dynamic) {
+		} catch (_:String) {
 			// Best-effort: target itself can handle reusing the dir; we mainly want deterministic runs.
 		}
 
@@ -320,8 +320,8 @@ class Main {
 				Sys.println(MacroHostClient.selftest());
 				Sys.println("OK hxhx macro rpc");
 				return;
-			} catch (e:Dynamic) {
-				fatal("hxhx: macro selftest failed: " + Std.string(e));
+			} catch (e:String) {
+				fatal("hxhx: macro selftest failed: " + e);
 			}
 		}
 
@@ -336,8 +336,8 @@ class Main {
 				Sys.println("macro_run=" + MacroHostClient.run(args[1]));
 				Sys.println("OK hxhx macro run");
 				return;
-			} catch (e:Dynamic) {
-				fatal("hxhx: macro run failed: " + Std.string(e));
+			} catch (e:String) {
+				fatal("hxhx: macro run failed: " + e);
 			}
 		}
 
@@ -347,8 +347,8 @@ class Main {
 				Sys.println("macro_getType=" + MacroHostClient.getType(args[1]));
 				Sys.println("OK hxhx macro getType");
 				return;
-			} catch (e:Dynamic) {
-				fatal("hxhx: macro getType failed: " + Std.string(e));
+			} catch (e:String) {
+				fatal("hxhx: macro getType failed: " + e);
 			}
 		}
 
@@ -416,12 +416,13 @@ class Main {
 			}
 			final src = sys.io.File.getContent(path);
 			final parseDebug = Sys.getEnv("HXHX_PARSE_DEBUG");
-			if (parseDebug == "1" || parseDebug == "true" || parseDebug == "yes") {
-				try {
-					final tail = src.length > 80 ? src.substr(src.length - 80) : src;
-					Sys.stderr().writeString("[hxhx parse] len=" + src.length + " tail=" + tail.split("\n").join("\\n") + "\n");
-				} catch (_:Dynamic) {}
-			}
+				if (parseDebug == "1" || parseDebug == "true" || parseDebug == "yes") {
+					try {
+						final tail = src.length > 80 ? src.substr(src.length - 80) : src;
+						Sys.stderr().writeString("[hxhx parse] len=" + src.length + " tail=" + tail.split("\n").join("\\n") + "\n");
+					} catch (_:haxe.io.Error) {
+					} catch (_:String) {}
+				}
 			final decl = ParserStage.parse(src).getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final imports = HxModuleDecl.getImports(decl);
@@ -465,8 +466,8 @@ class Main {
 
 				final resolved = try {
 					TargetPresets.resolve(targetId, forwarded);
-				} catch (e:Dynamic) {
-					fatal("hxhx: " + Std.string(e));
+				} catch (e:String) {
+					fatal("hxhx: " + e);
 				};
 				forwarded = resolved.forwarded;
 

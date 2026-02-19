@@ -272,7 +272,7 @@ class TargetPresets {
 			if (!sys.FileSystem.exists(Path.join([libRoot, "reflaxe", "src"]))) return null;
 			if (!sys.FileSystem.exists(Path.join([libRoot, "reflaxe.ocaml", "src"]))) return null;
 			return libRoot;
-		} catch (_:Dynamic) {
+		} catch (_:String) {
 			return null;
 		}
 	}

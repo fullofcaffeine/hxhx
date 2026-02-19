@@ -75,7 +75,7 @@ private class _EmitterStageDebug {
 				"callsig " + modName + "." + fnName + " required=" + required + " fixed=" + fixed + " hasRest=" + (hasRest ? "1" : "0")
 					+ " needsReceiver=" + (needsReceiver ? "1" : "0") + " args=[" + parts.join(",") + "]\n"
 			);
-		} catch (_:Dynamic) {}
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
 }
 
@@ -2515,6 +2515,10 @@ class EmitterStage {
 						true;
 				case SIf(_cond, thenBranch, elseBranch, _):
 					elseBranch != null && stmtAlwaysReturns(thenBranch) && stmtAlwaysReturns(elseBranch);
+				case SWhile(_cond, _body, _):
+					false;
+				case SDoWhile(_body, _cond, _):
+					false;
 				case SSwitch(_scrutinee, cases, _):
 					// Bring-up: treat switches as non-returning unless every case body returns.
 					if (cases == null || cases.length == 0) {
@@ -2661,7 +2665,26 @@ class EmitterStage {
 						} else {
 							"if " + condS + " then (" + thenUnit + ") else (" + elseUnit + ")";
 						}
-						case SForIn(name, iterable, body, _pos):
+					case SWhile(cond, body, _pos):
+						final condS = condToOcamlBool(cond, tyCtx);
+						final bodyUnit = stmtToUnit(body, tyCtx);
+						if (condS == "false") {
+							"()";
+						} else {
+							"(while " + condS + " do " + bodyUnit + " done)";
+						}
+					case SDoWhile(body, cond, _pos):
+						final bodyUnit = stmtToUnit(body, tyCtx);
+						final condS = condToOcamlBool(cond, tyCtx);
+						"(let __hx_do_continue = ref true in "
+						+ "while !__hx_do_continue do "
+						+ "__hx_do_continue := false; "
+						+ bodyUnit
+						+ "; if "
+						+ condS
+						+ " then __hx_do_continue := true else () "
+						+ "done)";
+					case SForIn(name, iterable, body, _pos):
 						final ident = ocamlValueIdent(name);
 						final bodyTy = extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 						final bodyUnit = stmtToUnit(body, bodyTy);
@@ -2948,8 +2971,8 @@ class EmitterStage {
 
 			final prog = Sys.programPath();
 			if (prog == null || prog.length == 0) return "";
-			final abs = try sys.FileSystem.fullPath(prog) catch (_:Dynamic) prog;
-			var dir = try haxe.io.Path.directory(abs) catch (_:Dynamic) "";
+			final abs = try sys.FileSystem.fullPath(prog) catch (_:haxe.io.Error) prog catch (_:String) prog;
+			var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
 			if (dir == null || dir.length == 0) return "";
 
 			for (_ in 0...10) {
@@ -3596,7 +3619,10 @@ class EmitterStage {
 							sys.io.File.saveContent(mlPath, out.join("\n"));
 							currentImportInt64 = prevInt64;
 							return moduleName + ".ml";
-						} catch (e:Dynamic) {
+						} catch (e:TyperError) {
+							currentImportInt64 = prevInt64;
+							throw e;
+						} catch (e:String) {
 							currentImportInt64 = prevInt64;
 							throw e;
 						}
@@ -3832,6 +3858,10 @@ class EmitterStage {
 						case SIf(_, thenBranch, elseBranch, _):
 							collectLocalsFromStmt(thenBranch, locals);
 							if (elseBranch != null) collectLocalsFromStmt(elseBranch, locals);
+						case SWhile(_, body, _):
+							collectLocalsFromStmt(body, locals);
+						case SDoWhile(body, _, _):
+							collectLocalsFromStmt(body, locals);
 						case SForIn(name, _, body, _):
 							if (name != null && name.length > 0) locals.set(name, true);
 							collectLocalsFromStmt(body, locals);
@@ -3911,6 +3941,12 @@ class EmitterStage {
 							scanExprForDeps(cond, locals, calls, idents);
 							scanStmtForDeps(thenBranch, locals, calls, idents);
 							if (elseBranch != null) scanStmtForDeps(elseBranch, locals, calls, idents);
+						case SWhile(cond, body, _):
+							scanExprForDeps(cond, locals, calls, idents);
+							scanStmtForDeps(body, locals, calls, idents);
+						case SDoWhile(body, cond, _):
+							scanStmtForDeps(body, locals, calls, idents);
+							scanExprForDeps(cond, locals, calls, idents);
 						case SForIn(_name, iterable, body, _):
 							scanExprForDeps(iterable, locals, calls, idents);
 							scanStmtForDeps(body, locals, calls, idents);
@@ -4234,6 +4270,12 @@ class EmitterStage {
 										if (cond != null) exprWorklist.push(cond);
 										if (thenBranch != null) stmtWorklist.push(thenBranch);
 										if (elseBranch != null) stmtWorklist.push(elseBranch);
+									case SWhile(cond, body, _):
+										if (cond != null) exprWorklist.push(cond);
+										if (body != null) stmtWorklist.push(body);
+									case SDoWhile(body, cond, _):
+										if (body != null) stmtWorklist.push(body);
+										if (cond != null) exprWorklist.push(cond);
 									case SForIn(_name, iterable, body, _):
 										if (iterable != null) exprWorklist.push(iterable);
 										if (body != null) stmtWorklist.push(body);
@@ -4509,7 +4551,13 @@ class EmitterStage {
 						currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 						currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
 						return mainModuleName + ".ml";
-						} catch (e:Dynamic) {
+						} catch (e:TyperError) {
+							currentOcamlModuleName = prevOcamlModule;
+							currentImportInt64 = prevInt64;
+							currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
+							currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
+							throw e;
+						} catch (e:String) {
 							currentOcamlModuleName = prevOcamlModule;
 							currentImportInt64 = prevInt64;
 							currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
@@ -4632,7 +4680,7 @@ class EmitterStage {
 						);
 						generatedPaths.push(shimFile);
 					}
-					} catch (_:Dynamic) {}
+					} catch (_:haxe.io.Error) {} catch (_:String) {}
 				}
 
 				// Stage 3 safety: avoid segfault-shaped behavior in generated macro context wrappers.
@@ -4701,7 +4749,7 @@ class EmitterStage {
 									? StringTools.replace(src, marker, marker + "\n[@@@warning \"-20\"]")
 									: ("[@@@warning \"-20\"]\n" + src);
 								sys.io.File.saveContent(shimPath, patched);
-							} catch (_:Dynamic) {}
+							} catch (_:haxe.io.Error) {} catch (_:String) {}
 						}
 					}
 
@@ -4735,7 +4783,7 @@ class EmitterStage {
 								);
 							generatedPaths.push(shimFile);
 						}
-					} catch (_:Dynamic) {}
+					} catch (_:haxe.io.Error) {} catch (_:String) {}
 				}
 
 				// Stage 3 bring-up: upstream unit fixtures use `Xml.*` helpers (e.g. `Xml.createElement`)
@@ -4933,7 +4981,7 @@ class EmitterStage {
 		final exePath = haxe.io.Path.join([outAbs, "out.exe"]);
 		try {
 			if (sys.FileSystem.exists(exePath)) sys.FileSystem.deleteFile(exePath);
-		} catch (_:Dynamic) {}
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
 
 		if (!buildExecutable) return exePath;
 
@@ -4943,7 +4991,7 @@ class EmitterStage {
 		}
 
 		// Compile from within `outAbs` so the compiler finds the `.cmi` it just produced.
-		final prevCwd = try Sys.getCwd() catch (_:Dynamic) null;
+		final prevCwd = try Sys.getCwd() catch (_:haxe.io.Error) null catch (_:String) null;
 		if (prevCwd == null) throw "stage3 emitter: cannot read current working directory";
 		Sys.setCwd(outAbs);
 
@@ -5056,7 +5104,12 @@ class EmitterStage {
 				args.push("unix.cmxa");
 				args.push("str.cmxa");
 				for (p in orderedNoRootUniq) args.push(p);
-			final code = try Sys.command(ocamlopt, args) catch (e:Dynamic) {
+			final code = try {
+				Sys.command(ocamlopt, args);
+			} catch (e:haxe.io.Error) {
+				Sys.setCwd(prevCwd);
+				throw e;
+			} catch (e:String) {
 				Sys.setCwd(prevCwd);
 				throw e;
 			};

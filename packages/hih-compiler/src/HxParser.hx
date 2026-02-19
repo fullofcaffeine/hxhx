@@ -931,7 +931,7 @@
 					}
 					if (cur.kind.match(TLParen)) {
 						bump();
-						try skipBalancedParens() catch (_:Dynamic) {}
+						try skipBalancedParens() catch (_:HxParseError) {}
 					}
 				}
 				parseUnaryExpr(stop);
@@ -1618,7 +1618,7 @@
 						// Optional meta args: `@:meta(...)`.
 						if (cur.kind.match(TLParen)) {
 							bump();
-							try skipBalancedParens() catch (_:Dynamic) {}
+							try skipBalancedParens() catch (_:HxParseError) {}
 						}
 					}
 					// Parse the following statement now that metadata is consumed.
@@ -1678,21 +1678,20 @@
 
 					STry(tryBody, catches, pos);
 				case TKeyword(KWhile):
-					// Bring-up: consume `while (...) stmt` as unsupported, but skip its body so we
-					// can keep parsing subsequent statements.
-					bump();
-					if (cur.kind.match(TLParen)) {
-						bump();
-						try skipBalancedParens() catch (_:Dynamic) {}
+					// Stage 3 bring-up: structured while loop support.
+					bump(); // `while`
+					if (!cur.kind.match(TLParen)) {
+						syncToStmtEnd();
+						return SExpr(EUnsupported("while"), pos);
 					}
-					if (cur.kind.match(TLBrace)) {
-						bump();
-						try skipBalancedBraces() catch (_:Dynamic) {}
-					} else {
-						// Fall back to parsing a single statement to advance the token stream.
-						parseStmt(stop);
+					bump(); // '('
+					final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
 					}
-					SExpr(EUnsupported("while"), pos);
+					if (cur.kind.match(TRParen)) bump();
+					final body = parseStmt(stop);
+					SWhile(cond, body, pos);
 				case TKeyword(KFor):
 					// Stage 3 bring-up: support the Haxe `for (name in iterable) stmt` form.
 					//
@@ -1714,10 +1713,10 @@
 
 					// Detect and reject C-style `for` early (we keep parsing resilient).
 					if (cur.kind.match(TSemicolon) || cur.kind.match(TKeyword(KVar))) {
-						try skipBalancedParens() catch (_:Dynamic) {}
+						try skipBalancedParens() catch (_:HxParseError) {}
 						if (cur.kind.match(TLBrace)) {
 							bump();
-							try skipBalancedBraces() catch (_:Dynamic) {}
+							try skipBalancedBraces() catch (_:HxParseError) {}
 						} else {
 							parseStmt(stop);
 						}
@@ -1727,10 +1726,10 @@
 					final name = readIdent("for-in loop variable");
 					if (!acceptKeyword(KIn)) {
 						// Not a `for-in` loop (future work). Consume the remainder best-effort.
-						try skipBalancedParens() catch (_:Dynamic) {}
+						try skipBalancedParens() catch (_:HxParseError) {}
 						if (cur.kind.match(TLBrace)) {
 							bump();
-							try skipBalancedBraces() catch (_:Dynamic) {}
+							try skipBalancedBraces() catch (_:HxParseError) {}
 						} else {
 							parseStmt(stop);
 						}
@@ -1761,22 +1760,25 @@
 					final body = parseStmt(stop);
 					SForIn(name, iterable, body, pos);
 				case TKeyword(KDo):
-					// Bring-up: consume `do stmt while (...);` as unsupported.
-					bump();
-					if (cur.kind.match(TLBrace)) {
-						bump();
-						try skipBalancedBraces() catch (_:Dynamic) {}
-					} else {
-						parseStmt(stop);
-					}
-					if (acceptKeyword(KWhile)) {
-						if (cur.kind.match(TLParen)) {
-							bump();
-							try skipBalancedParens() catch (_:Dynamic) {}
-						}
+					// Stage 3 bring-up: structured do/while support.
+					bump(); // `do`
+					final body = parseStmt(stop);
+					if (!acceptKeyword(KWhile)) {
 						syncToStmtEnd();
+						return SExpr(EUnsupported("do"), pos);
 					}
-					SExpr(EUnsupported("do"), pos);
+					if (!cur.kind.match(TLParen)) {
+						syncToStmtEnd();
+						return SExpr(EUnsupported("do"), pos);
+					}
+					bump(); // '('
+					final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+					if (!cur.kind.match(TRParen)) {
+						while (!cur.kind.match(TRParen) && !cur.kind.match(TEof)) bump();
+					}
+					if (cur.kind.match(TRParen)) bump();
+					syncToStmtEnd();
+					SDoWhile(body, cond, pos);
 				case TKeyword(KThrow):
 					bump();
 					final thrown = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
@@ -1869,12 +1871,42 @@
 						try {
 							out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
 							0; // ensure try/catch has a concrete, consistent expression type across targets
-						} catch (_:Dynamic) {
+						} catch (_:HxParseError) {
 							if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
 								try {
 									final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
 									Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel());
-								} catch (_:Dynamic) {}
+								} catch (_:haxe.io.Error) {} catch (_:String) {}
+							}
+							// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
+							out.push(SExpr(EUnsupported("body_parse_error"), HxPos.unknown()));
+
+							// Best-effort resync: advance until a plausible statement boundary.
+							while (true) {
+								switch (cur.kind) {
+									case TEof:
+										break;
+									case TSemicolon:
+										bump();
+										break;
+									case TRBrace:
+										// Only treat the wrapper close brace as "end of body".
+										if (isWrapperCloseBrace()) {
+											break;
+										}
+										// Otherwise, consume and keep scanning.
+										bump();
+									case _:
+										bump();
+								}
+							}
+							0;
+						} catch (_:String) {
+							if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {
+								try {
+									final lbl = debugBodyLabel == null || debugBodyLabel.length == 0 ? "<unknown>" : debugBodyLabel;
+									Sys.println("body_stmt_parse_error fn=" + lbl + " tok=" + curTokLabel());
+								} catch (_:haxe.io.Error) {} catch (_:String) {}
 							}
 							// Surface that we hit a parse hole so later stages can diagnose why a body is partial.
 							out.push(SExpr(EUnsupported("body_parse_error"), HxPos.unknown()));

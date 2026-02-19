@@ -96,7 +96,7 @@ Builtin Stage3 backend registration now uses explicit metadata + factory contrac
     - `requireForTarget(id)`
     - dynamic/provider seam:
       - `register(spec)`
-      - `registerProvider(provider)`
+      - `registerProvider(regs)` (registers one provider's descriptor/factory list)
       - `clearDynamicRegistrations()`
 
 Current builtin registrations are declared by:
@@ -124,10 +124,19 @@ Dynamic registration notes:
   - `-D hxhx_backend_provider=TypeA`
   - `-D hxhx_backend_providers=TypeA;TypeB`
   - `-D hxhx.backend.provider=TypeA`
+- Provider type requirement:
+  - each declared provider must expose static `providerRegistrations():Array<BackendRegistrationSpec>`
+  - instance-only `registrations()` providers are intentionally not loaded in Stage3.
 - Fallback behavior is explicit: if no provider declarations are present, Stage3 uses builtin
   registrations only (`BackendRegistry.clearDynamicRegistrations()` runs per request).
 - Optional diagnostics: `HXHX_TRACE_BACKEND_SELECTION=1` prints selected `implId`, and
   `HXHX_TRACE_BACKEND_PROVIDERS=1` prints provider registration counts.
+- Cast policy for `GenIrProgram` boundary:
+  - allowed in shared helper `backend.GenIrBoundary.requireProgram(...)` for interface-boundary
+    recovery in target cores,
+  - and at Stage3 reflection seams (`Reflect.callMethod` provider registration bridge,
+    reflaxe backend bridge dispatch for known wrapper types),
+  - not allowed inside target-core emitters (`OcamlTargetCore`, `JsTargetCore`).
 
 ### Injection rules (important for predictable UX)
 

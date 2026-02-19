@@ -30,6 +30,30 @@ package hxhx.macro;
 	  bring-up on OCaml with strict dune warning/error settings.
 **/
 class MacroHostClient {
+	static function withClient<T>(run:MacroClient->T):T {
+		final client = connect();
+		try {
+			final out = run(client);
+			client.close();
+			return out;
+		} catch (e:String) {
+			client.close();
+			throw e;
+		}
+	}
+
+	static function withSession<T>(run:MacroHostSession->T):T {
+		final session = openSession();
+		try {
+			final out = run(session);
+			session.close();
+			return out;
+		} catch (e:String) {
+			session.close();
+			throw e;
+		}
+	}
+
 	/**
 		Resolve the macro host executable path as `hxhx` sees it.
 
@@ -51,35 +75,21 @@ class MacroHostClient {
 	}
 
 	public static function selftest():String {
-		final client = connect();
-		var out = "";
-		try {
+		return withClient(function(client) {
 			final lines = new Array<String>();
 			lines.push("macro_host=ok");
 			lines.push("macro_ping=" + client.call("ping", ""));
 			lines.push("macro_define=" + client.call("compiler.define", MacroProtocol.encodeLen("n", "foo") + " " + MacroProtocol.encodeLen("v", "bar")));
 			lines.push("macro_defined=" + (client.call("context.defined", MacroProtocol.encodeLen("n", "foo")) == "1" ? "yes" : "no"));
 			lines.push("macro_definedValue=" + client.call("context.definedValue", MacroProtocol.encodeLen("n", "foo")));
-			out = lines.join("\n");
-		} catch (e:Dynamic) {
-			client.close();
-			throw e;
-		}
-		client.close();
-		return out;
+			return lines.join("\n");
+		});
 	}
 
 	public static function run(expr:String):String {
-		final client = connect();
-		var out = "";
-		try {
-			out = client.call("macro.run", MacroProtocol.encodeLen("e", expr));
-		} catch (e:Dynamic) {
-			client.close();
-			throw e;
-		}
-		client.close();
-		return out;
+		return withClient(function(client) {
+			return client.call("macro.run", MacroProtocol.encodeLen("e", expr));
+		});
 	}
 
 	/**
@@ -113,29 +123,17 @@ class MacroHostClient {
 		  may add reuse/caching.
 	**/
 	public static function runAll(exprs:Array<String>):Array<String> {
-		final session = openSession();
-		try {
+		return withSession(function(session) {
 			final out = new Array<String>();
 			for (expr in exprs) out.push(session.run(expr));
-			session.close();
 			return out;
-		} catch (e:Dynamic) {
-			session.close();
-			throw e;
-		}
+		});
 	}
 
 	public static function getType(name:String):String {
-		final client = connect();
-		var out = "";
-		try {
-			out = client.call("context.getType", MacroProtocol.encodeLen("n", name));
-		} catch (e:Dynamic) {
-			client.close();
-			throw e;
-		}
-		client.close();
-		return out;
+		return withClient(function(client) {
+			return client.call("context.getType", MacroProtocol.encodeLen("n", name));
+		});
 	}
 
 	static function resolveMacroHostExe():String {
@@ -151,8 +149,8 @@ class MacroHostClient {
 		final prog = Sys.programPath();
 		if (prog == null || prog.length == 0) return "";
 
-		final abs = try sys.FileSystem.fullPath(prog) catch (_:Dynamic) prog;
-		final dir = try haxe.io.Path.directory(abs) catch (_:Dynamic) "";
+		final abs = try sys.FileSystem.fullPath(prog) catch (_:String) prog;
+		final dir = try haxe.io.Path.directory(abs) catch (_:String) "";
 		if (dir == null || dir.length == 0) return "";
 
 		final candidates = [
@@ -165,7 +163,7 @@ class MacroHostClient {
 			final p = haxe.io.Path.join([dir, name]);
 			try {
 				if (sys.FileSystem.exists(p) && !sys.FileSystem.isDirectory(p)) return p;
-			} catch (_:Dynamic) {}
+			} catch (_:String) {}
 		}
 
 		return "";
@@ -231,7 +229,8 @@ private class MacroClient {
 	public function call(method:String, tail:String):String {
 		final id = nextId++;
 		if (TRACE) {
-			try Sys.stderr().writeString("[hxhx macro rpc] -> " + method + "\n") catch (_:Dynamic) {}
+			try Sys.stderr().writeString("[hxhx macro rpc] -> " + method + "\n") catch (_:haxe.io.Error) {
+			} catch (_:String) {}
 		}
 		final msg = tail == null || tail.length == 0
 			? ("req " + id + " " + method + "\n")
@@ -239,8 +238,10 @@ private class MacroClient {
 		try {
 			proc.stdin.writeString(msg, null);
 			proc.stdin.flush();
-		} catch (e:Dynamic) {
+		} catch (e:haxe.io.Error) {
 			throw "macro host: failed to write request: " + Std.string(e);
+		} catch (e:String) {
+			throw "macro host: failed to write request: " + e;
 		}
 
 		while (true) {
@@ -248,11 +249,13 @@ private class MacroClient {
 				proc.stdout.readLine();
 			} catch (_:haxe.io.Eof) {
 				final hostStderr = drainStderr(60);
-				final exitCode = try proc.exitCode() catch (_:Dynamic) -1;
+				final exitCode = try proc.exitCode() catch (_:String) -1;
 				throw "macro host: unexpected EOF while waiting for response (method=" + method + ", exit=" + exitCode + ")"
 					+ (hostStderr.length == 0 ? "" : ("\nmacro host stderr:\n" + hostStderr));
-			} catch (e:Dynamic) {
+			} catch (e:haxe.io.Error) {
 				throw "macro host: failed to read response: " + Std.string(e);
+			} catch (e:String) {
+				throw "macro host: failed to read response: " + e;
 			}
 			final trimmed = StringTools.trim(line);
 			if (trimmed.length == 0) continue;
@@ -288,7 +291,8 @@ private class MacroClient {
 			}
 		} catch (_:haxe.io.Eof) {
 			// ok
-		} catch (_:Dynamic) {}
+		} catch (_:haxe.io.Error) {
+		} catch (_:String) {}
 		return lines.join("\n");
 	}
 
@@ -298,7 +302,8 @@ private class MacroClient {
 		final method = parts[2];
 		final tail = parts[3];
 		if (TRACE) {
-			try Sys.stderr().writeString("[hxhx macro rpc] <- " + method + "\n") catch (_:Dynamic) {}
+			try Sys.stderr().writeString("[hxhx macro rpc] <- " + method + "\n") catch (_:haxe.io.Error) {
+			} catch (_:String) {}
 		}
 		if (id == null) {
 			replyErr(0, "missing id");
@@ -408,8 +413,10 @@ private class MacroClient {
 				case _:
 					replyErr(id, "unknown method: " + method);
 			}
-		} catch (e:Dynamic) {
+		} catch (e:haxe.io.Error) {
 			replyErr(id, method + ": exception: " + Std.string(e));
+		} catch (e:String) {
+			replyErr(id, method + ": exception: " + e);
 		}
 	}
 
@@ -430,7 +437,8 @@ private class MacroClient {
 		try {
 			proc.stdin.writeString("quit\n", null);
 			proc.stdin.flush();
-		} catch (_:Dynamic) {}
+		} catch (_:haxe.io.Error) {
+		} catch (_:String) {}
 
 		// Optional bring-up diagnostics: if the macro host logs to stderr (e.g. reverse-RPC tracing),
 		// drain it after requesting shutdown so the output is visible in CI logs.
@@ -442,7 +450,8 @@ private class MacroClient {
 				}
 			} catch (_:haxe.io.Eof) {
 				// expected
-			} catch (_:Dynamic) {}
+			} catch (_:haxe.io.Error) {
+			} catch (_:String) {}
 		}
 
 		proc.close();
