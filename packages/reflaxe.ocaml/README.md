@@ -34,6 +34,34 @@ Build emitted OCaml natively:
 haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
 ```
 
+## Minimal starter project
+
+Create `Main.hx`:
+
+```haxe
+class Main {
+	static function main() {
+		Sys.println("Hello from reflaxe.ocaml");
+	}
+}
+```
+
+Compile it to OCaml (from the same directory as `Main.hx`):
+
+```bash
+haxe -cp . -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
+```
+
+If you are outside this monorepo, run `haxelib dev reflaxe.ocaml /path/to/hxhx` once before that command.
+
+Build/run manually with dune:
+
+```bash
+cd out
+dune build ./*.exe
+dune exec ./out.exe
+```
+
 ## Using with mainstream upstream Haxe
 
 If you want upstream Haxe CLI + `reflaxe.ocaml` (outside `hxhx` workflows), point `haxelib` to this repo checkout:
