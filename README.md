@@ -395,7 +395,10 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
 - js-native do/while smoke (`do { ... } while (...)` including false-once condition)
 - js-native statement-level try/catch + throw/rethrow smoke (`caught:boom|rethrow:boom`)
 - js-native ordered multi-catch typed dispatch smoke (`string:boom|int:7|dynamic2:true`)
+- js-native checks auto-skip when the current `hxhx` binary does not expose `js-native` (the dedicated CI `JS-native smoke` lane still enforces that path)
 - optional local fast path: set `HXHX_BIN=packages/hxhx/out/_build/default/out.bc` to skip rebuilding `hxhx` for each script rerun
+- script default build mode uses stage0 (`HXHX_FORCE_STAGE0=1`); set `HXHX_FORCE_STAGE0=0` to validate the stage0-free bootstrap lane explicitly
+- stage0 build-lane observability defaults: `HXHX_STAGE0_HEARTBEAT=30`, `HXHX_STAGE0_FAILFAST_SECS=7200` (override test-lane defaults with `HXHX_TARGETS_STAGE0_HEARTBEAT_DEFAULT` / `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT`)
 - source-level Stage3 receiver-call regression (`other.add(n)` arity shape) is covered by `npm run test:m14:hih-emitter-receiver-call` (no stage0 bootstrap rebuild required)
 
 ## Two surfaces (design)

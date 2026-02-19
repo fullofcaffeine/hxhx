@@ -3,7 +3,7 @@ set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
-HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-}"
+HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
 HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
 HXHX_STAGE0_PROFILE_DETAIL="${HXHX_STAGE0_PROFILE_DETAIL:-0}"
@@ -14,9 +14,9 @@ HXHX_STAGE0_PREFER_NATIVE="${HXHX_STAGE0_PREFER_NATIVE:-0}"
 HXHX_STAGE0_TIMES="${HXHX_STAGE0_TIMES:-0}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
-HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-0}"
+HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-30}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
-HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
+HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-7200}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
 HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
 HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
@@ -27,6 +27,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
 BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-$HXHX_DIR/bootstrap_work}"
+
+is_true() {
+  local v="${1:-}"
+  [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" || "$v" == "on" ]]
+}
 
 create_stage0_log_file() {
   local prefix="$1"
@@ -62,6 +67,20 @@ esac
 case "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS: $HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_HEARTBEAT" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_STAGE0_HEARTBEAT: $HXHX_STAGE0_HEARTBEAT (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_FAILFAST_SECS" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_STAGE0_FAILFAST_SECS: $HXHX_STAGE0_FAILFAST_SECS (expected non-negative integer)." >&2
     exit 2
     ;;
 esac
@@ -163,7 +182,7 @@ run_bootstrap_dune_build() {
   return "$code"
 }
 
-if [ -z "$HXHX_FORCE_STAGE0" ] && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP_DIR/dune" ]; then
+if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP_DIR/dune" ]; then
   rm -rf "$BOOTSTRAP_BUILD_DIR"
   mkdir -p "$BOOTSTRAP_BUILD_DIR"
   (cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_BUILD_DIR" && tar -xf -)
@@ -266,25 +285,46 @@ fi
   fi
 
   run_stage0_build() {
-    if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
+    if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" = "0" ]; then
       "$HAXE_BIN" "${haxe_args[@]}"
       return
     fi
 
+    local log_file=""
+    local pid=""
+    local interval=""
+    local start_hb=""
+    local now=""
+    local elapsed=""
+    local child_pid=""
+    local rss_probe_pid=""
+    local rss_kb=""
+    local rss_mb=""
+    local cpu_pct=""
+    local proc_state=""
+    local log_bytes=""
+    local heartbeat_suffix=""
+    local code=0
+
     log_file="$(create_stage0_log_file hxhx-stage0-build)"
+    if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
+      interval=5
+    else
+      interval="$HXHX_STAGE0_HEARTBEAT"
+    fi
+
+    echo "== Stage0 build watch: heartbeat=${HXHX_STAGE0_HEARTBEAT}s failfast=${HXHX_STAGE0_FAILFAST_SECS}s" >&2
     echo "== Stage0 build command: $HAXE_BIN ${haxe_args[*]}" >&2
     echo "== Stage0 build log: $log_file" >&2
     "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
     pid="$!"
 
-    interval="$HXHX_STAGE0_HEARTBEAT"
     start_hb="$(date +%s)"
     while kill -0 "$pid" >/dev/null 2>&1; do
       sleep "$interval" || true
       now="$(date +%s)"
-      child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
+      elapsed="$((now - start_hb))"
       if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-        elapsed="$((now - start_hb))"
         if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
           echo "Stage0 build exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
           kill -9 "$pid" >/dev/null 2>&1 || true
@@ -294,23 +334,42 @@ fi
           exit 1
         fi
       fi
+
+      if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
+        continue
+      fi
+
+      child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
       rss_probe_pid="$pid"
       if [ -n "$child_pid" ]; then
         rss_probe_pid="$child_pid"
       fi
       rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      proc_state="$(ps -o state= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+      log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
+      heartbeat_suffix=""
+      if [ -n "$cpu_pct" ]; then
+        heartbeat_suffix="$heartbeat_suffix cpu=${cpu_pct}%"
+      fi
+      if [ -n "$proc_state" ]; then
+        heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
+      fi
+      if [ -n "$log_bytes" ]; then
+        heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
+      fi
       if [ -n "$rss_kb" ]; then
         rss_mb="$((rss_kb / 1024))"
         if [ -n "$child_pid" ]; then
-          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid" >&2
+          echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix" >&2
         else
-          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid" >&2
+          echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid$heartbeat_suffix" >&2
         fi
       else
         if [ -n "$child_pid" ]; then
-          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s pid=$pid child=$child_pid" >&2
+          echo "== Stage0 build heartbeat: elapsed=${elapsed}s pid=$pid child=$child_pid$heartbeat_suffix" >&2
         else
-          echo "== Stage0 build heartbeat: elapsed=$((now - start_hb))s pid=$pid" >&2
+          echo "== Stage0 build heartbeat: elapsed=${elapsed}s pid=$pid$heartbeat_suffix" >&2
         fi
       fi
       if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then

@@ -223,4 +223,7 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
       - name: Run tests
+        env:
+          HXHX_STAGE0_HEARTBEAT: "30"
+          HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm test

@@ -170,13 +170,23 @@ Notes:
 - JS expression lowering regressions are covered by `npm run test:m14:js-expr-new-array` and
   `npm run test:m14:js-expr-range` and `npm run test:m14:js-expr-array-comprehension` and
   `npm run test:m14:js-expr-switch`.
-- `npm run test:hxhx-targets` now also validates the runtime delegation guard:
-  `HXHX_FORBID_STAGE0=1` must block shim delegation while still allowing builtin Stage3 targets.
+- `npm run test:hxhx-targets` validates runtime delegation guard behavior when the current
+  `hxhx` binary exposes `HXHX_FORBID_STAGE0` shim enforcement.
 - For quicker local reruns after a successful build, you can reuse an existing binary:
   `HXHX_BIN=packages/hxhx/out/_build/default/out.bc npm run test:hxhx-targets`.
+- `npm run test:hxhx-targets` defaults to stage0 lane builds (`HXHX_FORCE_STAGE0=1`);
+  set `HXHX_FORCE_STAGE0=0` to run against stage0-free bootstrap snapshots.
+- Stage0 build-lane observability defaults:
+  - default heartbeat is bounded (`HXHX_STAGE0_HEARTBEAT=30`)
+  - default failfast is bounded (`HXHX_STAGE0_FAILFAST_SECS=7200`)
+  - override defaults for this test lane with:
+    - `HXHX_TARGETS_STAGE0_HEARTBEAT_DEFAULT=<sec>`
+    - `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT=<sec>`
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.
+- If the current `hxhx` binary does not expose `js-native`, `npm run test:hxhx-targets` skips
+  js-native-only checks and prints explicit skip markers (dedicated js-native CI smoke still enforces the lane).
   (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
 Dedicated display full-emit warm-output stress rung:
