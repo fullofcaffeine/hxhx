@@ -107,6 +107,11 @@ jobs:
           eval "$(opam env)"
           dune --version
           ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -177,6 +182,11 @@ jobs:
           eval "$(opam env)"
           dune --version
           ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -236,6 +246,11 @@ jobs:
           eval "$(opam env)"
           dune --version
           ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
