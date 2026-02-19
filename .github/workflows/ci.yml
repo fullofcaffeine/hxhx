@@ -102,7 +102,9 @@ jobs:
       - name: Install OCaml packages
         run: |
           set -euo pipefail
+          eval "$(opam env)"
           opam install -y dune ocamlfind
+          eval "$(opam env)"
           dune --version
           ocamlc -version
       - name: Setup Node.js
@@ -170,7 +172,9 @@ jobs:
       - name: Install OCaml packages
         run: |
           set -euo pipefail
+          eval "$(opam env)"
           opam install -y dune ocamlfind
+          eval "$(opam env)"
           dune --version
           ocamlc -version
       - name: Setup Node.js
@@ -227,7 +231,9 @@ jobs:
       - name: Install OCaml packages
         run: |
           set -euo pipefail
+          eval "$(opam env)"
           opam install -y dune ocamlfind
+          eval "$(opam env)"
           dune --version
           ocamlc -version
       - name: Setup Node.js
