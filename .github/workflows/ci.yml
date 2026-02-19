@@ -98,7 +98,9 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y ocaml dune ocaml-findlib
+          if ! sudo apt-get install -y ocaml dune ocaml-findlib; then
+            sudo apt-get install -y ocaml ocaml-dune ocaml-findlib
+          fi
           dune --version
           ocamlc -version
       - name: Setup Node.js
@@ -162,7 +164,9 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y ocaml dune ocaml-findlib
+          if ! sudo apt-get install -y ocaml dune ocaml-findlib; then
+            sudo apt-get install -y ocaml ocaml-dune ocaml-findlib
+          fi
           dune --version
           ocamlc -version
       - name: Setup Node.js
@@ -216,7 +220,9 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           # Prefer distro packages to keep CI fast (we only need dune + ocamlc).
-          sudo apt-get install -y ocaml dune ocaml-findlib
+          if ! sudo apt-get install -y ocaml dune ocaml-findlib; then
+            sudo apt-get install -y ocaml ocaml-dune ocaml-findlib
+          fi
           dune --version
           ocamlc -version
       - name: Setup Node.js
