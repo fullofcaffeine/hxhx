@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="assets/hxhx-logo.png" alt="hxhx logo" width="640" />
+  <img src="assets/hxhx-logo.png" alt="hxhx logo" width="420" />
 </p>
-
-# hxhx
+<h1 align="center">hxhx</h1>
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
 [![Compatibility Gate 1](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml)
