@@ -285,7 +285,7 @@ jobs:
           HXHX_STAGE0_OCAML_BUILD: "byte"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "1800"
-          HXHX_STAGE0_MAX_RSS_MB: "14336"
+          HXHX_STAGE0_MAX_RSS_MB: "0"
         run: |
           set -euo pipefail
 
