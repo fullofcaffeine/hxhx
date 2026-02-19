@@ -46,7 +46,7 @@ class BackendProviderResolver {
 
 		final instance = try {
 			Type.createInstance(cls, []);
-		} catch (error) {
+		} catch (error:Dynamic) {
 			throw "backend provider construction failed for " + normalized + ": " + Std.string(error);
 		}
 
@@ -54,7 +54,10 @@ class BackendProviderResolver {
 			throw "backend provider type must implement ITargetBackendProvider: " + normalized;
 		}
 
-		final provider:ITargetBackendProvider = cast instance;
-		return provider.registrations();
+		final registrationsFn = Reflect.field(instance, "registrations");
+		if (registrationsFn == null) {
+			throw "backend provider type must expose registrations(): " + normalized;
+		}
+		return cast Reflect.callMethod(instance, registrationsFn, []);
 	}
 }

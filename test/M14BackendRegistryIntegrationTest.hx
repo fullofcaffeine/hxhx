@@ -33,8 +33,8 @@ class M14BackendRegistryIntegrationTest {
 		var unknownError = "";
 		try {
 			BackendRegistry.requireForTarget("does-not-exist");
-		} catch (e:Dynamic) {
-			unknownError = Std.string(e);
+		} catch (e:haxe.Exception) {
+			unknownError = e.message;
 		}
 		assertTrue(unknownError.length > 0, "requireForTarget should fail for unknown backend");
 		assertTrue(unknownError.indexOf("does-not-exist") >= 0, "unknown backend error should include target id");
