@@ -23,7 +23,8 @@ class TyperContext {
 	final imports:Array<String>;
 	final classFullName:String;
 
-	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, imports:Array<String>, classFullName:String, ?loader:LazyTypeLoader) {
+	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, imports:Array<String>, classFullName:String,
+			?loader:LazyTypeLoader) {
 		this.index = index;
 		this.loader = loader;
 		this.filePath = filePath == null || filePath.length == 0 ? "<unknown>" : filePath;
@@ -41,17 +42,30 @@ class TyperContext {
 		  access across compilation units fragile during bootstrap.
 		- Exposing accessors keeps downstream stages deterministic.
 	**/
-	public function getIndex():TyperIndex return index;
-	public function getFilePath():String return filePath;
-	public function getModulePath():String return modulePath;
-	public function getPackagePath():String return packagePath;
-	public function getImports():Array<String> return imports;
-	public function getClassFullName():String return classFullName;
+	public function getIndex():TyperIndex
+		return index;
+
+	public function getFilePath():String
+		return filePath;
+
+	public function getModulePath():String
+		return modulePath;
+
+	public function getPackagePath():String
+		return packagePath;
+
+	public function getImports():Array<String>
+		return imports;
+
+	public function getClassFullName():String
+		return classFullName;
 
 	public function resolveType(typePath:String):Null<TyClassInfo> {
-		if (index == null) return null;
+		if (index == null)
+			return null;
 		final hit = index.resolveTypePath(typePath, packagePath, imports);
-		if (hit != null) return hit;
+		if (hit != null)
+			return hit;
 		return loader == null ? null : loader.ensureTypeAvailable(typePath, packagePath, imports);
 	}
 

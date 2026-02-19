@@ -26,10 +26,8 @@ class M14ResolverFixtureProvider implements ITargetBackendProvider {
 		return [
 			{
 				descriptor: descriptor,
-				create: function() return new TargetCoreBackend(
-					descriptor,
-					function(_program, _context) throw "fixture target core should not emit in this test"
-				)
+				create: function() return new TargetCoreBackend(descriptor,
+					function(_program, _context) throw "fixture target core should not emit in this test")
 			}
 		];
 	}

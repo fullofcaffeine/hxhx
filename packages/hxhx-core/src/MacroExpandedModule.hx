@@ -9,7 +9,9 @@
 **/
 class MacroExpandedModule {
 	public final macroMode:Bool;
+
 	final typed:TypedModule;
+
 	public final generatedOcamlModules:Array<GeneratedOcamlModule>;
 
 	public function new(typed:TypedModule, macroMode:Bool, ?generatedOcamlModules:Array<GeneratedOcamlModule>) {

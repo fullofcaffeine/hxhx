@@ -6,4 +6,3 @@ class Main {
 		final s = p.sum();
 	}
 }
-

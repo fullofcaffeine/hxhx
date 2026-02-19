@@ -16,7 +16,8 @@ class JsExprEmitter {
 		return {
 			resolveLocal: function(name:String):Null<String> {
 				final v = locals.get(name);
-				if (v != null) return v;
+				if (v != null)
+					return v;
 				return parent == null ? null : parent.resolveLocal(name);
 			},
 			resolveClassRef: function(name:String):Null<String> {
@@ -54,7 +55,13 @@ class JsExprEmitter {
 			case EBinop(op, left, right):
 				emitBinop(op, left, right, scope);
 			case ETernary(cond, thenExpr, elseExpr):
-				"(" + emit(cond, scope) + " ? " + emit(thenExpr, scope) + " : " + emit(elseExpr, scope) + ")";
+				"("
+				+ emit(cond, scope)
+				+ " ? "
+				+ emit(thenExpr, scope)
+				+ " : "
+				+ emit(elseExpr, scope)
+				+ ")";
 			case EAnon(fieldNames, fieldValues):
 				emitAnon(fieldNames, fieldValues, scope);
 			case EArrayDecl(values):
@@ -87,9 +94,11 @@ class JsExprEmitter {
 	static function resolveIdent(name:String, scope:JsEmitScope):String {
 		if (scope != null) {
 			final local = scope.resolveLocal(name);
-			if (local != null) return local;
+			if (local != null)
+				return local;
 			final cls = scope.resolveClassRef(name);
-			if (cls != null) return cls;
+			if (cls != null)
+				return cls;
 		}
 		return JsNameMangler.identifier(name);
 	}
@@ -111,14 +120,17 @@ class JsExprEmitter {
 	}
 
 	static function resolveTypePath(typePath:String, scope:JsEmitScope):Null<String> {
-		if (typePath == null || typePath.length == 0) return null;
+		if (typePath == null || typePath.length == 0)
+			return null;
 		if (scope != null) {
 			final direct = scope.resolveClassRef(typePath);
-			if (direct != null) return direct;
+			if (direct != null)
+				return direct;
 			final parts = typePath.split(".");
 			if (parts.length > 0) {
 				final simple = scope.resolveClassRef(parts[parts.length - 1]);
-				if (simple != null) return simple;
+				if (simple != null)
+					return simple;
 			}
 		}
 		return null;
@@ -128,7 +140,8 @@ class JsExprEmitter {
 		final argsJs = args.map(a -> emit(a, scope)).join(", ");
 		switch (typePath) {
 			case "Array":
-				if (args.length == 0) return "[]";
+				if (args.length == 0)
+					return "[]";
 				return "new Array(" + argsJs + ")";
 			case _:
 		}
@@ -221,11 +234,7 @@ class JsExprEmitter {
 		return out.join(" ");
 	}
 
-	static function emitSwitchExpr(
-		scrutinee:HxExpr,
-		cases:Array<{ pattern:HxSwitchPattern, expr:HxExpr }>,
-		scope:JsEmitScope
-	):String {
+	static function emitSwitchExpr(scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, expr:HxExpr}>, scope:JsEmitScope):String {
 		final out = new Array<String>();
 		out.push("(function () {");
 		out.push("var __sw = " + emit(scrutinee, scope) + ";");

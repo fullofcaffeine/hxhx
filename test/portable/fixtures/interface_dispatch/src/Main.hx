@@ -27,4 +27,3 @@ class Main {
 		Sys.println("OK interface_dispatch");
 	}
 }
-

@@ -12,4 +12,3 @@ class Main {
 		Sys.println("mtime_positive=" + (st.mtime.getTime() > 0));
 	}
 }
-

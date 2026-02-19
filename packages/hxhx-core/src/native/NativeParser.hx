@@ -24,25 +24,25 @@ extern class NativeParser {
 	public static function parseModuleDecl(source:String):String;
 
 	/**
-		Parse a module while hinting which class name we expect to treat as the
-		“main” class for this file.
+			Parse a module while hinting which class name we expect to treat as the
+			“main” class for this file.
 
-		Why
-		- Haxe modules can contain multiple types (multiple `class` declarations).
-	- During bring-up we still model `HxModuleDecl` as “one main class + methods”.
-	- The unhinted hook (`parse_module_decl`) can only pick a heuristic default,
-	  which is often wrong for upstream-shaped modules (e.g. `CommandFailure` then
-	  `System` in the same file).
+			Why
+			- Haxe modules can contain multiple types (multiple `class` declarations).
+		- During bring-up we still model `HxModuleDecl` as “one main class + methods”.
+		- The unhinted hook (`parse_module_decl`) can only pick a heuristic default,
+		  which is often wrong for upstream-shaped modules (e.g. `CommandFailure` then
+		  `System` in the same file).
 
-		What
-		- `expectedMainClass` should typically be the file basename without extension
-		  (e.g. `System` for `System.hx`).
-	- The native side will select that class (if present) and return its method
-	  summaries / body slices for Stage 2/3.
+			What
+			- `expectedMainClass` should typically be the file basename without extension
+			  (e.g. `System` for `System.hx`).
+		- The native side will select that class (if present) and return its method
+		  summaries / body slices for Stage 2/3.
 
-		How
-		- Implemented by `parse_module_decl_with_expected` in
-		  `std/runtime/HxHxNativeParser.ml`.
+			How
+			- Implemented by `parse_module_decl_with_expected` in
+			  `std/runtime/HxHxNativeParser.ml`.
 	**/
 	@:native("parse_module_decl_with_expected")
 	public static function parseModuleDeclWithExpected(source:String, expectedMainClass:String):String;

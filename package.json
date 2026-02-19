@@ -17,7 +17,7 @@
     "bench": "npm run bench:m14",
     "download": "lix download",
     "haxe": "haxe",
-    "ci:guards": "node scripts/ci/version-sync-check.js && node scripts/ci/legacy-path-check.js && node scripts/ci/provider-boundary-check.js",
+    "ci:guards": "node scripts/ci/version-sync-check.js && node scripts/ci/legacy-path-check.js && node scripts/ci/provider-boundary-check.js && npm run guard:hx-format",
     "guard:gitleaks": "bash scripts/ci/gitleaks-history-check.sh",
     "guard:hx-format": "bash scripts/lint/hx_format_guard.sh",
     "hooks:install": "bash scripts/install-git-hooks.sh",

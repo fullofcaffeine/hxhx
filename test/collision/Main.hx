@@ -5,4 +5,3 @@ class Main {
 		Sys.println(a_b.C.id());
 	}
 }
-

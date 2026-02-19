@@ -5,4 +5,3 @@ class M13MliHelper {
 		return a + b;
 	}
 }
-

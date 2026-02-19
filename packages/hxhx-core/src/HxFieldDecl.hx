@@ -35,9 +35,18 @@ class HxFieldDecl {
 		this.init = init;
 	}
 
-	public static function getName(f:HxFieldDecl):String return f.name;
-	public static function getVisibility(f:HxFieldDecl):HxVisibility return f.visibility;
-	public static function getIsStatic(f:HxFieldDecl):Bool return f.isStatic;
-	public static function getTypeHint(f:HxFieldDecl):String return f.typeHint;
-	public static function getInit(f:HxFieldDecl):Null<HxExpr> return f.init;
+	public static function getName(f:HxFieldDecl):String
+		return f.name;
+
+	public static function getVisibility(f:HxFieldDecl):HxVisibility
+		return f.visibility;
+
+	public static function getIsStatic(f:HxFieldDecl):Bool
+		return f.isStatic;
+
+	public static function getTypeHint(f:HxFieldDecl):String
+		return f.typeHint;
+
+	public static function getInit(f:HxFieldDecl):Null<HxExpr>
+		return f.init;
 }

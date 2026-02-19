@@ -48,48 +48,46 @@ extern class Math {
 	@:native("nan") static var NaN(default, null):Float;
 #end
 
-	static function abs(v:Float):Float;
-	static function min(a:Float, b:Float):Float;
-	static function max(a:Float, b:Float):Float;
+static function abs(v:Float):Float;
+static function min(a:Float, b:Float):Float;
+static function max(a:Float, b:Float):Float;
+static function sin(v:Float):Float;
+static function cos(v:Float):Float;
+static function tan(v:Float):Float;
+static function asin(v:Float):Float;
+static function acos(v:Float):Float;
+static function atan(v:Float):Float;
+static function atan2(y:Float, x:Float):Float;
+static function exp(v:Float):Float;
+static function log(v:Float):Float;
+static function pow(v:Float, exp:Float):Float;
+static function sqrt(v:Float):Float;
+static function round(v:Float):Int;
+static function floor(v:Float):Int;
+static function ceil(v:Float):Int;
+static function random():Float;
 
-	static function sin(v:Float):Float;
-	static function cos(v:Float):Float;
-	static function tan(v:Float):Float;
-	static function asin(v:Float):Float;
-	static function acos(v:Float):Float;
-	static function atan(v:Float):Float;
-	static function atan2(y:Float, x:Float):Float;
-	static function exp(v:Float):Float;
-	static function log(v:Float):Float;
-	static function pow(v:Float, exp:Float):Float;
-	static function sqrt(v:Float):Float;
+/**
+	Returns `floor(v)` as a `Float`.
 
-	static function round(v:Float):Int;
-	static function floor(v:Float):Int;
-	static function ceil(v:Float):Int;
-	static function random():Float;
+	Why
+	- Upstream `Math.ffloor` exists as either an extern (some targets) or a small inline wrapper.
+	- On OCaml, keeping it as an extern avoids relying on implicit Int→Float coercions during
+	  bootstrapping, which can surface as OCaml type errors when inlined into complex code.
+**/
+static function ffloor(v:Float):Float;
 
-	/**
-		Returns `floor(v)` as a `Float`.
+/** Returns `ceil(v)` as a `Float`. */
+static function fceil(v:Float):Float;
 
-		Why
-		- Upstream `Math.ffloor` exists as either an extern (some targets) or a small inline wrapper.
-		- On OCaml, keeping it as an extern avoids relying on implicit Int→Float coercions during
-		  bootstrapping, which can surface as OCaml type errors when inlined into complex code.
-	**/
-	static function ffloor(v:Float):Float;
+/**
+	Rounds `v` to float32 precision as a `Float`.
 
-	/** Returns `ceil(v)` as a `Float`. */
-	static function fceil(v:Float):Float;
+	Note: currently implemented as an identity in the OCaml runtime (double precision),
+	which matches Haxe’s “best-effort” semantics on targets without native float32.
+**/
+static function fround(v:Float):Float;
 
-	/**
-		Rounds `v` to float32 precision as a `Float`.
-
-		Note: currently implemented as an identity in the OCaml runtime (double precision),
-		which matches Haxe’s “best-effort” semantics on targets without native float32.
-	**/
-	static function fround(v:Float):Float;
-
-	static function isFinite(f:Float):Bool;
-	static function isNaN(f:Float):Bool;
+static function isFinite(f:Float):Bool;
+static function isNaN(f:Float):Bool;
 }

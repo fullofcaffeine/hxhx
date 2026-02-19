@@ -8,4 +8,3 @@ enum Token {
 	TRParen;
 	TEof;
 }
-

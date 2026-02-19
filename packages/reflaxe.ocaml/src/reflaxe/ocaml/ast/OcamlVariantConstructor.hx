@@ -4,4 +4,3 @@ typedef OcamlVariantConstructor = {
 	final name:String;
 	final args:Array<OcamlTypeExpr>;
 }
-

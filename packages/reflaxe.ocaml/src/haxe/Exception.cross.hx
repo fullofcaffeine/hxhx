@@ -16,7 +16,7 @@ package haxe;
 	- Like `haxe.elixir`, we use a `.cross.hx` + `#if ocaml_output` gate:
 	  - When compiling to OCaml (`-D ocaml_output=...`), emit the real implementation.
 	  - Otherwise, expose only an `extern` surface so other targets/tools don’t
-	    pull OCaml-only code (and don’t generate references to OCaml runtime modules).
+		pull OCaml-only code (and don’t generate references to OCaml runtime modules).
 **/
 @:coreApi
 #if ocaml_output
@@ -39,11 +39,11 @@ class Exception {
 		//
 		// The OCaml backend itself wraps non-Exception throws into `haxe.ValueException`
 		// when lowering `catch(e:haxe.Exception)` / `catch(e:haxe.ValueException)`.
-		return Std.isOfType(value, Exception) ? (value:Exception) : new Exception(Std.string(value), null, value);
+		return Std.isOfType(value, Exception) ? (value : Exception) : new Exception(Std.string(value), null, value);
 	}
 
 	static function thrown(value:Any):Any {
-		return Std.isOfType(value, Exception) ? (value:Exception).native : value;
+		return Std.isOfType(value, Exception) ? (value : Exception).native : value;
 	}
 
 	public function new(message:String, ?previous:Exception, ?native:Any) {
@@ -105,16 +105,16 @@ class Exception {
 }
 #else
 extern class Exception {
-	public var message(get,never):String;
+	public var message(get, never):String;
 	private function get_message():String;
 
-	public var stack(get,never):CallStack;
+	public var stack(get, never):CallStack;
 	private function get_stack():CallStack;
 
-	public var previous(get,never):Null<Exception>;
+	public var previous(get, never):Null<Exception>;
 	private function get_previous():Null<Exception>;
 
-	public var native(get,never):Any;
+	public var native(get, never):Any;
 	final private function get_native():Any;
 
 	static private function caught(value:Any):Exception;

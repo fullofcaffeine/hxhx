@@ -16,4 +16,3 @@ class InheritanceMain extends Base {
 		x.foo();
 	}
 }
-

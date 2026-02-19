@@ -65,12 +65,12 @@ class TargetPresets {
 		final normalizedId = targetId == null ? "" : targetId.toLowerCase();
 		return switch (normalizedId) {
 			case "ocaml": {
-				id: "ocaml",
-				kind: "both",
-				runMode: RUN_MODE_DELEGATE_STAGE0,
-				describe: "Reflaxe OCaml backend via stage0 delegation",
-				forwarded: applyOcaml(forwarded)
-			};
+					id: "ocaml",
+					kind: "both",
+					runMode: RUN_MODE_DELEGATE_STAGE0,
+					describe: "Reflaxe OCaml backend via stage0 delegation",
+					forwarded: applyOcaml(forwarded)
+				};
 			case "ocaml-stage3":
 				ensureBuiltinBackendRegistered("ocaml-stage3");
 				{
@@ -81,12 +81,12 @@ class TargetPresets {
 					forwarded: applyOcamlStage3(forwarded)
 				};
 			case "js": {
-				id: "js",
-				kind: "bundled",
-				runMode: RUN_MODE_DELEGATE_STAGE0,
-				describe: "JavaScript target via stage0 delegation",
-				forwarded: applyJs(forwarded)
-			};
+					id: "js",
+					kind: "bundled",
+					runMode: RUN_MODE_DELEGATE_STAGE0,
+					describe: "JavaScript target via stage0 delegation",
+					forwarded: applyJs(forwarded)
+				};
 			case "js-native":
 				ensureBuiltinBackendRegistered("js-native");
 				{
@@ -265,12 +265,15 @@ class TargetPresets {
 	static function findBundledLibRoot():Null<String> {
 		try {
 			final exe = Sys.programPath();
-			if (exe == null || exe.length == 0) return null;
+			if (exe == null || exe.length == 0)
+				return null;
 			final abs = sys.FileSystem.fullPath(exe);
 			final root = Path.directory(Path.directory(abs)); // <root>/bin/...
 			final libRoot = Path.join([root, "lib"]);
-			if (!sys.FileSystem.exists(Path.join([libRoot, "reflaxe", "src"]))) return null;
-			if (!sys.FileSystem.exists(Path.join([libRoot, "reflaxe.ocaml", "src"]))) return null;
+			if (!sys.FileSystem.exists(Path.join([libRoot, "reflaxe", "src"])))
+				return null;
+			if (!sys.FileSystem.exists(Path.join([libRoot, "reflaxe.ocaml", "src"])))
+				return null;
 			return libRoot;
 		} catch (_:String) {
 			return null;
@@ -338,8 +341,8 @@ private class ArgScan {
 
 	static function consumesValue(flag:String):Bool {
 		return switch (flag) {
-			case "-js" | "--js" | "-lua" | "--lua" | "-python" | "--python" | "-php" | "--php" | "-neko" | "--neko" | "-cpp" | "--cpp" | "-cs" | "--cs" | "-java" | "--java" | "-jvm" | "--jvm" | "-hl" | "--hl" | "-swf"
-				| "--swf" | "-as3" | "--as3" | "-xml" | "--xml" | "--run":
+			case "-js" | "--js" | "-lua" | "--lua" | "-python" | "--python" | "-php" | "--php" | "-neko" | "--neko" | "-cpp" | "--cpp" | "-cs" | "--cs" |
+				"-java" | "--java" | "-jvm" | "--jvm" | "-hl" | "--hl" | "-swf" | "--swf" | "-as3" | "--as3" | "-xml" | "--xml" | "--run":
 				true;
 			case _:
 				false;
@@ -350,7 +353,8 @@ private class ArgScan {
 		var i = 0;
 		while (i < args.length) {
 			final a = args[i];
-			if ((a == "-lib" || a == "--library") && i + 1 < args.length && args[i + 1] == name) return true;
+			if ((a == "-lib" || a == "--library") && i + 1 < args.length && args[i + 1] == name)
+				return true;
 			i++;
 		}
 		return false;
@@ -359,14 +363,16 @@ private class ArgScan {
 	public static function hasMacro(args:Array<String>, macroExpr:String):Bool {
 		var i = 0;
 		while (i < args.length) {
-			if (args[i] == "--macro" && i + 1 < args.length && args[i + 1] == macroExpr) return true;
+			if (args[i] == "--macro" && i + 1 < args.length && args[i + 1] == macroExpr)
+				return true;
 			i++;
 		}
 		return false;
 	}
 
 	public static function addMacroIfMissing(args:Array<String>, macroExpr:String):Void {
-		if (hasMacro(args, macroExpr)) return;
+		if (hasMacro(args, macroExpr))
+			return;
 		args.push("--macro");
 		args.push(macroExpr);
 	}
@@ -378,7 +384,8 @@ private class ArgScan {
 	public static function addDefineIfMissing(args:Array<String>, define:String):Void {
 		final eq = define.indexOf("=");
 		final name = eq == -1 ? define : define.substr(0, eq);
-		if (hasDefine(args, name)) return;
+		if (hasDefine(args, name))
+			return;
 		args.push("-D");
 		args.push(define);
 	}
@@ -389,8 +396,10 @@ private class ArgScan {
 			final a = args[i];
 			if (a == "-D" && i + 1 < args.length) {
 				final d = args[i + 1];
-				if (d == name) return "1";
-				if (StringTools.startsWith(d, name + "=")) return d.substr((name + "=").length);
+				if (d == name)
+					return "1";
+				if (StringTools.startsWith(d, name + "="))
+					return d.substr((name + "=").length);
 				i += 2;
 				continue;
 			}
@@ -400,9 +409,11 @@ private class ArgScan {
 	}
 
 	public static function addCpIfExists(args:Array<String>, path:String):Void {
-		if (!sys.FileSystem.exists(path)) return;
+		if (!sys.FileSystem.exists(path))
+			return;
 		// Don't spam duplicates: classpaths can be long and order-sensitive.
-		if (args.indexOf(path) != -1) return;
+		if (args.indexOf(path) != -1)
+			return;
 		args.push("-cp");
 		args.push(path);
 	}

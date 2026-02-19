@@ -5,11 +5,14 @@ import backend.TargetCoreBackend;
 
 class M14BackendRegistryIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond) throw message;
+		if (!cond)
+			throw message;
 	}
 
 	static function has(values:Array<String>, target:String):Bool {
-		for (v in values) if (v == target) return true;
+		for (v in values)
+			if (v == target)
+				return true;
 		return false;
 	}
 
@@ -80,10 +83,7 @@ private class _M14PluginProvider implements ITargetBackendProvider {
 		return [
 			{
 				descriptor: descriptor,
-				create: function() return new TargetCoreBackend(
-					descriptor,
-					function(_program, _context) throw "noop core should not emit in this test"
-				)
+				create: function() return new TargetCoreBackend(descriptor, function(_program, _context) throw "noop core should not emit in this test")
 			}
 		];
 	}

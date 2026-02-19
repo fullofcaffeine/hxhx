@@ -15,7 +15,8 @@ package ocaml;
  * - OCaml `char` is a byte (0..255). Passing out-of-range values is an error in OCaml.
  */
 abstract Char(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function ofInt(code:Int):Char {
 		return cast CharNative.chr(code);

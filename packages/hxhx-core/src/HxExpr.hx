@@ -17,7 +17,7 @@
 	- This is *not* the upstream Haxe AST. It is a bootstrap representation
 	  designed to keep the example runnable in CI while we expand coverage.
 **/
-	enum HxExpr {
+enum HxExpr {
 	ENull;
 	EBool(value:Bool);
 	EString(value:String);
@@ -168,7 +168,7 @@
 		- Full Haxe switch semantics are deferred; see `HxSwitchPattern` docs for the
 		  supported subset.
 	**/
-	ESwitch(scrutinee:HxExpr, cases:Array<{ pattern:HxSwitchPattern, expr:HxExpr }>);
+	ESwitch(scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, expr:HxExpr}>);
 
 	/**
 		Constructor call: `new TypePath(args...)`.
@@ -255,109 +255,109 @@
 		How
 		- Stage 3 typer currently treats the resulting value as `Dynamic`, but still types each
 		  field initializer for basic checking/local inference.
-		**/
-		EAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>);
+	**/
+	EAnon(fieldNames:Array<String>, fieldValues:Array<HxExpr>);
 
-		/**
-			Array comprehension expression: `[for (name in iterable) expr]`.
+	/**
+		Array comprehension expression: `[for (name in iterable) expr]`.
 
-			Why
-			- Upstream `tests/RunCi.hx` uses this to derive a target list from an env-var string:
-			  `[for (v in env.split(",")) v.trim().toLowerCase()]`.
-			- In early bring-up, treating this as `EUnsupported` makes the resulting array contain
-			  `(Obj.magic 0)` elements, which breaks `switch (test)` dispatch and prevents Gate2
-			  from exercising real `runCommand("haxe", ...)` sub-invocations.
+		Why
+		- Upstream `tests/RunCi.hx` uses this to derive a target list from an env-var string:
+		  `[for (v in env.split(",")) v.trim().toLowerCase()]`.
+		- In early bring-up, treating this as `EUnsupported` makes the resulting array contain
+		  `(Obj.magic 0)` elements, which breaks `switch (test)` dispatch and prevents Gate2
+		  from exercising real `runCommand("haxe", ...)` sub-invocations.
 
-			What
-			- Stores:
-			  - the loop variable name
-			  - the iterable expression
-			  - the yielded element expression
+		What
+		- Stores:
+		  - the loop variable name
+		  - the iterable expression
+		  - the yielded element expression
 
-			How (bring-up semantics)
-			- Stage 3 typer models this as `Array<Dynamic>` and types the body in a nested scope
-			  that binds `name` as `Dynamic` (or `Array<T>` element type when inferable).
-			- Stage 3 emitter lowers this to:
-			  - allocate an empty array
-			  - iterate the iterable
-			  - push each yielded element
-			  - return the filled array
-		**/
-		EArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr);
+		How (bring-up semantics)
+		- Stage 3 typer models this as `Array<Dynamic>` and types the body in a nested scope
+		  that binds `name` as `Dynamic` (or `Array<T>` element type when inferable).
+		- Stage 3 emitter lowers this to:
+		  - allocate an empty array
+		  - iterate the iterable
+		  - push each yielded element
+		  - return the filled array
+	**/
+	EArrayComprehension(name:String, iterable:HxExpr, yieldExpr:HxExpr);
 
-		/**
-			Array literal: `[e1, e2, ...]`.
+	/**
+		Array literal: `[e1, e2, ...]`.
 
-			Why
-			- Core Haxe code and common libraries use `[]` frequently (temporary arrays, buffers, etc.).
-			- Stage3 needs to parse this shape to avoid generating `EUnsupported("[")` in std code (e.g. `Bytes.toHex`).
+		Why
+		- Core Haxe code and common libraries use `[]` frequently (temporary arrays, buffers, etc.).
+		- Stage3 needs to parse this shape to avoid generating `EUnsupported("[")` in std code (e.g. `Bytes.toHex`).
 
-			How
-			- We keep this representation minimal: just the ordered element list.
-			- Stage3 typer treats this as `Array<Dynamic>` for now.
-		**/
-		EArrayDecl(values:Array<HxExpr>);
+		How
+		- We keep this representation minimal: just the ordered element list.
+		- Stage3 typer treats this as `Array<Dynamic>` for now.
+	**/
+	EArrayDecl(values:Array<HxExpr>);
 
-		/**
-			Array access: `arr[index]`.
+	/**
+		Array access: `arr[index]`.
 
-			Why
-			- Indexing is used pervasively in stdlib code (`b[i]`, `chars[c >> 4]`).
-			- Even before we model the full `ArrayAccess` semantics, parsing avoids
-			  token drift and enables a real typer later.
-		**/
-		EArrayAccess(array:HxExpr, index:HxExpr);
+		Why
+		- Indexing is used pervasively in stdlib code (`b[i]`, `chars[c >> 4]`).
+		- Even before we model the full `ArrayAccess` semantics, parsing avoids
+		  token drift and enables a real typer later.
+	**/
+	EArrayAccess(array:HxExpr, index:HxExpr);
 
-		/**
-			Range expression: `start...end`.
+	/**
+		Range expression: `start...end`.
 
-			Why
-			- This shape appears most often in `for` loops (`for (i in 0...n)`), which are used
-			  heavily by upstream compiler test harnesses (including Gate2 bring-up).
+		Why
+		- This shape appears most often in `for` loops (`for (i in 0...n)`), which are used
+		  heavily by upstream compiler test harnesses (including Gate2 bring-up).
 
-			What
-			- Stores the start and end expressions (end is **exclusive**, like Haxe).
+		What
+		- Stores the start and end expressions (end is **exclusive**, like Haxe).
 
-			How (bring-up)
-			- Today this node is only produced by the Stage3 parser for `for (i in start...end)`
-			  loops so the Stage3 bootstrap emitter can lower it to an OCaml `for` loop without
-			  needing a full `IntIterator` runtime model.
-		**/
-		ERange(start:HxExpr, end:HxExpr);
+		How (bring-up)
+		- Today this node is only produced by the Stage3 parser for `for (i in start...end)`
+		  loops so the Stage3 bootstrap emitter can lower it to an OCaml `for` loop without
+		  needing a full `IntIterator` runtime model.
+	**/
+	ERange(start:HxExpr, end:HxExpr);
 
-		/**
-			Cast expression: `cast expr` or `cast(expr, Type)`.
+	/**
+		Cast expression: `cast expr` or `cast(expr, Type)`.
 
-			Why
-			- Gate1 inputs (e.g. utest) use `cast` to coerce `Dynamic` to concrete types.
-			- Treating `cast` as unsupported makes upstream-shaped code look "unparseable",
-			  even though the semantics are intentionally permissive.
+		Why
+		- Gate1 inputs (e.g. utest) use `cast` to coerce `Dynamic` to concrete types.
+		- Treating `cast` as unsupported makes upstream-shaped code look "unparseable",
+		  even though the semantics are intentionally permissive.
 
-			What
-			- Stores the expression being cast.
-			- Stores the optional raw type-hint text (when present).
+		What
+		- Stores the expression being cast.
+		- Stores the optional raw type-hint text (when present).
 
-			How
-			- Stage3 typer:
-			  - if a type hint is provided, trusts it as the resulting type (best-effort),
-			  - otherwise, returns the inferred type of the inner expression.
-		**/
-		ECast(expr:HxExpr, typeHint:String);
+		How
+		- Stage3 typer:
+		  - if a type hint is provided, trusts it as the resulting type (best-effort),
+		  - otherwise, returns the inferred type of the inner expression.
+	**/
+	ECast(expr:HxExpr, typeHint:String);
 
-		/**
-			`untyped` escape hatch: `untyped expr`.
+	/**
+		`untyped` escape hatch: `untyped expr`.
 
-			Why
-			- Upstream std code uses `untyped` to access target-specific primitives.
-			- Stage3 bring-up should preserve the shape (so later stages can decide how
-			  to lower it) without failing parsing/typing.
+		Why
+		- Upstream std code uses `untyped` to access target-specific primitives.
+		- Stage3 bring-up should preserve the shape (so later stages can decide how
+		  to lower it) without failing parsing/typing.
 
-			How
-			- Stage3 typer returns `Dynamic` (after typing the inner expression for locals).
-		**/
-		EUntyped(expr:HxExpr);
+		How
+		- Stage3 typer returns `Dynamic` (after typing the inner expression for locals).
+	**/
+	EUntyped(expr:HxExpr);
 
-		/**
+	/**
 			Best-effort placeholder for expressions we don't parse yet.
 
 			We prefer to keep the parser permissive during early bootstrapping, while

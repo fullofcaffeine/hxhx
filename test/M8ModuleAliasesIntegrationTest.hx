@@ -10,29 +10,39 @@ class M8ModuleAliasesIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "M8AliasesMain",
+			"-cp",
+			"test",
+			"-main",
+			"M8AliasesMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_no_build",
-			"-D", "ocaml_output=" + outDir
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_no_build",
+			"-D",
+			"ocaml_output=" + outDir
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		// `haxe.io.Bytes` should produce alias modules:
 		// - Haxe.ml contains `module Io = Haxe_io`
 		// - Haxe_io.ml contains `module Bytes = Haxe_io_Bytes`
 		final haxeAlias = outDir + "/Haxe.ml";
-		if (!sys.FileSystem.exists(haxeAlias)) throw "missing alias module: " + haxeAlias;
+		if (!sys.FileSystem.exists(haxeAlias))
+			throw "missing alias module: " + haxeAlias;
 		final haxeAliasSrc = sys.io.File.getContent(haxeAlias);
 		assertContains(haxeAliasSrc, "module Io = Haxe_io", "Haxe.ml exports Io");
 
 		final haxeIoAlias = outDir + "/Haxe_io.ml";
-		if (!sys.FileSystem.exists(haxeIoAlias)) throw "missing alias module: " + haxeIoAlias;
+		if (!sys.FileSystem.exists(haxeIoAlias))
+			throw "missing alias module: " + haxeIoAlias;
 		final haxeIoAliasSrc = sys.io.File.getContent(haxeIoAlias);
 		assertContains(haxeIoAliasSrc, "module BytesBuffer = Haxe_io_BytesBuffer", "Haxe_io.ml exports BytesBuffer");
 	}

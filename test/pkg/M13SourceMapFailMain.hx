@@ -10,4 +10,3 @@ class M13SourceMapFailMain {
 		untyped __ocaml__("((\"not an int\") : int)");
 	}
 }
-

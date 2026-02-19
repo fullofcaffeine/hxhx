@@ -25,8 +25,10 @@ class M6ArrayIntegrationTest {
 			out.add(isAlphaNum ? String.fromCharCode(c) : "_");
 		}
 		var s = out.toString();
-		if (s.length == 0) s = "ocaml_app";
-		if (s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57) s = "_" + s;
+		if (s.length == 0)
+			s = "ocaml_app";
+		if (s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57)
+			s = "_" + s;
 		return s.toLowerCase();
 	}
 
@@ -35,21 +37,30 @@ class M6ArrayIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "ArrayMain",
+			"-cp",
+			"test",
+			"-main",
+			"ArrayMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_no_build",
-			"-D", "ocaml_output=" + outDir
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_no_build",
+			"-D",
+			"ocaml_output=" + outDir
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		final mainPath = outDir + "/ArrayMain.ml";
-		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;
+		if (!sys.FileSystem.exists(mainPath))
+			throw "missing output: " + mainPath;
 
 		final content = sys.io.File.getContent(mainPath);
 		assertContains(content, "HxArray.create", "array literal -> HxArray.create");
@@ -82,11 +93,13 @@ class M6ArrayIntegrationTest {
 				final builtExe = "_build/default/" + exeName + ".exe";
 				if (sys.FileSystem.exists(builtExe)) {
 					final runExit = Sys.command("./" + builtExe, []);
-					if (runExit != 0) throw "built exe failed: " + runExit;
+					if (runExit != 0)
+						throw "built exe failed: " + runExit;
 				}
 			}
 			Sys.setCwd(prev);
-			if (exit != 0) throw "dune build failed: " + exit;
+			if (exit != 0)
+				throw "dune build failed: " + exit;
 		}
 	}
 }

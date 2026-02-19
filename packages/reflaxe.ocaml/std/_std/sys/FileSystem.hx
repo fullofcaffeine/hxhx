@@ -19,4 +19,3 @@ extern class FileSystem {
 	static function deleteDirectory(path:String):Void;
 	static function readDirectory(path:String):Array<String>;
 }
-

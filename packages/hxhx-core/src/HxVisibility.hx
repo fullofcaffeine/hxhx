@@ -18,4 +18,3 @@ enum HxVisibility {
 	Public;
 	Private;
 }
-

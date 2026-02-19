@@ -16,39 +16,39 @@ class Lexer {
 	}
 
 	function skipSpaces():Void {
-			if (i < s.length) {
-				final c:Int = cast s.charCodeAt(i);
-				if (isSpace(c)) {
-					i = i + 1;
-					skipSpaces();
-				}
-			}
-	}
-
-	function readDigits(n:Int):Int {
-			return if (i >= s.length) {
-				n;
-			} else {
-				final d:Int = cast s.charCodeAt(i);
-				if (isDigit(d)) {
-					i = i + 1;
-					readDigits(n * 10 + (d - 48));
-				} else {
-					n;
+		if (i < s.length) {
+			final c:Int = cast s.charCodeAt(i);
+			if (isSpace(c)) {
+				i = i + 1;
+				skipSpaces();
 			}
 		}
 	}
 
-		public function next():Token {
-			skipSpaces();
-			return if (i >= s.length) {
-				TEof;
-			} else {
-				final c:Int = cast s.charCodeAt(i);
+	function readDigits(n:Int):Int {
+		return if (i >= s.length) {
+			n;
+		} else {
+			final d:Int = cast s.charCodeAt(i);
+			if (isDigit(d)) {
 				i = i + 1;
-				if (isDigit(c)) {
-					final n = readDigits(c - 48);
-					TInt(n);
+				readDigits(n * 10 + (d - 48));
+			} else {
+				n;
+			}
+		}
+	}
+
+	public function next():Token {
+		skipSpaces();
+		return if (i >= s.length) {
+			TEof;
+		} else {
+			final c:Int = cast s.charCodeAt(i);
+			i = i + 1;
+			if (isDigit(c)) {
+				final n = readDigits(c - 48);
+				TInt(n);
 			} else {
 				switch (c) {
 					case 43: TPlus; // +

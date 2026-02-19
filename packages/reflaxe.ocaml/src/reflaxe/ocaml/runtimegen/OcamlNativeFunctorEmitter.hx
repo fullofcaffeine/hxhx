@@ -1,7 +1,6 @@
 package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
-
 import reflaxe.output.OutputManager;
 
 /**
@@ -19,15 +18,14 @@ class OcamlNativeFunctorEmitter {
 	static inline final LINE_DIRECTIVE_DISABLE_DEFINE = "ocaml_no_line_directives";
 
 	static function escapeLineDirectivePath(path:String):String {
-		if (path == null) return "";
+		if (path == null)
+			return "";
 		return StringTools.replace(StringTools.replace(path, "\\", "\\\\"), "\"", "\\\"");
 	}
 
 	static function maybeLineDirective(fileName:String):Null<String> {
 		#if macro
-		return !haxe.macro.Context.defined(LINE_DIRECTIVE_DISABLE_DEFINE)
-			? ("# 1 \"" + escapeLineDirectivePath(fileName) + "\"")
-			: null;
+		return !haxe.macro.Context.defined(LINE_DIRECTIVE_DISABLE_DEFINE) ? ("# 1 \"" + escapeLineDirectivePath(fileName) + "\"") : null;
 		#else
 		return null;
 		#end
@@ -79,5 +77,4 @@ class OcamlNativeFunctorEmitter {
 		output.saveFile(fileName, lines.join("\n"));
 	}
 }
-
 #end

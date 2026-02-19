@@ -25,9 +25,9 @@ import hxhxmacrohost.MacroError;
 	What
 	- This file therefore has **two personalities**:
 	  - `#if (neko || eval || display)`: behave like upstream `haxe.macro.Context` by forwarding to
-	    the compiler's macro API via `load(...)`.
+		the compiler's macro API via `load(...)`.
 	  - `#else`: provide a tiny runtime subset mapped to the Stage4 RPC API (`hxhxmacrohost.api.Context`)
-	    so runtime macro code like `Macro.init()` can register hooks.
+		so runtime macro code like `Macro.init()` can register hooks.
 
 	How
 	- The macro personality is a small forwarder wrapper (not a full copy of upstream).
@@ -362,7 +362,8 @@ class Context {
 	public static function filterMessages(predicate:Message->Bool):Void {
 		// Bring-up rung: message filtering is currently a no-op at runtime.
 		// Keep argument "used" so OCaml warning-as-error builds don't fail.
-		if (predicate == null) return;
+		if (predicate == null)
+			return;
 	}
 }
 #end

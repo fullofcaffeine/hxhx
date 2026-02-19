@@ -19,4 +19,3 @@ class Main {
 		Sys.println("out=" + line);
 	}
 }
-

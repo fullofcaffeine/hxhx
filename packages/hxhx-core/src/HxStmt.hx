@@ -134,7 +134,7 @@ enum HxStmt {
 		- This uses a restricted pattern subset (see `HxSwitchPattern`).
 		- Lowered by the bootstrap emitter to nested `if ... then ... else ...` chains.
 	**/
-	SSwitch(scrutinee:HxExpr, cases:Array<{ pattern:HxSwitchPattern, body:HxStmt }>, pos:HxPos);
+	SSwitch(scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, body:HxStmt}>, pos:HxPos);
 
 	/**
 		Try/catch statement: `try stmt catch(name[:Type]) stmt ...`.
@@ -156,11 +156,7 @@ enum HxStmt {
 		- Typing currently treats catch variables as `Dynamic`.
 		- Non-js Stage3 emitters may still use permissive lowering while bring-up evolves.
 	**/
-	STry(
-		tryBody:HxStmt,
-		catches:Array<{ name:String, typeHint:String, body:HxStmt }>,
-		pos:HxPos
-	);
+	STry(tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>, pos:HxPos);
 
 	/**
 		Loop control statement: `break;`.

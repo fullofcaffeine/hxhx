@@ -23,4 +23,3 @@ typedef TargetRequirements = {
 	final macroApiVersion:Int;
 	final hostCaps:Array<String>;
 }
-

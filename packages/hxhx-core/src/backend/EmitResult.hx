@@ -23,4 +23,3 @@ class EmitResult {
 		this.builtExecutable = builtExecutable;
 	}
 }
-

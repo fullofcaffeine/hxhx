@@ -36,12 +36,14 @@ class FileInput extends Input {
 
 	public override function readByte():Int {
 		final b = NativeHxFileStream.read_byte(h);
-		if (b < 0) throw new Eof();
+		if (b < 0)
+			throw new Eof();
 		return b;
 	}
 
 	public override function readBytes(buf:Bytes, pos:Int, len:Int):Int {
-		if (len <= 0) return 0;
+		if (len <= 0)
+			return 0;
 		var i = 0;
 		try {
 			while (i < len) {
@@ -49,7 +51,8 @@ class FileInput extends Input {
 				i++;
 			}
 		} catch (_:Eof) {
-			if (i == 0) throw new Eof();
+			if (i == 0)
+				throw new Eof();
 		}
 		return i;
 	}
@@ -83,4 +86,3 @@ private extern class NativeHxFileStream {
 	static function tell_in(h:Dynamic):Int;
 	static function eof_in(h:Dynamic):Bool;
 }
-

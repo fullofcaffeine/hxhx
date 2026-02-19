@@ -11,7 +11,8 @@ class Eval {
 					case Sub: a - b;
 					case Mul: a * b;
 					case Div:
-						if (b == 0) throw "division by zero";
+						if (b == 0)
+							throw "division by zero";
 						Std.int(a / b);
 				}
 		}

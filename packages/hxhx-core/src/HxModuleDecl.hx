@@ -25,14 +25,7 @@ class HxModuleDecl {
 	public final headerOnly:Bool;
 	public final hasToplevelMain:Bool;
 
-	public function new(
-		packagePath:String,
-		imports:Array<String>,
-		mainClass:HxClassDecl,
-		classes:Array<HxClassDecl>,
-		headerOnly:Bool,
-		hasToplevelMain:Bool
-	) {
+	public function new(packagePath:String, imports:Array<String>, mainClass:HxClassDecl, classes:Array<HxClassDecl>, headerOnly:Bool, hasToplevelMain:Bool) {
 		this.packagePath = packagePath;
 		this.imports = imports;
 		this.mainClass = mainClass;

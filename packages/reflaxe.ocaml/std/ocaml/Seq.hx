@@ -19,7 +19,8 @@ package ocaml;
  *   `unit -> 'a Seq.node` in OCaml, which is not convenient to expose directly in Haxe.
  */
 abstract Seq<T>(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function empty<T>():Seq<T> {
 		return cast SeqNative.empty;

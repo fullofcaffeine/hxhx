@@ -49,4 +49,3 @@ class MyExn extends Exception {
 		super(msg);
 	}
 }
-

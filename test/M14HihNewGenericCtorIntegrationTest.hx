@@ -5,8 +5,11 @@ class M14HihNewGenericCtorIntegrationTest {
 
 	static function findMainFunction(decl:HxModuleDecl):HxFunctionDecl {
 		for (cls in HxModuleDecl.getClasses(decl)) {
-			if (HxClassDecl.getName(cls) != "Main") continue;
-			for (fn in HxClassDecl.getFunctions(cls)) if (HxFunctionDecl.getName(fn) == "main") return fn;
+			if (HxClassDecl.getName(cls) != "Main")
+				continue;
+			for (fn in HxClassDecl.getFunctions(cls))
+				if (HxFunctionDecl.getName(fn) == "main")
+					return fn;
 		}
 		fail("missing Main.main");
 		return null;
@@ -16,7 +19,8 @@ class M14HihNewGenericCtorIntegrationTest {
 		for (s in stmts) {
 			switch (s) {
 				case SVar(n, _typeHint, init, _):
-					if (n == name) return init;
+					if (n == name)
+						return init;
 				case _:
 			}
 		}
@@ -26,25 +30,19 @@ class M14HihNewGenericCtorIntegrationTest {
 	static function assertGenericNew(init:Null<HxExpr>, varName:String):Void {
 		switch (init) {
 			case ENew(typePath, args):
-				if (typePath != "MyGeneric") fail(varName + ": expected constructor type path MyGeneric, got " + typePath);
-				if (args == null || args.length != 1) fail(varName + ": expected one constructor arg");
+				if (typePath != "MyGeneric")
+					fail(varName + ": expected constructor type path MyGeneric, got " + typePath);
+				if (args == null || args.length != 1)
+					fail(varName + ": expected one constructor arg");
 			case _:
 				fail(varName + ": expected ENew, got " + Std.string(init));
 		}
 	}
 
 	static function main() {
-		final src = 'private typedef MyAnon = { a:Int };\n'
-			+ '@:generic class MyGeneric<T> {\n'
-			+ '  public var t:T;\n'
-			+ '  public function new(t:T) { this.t = t; }\n'
-			+ '}\n'
-			+ 'class Main {\n'
-			+ '  static function main() {\n'
-			+ '    var a = new MyGeneric<MyAnon>({a: 1});\n'
-			+ '    var b = new MyGeneric<String>("x");\n'
-			+ '  }\n'
-			+ '}\n';
+		final src = 'private typedef MyAnon = { a:Int };\n' + '@:generic class MyGeneric<T> {\n' + '  public var t:T;\n'
+			+ '  public function new(t:T) { this.t = t; }\n' + '}\n' + 'class Main {\n' + '  static function main() {\n'
+			+ '    var a = new MyGeneric<MyAnon>({a: 1});\n' + '    var b = new MyGeneric<String>("x");\n' + '  }\n' + '}\n';
 
 		final decl = new HxParser(src).parseModule("Main");
 		final mainFn = findMainFunction(decl);
@@ -59,7 +57,8 @@ class M14HihNewGenericCtorIntegrationTest {
 			case ENew(_, args):
 				switch (args[0]) {
 					case EAnon(fieldNames, fieldValues):
-						if (fieldNames.length != 1 || fieldNames[0] != "a") fail("a: expected anon field a");
+						if (fieldNames.length != 1 || fieldNames[0] != "a")
+							fail("a: expected anon field a");
 						switch (fieldValues[0]) {
 							case EInt(v): if (v != 1) fail("a: expected value 1");
 							case _: fail("a: expected int field initializer");

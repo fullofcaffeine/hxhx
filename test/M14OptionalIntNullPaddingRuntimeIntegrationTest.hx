@@ -3,11 +3,13 @@ import sys.io.File;
 
 class M14OptionalIntNullPaddingRuntimeIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond) throw message;
+		if (!cond)
+			throw message;
 	}
 
 	static function deleteRecursive(path:String):Void {
-		if (!FileSystem.exists(path)) return;
+		if (!FileSystem.exists(path))
+			return;
 		if (FileSystem.isDirectory(path)) {
 			for (entry in FileSystem.readDirectory(path)) {
 				deleteRecursive(haxe.io.Path.join([path, entry]));

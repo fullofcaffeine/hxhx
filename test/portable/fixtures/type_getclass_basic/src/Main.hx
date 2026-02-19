@@ -17,7 +17,7 @@ class Main {
 		final b:Base = new Child();
 		final i:IFoo = new Child();
 		final d:Dynamic = new Child();
-		final anon:Dynamic = { a: 1 };
+		final anon:Dynamic = {a: 1};
 
 		Sys.println("base=" + Type.getClassName(Type.getClass(b)).split(".").pop());
 		Sys.println("iface=" + Type.getClassName(Type.getClass(i)).split(".").pop());
@@ -25,4 +25,3 @@ class Main {
 		Sys.println("anon=" + (Type.getClass(anon) == null));
 	}
 }
-

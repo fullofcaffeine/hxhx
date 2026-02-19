@@ -22,7 +22,8 @@ package ocaml;
  *   code should normally use `StringBuf` (which this backend can implement via this surface).
  */
 abstract Buffer(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function create(size:Int):Buffer {
 		return cast BufferNative.create(size);
@@ -49,4 +50,3 @@ extern class BufferNative {
 	static function add_string(b:Buffer, s:String):Void;
 	static function contents(b:Buffer):String;
 }
-

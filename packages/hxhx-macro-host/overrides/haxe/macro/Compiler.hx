@@ -81,7 +81,7 @@ class Compiler {
 		load("register_metadata_impl", 2)(meta, source);
 	}
 
-static inline function load(f:String, nargs:Int):Dynamic {
+	static inline function load(f:String, nargs:Int):Dynamic {
 		return @:privateAccess haxe.macro.Context.load(f, nargs);
 	}
 }

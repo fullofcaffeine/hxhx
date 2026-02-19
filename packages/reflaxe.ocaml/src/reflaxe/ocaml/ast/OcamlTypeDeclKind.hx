@@ -7,4 +7,3 @@ enum OcamlTypeDeclKind {
 	Record(fields:Array<OcamlTypeRecordField>);
 	Variant(constructors:Array<OcamlVariantConstructor>);
 }
-

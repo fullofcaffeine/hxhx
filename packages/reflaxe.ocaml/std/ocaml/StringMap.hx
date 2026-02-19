@@ -23,7 +23,8 @@ package ocaml;
  * - Values are persistent (immutable) like OCaml maps: `add/remove` return a new map.
  */
 abstract StringMap<V>(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function empty<V>():StringMap<V> {
 		return cast StringMapNative.empty;

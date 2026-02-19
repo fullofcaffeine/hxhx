@@ -31,4 +31,3 @@ class ExternalMacros {
 		return "external=ok";
 	}
 }
-

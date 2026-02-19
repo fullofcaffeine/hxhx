@@ -20,4 +20,3 @@ class Macro {
 		haxe.macro.Context.onGenerate(function(_) {});
 	}
 }
-

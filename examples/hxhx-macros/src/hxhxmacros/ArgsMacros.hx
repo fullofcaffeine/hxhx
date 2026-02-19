@@ -27,4 +27,3 @@ class ArgsMacros {
 		Compiler.define("HXHX_ARG", v == null ? "" : v);
 	}
 }
-

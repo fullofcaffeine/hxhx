@@ -112,4 +112,3 @@ extern class Sys {
 	**/
 	static function stderr():haxe.io.Output;
 }
-

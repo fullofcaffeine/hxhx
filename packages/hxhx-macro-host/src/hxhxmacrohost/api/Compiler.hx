@@ -39,17 +39,21 @@ class Compiler {
 		  in the `v=` payload.
 	**/
 	public static function getDefine(key:String):Null<String> {
-		if (key == null || key.length == 0) return null;
+		if (key == null || key.length == 0)
+			return null;
 		final payload = HostToCompilerRpc.call("compiler.getDefine", Protocol.encodeLen("n", key));
-		if (payload == null || payload.length == 0) return null;
+		if (payload == null || payload.length == 0)
+			return null;
 		final m = Protocol.kvParse(payload);
 		final defined = m.exists("d") && m.get("d") == "1";
-		if (!defined) return null;
+		if (!defined)
+			return null;
 		return m.exists("v") ? m.get("v") : "";
 	}
 
 	public static function define(name:String, value:String):Void {
-		if (name == null || name.length == 0) return;
+		if (name == null || name.length == 0)
+			return;
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("v", value == null ? "" : value);
 		// Ignore return payload; errors propagate as exceptions.
 		HostToCompilerRpc.call("compiler.define", tail);
@@ -70,7 +74,8 @@ class Compiler {
 		  - `s` (raw `.ml` source)
 	**/
 	public static function emitOcamlModule(name:String, source:String):Void {
-		if (name == null || name.length == 0) return;
+		if (name == null || name.length == 0)
+			return;
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("s", source == null ? "" : source);
 		HostToCompilerRpc.call("compiler.emitOcamlModule", tail);
 	}
@@ -88,7 +93,8 @@ class Compiler {
 		- Sends a reverse RPC `compiler.addClassPath` with `cp=<...>`.
 	**/
 	public static function addClassPath(path:String):Void {
-		if (path == null || path.length == 0) return;
+		if (path == null || path.length == 0)
+			return;
 		final tail = Protocol.encodeLen("cp", path);
 		HostToCompilerRpc.call("compiler.addClassPath", tail);
 	}
@@ -107,7 +113,8 @@ class Compiler {
 		  - `m`: module path (e.g. `unit.TestInt64`)
 	**/
 	public static function includeModule(modulePath:String):Void {
-		if (modulePath == null || modulePath.length == 0) return;
+		if (modulePath == null || modulePath.length == 0)
+			return;
 		final tail = Protocol.encodeLen("m", modulePath);
 		HostToCompilerRpc.call("compiler.includeModule", tail);
 	}
@@ -127,7 +134,8 @@ class Compiler {
 		  - `s`: `.hx` source text
 	**/
 	public static function emitHxModule(name:String, source:String):Void {
-		if (name == null || name.length == 0) return;
+		if (name == null || name.length == 0)
+			return;
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("s", source == null ? "" : source);
 		HostToCompilerRpc.call("compiler.emitHxModule", tail);
 	}
@@ -151,7 +159,8 @@ class Compiler {
 		  (simple `public static function ...` patterns).
 	**/
 	public static function emitBuildFields(modulePath:String, membersSource:String):Void {
-		if (modulePath == null || modulePath.length == 0) return;
+		if (modulePath == null || modulePath.length == 0)
+			return;
 		final tail = Protocol.encodeLen("m", modulePath) + " " + Protocol.encodeLen("s", membersSource == null ? "" : membersSource);
 		HostToCompilerRpc.call("compiler.emitBuildFields", tail);
 	}

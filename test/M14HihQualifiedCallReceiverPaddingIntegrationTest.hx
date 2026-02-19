@@ -3,11 +3,13 @@ import sys.io.File;
 
 class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond) throw message;
+		if (!cond)
+			throw message;
 	}
 
 	static function deleteRecursive(path:String):Void {
-		if (!FileSystem.exists(path)) return;
+		if (!FileSystem.exists(path))
+			return;
 		if (FileSystem.isDirectory(path)) {
 			for (entry in FileSystem.readDirectory(path)) {
 				deleteRecursive(haxe.io.Path.join([path, entry]));
@@ -55,11 +57,14 @@ class M14HihQualifiedCallReceiverPaddingIntegrationTest {
 			var foundPaddedCall = false;
 			var foundUnpaddedCall = false;
 			for (entry in FileSystem.readDirectory(outDir)) {
-				if (!StringTools.endsWith(entry, '.ml')) continue;
+				if (!StringTools.endsWith(entry, '.ml'))
+					continue;
 				final mlPath = haxe.io.Path.join([outDir, entry]);
 				final ocaml = File.getContent(mlPath);
-				if (ocaml.indexOf('.equal ((Obj.magic HxRuntime.hx_null)) (left) (right)') >= 0) foundPaddedCall = true;
-				if (ocaml.indexOf('.equal (left) (right)') >= 0) foundUnpaddedCall = true;
+				if (ocaml.indexOf('.equal ((Obj.magic HxRuntime.hx_null)) (left) (right)') >= 0)
+					foundPaddedCall = true;
+				if (ocaml.indexOf('.equal (left) (right)') >= 0)
+					foundUnpaddedCall = true;
 			}
 
 			assertTrue(foundPaddedCall, 'Expected receiver-padded qualified call not found in emitted OCaml.');

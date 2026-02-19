@@ -3,7 +3,8 @@ import backend.js.JsTargetCore;
 
 class M14JsTargetCoreWiringIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond) throw message;
+		if (!cond)
+			throw message;
 	}
 
 	static function main():Void {
@@ -15,4 +16,3 @@ class M14JsTargetCoreWiringIntegrationTest {
 		assertTrue(JsBackend.targetCore().coreId() == core.coreId(), "js backend is not wired to JS target core");
 	}
 }
-

@@ -18,6 +18,7 @@
 	  - `var` fields (name + type hint)
 	  - function signatures (arg hints + return hint)
 **/
+
 import haxe.io.Path;
 
 class TyperIndex {
@@ -38,7 +39,8 @@ class TyperIndex {
 	}
 
 	public function addClass(info:TyClassInfo):Void {
-		if (info == null) return;
+		if (info == null)
+			return;
 		final fullName = info.getFullName();
 		byFullName.set(fullName, info);
 		final shortName = info.getShortName();
@@ -53,7 +55,8 @@ class TyperIndex {
 	}
 
 	static function expectedModuleNameFromFile(filePath:Null<String>):Null<String> {
-		if (filePath == null || filePath.length == 0) return null;
+		if (filePath == null || filePath.length == 0)
+			return null;
 		final name = Path.withoutDirectory(filePath);
 		final dot = name.lastIndexOf(".");
 		return dot <= 0 ? name : name.substr(0, dot);
@@ -75,7 +78,8 @@ class TyperIndex {
 
 	public static function build(resolved:Array<ResolvedModule>):TyperIndex {
 		final idx = new TyperIndex();
-		if (resolved == null) return idx;
+		if (resolved == null)
+			return idx;
 
 		for (m in resolved) {
 			final pm = ResolvedModule.getParsed(m);
@@ -90,7 +94,8 @@ class TyperIndex {
 			// - Helper type: `package.ModuleName.Helper`
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final clsName = HxClassDecl.getName(cls);
-				if (clsName == null || clsName.length == 0 || clsName == "Unknown") continue;
+				if (clsName == null || clsName.length == 0 || clsName == "Unknown")
+					continue;
 				final full = classFullNameInModule(pkg, moduleName, clsName);
 
 				final fields = new haxe.ds.StringMap<TyType>();
@@ -104,12 +109,16 @@ class TyperIndex {
 					final fnName = HxFunctionDecl.getName(fn);
 					final isStatic = HxFunctionDecl.getIsStatic(fn);
 					final args = new Array<TyType>();
-					for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+					for (a in HxFunctionDecl.getArgs(fn))
+						args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
 
 					final retHint = HxFunctionDecl.getReturnTypeHint(fn);
 					final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
 					final sig = new TyFunSig(fnName, isStatic, args, ret);
-					if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
+					if (isStatic)
+						statics.set(fnName, sig)
+					else
+						instances.set(fnName, sig);
 				}
 
 				idx.addClass(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));
@@ -120,25 +129,30 @@ class TyperIndex {
 	}
 
 	public function resolveTypePath(typePath:String, packagePath:String, imports:Array<String>):Null<TyClassInfo> {
-		if (typePath == null) return null;
+		if (typePath == null)
+			return null;
 		final raw = StringTools.trim(typePath);
-		if (raw.length == 0) return null;
+		if (raw.length == 0)
+			return null;
 
 		// If it looks fully qualified, try it directly first.
 		if (raw.indexOf(".") >= 0) {
 			final direct = getByFullName(raw);
-			if (direct != null) return direct;
+			if (direct != null)
+				return direct;
 		}
 
 		// Try explicit imports (match by last segment).
 		if (imports != null) {
 			for (imp in imports) {
-				if (imp == null || imp.length == 0) continue;
+				if (imp == null || imp.length == 0)
+					continue;
 				final parts = imp.split(".");
 				final last = parts.length == 0 ? "" : parts[parts.length - 1];
 				if (last == raw) {
 					final hit = getByFullName(imp);
-					if (hit != null) return hit;
+					if (hit != null)
+						return hit;
 				}
 			}
 		}
@@ -159,9 +173,11 @@ class TyperIndex {
 			while (true) {
 				final candidate = cur + "." + raw;
 				final hit = getByFullName(candidate);
-				if (hit != null) return hit;
+				if (hit != null)
+					return hit;
 				final lastDot = cur.lastIndexOf(".");
-				if (lastDot < 0) break;
+				if (lastDot < 0)
+					break;
 				cur = cur.substr(0, lastDot);
 			}
 		}

@@ -78,6 +78,7 @@ private extern class NativeHxFile {
 @:native("HxFileStream")
 private extern class NativeHxFileStream {
 	static function open_in(path:String, binary:Bool):Dynamic;
+
 	/**
 		Open an output stream.
 
@@ -86,4 +87,3 @@ private extern class NativeHxFileStream {
 	**/
 	static function open_out(path:String, binary:Bool, append:Bool, update:Bool):Dynamic;
 }
-

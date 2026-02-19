@@ -35,4 +35,3 @@ class Main {
 		Sys.println("OK charcodeat_implicit");
 	}
 }
-

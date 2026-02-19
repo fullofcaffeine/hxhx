@@ -12,6 +12,7 @@ enum OcamlPat {
 	POr(items:Array<OcamlPat>);
 	PConstructor(name:String, args:Array<OcamlPat>);
 	PRecord(fields:Array<OcamlPatRecordField>);
+
 	/** Pattern type annotation: `(pat : typ)` */
 	PAnnot(pat:OcamlPat, typ:OcamlTypeExpr);
 }

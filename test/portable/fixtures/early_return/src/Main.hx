@@ -1,13 +1,15 @@
 class Main {
 	static function f(x:Int):Int {
-		if (x == 0) return 1;
+		if (x == 0)
+			return 1;
 		return 2;
 	}
 
 	static function g(x:Int):Int {
 		var i = 0;
 		while (true) {
-			if (i == x) return i;
+			if (i == x)
+				return i;
 			i = i + 1;
 		}
 		return -1;
@@ -20,4 +22,3 @@ class Main {
 		Sys.println("OK early_return");
 	}
 }
-

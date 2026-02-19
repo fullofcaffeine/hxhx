@@ -17,4 +17,3 @@ package backend;
 	  minimal API churn.
 **/
 typedef GenIrProgram = MacroExpandedProgram;
-

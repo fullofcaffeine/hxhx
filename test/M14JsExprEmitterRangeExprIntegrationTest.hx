@@ -17,11 +17,7 @@ class M14JsExprEmitterRangeExprIntegrationTest {
 		assertContains(js, "(function () {", "range expression lowers to IIFE");
 		assertContains(js, "var __range_start = 1;", "range expression captures start once");
 		assertContains(js, "var __range_end = 5;", "range expression captures end once");
-		assertContains(
-			js,
-			"for (var __range_i = __range_start; __range_i < __range_end; __range_i++) {",
-			"range expression lowers to deterministic for loop"
-		);
+		assertContains(js, "for (var __range_i = __range_start; __range_i < __range_end; __range_i++) {", "range expression lowers to deterministic for loop");
 		assertContains(js, "__range_out.push(__range_i);", "range expression appends current loop value");
 	}
 }

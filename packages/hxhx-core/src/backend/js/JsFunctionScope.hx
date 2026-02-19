@@ -19,13 +19,15 @@ class JsFunctionScope {
 
 	function reserve(name:String):String {
 		var candidate = JsNameMangler.identifier(name);
-		if (candidate.length == 0) candidate = "_";
+		if (candidate.length == 0)
+			candidate = "_";
 		if (!used.exists(candidate)) {
 			used.set(candidate, true);
 			return candidate;
 		}
 		var suffix = 1;
-		while (used.exists(candidate + "_" + suffix)) suffix++;
+		while (used.exists(candidate + "_" + suffix))
+			suffix++;
 		final unique = candidate + "_" + suffix;
 		used.set(unique, true);
 		return unique;
@@ -33,7 +35,8 @@ class JsFunctionScope {
 
 	public function declareLocal(raw:String):String {
 		final existing = locals.get(raw);
-		if (existing != null) return existing;
+		if (existing != null)
+			return existing;
 		final safe = reserve(raw);
 		locals.set(raw, safe);
 		return safe;
@@ -52,7 +55,8 @@ class JsFunctionScope {
 		while (true) {
 			final name = reserve(base + "_" + tempCounter);
 			tempCounter++;
-			if (name != null && name.length > 0) return name;
+			if (name != null && name.length > 0)
+				return name;
 		}
 		return reserve("__tmp_fallback");
 	}

@@ -17,6 +17,7 @@
 **/
 class TySymbol {
 	public final name:String;
+
 	var ty:TyType;
 
 	public function new(name:String, ty:TyType) {
@@ -24,8 +25,11 @@ class TySymbol {
 		this.ty = ty;
 	}
 
-	public function getName():String return name;
-	public function getType():TyType return ty;
+	public function getName():String
+		return name;
+
+	public function getType():TyType
+		return ty;
 
 	/**
 		Refine a symbol's type during typing.

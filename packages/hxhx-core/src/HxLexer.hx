@@ -81,14 +81,17 @@ class HxLexer {
 
 			// Line comment: //
 			if (c == 47 && peek(1) == 47) {
-				bump(); bump();
-				while (!eof() && peek(0) != 10) bump();
+				bump();
+				bump();
+				while (!eof() && peek(0) != 10)
+					bump();
 				continue;
 			}
 
 			// Block comment: /* ... */
 			if (c == 47 && peek(1) == 42) {
-				bump(); bump();
+				bump();
+				bump();
 				while (!eof()) {
 					final d = bump();
 					if (d == 42 && peek(0) == 47) { // */
@@ -106,7 +109,8 @@ class HxLexer {
 	function readIdent(startPos:HxPos):HxToken {
 		final start = index;
 		bump(); // first char
-		while (!eof() && isIdentCont(peek(0))) bump();
+		while (!eof() && isIdentCont(peek(0)))
+			bump();
 		final text = src.substring(start, index);
 		return switch (text) {
 			case "package": new HxToken(TKeyword(KPackage), startPos);
@@ -150,7 +154,8 @@ class HxLexer {
 
 	function readNumber(startPos:HxPos):HxToken {
 		final start = index;
-		while (!eof() && isDigit(peek(0))) bump();
+		while (!eof() && isDigit(peek(0)))
+			bump();
 
 		// Hex integer literals (Stage 3 expansion): `0xFF`, `0X7fffff`.
 		//
@@ -158,18 +163,13 @@ class HxLexer {
 		// - The Haxe stdlib uses hex constants heavily (bit masks, float helpers).
 		// - Without hex support we tokenize `0xFF` as `0` + `x` + `FF`, which quickly
 		//   cascades into parse drift inside expressions.
-		if (!eof()
-			&& index == start + 1
-			&& src.charCodeAt(start) == "0".code
-			&& (peek(0) == "x".code || peek(0) == "X".code)) {
+		if (!eof() && index == start + 1 && src.charCodeAt(start) == "0".code && (peek(0) == "x".code || peek(0) == "X".code)) {
 			bump(); // 'x' or 'X'
 			while (!eof()) {
 				final c = peek(0);
-				final isHex =
-					(c >= "0".code && c <= "9".code)
-					|| (c >= "a".code && c <= "f".code)
-					|| (c >= "A".code && c <= "F".code);
-				if (!isHex) break;
+				final isHex = (c >= "0".code && c <= "9".code) || (c >= "a".code && c <= "f".code) || (c >= "A".code && c <= "F".code);
+				if (!isHex)
+					break;
 				bump();
 			}
 			final text = src.substring(start, index);
@@ -181,7 +181,8 @@ class HxLexer {
 		if (!eof() && peek(0) == ".".code && isDigit(peek(1))) {
 			isFloat = true;
 			bump(); // '.'
-			while (!eof() && isDigit(peek(0))) bump();
+			while (!eof() && isDigit(peek(0)))
+				bump();
 		}
 
 		// Scientific notation (Stage 3 expansion): `1e-5`, `1E10`, `3.14e+2`.
@@ -193,12 +194,15 @@ class HxLexer {
 		if (!eof() && (peek(0) == "e".code || peek(0) == "E".code)) {
 			var off = 1;
 			final sign = peek(1);
-			if (sign == "+".code || sign == "-".code) off = 2;
+			if (sign == "+".code || sign == "-".code)
+				off = 2;
 			if (isDigit(peek(off))) {
 				isFloat = true;
 				bump(); // 'e' or 'E'
-				if (peek(0) == "+".code || peek(0) == "-".code) bump();
-				while (!eof() && isDigit(peek(0))) bump();
+				if (peek(0) == "+".code || peek(0) == "-".code)
+					bump();
+				while (!eof() && isDigit(peek(0)))
+					bump();
 			}
 		}
 
@@ -232,9 +236,11 @@ class HxLexer {
 			var acc = 0;
 			for (_ in 0...count) {
 				final c = peek(0);
-				if (c == -1) return -1;
+				if (c == -1)
+					return -1;
 				final v = hexVal(c);
-				if (v < 0) return -1;
+				if (v < 0)
+					return -1;
 				acc = (acc << 4) | v;
 				bump();
 			}
@@ -247,14 +253,20 @@ class HxLexer {
 				return new HxToken(TString(buf.toString()), startPos);
 			}
 			if (c == 92) { // backslash
-				if (eof()) break;
+				if (eof())
+					break;
 				final esc = bump();
 				switch (esc) {
-					case 34: buf.addChar(34);
-					case 92: buf.addChar(92);
-					case 110: buf.addChar(10); // \n
-					case 114: buf.addChar(13); // \r
-					case 116: buf.addChar(9);  // \t
+					case 34:
+						buf.addChar(34);
+					case 92:
+						buf.addChar(92);
+					case 110:
+						buf.addChar(10); // \n
+					case 114:
+						buf.addChar(13); // \r
+					case 116:
+						buf.addChar(9); // \t
 					case "x".code:
 						// Hex byte escape: \xNN
 						final v = readHexDigits(2);
@@ -271,7 +283,8 @@ class HxLexer {
 						} else {
 							buf.addChar(v);
 						}
-					case _: buf.addChar(esc); // best-effort
+					case _:
+						buf.addChar(esc); // best-effort
 				}
 				continue;
 			}
@@ -301,9 +314,11 @@ class HxLexer {
 			var acc = 0;
 			for (_ in 0...count) {
 				final c = peek(0);
-				if (c == -1) return -1;
+				if (c == -1)
+					return -1;
 				final v = hexVal(c);
-				if (v < 0) return -1;
+				if (v < 0)
+					return -1;
 				acc = (acc << 4) | v;
 				bump();
 			}
@@ -316,14 +331,20 @@ class HxLexer {
 				return new HxToken(TString(buf.toString()), startPos);
 			}
 			if (c == 92) { // backslash
-				if (eof()) break;
+				if (eof())
+					break;
 				final esc = bump();
 				switch (esc) {
-					case "'".code: buf.addChar("'".code);
-					case 92: buf.addChar(92);
-					case 110: buf.addChar(10); // \n
-					case 114: buf.addChar(13); // \r
-					case 116: buf.addChar(9);  // \t
+					case "'".code:
+						buf.addChar("'".code);
+					case 92:
+						buf.addChar(92);
+					case 110:
+						buf.addChar(10); // \n
+					case 114:
+						buf.addChar(13); // \r
+					case 116:
+						buf.addChar(9); // \t
 					case "x".code:
 						final v = readHexDigits(2);
 						if (v < 0) {
@@ -338,7 +359,8 @@ class HxLexer {
 						} else {
 							buf.addChar(v);
 						}
-					case _: buf.addChar(esc); // best-effort
+					case _:
+						buf.addChar(esc); // best-effort
 				}
 				continue;
 			}
@@ -350,20 +372,37 @@ class HxLexer {
 	public function next():HxToken {
 		skipWhitespaceAndComments();
 		final p = pos();
-		if (eof()) return new HxToken(TEof, p);
+		if (eof())
+			return new HxToken(TEof, p);
 
 		final c = peek(0);
 		return switch (c) {
-			case 123: bump(); new HxToken(TLBrace, p);      // {
-			case 125: bump(); new HxToken(TRBrace, p);      // }
-			case 40:  bump(); new HxToken(TLParen, p);      // (
-			case 41:  bump(); new HxToken(TRParen, p);      // )
-			case 59:  bump(); new HxToken(TSemicolon, p);   // ;
-			case 58:  bump(); new HxToken(TColon, p);       // :
-			case 46:  bump(); new HxToken(TDot, p);         // .
-			case 44:  bump(); new HxToken(TComma, p);       // ,
-			case 34:  readString(p);                        // "
-			case 39:  readSingleQuotedString(p);            // '
+			case 123:
+				bump();
+				new HxToken(TLBrace, p); // {
+			case 125:
+				bump();
+				new HxToken(TRBrace, p); // }
+			case 40:
+				bump();
+				new HxToken(TLParen, p); // (
+			case 41:
+				bump();
+				new HxToken(TRParen, p); // )
+			case 59:
+				bump();
+				new HxToken(TSemicolon, p); // ;
+			case 58:
+				bump();
+				new HxToken(TColon, p); // :
+			case 46:
+				bump();
+				new HxToken(TDot, p); // .
+			case 44:
+				bump();
+				new HxToken(TComma, p); // ,
+			case 34: readString(p); // "
+			case 39: readSingleQuotedString(p); // '
 			case _ if (isDigit(c)): readNumber(p);
 			case _ if (isIdentStart(c)): readIdent(p);
 			case _:

@@ -28,9 +28,15 @@ class TyFunSig {
 		this.returnType = returnType == null ? TyType.unknown() : returnType;
 	}
 
-	public function getName():String return name;
-	public function getIsStatic():Bool return isStatic;
-	public function getArgs():Array<TyType> return args;
-	public function getReturnType():TyType return returnType;
-}
+	public function getName():String
+		return name;
 
+	public function getIsStatic():Bool
+		return isStatic;
+
+	public function getArgs():Array<TyType>
+		return args;
+
+	public function getReturnType():TyType
+		return returnType;
+}

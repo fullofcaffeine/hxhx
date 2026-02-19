@@ -19,12 +19,11 @@ package ocaml;
  *   the OCaml callsite.
  */
 abstract Hashtbl<K, V>(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function create<K, V>(size:Int, ?random:Bool):Hashtbl<K, V> {
-		return cast (random == null
-			? HashtblNative.create(size)
-			: HashtblNative.createWithRandom(random, size));
+		return cast(random == null ? HashtblNative.create(size) : HashtblNative.createWithRandom(random, size));
 	}
 
 	public static inline function length<K, V>(t:Hashtbl<K, V>):Int {

@@ -30,7 +30,8 @@ class HostToCompilerRpc {
 
 	static inline function isTrueEnv(name:String):Bool {
 		final v = Sys.getEnv(name);
-		if (v == null) return false;
+		if (v == null)
+			return false;
 		final t = StringTools.trim(v).toLowerCase();
 		return t == "1" || t == "true" || t == "yes";
 	}
@@ -57,12 +58,14 @@ class HostToCompilerRpc {
 	}
 
 	static function summarizeTail(tail:String):String {
-		if (tail == null || tail.length == 0) return "";
+		if (tail == null || tail.length == 0)
+			return "";
 		// Avoid dumping user payloads; only surface keys to show which ABI shape is being used.
 		try {
 			final m = Protocol.kvParse(tail);
 			final keys = new Array<String>();
-			for (k in m.keys()) keys.push(k);
+			for (k in m.keys())
+				keys.push(k);
 			return "keys=" + keys.join(",");
 		} catch (_:Dynamic) {
 			return "len=" + tail.length;
@@ -71,19 +74,20 @@ class HostToCompilerRpc {
 
 	public static function call(method:String, tail:String):String {
 		final id = nextId--;
-		if (traceEnabled()) writeTraceLine("[hxhx macro host rpc] -> " + method + (tail == null || tail.length == 0 ? "" : (" " + summarizeTail(tail))));
-		final msg = (tail == null || tail.length == 0)
-			? ("req " + id + " " + method + "\n")
-			: ("req " + id + " " + method + " " + tail + "\n");
+		if (traceEnabled())
+			writeTraceLine("[hxhx macro host rpc] -> " + method + (tail == null || tail.length == 0 ? "" : (" " + summarizeTail(tail))));
+		final msg = (tail == null || tail.length == 0) ? ("req " + id + " " + method + "\n") : ("req " + id + " " + method + " " + tail + "\n");
 		Sys.print(msg);
 		Sys.stdout().flush();
 
 		var out:String = "";
 		while (true) {
 			final line = safeReadLine();
-			if (line == null) throw "macro host: unexpected EOF while waiting for compiler response";
+			if (line == null)
+				throw "macro host: unexpected EOF while waiting for compiler response";
 			final trimmed = StringTools.trim(line);
-			if (trimmed.length == 0) continue;
+			if (trimmed.length == 0)
+				continue;
 			if (StringTools.startsWith(trimmed, "req ")) {
 				// Not expected in the current rung (no concurrent compiler requests while we are inside a handler).
 				throw "macro host: received unexpected compiler request while waiting for reverse response: " + trimmed;
@@ -94,20 +98,23 @@ class HostToCompilerRpc {
 
 			final parts = Protocol.splitN(trimmed, 3);
 			final rid = Std.parseInt(parts[1]);
-			if (rid == null || rid != id) throw "macro host: reverse response id mismatch: " + trimmed;
+			if (rid == null || rid != id)
+				throw "macro host: reverse response id mismatch: " + trimmed;
 
 			final status = parts[2];
 			final respTail = parts[3];
 			if (status == "ok") {
-				if (traceEnabled()) writeTraceLine("[hxhx macro host rpc] <- " + method + " ok");
+				if (traceEnabled())
+					writeTraceLine("[hxhx macro host rpc] <- " + method + " ok");
 				out = Protocol.kvGet(respTail, "v");
 				break;
 			}
 
 			final msg = Protocol.kvGet(respTail, "m");
 			final pos = Protocol.kvGet(respTail, "p");
-			if (traceEnabled()) writeTraceLine("[hxhx macro host rpc] <- " + method + " err");
-			throw (pos != null && pos.length > 0) ? ("compiler: " + msg + " (" + pos + ")") : ("compiler: " + msg);
+			if (traceEnabled())
+				writeTraceLine("[hxhx macro host rpc] <- " + method + " err");
+			throw(pos != null && pos.length > 0) ? ("compiler: " + msg + " (" + pos + ")") : ("compiler: " + msg);
 		}
 
 		return out;
@@ -115,7 +122,7 @@ class HostToCompilerRpc {
 
 	static function safeReadLine():Null<String> {
 		try {
-			return cast (untyped __ocaml__("(try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null))"));
+			return cast(untyped __ocaml__("(try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null))"));
 		} catch (_:Dynamic) {
 			return null;
 		}

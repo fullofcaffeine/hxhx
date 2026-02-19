@@ -20,4 +20,3 @@ interface ITargetCore {
 	public function coreId():String;
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult;
 }
-

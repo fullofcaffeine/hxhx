@@ -62,7 +62,8 @@ class BackendRegistry {
 		final ids = new Array<String>();
 		for (r in allRegistrations()) {
 			final id = r.descriptor.id;
-			if (seen.exists(id)) continue;
+			if (seen.exists(id))
+				continue;
 			seen.set(id, true);
 			ids.push(id);
 		}
@@ -74,14 +75,18 @@ class BackendRegistry {
 			throw "invalid backend registration (descriptor/create required)";
 		}
 		final d = spec.descriptor;
-		if (d.id == null || d.id.length == 0) throw "invalid backend registration: descriptor.id is required";
-		if (d.implId == null || d.implId.length == 0) throw "invalid backend registration: descriptor.implId is required";
+		if (d.id == null || d.id.length == 0)
+			throw "invalid backend registration: descriptor.id is required";
+		if (d.implId == null || d.implId.length == 0)
+			throw "invalid backend registration: descriptor.implId is required";
 		dynamicRegistrations.push(spec);
 	}
 
 	public static function registerProvider(regs:Array<BackendRegistrationSpec>):Int {
-		if (regs == null || regs.length == 0) return 0;
-		for (reg in regs) register(reg);
+		if (regs == null || regs.length == 0)
+			return 0;
+		for (reg in regs)
+			register(reg);
 		return regs.length;
 	}
 
@@ -101,7 +106,8 @@ class BackendRegistry {
 
 	public static function requireForTarget(targetId:String):IBackend {
 		final backend = createForTarget(targetId);
-		if (backend != null) return backend;
+		if (backend != null)
+			return backend;
 		final supported = supportedTargetIds();
 		supported.sort(function(a, b) return a < b ? -1 : (a > b ? 1 : 0));
 		throw "unknown Stage3 backend: " + targetId + " (supported: " + supported.join(", ") + ")";

@@ -11,17 +11,13 @@ class M14JsStmtEmitterTryThrowIntegrationTest {
 
 	static function main() {
 		final pos = HxPos.unknown();
-		final tryStmt:HxStmt = STry(
-			SBlock([SThrow(EString("boom"), pos)], pos),
-			[
-				{
-					name: "err",
-					typeHint: "Dynamic",
-					body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("err")]), pos)], pos)
-				}
-			],
-			pos
-		);
+		final tryStmt:HxStmt = STry(SBlock([SThrow(EString("boom"), pos)], pos), [
+			{
+				name: "err",
+				typeHint: "Dynamic",
+				body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("err")]), pos)], pos)
+			}
+		], pos);
 
 		final writer = new JsWriter();
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>());

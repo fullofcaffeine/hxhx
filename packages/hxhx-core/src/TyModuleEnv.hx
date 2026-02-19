@@ -23,8 +23,12 @@ class TyModuleEnv {
 		this.mainClass = mainClass;
 	}
 
-	public function getPackagePath():String return packagePath;
-	public function getImports():Array<String> return imports;
-	public function getMainClass():TyClassEnv return mainClass;
-}
+	public function getPackagePath():String
+		return packagePath;
 
+	public function getImports():Array<String>
+		return imports;
+
+	public function getMainClass():TyClassEnv
+		return mainClass;
+}

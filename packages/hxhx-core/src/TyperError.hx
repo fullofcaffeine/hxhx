@@ -43,7 +43,12 @@ class TyperError {
 		- `hxhx` (the Stage 3 runner) wants to detect and format `TyperError`
 		  instances without depending on record labels.
 	**/
-	public function getFilePath():String return filePath;
-	public function getPos():HxPos return pos;
-	public function getMessage():String return message;
+	public function getFilePath():String
+		return filePath;
+
+	public function getPos():HxPos
+		return pos;
+
+	public function getMessage():String
+		return message;
 }

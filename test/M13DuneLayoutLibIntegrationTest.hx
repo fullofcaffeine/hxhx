@@ -1,6 +1,7 @@
 class M13DuneLayoutLibIntegrationTest {
 	static function assertContains(haystack:String, needle:String, label:String):Void {
-		if (haystack.indexOf(needle) < 0) throw label + ": expected to find '" + needle + "'";
+		if (haystack.indexOf(needle) < 0)
+			throw label + ": expected to find '" + needle + "'";
 	}
 
 	static function main() {
@@ -8,22 +9,32 @@ class M13DuneLayoutLibIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "pkg.M13MliMain",
+			"-cp",
+			"test",
+			"-main",
+			"pkg.M13MliMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_no_build",
-			"-D", "ocaml_output=" + outDir,
-			"-D", "ocaml_dune_layout=lib"
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_no_build",
+			"-D",
+			"ocaml_output=" + outDir,
+			"-D",
+			"ocaml_dune_layout=lib"
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		final dunePath = outDir + "/dune";
-		if (!sys.FileSystem.exists(dunePath)) throw "missing dune file: " + dunePath;
+		if (!sys.FileSystem.exists(dunePath))
+			throw "missing dune file: " + dunePath;
 		final dune = sys.io.File.getContent(dunePath);
 		assertContains(dune, "(library", "dune: library stanza");
 		assertContains(dune, "(libraries hx_runtime", "dune: depends on hx_runtime");
@@ -37,10 +48,13 @@ class M13DuneLayoutLibIntegrationTest {
 		// Sanity: there should not be a generated entry module that calls main().
 		var foundEntry = false;
 		for (name in sys.FileSystem.readDirectory(outDir)) {
-			if (!StringTools.endsWith(name, ".ml")) continue;
+			if (!StringTools.endsWith(name, ".ml"))
+				continue;
 			final content = sys.io.File.getContent(outDir + "/" + name);
-			if (content.indexOf("ignore (Pkg_M13MliMain.main ())") >= 0) foundEntry = true;
+			if (content.indexOf("ignore (Pkg_M13MliMain.main ())") >= 0)
+				foundEntry = true;
 		}
-		if (foundEntry) throw "unexpected entry module in lib layout";
+		if (foundEntry)
+			throw "unexpected entry module in lib layout";
 	}
 }

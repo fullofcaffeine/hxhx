@@ -17,10 +17,10 @@ package hxhxmacrohost;
 	  - prints the banner `hxhx_macro_rpc_v=1`
 	  - performs the `hello proto=1` handshake
 	  - handles:
-	    - `ping`
-	    - `compiler.define`
-	    - `context.defined`
-	    - `context.definedValue`
+		- `ping`
+		- `compiler.define`
+		- `context.defined`
+		- `context.definedValue`
 
 	How
 	- Uses `untyped __ocaml__("<expr>")` as a controlled, repo-internal escape hatch.
@@ -43,8 +43,7 @@ class Stage3Main {
 		//
 		// Note: this is an OCaml *expression* that returns `unit`, so it can be used as a
 		// statement in a minimal Stage3-emitted function body.
-		untyped __ocaml__(
-			"(\n"
+		untyped __ocaml__("(\n"
 			+ "  let is_space = function ' ' | '\\t' | '\\n' | '\\r' -> true | _ -> false in\n"
 			+ "  let starts_with (prefix:string) (s:string) : bool =\n"
 			+ "    let lp = String.length prefix in\n"
@@ -183,9 +182,9 @@ class Stage3Main {
 			+ "  | Some hello ->\n"
 			+ "    let h = String.trim hello in\n"
 			+ "    if not (starts_with \"hello\" h) then (print_endline (\"err \" ^ encode_len \"m\" \"missing hello\"); flush stdout)\n"
-			+ "    else if not (String.contains h '=') || not (String.contains h '1') then (print_endline (\"err \" ^ encode_len \"m\" \"unsupported proto\"); flush stdout)\n"
+			+
+			"    else if not (String.contains h '=') || not (String.contains h '1') then (print_endline (\"err \" ^ encode_len \"m\" \"unsupported proto\"); flush stdout)\n"
 			+ "    else (print_endline \"ok\"; flush stdout; loop ())\n"
-			+ ")\n"
-		);
+			+ ")\n");
 	}
 }

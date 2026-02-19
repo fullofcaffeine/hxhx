@@ -32,22 +32,10 @@ class OcamlNameTools {
 	public static function isOcamlReservedValueName(name:String):Bool {
 		return switch (name) {
 			// Keywords (OCaml 4.x/5.x)
-			case "and", "as", "assert", "asr", "begin",
-				"class", "constraint",
-				"do", "done", "downto",
-				"else", "end", "exception", "external",
-				"false", "for", "fun", "function", "functor",
-				"if", "in", "include", "inherit", "initializer",
-				"land", "lazy", "let", "lor", "lsl", "lsr", "lxor",
-				"match", "method", "mod", "module", "mutable",
-				"new", "nonrec",
-				"object", "of", "open", "or",
-				"private",
-				"rec",
-				"sig", "struct",
-				"then", "to", "true", "try", "type",
-				"val", "virtual",
-				"when", "while", "with":
+			case "and", "as", "assert", "asr", "begin", "class", "constraint", "do", "done", "downto", "else", "end", "exception", "external", "false", "for",
+				"fun", "function", "functor", "if", "in", "include", "inherit", "initializer", "land", "lazy", "let", "lor", "lsl", "lsr", "lxor", "match",
+				"method", "mod", "module", "mutable", "new", "nonrec", "object", "of", "open", "or", "private", "rec", "sig", "struct", "then", "to", "true",
+				"try", "type", "val", "virtual", "when", "while", "with":
 				true;
 			case _:
 				false;
@@ -62,7 +50,8 @@ class OcamlNameTools {
 	 * - `"Main"` -> `"Main"`
 	 */
 	public static function moduleBaseName(moduleId:String):String {
-		if (moduleId == null || moduleId.length == 0) return "";
+		if (moduleId == null || moduleId.length == 0)
+			return "";
 		final parts = moduleId.split(".");
 		return parts.length == 0 ? moduleId : parts[parts.length - 1];
 	}
@@ -84,7 +73,8 @@ class OcamlNameTools {
 	 * - Leading digit becomes `_` prefix.
 	 */
 	public static function sanitizeLowerIdent(name:String):String {
-		if (name == null) return "";
+		if (name == null)
+			return "";
 		final out = new StringBuf();
 		for (i in 0...name.length) {
 			final c = name.charCodeAt(i);
@@ -92,9 +82,11 @@ class OcamlNameTools {
 			out.add(isAlphaNum ? String.fromCharCode(c).toLowerCase() : "_");
 		}
 		var s = out.toString();
-		if (s.length == 0) return s;
+		if (s.length == 0)
+			return s;
 		final first = s.charCodeAt(0);
-		if (first >= 48 && first <= 57) s = "_" + s;
+		if (first >= 48 && first <= 57)
+			s = "_" + s;
 		return s;
 	}
 

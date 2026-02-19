@@ -42,4 +42,3 @@ extern class EReg {
 
 	public static function escape(s:String):String;
 }
-

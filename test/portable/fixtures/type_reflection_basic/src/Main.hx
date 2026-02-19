@@ -9,4 +9,3 @@ class Main {
 		Sys.println("missing=" + (Type.resolveClass("nope.Nope") == null));
 	}
 }
-

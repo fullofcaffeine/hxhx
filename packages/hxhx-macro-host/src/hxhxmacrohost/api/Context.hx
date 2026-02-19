@@ -25,13 +25,15 @@ import hxhxmacrohost.Protocol;
 **/
 class Context {
 	public static function defined(name:String):Bool {
-		if (name == null) return false;
+		if (name == null)
+			return false;
 		final v = HostToCompilerRpc.call("context.defined", Protocol.encodeLen("n", name));
 		return v == "1";
 	}
 
 	public static function definedValue(name:String):String {
-		if (name == null) return "";
+		if (name == null)
+			return "";
 		return HostToCompilerRpc.call("context.definedValue", Protocol.encodeLen("n", name));
 	}
 
@@ -52,7 +54,8 @@ class Context {
 		  `compiler.registerHook k=afterTyping i=<id>`.
 	**/
 	public static function onAfterTyping(cb:Array<Dynamic>->Void):Void {
-		if (cb == null) return;
+		if (cb == null)
+			return;
 		final id = MacroRuntime.registerAfterTyping(cb);
 		final tail = Protocol.encodeLen("k", "afterTyping") + " " + Protocol.encodeLen("i", Std.string(id));
 		HostToCompilerRpc.call("compiler.registerHook", tail);
@@ -64,7 +67,8 @@ class Context {
 		See `onAfterTyping` for bring-up rationale and mechanics.
 	**/
 	public static function onGenerate(cb:Array<Dynamic>->Void, persistent:Bool = true):Void {
-		if (cb == null) return;
+		if (cb == null)
+			return;
 		// `persistent` is currently ignored in the bring-up rung (no compilation server).
 		final _ = persistent;
 		final id = MacroRuntime.registerOnGenerate(cb);
@@ -89,7 +93,8 @@ class Context {
 		- This hook kind currently receives no arguments.
 	**/
 	public static function onAfterGenerate(cb:Void->Void):Void {
-		if (cb == null) return;
+		if (cb == null)
+			return;
 		final id = MacroRuntime.registerAfterGenerate(cb);
 		final tail = Protocol.encodeLen("k", "afterGenerate") + " " + Protocol.encodeLen("i", Std.string(id));
 		HostToCompilerRpc.call("compiler.registerHook", tail);
@@ -113,24 +118,28 @@ class Context {
 	public static function getDefines():Map<String, String> {
 		final out:Map<String, String> = [];
 		final payload = HostToCompilerRpc.call("context.getDefines", "");
-		if (payload == null || payload.length == 0) return out;
+		if (payload == null || payload.length == 0)
+			return out;
 
 		final m = Protocol.kvParse(payload);
 		final countStr = m.exists("c") ? m.get("c") : "";
 		final count = Std.parseInt(countStr);
-		if (count == null || count <= 0) return out;
+		if (count == null || count <= 0)
+			return out;
 
 		for (i in 0...count) {
 			final kKey = "k" + i;
 			final vKey = "v" + i;
-			if (!m.exists(kKey)) continue;
+			if (!m.exists(kKey))
+				continue;
 			out.set(m.get(kKey), m.exists(vKey) ? m.get(vKey) : "");
 		}
 		return out;
 	}
 
 	public static function getType(name:String):String {
-		if (name == null || name.length == 0) return "missing";
+		if (name == null || name.length == 0)
+			return "missing";
 		return MacroRuntime.builtinTypeDesc(name);
 	}
 
@@ -147,7 +156,7 @@ class Context {
 		- Returns `Array<haxe.macro.Expr.Field>` values with:
 		  - `name`, `access`, `kind`, and `pos`
 		  - `FFun` bodies are stubbed with a trivial `null` expression so `ExprTools.map`-style
-		    traversals do not crash on `null` bodies.
+			traversals do not crash on `null` bodies.
 
 		How
 		- Reverse RPC `context.getBuildFields` returns a length-prefixed fragment list:
@@ -171,30 +180,36 @@ class Context {
 			return out;
 		}
 
-		final nullExpr:Expr = { expr: EConst(CIdent("null")), pos: null };
+		final nullExpr:Expr = {expr: EConst(CIdent("null")), pos: null};
 
 		for (i in 0...count) {
 			final nKey = "n" + i;
 			final kKey = "k" + i;
 			final sKey = "s" + i;
 			final vKey = "v" + i;
-			if (!m.exists(nKey)) continue;
+			if (!m.exists(nKey))
+				continue;
 
 			final name = m.get(nKey);
-			if (name.length == 0) continue;
+			if (name.length == 0)
+				continue;
 
 			final kind = m.exists(kKey) ? m.get(kKey) : "";
 			final isStatic = m.exists(sKey) && m.get(sKey) == "1";
 			final vis = m.exists(vKey) ? m.get(vKey) : "";
 
 			final access = new Array<Access>();
-			if (vis == "Public") access.push(APublic) else access.push(APrivate);
-			if (isStatic) access.push(AStatic);
+			if (vis == "Public")
+				access.push(APublic)
+			else
+				access.push(APrivate);
+			if (isStatic)
+				access.push(AStatic);
 
 			final field:Field = {
 				name: name,
 				access: access,
-				kind: (kind == "var") ? FVar(null, null) : FFun({ args: [], expr: nullExpr }),
+				kind: (kind == "var") ? FVar(null, null) : FFun({args: [], expr: nullExpr}),
 				pos: null
 			};
 			out.push(field);

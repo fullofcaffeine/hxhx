@@ -1,4 +1,4 @@
-typedef Point = { x:Int };
+typedef Point = {x:Int};
 
 enum E {
 	A;
@@ -29,8 +29,8 @@ class Main {
 		final eArg2:Dynamic = E.B(1);
 		Sys.println("dyn_enum_args=" + (eArg1 == eArg2));
 
-		final p1:Point = { x: 1 };
-		final p2:Point = { x: 1 };
+		final p1:Point = {x: 1};
+		final p2:Point = {x: 1};
 		Sys.println("typed_anon=" + (p1 == p2));
 		final p3 = p1;
 		Sys.println("typed_anon_same=" + (p1 == p3));

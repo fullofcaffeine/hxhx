@@ -30,4 +30,3 @@ typedef TargetDescriptor = {
 	final capabilities:BackendCapabilities;
 	final requires:TargetRequirements;
 }
-

@@ -4,14 +4,17 @@ class M14HihTryThrowStmtIntegrationTest {
 	}
 
 	static function assertTrue(cond:Bool, msg:String):Void {
-		if (!cond) fail(msg);
+		if (!cond)
+			fail(msg);
 	}
 
 	static function firstMainFn(decl:HxModuleDecl):HxFunctionDecl {
 		for (c in HxModuleDecl.getClasses(decl)) {
-			if (HxClassDecl.getName(c) != "Main") continue;
+			if (HxClassDecl.getName(c) != "Main")
+				continue;
 			for (fn in HxClassDecl.getFunctions(c)) {
-				if (HxFunctionDecl.getName(fn) == "main") return fn;
+				if (HxFunctionDecl.getName(fn) == "main")
+					return fn;
 			}
 		}
 		fail("missing Main.main");
@@ -19,17 +22,8 @@ class M14HihTryThrowStmtIntegrationTest {
 	}
 
 	static function main() {
-		final src = 'class Main {\n'
-			+ '  static function main() {\n'
-			+ '    try {\n'
-			+ '      throw "boom";\n'
-			+ '    } catch (message:String) {\n'
-			+ '      Sys.println(message);\n'
-			+ '    } catch (err:Dynamic) {\n'
-			+ '      Sys.println(err);\n'
-			+ '    }\n'
-			+ '  }\n'
-			+ '}\n';
+		final src = 'class Main {\n' + '  static function main() {\n' + '    try {\n' + '      throw "boom";\n' + '    } catch (message:String) {\n'
+			+ '      Sys.println(message);\n' + '    } catch (err:Dynamic) {\n' + '      Sys.println(err);\n' + '    }\n' + '  }\n' + '}\n';
 
 		final decl = new HxParser(src).parseModule("Main");
 		final mainFn = firstMainFn(decl);

@@ -34,9 +34,18 @@ class HxFunctionArg {
 
 		See `HxModuleDecl.getPackagePath` for the `-opaque` rationale.
 	**/
-	public static function getName(a:HxFunctionArg):String return a.name;
-	public static function getTypeHint(a:HxFunctionArg):String return a.typeHint;
-	public static function getDefaultValue(a:HxFunctionArg):HxDefaultValue return a.defaultValue;
-	public static function getIsOptional(a:HxFunctionArg):Bool return a.isOptional;
-	public static function getIsRest(a:HxFunctionArg):Bool return a.isRest;
+	public static function getName(a:HxFunctionArg):String
+		return a.name;
+
+	public static function getTypeHint(a:HxFunctionArg):String
+		return a.typeHint;
+
+	public static function getDefaultValue(a:HxFunctionArg):HxDefaultValue
+		return a.defaultValue;
+
+	public static function getIsOptional(a:HxFunctionArg):Bool
+		return a.isOptional;
+
+	public static function getIsRest(a:HxFunctionArg):Bool
+		return a.isRest;
 }

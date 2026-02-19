@@ -31,4 +31,3 @@ class Main {
 		Sys.println("OK nested_enum_switch");
 	}
 }
-

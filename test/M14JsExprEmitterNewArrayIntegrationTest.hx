@@ -3,7 +3,8 @@ import backend.js.JsFunctionScope;
 
 class M14JsExprEmitterNewArrayIntegrationTest {
 	static function assertEquals(actual:String, expected:String, label:String):Void {
-		if (actual != expected) throw label + ": expected '" + expected + "' but got '" + actual + "'";
+		if (actual != expected)
+			throw label + ": expected '" + expected + "' but got '" + actual + "'";
 	}
 
 	static function assertContains(haystack:String, needle:String, label:String):Void {

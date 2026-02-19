@@ -20,7 +20,7 @@
 	- This is *not* full Haxe `switch` semantics:
 	  - no guards (`if`),
 	  - limited multiple patterns (`case a | b:`) are supported, but only as a
-	    shallow OR of simple literals (no guards, no extractors).
+		shallow OR of simple literals (no guards, no extractors).
 	  - no structural patterns / extractors.
 	- It is intentionally “bring-up friendly” so we can run unmodified upstream
 	  harnesses without copying or translating upstream compiler code.
@@ -32,6 +32,7 @@ enum HxSwitchPattern {
 	PInt(value:Int);
 	PEnumValue(name:String);
 	PBind(name:String);
+
 	/**
 		OR-pattern list: `case a | b | c:`
 

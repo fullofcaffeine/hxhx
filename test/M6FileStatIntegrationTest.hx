@@ -10,27 +10,38 @@ class M6FileStatIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "FileStatMain",
+			"-cp",
+			"test",
+			"-main",
+			"FileStatMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_no_build",
-			"-D", "ocaml_output=" + outDir
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_no_build",
+			"-D",
+			"ocaml_output=" + outDir
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		final runtimePath = outDir + "/runtime/HxFileSystem.ml";
-		if (!sys.FileSystem.exists(runtimePath)) throw "missing runtime: " + runtimePath;
+		if (!sys.FileSystem.exists(runtimePath))
+			throw "missing runtime: " + runtimePath;
 
 		final dateRuntimePath = outDir + "/runtime/Date.ml";
-		if (!sys.FileSystem.exists(dateRuntimePath)) throw "missing runtime: " + dateRuntimePath;
+		if (!sys.FileSystem.exists(dateRuntimePath))
+			throw "missing runtime: " + dateRuntimePath;
 
 		final mainPath = outDir + "/FileStatMain.ml";
-		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;
+		if (!sys.FileSystem.exists(mainPath))
+			throw "missing output: " + mainPath;
 
 		final content = sys.io.File.getContent(mainPath);
 		assertContains(content, "HxFileSystem.stat", "FileSystem.stat lowering");
@@ -38,4 +49,3 @@ class M6FileStatIntegrationTest {
 		assertContains(content, "Date.getTime", "Date.getTime call");
 	}
 }
-

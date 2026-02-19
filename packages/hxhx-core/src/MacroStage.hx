@@ -15,7 +15,8 @@ class MacroStage {
 		return new MacroExpandedModule(m, true, generatedOcamlModules);
 	}
 
-	public static function expandProgram(modules:Array<TypedModule>, ?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>):MacroExpandedProgram {
+	public static function expandProgram(modules:Array<TypedModule>,
+			?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>):MacroExpandedProgram {
 		return new MacroExpandedProgram(modules, true, generatedOcamlModules);
 	}
 }

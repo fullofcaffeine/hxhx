@@ -42,9 +42,11 @@ class TyType {
 	}
 
 	public static function fromHintText(hint:String):TyType {
-		if (hint == null) return unknown();
+		if (hint == null)
+			return unknown();
 		final s = StringTools.trim(hint);
-		if (s.length == 0) return unknown();
+		if (s.length == 0)
+			return unknown();
 		return switch (s) {
 			case "Int", "Float", "Bool", "String", "Void", "Dynamic": new TyType(s);
 			case _: new TyType(s);
@@ -71,23 +73,32 @@ class TyType {
 		  carry us until a real monomorph engine exists.
 	**/
 	public static function unify(a:TyType, b:TyType):Null<TyType> {
-		if (a == null || b == null) return null;
+		if (a == null || b == null)
+			return null;
 
-		if (a.isUnknown()) return b;
-		if (b.isUnknown()) return a;
+		if (a.isUnknown())
+			return b;
+		if (b.isUnknown())
+			return a;
 
-		if (a.display == b.display) return a;
+		if (a.display == b.display)
+			return a;
 
 		// Bootstrap rule: treat `null` as compatible with most things.
-		if (a.display == "Null") return b;
-		if (b.display == "Null") return a;
+		if (a.display == "Null")
+			return b;
+		if (b.display == "Null")
+			return a;
 
 		// Numeric widening: Int + Float (or comparisons) unify to Float.
-		if (a.isNumeric() && b.isNumeric()) return new TyType("Float");
+		if (a.isNumeric() && b.isNumeric())
+			return new TyType("Float");
 
 		// Dynamic accepts anything (bootstrap).
-		if (a.display == "Dynamic") return a;
-		if (b.display == "Dynamic") return b;
+		if (a.display == "Dynamic")
+			return a;
+		if (b.display == "Dynamic")
+			return b;
 
 		return null;
 	}

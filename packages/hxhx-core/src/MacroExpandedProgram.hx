@@ -21,7 +21,9 @@
 **/
 class MacroExpandedProgram {
 	public final macroMode:Bool;
+
 	final typedModules:Array<TypedModule>;
+
 	public final generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>;
 
 	public function new(typedModules:Array<TypedModule>, macroMode:Bool, ?generatedOcamlModules:Array<MacroExpandedModule.GeneratedOcamlModule>) {
@@ -38,4 +40,3 @@ class MacroExpandedProgram {
 		return generatedOcamlModules;
 	}
 }
-

@@ -49,7 +49,8 @@ class Output {
 	**/
 	public function writeBytes(s:Bytes, pos:Int, len:Int):Int {
 		#if !neko
-		if (pos < 0 || len < 0 || pos + len > s.length) throw Error.OutsideBounds;
+		if (pos < 0 || len < 0 || pos + len > s.length)
+			throw Error.OutsideBounds;
 		#end
 		var k = len;
 		while (k > 0) {
@@ -67,13 +68,13 @@ class Output {
 	public function close():Void {}
 
 	/* ------------------ API ------------------ */
-
 	public function write(s:Bytes):Void {
 		var l = s.length;
 		var p = 0;
 		while (l > 0) {
 			var k = writeBytes(s, p, l);
-			if (k == 0) throw Error.Blocked;
+			if (k == 0)
+				throw Error.Blocked;
 			p += k;
 			l -= k;
 		}
@@ -95,7 +96,8 @@ class Output {
 		try {
 			while (true) {
 				final len = i.readBytes(buf, 0, size);
-				if (len == 0) throw Error.Blocked;
+				if (len == 0)
+					throw Error.Blocked;
 				writeFullBytes(buf, 0, len);
 			}
 		} catch (_:Eof) {}
@@ -127,22 +129,26 @@ class Output {
 	}
 
 	public function writeInt8(x:Int):Void {
-		if (x < -0x80 || x >= 0x80) throw Error.Overflow;
+		if (x < -0x80 || x >= 0x80)
+			throw Error.Overflow;
 		writeByte(x & 0xFF);
 	}
 
 	public function writeUInt8(x:Int):Void {
-		if (x < 0 || x >= 0x100) throw Error.Overflow;
+		if (x < 0 || x >= 0x100)
+			throw Error.Overflow;
 		writeByte(x);
 	}
 
 	public function writeInt16(x:Int):Void {
-		if (x < -0x8000 || x >= 0x8000) throw Error.Overflow;
+		if (x < -0x8000 || x >= 0x8000)
+			throw Error.Overflow;
 		writeUInt16(x & 0xFFFF);
 	}
 
 	public function writeUInt16(x:Int):Void {
-		if (x < 0 || x >= 0x10000) throw Error.Overflow;
+		if (x < 0 || x >= 0x10000)
+			throw Error.Overflow;
 		if (bigEndian) {
 			writeByte(x >> 8);
 			writeByte(x & 0xFF);
@@ -153,12 +159,14 @@ class Output {
 	}
 
 	public function writeInt24(x:Int):Void {
-		if (x < -0x800000 || x >= 0x800000) throw Error.Overflow;
+		if (x < -0x800000 || x >= 0x800000)
+			throw Error.Overflow;
 		writeUInt24(x & 0xFFFFFF);
 	}
 
 	public function writeUInt24(x:Int):Void {
-		if (x < 0 || x >= 0x1000000) throw Error.Overflow;
+		if (x < 0 || x >= 0x1000000)
+			throw Error.Overflow;
 		if (bigEndian) {
 			writeByte(x >> 16);
 			writeByte((x >> 8) & 0xFF);

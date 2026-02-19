@@ -33,18 +33,15 @@ class ReturnFieldMacros {
 		final fields = Context.getBuildFields();
 
 		final traceCall:Expr = {
-			expr: ECall(
-				{ expr: EConst(CIdent("trace")), pos: null },
-				[{ expr: EConst(CString("from_hxhx_build_macro_return", DoubleQuotes)), pos: null }]
-			),
+			expr: ECall({expr: EConst(CIdent("trace")), pos: null}, [{expr: EConst(CString("from_hxhx_build_macro_return", DoubleQuotes)), pos: null}]),
 			pos: null
 		};
-		final body:Expr = { expr: EBlock([traceCall]), pos: null };
+		final body:Expr = {expr: EBlock([traceCall]), pos: null};
 
 		fields.push({
 			name: "generated_return",
 			access: [APublic, AStatic],
-			kind: FFun({ args: [], expr: body }),
+			kind: FFun({args: [], expr: body}),
 			pos: null
 		});
 
@@ -70,19 +67,20 @@ class ReturnFieldMacros {
 		final fields = Context.getBuildFields();
 
 		final traceCall:Expr = {
-			expr: ECall(
-				{ expr: EConst(CIdent("trace")), pos: null },
-				[{ expr: EConst(CString("from_hxhx_build_macro_replaced", DoubleQuotes)), pos: null }]
-			),
+			expr: ECall({expr: EConst(CIdent("trace")), pos: null}, [
+				{expr: EConst(CString("from_hxhx_build_macro_replaced", DoubleQuotes)), pos: null}
+			]),
 			pos: null
 		};
-		final body:Expr = { expr: EBlock([traceCall]), pos: null };
+		final body:Expr = {expr: EBlock([traceCall]), pos: null};
 
 		for (f in fields) {
-			if (f == null || f.name != "generated_replace") continue;
+			if (f == null || f.name != "generated_replace")
+				continue;
 			switch (f.kind) {
 				case FFun(fn):
-					if (fn != null) fn.expr = body;
+					if (fn != null)
+						fn.expr = body;
 				case _:
 			}
 		}

@@ -32,14 +32,16 @@ class ProjectCompiler {
 		while (idx < entries.length) {
 			final name = entries[idx];
 			idx++;
-			if (name.length < 4 || name.substr(name.length - 4) != ".mhx") continue;
+			if (name.length < 4 || name.substr(name.length - 4) != ".mhx")
+				continue;
 			Sys.println("pc.file=" + name);
 
 			final path = dir + "/" + name;
 			Sys.println("pc.stat");
 			final st = FileSystem.stat(path);
 			final mt = st.mtime.getTime();
-			if (!(mt > 0)) stats.mtimePositive = false;
+			if (!(mt > 0))
+				stats.mtimePositive = false;
 
 			final prev = mtimeByPath.get(path);
 			if (prev != null && prev == mt && cacheByPath.exists(path)) {

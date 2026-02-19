@@ -57,7 +57,8 @@ class CompilerDriver {
 			final retStrLit = HxFunctionDecl.getReturnStringLiteral(fn);
 			final retStr = retStrLit.length == 0 ? "<none>" : retStrLit;
 			final args = HxFunctionDecl.getArgs(fn);
-			Sys.println("fn=" + HxFunctionDecl.getName(fn) + " static=" + (HxFunctionDecl.getIsStatic(fn) ? "yes" : "no") + " vis=" + vis + " args=" + args.length + " ret=" + ret + " retStr=" + retStr);
+			Sys.println("fn=" + HxFunctionDecl.getName(fn) + " static=" + (HxFunctionDecl.getIsStatic(fn) ? "yes" : "no") + " vis=" + vis + " args="
+				+ args.length + " ret=" + ret + " retStr=" + retStr);
 		}
 		try {
 			ResolverStage.parseProject(classPaths, "demo.B");
@@ -70,33 +71,21 @@ class CompilerDriver {
 		// We use upstream `tests/misc` fixtures as the behavioral oracle and keep a
 		// small, deterministic subset embedded here.
 		final upstreamShaped = [
-			new FrontendFixture(
-				"tests/misc/resolution/projects/spec/pack/Mod.hx",
-				[
-					"package pack;",
-					"@:build(Macro.build()) class Mod {}",
-					"@:build(Macro.build()) class ModSubType {}",
-				].join("\n"),
-				"pack",
-				"Mod",
-				false
-			),
-			new FrontendFixture(
-				"tests/misc/resolution/projects/spec/pack/ModWithStatic.hx",
-				[
-					"package pack;",
-					"",
-					"class ModWithStatic {",
-					'  public static function TheStatic() return "pack.ModWithStatic.TheStatic function";',
-					"}",
-					"",
-					"@:build(Macro.build())",
-					"class TheStatic {}",
-				].join("\n"),
-				"pack",
-				"ModWithStatic",
-				false
-			),
+			new FrontendFixture("tests/misc/resolution/projects/spec/pack/Mod.hx", [
+				"package pack;",
+				"@:build(Macro.build()) class Mod {}",
+				"@:build(Macro.build()) class ModSubType {}",
+			].join("\n"), "pack", "Mod", false),
+			new FrontendFixture("tests/misc/resolution/projects/spec/pack/ModWithStatic.hx", [
+				"package pack;",
+				"",
+				"class ModWithStatic {",
+				'  public static function TheStatic() return "pack.ModWithStatic.TheStatic function";',
+				"}",
+				"",
+				"@:build(Macro.build())",
+				"class TheStatic {}",
+			].join("\n"), "pack", "ModWithStatic", false),
 		];
 
 		for (case_ in upstreamShaped) {
@@ -116,7 +105,8 @@ class CompilerDriver {
 			}
 			if (label.indexOf("ModWithStatic") >= 0) {
 				final found = HxClassDecl.getFunctions(parsedMain).filter(f -> HxFunctionDecl.getName(f) == "TheStatic");
-				if (found.length != 1) throw new HxParseError('Fixture ' + label + ': expected 1 TheStatic function', new HxPos(0, 0, 0));
+				if (found.length != 1)
+					throw new HxParseError('Fixture ' + label + ': expected 1 TheStatic function', new HxPos(0, 0, 0));
 				final retStr = HxFunctionDecl.getReturnStringLiteral(found[0]);
 				if (retStr != "pack.ModWithStatic.TheStatic function") {
 					throw new HxParseError('Fixture ' + label + ': TheStatic return differs', new HxPos(0, 0, 0));
@@ -126,21 +116,28 @@ class CompilerDriver {
 			#if hih_native_parser
 			// Compare against the pure-Haxe frontend for this subset.
 			final haxeDecl = new HxParser(src).parseModule();
-			if (HxModuleDecl.getPackagePath(haxeDecl) != parsedPkg) throw new HxParseError('Fixture ' + label + ': package differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (HxModuleDecl.getPackagePath(haxeDecl) != parsedPkg)
+				throw new HxParseError('Fixture ' + label + ': package differs (native vs haxe)', new HxPos(0, 0, 0));
 			final haxeImports = HxModuleDecl.getImports(haxeDecl);
 			final parsedImports = HxModuleDecl.getImports(parsed);
-			if (haxeImports.length != parsedImports.length) throw new HxParseError('Fixture ' + label + ': import count differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (haxeImports.length != parsedImports.length)
+				throw new HxParseError('Fixture ' + label + ': import count differs (native vs haxe)', new HxPos(0, 0, 0));
 			for (i in 0...haxeImports.length) {
-				if (haxeImports[i] != parsedImports[i]) throw new HxParseError('Fixture ' + label + ': import differs (native vs haxe)', new HxPos(0, 0, 0));
+				if (haxeImports[i] != parsedImports[i])
+					throw new HxParseError('Fixture ' + label + ': import differs (native vs haxe)', new HxPos(0, 0, 0));
 			}
 			final haxeMain = HxModuleDecl.getMainClass(haxeDecl);
-			if (HxClassDecl.getName(haxeMain) != HxClassDecl.getName(parsedMain)) throw new HxParseError('Fixture ' + label + ': class differs (native vs haxe)', new HxPos(0, 0, 0));
-			if (HxClassDecl.getHasStaticMain(haxeMain) != HxClassDecl.getHasStaticMain(parsedMain)) throw new HxParseError('Fixture ' + label + ': static main differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (HxClassDecl.getName(haxeMain) != HxClassDecl.getName(parsedMain))
+				throw new HxParseError('Fixture ' + label + ': class differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (HxClassDecl.getHasStaticMain(haxeMain) != HxClassDecl.getHasStaticMain(parsedMain))
+				throw new HxParseError('Fixture ' + label + ': static main differs (native vs haxe)', new HxPos(0, 0, 0));
 			final haxeFns = HxClassDecl.getFunctions(haxeMain);
 			final parsedFns = HxClassDecl.getFunctions(parsedMain);
-			if (haxeFns.length != parsedFns.length) throw new HxParseError('Fixture ' + label + ': function count differs (native vs haxe)', new HxPos(0, 0, 0));
+			if (haxeFns.length != parsedFns.length)
+				throw new HxParseError('Fixture ' + label + ': function count differs (native vs haxe)', new HxPos(0, 0, 0));
 			for (i in 0...haxeFns.length) {
-				if (HxFunctionDecl.getName(haxeFns[i]) != HxFunctionDecl.getName(parsedFns[i])) throw new HxParseError('Fixture ' + label + ': function name differs (native vs haxe)', new HxPos(0, 0, 0));
+				if (HxFunctionDecl.getName(haxeFns[i]) != HxFunctionDecl.getName(parsedFns[i]))
+					throw new HxParseError('Fixture ' + label + ': function name differs (native vs haxe)', new HxPos(0, 0, 0));
 			}
 			#end
 		}
@@ -150,13 +147,8 @@ class CompilerDriver {
 		final typedFns = typed.getEnv().getMainClass().getFunctions();
 		Sys.println("typed_functions=" + typedFns.length);
 		for (tf in typedFns) {
-			Sys.println(
-				"typed_fn=" + tf.getName()
-				+ " args=" + tf.getParams().length
-				+ " locals=" + tf.getLocals().length
-				+ " ret=" + tf.getReturnType().toString()
-				+ " retExpr=" + tf.getReturnExprType().toString()
-			);
+			Sys.println("typed_fn=" + tf.getName() + " args=" + tf.getParams().length + " locals=" + tf.getLocals().length + " ret="
+				+ tf.getReturnType().toString() + " retExpr=" + tf.getReturnExprType().toString());
 		}
 
 		final expanded = MacroStage.expand(typed, []);

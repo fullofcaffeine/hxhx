@@ -27,14 +27,8 @@ class TyClassInfo {
 	final staticMethods:haxe.ds.StringMap<TyFunSig>;
 	final instanceMethods:haxe.ds.StringMap<TyFunSig>;
 
-	public function new(
-		fullName:String,
-		shortName:String,
-		modulePath:String,
-		fields:haxe.ds.StringMap<TyType>,
-		staticMethods:haxe.ds.StringMap<TyFunSig>,
-		instanceMethods:haxe.ds.StringMap<TyFunSig>
-	) {
+	public function new(fullName:String, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyType>, staticMethods:haxe.ds.StringMap<TyFunSig>,
+			instanceMethods:haxe.ds.StringMap<TyFunSig>) {
 		this.fullName = fullName;
 		this.shortName = shortName;
 		this.modulePath = modulePath;
@@ -50,13 +44,24 @@ class TyClassInfo {
 		this.instanceMethods = instanceMethods;
 	}
 
-	public function getFullName():String return fullName;
-	public function getShortName():String return shortName;
-	public function getModulePath():String return modulePath;
+	public function getFullName():String
+		return fullName;
 
-	public function hasField(name:String):Bool return fields.exists(name);
-	public function fieldType(name:String):Null<TyType> return fields.exists(name) ? fields.get(name) : null;
+	public function getShortName():String
+		return shortName;
 
-	public function staticMethod(name:String):Null<TyFunSig> return staticMethods.exists(name) ? staticMethods.get(name) : null;
-	public function instanceMethod(name:String):Null<TyFunSig> return instanceMethods.exists(name) ? instanceMethods.get(name) : null;
+	public function getModulePath():String
+		return modulePath;
+
+	public function hasField(name:String):Bool
+		return fields.exists(name);
+
+	public function fieldType(name:String):Null<TyType>
+		return fields.exists(name) ? fields.get(name) : null;
+
+	public function staticMethod(name:String):Null<TyFunSig>
+		return staticMethods.exists(name) ? staticMethods.get(name) : null;
+
+	public function instanceMethod(name:String):Null<TyFunSig>
+		return instanceMethods.exists(name) ? instanceMethods.get(name) : null;
 }

@@ -21,4 +21,3 @@ enum OcamlTypeExpr {
 	/** Record type: `{ mutable x : int; y : string }` */
 	TRecord(fields:Array<OcamlTypeRecordField>);
 }
-

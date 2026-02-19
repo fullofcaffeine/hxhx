@@ -26,10 +26,10 @@ import haxe.io.Path;
 	How
 	- This loader is intentionally conservative:
 	  - It only attempts candidate module paths that are derivable from the current typing context
-	    (fully-qualified, explicit imports, same-package).
+		(fully-qualified, explicit imports, same-package).
 	  - It is cycle-safe via a `visited` set keyed by module path.
 	  - It applies `HxConditionalCompilation.filterSource` before parsing so inactive branches
-	    don’t spuriously pull modules into the compilation.
+		don’t spuriously pull modules into the compilation.
 
 	Gotchas
 	- Stage3 still does not model full “module has multiple types” semantics. We index only the
@@ -60,15 +60,18 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {
-		if (resolved == null) return;
+		if (resolved == null)
+			return;
 		for (m in resolved) {
 			final mp = ResolvedModule.getModulePath(m);
-			if (mp != null && mp.length > 0) visited.set(mp, true);
+			if (mp != null && mp.length > 0)
+				visited.set(mp, true);
 		}
 	}
 
 	public function drainNewModules():Array<ResolvedModule> {
-		if (pending.length == 0) return [];
+		if (pending.length == 0)
+			return [];
 		final out = pending.copy();
 		pending.resize(0);
 		return out;
@@ -81,25 +84,31 @@ class ModuleLoader extends LazyTypeLoader {
 		Returns the resolved `TyClassInfo` or `null` if it still cannot be resolved.
 	**/
 	override public function ensureTypeAvailable(typePath:String, packagePath:String, imports:Array<String>):Null<TyClassInfo> {
-		if (typePath == null) return null;
+		if (typePath == null)
+			return null;
 		final raw = StringTools.trim(typePath);
-		if (raw.length == 0) return null;
+		if (raw.length == 0)
+			return null;
 		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
 
 		// Fast path: already indexed.
 		final pkg = packagePath == null ? "" : packagePath;
 		final hit0 = index == null ? null : index.resolveTypePath(raw, pkg, imports);
-		if (hit0 != null) return hit0;
+		if (hit0 != null)
+			return hit0;
 
 		// Try deriving candidate module paths from the typing context.
 		final candidates = candidateModulePaths(raw, pkg, imports);
-		if (trace) Sys.println("loader_resolve type=" + raw + " pkg=" + pkg + " candidates=" + candidates.join(","));
+		if (trace)
+			Sys.println("loader_resolve type=" + raw + " pkg=" + pkg + " candidates=" + candidates.join(","));
 		for (mp in candidates) {
-			if (mp == null || mp.length == 0) continue;
+			if (mp == null || mp.length == 0)
+				continue;
 			loadModuleByPath(mp);
 
 			final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
-			if (hit != null) return hit;
+			if (hit != null)
+				return hit;
 		}
 
 		return null;
@@ -108,21 +117,27 @@ class ModuleLoader extends LazyTypeLoader {
 	static function candidateModulePaths(typePath:String, packagePath:String, imports:Array<String>):Array<String> {
 		final out = new Array<String>();
 		final raw = typePath == null ? "" : StringTools.trim(typePath);
-		if (raw.length == 0) return out;
+		if (raw.length == 0)
+			return out;
 
 		// Fully-qualified candidate first.
-		if (raw.indexOf(".") >= 0) out.push(raw);
+		if (raw.indexOf(".") >= 0)
+			out.push(raw);
 
 		// Imported candidates (match by last segment).
 		if (imports != null) {
 			for (imp in imports) {
-				if (imp == null) continue;
+				if (imp == null)
+					continue;
 				final s = StringTools.trim(imp);
-				if (s.length == 0) continue;
-				if (StringTools.endsWith(s, ".*")) continue;
+				if (s.length == 0)
+					continue;
+				if (StringTools.endsWith(s, ".*"))
+					continue;
 				final parts = s.split(".");
 				final last = parts.length == 0 ? "" : parts[parts.length - 1];
-				if (last == raw) out.push(s);
+				if (last == raw)
+					out.push(s);
 			}
 		}
 
@@ -142,7 +157,8 @@ class ModuleLoader extends LazyTypeLoader {
 			while (true) {
 				out.push(cur + "." + raw);
 				final lastDot = cur.lastIndexOf(".");
-				if (lastDot < 0) break;
+				if (lastDot < 0)
+					break;
 				cur = cur.substr(0, lastDot);
 			}
 		}
@@ -162,8 +178,10 @@ class ModuleLoader extends LazyTypeLoader {
 		final seen = new haxe.ds.StringMap<Bool>();
 		final uniq = new Array<String>();
 		for (m in out) {
-			if (m == null || m.length == 0) continue;
-			if (seen.exists(m)) continue;
+			if (m == null || m.length == 0)
+				continue;
+			if (seen.exists(m))
+				continue;
 			seen.set(m, true);
 			uniq.push(m);
 		}
@@ -171,14 +189,17 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	function loadModuleByPath(modulePath:String):Void {
-		if (modulePath == null || modulePath.length == 0) return;
-		if (visited.exists(modulePath)) return;
+		if (modulePath == null || modulePath.length == 0)
+			return;
+		if (visited.exists(modulePath))
+			return;
 		visited.set(modulePath, true);
 		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
 
 		final filePath = resolveModuleFile(modulePath);
 		if (filePath == null) {
-			if (trace) Sys.println("loader_load miss module=" + modulePath);
+			if (trace)
+				Sys.println("loader_load miss module=" + modulePath);
 			return;
 		}
 
@@ -190,30 +211,35 @@ class ModuleLoader extends LazyTypeLoader {
 			null;
 		}
 		if (source == null) {
-			if (trace) Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
+			if (trace)
+				Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
 			return;
 		}
 
 		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
-			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro.")) return true;
-			if (filePath == null || filePath.length == 0) return false;
+			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
+				return true;
+			if (filePath == null || filePath.length == 0)
+				return false;
 			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
 		}
 
 		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
 			final out = new haxe.ds.StringMap<String>();
-			if (src != null) for (k in src.keys()) out.set(k, src.get(k));
+			if (src != null)
+				for (k in src.keys())
+					out.set(k, src.get(k));
 			return out;
 		}
 
-		final effectiveDefines = isMacroStdModule(modulePath, filePath)
-			? (() -> {
-				final m = cloneDefines(defines);
-				if (!m.exists("macro")) m.set("macro", "1");
-				if (!m.exists("eval")) m.set("eval", "1");
-				m;
-			})()
-			: defines;
+		final effectiveDefines = isMacroStdModule(modulePath, filePath) ? (() -> {
+			final m = cloneDefines(defines);
+			if (!m.exists("macro"))
+				m.set("macro", "1");
+			if (!m.exists("eval"))
+				m.set("eval", "1");
+			m;
+		})() : defines;
 		final filtered = HxConditionalCompilation.filterSource(source, effectiveDefines);
 		final parsed = try {
 			ParserStage.parse(filtered, filePath);
@@ -223,17 +249,20 @@ class ModuleLoader extends LazyTypeLoader {
 			null;
 		}
 		if (parsed == null) {
-			if (trace) Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
+			if (trace)
+				Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
 			return;
 		}
 
 		final rm = new ResolvedModule(modulePath, filePath, parsed);
 		pending.push(rm);
-		if (trace) Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
+		if (trace)
+			Sys.println("loader_load ok module=" + modulePath + " file=" + filePath);
 
 		if (index != null) {
 			for (info in TyperIndexBuild.fromResolvedModule(rm)) {
-				if (info != null) index.addClass(info);
+				if (info != null)
+					index.addClass(info);
 			}
 		}
 
@@ -249,42 +278,52 @@ class ModuleLoader extends LazyTypeLoader {
 		//   references found in source bodies (e.g. `pkg.Type.member(...)`).
 		final decl = parsed.getDecl();
 		for (dep in depsForParsedModule(filtered, decl)) {
-			if (dep == null || dep.length == 0) continue;
-			if (resolveModuleFile(dep) == null) continue;
+			if (dep == null || dep.length == 0)
+				continue;
+			if (resolveModuleFile(dep) == null)
+				continue;
 			loadModuleByPath(dep);
 		}
 	}
 
 	static function normalizeImport(raw:String):Null<String> {
-		if (raw == null) return null;
+		if (raw == null)
+			return null;
 		var s = StringTools.trim(raw);
-		if (s.length == 0) return null;
-		if (StringTools.startsWith(s, "using ")) s = StringTools.trim(s.substr("using ".length));
+		if (s.length == 0)
+			return null;
+		if (StringTools.startsWith(s, "using "))
+			s = StringTools.trim(s.substr("using ".length));
 		final asIdx = s.indexOf(" as ");
-		if (asIdx >= 0) s = StringTools.trim(s.substr(0, asIdx));
+		if (asIdx >= 0)
+			s = StringTools.trim(s.substr(0, asIdx));
 		return s.length == 0 ? null : s;
 	}
 
 	static function implicitQualifiedTypeDeps(source:String):Array<String> {
-		if (source == null || source.length == 0) return [];
+		if (source == null || source.length == 0)
+			return [];
 
 		final candidates = new haxe.ds.StringMap<Bool>();
 		for (line in source.split("\n")) {
 			final trimmed = StringTools.trim(line);
-			if (StringTools.startsWith(trimmed, "@:")) continue;
+			if (StringTools.startsWith(trimmed, "@:"))
+				continue;
 
 			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
 			var pos = 0;
 			while (re.matchSub(line, pos, -1)) {
 				final dep = re.matched(1);
-				if (dep != null && dep.length > 0) candidates.set(dep, true);
+				if (dep != null && dep.length > 0)
+					candidates.set(dep, true);
 				final mp = re.matchedPos();
 				pos = mp.pos + mp.len;
 			}
 		}
 
 		final out = new Array<String>();
-		for (dep in candidates.keys()) out.push(dep);
+		for (dep in candidates.keys())
+			out.push(dep);
 		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 		return out;
 	}
@@ -294,8 +333,10 @@ class ModuleLoader extends LazyTypeLoader {
 		final seen = new haxe.ds.StringMap<Bool>();
 
 		inline function push(dep:String):Void {
-			if (dep == null || dep.length == 0) return;
-			if (seen.exists(dep)) return;
+			if (dep == null || dep.length == 0)
+				return;
+			if (seen.exists(dep))
+				return;
 			seen.set(dep, true);
 			out.push(dep);
 		}
@@ -303,45 +344,57 @@ class ModuleLoader extends LazyTypeLoader {
 		final modulePkg = HxModuleDecl.getPackagePath(decl);
 		for (rawImport in HxModuleDecl.getImports(decl)) {
 			final imp = normalizeImport(rawImport);
-			if (imp == null) continue;
+			if (imp == null)
+				continue;
 
 			final resolvedImp = {
 				final existsDirect = resolveModuleFile(imp) != null;
-				if (existsDirect) imp else {
+				if (existsDirect)
+					imp
+				else {
 					final dot = imp.indexOf(".");
 					final head = dot == -1 ? imp : imp.substr(0, dot);
 					final head0 = head.length == 0 ? 0 : head.charCodeAt(0);
 					final headIsUpper = head0 >= "A".code && head0 <= "Z".code;
-					if (headIsUpper && modulePkg != null && modulePkg.length > 0 && !StringTools.startsWith(imp, modulePkg + ".")) modulePkg + "." + imp else imp;
+					if (headIsUpper && modulePkg != null && modulePkg.length > 0 && !StringTools.startsWith(imp, modulePkg + "."))
+						modulePkg + "." + imp
+					else
+						imp;
 				}
 			}
 
 			if (StringTools.endsWith(resolvedImp, ".*")) {
 				final base = resolvedImp.substr(0, resolvedImp.length - 2);
-				if (resolveModuleFile(base) != null) push(base);
+				if (resolveModuleFile(base) != null)
+					push(base);
 				continue;
 			}
 
 			push(resolvedImp);
 		}
 
-		for (dep in implicitQualifiedTypeDeps(filteredSource)) push(dep);
+		for (dep in implicitQualifiedTypeDeps(filteredSource))
+			push(dep);
 		return out;
 	}
 
 	function resolveModuleFile(modulePath:String):Null<String> {
 		inline function fileExistsExactCase(path:String):Bool {
-			if (path == null || path.length == 0) return false;
-			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path)) return false;
+			if (path == null || path.length == 0)
+				return false;
+			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path))
+				return false;
 			final dir = Path.directory(path);
-			if (dir == null || dir.length == 0) return true;
+			if (dir == null || dir.length == 0)
+				return true;
 			final base = Path.withoutDirectory(path);
 			var entries = dirEntryCache.get(dir);
 			if (entries == null) {
 				entries = new haxe.ds.StringMap<Bool>();
 				try {
 					for (name in sys.FileSystem.readDirectory(dir)) {
-						if (name != null && name.length > 0) entries.set(name, true);
+						if (name != null && name.length > 0)
+							entries.set(name, true);
 					}
 				} catch (_:haxe.io.Error) {} catch (_:String) {}
 				dirEntryCache.set(dir, entries);
@@ -350,12 +403,14 @@ class ModuleLoader extends LazyTypeLoader {
 		}
 
 		final parts = modulePath.split(".");
-		if (parts.length == 0) return null;
+		if (parts.length == 0)
+			return null;
 
 		final direct = parts.join("/") + ".hx";
 		for (cp in classPaths) {
 			final candidate = Path.join([cp, direct]);
-			if (fileExistsExactCase(candidate)) return candidate;
+			if (fileExistsExactCase(candidate))
+				return candidate;
 		}
 
 		// Sub-type fallback: pack.Mod.SubType -> pack/Mod.hx
@@ -364,7 +419,8 @@ class ModuleLoader extends LazyTypeLoader {
 			final fallback = fallbackParts.join("/") + ".hx";
 			for (cp in classPaths) {
 				final candidate = Path.join([cp, fallback]);
-				if (fileExistsExactCase(candidate)) return candidate;
+				if (fileExistsExactCase(candidate))
+					return candidate;
 			}
 		}
 
@@ -386,7 +442,8 @@ class TyperIndexBuild {
 	}
 
 	static function expectedModuleNameFromFile(filePath:Null<String>):Null<String> {
-		if (filePath == null || filePath.length == 0) return null;
+		if (filePath == null || filePath.length == 0)
+			return null;
 		final name = Path.withoutDirectory(filePath);
 		final dot = name.lastIndexOf(".");
 		return dot <= 0 ? name : name.substr(0, dot);
@@ -407,16 +464,19 @@ class TyperIndexBuild {
 
 	public static function fromResolvedModule(m:ResolvedModule):Array<TyClassInfo> {
 		final out = new Array<TyClassInfo>();
-		if (m == null) return out;
+		if (m == null)
+			return out;
 		final pm = ResolvedModule.getParsed(m);
-		if (pm == null) return out;
+		if (pm == null)
+			return out;
 		final decl = pm.getDecl();
 		final pkg = HxModuleDecl.getPackagePath(decl);
 		final moduleName = expectedModuleNameFromFile(ResolvedModule.getFilePath(m));
 
 		for (cls in HxModuleDecl.getClasses(decl)) {
 			final clsName = HxClassDecl.getName(cls);
-			if (clsName == null || clsName.length == 0 || clsName == "Unknown") continue;
+			if (clsName == null || clsName.length == 0 || clsName == "Unknown")
+				continue;
 			final full = classFullNameInModule(pkg, moduleName, clsName);
 
 			final fields = new haxe.ds.StringMap<TyType>();
@@ -430,12 +490,16 @@ class TyperIndexBuild {
 				final fnName = HxFunctionDecl.getName(fn);
 				final isStatic = HxFunctionDecl.getIsStatic(fn);
 				final args = new Array<TyType>();
-				for (a in HxFunctionDecl.getArgs(fn)) args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
+				for (a in HxFunctionDecl.getArgs(fn))
+					args.push(TyType.fromHintText(HxFunctionArg.getTypeHint(a)));
 
 				final retHint = HxFunctionDecl.getReturnTypeHint(fn);
 				final ret = (fnName == "new") ? TyType.fromHintText(full) : TyType.fromHintText(retHint);
 				final sig = new TyFunSig(fnName, isStatic, args, ret);
-				if (isStatic) statics.set(fnName, sig) else instances.set(fnName, sig);
+				if (isStatic)
+					statics.set(fnName, sig)
+				else
+					instances.set(fnName, sig);
 			}
 
 			out.push(new TyClassInfo(full, clsName, ResolvedModule.getModulePath(m), fields, statics, instances));

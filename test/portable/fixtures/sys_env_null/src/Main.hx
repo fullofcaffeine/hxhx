@@ -13,4 +13,3 @@ class Main {
 		Sys.println("environment(HX_TEST_ENV_MISSING_REFLAXE_OCAML)=" + (env.exists("HX_TEST_ENV_MISSING_REFLAXE_OCAML") ? "present" : "absent"));
 	}
 }
-

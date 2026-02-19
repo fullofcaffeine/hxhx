@@ -12,13 +12,13 @@ enum HxTokenKind {
 	TInt(value:Int);
 	TFloat(value:Float);
 	TKeyword(k:HxKeyword);
-	TLBrace;    // {
-	TRBrace;    // }
-	TLParen;    // (
-	TRParen;    // )
+	TLBrace; // {
+	TRBrace; // }
+	TLParen; // (
+	TRParen; // )
 	TSemicolon; // ;
-	TColon;     // :
-	TDot;       // .
-	TComma;     // ,
+	TColon; // :
+	TDot; // .
+	TComma; // ,
 	TOther(code:Int); // any single character we don't model yet
 }

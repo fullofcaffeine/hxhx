@@ -25,15 +25,8 @@ class HxFunctionDecl {
 	public final body:Array<HxStmt>;
 	public final returnStringLiteral:String;
 
-	public function new(
-		name:String,
-		visibility:HxVisibility,
-		isStatic:Bool,
-		args:Array<HxFunctionArg>,
-		returnTypeHint:String,
-		body:Array<HxStmt>,
-		returnStringLiteral:String
-	) {
+	public function new(name:String, visibility:HxVisibility, isStatic:Bool, args:Array<HxFunctionArg>, returnTypeHint:String, body:Array<HxStmt>,
+			returnStringLiteral:String) {
 		this.name = name;
 		this.visibility = visibility;
 		this.isStatic = isStatic;
@@ -53,27 +46,34 @@ class HxFunctionDecl {
 						return EUnsupported("<return-void>");
 					case SBlock(ss, _):
 						final r = find(ss);
-						if (r != null) return r;
+						if (r != null)
+							return r;
 					case SIf(_cond, thenBranch, elseBranch, _):
 						// Pre-order: then, then else. This is a bootstrap heuristic for “first return”.
 						final r1 = find([thenBranch]);
-						if (r1 != null) return r1;
+						if (r1 != null)
+							return r1;
 						if (elseBranch != null) {
 							final r2 = find([elseBranch]);
-							if (r2 != null) return r2;
+							if (r2 != null)
+								return r2;
 						}
 					case SWhile(_cond, body, _):
 						final r = find([body]);
-						if (r != null) return r;
+						if (r != null)
+							return r;
 					case SDoWhile(body, _cond, _):
 						final r = find([body]);
-						if (r != null) return r;
+						if (r != null)
+							return r;
 					case STry(tryBody, catches, _):
 						final rt = find([tryBody]);
-						if (rt != null) return rt;
+						if (rt != null)
+							return rt;
 						for (c in catches) {
 							final rc = find([c.body]);
-							if (rc != null) return rc;
+							if (rc != null)
+								return rc;
 						}
 					case SBreak(_):
 					case SContinue(_):
@@ -98,11 +98,24 @@ class HxFunctionDecl {
 		- Using non-inline getters keeps the bootstrap examples compiling without
 		  weakening dune’s warning discipline.
 	**/
-	public static function getName(fn:HxFunctionDecl):String return fn.name;
-	public static function getVisibility(fn:HxFunctionDecl):HxVisibility return fn.visibility;
-	public static function getIsStatic(fn:HxFunctionDecl):Bool return fn.isStatic;
-	public static function getArgs(fn:HxFunctionDecl):Array<HxFunctionArg> return fn.args;
-	public static function getReturnTypeHint(fn:HxFunctionDecl):String return fn.returnTypeHint;
-	public static function getBody(fn:HxFunctionDecl):Array<HxStmt> return fn.body;
-	public static function getReturnStringLiteral(fn:HxFunctionDecl):String return fn.returnStringLiteral;
+	public static function getName(fn:HxFunctionDecl):String
+		return fn.name;
+
+	public static function getVisibility(fn:HxFunctionDecl):HxVisibility
+		return fn.visibility;
+
+	public static function getIsStatic(fn:HxFunctionDecl):Bool
+		return fn.isStatic;
+
+	public static function getArgs(fn:HxFunctionDecl):Array<HxFunctionArg>
+		return fn.args;
+
+	public static function getReturnTypeHint(fn:HxFunctionDecl):String
+		return fn.returnTypeHint;
+
+	public static function getBody(fn:HxFunctionDecl):Array<HxStmt>
+		return fn.body;
+
+	public static function getReturnStringLiteral(fn:HxFunctionDecl):String
+		return fn.returnStringLiteral;
 }

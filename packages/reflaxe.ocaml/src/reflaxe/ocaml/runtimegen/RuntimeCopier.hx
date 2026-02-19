@@ -1,9 +1,7 @@
 package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
-
 import haxe.io.Path;
-
 import reflaxe.output.OutputManager;
 
 class RuntimeCopier {
@@ -27,10 +25,12 @@ class RuntimeCopier {
 
 	public static function copy(output:OutputManager, destSubdir:String = "runtime"):Void {
 		final stdDir = tryResolveStdDir();
-		if (stdDir == null) return;
+		if (stdDir == null)
+			return;
 
 		final runtimeDir = Path.join([stdDir, "runtime"]);
-		if (!sys.FileSystem.exists(runtimeDir) || !sys.FileSystem.isDirectory(runtimeDir)) return;
+		if (!sys.FileSystem.exists(runtimeDir) || !sys.FileSystem.isDirectory(runtimeDir))
+			return;
 
 		#if macro
 		final allowHxHxRuntime = haxe.macro.Context.defined("hih_native_parser")
@@ -41,15 +41,17 @@ class RuntimeCopier {
 		#end
 
 		for (name in sys.FileSystem.readDirectory(runtimeDir)) {
-			if (!StringTools.endsWith(name, ".ml") && !StringTools.endsWith(name, ".mli")) continue;
-			if (!allowHxHxRuntime && StringTools.startsWith(name, HXHX_RUNTIME_PREFIX)) continue;
+			if (!StringTools.endsWith(name, ".ml") && !StringTools.endsWith(name, ".mli"))
+				continue;
+			if (!allowHxHxRuntime && StringTools.startsWith(name, HXHX_RUNTIME_PREFIX))
+				continue;
 			final src = Path.join([runtimeDir, name]);
-			if (!sys.FileSystem.exists(src) || sys.FileSystem.isDirectory(src)) continue;
+			if (!sys.FileSystem.exists(src) || sys.FileSystem.isDirectory(src))
+				continue;
 			final rel = destSubdir + "/" + name;
 			final content = sys.io.File.getContent(src);
 			output.saveFile(rel, content);
 		}
 	}
 }
-
 #end

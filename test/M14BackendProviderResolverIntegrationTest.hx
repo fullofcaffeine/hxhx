@@ -9,7 +9,8 @@ class M14BackendProviderResolverIntegrationTest {
 	static final keepCtorFailureProvider = M14ResolverCtorFailureProvider;
 
 	static function assertTrue(condition:Bool, message:String):Void {
-		if (!condition) throw message;
+		if (!condition)
+			throw message;
 	}
 
 	static function assertFailsContains(fn:Void->Void, expected:String):Void {
@@ -32,17 +33,8 @@ class M14BackendProviderResolverIntegrationTest {
 		assertTrue(custom.length == 1, "custom provider should return one registration");
 		assertTrue(custom[0].descriptor.implId == "plugin/js-native@fixture", "unexpected custom provider impl id");
 
-		assertFailsContains(
-			function() BackendProviderResolver.registrationsForType("does.not.Exist"),
-			"backend provider type not found"
-		);
-		assertFailsContains(
-			function() BackendProviderResolver.registrationsForType("M14ResolverInvalidProvider"),
-			"must implement ITargetBackendProvider"
-		);
-		assertFailsContains(
-			function() BackendProviderResolver.registrationsForType("M14ResolverCtorFailureProvider"),
-			"construction failed"
-		);
+		assertFailsContains(function() BackendProviderResolver.registrationsForType("does.not.Exist"), "backend provider type not found");
+		assertFailsContains(function() BackendProviderResolver.registrationsForType("M14ResolverInvalidProvider"), "must implement ITargetBackendProvider");
+		assertFailsContains(function() BackendProviderResolver.registrationsForType("M14ResolverCtorFailureProvider"), "construction failed");
 	}
 }

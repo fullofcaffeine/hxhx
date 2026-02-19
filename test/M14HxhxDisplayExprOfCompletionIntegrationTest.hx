@@ -1,6 +1,7 @@
 class M14HxhxDisplayExprOfCompletionIntegrationTest {
 	static function assertTrue(condition:Bool, message:String):Void {
-		if (!condition) throw message;
+		if (!condition)
+			throw message;
 	}
 
 	static function assertContains(haystack:String, needle:String, message:String):Void {
@@ -52,9 +53,6 @@ class M14HxhxDisplayExprOfCompletionIntegrationTest {
 		assertTrue(exprResponse == "<list></list>", "Plain Expr completion should remain the default empty list");
 
 		final diagnosticsResponse = hxhx.DisplayResponseSynthesizer.synthesize("Main.hx@0@diagnostics", source);
-		assertTrue(
-			diagnosticsResponse == '[{"diagnostics":[]}]',
-			"Diagnostics display mode should keep existing synthetic response"
-		);
+		assertTrue(diagnosticsResponse == '[{"diagnostics":[]}]', "Diagnostics display mode should keep existing synthetic response");
 	}
 }

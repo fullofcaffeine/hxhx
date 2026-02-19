@@ -22,7 +22,8 @@ package ocaml.extlib;
  *   to stay ergonomic in Haxe, but the codegen must still emit the value (not `()`).
  */
 abstract PMap<K, V>(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function empty<K, V>():PMap<K, V> {
 		return cast PMapNative.empty;
@@ -99,4 +100,3 @@ extern class PMapNative {
 	static function fold(f:Dynamic, m:Dynamic, init:Dynamic):Dynamic;
 	static function foldi(f:Dynamic, m:Dynamic, init:Dynamic):Dynamic;
 }
-

@@ -107,17 +107,22 @@ class TypeTools {
 		switch (t) {
 			case TMono(tm):
 				final inner = tm.get();
-				if (inner != null) f(inner);
+				if (inner != null)
+					f(inner);
 			case TEnum(_, tl) | TInst(_, tl) | TType(_, tl) | TAbstract(_, tl):
-				for (tt in tl) f(tt);
+				for (tt in tl)
+					f(tt);
 			case TDynamic(t2):
-				if (t != t2) f(t2);
+				if (t != t2)
+					f(t2);
 			case TLazy(ft):
 				f(ft());
 			case TAnonymous(an):
-				for (field in an.get().fields) f(field.type);
+				for (field in an.get().fields)
+					f(field.type);
 			case TFun(args, ret):
-				for (arg in args) f(arg.t);
+				for (arg in args)
+					f(arg.t);
 				f(ret);
 		}
 		#else

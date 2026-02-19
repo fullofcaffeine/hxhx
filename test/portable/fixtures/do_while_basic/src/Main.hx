@@ -18,7 +18,8 @@ class Main {
 			var i = 0;
 			do {
 				i++;
-				if (i == 1) continue;
+				if (i == 1)
+					continue;
 				xs.push("x" + i);
 			} while (i < 3);
 			parts.push("cont=" + xs.join("|"));
@@ -30,7 +31,8 @@ class Main {
 			var i = 0;
 			do {
 				i++;
-				if (i == 2) break;
+				if (i == 2)
+					break;
 				xs.push("b" + i);
 			} while (true);
 			parts.push("break=" + xs.join("|"));
@@ -50,4 +52,3 @@ class Main {
 		Sys.println("once=" + once + "," + parts.slice(1).join(","));
 	}
 }
-

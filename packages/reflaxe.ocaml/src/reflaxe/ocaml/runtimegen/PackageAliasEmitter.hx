@@ -1,7 +1,6 @@
 package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
-
 import reflaxe.output.OutputManager;
 
 /**
@@ -27,15 +26,18 @@ import reflaxe.output.OutputManager;
  * - Emit one `.ml` file per package node.
  * - Avoid collisions with existing real modules by suffixing `_` as needed.
  */
-	class PackageAliasEmitter {
+class PackageAliasEmitter {
 	static inline final LINE_DIRECTIVE_DISABLE_DEFINE = "ocaml_no_line_directives";
 
 	static function escapeLineDirectivePath(path:String):String {
-		if (path == null) return "";
+		if (path == null)
+			return "";
 		return StringTools.replace(StringTools.replace(path, "\\", "\\\\"), "\"", "\\\"");
 	}
+
 	static function moduleIdToOcamlModuleName(moduleId:String):String {
-		if (moduleId == null || moduleId.length == 0) return "Main";
+		if (moduleId == null || moduleId.length == 0)
+			return "Main";
 		final flat = moduleId.split(".").join("_");
 		return flat.substr(0, 1).toUpperCase() + flat.substr(1);
 	}
@@ -48,12 +50,15 @@ import reflaxe.output.OutputManager;
 			out.add(isAlphaNum ? String.fromCharCode(c) : "_");
 		}
 		var s = out.toString();
-		if (s.length == 0) s = "X";
+		if (s.length == 0)
+			s = "X";
 		final first = s.charCodeAt(0);
 		final isUpper = first >= 65 && first <= 90;
 		final isLower = first >= 97 && first <= 122;
-		if (isLower) s = String.fromCharCode(first - 32) + s.substr(1);
-		else if (!isUpper) s = "M" + s;
+		if (isLower)
+			s = String.fromCharCode(first - 32) + s.substr(1);
+		else if (!isUpper)
+			s = "M" + s;
 		return s;
 	}
 
@@ -66,38 +71,40 @@ import reflaxe.output.OutputManager;
 		return name;
 	}
 
-		public static function emit(
-			output:OutputManager,
-			haxeModules:Array<String>,
-			?ocamlModuleNameForHaxeModuleId:(String)->String
-		):Void {
-			if (output == null || output.outputDir == null) return;
+	public static function emit(output:OutputManager, haxeModules:Array<String>, ?ocamlModuleNameForHaxeModuleId:(String) -> String):Void {
+		if (output == null || output.outputDir == null)
+			return;
 
-			final leafOcamlModules:Map<String, String> = [];
-			final used:Map<String, Bool> = [];
+		final leafOcamlModules:Map<String, String> = [];
+		final used:Map<String, Bool> = [];
 
-			// Track “real” modules that already exist (compiled output units).
-			for (m in haxeModules) {
-				if (m == null || m.length == 0) continue;
-				final ocaml = ocamlModuleNameForHaxeModuleId != null ? ocamlModuleNameForHaxeModuleId(m) : moduleIdToOcamlModuleName(m);
-				leafOcamlModules.set(m, ocaml);
-				used.set(ocaml, true);
-			}
+		// Track “real” modules that already exist (compiled output units).
+		for (m in haxeModules) {
+			if (m == null || m.length == 0)
+				continue;
+			final ocaml = ocamlModuleNameForHaxeModuleId != null ? ocamlModuleNameForHaxeModuleId(m) : moduleIdToOcamlModuleName(m);
+			leafOcamlModules.set(m, ocaml);
+			used.set(ocaml, true);
+		}
 
 		// Tree node: package prefix -> child packages + leaf modules.
 		final childPackages:Map<String, Map<String, Bool>> = [];
 		final childLeaves:Map<String, Map<String, String>> = [];
 
 		function ensurePkg(prefix:String):Void {
-			if (!childPackages.exists(prefix)) childPackages.set(prefix, []);
-			if (!childLeaves.exists(prefix)) childLeaves.set(prefix, []);
+			if (!childPackages.exists(prefix))
+				childPackages.set(prefix, []);
+			if (!childLeaves.exists(prefix))
+				childLeaves.set(prefix, []);
 		}
 
 		// Build a tree from dot paths.
 		for (m in haxeModules) {
-			if (m == null || m.length == 0) continue;
+			if (m == null || m.length == 0)
+				continue;
 			final parts = m.split(".");
-			if (parts.length < 2) continue; // no package path to alias
+			if (parts.length < 2)
+				continue; // no package path to alias
 
 			for (i in 0...(parts.length - 1)) {
 				final prefix = parts.slice(0, i + 1).join(".");
@@ -107,11 +114,13 @@ import reflaxe.output.OutputManager;
 				if (i + 1 == parts.length - 1) {
 					// Leaf module under this package.
 					final leaves = childLeaves.get(prefix);
-					if (leaves != null) leaves.set(next, m);
+					if (leaves != null)
+						leaves.set(next, m);
 				} else {
 					// Another package prefix.
 					final pkgs = childPackages.get(prefix);
-					if (pkgs != null) pkgs.set(next, true);
+					if (pkgs != null)
+						pkgs.set(next, true);
 				}
 			}
 		}
@@ -125,12 +134,14 @@ import reflaxe.output.OutputManager;
 
 		// Emit files in a stable order.
 		final prefixes:Array<String> = [];
-		for (p => _ in childPackages) prefixes.push(p);
+		for (p => _ in childPackages)
+			prefixes.push(p);
 		prefixes.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 
 		for (prefix in prefixes) {
 			final ocamlName = pkgOcamlModule.get(prefix);
-			if (ocamlName == null) continue;
+			if (ocamlName == null)
+				continue;
 
 			final lines:Array<String> = [];
 			#if macro
@@ -139,18 +150,21 @@ import reflaxe.output.OutputManager;
 			final useLineDirectives = false;
 			#end
 			final fileName = ocamlName + ".ml";
-			if (useLineDirectives) lines.push("# 1 \"" + escapeLineDirectivePath(fileName) + "\"");
+			if (useLineDirectives)
+				lines.push("# 1 \"" + escapeLineDirectivePath(fileName) + "\"");
 			lines.push("(* Generated by reflaxe.ocaml: package alias module *)");
 
 			final pkgs = childPackages.get(prefix);
 			if (pkgs != null) {
 				final segs:Array<String> = [];
-				for (s => _ in pkgs) segs.push(s);
+				for (s => _ in pkgs)
+					segs.push(s);
 				segs.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 				for (seg in segs) {
 					final childPrefix = prefix + "." + seg;
 					final target = pkgOcamlModule.get(childPrefix);
-					if (target == null) continue;
+					if (target == null)
+						continue;
 					lines.push("module " + sanitizeModuleSegment(seg) + " = " + target);
 				}
 			}
@@ -158,13 +172,16 @@ import reflaxe.output.OutputManager;
 			final leaves = childLeaves.get(prefix);
 			if (leaves != null) {
 				final segs:Array<String> = [];
-				for (s => _ in leaves) segs.push(s);
+				for (s => _ in leaves)
+					segs.push(s);
 				segs.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 				for (seg in segs) {
 					final leafModulePath = leaves.get(seg);
-					if (leafModulePath == null) continue;
+					if (leafModulePath == null)
+						continue;
 					final leafOcaml = leafOcamlModules.get(leafModulePath);
-					if (leafOcaml == null) continue;
+					if (leafOcaml == null)
+						continue;
 					lines.push("module " + sanitizeModuleSegment(seg) + " = " + leafOcaml);
 				}
 			}
@@ -174,5 +191,4 @@ import reflaxe.output.OutputManager;
 		}
 	}
 }
-
 #end

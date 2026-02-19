@@ -5,4 +5,3 @@ class M8DuneErgonomicsMain {
 		Sys.println("ok");
 	}
 }
-

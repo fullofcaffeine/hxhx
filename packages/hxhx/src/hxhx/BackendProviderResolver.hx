@@ -57,13 +57,16 @@ class BackendProviderResolver {
 
 	public static function registrationsForType(typePath:String):Array<BackendRegistrationSpec> {
 		final normalized = StringTools.trim(typePath == null ? "" : typePath);
-		if (normalized.length == 0) throw "backend provider type path is required";
+		if (normalized.length == 0)
+			throw "backend provider type path is required";
 
 		final known = knownProviderRegistrations(normalized);
-		if (known != null) return known;
+		if (known != null)
+			return known;
 
 		final cls = Type.resolveClass(normalized);
-		if (cls == null) throw "backend provider type not found: " + normalized;
+		if (cls == null)
+			throw "backend provider type not found: " + normalized;
 
 		final instance = try {
 			Type.createInstance(cls, []);

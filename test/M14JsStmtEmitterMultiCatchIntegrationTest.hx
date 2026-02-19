@@ -11,27 +11,23 @@ class M14JsStmtEmitterMultiCatchIntegrationTest {
 
 	static function main() {
 		final pos = HxPos.unknown();
-		final tryStmt:HxStmt = STry(
-			SBlock([SThrow(EString("boom"), pos)], pos),
-			[
-				{
-					name: "code",
-					typeHint: "Int",
-					body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("code")]), pos)], pos)
-				},
-				{
-					name: "msg",
-					typeHint: "String",
-					body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("msg")]), pos)], pos)
-				},
-				{
-					name: "fallback",
-					typeHint: "Dynamic",
-					body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("fallback")]), pos)], pos)
-				}
-			],
-			pos
-		);
+		final tryStmt:HxStmt = STry(SBlock([SThrow(EString("boom"), pos)], pos), [
+			{
+				name: "code",
+				typeHint: "Int",
+				body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("code")]), pos)], pos)
+			},
+			{
+				name: "msg",
+				typeHint: "String",
+				body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("msg")]), pos)], pos)
+			},
+			{
+				name: "fallback",
+				typeHint: "Dynamic",
+				body: SBlock([SExpr(ECall(EField(EIdent("Sys"), "println"), [EIdent("fallback")]), pos)], pos)
+			}
+		], pos);
 
 		final writer = new JsWriter();
 		final scope = new JsFunctionScope(new haxe.ds.StringMap<String>());

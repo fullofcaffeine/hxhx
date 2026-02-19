@@ -9,4 +9,3 @@ enum Option<T> {
 	None;
 	Some(value:T);
 }
-

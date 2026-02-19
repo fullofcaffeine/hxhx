@@ -59,4 +59,3 @@ class Main {
 		Sys.println("OK inc_dec_float_nullable");
 	}
 }
-

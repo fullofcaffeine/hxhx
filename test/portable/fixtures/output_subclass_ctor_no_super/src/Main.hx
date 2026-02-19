@@ -25,4 +25,3 @@ class Main {
 		Sys.println(out.toString());
 	}
 }
-

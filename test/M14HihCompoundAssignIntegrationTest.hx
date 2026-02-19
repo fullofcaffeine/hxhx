@@ -1,37 +1,31 @@
 class M14HihCompoundAssignIntegrationTest {
 	static function assertTrue(ok:Bool, label:String):Void {
-		if (!ok) throw label;
+		if (!ok)
+			throw label;
 	}
 
 	static function findTypedMain(tm:TypedModule):TyFunctionEnv {
 		final cls = tm.getEnv().getMainClass();
-		for (f in cls.getFunctions()) if (f.getName() == "main") return f;
+		for (f in cls.getFunctions())
+			if (f.getName() == "main")
+				return f;
 		throw "missing typed main()";
 	}
 
 	static function findLocalType(fn:TyFunctionEnv, name:String):String {
-		for (l in fn.getLocals()) if (l.getName() == name) return l.getType().getDisplay();
-		for (p in fn.getParams()) if (p.getName() == name) return p.getType().getDisplay();
+		for (l in fn.getLocals())
+			if (l.getName() == name)
+				return l.getType().getDisplay();
+		for (p in fn.getParams())
+			if (p.getName() == name)
+				return p.getType().getDisplay();
 		return "<missing>";
 	}
 
 	static function main() {
-		final src = 'class Main {\n'
-			+ '  static function main() {\n'
-			+ '    var acc:Int = 1;\n'
-			+ '    var a:Int = 1;\n'
-			+ '    var b:Int = 2;\n'
-			+ '    var x = a + +b;\n'
-			+ '    acc += 5;\n'
-			+ '    acc -= 1;\n'
-			+ '    acc <<= 1;\n'
-			+ '    acc >>>= 1;\n'
-			+ '    acc++;\n'
-			+ '    ++acc;\n'
-			+ '    acc--;\n'
-			+ '    --acc;\n'
-			+ '  }\n'
-			+ '}\n';
+		final src = 'class Main {\n' + '  static function main() {\n' + '    var acc:Int = 1;\n' + '    var a:Int = 1;\n' + '    var b:Int = 2;\n'
+			+ '    var x = a + +b;\n' + '    acc += 5;\n' + '    acc -= 1;\n' + '    acc <<= 1;\n' + '    acc >>>= 1;\n' + '    acc++;\n' + '    ++acc;\n'
+			+ '    acc--;\n' + '    --acc;\n' + '  }\n' + '}\n';
 
 		final decl = new HxParser(src).parseModule("Main");
 		final cls = HxModuleDecl.getMainClass(decl);
@@ -42,7 +36,8 @@ class M14HihCompoundAssignIntegrationTest {
 				break;
 			}
 		}
-		if (parsedMain == null) throw "missing parsed main()";
+		if (parsedMain == null)
+			throw "missing parsed main()";
 
 		var plusEqCount = 0;
 		var minusEqCount = 0;

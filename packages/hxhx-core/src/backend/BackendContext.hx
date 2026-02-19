@@ -29,14 +29,8 @@ class BackendContext {
 	public final buildExecutable:Bool;
 	public final defines:haxe.ds.StringMap<String>;
 
-	public function new(
-		outputDir:String,
-		outputFileHint:Null<String>,
-		mainModule:String,
-		emitFullBodies:Bool,
-		buildExecutable:Bool,
-		defines:haxe.ds.StringMap<String>
-	) {
+	public function new(outputDir:String, outputFileHint:Null<String>, mainModule:String, emitFullBodies:Bool, buildExecutable:Bool,
+			defines:haxe.ds.StringMap<String>) {
 		this.outputDir = outputDir;
 		this.outputFileHint = outputFileHint;
 		this.mainModule = mainModule == null ? "" : mainModule;
@@ -50,8 +44,8 @@ class BackendContext {
 	}
 
 	public function defineValue(name:String):Null<String> {
-		if (name == null || name.length == 0) return null;
+		if (name == null || name.length == 0)
+			return null;
 		return defines.get(name);
 	}
 }
-

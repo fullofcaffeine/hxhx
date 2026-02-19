@@ -29,7 +29,8 @@ class Lexer {
 		final start = i;
 		while (i < s.length) {
 			final c = s.charCodeAt(i);
-			if (!pred(c)) break;
+			if (!pred(c))
+				break;
 			i = i + 1;
 		}
 		return s.substring(start, i);
@@ -39,7 +40,8 @@ class Lexer {
 		var n = firstDigit - 48;
 		while (i < s.length) {
 			final c = s.charCodeAt(i);
-			if (!isDigit(c)) break;
+			if (!isDigit(c))
+				break;
 			i = i + 1;
 			n = n * 10 + (c - 48);
 		}
@@ -53,7 +55,8 @@ class Lexer {
 			final c = s.charCodeAt(i);
 			i = i + 1;
 
-			if (isDigit(c)) out = TInt(readInt(c));
+			if (isDigit(c))
+				out = TInt(readInt(c));
 			else if (isAlpha(c)) {
 				final rest = readWhile(ch -> isAlpha(ch) || isDigit(ch));
 				out = TId(String.fromCharCode(c) + rest);

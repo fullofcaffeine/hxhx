@@ -13,7 +13,8 @@ class M5ClassIntegrationTest {
 
 	static function assertMatchesEither(haystack:String, res:Array<EReg>, label:String):Void {
 		for (re in res) {
-			if (re.match(haystack)) return;
+			if (re.match(haystack))
+				return;
 		}
 		throw label + ": expected one of the regexes to match";
 	}
@@ -23,25 +24,35 @@ class M5ClassIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "ClassMain",
+			"-cp",
+			"test",
+			"-main",
+			"ClassMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_output=" + outDir,
-			"-D", "ocaml_no_build"
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_output=" + outDir,
+			"-D",
+			"ocaml_no_build"
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		final pointPath = outDir + "/Point.ml";
-		if (!sys.FileSystem.exists(pointPath)) throw "missing output: " + pointPath;
+		if (!sys.FileSystem.exists(pointPath))
+			throw "missing output: " + pointPath;
 		final pointMl = sys.io.File.getContent(pointPath);
 		assertContains(pointMl, "type t = { __hx_type : Obj.t; mutable x : int; mutable y : int }", "record type decl");
 		final createRe = ~/let create = fun ([A-Za-z_][A-Za-z0-9_]*) ([A-Za-z_][A-Za-z0-9_]*) ->/;
-		if (!createRe.match(pointMl)) throw "create fn: expected to find 'let create = fun <x> <y> ->'";
+		if (!createRe.match(pointMl))
+			throw "create fn: expected to find 'let create = fun <x> <y> ->'";
 		final xArg = createRe.matched(1);
 		final yArg = createRe.matched(2);
 		// Codegen may introduce a temp assignment to preserve Haxe assignment-expression semantics.
@@ -60,7 +71,8 @@ class M5ClassIntegrationTest {
 		], "incX updates field");
 
 		final mainPath = outDir + "/ClassMain.ml";
-		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;
+		if (!sys.FileSystem.exists(mainPath))
+			throw "missing output: " + mainPath;
 		final mainMl = sys.io.File.getContent(mainPath);
 		assertContains(mainMl, "Point.create 1 2", "new -> create");
 		assertContains(mainMl, "Point.incX p ()", "method call (no args)");

@@ -14,7 +14,7 @@
 	  - a human label pointing at the upstream fixture we are emulating
 	  - a source string (kept small and deterministic)
 	  - the minimal expected AST summary for this phase (package + first class +
-	    whether a static `main` exists)
+		whether a static `main` exists)
 
 	How:
 	- We avoid anonymous-structure typing in this example because the OCaml
@@ -27,13 +27,7 @@ class FrontendFixture {
 	public final expectMainClassName:String;
 	public final expectHasStaticMain:Bool;
 
-	public function new(
-		label:String,
-		source:String,
-		expectPackagePath:String,
-		expectMainClassName:String,
-		expectHasStaticMain:Bool
-	) {
+	public function new(label:String, source:String, expectPackagePath:String, expectMainClassName:String, expectHasStaticMain:Bool) {
 		this.label = label;
 		this.source = source;
 		this.expectPackagePath = expectPackagePath;

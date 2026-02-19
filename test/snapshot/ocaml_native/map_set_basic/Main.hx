@@ -3,8 +3,8 @@ import ocaml.IntMap as IMap;
 import ocaml.StringSet as SSet;
 import ocaml.IntSet as ISet;
 
-	class Main {
-		static function main() {
+class Main {
+	static function main() {
 		var sm:SMap<Int> = SMap.empty();
 		sm = SMap.add("a", 1, sm);
 		SMap.findOpt("a", sm);

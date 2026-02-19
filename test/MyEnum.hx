@@ -3,4 +3,3 @@ enum MyEnum {
 	B(i:Int);
 	C(i:Int, s:String);
 }
-

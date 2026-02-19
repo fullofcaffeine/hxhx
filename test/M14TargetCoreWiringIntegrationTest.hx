@@ -3,7 +3,8 @@ import backend.ocaml.OcamlTargetCore;
 
 class M14TargetCoreWiringIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond) throw message;
+		if (!cond)
+			throw message;
 	}
 
 	static function main():Void {
@@ -15,4 +16,3 @@ class M14TargetCoreWiringIntegrationTest {
 		assertTrue(OcamlStage3Backend.targetCore().coreId() == core.coreId(), "stage3 backend is not wired to OCaml target core");
 	}
 }
-

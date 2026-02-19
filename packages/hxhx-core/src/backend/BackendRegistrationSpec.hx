@@ -15,4 +15,3 @@ typedef BackendRegistrationSpec = {
 	final descriptor:TargetDescriptor;
 	final create:Void->IBackend;
 }
-

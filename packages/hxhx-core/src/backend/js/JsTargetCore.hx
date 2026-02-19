@@ -41,14 +41,17 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function ensureDirectory(path:String):Void {
-		if (path == null || path.length == 0) return;
-		if (sys.FileSystem.exists(path)) return;
+		if (path == null || path.length == 0)
+			return;
+		if (sys.FileSystem.exists(path))
+			return;
 		final parent = Path.directory(path);
-		if (parent != null && parent.length > 0 && parent != path) ensureDirectory(parent);
+		if (parent != null && parent.length > 0 && parent != path)
+			ensureDirectory(parent);
 		sys.FileSystem.createDirectory(path);
 	}
 
-	static function collectClassUnits(program:GenIrProgram):{ units:Array<JsClassUnit>, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String> } {
+	static function collectClassUnits(program:GenIrProgram):{units:Array<JsClassUnit>, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>} {
 		final bySimpleName = new haxe.ds.StringMap<String>();
 		final byFullName = new haxe.ds.StringMap<String>();
 		final units = new Array<JsClassUnit>();
@@ -61,10 +64,12 @@ class JsTargetCore implements ITargetCore {
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
 				final fullName = (pkg == null || pkg.length == 0) ? className : (pkg + "." + className);
-				if (byFullName.exists(fullName)) continue;
+				if (byFullName.exists(fullName))
+					continue;
 				final jsRef = JsNameMangler.classVarName(fullName);
 				byFullName.set(fullName, jsRef);
-				if (!bySimpleName.exists(className)) bySimpleName.set(className, jsRef);
+				if (!bySimpleName.exists(className))
+					bySimpleName.set(className, jsRef);
 				units.push({
 					fullName: fullName,
 					jsRef: jsRef,
@@ -126,12 +131,7 @@ class JsTargetCore implements ITargetCore {
 		writer.writeln("};");
 	}
 
-	static function emitClass(
-		writer:JsWriter,
-		unit:JsClassUnit,
-		classRefs:haxe.ds.StringMap<String>,
-		simpleNameRefs:haxe.ds.StringMap<String>
-	):Void {
+	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
 		writer.writeln("var " + unit.jsRef + " = {};");
 		writer.writeln(unit.jsRef + ".__hx_name = " + JsNameMangler.quoteString(unit.fullName) + ";");
 		writer.writeln("__hx_classes[" + JsNameMangler.quoteString(unit.fullName) + "] = " + unit.jsRef + ";");
@@ -142,7 +142,8 @@ class JsTargetCore implements ITargetCore {
 		final staticScope = new JsFunctionScope(classRefs);
 
 		for (field in HxClassDecl.getFields(unit.decl)) {
-			if (!HxFieldDecl.getIsStatic(field)) continue;
+			if (!HxFieldDecl.getIsStatic(field))
+				continue;
 			final suffix = JsNameMangler.propertySuffix(HxFieldDecl.getName(field));
 			final init = HxFieldDecl.getInit(field);
 			final value = init == null ? "null" : JsExprEmitter.emit(init, staticScope.exprScope());
@@ -150,7 +151,8 @@ class JsTargetCore implements ITargetCore {
 		}
 
 		for (fn in HxClassDecl.getFunctions(unit.decl)) {
-			if (!HxFunctionDecl.getIsStatic(fn)) continue;
+			if (!HxFunctionDecl.getIsStatic(fn))
+				continue;
 
 			final fnScope = new JsFunctionScope(classRefs);
 			final params = new Array<String>();
@@ -168,13 +170,16 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function resolveMainRef(main:String, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):Null<String> {
-		if (main == null || main.length == 0) return null;
+		if (main == null || main.length == 0)
+			return null;
 
 		final direct = byFullName.get(main);
-		if (direct != null) return direct;
+		if (direct != null)
+			return direct;
 
 		final parts = main.split(".");
-		if (parts.length == 0) return null;
+		if (parts.length == 0)
+			return null;
 		return bySimpleName.get(parts[parts.length - 1]);
 	}
 
@@ -182,7 +187,8 @@ class JsTargetCore implements ITargetCore {
 		final hint = context.outputFileHint;
 		final outputPath = (hint != null && hint.length > 0) ? hint : Path.join([context.outputDir, "out.js"]);
 		final outputDir = Path.directory(outputPath);
-		if (outputDir != null && outputDir.length > 0) ensureDirectory(outputDir);
+		if (outputDir != null && outputDir.length > 0)
+			ensureDirectory(outputDir);
 
 		final typedProgram = GenIrBoundary.requireProgram(program);
 		final classes = collectClassUnits(typedProgram);

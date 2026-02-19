@@ -4,4 +4,3 @@ enum BinOp {
 	Mul;
 	Div;
 }
-

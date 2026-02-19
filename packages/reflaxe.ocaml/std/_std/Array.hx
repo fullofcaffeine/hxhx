@@ -54,8 +54,8 @@ extern class Array<T> {
 		directly to runtime helpers, avoiding array-comprehension desugarings.
 	**/
 	public function map<S>(f:T->S):Array<S>;
+
 	public function filter(f:T->Bool):Array<T>;
 
 	public function resize(len:Int):Void;
 }
-

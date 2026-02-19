@@ -28,7 +28,7 @@ class BuildMacro {
 			access: [APublic, AStatic],
 			kind: FFun({
 				args: [],
-				ret: macro:String,
+				ret: macro :String,
 				expr: macro return "from_build_macro"
 			}),
 			pos: Context.currentPos()
@@ -37,4 +37,3 @@ class BuildMacro {
 	}
 	#end
 }
-

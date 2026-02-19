@@ -10,4 +10,3 @@ class Box {
 		this.h = h;
 	}
 }
-

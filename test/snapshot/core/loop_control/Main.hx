@@ -5,13 +5,17 @@ class Main {
 
 		while (true) {
 			i++;
-			if (i == 2) continue;
-			if (i == 5) break;
+			if (i == 2)
+				continue;
+			if (i == 5)
+				break;
 			sum += i;
 		}
 
-		if (i != 5) throw "bad i";
-		if (sum != 8) throw "bad sum";
+		if (i != 5)
+			throw "bad i";
+		if (sum != 8)
+			throw "bad sum";
 
 		var outer = 0;
 		var innerCount = 0;
@@ -21,12 +25,13 @@ class Main {
 			while (true) {
 				inner++;
 				innerCount++;
-				if (inner == 2) break;
+				if (inner == 2)
+					break;
 			}
 		}
 
-		if (innerCount != 6) throw "bad innerCount";
+		if (innerCount != 6)
+			throw "bad innerCount";
 		Sys.println("OK loop_control");
 	}
 }
-

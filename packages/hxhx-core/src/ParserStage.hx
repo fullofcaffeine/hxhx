@@ -15,21 +15,23 @@
 	  This matches the upstream bootstrap strategy: keep the frontend native
 	  while we reimplement the rest of the compiler pipeline in Haxe.
 **/
-	class ParserStage {
-		public function new() {}
+class ParserStage {
+	public function new() {}
 
-		static function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
-			if (filePath == null || filePath.length == 0) return null;
-			final name = haxe.io.Path.withoutDirectory(filePath);
-			final dot = name.lastIndexOf(".");
-			return dot <= 0 ? name : name.substr(0, dot);
-		}
+	static function expectedMainClassFromFile(filePath:Null<String>):Null<String> {
+		if (filePath == null || filePath.length == 0)
+			return null;
+		final name = haxe.io.Path.withoutDirectory(filePath);
+		final dot = name.lastIndexOf(".");
+		return dot <= 0 ? name : name.substr(0, dot);
+	}
 
-		public static function parse(source:String, ?filePath:String):ParsedModule {
-			final expectedMainClass = expectedMainClassFromFile(filePath);
-			final decl = #if hih_native_parser
-				// Bring-up escape hatch: allow forcing the pure-Haxe parser even when the
-				// native frontend is compiled in.
+	public static function parse(source:String, ?filePath:String):ParsedModule {
+		final expectedMainClass = expectedMainClassFromFile(filePath);
+		final decl =
+			#if hih_native_parser
+			// Bring-up escape hatch: allow forcing the pure-Haxe parser even when the
+			// native frontend is compiled in.
 			//
 			// Why
 			// - The native frontend protocol v1 is intentionally "header/return only" and
@@ -40,138 +42,152 @@
 			// How
 			// - `HIH_FORCE_HX_PARSER=1` selects the pure-Haxe frontend regardless of the
 			//   compiled-in `hih_native_parser` define.
-					((() -> {
-						function enrichNativeDecl(nativeDecl:HxModuleDecl):HxModuleDecl {
-								// Native protocol v1 only returns one "main" class. However, real Haxe modules
-								// commonly declare additional helper types in the same file (especially in the
-								// upstream unit/runci suites). We add a tiny, best-effort scanner to discover
-								// those additional classes and their static members so Stage3 emission can
-								// produce stub providers.
-								var main = HxModuleDecl.getMainClass(nativeDecl);
-								var mainName = HxClassDecl.getName(main);
+			((() -> {
+				function enrichNativeDecl(nativeDecl:HxModuleDecl):HxModuleDecl {
+					// Native protocol v1 only returns one "main" class. However, real Haxe modules
+					// commonly declare additional helper types in the same file (especially in the
+					// upstream unit/runci suites). We add a tiny, best-effort scanner to discover
+					// those additional classes and their static members so Stage3 emission can
+					// produce stub providers.
+					var main = HxModuleDecl.getMainClass(nativeDecl);
+					var mainName = HxClassDecl.getName(main);
 
-								// Some upstream modules have a non-class main type (notably enums).
-								//
-								// If the native protocol returns `Unknown`, scan for a matching top-level enum
-								// and treat it as the module's main provider so emission doesn't drop the unit.
-								final enumDeclsAll = scanModuleLocalHelperEnums(source, null);
-								final typedefDeclsAll = scanModuleLocalHelperTypedefs(source, null);
-								final abstractDeclsAll = scanModuleLocalHelperAbstracts(source, null);
-								if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
-									function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
-										if (candidates == null) return false;
-										for (c in candidates) {
-											final nm = HxClassDecl.getName(c);
-											if (nm != null && nm == expectedMainClass) {
-												main = c;
-												mainName = nm;
-												return true;
-											}
-										}
-										return false;
-									}
-
-									if (!tryPickMainFrom(enumDeclsAll)) {
-										if (!tryPickMainFrom(typedefDeclsAll)) tryPickMainFrom(abstractDeclsAll);
-									}
+					// Some upstream modules have a non-class main type (notably enums).
+					//
+					// If the native protocol returns `Unknown`, scan for a matching top-level enum
+					// and treat it as the module's main provider so emission doesn't drop the unit.
+					final enumDeclsAll = scanModuleLocalHelperEnums(source, null);
+					final typedefDeclsAll = scanModuleLocalHelperTypedefs(source, null);
+					final abstractDeclsAll = scanModuleLocalHelperAbstracts(source, null);
+					if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
+						function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
+							if (candidates == null)
+								return false;
+							for (c in candidates) {
+								final nm = HxClassDecl.getName(c);
+								if (nm != null && nm == expectedMainClass) {
+									main = c;
+									mainName = nm;
+									return true;
 								}
-
-								final existingClasses = HxModuleDecl.getClasses(nativeDecl);
-								final existingNames:Map<String, Bool> = new Map();
-								for (c in existingClasses) {
-									final nm = c == null ? null : HxClassDecl.getName(c);
-									if (nm != null && nm.length > 0) existingNames.set(nm, true);
-								}
-
-								function isMissingAndNotMain(c:HxClassDecl):Bool {
-									final nm = c == null ? null : HxClassDecl.getName(c);
-									return nm != null && nm.length > 0 && nm != mainName && !existingNames.exists(nm);
-								}
-
-								final extras = new Array<HxClassDecl>();
-								for (c in scanModuleLocalHelperClasses(source, mainName)) if (isMissingAndNotMain(c)) extras.push(c);
-								final enumDecls = new Array<HxClassDecl>();
-								for (c in enumDeclsAll) if (isMissingAndNotMain(c)) enumDecls.push(c);
-								final typedefDecls = new Array<HxClassDecl>();
-								for (c in typedefDeclsAll) if (isMissingAndNotMain(c)) typedefDecls.push(c);
-								final abstractDecls = new Array<HxClassDecl>();
-								for (c in abstractDeclsAll) if (isMissingAndNotMain(c)) abstractDecls.push(c);
-
-								if (extras.length == 0
-									&& enumDecls.length == 0
-									&& typedefDecls.length == 0
-									&& abstractDecls.length == 0
-									&& main == HxModuleDecl.getMainClass(nativeDecl)) {
-									return nativeDecl;
-								}
-
-								final classes = new Array<HxClassDecl>();
-								final seen:Map<String, Bool> = new Map();
-								function pushUnique(c:HxClassDecl):Void {
-									if (c == null) return;
-									final nm = HxClassDecl.getName(c);
-									if (nm != null && nm.length > 0 && seen.exists(nm)) return;
-									classes.push(c);
-									if (nm != null && nm.length > 0) seen.set(nm, true);
-								}
-
-								pushUnique(main);
-								for (c in existingClasses) pushUnique(c);
-								for (c in extras) pushUnique(c);
-								for (c in enumDecls) pushUnique(c);
-								for (c in typedefDecls) pushUnique(c);
-								for (c in abstractDecls) pushUnique(c);
-
-								return new HxModuleDecl(
-									HxModuleDecl.getPackagePath(nativeDecl),
-									HxModuleDecl.getImports(nativeDecl),
-									main,
-									classes,
-									HxModuleDecl.getHeaderOnly(nativeDecl),
-									HxModuleDecl.getHasToplevelMain(nativeDecl)
-								);
 							}
-
-						final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
-						if (v == "1" || v == "true" || v == "yes") return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
-						function fallbackAfterNativeFailure(nativeError:String):HxModuleDecl {
-							final strict = Sys.getEnv("HIH_NATIVE_PARSER_STRICT");
-							if (strict == "1" || strict == "true" || strict == "yes") throw nativeError;
-
-							// Fallback: the pure-Haxe frontend is slower, but it can unblock bring-up when the
-							// native lexer/parser cannot yet handle an upstream-shaped input.
-							//
-							// This is especially useful when widening the module graph for upstream suites
-							// (e.g. enabling heuristic same-package type resolution).
-							try {
-								return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
-							} catch (_:HxParseError) {
-								// Prefer the native error (it is usually more specific about the failure mode).
-								throw nativeError;
-							} catch (_:String) {
-								// Prefer the native error (it is usually more specific about the failure mode).
-								throw nativeError;
-							}
+							return false;
 						}
-						try {
-							return enrichNativeDecl(parseViaNativeHooks(source, expectedMainClass));
-						} catch (eNative:String) {
-							return fallbackAfterNativeFailure(eNative);
+
+						if (!tryPickMainFrom(enumDeclsAll)) {
+							if (!tryPickMainFrom(typedefDeclsAll))
+								tryPickMainFrom(abstractDeclsAll);
 						}
-				})());
+					}
+
+					final existingClasses = HxModuleDecl.getClasses(nativeDecl);
+					final existingNames:Map<String, Bool> = new Map();
+					for (c in existingClasses) {
+						final nm = c == null ? null : HxClassDecl.getName(c);
+						if (nm != null && nm.length > 0)
+							existingNames.set(nm, true);
+					}
+
+					function isMissingAndNotMain(c:HxClassDecl):Bool {
+						final nm = c == null ? null : HxClassDecl.getName(c);
+						return nm != null && nm.length > 0 && nm != mainName && !existingNames.exists(nm);
+					}
+
+					final extras = new Array<HxClassDecl>();
+					for (c in scanModuleLocalHelperClasses(source, mainName))
+						if (isMissingAndNotMain(c))
+							extras.push(c);
+					final enumDecls = new Array<HxClassDecl>();
+					for (c in enumDeclsAll)
+						if (isMissingAndNotMain(c))
+							enumDecls.push(c);
+					final typedefDecls = new Array<HxClassDecl>();
+					for (c in typedefDeclsAll)
+						if (isMissingAndNotMain(c))
+							typedefDecls.push(c);
+					final abstractDecls = new Array<HxClassDecl>();
+					for (c in abstractDeclsAll)
+						if (isMissingAndNotMain(c))
+							abstractDecls.push(c);
+
+					if (extras.length == 0
+						&& enumDecls.length == 0
+						&& typedefDecls.length == 0
+						&& abstractDecls.length == 0
+						&& main == HxModuleDecl.getMainClass(nativeDecl)) {
+						return nativeDecl;
+					}
+
+					final classes = new Array<HxClassDecl>();
+					final seen:Map<String, Bool> = new Map();
+					function pushUnique(c:HxClassDecl):Void {
+						if (c == null)
+							return;
+						final nm = HxClassDecl.getName(c);
+						if (nm != null && nm.length > 0 && seen.exists(nm))
+							return;
+						classes.push(c);
+						if (nm != null && nm.length > 0)
+							seen.set(nm, true);
+					}
+
+					pushUnique(main);
+					for (c in existingClasses)
+						pushUnique(c);
+					for (c in extras)
+						pushUnique(c);
+					for (c in enumDecls)
+						pushUnique(c);
+					for (c in typedefDecls)
+						pushUnique(c);
+					for (c in abstractDecls)
+						pushUnique(c);
+
+					return new HxModuleDecl(HxModuleDecl.getPackagePath(nativeDecl), HxModuleDecl.getImports(nativeDecl), main, classes,
+						HxModuleDecl.getHeaderOnly(nativeDecl), HxModuleDecl.getHasToplevelMain(nativeDecl));
+				}
+
+				final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
+				if (v == "1" || v == "true" || v == "yes")
+					return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
+				function fallbackAfterNativeFailure(nativeError:String):HxModuleDecl {
+					final strict = Sys.getEnv("HIH_NATIVE_PARSER_STRICT");
+					if (strict == "1" || strict == "true" || strict == "yes")
+						throw nativeError;
+
+					// Fallback: the pure-Haxe frontend is slower, but it can unblock bring-up when the
+					// native lexer/parser cannot yet handle an upstream-shaped input.
+					//
+					// This is especially useful when widening the module graph for upstream suites
+					// (e.g. enabling heuristic same-package type resolution).
+					try {
+						return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
+					} catch (_:HxParseError) {
+						// Prefer the native error (it is usually more specific about the failure mode).
+						throw nativeError;
+					} catch (_:String) {
+						// Prefer the native error (it is usually more specific about the failure mode).
+						throw nativeError;
+					}
+				}
+				try {
+					return enrichNativeDecl(parseViaNativeHooks(source, expectedMainClass));
+				} catch (eNative:String) {
+					return fallbackAfterNativeFailure(eNative);
+				}
+			})());
 			#else
-				new HxParser(source).parseModule(expectedMainClass);
+			new HxParser(source).parseModule(expectedMainClass);
 			#end
-			final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
-			return new ParsedModule(source, decl, path);
-		}
+		final path = filePath == null || filePath.length == 0 ? "<memory>" : filePath;
+		return new ParsedModule(source, decl, path);
+	}
 
 	#if hih_native_parser
 	static function parseViaNativeHooks(source:String, expectedMainClass:Null<String>):HxModuleDecl {
-		final encoded =
-			expectedMainClass != null && expectedMainClass.length > 0
-				? native.NativeParser.parseModuleDeclWithExpected(source, expectedMainClass)
-				: native.NativeParser.parseModuleDecl(source);
+		final encoded = expectedMainClass != null
+			&& expectedMainClass.length > 0 ? native.NativeParser.parseModuleDeclWithExpected(source,
+				expectedMainClass) : native.NativeParser.parseModuleDecl(source);
 		return decodeNativeProtocol(encoded);
 	}
 
@@ -209,50 +225,63 @@
 	**/
 	static function scanModuleLocalHelperClasses(source:String, mainClassName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
-		if (source == null || source.length == 0) return out;
+		if (source == null || source.length == 0)
+			return out;
 
 		final seen:Map<String, Bool> = new Map();
-		if (mainClassName != null && mainClassName.length > 0) seen.set(mainClassName, true);
+		if (mainClassName != null && mainClassName.length > 0)
+			seen.set(mainClassName, true);
 
 		var braceDepth = 0;
 		var i = 0;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{") braceDepth += 1;
-				else if (t.text == "}") braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				if (t.text == "{")
+					braceDepth += 1;
+				else if (t.text == "}")
+					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
 				continue;
 			}
 
-			if (braceDepth != 0) continue;
-			if (t.text != "class") continue;
+			if (braceDepth != 0)
+				continue;
+			if (t.text != "class")
+				continue;
 
 			// class <Name> ...
 			var nameTok = scanNextToken(source, i);
 			// Skip stray symbols/metadata between `class` and the identifier.
-			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+			while (nameTok.text.length > 0 && !nameTok.isIdent)
+				nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0)
+				continue;
 
 			final className = nameTok.text;
 			i = nameTok.nextPos;
 			final isMain = mainClassName != null && className == mainClassName;
 			final alreadySeen = seen.exists(className);
 			final shouldRecord = !isMain && !alreadySeen;
-			if (!alreadySeen) seen.set(className, true);
+			if (!alreadySeen)
+				seen.set(className, true);
 
 			// Seek the opening `{` for this class header.
 			var headerTok = scanNextToken(source, i);
-			while (headerTok.text.length > 0 && headerTok.text != "{") headerTok = scanNextToken(source, headerTok.nextPos);
-			if (headerTok.text != "{") continue;
+			while (headerTok.text.length > 0 && headerTok.text != "{")
+				headerTok = scanNextToken(source, headerTok.nextPos);
+			if (headerTok.text != "{")
+				continue;
 
 			final bodyStart = headerTok.nextPos;
 			final scanned = scanClassBodyForStatics(source, bodyStart);
 			i = scanned.nextPos;
 
-			if (shouldRecord) out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields));
+			if (shouldRecord)
+				out.push(new HxClassDecl(className, false, scanned.functions, scanned.fields));
 		}
 
 		return out;
@@ -267,7 +296,7 @@
 		- If an `.hx` file's *main type* is an enum, the native protocol would otherwise
 		  decode as `class Unknown`, and Stage3 emission would drop the module entirely,
 		  leading to OCaml failures like:
-		    `Error: Unbound module MyEnum`.
+			`Error: Unbound module MyEnum`.
 
 		What
 		- Scan the source text for top-level `enum <Name> { ... }` declarations.
@@ -287,16 +316,19 @@
 	**/
 	static function scanModuleLocalHelperEnums(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
-		if (source == null || source.length == 0) return out;
+		if (source == null || source.length == 0)
+			return out;
 
 		inline function isUpperStart(name:String):Bool {
-			if (name == null || name.length == 0) return false;
+			if (name == null || name.length == 0)
+				return false;
 			final c = name.charCodeAt(0);
 			return c >= "A".code && c <= "Z".code;
 		}
 
 		final seen:Map<String, Bool> = new Map();
-		if (mainTypeName != null && mainTypeName.length > 0) seen.set(mainTypeName, true);
+		if (mainTypeName != null && mainTypeName.length > 0)
+			seen.set(mainTypeName, true);
 
 		var braceDepth = 0;
 		var i = 0;
@@ -304,39 +336,51 @@
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{") braceDepth += 1;
-				else if (t.text == "}") braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				if (t.text == "{")
+					braceDepth += 1;
+				else if (t.text == "}")
+					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
 				continue;
 			}
 
-			if (braceDepth != 0) continue;
-			if (t.text != "enum") continue;
+			if (braceDepth != 0)
+				continue;
+			if (t.text != "enum")
+				continue;
 
 			// enum [abstract] <Name> ...
 			var isEnumAbstract = false;
 			var nameTok = scanNextToken(source, i);
-			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+			while (nameTok.text.length > 0 && !nameTok.isIdent)
+				nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0)
+				continue;
 
 			if (nameTok.text == "abstract") {
 				isEnumAbstract = true;
 				nameTok = scanNextToken(source, nameTok.nextPos);
-				while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
-				if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+				while (nameTok.text.length > 0 && !nameTok.isIdent)
+					nameTok = scanNextToken(source, nameTok.nextPos);
+				if (!nameTok.isIdent || nameTok.text.length == 0)
+					continue;
 			}
 
 			final enumName = nameTok.text;
 			i = nameTok.nextPos;
 
-			if (enumName == null || enumName.length == 0) continue;
+			if (enumName == null || enumName.length == 0)
+				continue;
 			if (seen.exists(enumName)) {
 				// Still need to consume the body so the outer loop doesn't get confused.
 				var headerTok = scanNextToken(source, i);
-				while (headerTok.text.length > 0 && headerTok.text != "{") headerTok = scanNextToken(source, headerTok.nextPos);
-				if (headerTok.text != "{") continue;
+				while (headerTok.text.length > 0 && headerTok.text != "{")
+					headerTok = scanNextToken(source, headerTok.nextPos);
+				if (headerTok.text != "{")
+					continue;
 				if (isEnumAbstract) {
 					final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
 					i = scanned.nextPos;
@@ -350,8 +394,10 @@
 
 			// Seek opening `{`.
 			var headerTok = scanNextToken(source, i);
-			while (headerTok.text.length > 0 && headerTok.text != "{") headerTok = scanNextToken(source, headerTok.nextPos);
-			if (headerTok.text != "{") continue;
+			while (headerTok.text.length > 0 && headerTok.text != "{")
+				headerTok = scanNextToken(source, headerTok.nextPos);
+			if (headerTok.text != "{")
+				continue;
 
 			final fields = new Array<HxFieldDecl>();
 			final functions = new Array<HxFunctionDecl>();
@@ -363,22 +409,26 @@
 				// Bring-up: record only the value names, emit them as static fields with a placeholder
 				// initializer. This keeps Stage3 emission linking without committing to full semantics.
 				for (v in scanned.values) {
-					if (v == null || v.length == 0 || !isUpperStart(v)) continue;
+					if (v == null || v.length == 0 || !isUpperStart(v))
+						continue;
 					fields.push(new HxFieldDecl(v, HxVisibility.Public, true, "Dynamic", EInt(0)));
 				}
 			} else {
 				final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
 				i = scanned.nextPos;
 				for (ctor in scanned.ctors) {
-					if (ctor == null) continue;
+					if (ctor == null)
+						continue;
 					final ctorName = ctor.name;
-					if (ctorName == null || ctorName.length == 0 || !isUpperStart(ctorName)) continue;
+					if (ctorName == null || ctorName.length == 0 || !isUpperStart(ctorName))
+						continue;
 					final argNames = ctor.args == null ? [] : ctor.args;
 					if (argNames.length == 0) {
 						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, "Dynamic", null));
 					} else {
 						final args = new Array<HxFunctionArg>();
-						for (a in argNames) args.push(new HxFunctionArg(a, "", HxDefaultValue.NoDefault, false, false));
+						for (a in argNames)
+							args.push(new HxFunctionArg(a, "", HxDefaultValue.NoDefault, false, false));
 						// Constructors conceptually return an enum value; during bring-up we keep the
 						// type wide to avoid OCaml type errors in heavily-`Obj.magic` codegen.
 						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, "Dynamic", [], ""));
@@ -413,35 +463,46 @@
 	**/
 	static function scanModuleLocalHelperTypedefs(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
-		if (source == null || source.length == 0) return out;
+		if (source == null || source.length == 0)
+			return out;
 
 		final seen:Map<String, Bool> = new Map();
-		if (mainTypeName != null && mainTypeName.length > 0) seen.set(mainTypeName, true);
+		if (mainTypeName != null && mainTypeName.length > 0)
+			seen.set(mainTypeName, true);
 
 		var braceDepth = 0;
 		var i = 0;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{") braceDepth += 1;
-				else if (t.text == "}") braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				if (t.text == "{")
+					braceDepth += 1;
+				else if (t.text == "}")
+					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
 				continue;
 			}
 
-			if (braceDepth != 0) continue;
-			if (t.text != "typedef") continue;
+			if (braceDepth != 0)
+				continue;
+			if (t.text != "typedef")
+				continue;
 
 			var nameTok = scanNextToken(source, i);
-			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+			while (nameTok.text.length > 0 && !nameTok.isIdent)
+				nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0)
+				continue;
 
 			final typeName = nameTok.text;
 			i = nameTok.nextPos;
-			if (typeName == null || typeName.length == 0) continue;
-			if (seen.exists(typeName)) continue;
+			if (typeName == null || typeName.length == 0)
+				continue;
+			if (seen.exists(typeName))
+				continue;
 			seen.set(typeName, true);
 
 			out.push(new HxClassDecl(typeName, false, [], []));
@@ -474,37 +535,47 @@
 	**/
 	static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
-		if (source == null || source.length == 0) return out;
+		if (source == null || source.length == 0)
+			return out;
 
 		final seen:Map<String, Bool> = new Map();
-		if (mainTypeName != null && mainTypeName.length > 0) seen.set(mainTypeName, true);
+		if (mainTypeName != null && mainTypeName.length > 0)
+			seen.set(mainTypeName, true);
 
 		var braceDepth = 0;
 		var i = 0;
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
-				if (t.text == "{") braceDepth += 1;
-				else if (t.text == "}") braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+				if (t.text == "{")
+					braceDepth += 1;
+				else if (t.text == "}")
+					braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
 				continue;
 			}
 
-			if (braceDepth != 0) continue;
+			if (braceDepth != 0)
+				continue;
 			if (t.text == "enum") {
 				// Skip full top-level enum blocks so `enum abstract` isn't treated as a regular abstract.
 				var enumNameTok = scanNextToken(source, i);
-				while (enumNameTok.text.length > 0 && !enumNameTok.isIdent) enumNameTok = scanNextToken(source, enumNameTok.nextPos);
-				if (!enumNameTok.isIdent || enumNameTok.text.length == 0) continue;
+				while (enumNameTok.text.length > 0 && !enumNameTok.isIdent)
+					enumNameTok = scanNextToken(source, enumNameTok.nextPos);
+				if (!enumNameTok.isIdent || enumNameTok.text.length == 0)
+					continue;
 
 				var isEnumAbstract = false;
 				if (enumNameTok.text == "abstract") {
 					isEnumAbstract = true;
 					enumNameTok = scanNextToken(source, enumNameTok.nextPos);
-					while (enumNameTok.text.length > 0 && !enumNameTok.isIdent) enumNameTok = scanNextToken(source, enumNameTok.nextPos);
-					if (!enumNameTok.isIdent || enumNameTok.text.length == 0) continue;
+					while (enumNameTok.text.length > 0 && !enumNameTok.isIdent)
+						enumNameTok = scanNextToken(source, enumNameTok.nextPos);
+					if (!enumNameTok.isIdent || enumNameTok.text.length == 0)
+						continue;
 				}
 				i = enumNameTok.nextPos;
 
@@ -525,11 +596,14 @@
 				}
 				continue;
 			}
-			if (t.text != "abstract") continue;
+			if (t.text != "abstract")
+				continue;
 
 			var nameTok = scanNextToken(source, i);
-			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+			while (nameTok.text.length > 0 && !nameTok.isIdent)
+				nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0)
+				continue;
 
 			final abstractName = nameTok.text;
 			i = nameTok.nextPos;
@@ -537,7 +611,8 @@
 			final isMain = mainTypeName != null && abstractName == mainTypeName;
 			final alreadySeen = seen.exists(abstractName);
 			final shouldRecord = !isMain && !alreadySeen;
-			if (!alreadySeen) seen.set(abstractName, true);
+			if (!alreadySeen)
+				seen.set(abstractName, true);
 
 			var fields = new Array<HxFieldDecl>();
 			var functions = new Array<HxFunctionDecl>();
@@ -555,7 +630,8 @@
 				i = headerTok.nextPos;
 			}
 
-			if (shouldRecord) out.push(new HxClassDecl(abstractName, false, functions, fields));
+			if (shouldRecord)
+				out.push(new HxClassDecl(abstractName, false, functions, fields));
 		}
 
 		return out;
@@ -568,7 +644,8 @@
 		var i = start;
 
 		inline function isUpperStart(name:String):Bool {
-			if (name == null || name.length == 0) return false;
+			if (name == null || name.length == 0)
+				return false;
 			final c = name.charCodeAt(0);
 			return c >= "A".code && c <= "Z".code;
 		}
@@ -576,7 +653,8 @@
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
 				switch (t.text) {
@@ -584,14 +662,17 @@
 						depth += 1;
 					case "}":
 						depth -= 1;
-						if (depth <= 0) break;
+						if (depth <= 0)
+							break;
 					case _:
 				}
 				continue;
 			}
 
-			if (depth != 1) continue;
-			if (!isUpperStart(t.text)) continue;
+			if (depth != 1)
+				continue;
+			if (!isUpperStart(t.text))
+				continue;
 
 			final ctorName = t.text;
 			final ctorArgs = new Array<String>();
@@ -613,7 +694,8 @@
 				while (true) {
 					final at = scanNextToken(source, i);
 					i = at.nextPos;
-					if (at.text.length == 0) break;
+					if (at.text.length == 0)
+						break;
 
 					if (!at.isIdent) {
 						switch (at.text) {
@@ -621,22 +703,27 @@
 								parenDepth += 1;
 							case ")":
 								parenDepth -= 1;
-								if (parenDepth <= 0) break;
+								if (parenDepth <= 0)
+									break;
 							case "[":
 								bracketDepth += 1;
 							case "]":
-								if (bracketDepth > 0) bracketDepth -= 1;
+								if (bracketDepth > 0)
+									bracketDepth -= 1;
 							case "{":
 								braceDepthInArgs += 1;
 								depth += 1;
 							case "}":
-								if (braceDepthInArgs > 0) braceDepthInArgs -= 1;
+								if (braceDepthInArgs > 0)
+									braceDepthInArgs -= 1;
 								depth -= 1;
-								if (depth <= 0) break;
+								if (depth <= 0)
+									break;
 							case "<":
 								angleDepth += 1;
 							case ">":
-								if (angleDepth > 0) angleDepth -= 1;
+								if (angleDepth > 0)
+									angleDepth -= 1;
 							case ",":
 								if (parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0) {
 									expectArg = true;
@@ -644,16 +731,20 @@
 									pendingRest = false;
 								}
 							case "?":
-								if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0) pendingOptional = true;
+								if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0)
+									pendingOptional = true;
 							case "...":
-								if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0) pendingRest = true;
+								if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0)
+									pendingRest = true;
 							case _:
 						}
 						continue;
 					}
 
-					if (!expectArg) continue;
-					if (parenDepth != 1 || bracketDepth != 0 || braceDepthInArgs != 0 || angleDepth != 0) continue;
+					if (!expectArg)
+						continue;
+					if (parenDepth != 1 || bracketDepth != 0 || braceDepthInArgs != 0 || angleDepth != 0)
+						continue;
 
 					final nm = at.text;
 					final argName = (nm == null || nm.length == 0) ? ("arg" + argIndex) : nm;
@@ -665,19 +756,22 @@
 				}
 			}
 
-			ctors.push({ name: ctorName, args: ctorArgs });
+			ctors.push({name: ctorName, args: ctorArgs});
 
 			// Consume tokens until the terminating `;` so we don't interpret type names
 			// as additional constructors.
 			while (true) {
 				final tt = scanNextToken(source, i);
 				i = tt.nextPos;
-				if (tt.text.length == 0) break;
+				if (tt.text.length == 0)
+					break;
 				if (!tt.isIdent) {
-					if (tt.text == "{") depth += 1;
+					if (tt.text == "{")
+						depth += 1;
 					else if (tt.text == "}") {
 						depth -= 1;
-						if (depth <= 0) break;
+						if (depth <= 0)
+							break;
 					} else if (depth == 1 && (tt.text == ";" || tt.text == ",")) {
 						break;
 					}
@@ -685,7 +779,7 @@
 			}
 		}
 
-		return { nextPos: i, ctors: ctors };
+		return {nextPos: i, ctors: ctors};
 	}
 
 	static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, values:Array<String>} {
@@ -695,7 +789,8 @@
 		var i = start;
 
 		inline function isUpperStart(name:String):Bool {
-			if (name == null || name.length == 0) return false;
+			if (name == null || name.length == 0)
+				return false;
 			final c = name.charCodeAt(0);
 			return c >= "A".code && c <= "Z".code;
 		}
@@ -703,7 +798,8 @@
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
 				switch (t.text) {
@@ -711,25 +807,31 @@
 						depth += 1;
 					case "}":
 						depth -= 1;
-						if (depth <= 0) break;
+						if (depth <= 0)
+							break;
 					case _:
 				}
 				continue;
 			}
 
-			if (depth != 1) continue;
-			if (t.text != "var") continue;
+			if (depth != 1)
+				continue;
+			if (t.text != "var")
+				continue;
 
 			// var <Name> ...
 			var nameTok = scanNextToken(source, i);
-			while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
-			if (!nameTok.isIdent || nameTok.text.length == 0) continue;
+			while (nameTok.text.length > 0 && !nameTok.isIdent)
+				nameTok = scanNextToken(source, nameTok.nextPos);
+			if (!nameTok.isIdent || nameTok.text.length == 0)
+				continue;
 			final name = nameTok.text;
 			i = nameTok.nextPos;
-			if (isUpperStart(name)) values.push(name);
+			if (isUpperStart(name))
+				values.push(name);
 		}
 
-		return { nextPos: i, values: values };
+		return {nextPos: i, values: values};
 	}
 
 	static function scanClassBodyForStatics(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
@@ -745,7 +847,8 @@
 		while (true) {
 			final t = scanNextToken(source, i);
 			i = t.nextPos;
-			if (t.text.length == 0) break;
+			if (t.text.length == 0)
+				break;
 
 			if (!t.isIdent) {
 				switch (t.text) {
@@ -753,7 +856,8 @@
 						depth += 1;
 					case "}":
 						depth -= 1;
-						if (depth <= 0) break;
+						if (depth <= 0)
+							break;
 					case ";":
 						if (depth == 1) {
 							// Declarations are terminated; reset modifiers.
@@ -765,7 +869,8 @@
 				continue;
 			}
 
-			if (depth != 1) continue;
+			if (depth != 1)
+				continue;
 
 			switch (t.text) {
 				case "public":
@@ -787,13 +892,14 @@
 						var isFieldDecl = false;
 						var j = i;
 						while (true) {
-								final nt = scanNextToken(source, j);
-								if (nt.text.length == 0) {
-									isFieldDecl = false;
-									break;
-								}
-								j = nt.nextPos;
-								if (!nt.isIdent) continue;
+							final nt = scanNextToken(source, j);
+							if (nt.text.length == 0) {
+								isFieldDecl = false;
+								break;
+							}
+							j = nt.nextPos;
+							if (!nt.isIdent)
+								continue;
 							switch (nt.text) {
 								case "public" | "private" | "static" | "inline" | "macro" | "extern" | "override" | "final":
 									continue;
@@ -804,7 +910,8 @@
 							}
 							break;
 						}
-						if (!isFieldDecl) continue;
+						if (!isFieldDecl)
+							continue;
 					}
 					// Best-effort: collect static vars/constants by name, ignore initializer and type hint.
 					//
@@ -820,7 +927,8 @@
 					while (true) {
 						final ft = scanNextToken(source, i);
 						i = ft.nextPos;
-						if (ft.text.length == 0) break;
+						if (ft.text.length == 0)
+							break;
 
 						if (!ft.isIdent) {
 							switch (ft.text) {
@@ -850,13 +958,17 @@
 							continue;
 						}
 
-						if (depth != 1) continue;
-						if (!wantName) continue;
+						if (depth != 1)
+							continue;
+						if (!wantName)
+							continue;
 
 						final name = ft.text;
 						wantName = false;
-						if (!wantStatic) continue;
-						if (name == null || name.length == 0) continue;
+						if (!wantStatic)
+							continue;
+						if (name == null || name.length == 0)
+							continue;
 						fields.push(new HxFieldDecl(name, fieldVis, true, "", null));
 					}
 
@@ -868,14 +980,14 @@
 					final fnVis = vis;
 
 					var nameTok = scanNextToken(source, i);
-					while (nameTok.text.length > 0 && !nameTok.isIdent) nameTok = scanNextToken(source, nameTok.nextPos);
+					while (nameTok.text.length > 0 && !nameTok.isIdent)
+						nameTok = scanNextToken(source, nameTok.nextPos);
 					final fnName = (nameTok.isIdent && nameTok.text.length > 0) ? nameTok.text : "";
 					i = nameTok.nextPos;
 
 					// Seek `(` for the parameter list (skip generics / return types).
 					var sigTok = scanNextToken(source, i);
-					while (sigTok.text.length > 0 && sigTok.text != "(" && sigTok.text != "{"
-						&& sigTok.text != ";" && sigTok.text != "=") {
+					while (sigTok.text.length > 0 && sigTok.text != "(" && sigTok.text != "{" && sigTok.text != ";" && sigTok.text != "=") {
 						i = sigTok.nextPos;
 						sigTok = scanNextToken(source, i);
 					}
@@ -896,7 +1008,8 @@
 						while (true) {
 							final at = scanNextToken(source, i);
 							i = at.nextPos;
-							if (at.text.length == 0) break;
+							if (at.text.length == 0)
+								break;
 
 							if (!at.isIdent) {
 								switch (at.text) {
@@ -913,7 +1026,8 @@
 										braceDepthInArgs += 1;
 										depth += 1;
 									case "}":
-										if (braceDepthInArgs > 0) braceDepthInArgs -= 1;
+										if (braceDepthInArgs > 0)
+											braceDepthInArgs -= 1;
 										depth -= 1;
 										if (depth <= 0) break;
 									case "<":
@@ -927,7 +1041,8 @@
 											pendingRest = false;
 										}
 									case "?":
-										if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0) pendingOptional = true;
+										if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0)
+											pendingOptional = true;
 									case "...":
 										if (expectArg && parenDepth == 1 && bracketDepth == 0 && braceDepthInArgs == 0 && angleDepth == 0) pendingRest = true;
 									case _:
@@ -935,8 +1050,10 @@
 								continue;
 							}
 
-							if (!expectArg) continue;
-							if (parenDepth != 1 || bracketDepth != 0 || braceDepthInArgs != 0 || angleDepth != 0) continue;
+							if (!expectArg)
+								continue;
+							if (parenDepth != 1 || bracketDepth != 0 || braceDepthInArgs != 0 || angleDepth != 0)
+								continue;
 
 							final nm = at.text;
 							final argName = (nm == null || nm.length == 0) ? ("arg" + argIndex) : nm;
@@ -958,15 +1075,17 @@
 			}
 		}
 
-		return { nextPos: i, fields: fields, functions: functions };
+		return {nextPos: i, fields: fields, functions: functions};
 	}
 
 	static function scanNextToken(source:String, start:Int):{isIdent:Bool, text:String, nextPos:Int} {
 		final len = source.length;
 		var i = start;
 
-		inline function isWs(c:Int):Bool return c == 9 || c == 10 || c == 13 || c == 32;
-		inline function isIdentStart(c:Int):Bool return (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || c == "_".code;
+		inline function isWs(c:Int):Bool
+			return c == 9 || c == 10 || c == 13 || c == 32;
+		inline function isIdentStart(c:Int):Bool
+			return (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || c == "_".code;
 		inline function isIdentPart(c:Int):Bool
 			return isIdentStart(c) || (c >= "0".code && c <= "9".code);
 
@@ -983,7 +1102,8 @@
 				while (i < len) {
 					final cc = source.charCodeAt(i);
 					i += 1;
-					if (cc == "\n".code) break;
+					if (cc == "\n".code)
+						break;
 				}
 				continue;
 			}
@@ -1010,10 +1130,12 @@
 					i += 1;
 					if (cc == "\\".code) {
 						// skip escaped char
-						if (i < len) i += 1;
+						if (i < len)
+							i += 1;
 						continue;
 					}
-					if (cc == quote) break;
+					if (cc == quote)
+						break;
 				}
 				continue;
 			}
@@ -1025,33 +1147,37 @@
 					final cc = source.charCodeAt(i);
 					i += 1;
 					if (cc == "\\".code) {
-						if (i < len) i += 1;
+						if (i < len)
+							i += 1;
 						continue;
 					}
-					if (cc == "/".code) break;
+					if (cc == "/".code)
+						break;
 				}
 				// flags
-				while (i < len && isIdentPart(source.charCodeAt(i))) i += 1;
+				while (i < len && isIdentPart(source.charCodeAt(i)))
+					i += 1;
 				continue;
 			}
 
 			if (isIdentStart(c)) {
 				final startIdent = i;
 				i += 1;
-				while (i < len && isIdentPart(source.charCodeAt(i))) i += 1;
-				return { isIdent: true, text: source.substr(startIdent, i - startIdent), nextPos: i };
+				while (i < len && isIdentPart(source.charCodeAt(i)))
+					i += 1;
+				return {isIdent: true, text: source.substr(startIdent, i - startIdent), nextPos: i};
 			}
 
 			// Ellipsis
 			if (c == ".".code && i + 2 < len && source.charCodeAt(i + 1) == ".".code && source.charCodeAt(i + 2) == ".".code) {
-				return { isIdent: false, text: "...", nextPos: i + 3 };
+				return {isIdent: false, text: "...", nextPos: i + 3};
 			}
 
 			// Single-char symbol
-			return { isIdent: false, text: String.fromCharCode(c), nextPos: i + 1 };
+			return {isIdent: false, text: String.fromCharCode(c), nextPos: i + 1};
 		}
 
-		return { isIdent: false, text: "", nextPos: len };
+		return {isIdent: false, text: "", nextPos: len};
 	}
 
 	/**
@@ -1071,32 +1197,32 @@
 		- See `docs/02-user-guide/HXHX_NATIVE_FRONTEND_PROTOCOL.md:1` for the exact
 		  wire format and versioning rules.
 	**/
-			static function decodeNativeProtocol(encoded:String):HxModuleDecl {
-				final lines = encoded.split("\n").filter(l -> l.length > 0);
-				if (lines.length == 0) {
-					throw "Native frontend: missing/invalid protocol header";
-				}
-				final header = lines[0];
-				if (header != "hxhx_frontend_v=1" && header != "hxhx_frontend_v=2") {
-					throw "Native frontend: missing/invalid protocol header";
-				}
+	static function decodeNativeProtocol(encoded:String):HxModuleDecl {
+		final lines = encoded.split("\n").filter(l -> l.length > 0);
+		if (lines.length == 0) {
+			throw "Native frontend: missing/invalid protocol header";
+		}
+		final header = lines[0];
+		if (header != "hxhx_frontend_v=1" && header != "hxhx_frontend_v=2") {
+			throw "Native frontend: missing/invalid protocol header";
+		}
 
-				var packagePath = "";
-				final imports = new Array<String>();
-				var className = "Unknown";
-				var headerOnly = false;
-				var hasToplevelMain = false;
-				var hasStaticMain = false;
-				final methodPayloads = new Array<String>();
-				final fieldPayloads = new Array<String>();
-				final staticFinalPayloads = new Array<String>();
-				final methodBodies:Map<String, String> = [];
-				final functions = new Array<HxFunctionDecl>();
-				final fields = new Array<HxFieldDecl>();
-				var sawOk = false;
+		var packagePath = "";
+		final imports = new Array<String>();
+		var className = "Unknown";
+		var headerOnly = false;
+		var hasToplevelMain = false;
+		var hasStaticMain = false;
+		final methodPayloads = new Array<String>();
+		final fieldPayloads = new Array<String>();
+		final staticFinalPayloads = new Array<String>();
+		final methodBodies:Map<String, String> = [];
+		final functions = new Array<HxFunctionDecl>();
+		final fields = new Array<HxFieldDecl>();
+		var sawOk = false;
 
-			for (i in 1...lines.length) {
-				final line = lines[i];
+		for (i in 1...lines.length) {
+			final line = lines[i];
 			if (line == "ok") {
 				sawOk = true;
 				continue;
@@ -1115,81 +1241,86 @@
 
 				final rest = line.substr("ast ".length);
 				final firstSpace = rest.indexOf(" ");
-				if (firstSpace <= 0) continue;
+				if (firstSpace <= 0)
+					continue;
 				final key = rest.substr(0, firstSpace);
-						final payload = decodeLenPayload(rest.substr(firstSpace + 1));
-						switch (key) {
-							case "package":
-								packagePath = payload;
-							case "imports":
-								if (payload.length > 0) {
-									for (p in payload.split("|")) if (p.length > 0) imports.push(p);
-								}
-							case "class":
-								className = payload;
-							case "header_only":
-								headerOnly = payload == "1";
-							case "toplevel_main":
-								hasToplevelMain = payload == "1";
-							case "method":
-								methodPayloads.push(payload);
-							case "field":
-								fieldPayloads.push(payload);
-							case "static_final":
-								staticFinalPayloads.push(payload);
-							case "method_body":
-								// Payload format: "<methodName>\n<bodySource>"
-								final nl = payload.indexOf("\n");
-								if (nl > 0) {
-									final name = payload.substr(0, nl);
-									if (!methodBodies.exists(name)) {
-										methodBodies.set(name, payload.substr(nl + 1));
-									}
-								}
-							case _:
+				final payload = decodeLenPayload(rest.substr(firstSpace + 1));
+				switch (key) {
+					case "package":
+						packagePath = payload;
+					case "imports":
+						if (payload.length > 0) {
+							for (p in payload.split("|"))
+								if (p.length > 0)
+									imports.push(p);
 						}
-						continue;
+					case "class":
+						className = payload;
+					case "header_only":
+						headerOnly = payload == "1";
+					case "toplevel_main":
+						hasToplevelMain = payload == "1";
+					case "method":
+						methodPayloads.push(payload);
+					case "field":
+						fieldPayloads.push(payload);
+					case "static_final":
+						staticFinalPayloads.push(payload);
+					case "method_body":
+						// Payload format: "<methodName>\n<bodySource>"
+						final nl = payload.indexOf("\n");
+						if (nl > 0) {
+							final name = payload.substr(0, nl);
+							if (!methodBodies.exists(name)) {
+								methodBodies.set(name, payload.substr(nl + 1));
+							}
+						}
+					case _:
 				}
+				continue;
 			}
+		}
 
-			if (!sawOk) {
-					throw "Native frontend: missing terminal 'ok'";
-				}
+		if (!sawOk) {
+			throw "Native frontend: missing terminal 'ok'";
+		}
 
-				for (mp in methodPayloads) {
-					final name = {
-						final parts = mp.split("|");
-						parts.length == 0 ? "" : parts[0];
-					};
-					functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
-				}
+		for (mp in methodPayloads) {
+			final name = {
+				final parts = mp.split("|");
+				parts.length == 0 ? "" : parts[0];
+			};
+			functions.push(decodeMethodPayload(mp, methodBodies.exists(name) ? methodBodies.get(name) : null));
+		}
 
-				final seenFields:Map<String, Bool> = [];
-				inline function pushFieldMaybe(f:Null<HxFieldDecl>) {
-					if (f == null) return;
-					final key = f.name + "|" + (f.isStatic ? "1" : "0");
-					if (seenFields.exists(key)) return;
-					seenFields.set(key, true);
-					fields.push(f);
-				}
+		final seenFields:Map<String, Bool> = [];
+		inline function pushFieldMaybe(f:Null<HxFieldDecl>) {
+			if (f == null)
+				return;
+			final key = f.name + "|" + (f.isStatic ? "1" : "0");
+			if (seenFields.exists(key))
+				return;
+			seenFields.set(key, true);
+			fields.push(f);
+		}
 
-				for (fp in fieldPayloads) {
-					pushFieldMaybe(decodeFieldPayload(fp));
-				}
+		for (fp in fieldPayloads) {
+			pushFieldMaybe(decodeFieldPayload(fp));
+		}
 
-				for (fp in staticFinalPayloads) {
-					pushFieldMaybe(decodeFieldPayload(fp));
-				}
+		for (fp in staticFinalPayloads) {
+			pushFieldMaybe(decodeFieldPayload(fp));
+		}
 
-				final cls = new HxClassDecl(className, hasStaticMain, functions, fields);
-				return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
-			}
+		final cls = new HxClassDecl(className, hasStaticMain, functions, fields);
+		return new HxModuleDecl(packagePath, imports, cls, [cls], headerOnly, hasToplevelMain);
+	}
 
-		static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>):HxFunctionDecl {
-			// Bootstrap note: payload is a `|` separated list (unescaped for '|').
-			//
-			// v=1:
-			//   name|vis|static|args|ret|retstr
+	static function decodeMethodPayload(payload:String, methodBodySrc:Null<String>):HxFunctionDecl {
+		// Bootstrap note: payload is a `|` separated list (unescaped for '|').
+		//
+		// v=1:
+		//   name|vis|static|args|ret|retstr
 		//
 		// v=1 (backward-compatible extensions; optional fields):
 		//   name|vis|static|args|ret|retstr|retid|argtypes|retexpr
@@ -1199,7 +1330,8 @@
 		// - retid: first detected `return <ident>` (if any)
 		// - argtypes: comma-separated `name:type` pairs (no '|' characters)
 		final parts = payload.split("|");
-		while (parts.length < 9) parts.push("");
+		while (parts.length < 9)
+			parts.push("");
 
 		final name = parts[0];
 		final vis = parts[1] == "private" ? HxVisibility.Private : HxVisibility.Public;
@@ -1213,9 +1345,11 @@
 		final argTypesPayload = parts[7];
 		if (argTypesPayload.length > 0) {
 			for (entry in argTypesPayload.split(",")) {
-				if (entry.length == 0) continue;
+				if (entry.length == 0)
+					continue;
 				final idx = entry.indexOf(":");
-				if (idx <= 0) continue;
+				if (idx <= 0)
+					continue;
 				var argName = entry.substr(0, idx);
 				// Native parser encodes rest params as `...name`. Normalize for lookup, but also
 				// retain the rest marker for later signature building (rest-only functions are
@@ -1233,14 +1367,16 @@
 		final argsPayload = parts[3];
 		if (argsPayload.length > 0) {
 			for (a in argsPayload.split(",")) {
-				if (a.length == 0) continue;
+				if (a.length == 0)
+					continue;
 				var rawName = a;
 				var isRest = false;
 				if (StringTools.startsWith(rawName, "...")) {
 					isRest = true;
 					rawName = rawName.substr(3);
 				}
-				if (!isRest && restArgsByName.exists(rawName)) isRest = true;
+				if (!isRest && restArgsByName.exists(rawName))
+					isRest = true;
 				var ty = argTypes.exists(rawName) ? argTypes.get(rawName) : "";
 				var isOptional = false;
 
@@ -1259,86 +1395,88 @@
 		final retStr = parts[5];
 		final retId = parts[6];
 		final retExpr = parts[8];
-			final body = new Array<HxStmt>();
-			final pos = HxPos.unknown();
-			// Prefer the richer `retexpr` field when present (it can represent `Util.ping()`),
-			// but keep legacy fields for older protocol emitters.
-			if (retExpr.length > 0) {
-				body.push(SReturn(parseReturnExprText(retExpr), pos));
-			} else if (retStr.length > 0) {
-				body.push(SReturn(EString(retStr), pos));
-			} else if (retId.length > 0) {
-				body.push(SReturn(EIdent(retId), pos));
-			}
+		final body = new Array<HxStmt>();
+		final pos = HxPos.unknown();
+		// Prefer the richer `retexpr` field when present (it can represent `Util.ping()`),
+		// but keep legacy fields for older protocol emitters.
+		if (retExpr.length > 0) {
+			body.push(SReturn(parseReturnExprText(retExpr), pos));
+		} else if (retStr.length > 0) {
+			body.push(SReturn(EString(retStr), pos));
+		} else if (retId.length > 0) {
+			body.push(SReturn(EIdent(retId), pos));
+		}
 
-			var outBody = body;
-				if (methodBodySrc != null && methodBodySrc.length > 0) {
-					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
-						try {
-							Sys.println("body_parse_have=" + name + " len=" + methodBodySrc.length);
-						} catch (_:haxe.io.Error) {} catch (_:String) {}
-					}
-					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_SRC") == "1") {
-						try {
-							final oneLine = methodBodySrc.split("\n").join("\\n");
-							final max = 300;
-							final shown = oneLine.length > max ? (oneLine.substr(0, max) + "...") : oneLine;
-							Sys.println("body_parse_src=" + name + " " + shown);
-						} catch (_:haxe.io.Error) {} catch (_:String) {}
-					}
-				// Best-effort: recover a structured statement list from the raw source slice.
-					//
-					// Why
-					// - The native frontend protocol v1+ transmits method bodies as raw source
-				//   (via `ast method_body`) rather than an OCaml-side statement AST.
-				// - Stage3 bring-up wants bodies so it can validate full-body lowering.
-				// Debug aid: allow logging parse holes with the method name.
-				HxParser.debugBodyLabel = name;
+		var outBody = body;
+		if (methodBodySrc != null && methodBodySrc.length > 0) {
+			if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
 				try {
-					outBody = HxParser.parseFunctionBodyText(methodBodySrc);
-				} catch (e:HxParseError) {
-					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
-						try {
-							Sys.println("body_parse_fail=" + name + " err=" + e.message);
-						} catch (_:haxe.io.Error) {} catch (_:String) {}
-					}
-					// Fall back to the summary-only body.
-					outBody = body;
-				} catch (e:String) {
-					if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
-						try {
-							Sys.println("body_parse_fail=" + name + " err=" + e);
-						} catch (_:haxe.io.Error) {} catch (_:String) {}
-					}
-					// Fall back to the summary-only body.
-					outBody = body;
-				}
-				HxParser.debugBodyLabel = "";
+					Sys.println("body_parse_have=" + name + " len=" + methodBodySrc.length);
+				} catch (_:haxe.io.Error) {} catch (_:String) {}
 			}
-
-			return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+			if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_SRC") == "1") {
+				try {
+					final oneLine = methodBodySrc.split("\n").join("\\n");
+					final max = 300;
+					final shown = oneLine.length > max ? (oneLine.substr(0, max) + "...") : oneLine;
+					Sys.println("body_parse_src=" + name + " " + shown);
+				} catch (_:haxe.io.Error) {} catch (_:String) {}
+			}
+			// Best-effort: recover a structured statement list from the raw source slice.
+			//
+			// Why
+			// - The native frontend protocol v1+ transmits method bodies as raw source
+			//   (via `ast method_body`) rather than an OCaml-side statement AST.
+			// - Stage3 bring-up wants bodies so it can validate full-body lowering.
+			// Debug aid: allow logging parse holes with the method name.
+			HxParser.debugBodyLabel = name;
+			try {
+				outBody = HxParser.parseFunctionBodyText(methodBodySrc);
+			} catch (e:HxParseError) {
+				if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
+					try {
+						Sys.println("body_parse_fail=" + name + " err=" + e.message);
+					} catch (_:haxe.io.Error) {} catch (_:String) {}
+				}
+				// Fall back to the summary-only body.
+				outBody = body;
+			} catch (e:String) {
+				if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_FAIL") == "1") {
+					try {
+						Sys.println("body_parse_fail=" + name + " err=" + e);
+					} catch (_:haxe.io.Error) {} catch (_:String) {}
+				}
+				// Fall back to the summary-only body.
+				outBody = body;
+			}
+			HxParser.debugBodyLabel = "";
 		}
 
-		static function decodeFieldPayload(payload:String):Null<HxFieldDecl> {
-			// v=2 field payload (also accepted from v1 `ast static_final`):
-			//   name\nvis\nstatic\ntypehint\ninitexpr
-			if (payload == null || payload.length == 0) return null;
-			final lines = payload.split("\n");
-			final name = lines.length > 0 ? lines[0] : "";
-			if (name.length == 0) return null;
-			final visLine = lines.length > 1 ? lines[1] : "public";
-			final vis = visLine == "private" ? HxVisibility.Private : HxVisibility.Public;
-			final isStatic = (lines.length > 2 ? lines[2] : "1") == "1";
-			final typeHint = lines.length > 3 ? lines[3] : "";
-			final initRaw = lines.length > 4 ? lines.slice(4).join("\n") : "";
-			final init = initRaw.length > 0 ? parseReturnExprText(initRaw) : null;
-			return new HxFieldDecl(name, vis, isStatic, typeHint, init);
-		}
+		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
+	}
 
-		static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
-			// Backward-compat shim for older call sites and tests.
-			return decodeFieldPayload(payload);
-		}
+	static function decodeFieldPayload(payload:String):Null<HxFieldDecl> {
+		// v=2 field payload (also accepted from v1 `ast static_final`):
+		//   name\nvis\nstatic\ntypehint\ninitexpr
+		if (payload == null || payload.length == 0)
+			return null;
+		final lines = payload.split("\n");
+		final name = lines.length > 0 ? lines[0] : "";
+		if (name.length == 0)
+			return null;
+		final visLine = lines.length > 1 ? lines[1] : "public";
+		final vis = visLine == "private" ? HxVisibility.Private : HxVisibility.Public;
+		final isStatic = (lines.length > 2 ? lines[2] : "1") == "1";
+		final typeHint = lines.length > 3 ? lines[3] : "";
+		final initRaw = lines.length > 4 ? lines.slice(4).join("\n") : "";
+		final init = initRaw.length > 0 ? parseReturnExprText(initRaw) : null;
+		return new HxFieldDecl(name, vis, isStatic, typeHint, init);
+	}
+
+	static function decodeStaticFinalPayload(payload:String):Null<HxFieldDecl> {
+		// Backward-compat shim for older call sites and tests.
+		return decodeFieldPayload(payload);
+	}
 
 	static function parseReturnExprText(raw:String):HxExpr {
 		// Bring-up: the native frontend transmits some expression text without fully parsing it.
@@ -1353,22 +1491,27 @@
 			final t = s == null ? "" : StringTools.trim(s);
 			// The native protocol's expression capture concatenates tokens without spaces, so
 			// `new Array<T>()` can arrive as `newArray<T>()`. Normalize that first.
-			if (!StringTools.startsWith(t, "new")) return s;
+			if (!StringTools.startsWith(t, "new"))
+				return s;
 			var norm = t;
 			if (norm.length > 3) {
 				final c3 = norm.charCodeAt(3);
 				final isWs = c3 == " ".code || c3 == "\t".code || c3 == "\n".code || c3 == "\r".code;
-				if (!isWs) norm = "new " + norm.substr(3);
+				if (!isWs)
+					norm = "new " + norm.substr(3);
 			}
-			if (!StringTools.startsWith(norm, "new ")) return norm;
+			if (!StringTools.startsWith(norm, "new "))
+				return norm;
 			final lt = norm.indexOf("<");
 			final lp = norm.indexOf("(");
-			if (lt < 0 || lp < 0 || lt > lp) return s;
+			if (lt < 0 || lp < 0 || lt > lp)
+				return s;
 			var depth = 0;
 			var i = lt;
 			while (i < norm.length) {
 				final c = norm.charCodeAt(i);
-				if (c == "<".code) depth++;
+				if (c == "<".code)
+					depth++;
 				else if (c == ">".code) {
 					depth--;
 					if (depth == 0) {
@@ -1382,7 +1525,8 @@
 
 		var s = StringTools.trim(raw);
 		s = stripNewTypeParams(s);
-		if (s.length == 0) return EUnsupported("<empty-return-expr>");
+		if (s.length == 0)
+			return EUnsupported("<empty-return-expr>");
 
 		// Regex literals: `~/.../flags` (Stage3 bring-up).
 		//
@@ -1395,11 +1539,15 @@
 		// Bring-up rule
 		// - Treat regex literals as unsupported expressions so downstream stages collapse them to
 		//   `(Obj.magic 0)` and we can progress to the next missing semantic.
-		if (StringTools.startsWith(s, "~/")) return EUnsupported("<regex-literal>");
+		if (StringTools.startsWith(s, "~/"))
+			return EUnsupported("<regex-literal>");
 
-		if (s == "null") return ENull;
-		if (s == "true") return EBool(true);
-		if (s == "false") return EBool(false);
+		if (s == "null")
+			return ENull;
+		if (s == "true")
+			return EBool(true);
+		if (s == "false")
+			return EBool(false);
 
 		if (s.length >= 2 && StringTools.startsWith(s, "\"") && StringTools.endsWith(s, "\"")) {
 			return EString(s.substr(1, s.length - 2));
@@ -1427,13 +1575,15 @@
 				i++;
 			}
 
-			if (saw && i == s.length) return EInt(sign * value);
+			if (saw && i == s.length)
+				return EInt(sign * value);
 		}
 
 		// Floats: best-effort via parseFloat if it contains '.'.
 		if (s.indexOf(".") != -1) {
 			final f = Std.parseFloat(s);
-			if (!Math.isNaN(f)) return EFloat(f);
+			if (!Math.isNaN(f))
+				return EFloat(f);
 		}
 
 		// Fallback: try to parse a small field/call chain (e.g. `Util.ping()`).
@@ -1464,25 +1614,31 @@
 
 	static function decodeLenPayload(s:String):String {
 		final colon = s.indexOf(":");
-		if (colon <= 0) return "";
+		if (colon <= 0)
+			return "";
 		final len = parseDecInt(s.substr(0, colon));
-		if (len < 0) return "";
+		if (len < 0)
+			return "";
 		final payload = s.substr(colon + 1);
 		final raw = payload.substr(0, len);
 		return unescapePayload(raw);
 	}
 
 	static function parseDecInt(s:String):Int {
-		if (s == null) return -1;
+		if (s == null)
+			return -1;
 		var i = 0;
 		// Trim leading spaces (defensive).
-		while (i < s.length && s.charCodeAt(i) == " ".code) i++;
-		if (i >= s.length) return -1;
+		while (i < s.length && s.charCodeAt(i) == " ".code)
+			i++;
+		if (i >= s.length)
+			return -1;
 		var value = 0;
 		var saw = false;
 		while (i < s.length) {
 			final c = s.charCodeAt(i);
-			if (c < "0".code || c > "9".code) break;
+			if (c < "0".code || c > "9".code)
+				break;
 			saw = true;
 			value = value * 10 + (c - "0".code);
 			i++;
@@ -1498,11 +1654,16 @@
 			if (c == "\\".code && i + 1 < s.length) {
 				final n = s.charCodeAt(i + 1);
 				switch (n) {
-					case "n".code: out.addChar("\n".code);
-					case "r".code: out.addChar("\r".code);
-					case "t".code: out.addChar("\t".code);
-					case "\\".code: out.addChar("\\".code);
-					case _: out.addChar(n);
+					case "n".code:
+						out.addChar("\n".code);
+					case "r".code:
+						out.addChar("\r".code);
+					case "t".code:
+						out.addChar("\t".code);
+					case "\\".code:
+						out.addChar("\\".code);
+					case _:
+						out.addChar(n);
 				}
 				i += 2;
 				continue;
@@ -1520,14 +1681,17 @@
 		var start = 0;
 		while (head.length < n && i <= s.length) {
 			if (i == s.length || s.charCodeAt(i) == " ".code) {
-				if (i > start) head.push(s.substr(start, i - start));
-				while (i < s.length && s.charCodeAt(i) == " ".code) i++;
+				if (i > start)
+					head.push(s.substr(start, i - start));
+				while (i < s.length && s.charCodeAt(i) == " ".code)
+					i++;
 				start = i;
 				continue;
 			}
 			i++;
 		}
-		while (head.length < n) head.push("");
+		while (head.length < n)
+			head.push("");
 		final tail = start <= s.length ? s.substr(start) : "";
 		head.push(tail);
 		return head;

@@ -10,11 +10,10 @@ package backend.js;
 class JsNameMangler {
 	static function isReserved(name:String):Bool {
 		return switch (name) {
-			case "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger" | "default" | "delete" | "do"
-				| "else" | "enum" | "export" | "extends" | "false" | "finally" | "for" | "function" | "if" | "import"
-				| "in" | "instanceof" | "new" | "null" | "return" | "super" | "switch" | "this" | "throw" | "true"
-				| "try" | "typeof" | "var" | "void" | "while" | "with" | "yield" | "let" | "static" | "implements"
-				| "interface" | "package" | "private" | "protected" | "public":
+			case "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger" | "default" | "delete" | "do" | "else" | "enum" | "export" |
+				"extends" | "false" | "finally" | "for" | "function" | "if" | "import" | "in" | "instanceof" | "new" | "null" | "return" | "super" |
+				"switch" | "this" | "throw" | "true" | "try" | "typeof" | "var" | "void" | "while" | "with" | "yield" | "let" | "static" | "implements" |
+				"interface" | "package" | "private" | "protected" | "public":
 				true;
 			case _:
 				false;
@@ -29,12 +28,15 @@ class JsNameMangler {
 			final isAlpha = (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
 			final isNum = c >= 48 && c <= 57;
 			final ch = isAlpha || isNum || c == 95 ? String.fromCharCode(c) : "_";
-			if (i == 0 && isNum) out.add("_");
+			if (i == 0 && isNum)
+				out.add("_");
 			out.add(ch);
 		}
 		var r = out.toString();
-		if (r.length == 0) r = "_";
-		if (isReserved(r)) r += "_";
+		if (r.length == 0)
+			r = "_";
+		if (isReserved(r))
+			r += "_";
 		return r;
 	}
 

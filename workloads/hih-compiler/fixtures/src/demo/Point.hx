@@ -25,6 +25,6 @@ class Point {
 		this.x = x;
 	}
 
-	public function getX():Int return this.x;
+	public function getX():Int
+		return this.x;
 }
-

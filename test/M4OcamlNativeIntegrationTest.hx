@@ -16,26 +16,38 @@ class M4OcamlNativeIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "OcamlNativeMain",
+			"-cp",
+			"test",
+			"-main",
+			"OcamlNativeMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_output=" + outDir
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_output=" + outDir
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		// Ensure we didn't emit duplicate ocaml.* type declarations.
-		if (sys.FileSystem.exists(outDir + "/ocaml_List.ml")) throw "unexpected ocaml_List.ml emission";
-		if (sys.FileSystem.exists(outDir + "/ocaml_Option.ml")) throw "unexpected ocaml_Option.ml emission";
-		if (sys.FileSystem.exists(outDir + "/ocaml_Result.ml")) throw "unexpected ocaml_Result.ml emission";
-		if (sys.FileSystem.exists(outDir + "/ocaml_Ref.ml")) throw "unexpected ocaml_Ref.ml emission";
+		if (sys.FileSystem.exists(outDir + "/ocaml_List.ml"))
+			throw "unexpected ocaml_List.ml emission";
+		if (sys.FileSystem.exists(outDir + "/ocaml_Option.ml"))
+			throw "unexpected ocaml_Option.ml emission";
+		if (sys.FileSystem.exists(outDir + "/ocaml_Result.ml"))
+			throw "unexpected ocaml_Result.ml emission";
+		if (sys.FileSystem.exists(outDir + "/ocaml_Ref.ml"))
+			throw "unexpected ocaml_Ref.ml emission";
 
 		final mainPath = outDir + "/OcamlNativeMain.ml";
-		if (!sys.FileSystem.exists(mainPath)) throw "missing output: " + mainPath;
+		if (!sys.FileSystem.exists(mainPath))
+			throw "missing output: " + mainPath;
 		final ml = sys.io.File.getContent(mainPath);
 
 		// Lists: `Nil`/`Cons` -> `[]` / `::`

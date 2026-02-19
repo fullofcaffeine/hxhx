@@ -3,11 +3,13 @@ import sys.io.File;
 
 class M14HxhxStage3ReceiverCallIntegrationTest {
 	static function assertTrue(cond:Bool, message:String):Void {
-		if (!cond) throw message;
+		if (!cond)
+			throw message;
 	}
 
 	static function deleteRecursive(path:String):Void {
-		if (!FileSystem.exists(path)) return;
+		if (!FileSystem.exists(path))
+			return;
 		if (FileSystem.isDirectory(path)) {
 			for (entry in FileSystem.readDirectory(path)) {
 				deleteRecursive(haxe.io.Path.join([path, entry]));
@@ -60,19 +62,12 @@ class M14HxhxStage3ReceiverCallIntegrationTest {
 				}
 			}
 			if (mainMl == null) {
-				throw 'Stage3 output missing main module (`Main.ml` or `*__Main.ml`); outDir entries: '
-					+ FileSystem.readDirectory(outDir).join(',');
+				throw 'Stage3 output missing main module (`Main.ml` or `*__Main.ml`); outDir entries: ' + FileSystem.readDirectory(outDir).join(',');
 			}
 
 			final ocaml = File.getContent(mainMl);
-			assertTrue(
-				ocaml.indexOf('add (other) (n)') >= 0,
-				'Stage3 receiver-call emit missing `add (other) (n)` call shape.'
-			);
-			assertTrue(
-				ocaml.indexOf('add (this_) (other) (n)') < 0,
-				'Stage3 receiver-call regression: emitted over-applied `add (this_) (other) (n)`.'
-			);
+			assertTrue(ocaml.indexOf('add (other) (n)') >= 0, 'Stage3 receiver-call emit missing `add (other) (n)` call shape.');
+			assertTrue(ocaml.indexOf('add (this_) (other) (n)') < 0, 'Stage3 receiver-call regression: emitted over-applied `add (this_) (other) (n)`.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

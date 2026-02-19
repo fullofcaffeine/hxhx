@@ -51,21 +51,23 @@ class Stdio {
 	}
 }
 
-	private class OcamlStdioInput extends Input {
-		final stream:Int;
+private class OcamlStdioInput extends Input {
+	final stream:Int;
 
-		public function new(stream:Int) {
-			this.stream = stream;
-		}
+	public function new(stream:Int) {
+		this.stream = stream;
+	}
 
 	public override function readByte():Int {
 		final b = NativeHxStdio.read_byte(stream);
-		if (b < 0) throw new Eof();
+		if (b < 0)
+			throw new Eof();
 		return b;
 	}
 
 	public override function readBytes(buf:Bytes, pos:Int, len:Int):Int {
-		if (len <= 0) return 0;
+		if (len <= 0)
+			return 0;
 		var i = 0;
 		try {
 			while (i < len) {
@@ -73,7 +75,8 @@ class Stdio {
 				i++;
 			}
 		} catch (_:Eof) {
-			if (i == 0) throw new Eof();
+			if (i == 0)
+				throw new Eof();
 		}
 		return i;
 	}
@@ -81,24 +84,26 @@ class Stdio {
 	public override function readLine():String {
 		// Prefer a native line reader to avoid per-byte overhead in common tooling workloads.
 		final s = NativeHxStdio.read_line(stream);
-		if (s == null) throw new Eof();
+		if (s == null)
+			throw new Eof();
 		return s;
 	}
 }
 
-	private class OcamlStdioOutput extends Output {
-		final stream:Int;
+private class OcamlStdioOutput extends Output {
+	final stream:Int;
 
-		public function new(stream:Int) {
-			this.stream = stream;
-		}
+	public function new(stream:Int) {
+		this.stream = stream;
+	}
 
 	public override function writeByte(c:Int):Void {
 		NativeHxStdio.write_byte(stream, c);
 	}
 
 	public override function writeBytes(buf:Bytes, pos:Int, len:Int):Int {
-		if (len <= 0) return 0;
+		if (len <= 0)
+			return 0;
 		for (i in 0...len) {
 			writeByte(buf.get(pos + i));
 		}
@@ -107,7 +112,8 @@ class Stdio {
 
 	public override function writeString(s:String, ?encoding:Encoding):Void {
 		if (encoding != null) {}
-		if (s == null || s.length == 0) return;
+		if (s == null || s.length == 0)
+			return;
 		NativeHxStdio.write_string(stream, s);
 	}
 

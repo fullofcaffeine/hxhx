@@ -4,7 +4,6 @@
 	This is a portable declaration surface: the OCaml backend lowers supported
 	String operations to `HxString` runtime helpers.
 **/
-
 extern class String {
 	public var length(default, null):Int;
 
@@ -23,4 +22,3 @@ extern class String {
 
 	@:pure public static function fromCharCode(code:Int):String;
 }
-

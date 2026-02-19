@@ -8,7 +8,8 @@ package ocaml;
  * This maps to the emitted module `OcamlNativeIntMap` (`'v OcamlNativeIntMap.t`).
  */
 abstract IntMap<V>(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function empty<V>():IntMap<V> {
 		return cast IntMapNative.empty;

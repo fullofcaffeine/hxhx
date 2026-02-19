@@ -23,4 +23,3 @@ typedef BackendCapabilities = {
 	final supportsBuildExecutable:Bool;
 	final supportsCustomOutputFile:Bool;
 }
-

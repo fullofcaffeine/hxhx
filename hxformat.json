@@ -6,6 +6,7 @@
     "node_modules",
     "vendor",
     "dist",
+    "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx",
     "packages/hxhx/bootstrap_work",
     "packages/hxhx/bootstrap_out",
     "packages/hxhx-macro-host/bootstrap_work",

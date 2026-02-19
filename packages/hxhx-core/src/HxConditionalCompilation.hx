@@ -43,7 +43,8 @@ class HxConditionalCompilation {
 	}
 
 	private static function makeBlankLineLike(line:String):String {
-		if (line == null || line.length == 0) return line;
+		if (line == null || line.length == 0)
+			return line;
 		final b = new StringBuf();
 		for (i in 0...line.length) {
 			final c = line.charCodeAt(i);
@@ -61,7 +62,8 @@ class HxConditionalCompilation {
 		  the same active surface.
 	**/
 	public static function filterSource(source:String, defines:haxe.ds.StringMap<String>):String {
-		if (source == null || source.length == 0) return source;
+		if (source == null || source.length == 0)
+			return source;
 
 		final lines = splitLinesPreserveNewlines(source);
 		final out = new StringBuf();
@@ -123,7 +125,8 @@ class HxConditionalCompilation {
 						} else {
 							final cond = evalExpr(directive.expr, defines);
 							top.branchActive = cond;
-							if (cond) top.seenTrue = true;
+							if (cond)
+								top.seenTrue = true;
 						}
 						stack[stack.length - 1] = top;
 					}
@@ -137,7 +140,8 @@ class HxConditionalCompilation {
 						stack[stack.length - 1] = top;
 					}
 				case "end":
-					if (stack.length > 0) stack.pop();
+					if (stack.length > 0)
+						stack.pop();
 				case _:
 			}
 
@@ -160,19 +164,24 @@ class HxConditionalCompilation {
 		Returns `null` if the line does not contain a supported inline construct.
 	**/
 	private static function filterInlineConditionals(line:String, defines:haxe.ds.StringMap<String>):Null<String> {
-		if (line == null || line.length == 0) return null;
+		if (line == null || line.length == 0)
+			return null;
 		// Fast-path: avoid scanning most lines.
-		if (line.indexOf("#if") == -1) return null;
+		if (line.indexOf("#if") == -1)
+			return null;
 
 		// Only attempt when there's a matching `#end` somewhere later.
-		if (line.indexOf("#end") == -1) return null;
+		if (line.indexOf("#end") == -1)
+			return null;
 
 		// Find a `#if` token outside string literals.
 		final idxIf = findTokenOutsideStrings(line, "#if", 0);
-		if (idxIf < 0) return null;
+		if (idxIf < 0)
+			return null;
 
 		final idxEnd = findTokenOutsideStrings(line, "#end", idxIf + 3);
-		if (idxEnd < 0) return null;
+		if (idxEnd < 0)
+			return null;
 
 		// Optional `#else`.
 		final idxElse = findTokenOutsideStrings(line, "#else", idxIf + 3);
@@ -181,11 +190,14 @@ class HxConditionalCompilation {
 
 		// Parse the condition boundary so we can separate it from the "then" expression.
 		var condStart = idxIf + 3;
-		while (condStart < line.length && isLineWs(line.charCodeAt(condStart))) condStart++;
-		if (condStart >= line.length) return null;
+		while (condStart < line.length && isLineWs(line.charCodeAt(condStart)))
+			condStart++;
+		if (condStart >= line.length)
+			return null;
 
 		final condEnd = parseInlineCondEnd(line, condStart, idxEnd);
-		if (condEnd <= condStart) return null;
+		if (condEnd <= condStart)
+			return null;
 
 		final condText = StringTools.trim(line.substr(condStart, condEnd - condStart));
 		final thenStart = condEnd;
@@ -226,7 +238,8 @@ class HxConditionalCompilation {
 		copyRange(idxEnd + 4, line.length); // "#end".length == 4
 
 		final b = new StringBuf();
-		for (c in outCodes) b.addChar(c);
+		for (c in outCodes)
+			b.addChar(c);
 		return b.toString();
 	}
 
@@ -243,7 +256,8 @@ class HxConditionalCompilation {
 					depth++;
 				} else if (c == ")".code) {
 					depth--;
-					if (depth == 0) return i + 1;
+					if (depth == 0)
+						return i + 1;
 				} else if (c == "\"".code || c == "'".code) {
 					// Skip over quoted strings inside the condition (best-effort).
 					i = skipStringLiteral(line, i, c, max);
@@ -255,7 +269,8 @@ class HxConditionalCompilation {
 		}
 
 		var i = start;
-		while (i < line.length && i < max && !isLineWs(line.charCodeAt(i))) i++;
+		while (i < line.length && i < max && !isLineWs(line.charCodeAt(i)))
+			i++;
 		return i;
 	}
 
@@ -268,15 +283,18 @@ class HxConditionalCompilation {
 				i += 2;
 				continue;
 			}
-			if (c == quote) return i + 1;
+			if (c == quote)
+				return i + 1;
 			i++;
 		}
 		return i;
 	}
 
 	private static function findTokenOutsideStrings(line:String, token:String, from:Int):Int {
-		if (line == null || token == null) return -1;
-		if (token.length == 0) return -1;
+		if (line == null || token == null)
+			return -1;
+		if (token.length == 0)
+			return -1;
 
 		var i = from < 0 ? 0 : from;
 		var inQuote = 0; // 0 = none, otherwise quote charcode
@@ -305,7 +323,8 @@ class HxConditionalCompilation {
 				return -1;
 			}
 
-			if (line.substr(i, token.length) == token) return i;
+			if (line.substr(i, token.length) == token)
+				return i;
 			i++;
 		}
 		return -1;
@@ -325,12 +344,14 @@ class HxConditionalCompilation {
 			}
 			i += 1;
 		}
-		if (start < s.length) out.push(s.substr(start));
+		if (start < s.length)
+			out.push(s.substr(start));
 		return out;
 	}
 
 	private static function stripLineCommentOutsideStrings(s:String):String {
-		if (s == null || s.length == 0) return s;
+		if (s == null || s.length == 0)
+			return s;
 		var i = 0;
 		var inSingle = false;
 		var inDouble = false;
@@ -366,13 +387,18 @@ class HxConditionalCompilation {
 	}
 
 	private static function parseDirectiveLine(line:String):Null<{kind:String, expr:String}> {
-		if (line == null) return null;
+		if (line == null)
+			return null;
 		var i = 0;
-		while (i < line.length && isSpace(line.charCodeAt(i))) i++;
-		if (i >= line.length) return null;
-		if (line.charCodeAt(i) != "#".code) return null;
+		while (i < line.length && isSpace(line.charCodeAt(i)))
+			i++;
+		if (i >= line.length)
+			return null;
+		if (line.charCodeAt(i) != "#".code)
+			return null;
 		i++;
-		while (i < line.length && isSpace(line.charCodeAt(i))) i++;
+		while (i < line.length && isSpace(line.charCodeAt(i)))
+			i++;
 
 		final rest = line.substr(i);
 		final restNoComment = stripLineCommentOutsideStrings(rest);
@@ -390,12 +416,17 @@ class HxConditionalCompilation {
 		// Strip trailing `//` comment text first so cases like:
 		//   #if cs // issue #996
 		// do not get misclassified as opaque.
-		if (restNoComment.indexOf("#") != -1) return {kind: "opaque", expr: ""};
+		if (restNoComment.indexOf("#") != -1)
+			return {kind: "opaque", expr: ""};
 		final trimmed = StringTools.trim(restNoComment);
-		if (StringTools.startsWith(trimmed, "if ")) return {kind: "if", expr: StringTools.trim(trimmed.substr(3))};
-		if (StringTools.startsWith(trimmed, "elseif ")) return {kind: "elseif", expr: StringTools.trim(trimmed.substr(7))};
-		if (trimmed == "else") return {kind: "else", expr: ""};
-		if (trimmed == "end") return {kind: "end", expr: ""};
+		if (StringTools.startsWith(trimmed, "if "))
+			return {kind: "if", expr: StringTools.trim(trimmed.substr(3))};
+		if (StringTools.startsWith(trimmed, "elseif "))
+			return {kind: "elseif", expr: StringTools.trim(trimmed.substr(7))};
+		if (trimmed == "else")
+			return {kind: "else", expr: ""};
+		if (trimmed == "end")
+			return {kind: "end", expr: ""};
 		return null;
 	}
 
@@ -428,24 +459,36 @@ private class ExprLexer {
 		this.s = s == null ? "" : s;
 	}
 
-	inline function eof():Bool return i >= s.length;
+	inline function eof():Bool
+		return i >= s.length;
+
 	inline function peek(off:Int = 0):Int {
 		final j = i + off;
 		return j >= s.length ? -1 : s.charCodeAt(j);
 	}
-	inline function bump():Int return eof() ? -1 : s.charCodeAt(i++);
-	inline function isWs(c:Int):Bool return c == 9 || c == 10 || c == 13 || c == 32;
-	inline function isIdentStart(c:Int):Bool return (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || c == "_".code;
-	inline function isIdentCont(c:Int):Bool return isIdentStart(c) || (c >= "0".code && c <= "9".code);
+
+	inline function bump():Int
+		return eof() ? -1 : s.charCodeAt(i++);
+
+	inline function isWs(c:Int):Bool
+		return c == 9 || c == 10 || c == 13 || c == 32;
+
+	inline function isIdentStart(c:Int):Bool
+		return (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || c == "_".code;
+
+	inline function isIdentCont(c:Int):Bool
+		return isIdentStart(c) || (c >= "0".code && c <= "9".code);
 
 	function skipWs():Void {
-		while (!eof() && isWs(peek())) i++;
+		while (!eof() && isWs(peek()))
+			i++;
 	}
 
 	function readIdent():String {
 		final start = i;
 		bump();
-		while (!eof() && isIdentCont(peek())) bump();
+		while (!eof() && isIdentCont(peek()))
+			bump();
 		return s.substr(start, i - start);
 	}
 
@@ -455,17 +498,25 @@ private class ExprLexer {
 		final b = new StringBuf();
 		while (!eof()) {
 			final c = bump();
-			if (c == q) return b.toString();
+			if (c == q)
+				return b.toString();
 			if (c == "\\".code && !eof()) {
 				final esc = bump();
 				switch (esc) {
-					case "n".code: b.addChar("\n".code);
-					case "r".code: b.addChar("\r".code);
-					case "t".code: b.addChar("\t".code);
-					case "\\".code: b.addChar("\\".code);
-					case "\"".code: b.addChar("\"".code);
-					case "'".code: b.addChar("'".code);
-					case _: b.addChar(esc);
+					case "n".code:
+						b.addChar("\n".code);
+					case "r".code:
+						b.addChar("\r".code);
+					case "t".code:
+						b.addChar("\t".code);
+					case "\\".code:
+						b.addChar("\\".code);
+					case "\"".code:
+						b.addChar("\"".code);
+					case "'".code:
+						b.addChar("'".code);
+					case _:
+						b.addChar(esc);
 				}
 				continue;
 			}
@@ -476,7 +527,8 @@ private class ExprLexer {
 
 	public function next():Token {
 		skipWs();
-		if (eof()) return TEof;
+		if (eof())
+			return TEof;
 		return switch (peek()) {
 			case "!".code:
 				if (peek(1) == "=".code) {
@@ -539,7 +591,8 @@ private class ExprParser {
 		this.cur = lex.next();
 	}
 
-	inline function bump():Void cur = lex.next();
+	inline function bump():Void
+		cur = lex.next();
 
 	public function parse():Bool {
 		final v = parseOr();
@@ -587,7 +640,8 @@ private class ExprParser {
 			case TLParen:
 				bump();
 				final v = parseOr();
-				if (cur.match(TRParen)) bump();
+				if (cur.match(TRParen))
+					bump();
 				v;
 			case TIdent(name):
 				bump();
@@ -613,7 +667,8 @@ private class ExprParser {
 					bump();
 				case _:
 			}
-			if (cur.match(TRParen)) bump();
+			if (cur.match(TRParen))
+				bump();
 			return key.length > 0 && defines.exists(key);
 		}
 
@@ -647,7 +702,8 @@ private class ExprParser {
 	}
 
 	function definedValue(name:String):String {
-		if (name == null || name.length == 0) return "";
+		if (name == null || name.length == 0)
+			return "";
 		return defines.exists(name) ? defines.get(name) : "";
 	}
 }

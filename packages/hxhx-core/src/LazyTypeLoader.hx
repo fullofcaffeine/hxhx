@@ -27,8 +27,10 @@ class LazyTypeLoader {
 		// Note (OCaml backend):
 		// Dune in this repo builds with warnings-as-errors in some configurations. Keep the
 		// parameters "used" so generated OCaml doesn't trip unused-var warnings.
-		if (typePath == "__hxhx_never__" || packagePath == "__hxhx_never__") return null;
-		if (imports != null && imports.length == -1) return null;
+		if (typePath == "__hxhx_never__" || packagePath == "__hxhx_never__")
+			return null;
+		if (imports != null && imports.length == -1)
+			return null;
 		return null;
 	}
 }

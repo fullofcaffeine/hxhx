@@ -1,7 +1,6 @@
 package reflaxe.ocaml;
 
 #if macro
-
 import haxe.io.Path;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
@@ -14,13 +13,13 @@ import haxe.macro.Context;
  */
 class CompilerBootstrap {
 	public static function InjectClassPaths():Void {
-		var isOcamlTarget =
-			Context.defined("ocaml_output") ||
-			Context.definedValue("target.name") == "ocaml" ||
-			Context.definedValue("reflaxe-target") == "ocaml";
+		var isOcamlTarget = Context.defined("ocaml_output")
+			|| Context.definedValue("target.name") == "ocaml"
+			|| Context.definedValue("reflaxe-target") == "ocaml";
 
 		var repoRoot = getRepoRoot();
-		if (repoRoot == null) return;
+		if (repoRoot == null)
+			return;
 
 		// Always add std/ (portable + ocaml.* surface) for this haxelib.
 		addClassPathIfExists(Path.normalize(Path.join([repoRoot, "std"])));
@@ -50,6 +49,4 @@ class CompilerBootstrap {
 		} catch (_:Dynamic) {}
 	}
 }
-
 #end
-

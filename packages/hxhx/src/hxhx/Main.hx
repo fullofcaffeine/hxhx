@@ -34,7 +34,8 @@ class Main {
 
 	static function isTrueEnv(name:String):Bool {
 		final raw = Sys.getEnv(name);
-		if (raw == null) return false;
+		if (raw == null)
+			return false;
 		switch (raw.toLowerCase()) {
 			case "1", "true", "yes", "on":
 				return true;
@@ -49,8 +50,10 @@ class Main {
 			final a = args[i];
 			if (a == "-D" && i + 1 < args.length) {
 				final d = args[i + 1];
-				if (d == name) return "1";
-				if (StringTools.startsWith(d, name + "=")) return d.substr((name + "=").length);
+				if (d == name)
+					return "1";
+				if (StringTools.startsWith(d, name + "="))
+					return d.substr((name + "=").length);
 				i += 2;
 				continue;
 			}
@@ -62,14 +65,17 @@ class Main {
 	static function addDefineIfMissing(args:Array<String>, define:String):Void {
 		final eq = define.indexOf("=");
 		final name = eq == -1 ? define : define.substr(0, eq);
-		if (hasDefine(args, name)) return;
+		if (hasDefine(args, name))
+			return;
 		args.push("-D");
 		args.push(define);
 	}
 
 	static function stripAll(args:Array<String>, flag:String):Array<String> {
 		final out = new Array<String>();
-		for (a in args) if (a != flag) out.push(a);
+		for (a in args)
+			if (a != flag)
+				out.push(a);
 		return out;
 	}
 
@@ -80,21 +86,23 @@ class Main {
 		// compiler configuration, which can trigger internal stage0 crashes in upstream
 		// workloads (Gate1).
 		final targetFlags = [
-			"-js", "--js",
-			"-lua", "--lua",
+			    "-js",     "--js",
+			   "-lua",    "--lua",
 			"-python", "--python",
-			"-php", "--php",
-			"-neko", "--neko",
-			"-cpp", "--cpp",
-			"-cs", "--cs",
-			"-java", "--java",
-			"-jvm", "--jvm",
-			"-hl", "--hl",
-			"-swf", "--swf",
-			"-as3", "--as3",
-			"-xml", "--xml"
+			   "-php",    "--php",
+			  "-neko",   "--neko",
+			   "-cpp",    "--cpp",
+			    "-cs",     "--cs",
+			  "-java",   "--java",
+			   "-jvm",    "--jvm",
+			    "-hl",     "--hl",
+			   "-swf",    "--swf",
+			   "-as3",    "--as3",
+			   "-xml",    "--xml"
 		];
-		for (a in args) if (targetFlags.indexOf(a) != -1) return true;
+		for (a in args)
+			if (targetFlags.indexOf(a) != -1)
+				return true;
 		return false;
 	}
 
@@ -125,18 +133,8 @@ class Main {
 	static function hasStandardNonJsTargetFlag(args:Array<String>):Bool {
 		for (a in args) {
 			switch (a) {
-				case "-lua", "--lua",
-					"-python", "--python",
-					"-php", "--php",
-					"-neko", "--neko",
-					"-cpp", "--cpp",
-					"-cs", "--cs",
-					"-java", "--java",
-					"-jvm", "--jvm",
-					"-hl", "--hl",
-					"-swf", "--swf",
-					"-as3", "--as3",
-					"-xml", "--xml":
+				case "-lua", "--lua", "-python", "--python", "-php", "--php", "-neko", "--neko", "-cpp", "--cpp", "-cs", "--cs", "-java", "--java", "-jvm",
+					"--jvm", "-hl", "--hl", "-swf", "--swf", "-as3", "--as3", "-xml", "--xml":
 					return true;
 				case _:
 			}
@@ -147,22 +145,25 @@ class Main {
 	static function shouldRouteStandardJsToNative(forwarded:Array<String>):Bool {
 		final expanded = Stage1Args.expandHxmlArgs(forwarded);
 		final scan = expanded == null ? forwarded : expanded;
-		if (!hasStandardJsTargetFlag(scan)) return false;
+		if (!hasStandardJsTargetFlag(scan))
+			return false;
 		return !hasStandardNonJsTargetFlag(scan);
 	}
 
 	static function isStrictCliDisallowedFlag(flag:String):Bool {
-		if (flag == null || flag.length == 0) return false;
-		if (flag == "--target" || flag == "--hxhx-target") return true;
-		if (StringTools.startsWith(flag, "--hxhx-") && flag != "--hxhx-strict-cli") return true;
+		if (flag == null || flag.length == 0)
+			return false;
+		if (flag == "--target" || flag == "--hxhx-target")
+			return true;
+		if (StringTools.startsWith(flag, "--hxhx-") && flag != "--hxhx-strict-cli")
+			return true;
 		return false;
 	}
 
 	static function validateStrictCliShimArgs(shimArgs:Array<String>):Void {
 		for (a in shimArgs) {
 			if (isStrictCliDisallowedFlag(a)) {
-				fatal("hxhx: strict CLI mode rejects non-upstream flag: " + a
-					+ " (remove --hxhx-strict-cli to use hxhx extensions)");
+				fatal("hxhx: strict CLI mode rejects non-upstream flag: " + a + " (remove --hxhx-strict-cli to use hxhx extensions)");
 			}
 		}
 	}
@@ -178,8 +179,10 @@ class Main {
 			out.add(isAlphaNum ? String.fromCharCode(c) : "_");
 		}
 		var r = out.toString();
-		if (r.length == 0) r = "ocaml_app";
-		if (r.charCodeAt(0) >= 48 && r.charCodeAt(0) <= 57) r = "_" + r;
+		if (r.length == 0)
+			r = "ocaml_app";
+		if (r.charCodeAt(0) >= 48 && r.charCodeAt(0) <= 57)
+			r = "_" + r;
 		return r;
 	}
 
@@ -189,7 +192,8 @@ class Main {
 	}
 
 	static function absPath(p:String):String {
-		if (p == null || p.length == 0) return "";
+		if (p == null || p.length == 0)
+			return "";
 		try {
 			return sys.FileSystem.fullPath(p);
 		} catch (_:String) {
@@ -198,18 +202,25 @@ class Main {
 	}
 
 	static function rmrf(path:String):Void {
-		if (path == null || path.length == 0) return;
-		if (!sys.FileSystem.exists(path)) return;
+		if (path == null || path.length == 0)
+			return;
+		if (!sys.FileSystem.exists(path))
+			return;
 		if (!sys.FileSystem.isDirectory(path)) {
-			try sys.FileSystem.deleteFile(path) catch (_:String) {}
+			try
+				sys.FileSystem.deleteFile(path)
+			catch (_:String) {}
 			return;
 		}
 		final entries = try sys.FileSystem.readDirectory(path) catch (_:String) [];
 		for (name in entries) {
-			if (name == null || name.length == 0) continue;
+			if (name == null || name.length == 0)
+				continue;
 			rmrf(haxe.io.Path.join([path, name]));
 		}
-		try sys.FileSystem.deleteDirectory(path) catch (_:String) {}
+		try
+			sys.FileSystem.deleteDirectory(path)
+		catch (_:String) {}
 	}
 
 	/**
@@ -238,7 +249,8 @@ class Main {
 	static function runOcamlInterpLike(haxeBin:String, forwarded:Array<String>, outOverride:String):Void {
 		// Expand positional `.hxml` args so we can safely rewrite flags like `--interp`.
 		final expanded = Stage1Args.expandHxmlArgs(forwarded);
-		if (expanded == null) fatal("hxhx: failed to expand .hxml args for ocaml run mode");
+		if (expanded == null)
+			fatal("hxhx: failed to expand .hxml args for ocaml run mode");
 
 		var argv = expanded;
 
@@ -253,7 +265,8 @@ class Main {
 		//   - NOT to produce any non-OCaml artifacts.
 		//
 		// `--no-output` achieves that while keeping the command line close to upstream.
-		if (argv.indexOf("--no-output") == -1) argv.push("--no-output");
+		if (argv.indexOf("--no-output") == -1)
+			argv.push("--no-output");
 
 		// Ensure we build to native code.
 		addDefineIfMissing(argv, "ocaml_build=native");
@@ -314,7 +327,8 @@ class Main {
 		}
 
 		final code = Sys.command(haxeBin, argv);
-		if (code != 0) Sys.exit(code);
+		if (code != 0)
+			Sys.exit(code);
 
 		final exeName = defaultExeName(outDir);
 		final exe = haxe.io.Path.join([outDir, "_build", "default", exeName + ".exe"]);
@@ -347,7 +361,8 @@ class Main {
 		final strictCliMode = shimArgs.indexOf("--hxhx-strict-cli") != -1;
 		if (strictCliMode) {
 			validateStrictCliShimArgs(shimArgs);
-			if (sep == -1) forwarded = stripAll(forwarded, "--hxhx-strict-cli");
+			if (sep == -1)
+				forwarded = stripAll(forwarded, "--hxhx-strict-cli");
 		}
 
 		// Stage 4 (bring-up): macro host RPC selftest.
@@ -426,12 +441,15 @@ class Main {
 				switch (shimArgs[i]) {
 					case "--hxhx-ocaml-interp":
 						ocamlInterpLike = true;
-						if (sep == -1) forwarded.splice(i, 1);
+						if (sep == -1)
+							forwarded.splice(i, 1);
 						i += 1;
 					case "--hxhx-ocaml-out":
-						if (i + 1 >= shimArgs.length) fatal("Usage: --hxhx-ocaml-out <dir>");
+						if (i + 1 >= shimArgs.length)
+							fatal("Usage: --hxhx-ocaml-out <dir>");
 						ocamlInterpOutDir = shimArgs[i + 1];
-						if (sep == -1) forwarded.splice(i, 2);
+						if (sep == -1)
+							forwarded.splice(i, 2);
 						i += 2;
 					case _:
 						i += 1;
@@ -456,13 +474,12 @@ class Main {
 			}
 			final src = sys.io.File.getContent(path);
 			final parseDebug = Sys.getEnv("HXHX_PARSE_DEBUG");
-				if (parseDebug == "1" || parseDebug == "true" || parseDebug == "yes") {
-					try {
-						final tail = src.length > 80 ? src.substr(src.length - 80) : src;
-						Sys.stderr().writeString("[hxhx parse] len=" + src.length + " tail=" + tail.split("\n").join("\\n") + "\n");
-					} catch (_:haxe.io.Error) {
-					} catch (_:String) {}
-				}
+			if (parseDebug == "1" || parseDebug == "true" || parseDebug == "yes") {
+				try {
+					final tail = src.length > 80 ? src.substr(src.length - 80) : src;
+					Sys.stderr().writeString("[hxhx parse] len=" + src.length + " tail=" + tail.split("\n").join("\\n") + "\n");
+				} catch (_:haxe.io.Error) {} catch (_:String) {}
+			}
 			final decl = ParserStage.parse(src).getDecl();
 			final pkg = HxModuleDecl.getPackagePath(decl);
 			final imports = HxModuleDecl.getImports(decl);
@@ -524,14 +541,17 @@ class Main {
 			}
 
 			if (shimArgs.length == 1 && shimArgs[0] == "--hxhx-list-targets") {
-				for (t in TargetPresets.listTargets()) Sys.println(t);
+				for (t in TargetPresets.listTargets())
+					Sys.println(t);
 				return;
 			}
 		}
 
 		final unsupportedLegacyTarget = findUnsupportedLegacyTarget(forwarded);
 		if (unsupportedLegacyTarget != null) {
-			fatal('hxhx: Target "' + unsupportedLegacyTarget + '" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported.');
+			fatal('hxhx: Target "'
+				+ unsupportedLegacyTarget
+				+ '" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported.');
 		}
 
 		// Compatibility note:

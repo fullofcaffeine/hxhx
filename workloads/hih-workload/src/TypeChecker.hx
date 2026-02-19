@@ -24,7 +24,8 @@ class TypeChecker {
 		switch (e) {
 			case EInt(_):
 			case EVar(name):
-				if (!env.exists(name)) throw "Unknown variable: " + name;
+				if (!env.exists(name))
+					throw "Unknown variable: " + name;
 			case EBin(_, a, b):
 				checkExpr(a, env);
 				checkExpr(b, env);

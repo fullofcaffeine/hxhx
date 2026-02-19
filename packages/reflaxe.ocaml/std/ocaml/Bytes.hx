@@ -20,7 +20,8 @@ package ocaml;
  * - This is not the same as `haxe.io.Bytes`. Conversions are explicit (`ofString`/`toString`).
  */
 abstract Bytes(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function make(len:Int, fill:Char):Bytes {
 		return cast BytesNative.make(len, fill);

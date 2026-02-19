@@ -33,10 +33,7 @@ class HaxelibInitMacros {
 
 		Context.onGenerate(function(_) {
 			Compiler.define("HXHX_HAXELIB_INIT_ON_GENERATE", "1");
-			Compiler.emitOcamlModule(
-				"HxHxHaxelibInitGen",
-				"let haxelib_init_generated : int = 1"
-			);
+			Compiler.emitOcamlModule("HxHxHaxelibInitGen", "let haxelib_init_generated : int = 1");
 		});
 
 		Context.onAfterGenerate(function() {

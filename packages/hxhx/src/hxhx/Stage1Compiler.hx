@@ -47,14 +47,17 @@ class Stage1Compiler {
 			while (true) {
 				final raw = p.stdout.readLine();
 				final line = StringTools.trim(raw);
-				if (line.length == 0) continue;
-				if (StringTools.startsWith(line, "-")) continue;
+				if (line.length == 0)
+					continue;
+				if (StringTools.startsWith(line, "-"))
+					continue;
 				paths.push(line);
 			}
 		} catch (_:haxe.io.Eof) {}
 
 		final code = p.exitCode();
-		if (code != 0) throw "haxelib path " + lib + " failed with exit code " + code;
+		if (code != 0)
+			throw "haxelib path " + lib + " failed with exit code " + code;
 		return paths;
 	}
 
@@ -76,7 +79,8 @@ class Stage1Compiler {
 		}
 
 		final parsed = Stage1Args.parse(filtered, permissive);
-		if (parsed == null) return 2;
+		if (parsed == null)
+			return 2;
 
 		if (!parsed.noOutput) {
 			return error("only --no-output is supported in stage1 bring-up");
@@ -89,7 +93,8 @@ class Stage1Compiler {
 		if (permissive && parsed.libs.length > 0) {
 			for (lib in parsed.libs) {
 				try {
-					for (p in resolveHaxelibPaths(lib)) classPaths.push(p);
+					for (p in resolveHaxelibPaths(lib))
+						classPaths.push(p);
 				} catch (e:String) {
 					return error("failed to resolve -lib " + lib + ": " + e);
 				}
@@ -97,14 +102,16 @@ class Stage1Compiler {
 		}
 
 		final resolved = Stage1Resolver.resolveMain(classPaths, parsed.main, parsed.cwd);
-		if (resolved == null) return 2;
+		if (resolved == null)
+			return 2;
 
 		final source = try sys.io.File.getContent(resolved.path) catch (_:haxe.io.Error) {
 			null;
 		} catch (_:String) {
 			null;
 		}
-		if (source == null) return error("failed to read: " + resolved.path);
+		if (source == null)
+			return error("failed to read: " + resolved.path);
 
 		final definesMap = HxDefineMap.fromRawDefines(parsed.defines);
 		// Bootstrap defaults: Stage1 runs for the OCaml native target, which behaves like a sys target.
@@ -121,7 +128,13 @@ class Stage1Compiler {
 			return error("parse failed: " + e);
 		}
 		if ((decl.packagePath ?? "") != resolved.packagePath) {
-			return error('package mismatch for "' + parsed.main + '": expected "' + resolved.packagePath + '" but parsed "' + (decl.packagePath ?? "") + '"');
+			return error('package mismatch for "'
+				+ parsed.main
+				+ '": expected "'
+				+ resolved.packagePath
+				+ '" but parsed "'
+				+ (decl.packagePath ?? "")
+				+ '"');
 		}
 
 		// Upstream supports module-level entrypoints (no class) like:
@@ -147,14 +160,17 @@ class Stage1Compiler {
 		// But it is transitive: if `Main` imports `A` and `A` imports `B`, we will attempt
 		// to parse `B` too.
 		final queue = new Array<String>();
-		for (imp in decl.imports) queue.push(imp);
+		for (imp in decl.imports)
+			queue.push(imp);
 
 		final visited = new Map<String, Bool>();
 		var q = 0;
 		while (q < queue.length) {
 			final imp = queue[q++];
-			if (imp == null || imp.length == 0) continue;
-			if (visited.exists(imp)) continue;
+			if (imp == null || imp.length == 0)
+				continue;
+			if (visited.exists(imp))
+				continue;
 			visited.set(imp, true);
 
 			if (StringTools.endsWith(imp, ".*")) {
@@ -169,7 +185,8 @@ class Stage1Compiler {
 					Sys.println("stage1=warn import_wildcard " + imp);
 					continue;
 				}
-				if (!visited.exists(base)) queue.push(base);
+				if (!visited.exists(base))
+					queue.push(base);
 				continue;
 			}
 
@@ -208,7 +225,8 @@ class Stage1Compiler {
 				continue;
 			}
 
-			for (imp2 in impDecl.imports) queue.push(imp2);
+			for (imp2 in impDecl.imports)
+				queue.push(imp2);
 		}
 
 		Sys.println("stage1=ok");
@@ -229,46 +247,48 @@ class Stage1Compiler {
 	- Parses only `-cp/-p`, `-main`, and `--no-output`.
 	- Returns `null` (and prints a user-facing message) on invalid input.
 **/
-	class Stage1Args {
-		public final classPaths:Array<String>;
-		public final main:String;
-		public final noOutput:Bool;
-		public final roots:Array<String>;
-		public final defines:Array<String>;
-		public final libs:Array<String>;
-		public final macros:Array<String>;
-		public final displayRequest:Null<String>;
-		public final cwd:String;
-		public final hadCmd:Bool;
+class Stage1Args {
+	public final classPaths:Array<String>;
+	public final main:String;
+	public final noOutput:Bool;
+	public final roots:Array<String>;
+	public final defines:Array<String>;
+	public final libs:Array<String>;
+	public final macros:Array<String>;
+	public final displayRequest:Null<String>;
+	public final cwd:String;
+	public final hadCmd:Bool;
 
-		function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>, displayRequest:Null<String>, cwd:String, hadCmd:Bool) {
-			this.classPaths = classPaths;
-			this.main = main;
-			this.noOutput = noOutput;
-			this.roots = roots;
-			this.defines = defines;
-			this.libs = libs;
-			this.macros = macros;
-			this.displayRequest = displayRequest;
-			this.cwd = cwd;
-			this.hadCmd = hadCmd;
-		}
+	function new(classPaths:Array<String>, main:String, noOutput:Bool, roots:Array<String>, defines:Array<String>, libs:Array<String>, macros:Array<String>,
+			displayRequest:Null<String>, cwd:String, hadCmd:Bool) {
+		this.classPaths = classPaths;
+		this.main = main;
+		this.noOutput = noOutput;
+		this.roots = roots;
+		this.defines = defines;
+		this.libs = libs;
+		this.macros = macros;
+		this.displayRequest = displayRequest;
+		this.cwd = cwd;
+		this.hadCmd = hadCmd;
+	}
 
 	public static function parse(args:Array<String>, permissive:Bool = false):Null<Stage1Args> {
 		final expanded = expandHxmlArgs(args);
-		if (expanded == null) return null;
+		if (expanded == null)
+			return null;
 
-			final classPaths = new Array<String>();
-			var main = "";
-			var noOutput = false;
-			final roots = new Array<String>();
-			final defines = new Array<String>();
-			final libs = new Array<String>();
-			final macros = new Array<String>();
-			var displayRequest:Null<String> = null;
-			var cwd = ".";
-			var stdRoot = "";
-			var hadCmd = false;
+		final classPaths = new Array<String>();
+		var main = "";
+		var noOutput = false;
+		final roots = new Array<String>();
+		final defines = new Array<String>();
+		final libs = new Array<String>();
+		final macros = new Array<String>();
+		var displayRequest:Null<String> = null;
+		var cwd = ".";
+		var stdRoot = "";
+		var hadCmd = false;
 
 		var i = 0;
 		while (i < expanded.length) {
@@ -306,65 +326,65 @@ class Stage1Compiler {
 					}
 					defines.push("dce=" + expanded[i + 1]);
 					i += 2;
-					case "--resource" if (permissive):
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after --resource");
-							return null;
-						}
-						i += 2;
-					// Target selection flags: Stage3 bring-up does not emit target artifacts, but we must
-					// consume these flags (and their output path) so the output file is not mis-parsed as
-					// a positional "dot path" root.
-					case "-js" | "--js" | "-lua" | "--lua" | "-python" | "--python" | "-php" | "--php" | "-neko" | "--neko" | "-cpp"
-						| "--cpp" | "-cs" | "--cs" | "-java" | "--java" | "-jvm" | "--jvm" | "-hl" | "--hl" | "-swf" | "--swf"
-						| "-as3" | "--as3" | "-xml" | "--xml" if (permissive):
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after " + a);
-							return null;
-						}
-						i += 2;
-					case "--cmd" if (permissive):
-						// Upstream `.hxml` frequently includes `--cmd <shell...>` setup steps.
-						// Stage1/Stage3 bring-up does not execute commands, but we must consume the argument
-						// to avoid treating it as a stray positional token (which can break parsing).
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after --cmd");
-							return null;
-						}
-						hadCmd = true;
-						i += 2;
-					case "-cmd" if (permissive):
-						// Upstream also supports the short form `-cmd <shell...>` (used by tests/unit/compile-flash.hxml).
-						// Same behavior as `--cmd` for bring-up: consume and ignore.
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after -cmd");
-							return null;
-						}
-						hadCmd = true;
-						i += 2;
-					case "-swf-lib" if (permissive):
-						// Flash-specific support flags: consume the 1-arg payload so it doesn't become a positional root.
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after -swf-lib");
-							return null;
-						}
-						i += 2;
-					case "--run", "-x" if (permissive):
-						// Upstream allows macro/compile-time suites to be driven via `--run`/`-x` instead
-						// of `-main` in some fixtures. For Stage3 diagnostic runs, treat this as setting
-						// the main module and ignore any additional runtime args.
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after " + a);
-							return null;
-						}
-						main = expanded[i + 1];
-						i += 2;
-						while (i < expanded.length && !StringTools.startsWith(expanded[i], "-")) i++;
-					case "-cp", "-p", "--class-path":
-						if (i + 1 >= expanded.length) {
-							Sys.println("hxhx(stage1): missing value after " + a);
-							return null;
-						}
+				case "--resource" if (permissive):
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --resource");
+						return null;
+					}
+					i += 2;
+				// Target selection flags: Stage3 bring-up does not emit target artifacts, but we must
+				// consume these flags (and their output path) so the output file is not mis-parsed as
+				// a positional "dot path" root.
+				case "-js" | "--js" | "-lua" | "--lua" | "-python" | "--python" | "-php" | "--php" | "-neko" | "--neko" | "-cpp" | "--cpp" | "-cs" | "--cs" |
+					"-java" | "--java" | "-jvm" | "--jvm" | "-hl" | "--hl" | "-swf" | "--swf" | "-as3" | "--as3" | "-xml" | "--xml" if (permissive):
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
+					i += 2;
+				case "--cmd" if (permissive):
+					// Upstream `.hxml` frequently includes `--cmd <shell...>` setup steps.
+					// Stage1/Stage3 bring-up does not execute commands, but we must consume the argument
+					// to avoid treating it as a stray positional token (which can break parsing).
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after --cmd");
+						return null;
+					}
+					hadCmd = true;
+					i += 2;
+				case "-cmd" if (permissive):
+					// Upstream also supports the short form `-cmd <shell...>` (used by tests/unit/compile-flash.hxml).
+					// Same behavior as `--cmd` for bring-up: consume and ignore.
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after -cmd");
+						return null;
+					}
+					hadCmd = true;
+					i += 2;
+				case "-swf-lib" if (permissive):
+					// Flash-specific support flags: consume the 1-arg payload so it doesn't become a positional root.
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after -swf-lib");
+						return null;
+					}
+					i += 2;
+				case "--run", "-x" if (permissive):
+					// Upstream allows macro/compile-time suites to be driven via `--run`/`-x` instead
+					// of `-main` in some fixtures. For Stage3 diagnostic runs, treat this as setting
+					// the main module and ignore any additional runtime args.
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
+					main = expanded[i + 1];
+					i += 2;
+					while (i < expanded.length && !StringTools.startsWith(expanded[i], "-"))
+						i++;
+				case "-cp", "-p", "--class-path":
+					if (i + 1 >= expanded.length) {
+						Sys.println("hxhx(stage1): missing value after " + a);
+						return null;
+					}
 					classPaths.push(expanded[i + 1]);
 					i += 2;
 				case "-C", "--cwd":
@@ -433,24 +453,27 @@ class Stage1Compiler {
 						Sys.println("hxhx(stage1): unsupported flag: " + a);
 						return null;
 					}
-						if (permissive) {
-							// Upstream allows passing "dot paths" (type/module roots) as positional args.
-							// For Stage1/Stage3 bring-up, record these so Stage3 can treat them as resolver roots
-							// in macro-only/compile-time suites that omit `-main`.
-							roots.push(a);
-							i += 1;
-							continue;
-						}
-						Sys.println("hxhx(stage1): unsupported argument: " + a);
-						return null;
-				}
+					if (permissive) {
+						// Upstream allows passing "dot paths" (type/module roots) as positional args.
+						// For Stage1/Stage3 bring-up, record these so Stage3 can treat them as resolver roots
+						// in macro-only/compile-time suites that omit `-main`.
+						roots.push(a);
+						i += 1;
+						continue;
+					}
+					Sys.println("hxhx(stage1): unsupported argument: " + a);
+					return null;
 			}
-
-			if (classPaths.length == 0) classPaths.push(".");
-			if (stdRoot == null || stdRoot.length == 0) stdRoot = inferStdRoot();
-			if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1) classPaths.push(stdRoot);
-			return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd);
 		}
+
+		if (classPaths.length == 0)
+			classPaths.push(".");
+		if (stdRoot == null || stdRoot.length == 0)
+			stdRoot = inferStdRoot();
+		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1)
+			classPaths.push(stdRoot);
+		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd);
+	}
 
 	static function inferStdRoot():String {
 		try {
@@ -462,10 +485,10 @@ class Stage1Compiler {
 			final haxePath = Sys.getEnv("HAXEPATH");
 			if (haxePath != null && haxePath.length > 0) {
 				final candidate = haxe.io.Path.normalize(haxe.io.Path.join([haxePath, "std"]));
-				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) return candidate;
+				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate))
+					return candidate;
 			}
-		} catch (_:haxe.io.Error) {
-		} catch (_:String) {}
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
 		return "";
 	}
 
@@ -474,7 +497,8 @@ class Stage1Compiler {
 		final out = new Array<String>();
 
 		for (a in args) {
-			if (a == null || a.length == 0) continue;
+			if (a == null || a.length == 0)
+				continue;
 
 			if (!StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
 				sawHxml = true;
@@ -483,8 +507,10 @@ class Stage1Compiler {
 					return null;
 				}
 				final expanded = Hxml.parseFile(a);
-				if (expanded == null) return null;
-				for (t in expanded) out.push(t);
+				if (expanded == null)
+					return null;
+				for (t in expanded)
+					out.push(t);
 				continue;
 			}
 
@@ -503,17 +529,36 @@ class Stage1Compiler {
 		- Using non-inline getters avoids relying on OCaml record-field label visibility and keeps the
 		  Stage1/Stage3 bring-up code stable as we evolve the backend.
 	**/
-		public static function getClassPaths(a:Stage1Args):Array<String> return a.classPaths;
-		public static function getMain(a:Stage1Args):String return a.main;
-		public static function getNoOutput(a:Stage1Args):Bool return a.noOutput;
-		public static function getRoots(a:Stage1Args):Array<String> return a.roots;
-		public static function getDefines(a:Stage1Args):Array<String> return a.defines;
-		public static function getLibs(a:Stage1Args):Array<String> return a.libs;
-		public static function getMacros(a:Stage1Args):Array<String> return a.macros;
-		public static function getDisplayRequest(a:Stage1Args):Null<String> return a.displayRequest;
-		public static function getCwd(a:Stage1Args):String return a.cwd;
-		public static function getHadCmd(a:Stage1Args):Bool return a.hadCmd;
-	}
+	public static function getClassPaths(a:Stage1Args):Array<String>
+		return a.classPaths;
+
+	public static function getMain(a:Stage1Args):String
+		return a.main;
+
+	public static function getNoOutput(a:Stage1Args):Bool
+		return a.noOutput;
+
+	public static function getRoots(a:Stage1Args):Array<String>
+		return a.roots;
+
+	public static function getDefines(a:Stage1Args):Array<String>
+		return a.defines;
+
+	public static function getLibs(a:Stage1Args):Array<String>
+		return a.libs;
+
+	public static function getMacros(a:Stage1Args):Array<String>
+		return a.macros;
+
+	public static function getDisplayRequest(a:Stage1Args):Null<String>
+		return a.displayRequest;
+
+	public static function getCwd(a:Stage1Args):String
+		return a.cwd;
+
+	public static function getHadCmd(a:Stage1Args):Bool
+		return a.hadCmd;
+}
 
 /**
 	Stage1 module resolver (main module only).
@@ -560,12 +605,13 @@ class Stage1Resolver {
 			final base = resolveClassPath(cwd, cp);
 			final candidate = Path.join([base].concat(pkgParts).concat([className + ".hx"]));
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
-				return { path: candidate, packagePath: pkg, className: className };
+				return {path: candidate, packagePath: pkg, className: className};
 			}
 		}
 
 		Sys.println("hxhx(stage1): could not find main module for -main " + main);
-		for (cp in classPaths) Sys.println("  searched: " + resolveClassPath(cwd, cp));
+		for (cp in classPaths)
+			Sys.println("  searched: " + resolveClassPath(cwd, cp));
 		return null;
 	}
 
@@ -580,7 +626,8 @@ class Stage1Resolver {
 		// leaf type: `a.b.Mod.SubType` should resolve to `a/b/Mod.hx` if
 		// `a/b/Mod/SubType.hx` doesn't exist.
 		final parts = modulePath.split(".");
-		if (parts.length == 0) return null;
+		if (parts.length == 0)
+			return null;
 		final leafName = parts[parts.length - 1];
 
 		for (cp in classPaths) {
@@ -591,7 +638,7 @@ class Stage1Resolver {
 				final pkg = pkgParts.join(".");
 				final candidate = Path.join([base].concat(pkgParts).concat([leafName + ".hx"]));
 				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
-					return { path: candidate, packagePath: pkg, className: leafName };
+					return {path: candidate, packagePath: pkg, className: leafName};
 				}
 			}
 
@@ -602,7 +649,7 @@ class Stage1Resolver {
 				final pkg = pkgParts.join(".");
 				final candidate = Path.join([base].concat(pkgParts).concat([modName + ".hx"]));
 				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate)) {
-					return { path: candidate, packagePath: pkg, className: modName };
+					return {path: candidate, packagePath: pkg, className: modName};
 				}
 			}
 		}

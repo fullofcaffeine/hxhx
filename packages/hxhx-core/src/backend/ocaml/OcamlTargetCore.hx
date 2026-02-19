@@ -35,12 +35,8 @@ class OcamlTargetCore implements ITargetCore {
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
 		final typedProgram = GenIrBoundary.requireProgram(program);
 		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable);
-		return new EmitResult(
-			entryPath,
-			[
-				new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath)
-			],
-			context.buildExecutable
-		);
+		return new EmitResult(entryPath, [
+			new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath)
+		], context.buildExecutable);
 	}
 }

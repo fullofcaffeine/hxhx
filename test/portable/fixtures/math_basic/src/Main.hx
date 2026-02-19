@@ -7,4 +7,3 @@ class Main {
 		Sys.println("OK math_basic");
 	}
 }
-

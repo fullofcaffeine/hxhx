@@ -11,7 +11,8 @@ package ocaml;
  * - Operations are `inline` wrappers over the emitted module `OcamlNativeStringSet`.
  */
 abstract StringSet(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function empty():StringSet {
 		return cast StringSetNative.empty;

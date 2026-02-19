@@ -53,11 +53,7 @@ class PluginFixtureMacros {
 
 		Context.onGenerate(function(_) {
 			Compiler.define("HXHX_PLUGIN_FIXTURE_ON_GENERATE", "1");
-			Compiler.emitOcamlModule(
-				"HxHxPluginFixtureGen",
-				"let plugin_fixture_generated : string = \"ok\""
-			);
+			Compiler.emitOcamlModule("HxHxPluginFixtureGen", "let plugin_fixture_generated : string = \"ok\"");
 		});
 	}
 }
-

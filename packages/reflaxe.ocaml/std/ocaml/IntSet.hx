@@ -6,7 +6,8 @@ package ocaml;
  * See `ocaml.StringSet` for the rationale and architecture.
  */
 abstract IntSet(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function empty():IntSet {
 		return cast IntSetNative.empty;

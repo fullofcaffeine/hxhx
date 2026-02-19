@@ -1,6 +1,6 @@
 package a_b;
 
 class C {
-	public static function id():Int return 2;
+	public static function id():Int
+		return 2;
 }
-

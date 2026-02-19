@@ -84,6 +84,7 @@ class MacroRuntime {
 		- If a build macro doesn't call `Context.getBuildFields()` at all, we consider the snapshot absent.
 	**/
 	static var currentBuildFieldNames:Array<String> = [];
+
 	static var hasBuildFieldSnapshot:Bool = false;
 
 	public static function setCurrentBuildFieldNames(names:Array<String>):Void {
@@ -101,7 +102,8 @@ class MacroRuntime {
 	}
 
 	public static function hasCurrentBuildFieldName(name:String):Bool {
-		if (name == null || name.length == 0) return false;
+		if (name == null || name.length == 0)
+			return false;
 		return currentBuildFieldNames.indexOf(name) != -1;
 	}
 
@@ -121,17 +123,22 @@ class MacroRuntime {
 	}
 
 	public static function runHook(kind:String, id:Int):Void {
-		if (kind == null) throw "MacroRuntime.runHook: missing kind";
-		if (id < 0) throw "MacroRuntime.runHook: invalid hook id: " + id;
+		if (kind == null)
+			throw "MacroRuntime.runHook: missing kind";
+		if (id < 0)
+			throw "MacroRuntime.runHook: invalid hook id: " + id;
 		switch (kind) {
 			case "afterTyping":
-				if (id >= afterTypingHooks.length) throw "MacroRuntime.runHook: unknown afterTyping hook id: " + id;
+				if (id >= afterTypingHooks.length)
+					throw "MacroRuntime.runHook: unknown afterTyping hook id: " + id;
 				afterTypingHooks[id]([]);
 			case "onGenerate":
-				if (id >= onGenerateHooks.length) throw "MacroRuntime.runHook: unknown onGenerate hook id: " + id;
+				if (id >= onGenerateHooks.length)
+					throw "MacroRuntime.runHook: unknown onGenerate hook id: " + id;
 				onGenerateHooks[id]([]);
 			case "afterGenerate":
-				if (id >= afterGenerateHooks.length) throw "MacroRuntime.runHook: unknown afterGenerate hook id: " + id;
+				if (id >= afterGenerateHooks.length)
+					throw "MacroRuntime.runHook: unknown afterGenerate hook id: " + id;
 				afterGenerateHooks[id]();
 			case _:
 				throw "MacroRuntime.runHook: unknown kind: " + kind;

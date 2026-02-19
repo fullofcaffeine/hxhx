@@ -14,4 +14,3 @@ class HxToken {
 		this.pos = pos;
 	}
 }
-

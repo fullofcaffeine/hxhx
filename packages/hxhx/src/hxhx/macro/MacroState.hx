@@ -49,7 +49,8 @@ class MacroState {
 		//
 		// What
 		// - Insertion-sort in-place using plain loops and string comparisons.
-		if (arr == null || arr.length <= 1) return;
+		if (arr == null || arr.length <= 1)
+			return;
 		var i = 1;
 		while (i < arr.length) {
 			final key = arr[i];
@@ -59,7 +60,8 @@ class MacroState {
 				// Null-safety: treat nulls as empty strings so ordering is deterministic.
 				final a = cur == null ? "" : cur;
 				final b = key == null ? "" : key;
-				if (!(a > b)) break;
+				if (!(a > b))
+					break;
 				arr[j + 1] = cur;
 				j -= 1;
 			}
@@ -83,7 +85,8 @@ class MacroState {
 	}
 
 	public static function setDefine(name:String, value:String):Void {
-		if (name == null || name.length == 0) return;
+		if (name == null || name.length == 0)
+			return;
 		defines.set(name, value == null ? "" : value);
 	}
 
@@ -103,11 +106,14 @@ class MacroState {
 		  - `NAME → VALUE` for the `=` form
 	**/
 	public static function seedFromCliDefines(defines:Array<String>):Void {
-		if (defines == null || defines.length == 0) return;
+		if (defines == null || defines.length == 0)
+			return;
 		for (raw in defines) {
-			if (raw == null) continue;
+			if (raw == null)
+				continue;
 			final s = StringTools.trim(raw);
-			if (s.length == 0) continue;
+			if (s.length == 0)
+				continue;
 			final eq = s.indexOf("=");
 			if (eq == -1) {
 				setDefine(s, "1");
@@ -120,12 +126,14 @@ class MacroState {
 	}
 
 	public static function defined(name:String):Bool {
-		if (name == null || name.length == 0) return false;
+		if (name == null || name.length == 0)
+			return false;
 		return defines.exists(name);
 	}
 
 	public static function definedValue(name:String):String {
-		if (name == null || name.length == 0) return "";
+		if (name == null || name.length == 0)
+			return "";
 		final v = defines.get(name);
 		return v == null ? "" : v;
 	}
@@ -141,7 +149,8 @@ class MacroState {
 	**/
 	public static function listDefineNames():Array<String> {
 		final out = new Array<String>();
-		for (k in defines.keys()) out.push(k);
+		for (k in defines.keys())
+			out.push(k);
 		sortStringsInPlace(out);
 		return out;
 	}
@@ -179,7 +188,8 @@ class MacroState {
 		  - `afterGenerate`
 	**/
 	public static function registerHook(kind:String, id:Int):Void {
-		if (kind == null) return;
+		if (kind == null)
+			return;
 		switch (kind) {
 			case "afterTyping":
 				afterTypingHookIds.push(id);
@@ -220,21 +230,28 @@ class MacroState {
 		- Validates `name` with a conservative allowlist so generated filenames are safe and deterministic.
 	**/
 	public static function emitOcamlModule(name:String, source:String):Void {
-		if (name == null) return;
+		if (name == null)
+			return;
 		final n = StringTools.trim(name);
-		if (n.length == 0) return;
+		if (n.length == 0)
+			return;
 
 		// Conservative OCaml module name check: [A-Za-z_][A-Za-z0-9_]* (no dots, no path separators).
 		// We don't enforce initial capital here; `EmitterStage` writes `<name>.ml` and OCaml will treat
 		// the unit name as `StringTools.capitalize(name)`. We only care about filesystem safety now.
-		inline function isAlpha(c:Int):Bool return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
-		inline function isDigit(c:Int):Bool return c >= "0".code && c <= "9".code;
-		inline function isUnderscore(c:Int):Bool return c == "_".code;
+		inline function isAlpha(c:Int):Bool
+			return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
+		inline function isDigit(c:Int):Bool
+			return c >= "0".code && c <= "9".code;
+		inline function isUnderscore(c:Int):Bool
+			return c == "_".code;
 		final first = n.charCodeAt(0);
-		if (!(isAlpha(first) || isUnderscore(first))) return;
+		if (!(isAlpha(first) || isUnderscore(first)))
+			return;
 		for (i in 1...n.length) {
 			final c = n.charCodeAt(i);
-			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c))) return;
+			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c)))
+				return;
 		}
 
 		ocamlModules.set(n, source == null ? "" : source);
@@ -242,13 +259,15 @@ class MacroState {
 
 	public static function listOcamlModuleNames():Array<String> {
 		final out = new Array<String>();
-		for (k in ocamlModules.keys()) out.push(k);
+		for (k in ocamlModules.keys())
+			out.push(k);
 		sortStringsInPlace(out);
 		return out;
 	}
 
 	public static function getOcamlModuleSource(name:String):String {
-		if (name == null || name.length == 0) return "";
+		if (name == null || name.length == 0)
+			return "";
 		final v = ocamlModules.get(name);
 		return v == null ? "" : v;
 	}
@@ -261,10 +280,13 @@ class MacroState {
 		  it changes which modules can be resolved.
 	**/
 	public static function addClassPath(path:String):Void {
-		if (path == null) return;
+		if (path == null)
+			return;
 		final p = StringTools.trim(path);
-		if (p.length == 0) return;
-		if (classPaths.indexOf(p) == -1) classPaths.push(p);
+		if (p.length == 0)
+			return;
+		if (classPaths.indexOf(p) == -1)
+			classPaths.push(p);
 	}
 
 	public static function listClassPaths():Array<String> {
@@ -290,10 +312,13 @@ class MacroState {
 		  It is a small rung to validate the “macro changes compilation universe” loop.
 	**/
 	public static function includeModule(path:String):Void {
-		if (path == null) return;
+		if (path == null)
+			return;
 		final p = StringTools.trim(path);
-		if (p.length == 0) return;
-		if (includedModules.indexOf(p) == -1) includedModules.push(p);
+		if (p.length == 0)
+			return;
+		if (includedModules.indexOf(p) == -1)
+			includedModules.push(p);
 	}
 
 	public static function listIncludedModules():Array<String> {
@@ -327,32 +352,41 @@ class MacroState {
 		- Records the module so tests can assert what was emitted.
 	**/
 	public static function emitHxModule(name:String, source:String):Void {
-		if (name == null) return;
+		if (name == null)
+			return;
 		final n = StringTools.trim(name);
-		if (n.length == 0) return;
+		if (n.length == 0)
+			return;
 		if (generatedHxDir == null || generatedHxDir.length == 0) {
 			throw "MacroState.emitHxModule: missing generated hx dir (call setGeneratedHxDir before running macros)";
 		}
 
 		// Conservative file-safe module name: [A-Za-z_][A-Za-z0-9_]*
-		inline function isAlpha(c:Int):Bool return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
-		inline function isDigit(c:Int):Bool return c >= "0".code && c <= "9".code;
-		inline function isUnderscore(c:Int):Bool return c == "_".code;
+		inline function isAlpha(c:Int):Bool
+			return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
+		inline function isDigit(c:Int):Bool
+			return c >= "0".code && c <= "9".code;
+		inline function isUnderscore(c:Int):Bool
+			return c == "_".code;
 		final first = n.charCodeAt(0);
-		if (!(isAlpha(first) || isUnderscore(first))) return;
+		if (!(isAlpha(first) || isUnderscore(first)))
+			return;
 		for (i in 1...n.length) {
 			final c = n.charCodeAt(i);
-			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c))) return;
+			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c)))
+				return;
 		}
 
-		if (!sys.FileSystem.exists(generatedHxDir)) sys.FileSystem.createDirectory(generatedHxDir);
+		if (!sys.FileSystem.exists(generatedHxDir))
+			sys.FileSystem.createDirectory(generatedHxDir);
 		final path = haxe.io.Path.join([generatedHxDir, n + ".hx"]);
 		sys.io.File.saveContent(path, source == null ? "" : source);
 		generatedHxModules.set(n, source == null ? "" : source);
 	}
 
 	public static function hasGeneratedHxModules():Bool {
-		for (_ in generatedHxModules.keys()) return true;
+		for (_ in generatedHxModules.keys())
+			return true;
 		return false;
 	}
 
@@ -378,9 +412,11 @@ class MacroState {
 		  module's main class before typing.
 	**/
 	public static function emitBuildFields(modulePath:String, membersSource:String):Void {
-		if (modulePath == null) return;
+		if (modulePath == null)
+			return;
 		final m = StringTools.trim(modulePath);
-		if (m.length == 0) return;
+		if (m.length == 0)
+			return;
 		final src = membersSource == null ? "" : membersSource;
 		var arr = buildFieldsByModule.get(m);
 		if (arr == null) {
@@ -391,17 +427,21 @@ class MacroState {
 	}
 
 	public static function listBuildFields(modulePath:String):Array<String> {
-		if (modulePath == null) return [];
+		if (modulePath == null)
+			return [];
 		final m = StringTools.trim(modulePath);
-		if (m.length == 0) return [];
+		if (m.length == 0)
+			return [];
 		final arr = buildFieldsByModule.get(m);
 		return arr == null ? [] : arr.copy();
 	}
 
 	public static function clearBuildFields(modulePath:String):Void {
-		if (modulePath == null) return;
+		if (modulePath == null)
+			return;
 		final m = StringTools.trim(modulePath);
-		if (m.length == 0) return;
+		if (m.length == 0)
+			return;
 		buildFieldsByModule.remove(m);
 	}
 

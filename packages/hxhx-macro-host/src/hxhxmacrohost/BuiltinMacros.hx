@@ -125,7 +125,8 @@ class BuiltinMacros {
 		final enumMap = defs.exists("HXHX_ENUM") ? defs.get("HXHX_ENUM") : null;
 		final flagGet = Compiler.getDefine("HXHX_FLAG");
 		final enumGet = Compiler.getDefine("HXHX_ENUM");
-		return "defines:flag_map=" + Std.string(flagMap) + ";flag_get=" + Std.string(flagGet) + ";enum_map=" + Std.string(enumMap) + ";enum_get=" + Std.string(enumGet);
+		return "defines:flag_map=" + Std.string(flagMap) + ";flag_get=" + Std.string(flagGet) + ";enum_map=" + Std.string(enumMap) + ";enum_get="
+			+ Std.string(enumGet);
 	}
 
 	/**

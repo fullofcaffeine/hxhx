@@ -1,12 +1,10 @@
 package reflaxe.ocaml.preprocessor;
 
 #if (macro || reflaxe_runtime)
-
 import haxe.macro.Type.TypedExpr;
 import haxe.macro.Type.TypedExprDef;
 import haxe.macro.Type.TVar;
 import haxe.macro.TypedExprTools;
-
 import reflaxe.preprocessors.BasePreprocessor;
 import reflaxe.data.ClassFuncData;
 import reflaxe.BaseCompiler;
@@ -20,12 +18,13 @@ class InlineSwitchTempImpl extends BasePreprocessor {
 	public function new() {}
 
 	public function process(data:ClassFuncData, compiler:BaseCompiler):Void {
-		if (data.expr == null) return;
+		if (data.expr == null)
+			return;
 		data.setExpr(transform(data.expr));
 	}
 
 	static inline function withExpr(e:TypedExpr, expr:TypedExprDef):TypedExpr {
-		return { expr: expr, pos: e.pos, t: e.t };
+		return {expr: expr, pos: e.pos, t: e.t};
 	}
 
 	function transform(e:TypedExpr):TypedExpr {
@@ -41,15 +40,15 @@ class InlineSwitchTempImpl extends BasePreprocessor {
 	}
 
 	function inlineSwitchTemps(el:Array<TypedExpr>):Array<TypedExpr> {
-		if (el.length < 2) return el;
+		if (el.length < 2)
+			return el;
 
 		final out:Array<TypedExpr> = [];
 		var i = 0;
 		while (i < el.length) {
 			if (i + 1 < el.length) {
 				switch [el[i].expr, el[i + 1].expr] {
-					case [TVar(v, init), TSwitch(switchExpr, cases, edef)]
-						if (init != null && isLocalVar(switchExpr, v)):
+					case [TVar(v, init), TSwitch(switchExpr, cases, edef)] if (init != null && isLocalVar(switchExpr, v)):
 						{
 							// Ensure the temp isn't used later in the block.
 							if (!isVarUsedInExprs(el, i + 2, v.id)) {
@@ -78,7 +77,8 @@ class InlineSwitchTempImpl extends BasePreprocessor {
 
 	static function isVarUsedInExprs(exprs:Array<TypedExpr>, startIndex:Int, varId:Int):Bool {
 		for (i in startIndex...exprs.length) {
-			if (isVarUsed(exprs[i], varId)) return true;
+			if (isVarUsed(exprs[i], varId))
+				return true;
 		}
 		return false;
 	}
@@ -97,5 +97,4 @@ class InlineSwitchTempImpl extends BasePreprocessor {
 		return used;
 	}
 }
-
 #end

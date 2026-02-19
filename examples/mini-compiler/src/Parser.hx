@@ -52,7 +52,8 @@ class Parser {
 				false;
 		}
 
-		if (!ok) throw "Expected " + label;
+		if (!ok)
+			throw "Expected " + label;
 		bump();
 	}
 

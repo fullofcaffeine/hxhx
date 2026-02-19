@@ -29,11 +29,20 @@ class TyFunctionEnv {
 		this.returnExprType = returnExprType;
 	}
 
-	public function getName():String return name;
-	public function getParams():Array<TySymbol> return params;
-	public function getLocals():Array<TySymbol> return locals;
-	public function getReturnType():TyType return returnType;
-	public function getReturnExprType():TyType return returnExprType;
+	public function getName():String
+		return name;
+
+	public function getParams():Array<TySymbol>
+		return params;
+
+	public function getLocals():Array<TySymbol>
+		return locals;
+
+	public function getReturnType():TyType
+		return returnType;
+
+	public function getReturnExprType():TyType
+		return returnExprType;
 
 	/**
 		Declare a new local symbol.
@@ -57,8 +66,12 @@ class TyFunctionEnv {
 		Resolve a symbol (parameter or local) by name.
 	**/
 	public function resolveSymbol(name:String):Null<TySymbol> {
-		for (p in params) if (p.getName() == name) return p;
-		for (l in locals) if (l.getName() == name) return l;
+		for (p in params)
+			if (p.getName() == name)
+				return p;
+		for (l in locals)
+			if (l.getName() == name)
+				return l;
 		return null;
 	}
 

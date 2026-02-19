@@ -6,4 +6,3 @@ class Main {
 		Sys.println(x);
 	}
 }
-

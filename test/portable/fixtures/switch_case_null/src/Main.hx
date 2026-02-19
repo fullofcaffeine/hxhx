@@ -45,4 +45,3 @@ class Main {
 		Sys.println("OK switch_case_null");
 	}
 }
-

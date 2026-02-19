@@ -15,7 +15,9 @@ class TyClassEnv {
 		this.functions = functions;
 	}
 
-	public function getName():String return name;
-	public function getFunctions():Array<TyFunctionEnv> return functions;
-}
+	public function getName():String
+		return name;
 
+	public function getFunctions():Array<TyFunctionEnv>
+		return functions;
+}

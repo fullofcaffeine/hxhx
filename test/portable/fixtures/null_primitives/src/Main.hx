@@ -29,4 +29,3 @@ class Main {
 		Sys.println("OK null_primitives");
 	}
 }
-

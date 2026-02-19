@@ -11,13 +11,15 @@ import StringTools;
 **/
 class JsStmtEmitter {
 	public static function emitFunctionBody(writer:JsWriter, body:Array<HxStmt>, scope:JsFunctionScope):Void {
-		for (s in body) emitStmt(writer, s, scope);
+		for (s in body)
+			emitStmt(writer, s, scope);
 	}
 
 	static function emitStmtBlockContent(writer:JsWriter, stmt:HxStmt, scope:JsFunctionScope):Void {
 		switch (stmt) {
 			case SBlock(stmts, _):
-				for (s in stmts) emitStmt(writer, s, scope);
+				for (s in stmts)
+					emitStmt(writer, s, scope);
 			case _:
 				emitStmt(writer, stmt, scope);
 		}
@@ -28,7 +30,8 @@ class JsStmtEmitter {
 			case SBlock(stmts, _):
 				writer.writeln("{");
 				writer.pushIndent();
-				for (s in stmts) emitStmt(writer, s, scope);
+				for (s in stmts)
+					emitStmt(writer, s, scope);
 				writer.popIndent();
 				writer.writeln("}");
 			case SVar(name, _typeHint, init, _):
@@ -86,9 +89,11 @@ class JsStmtEmitter {
 	}
 
 	static function normalizeCatchType(typeHint:String):String {
-		if (typeHint == null) return "";
+		if (typeHint == null)
+			return "";
 		var hint = StringTools.trim(typeHint);
-		if (hint.length == 0) return "";
+		if (hint.length == 0)
+			return "";
 		hint = StringTools.replace(hint, " ", "");
 		hint = StringTools.replace(hint, "\t", "");
 		hint = StringTools.replace(hint, "\n", "");
@@ -97,19 +102,22 @@ class JsStmtEmitter {
 			hint = hint.substr(5, hint.length - 6);
 		}
 		final genericAt = hint.indexOf("<");
-		if (genericAt >= 0) hint = hint.substr(0, genericAt);
+		if (genericAt >= 0)
+			hint = hint.substr(0, genericAt);
 		return hint;
 	}
 
 	static function simpleTypeName(fullName:String):String {
-		if (fullName == null || fullName.length == 0) return "";
+		if (fullName == null || fullName.length == 0)
+			return "";
 		final parts = fullName.split(".");
 		return parts[parts.length - 1];
 	}
 
 	static function emitCatchCondition(typeHint:String, errRef:String):String {
 		final normalized = normalizeCatchType(typeHint);
-		if (normalized.length == 0 || normalized == "Dynamic" || normalized == "Any") return "true";
+		if (normalized.length == 0 || normalized == "Dynamic" || normalized == "Any")
+			return "true";
 
 		return switch (normalized) {
 			case "String" | "StdTypes.String":
@@ -126,22 +134,33 @@ class JsStmtEmitter {
 				final simple = simpleTypeName(normalized);
 				final normalizedQuoted = JsNameMangler.quoteString(normalized);
 				final simpleQuoted = JsNameMangler.quoteString(simple);
-				"(" + errRef + " != null && typeof " + errRef + " === \"object\" && ("
-				+ errRef + ".__hx_name === " + normalizedQuoted
-				+ " || " + errRef + ".__hx_name === " + simpleQuoted
-				+ " || (" + errRef + ".constructor != null && ("
-				+ errRef + ".constructor.__hx_name === " + normalizedQuoted
-				+ " || " + errRef + ".constructor.__hx_name === " + simpleQuoted
+				"("
+				+ errRef
+				+ " != null && typeof "
+				+ errRef
+				+ " === \"object\" && ("
+				+ errRef
+				+ ".__hx_name === "
+				+ normalizedQuoted
+				+ " || "
+				+ errRef
+				+ ".__hx_name === "
+				+ simpleQuoted
+				+ " || ("
+				+ errRef
+				+ ".constructor != null && ("
+				+ errRef
+				+ ".constructor.__hx_name === "
+				+ normalizedQuoted
+				+ " || "
+				+ errRef
+				+ ".constructor.__hx_name === "
+				+ simpleQuoted
 				+ "))))";
 		}
 	}
 
-	static function emitTry(
-		writer:JsWriter,
-		tryBody:HxStmt,
-		catches:Array<{ name:String, typeHint:String, body:HxStmt }>,
-		scope:JsFunctionScope
-	):Void {
+	static function emitTry(writer:JsWriter, tryBody:HxStmt, catches:Array<{name:String, typeHint:String, body:HxStmt}>, scope:JsFunctionScope):Void {
 		writer.writeln("try {");
 		writer.pushIndent();
 		emitStmtBlockContent(writer, tryBody, scope);
@@ -179,11 +198,8 @@ class JsStmtEmitter {
 		switch (iterable) {
 			case ERange(start, end):
 				final local = scope.declareLocal(name);
-				writer.writeln(
-					"for (var " + local + " = " + JsExprEmitter.emit(start, scope.exprScope())
-					+ "; " + local + " < " + JsExprEmitter.emit(end, scope.exprScope())
-					+ "; " + local + "++) {"
-				);
+				writer.writeln("for (var " + local + " = " + JsExprEmitter.emit(start, scope.exprScope()) + "; " + local + " < "
+					+ JsExprEmitter.emit(end, scope.exprScope()) + "; " + local + "++) {");
 				writer.pushIndent();
 				emitStmtBlockContent(writer, body, scope);
 				writer.popIndent();
@@ -202,12 +218,7 @@ class JsStmtEmitter {
 		}
 	}
 
-	static function emitSwitch(
-		writer:JsWriter,
-		scrutinee:HxExpr,
-		cases:Array<{ pattern:HxSwitchPattern, body:HxStmt }>,
-		scope:JsFunctionScope
-	):Void {
+	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, body:HxStmt}>, scope:JsFunctionScope):Void {
 		final scrutineeVar = scope.freshTemp("__sw");
 		writer.writeln("var " + scrutineeVar + " = " + JsExprEmitter.emit(scrutinee, scope.exprScope()) + ";");
 

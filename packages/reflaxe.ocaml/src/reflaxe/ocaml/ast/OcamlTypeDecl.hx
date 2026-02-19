@@ -5,4 +5,3 @@ typedef OcamlTypeDecl = {
 	final params:Array<String>; // without leading `'`
 	final kind:OcamlTypeDeclKind;
 }
-

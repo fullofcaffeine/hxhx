@@ -26,17 +26,23 @@ import hxhxmacrohost.api.Compiler;
 **/
 class BuildMacroSupport {
 	static function escapeHaxeString(s:String):String {
-		if (s == null) return "";
-		return s
-			.split("\\").join("\\\\")
-			.split("\"").join("\\\"")
-			.split("\n").join("\\n")
-			.split("\r").join("\\r")
-			.split("\t").join("\\t");
+		if (s == null)
+			return "";
+		return s.split("\\")
+			.join("\\\\")
+			.split("\"")
+			.join("\\\"")
+			.split("\n")
+			.join("\\n")
+			.split("\r")
+			.join("\\r")
+			.split("\t")
+			.join("\\t");
 	}
 
 	static function tryExtractTraceString(e:Null<Expr>):Null<String> {
-		if (e == null) return null;
+		if (e == null)
+			return null;
 		return switch (e.expr) {
 			case EBlock(stmts) if (stmts != null && stmts.length == 1):
 				tryExtractTraceString(stmts[0]);
@@ -60,7 +66,8 @@ class BuildMacroSupport {
 	}
 
 	static function tryExtractReturnString(e:Null<Expr>):Null<String> {
-		if (e == null) return null;
+		if (e == null)
+			return null;
 		return switch (e.expr) {
 			case EBlock(stmts) if (stmts != null && stmts.length == 1):
 				tryExtractReturnString(stmts[0]);
@@ -77,7 +84,8 @@ class BuildMacroSupport {
 	}
 
 	static function tryExtractReturnInt(e:Null<Expr>):Null<Int> {
-		if (e == null) return null;
+		if (e == null)
+			return null;
 		return switch (e.expr) {
 			case EBlock(stmts) if (stmts != null && stmts.length == 1):
 				tryExtractReturnInt(stmts[0]);
@@ -94,7 +102,8 @@ class BuildMacroSupport {
 	}
 
 	static function tryConstToHaxe(e:Null<Expr>):Null<String> {
-		if (e == null) return null;
+		if (e == null)
+			return null;
 		return switch (e.expr) {
 			case EConst(CString(s, _)):
 				"\"" + escapeHaxeString(s) + "\"";
@@ -127,9 +136,9 @@ class BuildMacroSupport {
 		- Supports only `FFun` with:
 		  - non-optional args (names only; no types/defaults)
 		  - body being one of:
-		    - a single `trace("...")` (directly or wrapped in a 1-statement block)
-		    - `return "<...>"` (string literal)
-		    - `return <int>` (int literal)
+			- a single `trace("...")` (directly or wrapped in a 1-statement block)
+			- `return "<...>"` (string literal)
+			- `return <int>` (int literal)
 		- Supports only `FVar` as `var name:Dynamic;` (no init / no properties).
 		- Emits members with `public/private` + optional `static`.
 
@@ -137,7 +146,8 @@ class BuildMacroSupport {
 		- Printing arbitrary expressions, types, arguments, metadata, properties, etc.
 	**/
 	static function printFieldMinimal(f:Field):Null<String> {
-		if (f == null || f.name == null || f.name.length == 0) return null;
+		if (f == null || f.name == null || f.name.length == 0)
+			return null;
 
 		final isStatic = f.access != null && f.access.indexOf(AStatic) != -1;
 		final isPublic = f.access != null && f.access.indexOf(APublic) != -1;
@@ -146,15 +156,18 @@ class BuildMacroSupport {
 
 		return switch (f.kind) {
 			case FFun(fn):
-				if (fn == null) return null;
+				if (fn == null)
+					return null;
 
 				// Keep arg handling very conservative: Stage3's bootstrap parser doesn't
 				// support optional args (`?x`) or default values robustly yet.
 				final argNames = new Array<String>();
 				if (fn.args != null) {
 					for (a in fn.args) {
-						if (a == null || a.name == null || a.name.length == 0) return null;
-						if (a.opt == true) return null;
+						if (a == null || a.name == null || a.name.length == 0)
+							return null;
+						if (a.opt == true)
+							return null;
 						argNames.push(a.name);
 					}
 				}
@@ -224,12 +237,16 @@ class BuildMacroSupport {
 		final seenByName:Map<String, Bool> = new Map();
 
 		for (raw in arr) {
-			if (raw == null) continue;
-			if (!Reflect.hasField(raw, "name") || !Reflect.hasField(raw, "kind")) continue;
+			if (raw == null)
+				continue;
+			if (!Reflect.hasField(raw, "name") || !Reflect.hasField(raw, "kind"))
+				continue;
 			final f:Field = cast raw;
-			if (f == null || f.name == null || f.name.length == 0) continue;
+			if (f == null || f.name == null || f.name.length == 0)
+				continue;
 
-			if (seenByName.exists(f.name)) continue;
+			if (seenByName.exists(f.name))
+				continue;
 			seenByName.set(f.name, true);
 
 			// Emit both:
@@ -248,7 +265,8 @@ class BuildMacroSupport {
 		final lines = new Array<String>();
 		for (f in emittedFields) {
 			final text = printFieldMinimal(f);
-			if (text != null && text.length > 0) lines.push(text);
+			if (text != null && text.length > 0)
+				lines.push(text);
 		}
 
 		if (lines.length == 0) {

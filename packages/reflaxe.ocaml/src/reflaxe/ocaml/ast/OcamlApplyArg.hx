@@ -25,4 +25,3 @@ typedef OcamlApplyArg = {
 	final isOptional:Bool;
 	final expr:OcamlExpr;
 }
-

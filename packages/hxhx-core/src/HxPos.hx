@@ -36,9 +36,14 @@ class HxPos {
 		- The OCaml build uses dune `-opaque`, which can make direct field access
 		  across compilation units fragile during bootstrap.
 	**/
-	public function getIndex():Int return index;
-	public function getLine():Int return line;
-	public function getColumn():Int return column;
+	public function getIndex():Int
+		return index;
+
+	public function getLine():Int
+		return line;
+
+	public function getColumn():Int
+		return column;
 
 	/**
 		Sentinel “unknown” position.

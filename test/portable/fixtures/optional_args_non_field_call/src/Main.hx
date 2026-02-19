@@ -23,4 +23,3 @@ class Main {
 		Sys.println("optOnly=" + g());
 	}
 }
-

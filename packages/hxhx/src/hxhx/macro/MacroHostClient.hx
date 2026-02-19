@@ -125,7 +125,8 @@ class MacroHostClient {
 	public static function runAll(exprs:Array<String>):Array<String> {
 		return withSession(function(session) {
 			final out = new Array<String>();
-			for (expr in exprs) out.push(session.run(expr));
+			for (expr in exprs)
+				out.push(session.run(expr));
 			return out;
 		});
 	}
@@ -138,7 +139,8 @@ class MacroHostClient {
 
 	static function resolveMacroHostExe():String {
 		final env = Sys.getEnv("HXHX_MACRO_HOST_EXE");
-		if (env != null && env.length > 0) return env;
+		if (env != null && env.length > 0)
+			return env;
 
 		// Distribution-friendly default: if `hxhx-macro-host` is shipped next to the `hxhx` binary,
 		// discover it automatically so users don't have to set `HXHX_MACRO_HOST_EXE`.
@@ -147,22 +149,20 @@ class MacroHostClient {
 		// - If `Sys.programPath()` is unavailable or points somewhere unexpected, we fall back to "".
 		// - The env var always wins (useful for local dev or non-standard layouts).
 		final prog = Sys.programPath();
-		if (prog == null || prog.length == 0) return "";
+		if (prog == null || prog.length == 0)
+			return "";
 
 		final abs = try sys.FileSystem.fullPath(prog) catch (_:String) prog;
 		final dir = try haxe.io.Path.directory(abs) catch (_:String) "";
-		if (dir == null || dir.length == 0) return "";
+		if (dir == null || dir.length == 0)
+			return "";
 
-		final candidates = [
-			"hxhx-macro-host",
-			"hxhx-macro-host.exe",
-			"hxhx-macro",
-			"hxhx-macro.exe",
-		];
+		final candidates = ["hxhx-macro-host", "hxhx-macro-host.exe", "hxhx-macro", "hxhx-macro.exe",];
 		for (name in candidates) {
 			final p = haxe.io.Path.join([dir, name]);
 			try {
-				if (sys.FileSystem.exists(p) && !sys.FileSystem.isDirectory(p)) return p;
+				if (sys.FileSystem.exists(p) && !sys.FileSystem.isDirectory(p))
+					return p;
 			} catch (_:String) {}
 		}
 
@@ -196,13 +196,18 @@ class MacroHostClient {
 private class MacroClient {
 	final proc:sys.io.Process;
 	var nextId:Int = 1;
+
 	static final TRACE:Bool = {
 		final v = Sys.getEnv("HXHX_MACRO_TRACE");
-		v == "1" || v == "true" || v == "yes";
+		v == "1"
+		|| v == "true"
+		|| v == "yes";
 	};
 	static final TRACE_HOST:Bool = {
 		final v = Sys.getEnv("HXHX_MACRO_HOST_TRACE");
-		v == "1" || v == "true" || v == "yes";
+		v == "1"
+		|| v == "true"
+		|| v == "yes";
 	};
 
 	function new(proc:sys.io.Process) {
@@ -229,12 +234,12 @@ private class MacroClient {
 	public function call(method:String, tail:String):String {
 		final id = nextId++;
 		if (TRACE) {
-			try Sys.stderr().writeString("[hxhx macro rpc] -> " + method + "\n") catch (_:haxe.io.Error) {
-			} catch (_:String) {}
+			try
+				Sys.stderr().writeString("[hxhx macro rpc] -> " + method + "\n")
+			catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
-		final msg = tail == null || tail.length == 0
-			? ("req " + id + " " + method + "\n")
-			: ("req " + id + " " + method + " " + tail + "\n");
+		final msg = tail == null
+			|| tail.length == 0 ? ("req " + id + " " + method + "\n") : ("req " + id + " " + method + " " + tail + "\n");
 		try {
 			proc.stdin.writeString(msg, null);
 			proc.stdin.flush();
@@ -250,7 +255,11 @@ private class MacroClient {
 			} catch (_:haxe.io.Eof) {
 				final hostStderr = drainStderr(60);
 				final exitCode = try proc.exitCode() catch (_:String) -1;
-				throw "macro host: unexpected EOF while waiting for response (method=" + method + ", exit=" + exitCode + ")"
+				throw "macro host: unexpected EOF while waiting for response (method="
+					+ method
+					+ ", exit="
+					+ exitCode
+					+ ")"
 					+ (hostStderr.length == 0 ? "" : ("\nmacro host stderr:\n" + hostStderr));
 			} catch (e:haxe.io.Error) {
 				throw "macro host: failed to read response: " + Std.string(e);
@@ -258,7 +267,8 @@ private class MacroClient {
 				throw "macro host: failed to read response: " + e;
 			}
 			final trimmed = StringTools.trim(line);
-			if (trimmed.length == 0) continue;
+			if (trimmed.length == 0)
+				continue;
 
 			// Duplex bring-up: while we are waiting for a response, the macro host may send its own request
 			// back to the compiler (this process).
@@ -269,21 +279,24 @@ private class MacroClient {
 
 			final parts = MacroProtocol.splitN(trimmed, 3);
 			final rid = Std.parseInt(parts[1]);
-			if (rid == null || rid != id) throw "macro host: response id mismatch: " + trimmed;
+			if (rid == null || rid != id)
+				throw "macro host: response id mismatch: " + trimmed;
 			final status = parts[2];
 			final respTail = parts[3];
-			if (status == "ok") return MacroProtocol.kvGet(respTail, "v");
+			if (status == "ok")
+				return MacroProtocol.kvGet(respTail, "v");
 
 			final msg = MacroProtocol.kvGet(respTail, "m");
 			final pos = MacroProtocol.kvGet(respTail, "p");
-			throw (pos != null && pos.length > 0) ? ("macro host: " + msg + " (" + pos + ")") : ("macro host: " + msg);
+			throw(pos != null && pos.length > 0) ? ("macro host: " + msg + " (" + pos + ")") : ("macro host: " + msg);
 		}
 
 		return "";
 	}
 
 	function drainStderr(maxLines:Int):String {
-		if (maxLines <= 0) return "";
+		if (maxLines <= 0)
+			return "";
 		final lines = new Array<String>();
 		try {
 			while (lines.length < maxLines) {
@@ -291,8 +304,7 @@ private class MacroClient {
 			}
 		} catch (_:haxe.io.Eof) {
 			// ok
-		} catch (_:haxe.io.Error) {
-		} catch (_:String) {}
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
 		return lines.join("\n");
 	}
 
@@ -302,8 +314,9 @@ private class MacroClient {
 		final method = parts[2];
 		final tail = parts[3];
 		if (TRACE) {
-			try Sys.stderr().writeString("[hxhx macro rpc] <- " + method + "\n") catch (_:haxe.io.Error) {
-			} catch (_:String) {}
+			try
+				Sys.stderr().writeString("[hxhx macro rpc] <- " + method + "\n")
+			catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
 		if (id == null) {
 			replyErr(0, "missing id");
@@ -327,7 +340,8 @@ private class MacroClient {
 						replyErr(id, method + ": missing name");
 						return;
 					}
-					final payload = MacroProtocol.encodeLen("d", MacroState.defined(name) ? "1" : "0") + " "
+					final payload = MacroProtocol.encodeLen("d", MacroState.defined(name) ? "1" : "0")
+						+ " "
 						+ MacroProtocol.encodeLen("v", MacroState.definedValue(name));
 					replyOk(id, MacroProtocol.encodeLen("v", payload));
 				case "compiler.registerHook":
@@ -426,10 +440,7 @@ private class MacroClient {
 	}
 
 	inline function replyErr(id:Int, msg:String):Void {
-		proc.stdin.writeString(
-			"res " + id + " err " + MacroProtocol.encodeLen("m", msg) + " " + MacroProtocol.encodeLen("p", "") + "\n",
-			null
-		);
+		proc.stdin.writeString("res " + id + " err " + MacroProtocol.encodeLen("m", msg) + " " + MacroProtocol.encodeLen("p", "") + "\n", null);
 		proc.stdin.flush();
 	}
 
@@ -437,8 +448,7 @@ private class MacroClient {
 		try {
 			proc.stdin.writeString("quit\n", null);
 			proc.stdin.flush();
-		} catch (_:haxe.io.Error) {
-		} catch (_:String) {}
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
 
 		// Optional bring-up diagnostics: if the macro host logs to stderr (e.g. reverse-RPC tracing),
 		// drain it after requesting shutdown so the output is visible in CI logs.
@@ -450,8 +460,7 @@ private class MacroClient {
 				}
 			} catch (_:haxe.io.Eof) {
 				// expected
-			} catch (_:haxe.io.Error) {
-			} catch (_:String) {}
+			} catch (_:haxe.io.Error) {} catch (_:String) {}
 		}
 
 		proc.close();

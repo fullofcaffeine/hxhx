@@ -1,13 +1,14 @@
 class M13SourceMapIntegrationTest {
 	static function shQuote(s:String):String {
-		if (s == null) return "''";
+		if (s == null)
+			return "''";
 		return "'" + s.split("'").join("'\\''") + "'";
 	}
 
-	static function runHaxeCapture(args:Array<String>):{ code:Int, output:String } {
+	static function runHaxeCapture(args:Array<String>):{code:Int, output:String} {
 		if (Sys.systemName() == "Windows") {
 			// Best-effort: this repo's CI is POSIX-based; keep the test deterministic there.
-			return { code: Sys.command("haxe", args), output: "" };
+			return {code: Sys.command("haxe", args), output: ""};
 		}
 
 		final cmd = "haxe " + args.map(shQuote).join(" ");
@@ -15,14 +16,17 @@ class M13SourceMapIntegrationTest {
 		final out = p.stdout.readAll().toString();
 		final code = p.exitCode();
 		p.close();
-		return { code: code, output: out };
+		return {code: code, output: out};
 	}
 
 	static function findLineOfNeedle(source:String, needle:String):Int {
 		final idx = source.indexOf(needle);
-		if (idx < 0) return -1;
+		if (idx < 0)
+			return -1;
 		var line = 1;
-		for (i in 0...idx) if (source.charCodeAt(i) == "\n".code) line++;
+		for (i in 0...idx)
+			if (source.charCodeAt(i) == "\n".code)
+				line++;
 		return line;
 	}
 
@@ -31,24 +35,34 @@ class M13SourceMapIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "pkg.M13SourceMapFailMain",
+			"-cp",
+			"test",
+			"-main",
+			"pkg.M13SourceMapFailMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_output=" + outDir,
-			"-D", "ocaml_build=byte",
-			"-D", "ocaml_sourcemap=directives"
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_output=" + outDir,
+			"-D",
+			"ocaml_build=byte",
+			"-D",
+			"ocaml_sourcemap=directives"
 		];
 
 		final res = runHaxeCapture(args);
-		if (res.code == 0) throw "expected haxe to fail (dune build should fail) but exit code was 0";
+		if (res.code == 0)
+			throw "expected haxe to fail (dune build should fail) but exit code was 0";
 
 		final srcPath = "test/pkg/M13SourceMapFailMain.hx";
 		final src = sys.io.File.getContent(srcPath);
 		final expectedLine = findLineOfNeedle(src, "__ocaml__");
-		if (expectedLine <= 0) throw "failed to find __ocaml__ callsite line in " + srcPath;
+		if (expectedLine <= 0)
+			throw "failed to find __ocaml__ callsite line in " + srcPath;
 
 		// We only assert on the basename + line number so this stays stable across environments.
 		if (res.output.indexOf("M13SourceMapFailMain.hx") < 0) {
@@ -59,4 +73,3 @@ class M13SourceMapIntegrationTest {
 		}
 	}
 }
-

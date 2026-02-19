@@ -49,15 +49,18 @@ class Main {
 
 		while (true) {
 			final line = safeReadLine();
-			if (line == null) return;
+			if (line == null)
+				return;
 			final trimmed = StringTools.trim(line);
-			if (trimmed.length == 0) continue;
-				if (trimmed == "quit") return;
+			if (trimmed.length == 0)
+				continue;
+			if (trimmed == "quit")
+				return;
 
-				if (StringTools.startsWith(trimmed, "req ")) {
-					handleReq(trimmed);
-					continue;
-				}
+			if (StringTools.startsWith(trimmed, "req ")) {
+				handleReq(trimmed);
+				continue;
+			}
 
 			// Unknown line; respond with an error if it looks structured.
 			replyErr(0, "unknown message");
@@ -66,7 +69,7 @@ class Main {
 
 	static function safeReadLine():Null<String> {
 		try {
-			return cast (untyped __ocaml__("(try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null))"));
+			return cast(untyped __ocaml__("(try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null))"));
 		} catch (_:Dynamic) {
 			return null;
 		}
@@ -217,17 +220,20 @@ class Main {
 			case _:
 				null;
 		}
-		if (builtin != null) return builtin;
+		if (builtin != null)
+			return builtin;
 
 		final ext = EntryPoints.run(e);
-		if (ext != null) return ext;
+		if (ext != null)
+			return ext;
 
 		return "ran:" + e;
 	}
 
 	static function expandExprMacro(expr:String):String {
 		final e = expr == null ? "" : StringTools.trim(expr);
-		if (e.length == 0) throw "macro.expandExpr: empty expr";
+		if (e.length == 0)
+			throw "macro.expandExpr: empty expr";
 
 		// Primary expansion mechanism: entrypoints generated at macro-host build time.
 		//
@@ -236,7 +242,8 @@ class Main {
 		// - static method call dispatch
 		// - no reflection dependency on `Reflect.callMethod` (portable surface is not ready)
 		final ext = EntryPoints.run(e);
-		if (ext != null) return ext;
+		if (ext != null)
+			return ext;
 
 		// Minimal builtin expansions for bring-up.
 		//
@@ -254,12 +261,16 @@ class Main {
 	}
 
 	static function parseOneStringLiteralArg(s:String):Null<String> {
-		if (s == null) return null;
+		if (s == null)
+			return null;
 		final t = StringTools.trim(s);
-		if (t.length < 2) return null;
+		if (t.length < 2)
+			return null;
 		final q = t.charCodeAt(0);
-		if (q != "\"".code && q != "'".code) return null;
-		if (t.charCodeAt(t.length - 1) != q) return null;
+		if (q != "\"".code && q != "'".code)
+			return null;
+		if (t.charCodeAt(t.length - 1) != q)
+			return null;
 		// Very small unescape set: enough for module paths in upstream-ish tests.
 		var body = t.substr(1, t.length - 2);
 		body = StringTools.replace(body, "\\\\", "\\");
@@ -273,15 +284,19 @@ class Main {
 	}
 
 	static function parseDecInt(s:String):Int {
-		if (s == null) return -1;
+		if (s == null)
+			return -1;
 		var i = 0;
-		while (i < s.length && s.charCodeAt(i) == " ".code) i++;
-		if (i >= s.length) return -1;
+		while (i < s.length && s.charCodeAt(i) == " ".code)
+			i++;
+		if (i >= s.length)
+			return -1;
 		var value = 0;
 		var saw = false;
 		while (i < s.length) {
 			final c = s.charCodeAt(i);
-			if (c < "0".code || c > "9".code) break;
+			if (c < "0".code || c > "9".code)
+				break;
 			saw = true;
 			value = value * 10 + (c - "0".code);
 			i++;

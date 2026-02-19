@@ -1,9 +1,7 @@
 package reflaxe.ocaml.runtimegen;
 
 #if (macro || reflaxe_runtime)
-
 import haxe.io.Path;
-
 import reflaxe.ocaml.runtimegen.OcamlBuildRunner.BuildResult;
 
 /**
@@ -50,14 +48,16 @@ class OcamlMliGenerator {
 	static inline final RUNTIME_DIR = "runtime";
 
 	static function normalizeCompiledBaseName(base:String):String {
-		if (base == null || base.length == 0) return base;
+		if (base == null || base.length == 0)
+			return base;
 		final c = base.charCodeAt(0);
 		final isUpper = c >= 65 && c <= 90;
 		return isUpper ? (String.fromCharCode(c + 32) + base.substr(1)) : base;
 	}
 
 	static function isHiddenOrBuildArtifact(pathRel:String):Bool {
-		if (pathRel == null || pathRel.length == 0) return true;
+		if (pathRel == null || pathRel.length == 0)
+			return true;
 		final parts = pathRel.split("/");
 		return parts.indexOf(BUILD_DIR) != -1;
 	}
@@ -69,19 +69,24 @@ class OcamlMliGenerator {
 
 	static function listMlFilesRecursive(root:String, currentRel:String, out:Array<String>):Void {
 		final currentAbs = currentRel.length == 0 ? root : Path.join([root, currentRel]);
-		if (!sys.FileSystem.exists(currentAbs) || !sys.FileSystem.isDirectory(currentAbs)) return;
+		if (!sys.FileSystem.exists(currentAbs) || !sys.FileSystem.isDirectory(currentAbs))
+			return;
 
 		for (name in sys.FileSystem.readDirectory(currentAbs)) {
-			if (name == "." || name == "..") continue;
+			if (name == "." || name == "..")
+				continue;
 			final nextRel = currentRel.length == 0 ? name : (currentRel + "/" + name);
-			if (isHiddenOrBuildArtifact(nextRel) || isRuntimePath(nextRel)) continue;
+			if (isHiddenOrBuildArtifact(nextRel) || isRuntimePath(nextRel))
+				continue;
 			final nextAbs = Path.join([root, nextRel]);
-			if (!sys.FileSystem.exists(nextAbs)) continue;
+			if (!sys.FileSystem.exists(nextAbs))
+				continue;
 			if (sys.FileSystem.isDirectory(nextAbs)) {
 				listMlFilesRecursive(root, nextRel, out);
 				continue;
 			}
-			if (StringTools.endsWith(name, ".ml")) out.push(nextRel);
+			if (StringTools.endsWith(name, ".ml"))
+				out.push(nextRel);
 		}
 	}
 
@@ -89,25 +94,30 @@ class OcamlMliGenerator {
 		final dirs = new Map<String, Bool>();
 
 		function walk(abs:String):Void {
-			if (!sys.FileSystem.exists(abs) || !sys.FileSystem.isDirectory(abs)) return;
+			if (!sys.FileSystem.exists(abs) || !sys.FileSystem.isDirectory(abs))
+				return;
 			var hasCmi = false;
 			for (name in sys.FileSystem.readDirectory(abs)) {
-				if (name == "." || name == "..") continue;
+				if (name == "." || name == "..")
+					continue;
 				final child = Path.join([abs, name]);
-				if (!sys.FileSystem.exists(child)) continue;
+				if (!sys.FileSystem.exists(child))
+					continue;
 				if (sys.FileSystem.isDirectory(child)) {
 					walk(child);
 				} else if (StringTools.endsWith(name, ".cmi")) {
 					hasCmi = true;
 				}
 			}
-			if (hasCmi) dirs.set(abs, true);
+			if (hasCmi)
+				dirs.set(abs, true);
 		}
 
 		walk(buildRoot);
 
 		final out:Array<String> = [];
-		for (d in dirs.keys()) out.push(d);
+		for (d in dirs.keys())
+			out.push(d);
 		out.sort(Reflect.compare);
 		return out;
 	}
@@ -116,16 +126,20 @@ class OcamlMliGenerator {
 		final bases = new Map<String, Bool>();
 
 		function walk(abs:String):Void {
-			if (!sys.FileSystem.exists(abs) || !sys.FileSystem.isDirectory(abs)) return;
+			if (!sys.FileSystem.exists(abs) || !sys.FileSystem.isDirectory(abs))
+				return;
 			for (name in sys.FileSystem.readDirectory(abs)) {
-				if (name == "." || name == "..") continue;
+				if (name == "." || name == "..")
+					continue;
 				final child = Path.join([abs, name]);
-				if (!sys.FileSystem.exists(child)) continue;
+				if (!sys.FileSystem.exists(child))
+					continue;
 				if (sys.FileSystem.isDirectory(child)) {
 					walk(child);
 					continue;
 				}
-				if (!StringTools.endsWith(name, ".cmi")) continue;
+				if (!StringTools.endsWith(name, ".cmi"))
+					continue;
 				final base = Path.withoutExtension(name);
 				bases.set(normalizeCompiledBaseName(base), true);
 			}
@@ -137,7 +151,8 @@ class OcamlMliGenerator {
 
 	static function tryReadDuneLibraries(outDir:String):Array<String> {
 		final dunePath = Path.join([outDir, "dune"]);
-		if (!sys.FileSystem.exists(dunePath)) return [];
+		if (!sys.FileSystem.exists(dunePath))
+			return [];
 		final content = sys.io.File.getContent(dunePath);
 
 		// Minimal parse: look for `(libraries a b c)` in the generated dune stanza.
@@ -149,30 +164,34 @@ class OcamlMliGenerator {
 			final raw = re.matched(1);
 			for (t in raw.split(" ")) {
 				final s = StringTools.trim(t);
-				if (s.length == 0) continue;
+				if (s.length == 0)
+					continue;
 				// dune can include the local runtime library; ocamlfind won't know it.
-				if (s == "hx_runtime") continue;
+				if (s == "hx_runtime")
+					continue;
 				libs.push(s);
 			}
 		}
 		return libs;
 	}
 
-	static function runCapture(cmd:String, args:Array<String>):{ code:Int, out:String, err:String } {
+	static function runCapture(cmd:String, args:Array<String>):{code:Int, out:String, err:String} {
 		final p = new sys.io.Process(cmd, args);
 		try {
 			final stdout = p.stdout.readAll().toString();
 			final stderr = p.stderr.readAll().toString();
 			final code = p.exitCode();
 			p.close();
-			return { code: code, out: stdout, err: stderr };
+			return {code: code, out: stdout, err: stderr};
 		} catch (e:Dynamic) {
-			try p.close() catch (_:Dynamic) {}
-			return { code: 1, out: "", err: "Process failed: " + Std.string(e) };
+			try
+				p.close()
+			catch (_:Dynamic) {}
+			return {code: 1, out: "", err: "Process failed: " + Std.string(e)};
 		}
 	}
 
-	public static function tryEnsureAllCmiBuilt(cfg:{ outDir:String, exeName:String, mode:String }):BuildResult {
+	public static function tryEnsureAllCmiBuilt(cfg:{outDir:String, exeName:String, mode:String}):BuildResult {
 		final outDir = cfg.outDir;
 		final exeName = cfg.exeName;
 		final mode = cfg.mode != null ? cfg.mode : "native";
@@ -182,7 +201,8 @@ class OcamlMliGenerator {
 		// because those interfaces are maintained manually in `std/runtime/`.
 		final mlFiles:Array<String> = [];
 		listMlFilesRecursive(outDir, "", mlFiles);
-		if (mlFiles.length == 0) return Ok(null);
+		if (mlFiles.length == 0)
+			return Ok(null);
 
 		// Dune stores compiled objects for executables under:
 		//   _build/default/.<exeName>.eobjs/<modeDir>/
@@ -194,15 +214,18 @@ class OcamlMliGenerator {
 		final seen:Map<String, Bool> = [];
 		for (rel in mlFiles) {
 			final base = Path.withoutExtension(Path.withoutDirectory(rel));
-			if (base == null || base.length == 0) continue;
+			if (base == null || base.length == 0)
+				continue;
 			final cmiBase = normalizeCompiledBaseName(base);
-			if (seen.exists(cmiBase)) continue;
+			if (seen.exists(cmiBase))
+				continue;
 			seen.set(cmiBase, true);
 			final relTarget = Path.join([BUILD_DIR, "default", "." + exeName + ".eobjs", modeDir, cmiBase + ".cmi"]);
 			targets.push(relTarget);
 		}
 
-		if (targets.length == 0) return Ok(null);
+		if (targets.length == 0)
+			return Ok(null);
 
 		// Build in batches to avoid exceeding command-line length on large outputs.
 		final batchSize = 200;
@@ -246,19 +269,22 @@ class OcamlMliGenerator {
 
 		final mlFiles:Array<String> = [];
 		listMlFilesRecursive(outDir, "", mlFiles);
-		if (mlFiles.length == 0) return Ok(null);
+		if (mlFiles.length == 0)
+			return Ok(null);
 
 		final includeDirs = uniqueDirsContainingCmi(buildDefault);
 		final dunePkgs = tryReadDuneLibraries(outDir);
 
 		for (rel in mlFiles) {
 			final base = normalizeCompiledBaseName(Path.withoutExtension(Path.withoutDirectory(rel)));
-			if (!compiledBases.exists(base)) continue;
+			if (!compiledBases.exists(base))
+				continue;
 
 			final abs = Path.join([outDir, rel]);
 			final mliRel = rel.substr(0, rel.length - 3) + ".mli";
 			final mliAbs = Path.join([outDir, mliRel]);
-			if (sys.FileSystem.exists(mliAbs)) continue;
+			if (sys.FileSystem.exists(mliAbs))
+				continue;
 
 			final args:Array<String> = [];
 			if (dunePkgs.length > 0) {
@@ -295,5 +321,4 @@ class OcamlMliGenerator {
 		return Ok(null);
 	}
 }
-
 #end

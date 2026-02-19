@@ -5,4 +5,3 @@ typedef OcamlTypeRecordField = {
 	final isMutable:Bool;
 	final typ:OcamlTypeExpr;
 }
-

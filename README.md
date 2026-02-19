@@ -83,6 +83,8 @@ Manual formatting guard command:
 npm run guard:hx-format
 ```
 
+`npm run ci:guards` now includes the deterministic Haxe formatting check.
+
 Manual secret scan guard command:
 
 ```bash

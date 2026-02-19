@@ -27,9 +27,11 @@ class HxDefineMap {
 		- Keeps parsing logic in one place so both CLI parsing and macro-time define merging are consistent.
 	**/
 	public static function addRawDefine(dst:haxe.ds.StringMap<String>, raw:String):Void {
-		if (dst == null || raw == null) return;
+		if (dst == null || raw == null)
+			return;
 		final s = StringTools.trim(raw);
-		if (s.length == 0) return;
+		if (s.length == 0)
+			return;
 
 		final eq = s.indexOf("=");
 		if (eq == -1) {
@@ -38,20 +40,25 @@ class HxDefineMap {
 		}
 
 		final name = StringTools.trim(s.substr(0, eq));
-		if (name.length == 0) return;
+		if (name.length == 0)
+			return;
 		final value = s.substr(eq + 1); // preserve spaces; callers can trim if desired
 		dst.set(name, value);
 	}
 
 	public static function fromRawDefines(rawDefines:Array<String>):haxe.ds.StringMap<String> {
 		final out = new haxe.ds.StringMap<String>();
-		if (rawDefines == null) return out;
-		for (raw in rawDefines) addRawDefine(out, raw);
+		if (rawDefines == null)
+			return out;
+		for (raw in rawDefines)
+			addRawDefine(out, raw);
 		return out;
 	}
 
 	public static function mergeInto(dst:haxe.ds.StringMap<String>, src:haxe.ds.StringMap<String>):Void {
-		if (dst == null || src == null) return;
-		for (k in src.keys()) dst.set(k, src.get(k));
+		if (dst == null || src == null)
+			return;
+		for (k in src.keys())
+			dst.set(k, src.get(k));
 	}
 }

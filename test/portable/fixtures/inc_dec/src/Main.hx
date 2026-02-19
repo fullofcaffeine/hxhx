@@ -7,7 +7,8 @@ class Counter {
 
 	public function loopTo(n:Int):Int {
 		while (true) {
-			if (i == n) return i;
+			if (i == n)
+				return i;
 			i++;
 		}
 		return -1;
@@ -46,4 +47,3 @@ class Main {
 		Sys.println("OK inc_dec");
 	}
 }
-

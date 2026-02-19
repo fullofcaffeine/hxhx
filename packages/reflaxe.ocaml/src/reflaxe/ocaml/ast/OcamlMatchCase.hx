@@ -5,4 +5,3 @@ typedef OcamlMatchCase = {
 	final guard:Null<OcamlExpr>;
 	final expr:OcamlExpr;
 }
-

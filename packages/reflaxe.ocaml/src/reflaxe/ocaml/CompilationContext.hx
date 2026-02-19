@@ -55,12 +55,15 @@ class CompilationContext {
 
 	/** Current super class full name (`pack.Type`), when compiling a class with `extends`. */
 	public var currentSuperFullName:Null<String> = null;
+
 	/** Current super class module id (e.g. `pack.Module`). */
 	public var currentSuperModuleId:Null<String> = null;
+
 	/** Current super class type name. */
 	public var currentSuperTypeName:Null<String> = null;
+
 	/** Current super class constructor signature (excluding implicit `self`). */
-	public var currentSuperCtorArgs:Null<Array<{ name:String, opt:Bool, t:Type }>> = null;
+	public var currentSuperCtorArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = null;
 
 	/**
 	 * Set of Haxe full names that participate in inheritance (either extend something, or are extended).
@@ -70,6 +73,7 @@ class CompilationContext {
 	 * - The builder needs to know when to emit `self.foo self arg` instead of static `Foo.foo self arg`.
 	 */
 	public final virtualTypes:Map<String, Bool> = [];
+
 	public var virtualTypesComputed:Bool = false;
 
 	/** Haxe full names of interfaces (non-stdlib only, for now). */
@@ -119,6 +123,7 @@ class CompilationContext {
 	 *   avoid bloating small outputs; expand when we start running upstream suites.
 	 */
 	public final nonStdTypeRegistryClasses:Map<String, Bool> = [];
+
 	public final nonStdTypeRegistryEnums:Map<String, Bool> = [];
 
 	/**
@@ -158,7 +163,7 @@ class CompilationContext {
 	 * - Seeded in `OcamlCompiler.compileEnumImpl` from each enum field's typed function signature.
 	 * - Consumed in `OcamlCompiler.onOutputComplete()` to emit `HxType.register_enum_ctor` entries.
 	 */
-	public final enumCtorArgsByFullNameAndCtor:Map<String, Array<{ name:String, opt:Bool, t:Type }>> = [];
+	public final enumCtorArgsByFullNameAndCtor:Map<String, Array<{name:String, opt:Bool, t:Type}>> = [];
 
 	/**
 	 * Output file id overrides for Haxe modules.
@@ -180,16 +185,19 @@ class CompilationContext {
 	public final fileIdOverrideByModuleId:Map<String, String> = [];
 
 	public function fileIdForModuleId(moduleId:String):String {
-		if (moduleId == null || moduleId.length == 0) return "Main";
+		if (moduleId == null || moduleId.length == 0)
+			return "Main";
 		final existing = fileIdOverrideByModuleId.get(moduleId);
-		if (existing != null) return existing;
+		if (existing != null)
+			return existing;
 
 		// Mirror Reflaxe's default `BaseType.moduleId()` behavior for non-overridden modules.
 		final raw = StringTools.replace(moduleId, ".", "_");
 
 		// Conservative safety margin below common filesystem limits for a single path component.
 		final maxLen = 180;
-		if (raw.length <= maxLen) return raw;
+		if (raw.length <= maxLen)
+			return raw;
 
 		final hash = haxe.crypto.Md5.encode(raw).substr(0, 12);
 		final keep = 64;
@@ -207,7 +215,8 @@ class CompilationContext {
 
 	public function ocamlModuleNameForModuleId(moduleId:String):String {
 		final fileId = fileIdForModuleId(moduleId);
-		if (fileId == null || fileId.length == 0) return "Main";
+		if (fileId == null || fileId.length == 0)
+			return "Main";
 		final first = fileId.charCodeAt(0);
 		final isLower = first >= 97 && first <= 122;
 		return isLower ? (String.fromCharCode(first - 32) + fileId.substr(1)) : fileId;
@@ -228,7 +237,8 @@ class CompilationContext {
 	 * - Seeded in `OcamlCompiler.compileClassImpl` from the typed constructor signature.
 	 * - Consumed in `OcamlCompiler.onOutputComplete()` to generate `HxTypeRegistry` ctor registrations.
 	 */
-	public final ctorArgsByFullName:Map<String, Array<{ name:String, opt:Bool, t:Type }>> = [];
+	public final ctorArgsByFullName:Map<String, Array<{name:String, opt:Bool, t:Type}>> = [];
+
 	/**
 	 * Whether a class has a constructor available after typing/DCE.
 	 *

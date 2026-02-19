@@ -22,4 +22,3 @@ class EmitArtifact {
 		this.path = path == null ? "" : path;
 	}
 }
-

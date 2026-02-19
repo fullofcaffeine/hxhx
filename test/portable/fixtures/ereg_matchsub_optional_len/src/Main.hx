@@ -2,7 +2,8 @@ class Main {
 	static function main() {
 		final sb = new StringBuf();
 		for (i in 0...400) {
-			if (i > 0) sb.add(",");
+			if (i > 0)
+				sb.add(",");
 			sb.add("item");
 			sb.add(Std.string(i));
 		}

@@ -18,7 +18,8 @@ class M5GuardrailsIntegrationTest {
 		final code = p.exitCode();
 		p.close();
 
-		if (code == 0) throw label + ": expected compile to fail";
+		if (code == 0)
+			throw label + ": expected compile to fail";
 
 		final combined = out + "\n" + err;
 		if (combined.indexOf(mustContain) < 0) {
@@ -31,13 +32,19 @@ class M5GuardrailsIntegrationTest {
 		sys.FileSystem.createDirectory(baseOut);
 
 		final common = [
-			"-cp", "test",
+			"-cp",
+			"test",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_no_build",
-			"-D", "ocaml_no_dune"
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_no_build",
+			"-D",
+			"ocaml_no_dune"
 		];
 
 		final out1 = baseOut + "/inheritance";
@@ -52,11 +59,8 @@ class M5GuardrailsIntegrationTest {
 		sys.FileSystem.createDirectory(out3);
 		assertOk(common.concat(["-main", "ReflectionMain", "-D", "ocaml_output=" + out3]), "reflect field access supported");
 
-			final out4 = baseOut + "/type_reflection";
-			sys.FileSystem.createDirectory(out4);
-			assertOk(
-				common.concat(["-main", "TypeReflectionMain", "-D", "ocaml_output=" + out4]),
-				"Type.* reflection supported (minimal)"
-			);
-		}
+		final out4 = baseOut + "/type_reflection";
+		sys.FileSystem.createDirectory(out4);
+		assertOk(common.concat(["-main", "TypeReflectionMain", "-D", "ocaml_output=" + out4]), "Type.* reflection supported (minimal)");
 	}
+}

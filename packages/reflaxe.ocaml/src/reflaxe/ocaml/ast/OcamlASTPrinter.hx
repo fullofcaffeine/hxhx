@@ -18,7 +18,8 @@ class OcamlASTPrinter {
 	public function new() {}
 
 	static function indent(level:Int):String {
-		if (level <= 0) return "";
+		if (level <= 0)
+			return "";
 		while (indentCache.length <= level) {
 			indentCache.push(indentCache[indentCache.length - 1] + INDENT);
 		}
@@ -26,16 +27,20 @@ class OcamlASTPrinter {
 	}
 
 	static function escapeLineDirectiveFile(file:String):String {
-		if (file == null) return "";
+		if (file == null)
+			return "";
 		return file.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 
 	public function printModule(items:Array<OcamlModuleItem>):String {
-		if (items.length == 0) return "";
-		if (items.length == 1) return printItem(items[0]);
+		if (items.length == 0)
+			return "";
+		if (items.length == 1)
+			return printItem(items[0]);
 		final buf = new StringBuf();
 		for (i in 0...items.length) {
-			if (i != 0) buf.add("\n\n");
+			if (i != 0)
+				buf.add("\n\n");
 			buf.add(printItem(items[i]));
 		}
 		return buf.toString();
@@ -57,7 +62,6 @@ class OcamlASTPrinter {
 	// =========================================================
 	// Expressions
 	// =========================================================
-
 	static inline final PREC_TOP = 0;
 	static inline final PREC_LET = 1;
 	static inline final PREC_SEQ = 2;
@@ -127,8 +131,13 @@ class OcamlASTPrinter {
 				// Note: this may introduce extra newlines and can shift formatting, so it is
 				// only expected to appear when `-D ocaml_sourcemap` is enabled.
 				final innerPrinted = printExprCtx(inner, ctxPrec, indentLevel);
-				"\n# " + Std.string(pos.line) + " \"" + escapeLineDirectiveFile(pos.file) + "\"\n"
-					+ indent(indentLevel) + innerPrinted;
+				"\n# "
+				+ Std.string(pos.line)
+				+ " \""
+				+ escapeLineDirectiveFile(pos.file)
+				+ "\"\n"
+				+ indent(indentLevel)
+				+ innerPrinted;
 			case ERaise(exn):
 				"raise (" + printExprCtx(exn, PREC_TOP, indentLevel) + ")";
 			case ETuple(items):
@@ -140,28 +149,16 @@ class OcamlASTPrinter {
 				function needsTupleElemParens(expr:OcamlExpr):Bool {
 					return switch (expr) {
 						case EPos(_, inner): needsTupleElemParens(inner);
-						case ELet(_, _, _, _)
-							| EFun(_, _)
-							| EIf(_, _, _)
-							| EMatch(_, _)
-							| ETry(_, _)
-							| ESeq(_)
-							| EWhile(_, _)
-							| EAssign(_, _, _)
-							| ERaise(_):
+						case ELet(_, _, _, _) | EFun(_, _) | EIf(_, _, _) | EMatch(_, _) | ETry(_, _) | ESeq(_) | EWhile(_, _) | EAssign(_, _, _) | ERaise(_):
 							true;
 						case _:
 							false;
 					}
 				}
-				"("
-					+ items
-						.map(i -> {
-							final inner = printExprCtx(i, PREC_TOP, indentLevel);
-							needsTupleElemParens(i) ? ("(" + inner + ")") : inner;
-						})
-						.join(", ")
-					+ ")";
+				"(" + items.map(i -> {
+					final inner = printExprCtx(i, PREC_TOP, indentLevel);
+					needsTupleElemParens(i) ? ("(" + inner + ")") : inner;
+				}).join(", ") + ")";
 			case EAnnot(expr, typ):
 				"(" + printExprCtx(expr, PREC_TOP, indentLevel) + " : " + printType(typ) + ")";
 			case ERecord(fields):
@@ -188,8 +185,10 @@ class OcamlASTPrinter {
 			case ESeq(exprs):
 				printSeq(exprs, indentLevel);
 			case EWhile(cond, body):
-				"while " + printExprCtx(cond, PREC_TOP, indentLevel)
-				+ " do " + printExprCtx(body, PREC_TOP, indentLevel)
+				"while "
+				+ printExprCtx(cond, PREC_TOP, indentLevel)
+				+ " do "
+				+ printExprCtx(body, PREC_TOP, indentLevel)
 				+ " done";
 			case EList(items):
 				"[" + items.map(i -> printExprCtx(i, PREC_TOP, indentLevel)).join("; ") + "]";
@@ -199,9 +198,12 @@ class OcamlASTPrinter {
 				final ps = params.map(printPat).join(" ");
 				"fun " + ps + " -> " + printExprCtx(body, PREC_TOP, indentLevel);
 			case EIf(cond, thenExpr, elseExpr):
-				"if " + printExprCtx(cond, PREC_TOP, indentLevel)
-				+ " then " + printExprCtx(thenExpr, PREC_TOP, indentLevel)
-				+ " else " + printExprCtx(elseExpr, PREC_TOP, indentLevel);
+				"if "
+				+ printExprCtx(cond, PREC_TOP, indentLevel)
+				+ " then "
+				+ printExprCtx(thenExpr, PREC_TOP, indentLevel)
+				+ " else "
+				+ printExprCtx(elseExpr, PREC_TOP, indentLevel);
 			case EMatch(scrutinee, cases):
 				printMatch(scrutinee, cases, indentLevel);
 			case ETry(body, cases):
@@ -239,15 +241,18 @@ class OcamlASTPrinter {
 	}
 
 	function printSeq(exprs:Array<OcamlExpr>, indentLevel:Int):String {
-		if (exprs.length == 0) return "()";
-		if (exprs.length == 1) return printExprCtx(exprs[0], PREC_TOP, indentLevel);
+		if (exprs.length == 0)
+			return "()";
+		if (exprs.length == 1)
+			return printExprCtx(exprs[0], PREC_TOP, indentLevel);
 
 		final indent0 = indent(indentLevel);
 		final indent1 = indent(indentLevel + 1);
 		final buf = new StringBuf();
 		buf.add("(\n");
 		for (i in 0...exprs.length) {
-			if (i != 0) buf.add(";\n");
+			if (i != 0)
+				buf.add(";\n");
 			buf.add(indent1);
 			buf.add(printExprCtx(exprs[i], PREC_TOP, indentLevel + 1));
 		}
@@ -308,31 +313,27 @@ class OcamlASTPrinter {
 			return true;
 		}
 
-			return switch (op) {
-				// `not f x` parses as `(not f) x`, so we emit `not (f x)` instead.
-				case Not:
-					"not (" + printExprCtx(expr, PREC_TOP, indentLevel) + ")";
-				case Neg:
-					needsParensAfterPrefix(expr)
-						? "-(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
-						: "-" + printExprCtx(expr, PREC_MUL, indentLevel);
-				case NegF:
-					needsParensAfterPrefix(expr)
-						? "-.(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
-						: "-." + printExprCtx(expr, PREC_MUL, indentLevel);
-				case Deref:
-					needsParensAfterPrefix(expr)
-						? "!(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")"
-						: "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
-			}
+		return switch (op) {
+			// `not f x` parses as `(not f) x`, so we emit `not (f x)` instead.
+			case Not:
+				"not (" + printExprCtx(expr, PREC_TOP, indentLevel) + ")";
+			case Neg:
+				needsParensAfterPrefix(expr) ? "-(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")" : "-" + printExprCtx(expr, PREC_MUL, indentLevel);
+			case NegF:
+				needsParensAfterPrefix(expr) ? "-.(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")" : "-." + printExprCtx(expr, PREC_MUL, indentLevel);
+			case Deref:
+				needsParensAfterPrefix(expr) ? "!(" + printExprCtx(expr, PREC_TOP, indentLevel) + ")" : "!" + printExprCtx(expr, PREC_FIELD, indentLevel);
 		}
+	}
 
 	function printRecord(fields:Array<OcamlRecordField>, indentLevel:Int):String {
-		if (fields.length == 0) return "{}";
+		if (fields.length == 0)
+			return "{}";
 		final buf = new StringBuf();
 		buf.add("{ ");
 		for (i in 0...fields.length) {
-			if (i != 0) buf.add("; ");
+			if (i != 0)
+				buf.add("; ");
 			final f = fields[i];
 			// OCaml precedence gotcha: `fun ... -> ...; other_field = ...` can be parsed as a
 			// sequence inside the function body instead of a record field separator.
@@ -357,7 +358,8 @@ class OcamlASTPrinter {
 
 	function printApp(fn:OcamlExpr, args:Array<OcamlExpr>, indentLevel:Int):String {
 		final f = printExprCtx(fn, PREC_APP, indentLevel);
-		if (args.length == 0) return f;
+		if (args.length == 0)
+			return f;
 		final buf = new StringBuf();
 		buf.add(f);
 		for (i in 0...args.length) {
@@ -371,7 +373,8 @@ class OcamlASTPrinter {
 
 	function printAppArgs(fn:OcamlExpr, args:Array<OcamlApplyArg>, indentLevel:Int):String {
 		final f = printExprCtx(fn, PREC_APP, indentLevel);
-		if (args.length == 0) return f;
+		if (args.length == 0)
+			return f;
 
 		inline function renderLabelArg(prefix:String, label:String, value:OcamlExpr):String {
 			final rendered = printExprCtx(value, PREC_TOP, indentLevel);
@@ -388,9 +391,7 @@ class OcamlASTPrinter {
 				case _:
 					true;
 			}
-			return needsParens
-				? (prefix + label + ":(" + rendered + ")")
-				: (prefix + label + ":" + rendered);
+			return needsParens ? (prefix + label + ":(" + rendered + ")") : (prefix + label + ":" + rendered);
 		}
 
 		final buf = new StringBuf();
@@ -422,8 +423,14 @@ class OcamlASTPrinter {
 
 	function printLetIn(name:String, value:OcamlExpr, body:OcamlExpr, isRec:Bool, indentLevel:Int):String {
 		final recStr = isRec ? " rec" : "";
-		return "let" + recStr + " " + name + " = " + printExprCtx(value, PREC_TOP, indentLevel)
-			+ " in " + printExprCtx(body, PREC_TOP, indentLevel);
+		return "let"
+			+ recStr
+			+ " "
+			+ name
+			+ " = "
+			+ printExprCtx(value, PREC_TOP, indentLevel)
+			+ " in "
+			+ printExprCtx(body, PREC_TOP, indentLevel);
 	}
 
 	function needsGroupingInMatchArmExpr(e:OcamlExpr):Bool {
@@ -511,8 +518,7 @@ class OcamlASTPrinter {
 					"[]";
 				} else if (name == "::" && args.length == 2) {
 					printPatCtx(args[0], true) + " :: " + printPatCtx(args[1], true);
-				} else
-				if (args.length == 0) {
+				} else if (args.length == 0) {
 					name;
 				} else if (args.length == 1) {
 					name + " " + printPatCtx(args[0], true);
@@ -618,13 +624,13 @@ class OcamlASTPrinter {
 	}
 
 	function printVariantConstructors(constructors:Array<OcamlVariantConstructor>, indentLevel:Int):String {
-		if (constructors.length == 0) return "|";
+		if (constructors.length == 0)
+			return "|";
 		final indent0 = indent(indentLevel);
 		final parts = constructors.map(function(c) {
-			if (c.args.length == 0) return indent0 + "| " + c.name;
-			final args = c.args.length == 1
-				? printTypeCtx(c.args[0], TPREC_TUPLE)
-				: c.args.map(a -> printTypeCtx(a, TPREC_TUPLE)).join(" * ");
+			if (c.args.length == 0)
+				return indent0 + "| " + c.name;
+			final args = c.args.length == 1 ? printTypeCtx(c.args[0], TPREC_TUPLE) : c.args.map(a -> printTypeCtx(a, TPREC_TUPLE)).join(" * ");
 			return indent0 + "| " + c.name + " of " + args;
 		});
 		return "\n" + parts.join("\n");

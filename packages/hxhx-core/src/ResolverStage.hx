@@ -22,14 +22,15 @@ import haxe.io.Path;
 	- Resolution strategy:
 	  1. Try `<cp>/<modulePathWithSlashes>.hx`
 	  2. If the import looks like a “subtype in module” (`pack.Mod.SubType`), fall back
-	     to `<cp>/pack/Mod.hx` when `<cp>/pack/Mod/SubType.hx` does not exist.
+		 to `<cp>/pack/Mod.hx` when `<cp>/pack/Mod/SubType.hx` does not exist.
 	- Parsing uses `ParserStage.parse`, which can route to either the pure-Haxe frontend
 	  or the native OCaml frontend hook (see `ParserStage` hxdoc).
 **/
 class ResolverStage {
 	static function traceResolverDepsEnabled():Bool {
 		final v = Sys.getEnv("HXHX_TRACE_RESOLVER_DEPS");
-		if (v == null) return false;
+		if (v == null)
+			return false;
 		final s = StringTools.trim(v).toLowerCase();
 		return s == "1" || s == "true" || s == "yes";
 	}
@@ -47,15 +48,18 @@ class ResolverStage {
 		// Opt-out
 		// - Set `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0` (or "false"/"no") to disable if it causes
 		//   unwanted graph widening.
-		if (v == null || StringTools.trim(v).length == 0) return true;
+		if (v == null || StringTools.trim(v).length == 0)
+			return true;
 		final s = StringTools.trim(v).toLowerCase();
-		if (s == "0" || s == "false" || s == "no") return false;
+		if (s == "0" || s == "false" || s == "no")
+			return false;
 		return s == "1" || s == "true" || s == "yes";
 	}
 
 	static function implicitSamePackageDeps(source:String, modulePath:String, decl:HxModuleDecl):Array<String> {
 		final pkg = HxModuleDecl.getPackagePath(decl);
-		if (pkg == null || pkg.length == 0) return [];
+		if (pkg == null || pkg.length == 0)
+			return [];
 		final moduleName = modulePath == null ? "" : modulePath.split(".").pop();
 
 		final candidates = new Map<String, Bool>();
@@ -63,7 +67,8 @@ class ResolverStage {
 			var pos = 0;
 			while (re.matchSub(source, pos, -1)) {
 				final name = re.matched(1);
-				if (name != null && name.length > 0) candidates.set(name, true);
+				if (name != null && name.length > 0)
+					candidates.set(name, true);
 				final mp = re.matchedPos();
 				pos = mp.pos + mp.len;
 			}
@@ -75,12 +80,14 @@ class ResolverStage {
 		addMatches(~/\b([A-Z][A-Za-z0-9_]*)\s*\./g);
 
 		final names = new Array<String>();
-		for (name in candidates.keys()) names.push(name);
+		for (name in candidates.keys())
+			names.push(name);
 		names.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 
 		final out = new Array<String>();
 		for (name in names) {
-			if (name == moduleName) continue;
+			if (name == moduleName)
+				continue;
 			out.push(pkg + "." + name);
 		}
 		return out;
@@ -106,27 +113,31 @@ class ResolverStage {
 		  positives low enough for bring-up.
 	**/
 	static function implicitQualifiedTypeDeps(source:String):Array<String> {
-		if (source == null || source.length == 0) return [];
+		if (source == null || source.length == 0)
+			return [];
 
 		final candidates = new Map<String, Bool>();
 		// Skip metadata lines (`@:build(...)`, `@:autoBuild(...)`, etc.) so macro entrypoint
 		// paths do not widen the main compilation graph.
 		for (line in source.split("\n")) {
 			final trimmed = StringTools.trim(line);
-			if (StringTools.startsWith(trimmed, "@:")) continue;
+			if (StringTools.startsWith(trimmed, "@:"))
+				continue;
 
 			final re = ~/\b(([A-Za-z_][A-Za-z0-9_]*\.)+[A-Z][A-Za-z0-9_]*)\b/g;
 			var pos = 0;
 			while (re.matchSub(line, pos, -1)) {
 				final dep = re.matched(1);
-				if (dep != null && dep.length > 0) candidates.set(dep, true);
+				if (dep != null && dep.length > 0)
+					candidates.set(dep, true);
 				final mp = re.matchedPos();
 				pos = mp.pos + mp.len;
 			}
 		}
 
 		final out = new Array<String>();
-		for (dep in candidates.keys()) out.push(dep);
+		for (dep in candidates.keys())
+			out.push(dep);
 		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 		return out;
 	}
@@ -150,23 +161,29 @@ class ResolverStage {
 		final definesMap = defines == null ? new haxe.ds.StringMap<String>() : defines;
 
 		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
-			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro.")) return true;
-			if (filePath == null || filePath.length == 0) return false;
+			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
+				return true;
+			if (filePath == null || filePath.length == 0)
+				return false;
 			return filePath.indexOf("/haxe/macro/") != -1 || filePath.indexOf("\\haxe\\macro\\") != -1;
 		}
 
 		function cloneDefines(src:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
 			final out = new haxe.ds.StringMap<String>();
-			if (src != null) for (k in src.keys()) out.set(k, src.get(k));
+			if (src != null)
+				for (k in src.keys())
+					out.set(k, src.get(k));
 			return out;
 		}
 
 		final stack = new Array<String>();
 		if (roots != null) {
 			for (r in roots) {
-				if (r == null) continue;
+				if (r == null)
+					continue;
 				final m = StringTools.trim(r);
-				if (m.length == 0) continue;
+				if (m.length == 0)
+					continue;
 				stack.push(m);
 			}
 		}
@@ -175,12 +192,15 @@ class ResolverStage {
 		// doesn't risk blowing the OCaml stack during bring-up.
 		while (stack.length > 0) {
 			final modulePath = stack.pop();
-			if (modulePath == null || modulePath.length == 0) continue;
-			if (visited.exists(modulePath)) continue;
+			if (modulePath == null || modulePath.length == 0)
+				continue;
+			if (visited.exists(modulePath))
+				continue;
 			visited.set(modulePath, true);
 
 			final filePath = resolveModuleFile(classPaths, modulePath);
-			if (filePath == null) throw "import_missing " + modulePath;
+			if (filePath == null)
+				throw "import_missing " + modulePath;
 
 			final source = try {
 				sys.io.File.getContent(filePath);
@@ -189,7 +209,8 @@ class ResolverStage {
 			} catch (_:String) {
 				null;
 			}
-			if (source == null) throw "import_unreadable " + filePath;
+			if (source == null)
+				throw "import_unreadable " + filePath;
 
 			// Apply conditional compilation filtering so inactive `#if` branches don't affect
 			// the resolver's module graph during bootstrapping.
@@ -201,17 +222,17 @@ class ResolverStage {
 			//   but upstream unit harness modules can still reference `haxe.macro.*` at build time.
 			// - To keep Gate bring-up moving, parse/filter `haxe.macro.*` modules with `macro=1`
 			//   so their declarations exist for Stage3 emission (stubs/Obj.magic are fine here).
-			final effectiveDefines = isMacroStdModule(modulePath, filePath)
-				? (() -> {
-					final m = cloneDefines(definesMap);
-					if (!m.exists("macro")) m.set("macro", "1");
-					// Macros run on the eval host by default in Haxe 4.x. Many macro APIs are guarded by:
-					//   #if (neko || eval || display)
-					// so we also set `eval=1` to surface their declarations during bring-up.
-					if (!m.exists("eval")) m.set("eval", "1");
-					m;
-				})()
-				: definesMap;
+			final effectiveDefines = isMacroStdModule(modulePath, filePath) ? (() -> {
+				final m = cloneDefines(definesMap);
+				if (!m.exists("macro"))
+					m.set("macro", "1");
+				// Macros run on the eval host by default in Haxe 4.x. Many macro APIs are guarded by:
+				//   #if (neko || eval || display)
+				// so we also set `eval=1` to surface their declarations during bring-up.
+				if (!m.exists("eval"))
+					m.set("eval", "1");
+				m;
+			})() : definesMap;
 			final filteredSource = HxConditionalCompilation.filterSource(source, effectiveDefines);
 
 			final parsed = try {
@@ -230,7 +251,8 @@ class ResolverStage {
 
 			for (rawImport in HxModuleDecl.getImports(decl)) {
 				final imp = normalizeImport(rawImport);
-				if (imp == null) continue;
+				if (imp == null)
+					continue;
 
 				// Haxe import paths can be relative to the current package. In upstream code it's common
 				// to write `import MyType` (or `import MyMod.SubType`) inside `package unit;`, which
@@ -239,7 +261,9 @@ class ResolverStage {
 				// Bootstrap rule: try the raw import first, then fall back to a same-package prefix.
 				final resolvedImp = {
 					final existsDirect = resolveModuleFile(classPaths, imp) != null;
-					if (existsDirect) imp else {
+					if (existsDirect)
+						imp
+					else {
 						// Only consider a same-package prefix when the import path begins with an uppercase
 						// identifier (module/type). Lowercase-leading paths are typically absolute packages
 						// (e.g. `haxe.ds.List`) and should not be rewritten.
@@ -247,7 +271,10 @@ class ResolverStage {
 						final head = dot == -1 ? imp : imp.substr(0, dot);
 						final head0 = head.length == 0 ? 0 : head.charCodeAt(0);
 						final headIsUpper = head0 >= "A".code && head0 <= "Z".code;
-						if (headIsUpper && modulePkg != null && modulePkg.length > 0 && !StringTools.startsWith(imp, modulePkg + ".")) modulePkg + "." + imp else imp;
+						if (headIsUpper && modulePkg != null && modulePkg.length > 0 && !StringTools.startsWith(imp, modulePkg + "."))
+							modulePkg + "." + imp
+						else
+							imp;
 					}
 				}
 
@@ -255,38 +282,44 @@ class ResolverStage {
 					final base = resolvedImp.substr(0, resolvedImp.length - 2);
 					// If the base module doesn't exist as a file, treat this as a package-wildcard import
 					// (`import pack.*`) and ignore it for graph traversal.
-					if (resolveModuleFile(classPaths, base) != null) deps.push(base);
+					if (resolveModuleFile(classPaths, base) != null)
+						deps.push(base);
 					continue;
 				}
 
 				deps.push(resolvedImp);
 			}
 
-				// Bootstrap extension: approximate "same-package type resolution" used by the real compiler.
-				//
-				// IMPORTANT: run the heuristic on the *filtered* source so inactive `#if` branches
-				// do not widen the module graph (and accidentally pull in platform-only modules
-				// like `unit.TestJava` during `--interp` bring-up).
-				final traceDeps = traceResolverDepsEnabled();
-				if (resolveImplicitSamePackageTypesEnabled()) {
-					for (dep in implicitSamePackageDeps(filteredSource, modulePath, decl)) {
-						final exists = resolveModuleFile(classPaths, dep) != null;
-						if (traceDeps) Sys.println("resolver_samepkg_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
-						if (exists) deps.push(dep);
-					}
-				}
-
-				for (dep in implicitQualifiedTypeDeps(filteredSource)) {
+			// Bootstrap extension: approximate "same-package type resolution" used by the real compiler.
+			//
+			// IMPORTANT: run the heuristic on the *filtered* source so inactive `#if` branches
+			// do not widen the module graph (and accidentally pull in platform-only modules
+			// like `unit.TestJava` during `--interp` bring-up).
+			final traceDeps = traceResolverDepsEnabled();
+			if (resolveImplicitSamePackageTypesEnabled()) {
+				for (dep in implicitSamePackageDeps(filteredSource, modulePath, decl)) {
 					final exists = resolveModuleFile(classPaths, dep) != null;
-					if (traceDeps) Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
-					if (exists) deps.push(dep);
+					if (traceDeps)
+						Sys.println("resolver_samepkg_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+					if (exists)
+						deps.push(dep);
 				}
+			}
+
+			for (dep in implicitQualifiedTypeDeps(filteredSource)) {
+				final exists = resolveModuleFile(classPaths, dep) != null;
+				if (traceDeps)
+					Sys.println("resolver_qualified_dep module=" + modulePath + " dep=" + dep + " exists=" + (exists ? "1" : "0"));
+				if (exists)
+					deps.push(dep);
+			}
 
 			// Preserve the old DFS-ish order by pushing dependencies in reverse.
 			var i = deps.length - 1;
 			while (i >= 0) {
 				final dep = deps[i];
-				if (dep != null && dep.length > 0 && !visited.exists(dep)) stack.push(dep);
+				if (dep != null && dep.length > 0 && !visited.exists(dep))
+					stack.push(dep);
 				i -= 1;
 			}
 		}
@@ -294,9 +327,11 @@ class ResolverStage {
 	}
 
 	static function normalizeImport(raw:String):Null<String> {
-		if (raw == null) return null;
+		if (raw == null)
+			return null;
 		var s = StringTools.trim(raw);
-		if (s.length == 0) return null;
+		if (s.length == 0)
+			return null;
 
 		// Native parser may provide "using Foo" (future-proofing).
 		if (StringTools.startsWith(s, "using ")) {
@@ -305,31 +340,39 @@ class ResolverStage {
 
 		// Parser may provide "Foo as Bar"; alias is ignored for resolution.
 		final asIdx = s.indexOf(" as ");
-		if (asIdx >= 0) s = StringTools.trim(s.substr(0, asIdx));
+		if (asIdx >= 0)
+			s = StringTools.trim(s.substr(0, asIdx));
 
 		return s.length == 0 ? null : s;
 	}
 
 	static function resolveModuleFile(classPaths:Array<String>, modulePath:String):Null<String> {
 		function fileExistsExactCase(path:String):Bool {
-			if (path == null || path.length == 0) return false;
-			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path)) return false;
+			if (path == null || path.length == 0)
+				return false;
+			if (!sys.FileSystem.exists(path) || sys.FileSystem.isDirectory(path))
+				return false;
 			final dir = Path.directory(path);
-			if (dir == null || dir.length == 0) return true;
+			if (dir == null || dir.length == 0)
+				return true;
 			final base = Path.withoutDirectory(path);
 			try {
-				for (name in sys.FileSystem.readDirectory(dir)) if (name == base) return true;
+				for (name in sys.FileSystem.readDirectory(dir))
+					if (name == base)
+						return true;
 			} catch (_:haxe.io.Error) {} catch (_:String) {}
 			return false;
 		}
 
 		final parts = modulePath.split(".");
-		if (parts.length == 0) return null;
+		if (parts.length == 0)
+			return null;
 
 		final direct = parts.join("/") + ".hx";
 		for (cp in classPaths) {
 			final candidate = Path.join([cp, direct]);
-			if (fileExistsExactCase(candidate)) return candidate;
+			if (fileExistsExactCase(candidate))
+				return candidate;
 		}
 
 		// Heuristic: allow import of a type defined in its module file:
@@ -340,7 +383,8 @@ class ResolverStage {
 			final fallback = fallbackParts.join("/") + ".hx";
 			for (cp in classPaths) {
 				final candidate = Path.join([cp, fallback]);
-				if (fileExistsExactCase(candidate)) return candidate;
+				if (fileExistsExactCase(candidate))
+					return candidate;
 			}
 		}
 

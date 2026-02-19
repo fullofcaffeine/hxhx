@@ -38,7 +38,8 @@ class Parser {
 			case TEof: expected == TEof;
 			case TInt(_), TId(_): false;
 		}
-		if (!ok) throw "Expected " + label;
+		if (!ok)
+			throw "Expected " + label;
 		bump();
 	}
 

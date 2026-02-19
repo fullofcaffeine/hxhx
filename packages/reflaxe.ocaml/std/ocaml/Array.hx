@@ -25,7 +25,8 @@ package ocaml;
  *   code, keep using `Array<T>`.
  */
 abstract Array<T>(Dynamic) {
-	inline function new(v:Dynamic) this = v;
+	inline function new(v:Dynamic)
+		this = v;
 
 	public static inline function make<T>(len:Int, init:T):Array<T> {
 		return cast ArrayNative.make(len, init);

@@ -53,7 +53,8 @@ class Hxml {
 	public static function parseFileUnits(path:String):Null<Array<Array<String>>> {
 		final seen = new Map<String, Bool>();
 		final toks = parseFileRec(Path.normalize(path), seen, 0, true);
-		if (toks == null) return null;
+		if (toks == null)
+			return null;
 		return splitIntoUnits(toks);
 	}
 
@@ -74,15 +75,18 @@ class Hxml {
 		  `compile-each.hxml` provides shared args (e.g. `-cp src`) and `--each` begins per-target units.
 	**/
 	public static function expandArgsToUnits(args:Array<String>):Null<Array<Array<String>>> {
-		if (args == null) return [[]];
+		if (args == null)
+			return [[]];
 		final seen = new Map<String, Bool>();
 		final toks = new Array<String>();
 
 		for (a in args) {
 			if (a != null && a.length > 0 && !StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
 				final expanded = parseFileRec(Path.normalize(a), seen, 0, true);
-				if (expanded == null) return null;
-				for (t in expanded) toks.push(t);
+				if (expanded == null)
+					return null;
+				for (t in expanded)
+					toks.push(t);
 				continue;
 			}
 			toks.push(a);
@@ -97,15 +101,18 @@ class Hxml {
 		var commonPrefix:Null<Array<String>> = null;
 
 		inline function shouldPushUnit():Bool {
-			if (cur.length == 0) return false;
-			if (commonPrefix == null) return true;
+			if (cur.length == 0)
+				return false;
+			if (commonPrefix == null)
+				return true;
 			return cur.length > commonPrefix.length;
 		}
 
 		inline function flushNext():Void {
 			// Ignore empty/degenerate units to match upstream’s permissive behavior
 			// (`--next` chains, `--each` with no following compile, etc.).
-			if (shouldPushUnit()) units.push(cur);
+			if (shouldPushUnit())
+				units.push(cur);
 			cur = commonPrefix == null ? new Array<String>() : commonPrefix.copy();
 		}
 
@@ -123,8 +130,9 @@ class Hxml {
 			}
 			cur.push(t);
 		}
-		if (shouldPushUnit()) units.push(cur);
-		return units.length == 0 ? [ [] ] : units;
+		if (shouldPushUnit())
+			units.push(cur);
+		return units.length == 0 ? [[]] : units;
 	}
 
 	static function parseFileRec(path:String, seen:Map<String, Bool>, depth:Int, allowNext:Bool):Null<Array<String>> {
@@ -168,7 +176,8 @@ class Hxml {
 				seen.remove(norm);
 				return null;
 			}
-			for (t in lineTokens) tokens.push(t);
+			for (t in lineTokens)
+				tokens.push(t);
 		}
 
 		// Rewrite relative `-cp` / `-p` entries relative to this file.
@@ -204,7 +213,8 @@ class Hxml {
 					seen.remove(norm);
 					return null;
 				}
-				for (x in expanded) out.push(x);
+				for (x in expanded)
+					out.push(x);
 				continue;
 			}
 
@@ -219,14 +229,18 @@ class Hxml {
 	}
 
 	static function tokenizeLine(line:String):Null<Array<String>> {
-		if (line == null) return [];
+		if (line == null)
+			return [];
 		final s = line;
 		var i = 0;
 
 		// Trim leading whitespace.
-		while (i < s.length && isSpace(s.charCodeAt(i))) i++;
-		if (i >= s.length) return [];
-		if (s.charCodeAt(i) == "#".code) return [];
+		while (i < s.length && isSpace(s.charCodeAt(i)))
+			i++;
+		if (i >= s.length)
+			return [];
+		if (s.charCodeAt(i) == "#".code)
+			return [];
 
 		// Upstream `.hxml` treats some flags as "consume the rest of the line as a single argument"
 		// (not whitespace-tokenized). This is especially important for:
@@ -237,13 +251,17 @@ class Hxml {
 		// implement this small compatibility behavior here in the tokenizer (before generic splitting).
 		function restOfLineAfter(prefix:String):Null<Array<String>> {
 			final p = prefix.length;
-			if (i + p > s.length) return null;
-			if (s.substr(i, p) != prefix) return null;
+			if (i + p > s.length)
+				return null;
+			if (s.substr(i, p) != prefix)
+				return null;
 			final j = i + p;
 			// Require whitespace after the flag to avoid matching `--macroFoo`.
-			if (j < s.length && !isSpace(s.charCodeAt(j))) return null;
+			if (j < s.length && !isSpace(s.charCodeAt(j)))
+				return null;
 			var k = j;
-			while (k < s.length && isSpace(s.charCodeAt(k))) k++;
+			while (k < s.length && isSpace(s.charCodeAt(k)))
+				k++;
 			final rest = StringTools.rtrim(s.substr(k));
 			if (rest.length == 0) {
 				Sys.println("hxhx(stage1): missing value after " + prefix);
@@ -253,11 +271,14 @@ class Hxml {
 		}
 
 		final macroLine = restOfLineAfter("--macro");
-		if (macroLine != null) return macroLine;
+		if (macroLine != null)
+			return macroLine;
 		final cmdLine = restOfLineAfter("--cmd");
-		if (cmdLine != null) return cmdLine;
+		if (cmdLine != null)
+			return cmdLine;
 		final cmdLine2 = restOfLineAfter("-cmd");
-		if (cmdLine2 != null) return cmdLine2;
+		if (cmdLine2 != null)
+			return cmdLine2;
 
 		final tokens = new Array<String>();
 		var cur = new StringBuf();
@@ -280,7 +301,8 @@ class Hxml {
 
 			if (quote == 0 && isSpace(c)) {
 				flush();
-				while (i < s.length && isSpace(s.charCodeAt(i))) i++;
+				while (i < s.length && isSpace(s.charCodeAt(i)))
+					i++;
 				continue;
 			}
 

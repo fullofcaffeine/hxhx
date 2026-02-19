@@ -22,7 +22,7 @@ private typedef NativeTrace = {
 	- Like `haxe.elixir`, we use a `.cross.hx` + `#if ocaml_output` gate:
 	  - When compiling to OCaml (`-D ocaml_output=...`), emit the real implementation.
 	  - Otherwise, expose only the upstream `extern` surface so other targets/tools
-	    do not accidentally pull in OCaml-only code.
+		do not accidentally pull in OCaml-only code.
 **/
 @:dox(hide)
 @:noCompletion
@@ -57,28 +57,33 @@ class NativeStackTrace {
 		// - and it keeps `haxe.NativeStackTrace` independent from regex lowering details.
 		final fileNeedle = 'file "';
 		final fileStart0 = line.indexOf(fileNeedle);
-		if (fileStart0 < 0) return null;
+		if (fileStart0 < 0)
+			return null;
 		final fileStart = fileStart0 + fileNeedle.length;
 		final fileEnd = line.indexOf('"', fileStart);
-		if (fileEnd < 0) return null;
+		if (fileEnd < 0)
+			return null;
 		final file = line.substr(fileStart, fileEnd - fileStart);
 
 		final lineNeedle = "line ";
 		final lineStart0 = line.indexOf(lineNeedle, fileEnd);
-		if (lineStart0 < 0) return null;
+		if (lineStart0 < 0)
+			return null;
 		var i = lineStart0 + lineNeedle.length;
 		var j = i;
 		while (j < line.length) {
 			final c = line.charCodeAt(j);
-			if (c < "0".code || c > "9".code) break;
+			if (c < "0".code || c > "9".code)
+				break;
 			j++;
 		}
-		if (j == i) return null;
+		if (j == i)
+			return null;
 		var ln = 0;
 		for (k in i...j) {
 			ln = ln * 10 + (line.charCodeAt(k) - "0".code);
 		}
-		return { file: file, line: ln };
+		return {file: file, line: ln};
 	}
 
 	static public function toHaxe(nativeStackTrace:Any, skip:Int = 0):Array<StackItem> {
@@ -103,6 +108,7 @@ class NativeStackTrace {
 	}
 }
 #else
+
 /**
 	Do not use manually.
 **/

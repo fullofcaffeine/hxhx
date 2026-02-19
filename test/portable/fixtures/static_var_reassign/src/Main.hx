@@ -7,4 +7,3 @@ class Main {
 		Sys.println("x1=" + C.x);
 	}
 }
-

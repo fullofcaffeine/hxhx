@@ -3,4 +3,3 @@ class Main {
 		Sys.println("hello from hxhx --target ocaml");
 	}
 }
-

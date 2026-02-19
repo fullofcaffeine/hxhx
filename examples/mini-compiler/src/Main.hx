@@ -16,4 +16,3 @@ class Main {
 		untyped __ocaml__("print_endline \"OK mini-compiler\"");
 	}
 }
-

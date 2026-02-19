@@ -1,7 +1,6 @@
 package reflaxe.ocaml;
 
 #if (macro || reflaxe_runtime)
-
 import reflaxe.ReflectCompiler;
 import reflaxe.preprocessors.ExpressionPreprocessor;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
@@ -35,10 +34,9 @@ class CompilerInit {
 		CompilerBootstrap.InjectClassPaths();
 		#end
 		#if macro
-		final isOcamlTarget =
-			haxe.macro.Context.defined("ocaml_output") ||
-			haxe.macro.Context.definedValue("target.name") == "ocaml" ||
-			haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
+		final isOcamlTarget = haxe.macro.Context.defined("ocaml_output")
+			|| haxe.macro.Context.definedValue("target.name") == "ocaml"
+			|| haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
 		if (isOcamlTarget) {
 			// Force-link OCaml-only std overrides that are reached via backend intrinsics
 			// rather than direct Haxe references (so DCE/module reachability would drop them).
@@ -49,10 +47,7 @@ class CompilerInit {
 			try {
 				haxe.macro.Context.getType("sys.io.Stdio");
 			} catch (_:haxe.Exception) {
-				haxe.macro.Context.error(
-					"reflaxe.ocaml: failed to load sys.io.Stdio (required for Sys stdio lowering).",
-					haxe.macro.Context.currentPos()
-				);
+				haxe.macro.Context.error("reflaxe.ocaml: failed to load sys.io.Stdio (required for Sys stdio lowering).", haxe.macro.Context.currentPos());
 			}
 			// Typed catch lowering can wrap non-Exception throws as `haxe.ValueException`.
 			// Ensure the OCaml runtime module is always reachable so generated references to
@@ -60,10 +55,8 @@ class CompilerInit {
 			try {
 				haxe.macro.Context.getType("haxe.ValueException");
 			} catch (_:haxe.Exception) {
-				haxe.macro.Context.error(
-					"reflaxe.ocaml: failed to load haxe.ValueException (required for typed catch lowering).",
-					haxe.macro.Context.currentPos()
-				);
+				haxe.macro.Context.error("reflaxe.ocaml: failed to load haxe.ValueException (required for typed catch lowering).",
+					haxe.macro.Context.currentPos());
 			}
 		}
 		#end
@@ -76,12 +69,10 @@ class CompilerInit {
 		//
 		// To keep Gate1 stable while we iterate on where and how we apply rewrites,
 		// allow disabling all preprocessors via a define.
-		var prepasses:Array<ExpressionPreprocessor> =
-			#if macro
-			if (haxe.macro.Context.defined("reflaxe_ocaml_disable_expression_preprocessors")) []
-			else
-			#end
-			ExpressionPreprocessorHelper.defaults();
+		var prepasses:Array<ExpressionPreprocessor> = #if macro if (haxe.macro.Context.defined("reflaxe_ocaml_disable_expression_preprocessors"))
+			[]
+		else #end
+		ExpressionPreprocessorHelper.defaults();
 
 		// Run early so later preprocessors operate on cleaner shapes.
 		// This pass is purely "pretty output" for OCaml, so it is safe to skip in bring-up runs.
@@ -95,22 +86,62 @@ class CompilerInit {
 			fileOutputType: FilePerModule,
 			ignoreTypes: [],
 			reservedVarNames: [
-				"and", "as", "assert", "asr", "begin",
-				"class", "constraint",
-				"do", "done", "downto",
-				"else", "end", "exception", "external",
-				"false", "for", "fun", "function", "functor",
-				"if", "in", "include", "inherit", "initializer",
-				"land", "lazy", "let", "lor", "lsl", "lsr", "lxor",
-				"match", "method", "mod", "module", "mutable",
-				"new", "nonrec",
-				"object", "of", "open", "or",
+				"and",
+				"as",
+				"assert",
+				"asr",
+				"begin",
+				"class",
+				"constraint",
+				"do",
+				"done",
+				"downto",
+				"else",
+				"end",
+				"exception",
+				"external",
+				"false",
+				"for",
+				"fun",
+				"function",
+				"functor",
+				"if",
+				"in",
+				"include",
+				"inherit",
+				"initializer",
+				"land",
+				"lazy",
+				"let",
+				"lor",
+				"lsl",
+				"lsr",
+				"lxor",
+				"match",
+				"method",
+				"mod",
+				"module",
+				"mutable",
+				"new",
+				"nonrec",
+				"object",
+				"of",
+				"open",
+				"or",
 				"private",
 				"rec",
-				"sig", "struct",
-				"then", "to", "true", "try", "type",
-				"val", "virtual",
-				"when", "while", "with"
+				"sig",
+				"struct",
+				"then",
+				"to",
+				"true",
+				"try",
+				"type",
+				"val",
+				"virtual",
+				"when",
+				"while",
+				"with"
 			],
 			targetCodeInjectionName: "__ocaml__",
 			ignoreBodilessFunctions: false,
@@ -119,5 +150,4 @@ class CompilerInit {
 		});
 	}
 }
-
 #end

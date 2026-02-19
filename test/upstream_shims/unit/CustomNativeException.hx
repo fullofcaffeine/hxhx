@@ -25,4 +25,3 @@ package unit;
 class CustomNativeException {
 	public function new(m:String) {}
 }
-

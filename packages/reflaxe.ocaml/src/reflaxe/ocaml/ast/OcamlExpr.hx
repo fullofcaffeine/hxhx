@@ -24,7 +24,7 @@ enum OcamlBinop {
 
 	Eq;
 	Neq;
-	PhysEq;  // ==
+	PhysEq; // ==
 	PhysNeq; // !=
 	Lt;
 	Lte;
@@ -45,6 +45,7 @@ enum OcamlUnop {
 enum OcamlExpr {
 	EConst(c:OcamlConst);
 	EIdent(name:String);
+
 	/** Raw OCaml snippet injected verbatim (escape hatch). */
 	ERaw(code:String);
 
@@ -86,6 +87,7 @@ enum OcamlExpr {
 
 	EIf(cond:OcamlExpr, thenExpr:OcamlExpr, elseExpr:OcamlExpr);
 	EMatch(scrutinee:OcamlExpr, cases:Array<OcamlMatchCase>);
+
 	/** `try <body> with | <pat> -> <expr> ...` */
 	ETry(body:OcamlExpr, cases:Array<OcamlMatchCase>);
 

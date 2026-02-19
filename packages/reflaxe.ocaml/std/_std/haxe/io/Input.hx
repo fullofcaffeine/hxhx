@@ -45,7 +45,8 @@ class Input {
 		if EOF is reached.
 	**/
 	public function readBytes(s:Bytes, pos:Int, len:Int):Int {
-		if (pos < 0 || len < 0 || pos + len > s.length) throw Error.OutsideBounds;
+		if (pos < 0 || len < 0 || pos + len > s.length)
+			throw Error.OutsideBounds;
 		var k = len;
 		try {
 			while (k > 0) {
@@ -61,14 +62,14 @@ class Input {
 	public function close():Void {}
 
 	/* ------------------ API ------------------ */
-
 	public function readAll(?bufsize:Int):Bytes {
 		final size:Int = bufsize == null ? (1 << 14) : (cast bufsize);
 		final buf = Bytes.alloc(size);
 		final total = new BytesBuffer();
 		while (true) {
 			final len = readBytes(buf, 0, size);
-			if (len == 0) break;
+			if (len == 0)
+				break;
 			total.addBytes(buf, 0, len);
 		}
 		return total.getBytes();
@@ -77,7 +78,8 @@ class Input {
 	public function readFullBytes(s:Bytes, pos:Int, len:Int):Void {
 		while (len > 0) {
 			final k = readBytes(s, pos, len);
-			if (k == 0) throw Error.Blocked;
+			if (k == 0)
+				throw Error.Blocked;
 			pos += k;
 			len -= k;
 		}
@@ -88,7 +90,8 @@ class Input {
 		var p = 0;
 		while (nbytes > 0) {
 			final k = readBytes(s, p, nbytes);
-			if (k == 0) throw Error.Blocked;
+			if (k == 0)
+				throw Error.Blocked;
 			p += k;
 			nbytes -= k;
 		}
@@ -118,7 +121,8 @@ class Input {
 			}
 		} catch (e:Eof) {
 			s = buf.getBytes().toString();
-			if (s.length == 0) throw e;
+			if (s.length == 0)
+				throw e;
 		}
 		return s;
 	}
@@ -171,9 +175,7 @@ class Input {
 		final ch2 = readByte();
 		final ch3 = readByte();
 		final ch4 = readByte();
-		return bigEndian
-			? (ch4 | (ch3 << 8) | (ch2 << 16) | (ch1 << 24))
-			: (ch1 | (ch2 << 8) | (ch3 << 16) | (ch4 << 24));
+		return bigEndian ? (ch4 | (ch3 << 8) | (ch2 << 16) | (ch1 << 24)) : (ch1 | (ch2 << 8) | (ch3 << 16) | (ch4 << 24));
 	}
 
 	public function readString(len:Int, ?encoding:Encoding):String {

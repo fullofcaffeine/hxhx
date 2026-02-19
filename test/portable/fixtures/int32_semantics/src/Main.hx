@@ -20,4 +20,3 @@ class Main {
 		Sys.println("OK int32_semantics");
 	}
 }
-

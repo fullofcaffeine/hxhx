@@ -40,7 +40,8 @@ class FileOutput extends Output {
 	}
 
 	public override function writeBytes(buf:Bytes, pos:Int, len:Int):Int {
-		if (len <= 0) return 0;
+		if (len <= 0)
+			return 0;
 		for (i in 0...len) {
 			writeByte(buf.get(pos + i));
 		}
@@ -72,4 +73,3 @@ private extern class NativeHxFileStream {
 	static function seek_out(h:Dynamic, p:Int, kind:Int):Void;
 	static function tell_out(h:Dynamic):Int;
 }
-

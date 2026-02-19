@@ -4,4 +4,3 @@ typedef OcamlPatRecordField = {
 	final name:String;
 	final pat:OcamlPat;
 }
-

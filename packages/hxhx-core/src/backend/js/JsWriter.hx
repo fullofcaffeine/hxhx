@@ -21,11 +21,13 @@ class JsWriter {
 	}
 
 	public function popIndent():Void {
-		if (indent > 0) indent -= 1;
+		if (indent > 0)
+			indent -= 1;
 	}
 
 	public function writeln(line:String):Void {
-		for (_ in 0...indent) out.add(unit);
+		for (_ in 0...indent)
+			out.add(unit);
 		out.add(line == null ? "" : line);
 		out.add("\n");
 	}

@@ -9,4 +9,3 @@ enum Result<T, E> {
 	Ok(value:T);
 	Error(error:E);
 }
-

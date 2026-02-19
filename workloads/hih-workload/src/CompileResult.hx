@@ -16,4 +16,3 @@ class CompileResult {
 		this.modules = modules;
 	}
 }
-

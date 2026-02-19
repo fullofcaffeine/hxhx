@@ -4,24 +4,35 @@ class M13MliIntegrationTest {
 		sys.FileSystem.createDirectory(outDir);
 
 		final args = [
-			"-cp", "test",
-			"-main", "pkg.M13MliMain",
+			"-cp",
+			"test",
+			"-main",
+			"pkg.M13MliMain",
 			"--no-output",
-			"-lib", "reflaxe.ocaml",
-			"-D", "no-traces",
-			"-D", "no_traces",
-			"-D", "ocaml_output=" + outDir,
-			"-D", "ocaml_build=byte",
-			"-D", "ocaml_mli"
+			"-lib",
+			"reflaxe.ocaml",
+			"-D",
+			"no-traces",
+			"-D",
+			"no_traces",
+			"-D",
+			"ocaml_output=" + outDir,
+			"-D",
+			"ocaml_build=byte",
+			"-D",
+			"ocaml_mli"
 		];
 
 		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0) throw "haxe compile failed: " + exitCode;
+		if (exitCode != 0)
+			throw "haxe compile failed: " + exitCode;
 
 		final mainMli = outDir + "/pkg_M13MliMain.mli";
-		if (!sys.FileSystem.exists(mainMli)) throw "missing inferred .mli: " + mainMli;
+		if (!sys.FileSystem.exists(mainMli))
+			throw "missing inferred .mli: " + mainMli;
 
 		final regMli = outDir + "/HxTypeRegistry.mli";
-		if (!sys.FileSystem.exists(regMli)) throw "missing inferred .mli: " + regMli;
+		if (!sys.FileSystem.exists(regMli))
+			throw "missing inferred .mli: " + regMli;
 	}
 }

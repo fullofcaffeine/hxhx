@@ -14,18 +14,23 @@ class TyperStage {
 	}
 
 	static function arrayElementType(t:TyType):Null<TyType> {
-		if (t == null) return null;
+		if (t == null)
+			return null;
 		final d = t.getDisplay();
-		if (d == null) return null;
-		if (!StringTools.startsWith(d, "Array<")) return null;
-		if (!StringTools.endsWith(d, ">")) return null;
+		if (d == null)
+			return null;
+		if (!StringTools.startsWith(d, "Array<"))
+			return null;
+		if (!StringTools.endsWith(d, ">"))
+			return null;
 		final inner = StringTools.trim(d.substr("Array<".length, d.length - "Array<".length - 1));
 		return inner.length == 0 ? TyType.unknown() : TyType.fromHintText(inner);
 	}
 
 	static function typeFromHintInContext(hint:String, ctx:TyperContext):TyType {
 		final raw = hint == null ? "" : StringTools.trim(hint);
-		if (raw.length == 0) return TyType.unknown();
+		if (raw.length == 0)
+			return TyType.unknown();
 		// Keep primitive-like names stable.
 		switch (raw) {
 			case "Int", "Float", "Bool", "String", "Void", "Dynamic", "Null":
@@ -102,7 +107,8 @@ class TyperStage {
 		final ctx = new TyperContext(index, pm.getFilePath(), ResolvedModule.getModulePath(m), pkg, imports, classFullName, loader);
 
 		final typedFns = new Array<TyFunctionEnv>();
-		for (fn in HxClassDecl.getFunctions(cls)) typedFns.push(typeFunction(fn, ctx));
+		for (fn in HxClassDecl.getFunctions(cls))
+			typedFns.push(typeFunction(fn, ctx));
 		final classEnv = new TyClassEnv(className, typedFns);
 		final env = new TyModuleEnv(pkg, imports, classEnv);
 		return new TypedModule(pm, env);
@@ -119,46 +125,45 @@ class TyperStage {
 			params.push(new TySymbol(name, ty));
 		}
 
-			final locals = new Array<TySymbol>();
-			final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown());
+		final locals = new Array<TySymbol>();
+		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, TyType.unknown(), TyType.unknown());
 
-			final returnExprTy = inferReturnType(fn, scope, ctx);
-			final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
-			final retTy = if (retHintText != null && retHintText.length > 0) {
-				final hinted = typeFromHintInContext(retHintText, ctx);
-				// If we couldn't infer a concrete return type (e.g. because the parser produced an
-				// empty/unsupported body), keep bring-up moving by trusting the explicit hint.
-				if (!returnExprTy.isUnknown()) {
-					final unified = TyType.unify(hinted, returnExprTy);
-					if (unified == null) {
-						if (isStrict()) {
-							throw new TyperError(ctx.getFilePath(), HxPos.unknown(),
-								"return type hint " + hinted + " conflicts with inferred return " + returnExprTy
-							);
-						}
-						// Bring-up default: trust the explicit hint and continue.
+		final returnExprTy = inferReturnType(fn, scope, ctx);
+		final retHintText = HxFunctionDecl.getReturnTypeHint(fn);
+		final retTy = if (retHintText != null && retHintText.length > 0) {
+			final hinted = typeFromHintInContext(retHintText, ctx);
+			// If we couldn't infer a concrete return type (e.g. because the parser produced an
+			// empty/unsupported body), keep bring-up moving by trusting the explicit hint.
+			if (!returnExprTy.isUnknown()) {
+				final unified = TyType.unify(hinted, returnExprTy);
+				if (unified == null) {
+					if (isStrict()) {
+						throw new TyperError(ctx.getFilePath(), HxPos.unknown(),
+							"return type hint " + hinted + " conflicts with inferred return " + returnExprTy);
 					}
+					// Bring-up default: trust the explicit hint and continue.
 				}
-				hinted;
-				} else {
-					// No explicit hint:
-					// - If we inferred a return type from `return` statements, use it.
-					// - Otherwise, default to `Void` to match the common `function f() { ... }` / `static function main()` shape.
-					//
-					// Bring-up heuristic:
-					// - The native frontend protocol can capture a "first return string literal" even when
-					//   we can't parse a complex body (e.g. a `switch` with returns in cases).
-					// - If present, treat the function as returning `String` instead of collapsing to `Void`.
-					if (!returnExprTy.isUnknown()) {
-						returnExprTy;
-					} else {
-						final retStr = HxFunctionDecl.getReturnStringLiteral(fn);
-						(retStr != null && retStr.length > 0) ? TyType.fromHintText("String") : TyType.fromHintText("Void");
-					}
-				}
-
-			return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
+			}
+			hinted;
+		} else {
+			// No explicit hint:
+			// - If we inferred a return type from `return` statements, use it.
+			// - Otherwise, default to `Void` to match the common `function f() { ... }` / `static function main()` shape.
+			//
+			// Bring-up heuristic:
+			// - The native frontend protocol can capture a "first return string literal" even when
+			//   we can't parse a complex body (e.g. a `switch` with returns in cases).
+			// - If present, treat the function as returning `String` instead of collapsing to `Void`.
+			if (!returnExprTy.isUnknown()) {
+				returnExprTy;
+			} else {
+				final retStr = HxFunctionDecl.getReturnStringLiteral(fn);
+				(retStr != null && retStr.length > 0) ? TyType.fromHintText("String") : TyType.fromHintText("Void");
+			}
 		}
+
+		return new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, retTy, returnExprTy);
+	}
 
 	static function inferReturnType(fn:HxFunctionDecl, scope:TyFunctionEnv, ctx:TyperContext):TyType {
 		var out:Null<TyType> = null;
@@ -171,11 +176,7 @@ class TyperStage {
 			final u = TyType.unify(out, t);
 			if (u == null) {
 				if (isStrict()) {
-					throw new TyperError(
-						ctx.getFilePath(),
-						pos,
-						"incompatible return types: " + out + " vs " + t
-					);
+					throw new TyperError(ctx.getFilePath(), pos, "incompatible return types: " + out + " vs " + t);
 				}
 				// Bring-up default: collapse to Dynamic to keep typing moving.
 				out = TyType.fromHintText("Dynamic");
@@ -184,10 +185,11 @@ class TyperStage {
 			out = u;
 		}
 
-			function typeStmt(s:HxStmt):Void {
-				switch (s) {
+		function typeStmt(s:HxStmt):Void {
+			switch (s) {
 				case SBlock(stmts, _pos):
-					for (ss in stmts) typeStmt(ss);
+					for (ss in stmts)
+						typeStmt(ss);
 				case SSwitch(scrutinee, cases, pos):
 					// Bring-up: type-check the scrutinee, then each case body.
 					// Binder patterns declare a best-effort local for the body.
@@ -206,7 +208,8 @@ class TyperStage {
 					// Best-effort: ensure the condition is at least type-checked for locals.
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(thenBranch);
-					if (elseBranch != null) typeStmt(elseBranch);
+					if (elseBranch != null)
+						typeStmt(elseBranch);
 				case SWhile(cond, body, pos):
 					inferExprType(cond, scope, ctx, pos);
 					typeStmt(body);
@@ -221,37 +224,34 @@ class TyperStage {
 					}
 				case SBreak(_):
 				case SContinue(_):
-					case SForIn(name, iterable, body, pos):
-						// Bring-up: type-check the iterable expression and bind the loop variable.
-						//
-						// We intentionally model the loop variable as a function-local symbol for now
-						// (not a nested scope) so later statements can still reference it during bring-up.
-						final iterableTy = inferExprType(iterable, scope, ctx, pos);
-						final loopTy = switch (iterable) {
-							case ERange(_, _):
-								TyType.fromHintText("Int");
-							case _:
-								// Best-effort: if we can see an `Array<T>` element type, propagate it
-								// to the loop variable so string/number-heavy harness code can emit.
-								final elem = arrayElementType(iterableTy);
-								(elem != null && !elem.isUnknown()) ? elem : TyType.fromHintText("Dynamic");
-						}
-						scope.declareLocal(name, loopTy);
-						typeStmt(body);
-						case SVar(name, typeHint, init, pos):
-						// Declare first so subsequent statements can reference the symbol deterministically.
-						final hinted = typeFromHintInContext(typeHint, ctx);
-						final sym = scope.declareLocal(name, hinted);
-						if (init != null) {
-							final initTy = inferExprType(init, scope, ctx, pos);
-							final u = TyType.unify(sym.getType(), initTy);
+				case SForIn(name, iterable, body, pos):
+					// Bring-up: type-check the iterable expression and bind the loop variable.
+					//
+					// We intentionally model the loop variable as a function-local symbol for now
+					// (not a nested scope) so later statements can still reference it during bring-up.
+					final iterableTy = inferExprType(iterable, scope, ctx, pos);
+					final loopTy = switch (iterable) {
+						case ERange(_, _):
+							TyType.fromHintText("Int");
+						case _:
+							// Best-effort: if we can see an `Array<T>` element type, propagate it
+							// to the loop variable so string/number-heavy harness code can emit.
+							final elem = arrayElementType(iterableTy);
+							(elem != null && !elem.isUnknown()) ? elem : TyType.fromHintText("Dynamic");
+					}
+					scope.declareLocal(name, loopTy);
+					typeStmt(body);
+				case SVar(name, typeHint, init, pos):
+					// Declare first so subsequent statements can reference the symbol deterministically.
+					final hinted = typeFromHintInContext(typeHint, ctx);
+					final sym = scope.declareLocal(name, hinted);
+					if (init != null) {
+						final initTy = inferExprType(init, scope, ctx, pos);
+						final u = TyType.unify(sym.getType(), initTy);
 						if (u == null) {
 							if (isStrict()) {
-								throw new TyperError(
-									ctx.getFilePath(),
-									pos,
-									"initializer type " + initTy + " is not compatible with local " + name + ":" + sym.getType()
-								);
+								throw new TyperError(ctx.getFilePath(), pos,
+									"initializer type " + initTy + " is not compatible with local " + name + ":" + sym.getType());
 							}
 							// Bring-up default: widen locals to Dynamic when inference disagrees.
 							sym.setType(TyType.fromHintText("Dynamic"));
@@ -281,13 +281,14 @@ class TyperStage {
 			}
 		}
 
-			for (s in HxFunctionDecl.getBody(fn)) typeStmt(s);
-			// If we saw no explicit returns, the true return type depends on surrounding typing rules.
-			// For bootstrap bring-up we return `Unknown` here so `typeFunction` can:
-			// - trust an explicit return type hint, or
-			// - default to `Void` when no hint is provided.
-			return out == null ? TyType.unknown() : out;
-		}
+		for (s in HxFunctionDecl.getBody(fn))
+			typeStmt(s);
+		// If we saw no explicit returns, the true return type depends on surrounding typing rules.
+		// For bootstrap bring-up we return `Unknown` here so `typeFunction` can:
+		// - trust an explicit return type hint, or
+		// - default to `Void` when no hint is provided.
+		return out == null ? TyType.unknown() : out;
+	}
 
 	static function inferExprType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyType {
 		/**
@@ -320,7 +321,8 @@ class TyperStage {
 		}
 
 		function isUpperStartName(name:String):Bool {
-			if (name == null || name.length == 0) return false;
+			if (name == null || name.length == 0)
+				return false;
 			final c = name.charCodeAt(0);
 			return c >= "A".code && c <= "Z".code;
 		}
@@ -356,70 +358,73 @@ class TyperStage {
 					final t = ctx.resolveType(name);
 					t != null ? TyType.fromHintText(t.getFullName()) : TyType.unknown();
 				}
-				case EField(obj, _field):
-					// Stage 3 bring-up: type a tiny set of `Math` constants used in upstream unit tests.
-					//
-					// Why
-					// - Upstream `unit/TestNaN.hx` uses `Math.NaN` as a `Float` value and then compares it
-					//   against numeric literals in `if` conditions.
-					// - Without recognizing `Math.NaN` as `Float`, our function return inference widens to
-					//   `Void`, and the bootstrap emitter produces OCaml like:
-					//     `let a : unit = foo () in if a > 0 then ...`
-					//   which fails typechecking.
-					//
-					// Scope
-					// - This is intentionally narrow (bring-up only). A real typer should derive these
-					//   from the standard library model.
-					switch ({ obj: obj, field: _field }) {
-						case { obj: EIdent("Math"), field: "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY" | "PI" }:
-							return TyType.fromHintText("Float");
-						case _:
-					}
+			case EField(obj, _field):
+				// Stage 3 bring-up: type a tiny set of `Math` constants used in upstream unit tests.
+				//
+				// Why
+				// - Upstream `unit/TestNaN.hx` uses `Math.NaN` as a `Float` value and then compares it
+				//   against numeric literals in `if` conditions.
+				// - Without recognizing `Math.NaN` as `Float`, our function return inference widens to
+				//   `Void`, and the bootstrap emitter produces OCaml like:
+				//     `let a : unit = foo () in if a > 0 then ...`
+				//   which fails typechecking.
+				//
+				// Scope
+				// - This is intentionally narrow (bring-up only). A real typer should derive these
+				//   from the standard library model.
+				switch ({
+					obj:obj, field:_field
+				}) {
+					case {obj: EIdent("Math"), field: "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY" | "PI"}:
+						return TyType.fromHintText("Float");
+					case _:
+				}
 
-					// Static field access through a (possibly fully-qualified) type path.
-					//
-					// Why
-					// - Upstream suites access module-local helper values via fully-qualified paths, e.g.:
-					//     `unit.MyAbstract.FakeEnumAbstract.NotFound`
-					// - If we don't recognize `unit.MyAbstract.FakeEnumAbstract` as a type path here, the
-					//   lazy ModuleLoader never gets a chance to load the defining module, and Stage3
-					//   emission can fail later with OCaml errors like:
-					//     `Error: Unbound module Unit_MyAbstract_FakeEnumAbstract`.
-					//
-					// How
-					// - When `obj` is a dotted field chain whose last segment looks like a type name
-					//   (UpperStart), ask the context to resolve it as a type.
-					// - This triggers ModuleLoader-based on-demand loading.
-					final dotted = dottedFieldPath(obj);
-					if (dotted != null) {
-						final parts = dotted.split(".");
-						final last = parts.length == 0 ? "" : parts[parts.length - 1];
-						if (isUpperStartName(last)) {
-							final c = ctx.resolveType(dotted);
-							if (c != null) {
-								final ft = c.fieldType(_field);
-								if (ft != null) return ft;
-								// Bring-up default: static fields without hints are treated as dynamic.
-								return TyType.fromHintText("Dynamic");
-							}
+				// Static field access through a (possibly fully-qualified) type path.
+				//
+				// Why
+				// - Upstream suites access module-local helper values via fully-qualified paths, e.g.:
+				//     `unit.MyAbstract.FakeEnumAbstract.NotFound`
+				// - If we don't recognize `unit.MyAbstract.FakeEnumAbstract` as a type path here, the
+				//   lazy ModuleLoader never gets a chance to load the defining module, and Stage3
+				//   emission can fail later with OCaml errors like:
+				//     `Error: Unbound module Unit_MyAbstract_FakeEnumAbstract`.
+				//
+				// How
+				// - When `obj` is a dotted field chain whose last segment looks like a type name
+				//   (UpperStart), ask the context to resolve it as a type.
+				// - This triggers ModuleLoader-based on-demand loading.
+				final dotted = dottedFieldPath(obj);
+				if (dotted != null) {
+					final parts = dotted.split(".");
+					final last = parts.length == 0 ? "" : parts[parts.length - 1];
+					if (isUpperStartName(last)) {
+						final c = ctx.resolveType(dotted);
+						if (c != null) {
+							final ft = c.fieldType(_field);
+							if (ft != null)
+								return ft;
+							// Bring-up default: static fields without hints are treated as dynamic.
+							return TyType.fromHintText("Dynamic");
 						}
 					}
-					switch (obj) {
-						case EThis:
-							final c = ctx.currentClass();
-							if (c != null) {
-								final ft = c.fieldType(_field);
-								if (ft != null) {
-									ft;
-								} else {
-									if (isStrict()) {
-										throw new TyperError(ctx.getFilePath(), pos, "Unknown field this." + _field);
-									}
-									TyType.unknown();
-								}
+				}
+				switch (obj) {
+					case EThis:
+						final c = ctx.currentClass();
+						if (c != null) {
+							final ft = c.fieldType(_field);
+							if (ft != null) {
+								ft;
 							} else {
+								if (isStrict()) {
+									throw new TyperError(ctx.getFilePath(), pos, "Unknown field this." + _field);
+								}
 								TyType.unknown();
 							}
+						} else {
+							TyType.unknown();
+						}
 					case _:
 						// Best-effort: infer child for locals; actual field typing depends on the index.
 						final objTy = inferExprType(obj, scope, ctx, pos);
@@ -439,62 +444,71 @@ class TyperStage {
 							TyType.unknown();
 						}
 				}
-				case ECall(callee, args):
-					// Stage 3 bring-up: type a small set of `Sys.*` primitives explicitly.
-					//
-					// Why
-					// - Gate2/Stage3 emit-runner harnesses rely on `Sys.command` for spawning sub-invocations.
-					// - Without recognizing these return types, simple code like:
-					//     `var code = Sys.command("haxe", ["-version"]); trace(code);`
-					//   loses the `Int` type for `code` and degrades into `<unsupported>` printing.
-					//
-					// What
-					// - This is *not* a complete stdlib typing story.
-					// - It is a targeted bring-up bridge so the bootstrap emitter can produce runnable OCaml.
-					switch (callee) {
-						case EField(EIdent("Sys"), "command"):
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("Int");
-						case EField(EIdent("Sys"), "getEnv"):
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("String");
-						case EField(EIdent("Sys"), "putEnv"), EField(EIdent("Sys"), "setCwd"):
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("Void");
-						case EField(EIdent("Sys"), "getCwd"), EField(EIdent("Sys"), "systemName"):
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("String");
-						case EField(EIdent("Sys"), "args"):
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("Array<String>");
-						case EField(EIdent("Timer"), "stamp"):
-							// Gate2 bring-up: RunCi uses `Timer.stamp()` for timing logs.
-							// We map it to a float so `Math.round(Timer.stamp() - t)` can type.
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("Float");
-						case EField(EIdent("Math"), "round"):
-							// Gate2 bring-up: RunCi computes `final dt = Math.round(Timer.stamp() - t);`.
-							// If this stays unknown, string interpolation of `${dt}s` degrades to `<unsupported>`.
-							for (a in args) inferExprType(a, scope, ctx, pos);
-							return TyType.fromHintText("Int");
-						case _:
-					}
+			case ECall(callee, args):
+				// Stage 3 bring-up: type a small set of `Sys.*` primitives explicitly.
+				//
+				// Why
+				// - Gate2/Stage3 emit-runner harnesses rely on `Sys.command` for spawning sub-invocations.
+				// - Without recognizing these return types, simple code like:
+				//     `var code = Sys.command("haxe", ["-version"]); trace(code);`
+				//   loses the `Int` type for `code` and degrades into `<unsupported>` printing.
+				//
+				// What
+				// - This is *not* a complete stdlib typing story.
+				// - It is a targeted bring-up bridge so the bootstrap emitter can produce runnable OCaml.
+				switch (callee) {
+					case EField(EIdent("Sys"), "command"):
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("Int");
+					case EField(EIdent("Sys"), "getEnv"):
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("String");
+					case EField(EIdent("Sys"), "putEnv"), EField(EIdent("Sys"), "setCwd"):
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("Void");
+					case EField(EIdent("Sys"), "getCwd"), EField(EIdent("Sys"), "systemName"):
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("String");
+					case EField(EIdent("Sys"), "args"):
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("Array<String>");
+					case EField(EIdent("Timer"), "stamp"):
+						// Gate2 bring-up: RunCi uses `Timer.stamp()` for timing logs.
+						// We map it to a float so `Math.round(Timer.stamp() - t)` can type.
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("Float");
+					case EField(EIdent("Math"), "round"):
+						// Gate2 bring-up: RunCi computes `final dt = Math.round(Timer.stamp() - t);`.
+						// If this stays unknown, string interpolation of `${dt}s` degrades to `<unsupported>`.
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
+						return TyType.fromHintText("Int");
+					case _:
+				}
 
-					// Best-effort: type children for local inference, and use the index when we can.
-					switch (callee) {
+				// Best-effort: type children for local inference, and use the index when we can.
+				switch (callee) {
 					case EField(obj, field):
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
 							case EIdent(typeName):
 								final c = ctx.resolveType(typeName);
 								if (c != null) {
-									for (a in args) inferExprType(a, scope, ctx, pos);
+									for (a in args)
+										inferExprType(a, scope, ctx, pos);
 									final sig = c.staticMethod(field);
 									sig != null ? sig.getReturnType() : TyType.unknown();
 								} else {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
-									for (a in args) inferExprType(a, scope, ctx, pos);
+									for (a in args)
+										inferExprType(a, scope, ctx, pos);
 									final idx = ctx.getIndex();
 									final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 									if (c2 != null) {
@@ -506,7 +520,8 @@ class TyperStage {
 								}
 							case EThis:
 								final c = ctx.currentClass();
-								for (a in args) inferExprType(a, scope, ctx, pos);
+								for (a in args)
+									inferExprType(a, scope, ctx, pos);
 								if (c != null) {
 									final sig = c.instanceMethod(field);
 									sig != null ? sig.getReturnType() : TyType.unknown();
@@ -525,7 +540,8 @@ class TyperStage {
 									if (isUpperStartName(last)) {
 										final c = ctx.resolveType(dotted);
 										if (c != null) {
-											for (a in args) inferExprType(a, scope, ctx, pos);
+											for (a in args)
+												inferExprType(a, scope, ctx, pos);
 											final sig = c.staticMethod(field);
 											return sig != null ? sig.getReturnType() : TyType.unknown();
 										}
@@ -534,7 +550,8 @@ class TyperStage {
 
 								// `obj` is a value identifier (local/param), not a type name.
 								final objTy = inferExprType(obj, scope, ctx, pos);
-								for (a in args) inferExprType(a, scope, ctx, pos);
+								for (a in args)
+									inferExprType(a, scope, ctx, pos);
 								final idx = ctx.getIndex();
 								final c2 = idx == null ? null : idx.getByFullName(objTy.getDisplay());
 								if (c2 != null) {
@@ -546,62 +563,68 @@ class TyperStage {
 						}
 					case _:
 						inferExprType(callee, scope, ctx, pos);
-						for (a in args) inferExprType(a, scope, ctx, pos);
+						for (a in args)
+							inferExprType(a, scope, ctx, pos);
 						TyType.unknown();
-					}
-				case ELambda(argNames, body):
-					// Stage 3 bring-up: type the body in a nested scope that:
-					// - introduces lambda args (shadowing outer locals/params),
-					// - but preserves visibility of outer locals/params for capture.
-					//
-					// We intentionally return `Dynamic` as the lambda value type for now.
-					final lambdaArgs = new Array<TySymbol>();
-					for (n in argNames) lambdaArgs.push(new TySymbol(n, TyType.fromHintText("Dynamic")));
-					final combinedParams = lambdaArgs.concat(scope.getParams().copy());
-					final combinedLocals = scope.getLocals().copy();
-					final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
-					inferExprType(body, nested, ctx, pos);
-					TyType.fromHintText("Dynamic");
-				case ETryCatchRaw(_raw):
-					// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
-					// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.
-					TyType.fromHintText("Dynamic");
-				case ESwitchRaw(_raw):
-					// Stage 3 bring-up: we only preserve the shape of `switch` expressions so parsing/typing
-					// can proceed deterministically through upstream-shaped code (notably runci).
-					// Correct semantics (pattern matching + guards + value typing) are Stage 4+ work.
-					TyType.fromHintText("Dynamic");
-				case ESwitch(scrutinee, cases):
-					// Bring-up: type the scrutinee and unify case-expression types best-effort.
-					// This is intentionally permissive; if unification fails we widen to Dynamic.
-					final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
-					var out:TyType = TyType.unknown();
-					if (cases != null) {
-						for (c in cases) {
-							var branchTy:TyType = TyType.unknown();
-							switch (c.pattern) {
-								case PBind(name):
-									// Bring-up: we do not model nested scopes yet; declare the binder as
-									// a best-effort local so the case body can type its references.
-									scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
-									branchTy = inferExprType(c.expr, scope, ctx, pos);
-								case _:
-									branchTy = inferExprType(c.expr, scope, ctx, pos);
-							}
+				}
+			case ELambda(argNames, body):
+				// Stage 3 bring-up: type the body in a nested scope that:
+				// - introduces lambda args (shadowing outer locals/params),
+				// - but preserves visibility of outer locals/params for capture.
+				//
+				// We intentionally return `Dynamic` as the lambda value type for now.
+				final lambdaArgs = new Array<TySymbol>();
+				for (n in argNames)
+					lambdaArgs.push(new TySymbol(n, TyType.fromHintText("Dynamic")));
+				final combinedParams = lambdaArgs.concat(scope.getParams().copy());
+				final combinedLocals = scope.getLocals().copy();
+				final nested = new TyFunctionEnv("<lambda>", combinedParams, combinedLocals, TyType.unknown(), TyType.unknown());
+				inferExprType(body, nested, ctx, pos);
+				TyType.fromHintText("Dynamic");
+			case ETryCatchRaw(_raw):
+				// Stage 3 bring-up: we only preserve the shape of `try/catch` in the expression tree.
+				// Correct semantics are Stage 4+ work, so we type it as `Dynamic` here.
+				TyType.fromHintText("Dynamic");
+			case ESwitchRaw(_raw):
+				// Stage 3 bring-up: we only preserve the shape of `switch` expressions so parsing/typing
+				// can proceed deterministically through upstream-shaped code (notably runci).
+				// Correct semantics (pattern matching + guards + value typing) are Stage 4+ work.
+				TyType.fromHintText("Dynamic");
+			case ESwitch(scrutinee, cases):
+				// Bring-up: type the scrutinee and unify case-expression types best-effort.
+				// This is intentionally permissive; if unification fails we widen to Dynamic.
+				final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
+				var out:TyType = TyType.unknown();
+				if (cases != null) {
+					for (c in cases) {
+						var branchTy:TyType = TyType.unknown();
+						switch (c.pattern) {
+							case PBind(name):
+								// Bring-up: we do not model nested scopes yet; declare the binder as
+								// a best-effort local so the case body can type its references.
+								scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
+								branchTy = inferExprType(c.expr, scope, ctx, pos);
+							case _:
+								branchTy = inferExprType(c.expr, scope, ctx, pos);
+						}
 
-							if (out.isUnknown()) out = branchTy;
-							else {
-								final u = TyType.unify(out, branchTy);
-								if (u != null) out = u;
-								else if (!isStrict()) out = TyType.fromHintText("Dynamic");
-							}
+						if (out.isUnknown())
+							out = branchTy;
+						else {
+							final u = TyType.unify(out, branchTy);
+							if (u != null)
+								out = u;
+							else if (!isStrict())
+								out = TyType.fromHintText("Dynamic");
 						}
 					}
-					out.isUnknown() ? TyType.fromHintText("Dynamic") : out;
-				case ENew(_typePath, args):
-					for (a in args) inferExprType(a, scope, ctx, pos);
-					final c = ctx.resolveType(_typePath);
-					c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(_typePath);
+				}
+				out.isUnknown() ? TyType.fromHintText("Dynamic") : out;
+			case ENew(_typePath, args):
+				for (a in args)
+					inferExprType(a, scope, ctx, pos);
+				final c = ctx.resolveType(_typePath);
+				c != null ? TyType.fromHintText(c.getFullName()) : TyType.fromHintText(_typePath);
 			case EUnop(_op, e):
 				switch (_op) {
 					case "!":
@@ -653,9 +676,7 @@ class TyperStage {
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
 						// Best-effort: treat as Bool if both operands are Bool; otherwise Int.
-						(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool")
-							? TyType.fromHintText("Bool")
-							: TyType.fromHintText("Int");
+						(ta.getDisplay() == "Bool" && tb.getDisplay() == "Bool") ? TyType.fromHintText("Bool") : TyType.fromHintText("Int");
 					case "+":
 						final ta = inferExprType(a, scope, ctx, pos);
 						final tb = inferExprType(b, scope, ctx, pos);
@@ -663,72 +684,72 @@ class TyperStage {
 							TyType.fromHintText("String");
 						} else {
 							final u = TyType.unify(ta, tb);
-							u != null && u.isNumeric() ? u : TyType.unknown();
+							u != null
+							&& u.isNumeric() ? u : TyType.unknown();
 						}
-					case "-" | "*" | "/" | "%":
-						final ta = inferExprType(a, scope, ctx, pos);
-						final tb = inferExprType(b, scope, ctx, pos);
-						final u = TyType.unify(ta, tb);
-						u != null && u.isNumeric() ? u : TyType.unknown();
+					case "-" | "*" | "/" | "%": final ta = inferExprType(a, scope, ctx,
+							pos); final tb = inferExprType(b, scope, ctx, pos); final u = TyType.unify(ta, tb); u != null && u.isNumeric() ? u : TyType.unknown();
 					case _:
 						inferExprType(a, scope, ctx, pos);
 						inferExprType(b, scope, ctx, pos);
 						TyType.unknown();
 				}
-				case ETernary(cond, thenExpr, elseExpr):
-					inferExprType(cond, scope, ctx, pos);
-					final t1 = inferExprType(thenExpr, scope, ctx, pos);
-					final t2 = inferExprType(elseExpr, scope, ctx, pos);
-					final u = TyType.unify(t1, t2);
-					u == null ? TyType.fromHintText("Dynamic") : u;
-					case EAnon(_names, values):
-						for (v in values) inferExprType(v, scope, ctx, pos);
-						TyType.fromHintText("Dynamic");
-					case EArrayComprehension(name, iterable, yieldExpr):
-						// Bring-up: type the iterable and bind the loop variable for the yield expression.
-						final itTy = inferExprType(iterable, scope, ctx, pos);
-						final elemTy = arrayElementType(itTy);
-						scope.declareLocal(name, (elemTy != null && !elemTy.isUnknown()) ? elemTy : TyType.fromHintText("Dynamic"));
-						inferExprType(yieldExpr, scope, ctx, pos);
-						TyType.fromHintText("Array<Dynamic>");
-						case EArrayDecl(values):
-							var elem:TyType = TyType.unknown();
-							var saw = false;
-							for (v in values) {
-							final vt = inferExprType(v, scope, ctx, pos);
-							if (!saw) {
-								saw = true;
-								elem = vt;
-								continue;
-							}
-							final u = TyType.unify(elem, vt);
-							if (u == null) {
-								elem = TyType.fromHintText("Dynamic");
-								break;
-							}
-							elem = u;
-						}
-						if (!saw) elem = TyType.fromHintText("Dynamic");
-						TyType.fromHintText("Array<" + elem.getDisplay() + ">");
-					case EArrayAccess(array, index):
-						inferExprType(array, scope, ctx, pos);
-						inferExprType(index, scope, ctx, pos);
-						// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
-					TyType.fromHintText("Dynamic");
-				case ERange(start, end):
-					inferExprType(start, scope, ctx, pos);
-					inferExprType(end, scope, ctx, pos);
-					// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
-					TyType.fromHintText("Dynamic");
-				case ECast(expr, typeHint):
-					final inner = inferExprType(expr, scope, ctx, pos);
-					final hinted = typeFromHintInContext(typeHint, ctx);
-					hinted.isUnknown() ? inner : hinted;
-				case EUntyped(expr):
-					inferExprType(expr, scope, ctx, pos);
-					TyType.fromHintText("Dynamic");
-				case EUnsupported(_):
-					TyType.unknown();
-			}
+			case ETernary(cond, thenExpr, elseExpr):
+				inferExprType(cond, scope, ctx, pos);
+				final t1 = inferExprType(thenExpr, scope, ctx, pos);
+				final t2 = inferExprType(elseExpr, scope, ctx, pos);
+				final u = TyType.unify(t1, t2);
+				u == null ? TyType.fromHintText("Dynamic") : u;
+			case EAnon(_names, values):
+				for (v in values)
+					inferExprType(v, scope, ctx, pos);
+				TyType.fromHintText("Dynamic");
+			case EArrayComprehension(name, iterable, yieldExpr):
+				// Bring-up: type the iterable and bind the loop variable for the yield expression.
+				final itTy = inferExprType(iterable, scope, ctx, pos);
+				final elemTy = arrayElementType(itTy);
+				scope.declareLocal(name, (elemTy != null && !elemTy.isUnknown()) ? elemTy : TyType.fromHintText("Dynamic"));
+				inferExprType(yieldExpr, scope, ctx, pos);
+				TyType.fromHintText("Array<Dynamic>");
+			case EArrayDecl(values):
+				var elem:TyType = TyType.unknown();
+				var saw = false;
+				for (v in values) {
+					final vt = inferExprType(v, scope, ctx, pos);
+					if (!saw) {
+						saw = true;
+						elem = vt;
+						continue;
+					}
+					final u = TyType.unify(elem, vt);
+					if (u == null) {
+						elem = TyType.fromHintText("Dynamic");
+						break;
+					}
+					elem = u;
+				}
+				if (!saw)
+					elem = TyType.fromHintText("Dynamic");
+				TyType.fromHintText("Array<" + elem.getDisplay() + ">");
+			case EArrayAccess(array, index):
+				inferExprType(array, scope, ctx, pos);
+				inferExprType(index, scope, ctx, pos);
+				// Stage3: indexing semantics depend on the concrete container type (Array/Bytes/String/etc).
+				TyType.fromHintText("Dynamic");
+			case ERange(start, end):
+				inferExprType(start, scope, ctx, pos);
+				inferExprType(end, scope, ctx, pos);
+				// Bring-up: `start...end` is primarily used as a loop iterable; model it as Dynamic.
+				TyType.fromHintText("Dynamic");
+			case ECast(expr, typeHint):
+				final inner = inferExprType(expr, scope, ctx, pos);
+				final hinted = typeFromHintInContext(typeHint, ctx);
+				hinted.isUnknown() ? inner : hinted;
+			case EUntyped(expr):
+				inferExprType(expr, scope, ctx, pos);
+				TyType.fromHintText("Dynamic");
+			case EUnsupported(_):
+				TyType.unknown();
 		}
 	}
+}

@@ -29,4 +29,3 @@ class Main {
 		Sys.println("u=" + uResult + ",i=" + iResult);
 	}
 }
-
