@@ -1,5 +1,5 @@
 -cp test
--cp packages/hih-compiler/src
+-cp packages/hxhx-core/src
 
 -main M14TargetCoreWiringIntegrationTest
 --interp

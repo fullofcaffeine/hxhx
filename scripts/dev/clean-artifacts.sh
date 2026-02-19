@@ -180,7 +180,7 @@ collect_safe_candidates() {
   add_path_if_exists "$ROOT/packages/hxhx/out"
   add_path_if_exists "$ROOT/packages/hxhx/bootstrap_work"
   add_path_if_exists "$ROOT/packages/hxhx/bootstrap_verify"
-  add_path_if_exists "$ROOT/tools/hxhx-macro-host/out"
+  add_path_if_exists "$ROOT/packages/hxhx-macro-host/out"
 
   if [[ -d "$ROOT" ]]; then
     find "$ROOT" -mindepth 1 -maxdepth 1 -type d \
@@ -223,13 +223,13 @@ collect_safe_candidates() {
 collect_deep_candidates() {
   collect_safe_candidates
   add_path_if_exists "$ROOT/packages/hxhx/bootstrap_out/_build"
-  add_path_if_exists "$ROOT/tools/hxhx-macro-host/bootstrap_out/_build"
+  add_path_if_exists "$ROOT/packages/hxhx-macro-host/bootstrap_out/_build"
 
   if [[ -d "$ROOT/packages/hxhx/bootstrap_out" ]]; then
     find "$ROOT/packages/hxhx/bootstrap_out" -maxdepth 1 -type f -name '*.install' -print >>"$CANDIDATES" 2>/dev/null || true
   fi
-  if [[ -d "$ROOT/tools/hxhx-macro-host/bootstrap_out" ]]; then
-    find "$ROOT/tools/hxhx-macro-host/bootstrap_out" -maxdepth 1 -type f -name '*.install' -print >>"$CANDIDATES" 2>/dev/null || true
+  if [[ -d "$ROOT/packages/hxhx-macro-host/bootstrap_out" ]]; then
+    find "$ROOT/packages/hxhx-macro-host/bootstrap_out" -maxdepth 1 -type f -name '*.install' -print >>"$CANDIDATES" 2>/dev/null || true
   fi
 }
 

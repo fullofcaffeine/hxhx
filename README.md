@@ -4,6 +4,8 @@
 
 Haxe → OCaml target built on Reflaxe.
 
+This monorepo is now **hxhx-first**: `hxhx` is the primary compiler product, and `reflaxe.ocaml` remains a first-class backend/runtime package.
+
 This repo is currently in early scaffolding (see `prd.md` for the roadmap).
 
 ## Environment setup
@@ -82,19 +84,27 @@ Optional flags:
 
 ## hxhx (Haxe-in-Haxe) bring-up
 
-`hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is a **stage0 shim** that delegates to a system `haxe`, but it already provides a place to hang acceptance tests and bootstrapping gates.
-Linked Stage3 backends (`ocaml-stage3`, `js-native`) are now selected through a canonical builtin backend registry (`packages/hih-compiler/src/backend/BackendRegistry.hx`) with explicit descriptors (`TargetDescriptor`) and compatibility requirements (`TargetRequirements`).
-Stage3 backend input is now named as a codegen contract (`GenIrProgram` v0 alias), and builtin backends now split emission into reusable target-core pilots (`packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx`, `packages/hih-compiler/src/backend/js/JsTargetCore.hx`) to support plugin→builtin promotion without codegen rewrites.
+`hxhx` is the long-term “Haxe-in-Haxe” compiler. Right now it is still partly staged, but it already provides stage0-free bootstrap paths, linked native Stage3 backends, and acceptance gates.
+Linked Stage3 backends (`ocaml-stage3`, `js-native`) are now selected through a canonical builtin backend registry (`packages/hxhx-core/src/backend/BackendRegistry.hx`) with explicit descriptors (`TargetDescriptor`) and compatibility requirements (`TargetRequirements`).
+Stage3 backend input is now named as a codegen contract (`GenIrProgram` v0 alias), and builtin backends now split emission into reusable target-core pilots (`packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx`, `packages/hxhx-core/src/backend/js/JsTargetCore.hx`) to support plugin→builtin promotion without codegen rewrites.
 The registry also has a provider seam (`registerProvider(regs)`) so plugin wrappers can participate in the same deterministic precedence model as builtins.
 Stage3 loads provider declarations per request from `HXHX_BACKEND_PROVIDERS` / `-D hxhx_backend_provider=...` before backend resolution, and falls back to builtin registrations when none are declared.
-`GenIrProgram` cast policy is now explicit: target-core emitters stay fully typed; boundary recovery uses shared helper `packages/hih-compiler/src/backend/GenIrBoundary.hx`, with additional casts only at narrow Stage3 reflection/bridge seams. See `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`.
+`GenIrProgram` cast policy is now explicit: target-core emitters stay fully typed; boundary recovery uses shared helper `packages/hxhx-core/src/backend/GenIrBoundary.hx`, with additional casts only at narrow Stage3 reflection/bridge seams. See `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`.
 
-### Naming: `hih-*` vs `hxhx`
+### Current execution reality
 
-- `hih-*` (“Haxe-in-Haxe”) packages are **internal implementation libraries** used for staged bring-up (parser/typer/emitter slices, small runtimes, test harness glue).
-- `hxhx` is the **end-user/compiler product name** (the CLI/binary and the public “Haxe-in-Haxe” story).
+- `--target ocaml-stage3` and `--target js-native` run linked Stage3 backends directly.
+- bootstrap builds (`scripts/hxhx/build-hxhx.sh`, `scripts/hxhx/build-hxhx-macro-host.sh`) are stage0-free by default when committed snapshots are present.
+- legacy delegated paths still exist for compatibility, and can be blocked with `HXHX_FORBID_STAGE0=1`.
+- CI now includes explicit stage0-free smoke validation before the full test lane.
 
-In practice: `hxhx` depends on `hih-*` today, and we may rename/reshape the internal packages later without changing the external `hxhx` name.
+### Naming: `hxhx-core` vs `hxhx`
+
+- `packages/hxhx-core` is the internal compiler core (parser/typer/lowering/backend contracts).
+- `packages/hxhx` is the CLI/product entrypoint (the user-facing `hxhx` story).
+- `packages/hxhx-macro-host` is the Stage4 macro host process package.
+
+In practice: `hxhx` depends on `hxhx-core` and macro-host packages while keeping the external `hxhx` name stable.
 
 Terminology note: in this repo, “compile Haxe” might mean compiling this backend, building the upstream compiler binary, or compiling Haxe projects. See `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1` for precise definitions and the Stage0→Stage2 bootstrapping model.
 
@@ -401,13 +411,15 @@ This repo currently contains two products:
 
 Supporting components:
 
-- `packages/hih-compiler/`: internal staged compiler libraries used by `hxhx`.
-- `tools/hxhx-macro-host/`: macro host process used for Stage4 bring-up.
+- `packages/hxhx-core/`: internal staged compiler libraries used by `hxhx`.
+- `packages/hxhx-macro-host/`: macro host process used for Stage4 bring-up.
 - `examples/`: consumer projects and QA harnesses (compile → dune build → run).
 - `workloads/`: compiler-shaped acceptance workloads (`npm run test:acceptance`).
 - `vendor/haxe/` (ignored): optional upstream checkout used as a black-box behavior oracle in CI gates.
 
-Rationale: keep backend + compiler iteration fast in one repo while making it obvious what is “shippable” (`packages/`), what is an internal tool (`tools/`), and what is a consumer example (`examples/`) versus a compiler-shaped acceptance workload (`workloads/`).
+Rationale: keep backend + compiler iteration fast in one repo while making it obvious what is shippable (`packages/`), what is a consumer example (`examples/`), and what is a compiler-shaped acceptance workload (`workloads/`).
+
+For explicit product boundaries and future split criteria, see `docs/00-project/BOUNDARIES.md`.
 
 ## Docs
 

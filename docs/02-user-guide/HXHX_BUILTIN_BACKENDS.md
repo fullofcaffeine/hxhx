@@ -80,13 +80,13 @@ If we discover a conflict, we can rename to `--hxhx-target` without changing the
 
 Builtin Stage3 backend registration now uses explicit metadata + factory contracts in code:
 
-- `packages/hih-compiler/src/backend/TargetDescriptor.hx`
+- `packages/hxhx-core/src/backend/TargetDescriptor.hx`
   - `id`: target ID (`ocaml-stage3`, `js-native`, ...)
   - `implId`: implementation ID (`builtin/js-native`, ...)
   - `abiVersion`, `priority`, `description`
   - `capabilities` (`supportsNoEmit`, `supportsBuildExecutable`, `supportsCustomOutputFile`)
   - `requires` (`genIrVersion`, `macroApiVersion`, `hostCaps`)
-- `packages/hih-compiler/src/backend/BackendRegistry.hx`
+- `packages/hxhx-core/src/backend/BackendRegistry.hx`
   - canonical source of builtin backend registrations
   - deterministic resolution (`priority` first, then `implId` tie-break)
   - typed entrypoints:
@@ -101,14 +101,14 @@ Builtin Stage3 backend registration now uses explicit metadata + factory contrac
 
 Current builtin registrations are declared by:
 
-- `packages/hih-compiler/src/backend/ocaml/OcamlStage3Backend.hx`
-- `packages/hih-compiler/src/backend/js/JsBackend.hx`
+- `packages/hxhx-core/src/backend/ocaml/OcamlStage3Backend.hx`
+- `packages/hxhx-core/src/backend/js/JsBackend.hx`
 
 Current codegen contract + target-core pilot:
 
-- `packages/hih-compiler/src/backend/GenIrProgram.hx` defines the Stage3 backend input contract (`GenIR` v0 alias).
-- `packages/hih-compiler/src/backend/ITargetCore.hx` defines reusable target-core emission.
-- `packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx` and `packages/hih-compiler/src/backend/js/JsTargetCore.hx`
+- `packages/hxhx-core/src/backend/GenIrProgram.hx` defines the Stage3 backend input contract (`GenIR` v0 alias).
+- `packages/hxhx-core/src/backend/ITargetCore.hx` defines reusable target-core emission.
+- `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx` and `packages/hxhx-core/src/backend/js/JsTargetCore.hx`
   are current promotion pilots used by builtin wrappers.
 
 `hxhx` target presets (`packages/hxhx/src/hxhx/TargetPresets.hx`) now verify that builtin preset IDs are registered in this canonical registry.

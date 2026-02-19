@@ -49,7 +49,7 @@ Important constraints:
 
 Expression expansion is performed by the Stage4 macro host via a dedicated RPC method:
 
-- file: `tools/hxhx-macro-host/src/hxhxmacrohost/Main.hx`
+- file: `packages/hxhx-macro-host/src/hxhxmacrohost/Main.hx`
 - RPC: `macro.expandExpr`
 
 `macro.expandExpr` takes the call expression text (a deterministic, allowlisted string), dispatches it to a compiled-in

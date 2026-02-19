@@ -19,7 +19,7 @@ import haxe.macro.Compiler;
 
 	How
 	- At runtime in the macro host, `haxe.macro.Compiler.define` is overridden (see
-	  `tools/hxhx-macro-host/overrides/haxe/macro/Compiler.hx`) and lowered to a reverse-RPC call
+	  `packages/hxhx-macro-host/overrides/haxe/macro/Compiler.hx`) and lowered to a reverse-RPC call
 	  back into the compiler process.
 **/
 class ArgsMacros {

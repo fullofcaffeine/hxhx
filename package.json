@@ -17,7 +17,7 @@
     "bench": "npm run bench:m14",
     "download": "lix download",
     "haxe": "haxe",
-    "ci:guards": "node scripts/ci/version-sync-check.js",
+    "ci:guards": "node scripts/ci/version-sync-check.js && node scripts/ci/legacy-path-check.js",
     "clean": "bash scripts/dev/clean-artifacts.sh --safe",
     "clean:deep": "bash scripts/dev/clean-artifacts.sh --deep --yes",
     "clean:tmp": "bash scripts/dev/clean-artifacts.sh --tmp-only",

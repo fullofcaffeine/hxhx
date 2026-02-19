@@ -64,7 +64,7 @@ if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
   #
   # For CI-friendliness and to keep this runner stage0-free with respect to macro-host
   # selection, we use the repo's committed bootstrap macro host snapshot when available
-  # (see `tools/hxhx-macro-host/bootstrap_out`).
+  # (see `packages/hxhx-macro-host/bootstrap_out`).
   #
   # NOTE: This does *not* execute upstream's real `tests/unit/src/Macro.hx` yet. The
   # bring-up goal here is to exercise the macro ABI boundary (spawn + handshake +

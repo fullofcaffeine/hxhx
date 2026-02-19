@@ -56,7 +56,7 @@ These are the main seam categories we should keep pulling behind interfaces/IR n
 
 Minimal proof-of-concept extraction (no behavior change):
 
-- Added `packages/hih-compiler/src/HihBackendDialect.hx`.
+- Added `packages/hxhx-core/src/HihBackendDialect.hx`.
 - Introduced `HihBackendDialect` with three methods:
   - `runtimeIsNull(...)`
   - `runtimeDynamicEquals(...)`
@@ -70,10 +70,10 @@ This is intentionally small: it proves the extraction shape without changing emi
 
 To reduce backend-selection drift, builtin Stage3 targets now share a canonical registry contract:
 
-- `packages/hih-compiler/src/backend/TargetDescriptor.hx`
-- `packages/hih-compiler/src/backend/TargetRequirements.hx`
-- `packages/hih-compiler/src/backend/GenIrProgram.hx`
-- `packages/hih-compiler/src/backend/BackendRegistry.hx`
+- `packages/hxhx-core/src/backend/TargetDescriptor.hx`
+- `packages/hxhx-core/src/backend/TargetRequirements.hx`
+- `packages/hxhx-core/src/backend/GenIrProgram.hx`
+- `packages/hxhx-core/src/backend/BackendRegistry.hx`
 
 This registry is now the source of truth for:
 
@@ -99,7 +99,7 @@ Chosen path (near-term): **Approach B** from the design options, with a strict c
 Allowed cast boundaries (narrow and documented):
 
 - Shared backend GenIR boundary helper:
-  - `packages/hih-compiler/src/backend/GenIrBoundary.hx`
+  - `packages/hxhx-core/src/backend/GenIrBoundary.hx`
   - `GenIrBoundary.requireProgram(program:Dynamic):GenIrProgram`
 - Stage3 provider reflection bridge when loading provider static methods by type name
   (`Reflect.callMethod` result cast to `Array<BackendRegistrationSpec>`).
@@ -119,7 +119,7 @@ Medium-term roadmap:
 Validation matrix for this boundary:
 
 ```bash
-haxe -cp packages/hxhx/src -cp packages/hih-compiler/src -cp packages/reflaxe.ocaml/src -cp packages/reflaxe.ocaml/std -main hxhx.Main --no-output -D hih_native_parser
+haxe -cp packages/hxhx/src -cp packages/hxhx-core/src -cp packages/reflaxe.ocaml/src -cp packages/reflaxe.ocaml/std -main hxhx.Main --no-output -D hih_native_parser
 npm run -s test:hxhx:builtin-target-smoke
 ```
 
@@ -146,10 +146,10 @@ This promotion lifecycle is why we keep extracting backend contracts now, even w
 
 Pilot status:
 
-- `packages/hih-compiler/src/backend/ITargetCore.hx` defines the reusable target-core contract.
-- `packages/hih-compiler/src/backend/TargetCoreBackend.hx` is the generic wrapper adapter (`TargetDescriptor` + `ITargetCore` -> `IBackend`).
-- `packages/hih-compiler/src/backend/ocaml/OcamlTargetCore.hx` is the first concrete target-core pilot.
-- `packages/hih-compiler/src/backend/js/JsTargetCore.hx` now applies the same pattern for JS.
+- `packages/hxhx-core/src/backend/ITargetCore.hx` defines the reusable target-core contract.
+- `packages/hxhx-core/src/backend/TargetCoreBackend.hx` is the generic wrapper adapter (`TargetDescriptor` + `ITargetCore` -> `IBackend`).
+- `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx` is the first concrete target-core pilot.
+- `packages/hxhx-core/src/backend/js/JsTargetCore.hx` now applies the same pattern for JS.
 - `OcamlStage3Backend` and `JsBackend` now delegate emission to their target-core classes, proving wrapper/core separation without behavior changes.
 - `BackendRegistry` now supports a dynamic provider seam (`register`, `registerProvider`, `clearDynamicRegistrations`) so plugin wrappers can join builtin resolution without custom selection paths.
 - `Stage3Compiler` now loads provider declarations per request (`HXHX_BACKEND_PROVIDERS` / `-D hxhx_backend_provider=...`) before resolving `--hxhx-backend`, so fallback to builtins stays deterministic when no providers are declared.

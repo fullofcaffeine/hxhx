@@ -36,7 +36,7 @@ fi
 
 echo "== Building hxhx macro host (RPC skeleton)"
 # By default this uses the committed Stage4 bootstrap snapshot under:
-#   tools/hxhx-macro-host/bootstrap_out
+#   packages/hxhx-macro-host/bootstrap_out
 # so `npm test` can run without a stage0 `haxe` binary on PATH.
 HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
 if [ -z "$HXHX_MACRO_HOST_EXE" ] || [ ! -f "$HXHX_MACRO_HOST_EXE" ]; then

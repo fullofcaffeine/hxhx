@@ -34,7 +34,7 @@ Command behavior:
 Do not delete these during normal cleanup:
 
 - `packages/hxhx/bootstrap_out/*.ml` and companion dune files
-- `tools/hxhx-macro-host/bootstrap_out/*.ml` and companion dune files
+- `packages/hxhx-macro-host/bootstrap_out/*.ml` and companion dune files
 
 These are committed bootstrap snapshots used for stage0-free builds.
 
@@ -56,7 +56,7 @@ These are committed bootstrap snapshots used for stage0-free builds.
 ### Deep-clean targets (larger rebuild cost)
 
 - `packages/hxhx/bootstrap_out/_build`
-- `tools/hxhx-macro-host/bootstrap_out/_build`
+- `packages/hxhx-macro-host/bootstrap_out/_build`
 
 These are local build caches; deleting them is safe but the next build is slower.
 

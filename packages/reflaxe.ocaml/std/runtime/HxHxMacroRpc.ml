@@ -20,7 +20,7 @@
    How:
    - Uses Unix.open_process_full for portability.
    - The macro host executable is built from Haxe sources in:
-       tools/hxhx-macro-host/
+       packages/hxhx-macro-host/
    - Protocol details:
        docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md
 *)

@@ -2966,7 +2966,7 @@ class EmitterStage {
 			if (shimRepoRoot.length > 0) return shimRepoRoot;
 			final env = Sys.getEnv("HXHX_REPO_ROOT");
 			if (env != null && env.length > 0) {
-				final candidate = haxe.io.Path.join([env, "packages", "hih-compiler", "shims"]);
+				final candidate = haxe.io.Path.join([env, "packages", "hxhx-core", "shims"]);
 				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate)) {
 					shimRepoRoot = env;
 					return shimRepoRoot;
@@ -2980,7 +2980,7 @@ class EmitterStage {
 			if (dir == null || dir.length == 0) return "";
 
 			for (_ in 0...10) {
-				final shimsDir = haxe.io.Path.join([dir, "packages", "hih-compiler", "shims"]);
+				final shimsDir = haxe.io.Path.join([dir, "packages", "hxhx-core", "shims"]);
 				if (sys.FileSystem.exists(shimsDir) && sys.FileSystem.isDirectory(shimsDir)) {
 					shimRepoRoot = dir;
 					return shimRepoRoot;
@@ -2995,7 +2995,7 @@ class EmitterStage {
 			function readShimTemplate(shimName:String):String {
 				final root = inferRepoRootForShims();
 				if (root == null || root.length == 0) throw "stage3 emitter: cannot locate repo root for shim templates (set HXHX_REPO_ROOT)";
-				final path = haxe.io.Path.join([root, "packages", "hih-compiler", "shims", shimName + ".ml"]);
+				final path = haxe.io.Path.join([root, "packages", "hxhx-core", "shims", shimName + ".ml"]);
 				if (!sys.FileSystem.exists(path)) throw "stage3 emitter: missing shim template: " + path;
 				return sys.io.File.getContent(path);
 			}

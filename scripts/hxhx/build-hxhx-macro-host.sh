@@ -4,7 +4,7 @@ set -euo pipefail
 HAXE_BIN="${HAXE_BIN:-haxe}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TOOL_DIR="$ROOT/tools/hxhx-macro-host"
+TOOL_DIR="$ROOT/packages/hxhx-macro-host"
 BOOTSTRAP_DIR="$TOOL_DIR/bootstrap_out"
 
 # Stage4 / Gate bring-up note:
@@ -81,7 +81,7 @@ normalize_cp() {
     return 0
   fi
   # Treat relative classpaths as repo-root relative, because this script `cd`s
-  # into `tools/hxhx-macro-host` before invoking the Haxe compiler.
+  # into `packages/hxhx-macro-host` before invoking the Haxe compiler.
   if [[ "$cp" != /* ]]; then
     cp="$ROOT/$cp"
   fi

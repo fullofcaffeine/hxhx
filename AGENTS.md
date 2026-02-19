@@ -66,7 +66,7 @@ This repo generates large transient artifacts during bootstrap/gate workflows. K
 
 **Do not remove committed bootstrap source snapshots**:
 - `packages/hxhx/bootstrap_out/*.ml` (and companion dune files)
-- `tools/hxhx-macro-host/bootstrap_out/*.ml` (and companion dune files)
+- `packages/hxhx-macro-host/bootstrap_out/*.ml` (and companion dune files)
 
 **Debug retention knobs**:
 - default behavior is cleanup-on-finish for stage0 logs
@@ -177,7 +177,7 @@ from our own Haxe sources as **bootstrap snapshots**.
 
 Current bootstrap snapshot locations:
 
-- `tools/hxhx-macro-host/bootstrap_out/` — generated OCaml sources + dune files for `hxhx-macro-host`.
+- `packages/hxhx-macro-host/bootstrap_out/` — generated OCaml sources + dune files for `hxhx-macro-host`.
 - `packages/hxhx/bootstrap_out/` — generated OCaml sources + dune files for `hxhx` (stage0-free build by default).
 
 Rules:

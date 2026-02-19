@@ -5,13 +5,13 @@ set -euo pipefail
 #
 # Why
 # - CI and Gate runners should be able to build/select a macro host without a stage0 `haxe`
-#   binary, using `tools/hxhx-macro-host/bootstrap_out`.
+#   binary, using `packages/hxhx-macro-host/bootstrap_out`.
 # - When macro-host Haxe sources change, we update the snapshot intentionally via this script.
 #
 # What
-# - Builds `tools/hxhx-macro-host` via stage0 `haxe` + `reflaxe.ocaml`.
+# - Builds `packages/hxhx-macro-host` via stage0 `haxe` + `reflaxe.ocaml`.
 # - Copies the generated OCaml sources (excluding `_build/` and `_gen_hx/`) into:
-#     tools/hxhx-macro-host/bootstrap_out/
+#     packages/hxhx-macro-host/bootstrap_out/
 #
 # How
 # - The entrypoint allowlist is pinned to the union used by `scripts/test-hxhx-targets.sh`
@@ -24,7 +24,7 @@ set -euo pipefail
 HAXE_BIN="${HAXE_BIN:-haxe}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TOOL_DIR="$ROOT/tools/hxhx-macro-host"
+TOOL_DIR="$ROOT/packages/hxhx-macro-host"
 OUT_DIR="$TOOL_DIR/out"
 BOOTSTRAP_DIR="$TOOL_DIR/bootstrap_out"
 
