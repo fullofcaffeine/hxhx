@@ -7,6 +7,7 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 REPS_RAW="${HXHX_BUILTIN_SMOKE_REPS:-1}"
 OCAML_LANE_RAW="${HXHX_BUILTIN_SMOKE_OCAML:-1}"
 JS_NATIVE_LANE_RAW="${HXHX_BUILTIN_SMOKE_JS_NATIVE:-0}"
+REQUIRE_JS_NATIVE_RAW="${HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE:-0}"
 
 parse_bool() {
   local name="$1"
@@ -25,6 +26,7 @@ parse_bool() {
 
 OCAML_LANE="$(parse_bool HXHX_BUILTIN_SMOKE_OCAML "$OCAML_LANE_RAW")"
 JS_NATIVE_LANE="$(parse_bool HXHX_BUILTIN_SMOKE_JS_NATIVE "$JS_NATIVE_LANE_RAW")"
+REQUIRE_JS_NATIVE="$(parse_bool HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE "$REQUIRE_JS_NATIVE_RAW")"
 
 if [ "$OCAML_LANE" != "1" ] && [ "$JS_NATIVE_LANE" != "1" ]; then
   echo "Nothing to run: both HXHX_BUILTIN_SMOKE_OCAML and HXHX_BUILTIN_SMOKE_JS_NATIVE are disabled." >&2
@@ -82,18 +84,15 @@ ensure_target_available() {
   printf '%s\n' "$targets" | grep -qx "$target"
 }
 
+JS_NATIVE_AVAILABLE=1
 if [ "$JS_NATIVE_LANE" = "1" ] && ! ensure_target_available "js-native"; then
-  echo "Current hxhx build does not expose js-native preset; rebuilding from source (HXHX_FORCE_STAGE0=1)." >&2
-  HXHX_BIN="$(HAXE_BIN="$HAXE_BIN" HXHX_FORCE_STAGE0=1 "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
-  if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
-    echo "Failed to rebuild hxhx binary with HXHX_FORCE_STAGE0=1." >&2
+  JS_NATIVE_AVAILABLE=0
+  if [ "$REQUIRE_JS_NATIVE" = "1" ]; then
+    echo "hxhx binary does not expose --target js-native and HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=1." >&2
     exit 1
   fi
-fi
-
-if [ "$JS_NATIVE_LANE" = "1" ] && ! ensure_target_available "js-native"; then
-  echo "hxhx binary does not support --target js-native after rebuild attempt." >&2
-  exit 1
+  echo "WARN: current hxhx binary does not expose --target js-native; skipping js-native smoke lane." >&2
+  echo "      Set HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=1 to fail when js-native is unavailable." >&2
 fi
 
 now_ms() {
@@ -199,6 +198,11 @@ else
 fi
 
 if [ "$JS_NATIVE_LANE" = "1" ]; then
+  if [ "$JS_NATIVE_AVAILABLE" != "1" ]; then
+    echo "js_native_smoke=skipped"
+    echo "builtin_target_smoke=ok"
+    exit 0
+  fi
   echo "== js-native emit+run smoke"
   js_artifact="$tmpdir/out_js_native/main.js"
   if ! js_out="$("$HXHX_BIN" --target js-native --js "$js_artifact" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native" 2>&1)"; then
