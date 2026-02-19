@@ -91,7 +91,20 @@ Manual secret scan guard command:
 npm run guard:gitleaks
 ```
 
+Manual machine-local path leak guard command:
+
+```bash
+npm run guard:local-paths
+```
+
+Public release preflight bundle:
+
+```bash
+npm run release:preflight
+```
+
 Contributor workflow details: `CONTRIBUTING.md`.
+Release checklist: `docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md`.
 
 Generate `.ml` files into an output directory:
 

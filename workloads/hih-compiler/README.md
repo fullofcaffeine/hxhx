@@ -9,7 +9,7 @@ Target goals:
 
 Reference implementation (OCaml Haxe compiler source):
 
-- `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
+- `vendor/haxe` (or your local upstream Haxe checkout path)
 
 This is intentionally kept as an **acceptance-only** example (it’s allowed to be heavier and more compiler-shaped).
 Run it via:

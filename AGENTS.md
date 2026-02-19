@@ -77,9 +77,9 @@ Always run `git status --short` after cleanup to verify no tracked files were ac
 
 ## Local Reference Repos
 
-- `haxe.elixir.reference`: `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference`
-- Haxe compiler source (reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
-- `haxe.elixir.codex` (compiler + testing patterns reference): `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex`
+- `haxe.elixir.reference`: `<path-to-haxe.elixir.reference>`
+- Haxe compiler source (reference): `<path-to-haxe.elixir.reference>/haxe`
+- `haxe.elixir.codex` (compiler + testing patterns reference): `<path-to-haxe.elixir.codex>`
 
 ## Licensing (MIT Goal, Keep Private for Now)
 
@@ -222,12 +222,12 @@ Legal reality note (engineering guidance, not legal advice):
 When implementing backend semantics or Haxe-in-Haxe bootstrap behavior, cross-check against upstream Haxe’s **existing OCaml implementation**:
 
 - Prefer working against a local `vendor/haxe` checkout (ignored by git) created via `bash scripts/vendor/fetch-haxe-upstream.sh`.
-- In local dev, it’s also fine to point `vendor/haxe` at your reference checkout (e.g. symlink to `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`) for fast iteration — but keep it untracked.
+- In local dev, it’s also fine to point `vendor/haxe` at your reference checkout (for example, symlink to `<path-to-haxe-reference>/haxe`) for fast iteration — but keep it untracked.
 
 When implementing semantics or compiler architecture:
 
-- Prefer cross-checking against the upstream **OCaml** Haxe compiler code in `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe` (behavior, data structures, ordering/printing, runtime expectations).
-- Prefer cross-checking our prior compiler target patterns in `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex` (testing layers, acceptance workloads, CI gates).
+- Prefer cross-checking against the upstream **OCaml** Haxe compiler code in your local Haxe reference checkout (behavior, data structures, ordering/printing, runtime expectations).
+- Prefer cross-checking our prior compiler target patterns in your local `haxe.elixir.codex` checkout (testing layers, acceptance workloads, CI gates).
 - If we need the upstream source inside this repo for repeatable tests, prefer a pinned fetch/submodule under `vendor/` rather than copying it (size + licensing + history).
 - Optional vendored upstream checkout location (preferred for gate runners): `vendor/haxe` (create with `bash scripts/vendor/fetch-haxe-upstream.sh`)
 
@@ -246,7 +246,7 @@ Vendoring policy:
 - Instead, we keep a pinned local checkout at `vendor/haxe` (ignored by git) via:
   - `bash scripts/vendor/fetch-haxe-upstream.sh` (defaults to `HAXE_UPSTREAM_REF=4.3.7`)
   - Override path with `HAXE_UPSTREAM_DIR=/path/to/haxe` when needed.
-- Local convenience: you may symlink `vendor/haxe` to an existing checkout (e.g. `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`) for faster iteration.
+- Local convenience: you may symlink `vendor/haxe` to an existing checkout (for example, `<path-to-haxe-reference>/haxe`) for faster iteration.
 
 ## Long-Term Acceptance Example: Haxe-in-Haxe (Production-Grade)
 
@@ -260,8 +260,8 @@ We want a potentially **production-ready** Haxe-in-Haxe compiler example under `
 
 When implementing language/runtime semantics, cross-check behavior against:
 
-- The Haxe compiler source + tests in `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
-- The patterns and docs in `/Users/fullofcaffeine/workspace/code/haxe.elixir.codex` (testing strategy, acceptance workloads, etc.)
+- The Haxe compiler source + tests in your local Haxe reference checkout
+- The patterns and docs in your local `haxe.elixir.codex` checkout (testing strategy, acceptance workloads, etc.)
 - `haxe.elixir.reference` for additional target/stdlib mapping ideas
 
 Prefer adding tests that match the repo’s testing layers:

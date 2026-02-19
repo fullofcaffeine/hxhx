@@ -8,7 +8,7 @@ This document is a **checklist-driven map** from:
 
 Primary upstream reference checkout:
 
-- `/Users/fullofcaffeine/workspace/code/haxe.elixir.reference/haxe`
+- `vendor/haxe` (or your local upstream Haxe checkout path)
 
 ## How to use this doc
 

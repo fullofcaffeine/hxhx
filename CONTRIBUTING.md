@@ -25,8 +25,10 @@ If `bd` hooks are installed, this chains the repo hook under `.git/hooks/pre-com
 ## Guard commands
 
 - Secret scan (full history): `npm run guard:gitleaks`
+- Machine-local path leak check: `npm run guard:local-paths`
 - Guardrail checks: `npm run ci:guards`
 - Deterministic Haxe format check: `npm run guard:hx-format`
+- Public release preflight bundle: `npm run release:preflight`
 
 ## CI alignment
 
