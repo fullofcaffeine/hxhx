@@ -282,6 +282,7 @@ jobs:
         run: npx lix download
       - name: Run tests
         env:
+          HXHX_FORCE_STAGE0: "0"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "7200"
         run: npm test

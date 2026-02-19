@@ -37,6 +37,7 @@
 - **Backend architecture and contracts:** [docs/02-user-guide/HXHX_BACKEND_LAYERING.md](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
 - **Macro host protocol:** [docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
 - **Public release preflight checklist:** [docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
+- **Stdlib reuse + provenance boundaries:** [docs/00-project/STD_LIB_POLICY.md](docs/00-project/STD_LIB_POLICY.md)
 
 ## Products in this repo
 

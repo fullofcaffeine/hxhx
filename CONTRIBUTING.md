@@ -36,3 +36,9 @@ The repo pre-commit hook enforces staged local-path checks, staged secret scanni
 - CI runs `gitleaks` on full history in `.github/workflows/ci.yml`.
 - Local `scripts/ci/gitleaks-history-check.sh` and CI share the same config (`.gitleaks.toml`).
 - Keep `README.md` updated in the same PR when workflows or required tools change.
+
+## Upstream stdlib policy (required)
+
+- Follow `docs/00-project/STD_LIB_POLICY.md` for upstream sync boundaries.
+- Upstream Haxe is used as a behavior oracle; direct reuse is limited to stdlib scope.
+- Do not copy upstream compiler or test sources into this repository.

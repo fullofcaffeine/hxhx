@@ -36,6 +36,7 @@ This monorepo contains multiple packages, but one product direction:
 - Keep upstream compiler code as a behavior oracle, not a source tree dependency.
 - Keep repository implementation content permissive-only.
 - Keep `vendor/haxe` untracked and used only for oracle test runs.
+- Follow stdlib sync boundary rules in `docs/00-project/STD_LIB_POLICY.md`.
 
 ## Repo split policy
 
