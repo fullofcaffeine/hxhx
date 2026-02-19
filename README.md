@@ -94,6 +94,7 @@ Stage3 loads provider declarations per request from `HXHX_BACKEND_PROVIDERS` / `
 ### Current execution reality
 
 - `--target ocaml-stage3` and `--target js-native` run linked Stage3 backends directly.
+- standard JS output flags (`-js` / `--js`) auto-route through the linked `js-native` Stage3 backend when no conflicting non-JS target is present.
 - bootstrap builds (`scripts/hxhx/build-hxhx.sh`, `scripts/hxhx/build-hxhx-macro-host.sh`) are stage0-free by default when committed snapshots are present.
 - legacy delegated paths still exist for compatibility, and can be blocked with `HXHX_FORBID_STAGE0=1`.
 - CI now includes explicit stage0-free smoke validation before the full test lane.

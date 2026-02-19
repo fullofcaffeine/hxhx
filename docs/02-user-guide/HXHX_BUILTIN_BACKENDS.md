@@ -208,13 +208,17 @@ Current `hxhx` target presets:
   - kind: `builtin`
   - behavior: routes through linked Stage3 backend dispatch with backend ID `js-native`
   - status: MVP non-delegating JS emitter is enabled (constrained subset; emits one JS file artifact and Stage3 runs it via `node` when available)
+- standard `-js` / `--js` (no `--target`)
+  - kind: auto-selected builtin path when compatible
+  - behavior: routes through linked `js-native` Stage3 backend when no conflicting non-JS target flag is present
+  - fallback: if `js-native` is unavailable in the current binary, shim mode falls back to stage0 delegation unless `HXHX_FORBID_STAGE0=1` is set
 - `--target flash|swf|as3`
   - status: intentionally unsupported in `hxhx` (fails fast with a clear message)
 - raw legacy target flags (`--swf`, `--as3`)
   - status: intentionally unsupported in `hxhx` (fails fast with the same message)
 - `--hxhx-strict-cli`
   - status: available
-  - behavior: enforces upstream-style CLI surface by rejecting hxhx-only flags (`--target`, `--hxhx-*`), while preserving normal extension mode when the flag is omitted
+  - behavior: enforces upstream-style CLI surface by rejecting hxhx-only flags (`--target`, `--hxhx-*`), while still allowing upstream JS flags (`-js` / `--js`) to route to linked `js-native`
 
 ### `js-native` semantics snapshot (MVP)
 

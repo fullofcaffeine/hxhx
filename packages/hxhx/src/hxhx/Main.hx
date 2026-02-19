@@ -111,6 +111,46 @@ class Main {
 		return null;
 	}
 
+	static function hasStandardJsTargetFlag(args:Array<String>):Bool {
+		for (a in args) {
+			switch (a) {
+				case "-js", "--js":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function hasStandardNonJsTargetFlag(args:Array<String>):Bool {
+		for (a in args) {
+			switch (a) {
+				case "-lua", "--lua",
+					"-python", "--python",
+					"-php", "--php",
+					"-neko", "--neko",
+					"-cpp", "--cpp",
+					"-cs", "--cs",
+					"-java", "--java",
+					"-jvm", "--jvm",
+					"-hl", "--hl",
+					"-swf", "--swf",
+					"-as3", "--as3",
+					"-xml", "--xml":
+					return true;
+				case _:
+			}
+		}
+		return false;
+	}
+
+	static function shouldRouteStandardJsToNative(forwarded:Array<String>):Bool {
+		final expanded = Stage1Args.expandHxmlArgs(forwarded);
+		final scan = expanded == null ? forwarded : expanded;
+		if (!hasStandardJsTargetFlag(scan)) return false;
+		return !hasStandardNonJsTargetFlag(scan);
+	}
+
 	static function isStrictCliDisallowedFlag(flag:String):Bool {
 		if (flag == null || flag.length == 0) return false;
 		if (flag == "--target" || flag == "--hxhx-target") return true;
@@ -447,6 +487,7 @@ class Main {
 		//
 		// This is a shim-owned flag family and should never be forwarded to stage0 `haxe`.
 		// See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1`.
+		var selectedShimTargetPreset:Null<String> = null;
 		{
 			// Only parse shim flags in the pre-`--` section (so `hxhx -- --target ...` forwards).
 			final idx = shimArgs.indexOf("--target");
@@ -469,6 +510,7 @@ class Main {
 				} catch (e:String) {
 					fatal("hxhx: " + e);
 				};
+				selectedShimTargetPreset = resolved.id;
 				forwarded = resolved.forwarded;
 
 				if (resolved.runMode == TargetPresets.RUN_MODE_BUILTIN_STAGE3) {
@@ -529,6 +571,35 @@ class Main {
 			}
 			runOcamlInterpLike(haxeBin, forwarded, ocamlInterpOutDir);
 			return;
+		}
+
+		// Native JS routing for standard upstream flags (`-js` / `--js`).
+		//
+		// Why
+		// - Preserve upstream CLI ergonomics for JS output without requiring hxhx-only flags
+		//   like `--target js-native`.
+		// - Keep strict CLI mode usable in non-delegating flows.
+		//
+		// Guardrails
+		// - Explicit shim target presets still win (`--target ...`).
+		// - We only auto-route when JS is the only explicit standard target family in the request.
+		// - If builtin `js-native` is unavailable:
+		//   - with stage0 allowed: fall back to normal stage0 delegation,
+		//   - with `HXHX_FORBID_STAGE0=1`: fail fast with a clear error.
+		if (selectedShimTargetPreset == null && shouldRouteStandardJsToNative(forwarded)) {
+			final resolvedJsNative = try {
+				TargetPresets.resolve("js-native", forwarded);
+			} catch (e:String) {
+				if (forbidStage0Delegation) {
+					fatal("hxhx: --js requested native routing, but builtin js-native backend is unavailable: " + e);
+				}
+				null;
+			}
+			if (resolvedJsNative != null) {
+				final stage3Args = ["--hxhx-backend", resolvedJsNative.id].concat(resolvedJsNative.forwarded);
+				final code = Stage3Compiler.run(stage3Args);
+				Sys.exit(code);
+			}
 		}
 
 		if (forbidStage0Delegation) {

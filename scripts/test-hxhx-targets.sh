@@ -421,6 +421,18 @@ grep -q "strict CLI mode rejects non-upstream flag: --hxhx-stage3" "$strict_log"
 echo "== Strict CLI mode: allows upstream-style flags"
 "$HXHX_BIN" --hxhx-strict-cli --js "$tmpdir/strict_cli_ok.js" -cp "$tmpdir/src" -main StrictCliMain --no-output >/dev/null
 
+echo "== Strict CLI mode: --js routes to linked native backend"
+strict_js_dir="$tmpdir/strict_cli_native"
+mkdir -p "$strict_js_dir/work"
+strict_js_artifact="$strict_js_dir/main.js"
+out="$(HXHX_TRACE_BACKEND_SELECTION=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --hxhx-strict-cli --js "$strict_js_artifact" -cp "$tmpdir/src" -main JsNativeMain --cwd "$strict_js_dir/work")"
+echo "$out" | grep -q "^backend_selected_impl=builtin/js-native$"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^artifact=$strict_js_artifact$"
+echo "$out" | grep -q "^run=ok$"
+echo "$out" | grep -q "^js-native:6$"
+test -f "$strict_js_artifact"
+
 echo "== Strict CLI mode: ignores forwarded args after --"
 strict_sep_log="$(mktemp)"
 "$HXHX_BIN" --hxhx-strict-cli -- --target js >"$strict_sep_log" 2>&1 || true
