@@ -2,22 +2,29 @@
 
 [![Version](https://img.shields.io/badge/version-0.8.0-blue)]
 
-MIT-licensed Haxe-in-Haxe compiler monorepo with `reflaxe.ocaml` as a first-class backend/runtime package.
+`hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility, paired with `reflaxe.ocaml` so the toolchain can bootstrap and ship native binaries under MIT.
 
-## What this repo contains
+## Why this project exists
+
+- **Hackability first:** compiler code should be readable and practical to extend.
+- **Parity as a goal:** align behavior with upstream Haxe `4.3.7` through oracle-driven gates.
+- **Permissive distribution path:** keep implementation provenance clean so embedding/commercial usage stays practical.
+- **Performance path:** compile Reflaxe targets to native executables instead of relying only on eval workflows.
+
+## Start here
+
+- **Roadmap and milestones:** [docs/01-getting-started/HXHX_1_0_ROADMAP.md](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
+- **Acceptance criteria and gate definitions:** [docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
+- **Use `reflaxe.ocaml` with upstream Haxe:** [docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
+- **Backend architecture and contracts:** [docs/02-user-guide/HXHX_BACKEND_LAYERING.md](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
+- **Macro host protocol:** [docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
+- **Public release preflight checklist:** [docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
+
+## Products in this repo
 
 - `hxhx`: the primary compiler product (Haxe-in-Haxe).
 - `reflaxe.ocaml`: an OCaml backend/runtime package used by `hxhx`, and also usable with upstream Haxe.
 - Shared compiler/backend infrastructure developed together while the projects are still tightly coupled (`hxhx -> reflaxe.ocaml`).
-
-## Why hxhx was created
-
-- Make compiler implementation easier to understand.
-- Make compiler behavior easier to change and extend.
-- Reach feature parity with upstream Haxe `4.3.7` (current target baseline).
-- Keep a clean-room implementation path so the project remains MIT-licensed and practical for embedded/commercial use.
-- Compile Reflaxe compilers/targets to native executables for better performance.
-- Keep `reflaxe.ocaml` usable with upstream Haxe while co-developing both projects in this monorepo for now.
 
 ## Monorepo strategy (for now)
 
@@ -25,9 +32,7 @@ We are keeping `hxhx` and `reflaxe.ocaml` in one monorepo because they still sha
 
 ## Using reflaxe.ocaml with upstream Haxe
 
-See `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md` for a dedicated setup/usage guide.
-
-This repo is currently in active bring-up (see `prd.md` for the roadmap).
+See [docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md) for dedicated setup/usage.
 
 ## Environment setup
 
