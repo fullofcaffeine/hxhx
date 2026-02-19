@@ -15,6 +15,14 @@ This monorepo contains multiple packages, but one product direction:
   Stage4 macro host process package.
 - `packages/reflaxe.ocaml/`  
   OCaml backend/runtime package used by both user-facing target flows and bootstrap flows.
+  It is also designed to stay usable with upstream Haxe.
+
+## Strategic goals (boundaries-level)
+
+- Keep `hxhx` implementation understandable and easy to modify.
+- Reach upstream-compatible behavior for Haxe `4.3.7` workflows.
+- Preserve clean-room MIT provenance for permissive commercial/embedded usage.
+- Compile Reflaxe compilers/targets to native executables where practical for performance.
 
 ## Execution reality (today)
 

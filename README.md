@@ -1,12 +1,33 @@
-# reflaxe.ocaml
+# hxhx
 
 [![Version](https://img.shields.io/badge/version-0.8.0-blue)]
 
-Haxe → OCaml target built on Reflaxe.
+MIT-licensed Haxe-in-Haxe compiler monorepo with `reflaxe.ocaml` as a first-class backend/runtime package.
 
-This monorepo is now **hxhx-first**: `hxhx` is the primary compiler product, and `reflaxe.ocaml` remains a first-class backend/runtime package.
+## What this repo contains
 
-This repo is currently in early scaffolding (see `prd.md` for the roadmap).
+- `hxhx`: the primary compiler product (Haxe-in-Haxe).
+- `reflaxe.ocaml`: an OCaml backend/runtime package used by `hxhx`, and also usable with upstream Haxe.
+- Shared compiler/backend infrastructure developed together while the projects are still tightly coupled (`hxhx -> reflaxe.ocaml`).
+
+## Why hxhx was created
+
+- Make compiler implementation easier to understand.
+- Make compiler behavior easier to change and extend.
+- Reach feature parity with upstream Haxe `4.3.7` (current target baseline).
+- Keep a clean-room implementation path so the project remains MIT-licensed and practical for embedded/commercial use.
+- Compile Reflaxe compilers/targets to native executables for better performance.
+- Keep `reflaxe.ocaml` usable with upstream Haxe while co-developing both projects in this monorepo for now.
+
+## Monorepo strategy (for now)
+
+We are keeping `hxhx` and `reflaxe.ocaml` in one monorepo because they still share bootstrap, runtime, and backend iteration loops. As coupling drops and gates stabilize, repo split/rename decisions can be revisited with lower risk.
+
+## Using reflaxe.ocaml with upstream Haxe
+
+See `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md` for a dedicated setup/usage guide.
+
+This repo is currently in active bring-up (see `prd.md` for the roadmap).
 
 ## Environment setup
 
@@ -34,7 +55,7 @@ sudo apt-get update
 sudo apt-get install -y ocaml dune ocaml-findlib
 ```
 
-## Usage (current scaffold)
+## reflaxe.ocaml usage (current scaffold)
 
 This repo is set up for **Lix** (via `lix.client` / haxeshim-style `haxe_libraries`).
 

@@ -188,25 +188,25 @@ class Stage3Compiler {
 		return BackendRegistry.requireForTarget(backendId);
 	}
 
-static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
+	static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
 		final expandedProgram = GenIrBoundary.requireProgram(expanded);
 		#if reflaxe
-		final backendDyn:Dynamic = cast backend;
-		if (Std.isOfType(backendDyn, JsBackend)) {
-			final jsBackend:JsBackend = cast backendDyn;
+		if (Std.isOfType(backend, JsBackend)) {
+			final jsBackend:JsBackend = cast backend;
 			return JsBackend.emitBridge(jsBackend, expandedProgram, context);
 		}
-		if (Std.isOfType(backendDyn, OcamlStage3Backend)) {
-			final ocamlBackend:OcamlStage3Backend = cast backendDyn;
+		if (Std.isOfType(backend, OcamlStage3Backend)) {
+			final ocamlBackend:OcamlStage3Backend = cast backend;
 			return OcamlStage3Backend.emitBridge(ocamlBackend, expandedProgram, context);
 		}
-		if (Std.isOfType(backendDyn, TargetCoreBackend)) {
-			final targetCoreBackend:TargetCoreBackend = cast backendDyn;
+		if (Std.isOfType(backend, TargetCoreBackend)) {
+			final targetCoreBackend:TargetCoreBackend = cast backend;
 			return TargetCoreBackend.emitBridge(targetCoreBackend, expandedProgram, context);
 		}
-		final emitFn = Reflect.field(backendDyn, "emit");
+		final backendReflect:Dynamic = cast backend;
+		final emitFn = Reflect.field(backendReflect, "emit");
 		if (emitFn == null) throw "backend missing emit() method: " + backendId;
-		return cast Reflect.callMethod(backendDyn, emitFn, [expanded, context]);
+		return cast Reflect.callMethod(backendReflect, emitFn, [expandedProgram, context]);
 		#else
 		return backend.emit(expandedProgram, context);
 		#end
