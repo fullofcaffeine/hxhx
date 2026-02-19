@@ -4,6 +4,10 @@ import backend.BackendRegistrationSpec;
 import backend.ITargetBackendProvider;
 import backend.js.JsBackend;
 
+private typedef ProviderDispatch = {
+	function registrations():Array<BackendRegistrationSpec>;
+}
+
 /**
 	Resolves Stage3 backend provider registrations by type path.
 
@@ -13,18 +17,37 @@ import backend.js.JsBackend;
 	  method invocation.
 	- Custom providers still need a dynamic entrypoint, but with a typed contract.
 
-	What
-	- Fast-path known providers (currently `backend.js.JsBackend`) through a static table.
-	- Fallback to typed instance loading for custom providers:
-	  - `Type.resolveClass`
-	  - `Type.createInstance`
-	  - `ITargetBackendProvider.registrations()`
+		What
+		- Fast-path known providers (currently `backend.js.JsBackend`) through a static table.
+		- Fallback to typed instance loading for custom providers:
+		  - `Type.resolveClass`
+		  - `Type.createInstance`
+		  - `Std.downcast(..., ITargetBackendProvider)`
+		  - dispatch through `ProviderDispatch` structural view (`registrations()`)
 
-	Gotchas
-	- `Type.createInstance` returns an untyped runtime value. We keep one guarded cast
-	  at this boundary after `Std.isOfType(..., ITargetBackendProvider)` succeeds.
+		Gotchas
+		- `Type.createInstance` returns an untyped runtime value.
+		- Interface method dispatch on `ITargetBackendProvider` is not yet representable
+		  as direct OCaml record-field access in this bootstrap lane.
+		- `requireProvider` keeps contract validation typed via `Std.downcast(..., ITargetBackendProvider)`,
+		  then returns a structural `ProviderDispatch` view for compile-safe invocation.
 **/
 class BackendProviderResolver {
+	@:keep
+	static final keepValueExceptionClass:Class<haxe.ValueException> = haxe.ValueException;
+
+	static inline function providerRegistrations(provider:ProviderDispatch):Array<BackendRegistrationSpec> {
+		return provider.registrations();
+	}
+
+	static function requireProvider(instance:Dynamic, typePath:String):ProviderDispatch {
+		final providerContract:Null<ITargetBackendProvider> = Std.downcast(instance, ITargetBackendProvider);
+		if (providerContract == null) {
+			throw "backend provider type must implement ITargetBackendProvider: " + typePath;
+		}
+		return cast providerContract;
+	}
+
 	static function knownProviderRegistrations(typePath:String):Null<Array<BackendRegistrationSpec>> {
 		return switch (typePath) {
 			case "backend.js.JsBackend":
@@ -46,18 +69,11 @@ class BackendProviderResolver {
 
 		final instance = try {
 			Type.createInstance(cls, []);
-		} catch (error:Dynamic) {
-			throw "backend provider construction failed for " + normalized + ": " + Std.string(error);
+		} catch (error:haxe.Exception) {
+			throw "backend provider construction failed for " + normalized + ": " + error.message;
 		}
 
-		if (!Std.isOfType(instance, ITargetBackendProvider)) {
-			throw "backend provider type must implement ITargetBackendProvider: " + normalized;
-		}
-
-		final registrationsFn = Reflect.field(instance, "registrations");
-		if (registrationsFn == null) {
-			throw "backend provider type must expose registrations(): " + normalized;
-		}
-		return cast Reflect.callMethod(instance, registrationsFn, []);
+		final provider = requireProvider(instance, normalized);
+		return providerRegistrations(provider);
 	}
 }
