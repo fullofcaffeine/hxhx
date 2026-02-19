@@ -59,7 +59,7 @@ This repo has two “levels” of setup:
 
 - **Node.js + npm** (used for Lix + dev tooling).
 - **Haxe** (this repo targets Haxe **4.3.7** right now).
-- **OCaml + dune** (required if you want to compile the emitted OCaml to a binary).
+- **OCaml 5.2+ + dune** (required if you want to compile emitted OCaml or run stage0-free bootstrap flows).
 
 macOS (Homebrew):
 
@@ -67,11 +67,15 @@ macOS (Homebrew):
 brew install ocaml dune ocaml-findlib
 ```
 
-Linux (example, Debian/Ubuntu):
+Linux (recommended, Debian/Ubuntu via opam):
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y ocaml dune ocaml-findlib
+sudo apt-get install -y opam m4 pkg-config libgmp-dev
+opam init -a --disable-sandboxing
+opam switch create 5.2.1
+eval "$(opam env)"
+opam install -y dune ocamlfind
 ```
 
 ## reflaxe.ocaml usage (current scaffold)
