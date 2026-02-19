@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 
+echo "[pre-commit] Running local path guard on staged changes..."
+node "$ROOT_DIR/scripts/ci/local-path-check.js" --staged
+
 resolve_gitleaks_bin() {
 	if command -v gitleaks >/dev/null 2>&1; then
 		command -v gitleaks

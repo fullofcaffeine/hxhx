@@ -77,6 +77,11 @@ Pre-commit requirements:
 - `gitleaks` available on `PATH` (or repo-local `./gitleaks` binary).
 - `haxelib formatter` installed (`haxelib install formatter`).
 
+Pre-commit now enforces:
+- staged local-path leak guard
+- staged gitleaks scan
+- staged deterministic `.hx` auto-format
+
 Manual formatting guard command:
 
 ```bash

@@ -17,6 +17,15 @@ function gitTrackedAll() {
 	}
 }
 
+function gitStagedFiles() {
+	try {
+		const out = cp.execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z'], { encoding: 'utf8' })
+		return out.split('\0').filter(Boolean)
+	} catch (_) {
+		return []
+	}
+}
+
 function shouldScanText(path) {
 	if (path.startsWith('.beads/')) return false
 	if (path.startsWith('packages/hxhx/bootstrap_out/')) return false
@@ -46,7 +55,10 @@ const patterns = [
 const violations = []
 const maxViolations = 200
 
-for (const path of gitTrackedAll()) {
+const stagedOnly = process.argv.includes('--staged')
+const files = stagedOnly ? gitStagedFiles() : gitTrackedAll()
+
+for (const path of files) {
 	if (!shouldScanText(path)) continue
 
 	let text
@@ -83,5 +95,6 @@ if (violations.length > 0) {
 	const extra = violations.length > 40 ? `\n- ... (${violations.length - 40} more)` : ''
 	fail(`machine-local absolute paths found in tracked text:\n${lines.join('\n')}${extra}`)
 } else {
-	console.log('[ci:guards] OK: no machine-local absolute paths found')
+	const scope = stagedOnly ? 'staged files' : 'tracked files'
+	console.log(`[ci:guards] OK: no machine-local absolute paths found in ${scope}`)
 }

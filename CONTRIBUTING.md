@@ -16,6 +16,7 @@ npm run hooks:install
 ```
 
 If `bd` hooks are installed, this chains the repo hook under `.git/hooks/pre-commit.old` so both flows run.
+The repo pre-commit hook enforces staged local-path checks, staged secret scanning, and staged Haxe formatting.
 
 ## Required local tools
 
