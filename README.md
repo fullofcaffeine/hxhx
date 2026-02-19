@@ -1,8 +1,21 @@
 # hxhx
 
-[![Version](https://img.shields.io/badge/version-0.8.0-blue)]
+[![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
+[![Compatibility Gate 1](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml)
+[![Compatibility Gate 2](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml)
+[![Compatibility Gate 3](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
 `hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility, paired with `reflaxe.ocaml` so the toolchain can bootstrap and ship native binaries under MIT.
+
+## CI badges (plain English)
+
+- **CI**: fast safety checks (guards + core tests) on regular changes.
+- **Compatibility Gate 1**: upstream unit macro compatibility baseline.
+- **Compatibility Gate 2**: wider upstream `runci` macro workload checks.
+- **Compatibility Gate 3**: target/workflow compatibility checks (`Macro`, `Js`, `Neko`, and opt-in targets).
+- New contributor shortcut: start with `npm run ci:guards` and `npm test`; use gate docs for deeper validation: [docs/01-getting-started/TESTING.md](docs/01-getting-started/TESTING.md).
 
 ## Why this project exists
 

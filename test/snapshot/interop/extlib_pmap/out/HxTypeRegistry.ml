@@ -7,6 +7,7 @@ let init () : unit =
   ignore (HxType.class_ "StringBuf");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
+  ignore (HxType.class_ "haxe.ValueException");
   ignore (HxType.class_ "haxe.io.BytesBuffer");
   ignore (HxType.class_ "haxe.io.FPHelper");
   ignore (HxType.class_ "haxe.io.Input");
@@ -31,6 +32,13 @@ let init () : unit =
   );
   HxType.register_class_ctor "haxe.NativeStackTrace" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_NativeStackTrace.create ())
+  );
+  HxType.register_class_ctor "haxe.ValueException" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'value' for haxe.ValueException" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else Obj.magic HxRuntime.hx_null in
+    let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
+    Obj.repr (Haxe_ValueException.create a0 a1 a2)
   );
   HxType.register_class_ctor "haxe.io.BytesBuffer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_BytesBuffer.create ())
@@ -61,6 +69,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "StringBuf" (fun () -> Obj.repr (StringBuf.__empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
+  HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.BytesBuffer" (fun () -> Obj.repr (Haxe_io_BytesBuffer.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Input" (fun () -> Obj.repr (Haxe_io_Input.__empty ()));
@@ -76,6 +85,8 @@ let init () : unit =
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
+  HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
+  HxType.register_class_static_fields "haxe.ValueException" [];
   HxType.register_class_instance_fields "haxe.io.BytesBuffer" [ "add"; "addByte"; "addBytes"; "addDouble"; "addFloat"; "addInt32"; "addInt64"; "addString"; "b"; "getBytes"; "get_length" ];
   HxType.register_class_static_fields "haxe.io.BytesBuffer" [];
   HxType.register_class_instance_fields "haxe.io.FPHelper" [];
@@ -94,6 +105,7 @@ let init () : unit =
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioInput" [];
   HxType.register_class_instance_fields "sys.io._Stdio.OcamlStdioOutput" [ "bigEndian"; "close"; "flush"; "prepare"; "set_bigEndian"; "stream"; "write"; "writeByte"; "writeBytes"; "writeDouble"; "writeFloat"; "writeFullBytes"; "writeInput"; "writeInt16"; "writeInt24"; "writeInt32"; "writeInt8"; "writeString"; "writeUInt16"; "writeUInt24"; "writeUInt8" ];
   HxType.register_class_static_fields "sys.io._Stdio.OcamlStdioOutput" [];
+  HxType.register_class_super "haxe.ValueException" (HxType.class_ "haxe.Exception");
   HxType.register_class_super "sys.io._Stdio.OcamlStdioInput" (HxType.class_ "haxe.io.Input");
   HxType.register_class_super "sys.io._Stdio.OcamlStdioOutput" (HxType.class_ "haxe.io.Output");
   HxType.register_class_tags "IntIterator" [ "IntIterator" ];
@@ -107,6 +119,7 @@ let init () : unit =
   HxType.register_class_tags "haxe.Int64Helper" [ "haxe.Int64Helper" ];
   HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
   HxType.register_class_tags "haxe.SysTools" [ "haxe.SysTools" ];
+  HxType.register_class_tags "haxe.ValueException" [ "haxe.Exception"; "haxe.ValueException" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.Constructible_Impl_" [ "haxe._Constraints.Constructible_Impl_" ];
   HxType.register_class_tags "haxe._Constraints.FlatEnum_Impl_" [ "haxe._Constraints.FlatEnum_Impl_" ];

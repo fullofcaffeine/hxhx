@@ -22,6 +22,7 @@
 		"haxe_exceptions_PosException.ml",
 		"haxe_exceptions_NotImplementedException.ml",
 		"haxe_ds_ReadOnlyArray.ml",
+		"haxe_ValueException.ml",
 		"haxe_SysTools.ml",
 		"haxe_NativeStackTrace.ml",
 		"haxe_Int64Helper.ml",

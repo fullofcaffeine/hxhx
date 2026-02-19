@@ -21,6 +21,7 @@
 		"haxe_ds_Map.ml",
 		"haxe_ds_EnumValueMap.ml",
 		"haxe_ds_BalancedTree.ml",
+		"haxe_ValueException.ml",
 		"haxe_SysTools.ml",
 		"haxe_NativeStackTrace.ml",
 		"haxe_Int64Helper.ml",

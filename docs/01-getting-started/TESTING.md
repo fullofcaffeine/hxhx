@@ -57,6 +57,12 @@ These are **not** part of `npm test` because they depend on:
 - a local checkout of the upstream Haxe compiler repo
 - extra toolchains / deps (`haxelib`, network for pinned libs, etc.)
 
+Plain-English gate map:
+
+- **Gate 1**: “core compatibility” — upstream unit macro suite.
+- **Gate 2**: “bigger macro workflow” — upstream `runci` Macro target.
+- **Gate 3**: “target matrix” — staged target workflows (`Macro`, `Js`, `Neko`, opt-in extras).
+
 Gate 1 (unit macro suite) uses the upstream file:
 
 - `tests/unit/compile-macro.hxml`
