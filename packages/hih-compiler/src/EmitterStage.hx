@@ -2684,6 +2684,10 @@ class EmitterStage {
 						+ condS
 						+ " then __hx_do_continue := true else () "
 						+ "done)";
+					case SBreak(_pos):
+						"()";
+					case SContinue(_pos):
+						"()";
 					case SForIn(name, iterable, body, _pos):
 						final ident = ocamlValueIdent(name);
 						final bodyTy = extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
@@ -4286,6 +4290,8 @@ class EmitterStage {
 										}
 									case SThrow(expr, _):
 										if (expr != null) exprWorklist.push(expr);
+									case SBreak(_):
+									case SContinue(_):
 									case SSwitch(scrutinee, cases, _):
 										if (scrutinee != null) exprWorklist.push(scrutinee);
 										if (cases != null) for (c in cases) if (c != null && c.body != null) stmtWorklist.push(c.body);

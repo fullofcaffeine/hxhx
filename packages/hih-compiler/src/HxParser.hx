@@ -1787,11 +1787,11 @@
 				case TKeyword(KBreak):
 					bump();
 					syncToStmtEnd();
-					SExpr(EUnsupported("break"), pos);
+					SBreak(pos);
 				case TKeyword(KContinue):
 					bump();
 					syncToStmtEnd();
-					SExpr(EUnsupported("continue"), pos);
+					SContinue(pos);
 				case _:
 					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
 					syncToStmtEnd();

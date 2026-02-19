@@ -75,6 +75,8 @@ class HxFunctionDecl {
 							final rc = find([c.body]);
 							if (rc != null) return rc;
 						}
+					case SBreak(_):
+					case SContinue(_):
 					case SThrow(_, _):
 					case _:
 				}

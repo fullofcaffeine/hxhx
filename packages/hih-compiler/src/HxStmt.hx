@@ -163,6 +163,24 @@ enum HxStmt {
 	);
 
 	/**
+		Loop control statement: `break;`.
+
+		Why
+		- `break` is core statement-level control flow and should not be modeled as an
+		  unsupported expression marker.
+	**/
+	SBreak(pos:HxPos);
+
+	/**
+		Loop control statement: `continue;`.
+
+		Why
+		- `continue` is core statement-level control flow and should not be modeled as an
+		  unsupported expression marker.
+	**/
+	SContinue(pos:HxPos);
+
+	/**
 		Throw statement: `throw expr;`.
 
 		Why

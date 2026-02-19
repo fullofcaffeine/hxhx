@@ -674,6 +674,8 @@ static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dyn
 					case STry(tryBody, catches, _pos):
 						collectUnsupportedExprRawInStmt(tryBody, out, max);
 						for (c in catches) collectUnsupportedExprRawInStmt(c.body, out, max);
+					case SBreak(_pos):
+					case SContinue(_pos):
 					case SThrow(expr, _pos):
 						collectUnsupportedExprRawInExpr(expr, out, max);
 					case SSwitch(scrutinee, cases, _pos):
@@ -718,6 +720,10 @@ static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dyn
 						var c = countUnsupportedExprsInStmt(tryBody);
 						for (cc in catches) c += countUnsupportedExprsInStmt(cc.body);
 						c;
+					case SBreak(_pos):
+						0;
+					case SContinue(_pos):
+						0;
 					case SThrow(expr, _pos):
 						countUnsupportedExprsInExpr(expr);
 					case SSwitch(scrutinee, cases, _pos):

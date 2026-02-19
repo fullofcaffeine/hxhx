@@ -202,6 +202,10 @@ class ExprMacroExpander {
 							outCatches.push({name: c.name, typeHint: c.typeHint, body: rBody});
 						}
 						changed ? STry(rTry, outCatches, pos) : s;
+					case SBreak(_):
+						s;
+					case SContinue(_):
+						s;
 					case SSwitch(scrutinee, cases, pos):
 						final rScrutinee = rewriteExpr(scrutinee, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 						var changed = rScrutinee != scrutinee;

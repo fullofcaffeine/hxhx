@@ -76,9 +76,9 @@ class JsStmtEmitter {
 				writer.writeln("return " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
 			case SThrow(expr, _):
 				writer.writeln("throw " + JsExprEmitter.emit(expr, scope.exprScope()) + ";");
-			case SExpr(EUnsupported("break"), _):
+			case SBreak(_):
 				writer.writeln("break;");
-			case SExpr(EUnsupported("continue"), _):
+			case SContinue(_):
 				writer.writeln("continue;");
 			case SExpr(expr, _):
 				writer.writeln(JsExprEmitter.emit(expr, scope.exprScope()) + ";");

@@ -219,6 +219,8 @@ class TyperStage {
 						scope.declareLocal(c.name, TyType.fromHintText("Dynamic"));
 						typeStmt(c.body);
 					}
+				case SBreak(_):
+				case SContinue(_):
 					case SForIn(name, iterable, body, pos):
 						// Bring-up: type-check the iterable expression and bind the loop variable.
 						//
