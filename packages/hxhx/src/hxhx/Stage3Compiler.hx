@@ -1064,26 +1064,11 @@ static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dyn
 		var totalRegistered = 0;
 
 		for (typePath in providerTypes) {
-			if (typePath == "backend.js.JsBackend") {
-				final regs = JsBackend.providerRegistrations();
-				final registered = BackendRegistry.registerProvider(regs);
-				totalRegistered += registered;
-				if (trace) Sys.println("backend_provider[" + typePath + "]=" + registered);
-				continue;
-			}
-
-			final cls = Type.resolveClass(typePath);
-			if (cls == null) throw "backend provider type not found: " + typePath;
-			final staticRegsFn = Reflect.field(cls, "providerRegistrations");
-			if (staticRegsFn != null) {
-				final regs:Array<backend.BackendRegistrationSpec> = cast Reflect.callMethod(cls, staticRegsFn, []);
-				final registered = BackendRegistry.registerProvider(regs);
-				totalRegistered += registered;
-				if (trace) {
-					Sys.println("backend_provider[" + typePath + "]=" + registered);
-				}
-			} else {
-				throw "backend provider type must expose static providerRegistrations(): " + typePath;
+			final regs = BackendProviderResolver.registrationsForType(typePath);
+			final registered = BackendRegistry.registerProvider(regs);
+			totalRegistered += registered;
+			if (trace) {
+				Sys.println("backend_provider[" + typePath + "]=" + registered);
 			}
 		}
 

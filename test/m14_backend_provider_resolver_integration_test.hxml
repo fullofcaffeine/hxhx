@@ -1,0 +1,6 @@
+-cp test
+-cp packages/hih-compiler/src
+-cp packages/hxhx/src
+
+-main M14BackendProviderResolverIntegrationTest
+--interp

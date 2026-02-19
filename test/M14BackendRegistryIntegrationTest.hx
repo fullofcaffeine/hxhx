@@ -40,7 +40,7 @@ class M14BackendRegistryIntegrationTest {
 		assertTrue(unknownError.indexOf("does-not-exist") >= 0, "unknown backend error should include target id");
 		assertTrue(unknownError.indexOf("ocaml-stage3") >= 0, "unknown backend error should list supported backends");
 
-		final pluginRegistered = BackendRegistry.registerProvider(new _M14PluginProvider());
+		final pluginRegistered = BackendRegistry.registerProvider((new _M14PluginProvider()).registrations());
 		assertTrue(pluginRegistered == 1, "expected exactly one plugin registration");
 		final jsAfterPlugin = BackendRegistry.descriptorForTarget("js-native");
 		assertTrue(jsAfterPlugin != null, "descriptorForTarget(js-native) returned null after plugin registration");
