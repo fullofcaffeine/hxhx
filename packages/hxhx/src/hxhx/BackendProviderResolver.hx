@@ -29,16 +29,17 @@ private typedef ProviderDispatch = {
 		- `Type.createInstance` returns an untyped runtime value.
 		- Interface method dispatch on `ITargetBackendProvider` is not yet representable
 		  as direct OCaml record-field access in this bootstrap lane.
-		- `requireProvider` keeps contract validation typed via `Std.downcast(..., ITargetBackendProvider)`,
-		  then returns a structural `ProviderDispatch` view for compile-safe invocation.
+		- The dynamic instance boundary is narrowed immediately with
+		  `Std.downcast(..., ITargetBackendProvider)` before dispatch.
+		- `requireProvider` accepts the typed contract and returns a structural
+		  `ProviderDispatch` view for compile-safe invocation.
 **/
 class BackendProviderResolver {
 	static inline function providerRegistrations(provider:ProviderDispatch):Array<BackendRegistrationSpec> {
 		return provider.registrations();
 	}
 
-	static function requireProvider(instance:Dynamic, typePath:String):ProviderDispatch {
-		final providerContract:Null<ITargetBackendProvider> = Std.downcast(instance, ITargetBackendProvider);
+	static function requireProvider(providerContract:Null<ITargetBackendProvider>, typePath:String):ProviderDispatch {
 		if (providerContract == null) {
 			throw "backend provider type must implement ITargetBackendProvider: " + typePath;
 		}
@@ -69,8 +70,9 @@ class BackendProviderResolver {
 		} catch (error:haxe.Exception) {
 			throw "backend provider construction failed for " + normalized + ": " + error.message;
 		}
+		final providerContract:Null<ITargetBackendProvider> = Std.downcast(instance, ITargetBackendProvider);
 
-		final provider = requireProvider(instance, normalized);
+		final provider = requireProvider(providerContract, normalized);
 		return providerRegistrations(provider);
 	}
 }
