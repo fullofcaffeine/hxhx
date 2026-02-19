@@ -83,6 +83,14 @@ Manual formatting guard command:
 npm run guard:hx-format
 ```
 
+Manual secret scan guard command:
+
+```bash
+npm run guard:gitleaks
+```
+
+Contributor workflow details: `CONTRIBUTING.md`.
+
 Generate `.ml` files into an output directory:
 
 ```bash

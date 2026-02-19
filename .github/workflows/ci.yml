@@ -39,7 +39,7 @@ jobs:
       - name: Run gitleaks (all history)
         run: |
           set -euo pipefail
-          gitleaks detect --source . --config .gitleaks.toml --redact --log-opts="--all"
+          bash scripts/ci/gitleaks-history-check.sh
 
   guards:
     name: Guardrails
