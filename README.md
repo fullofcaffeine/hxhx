@@ -28,6 +28,7 @@
 
 - **Roadmap and milestones:** [docs/01-getting-started/HXHX_1_0_ROADMAP.md](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
 - **Acceptance criteria and gate definitions:** [docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
+- **`reflaxe.ocaml` package README:** [packages/reflaxe.ocaml/README.md](packages/reflaxe.ocaml/README.md)
 - **Use `reflaxe.ocaml` with upstream Haxe:** [docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
 - **Backend architecture and contracts:** [docs/02-user-guide/HXHX_BACKEND_LAYERING.md](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
 - **Macro host protocol:** [docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
