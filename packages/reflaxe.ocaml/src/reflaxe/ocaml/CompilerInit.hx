@@ -30,32 +30,43 @@ class CompilerInit {
 		}
 		#end
 
-			// Ensure std/_std injection is only applied when targeting OCaml.
-			#if macro
-			CompilerBootstrap.InjectClassPaths();
-			#end
-			#if macro
-			final isOcamlTarget =
-				haxe.macro.Context.defined("ocaml_output") ||
-				haxe.macro.Context.definedValue("target.name") == "ocaml" ||
-				haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
-			if (isOcamlTarget) {
-				// Force-link OCaml-only std overrides that are reached via backend intrinsics
-				// rather than direct Haxe references (so DCE/module reachability would drop them).
-				//
-				// Important: `Compiler.include("sys.io")` pulls in the whole package and bloats
-				// small outputs/snapshots. We only need `sys.io.Stdio` for backend-intrinsic
-				// lowering of `Sys.stdin/stdout/stderr`, so we load that module explicitly.
-				try {
-					haxe.macro.Context.getType("sys.io.Stdio");
-				} catch (_:Dynamic) {
-					haxe.macro.Context.error(
-						"reflaxe.ocaml: failed to load sys.io.Stdio (required for Sys stdio lowering).",
-						haxe.macro.Context.currentPos()
-					);
-				}
+		// Ensure std/_std injection is only applied when targeting OCaml.
+		#if macro
+		CompilerBootstrap.InjectClassPaths();
+		#end
+		#if macro
+		final isOcamlTarget =
+			haxe.macro.Context.defined("ocaml_output") ||
+			haxe.macro.Context.definedValue("target.name") == "ocaml" ||
+			haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
+		if (isOcamlTarget) {
+			// Force-link OCaml-only std overrides that are reached via backend intrinsics
+			// rather than direct Haxe references (so DCE/module reachability would drop them).
+			//
+			// Important: `Compiler.include("sys.io")` pulls in the whole package and bloats
+			// small outputs/snapshots. We only need `sys.io.Stdio` for backend-intrinsic
+			// lowering of `Sys.stdin/stdout/stderr`, so we load that module explicitly.
+			try {
+				haxe.macro.Context.getType("sys.io.Stdio");
+			} catch (_:haxe.Exception) {
+				haxe.macro.Context.error(
+					"reflaxe.ocaml: failed to load sys.io.Stdio (required for Sys stdio lowering).",
+					haxe.macro.Context.currentPos()
+				);
 			}
-			#end
+			// Typed catch lowering can wrap non-Exception throws as `haxe.ValueException`.
+			// Ensure the OCaml runtime module is always reachable so generated references to
+			// `Haxe_ValueException.create` link in stage0/stage3 bootstrap lanes.
+			try {
+				haxe.macro.Context.getType("haxe.ValueException");
+			} catch (_:haxe.Exception) {
+				haxe.macro.Context.error(
+					"reflaxe.ocaml: failed to load haxe.ValueException (required for typed catch lowering).",
+					haxe.macro.Context.currentPos()
+				);
+			}
+		}
+		#end
 
 		// Expression preprocessors rewrite typed expressions to be more codegen-friendly.
 		//

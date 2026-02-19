@@ -33,9 +33,6 @@ private typedef ProviderDispatch = {
 		  then returns a structural `ProviderDispatch` view for compile-safe invocation.
 **/
 class BackendProviderResolver {
-	@:keep
-	static final keepValueExceptionClass:Class<haxe.ValueException> = haxe.ValueException;
-
 	static inline function providerRegistrations(provider:ProviderDispatch):Array<BackendRegistrationSpec> {
 		return provider.registrations();
 	}
