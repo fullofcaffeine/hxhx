@@ -185,9 +185,13 @@ Notes:
 - Stage0 build-lane observability defaults:
   - default heartbeat is bounded (`HXHX_STAGE0_HEARTBEAT=30`)
   - default failfast is bounded (`HXHX_STAGE0_FAILFAST_SECS=7200`)
+  - optional RSS guard (`HXHX_STAGE0_MAX_RSS_MB=<limit>`) hard-stops runaway stage0 builds.
   - override defaults for this test lane with:
     - `HXHX_TARGETS_STAGE0_HEARTBEAT_DEFAULT=<sec>`
     - `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT=<sec>`
+- CI split for stability:
+  - `Tests` runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free bootstrap path).
+  - `Stage0 source-build smoke` separately validates stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`).
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.

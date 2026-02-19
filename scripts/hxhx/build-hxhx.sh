@@ -18,6 +18,7 @@ HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-30}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-7200}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
+HXHX_STAGE0_MAX_RSS_MB="${HXHX_STAGE0_MAX_RSS_MB:-0}"
 HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
 HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 HXHX_BOOTSTRAP_HEARTBEAT="${HXHX_BOOTSTRAP_HEARTBEAT:-20}"
@@ -57,6 +58,38 @@ cleanup_stage0_log_file() {
   fi
 }
 
+collect_process_tree_pids() {
+  local root_pid="$1"
+  local frontier="$root_pid"
+  local seen=" $root_pid "
+  local collected="$root_pid"
+  local parent_pid=""
+  local child_pids=""
+  local child_pid=""
+  local next_frontier=""
+
+  while [ -n "$frontier" ]; do
+    next_frontier=""
+    for parent_pid in $frontier; do
+      child_pids="$(pgrep -P "$parent_pid" 2>/dev/null || true)"
+      if [ -z "$child_pids" ]; then
+        continue
+      fi
+      for child_pid in $child_pids; do
+        if [[ "$seen" == *" $child_pid "* ]]; then
+          continue
+        fi
+        seen="$seen$child_pid "
+        collected="$collected $child_pid"
+        next_frontier="$next_frontier $child_pid"
+      done
+    done
+    frontier="${next_frontier# }"
+  done
+
+  echo "$collected"
+}
+
 case "$HXHX_BOOTSTRAP_HEARTBEAT" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_BOOTSTRAP_HEARTBEAT: $HXHX_BOOTSTRAP_HEARTBEAT (expected non-negative integer)." >&2
@@ -81,6 +114,13 @@ esac
 case "$HXHX_STAGE0_FAILFAST_SECS" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_STAGE0_FAILFAST_SECS: $HXHX_STAGE0_FAILFAST_SECS (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_MAX_RSS_MB" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_STAGE0_MAX_RSS_MB: $HXHX_STAGE0_MAX_RSS_MB (expected non-negative integer)." >&2
     exit 2
     ;;
 esac
@@ -296,9 +336,13 @@ fi
     local start_hb=""
     local now=""
     local elapsed=""
-    local child_pid=""
+    local tree_pids=""
+    local tree_pid=""
     local rss_probe_pid=""
+    local pid_rss_kb=""
     local rss_kb=""
+    local tree_rss_kb=""
+    local tree_rss_mb=""
     local rss_mb=""
     local cpu_pct=""
     local proc_state=""
@@ -339,12 +383,25 @@ fi
         continue
       fi
 
-      child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
+      tree_pids="$(collect_process_tree_pids "$pid")"
       rss_probe_pid="$pid"
-      if [ -n "$child_pid" ]; then
-        rss_probe_pid="$child_pid"
+      rss_kb=""
+      tree_rss_kb=0
+      tree_rss_mb=0
+      for tree_pid in $tree_pids; do
+        pid_rss_kb="$(ps -o rss= -p "$tree_pid" 2>/dev/null | tr -d ' ' || true)"
+        if [ -z "$pid_rss_kb" ]; then
+          continue
+        fi
+        tree_rss_kb="$((tree_rss_kb + pid_rss_kb))"
+        if [ -z "$rss_kb" ] || [ "$pid_rss_kb" -gt "$rss_kb" ]; then
+          rss_kb="$pid_rss_kb"
+          rss_probe_pid="$tree_pid"
+        fi
+      done
+      if [ "$tree_rss_kb" -gt 0 ]; then
+        tree_rss_mb="$((tree_rss_kb / 1024))"
       fi
-      rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
       cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
       proc_state="$(ps -o state= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
       log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
@@ -355,22 +412,25 @@ fi
       if [ -n "$proc_state" ]; then
         heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
       fi
+      if [ "$tree_rss_mb" != "0" ]; then
+        heartbeat_suffix="$heartbeat_suffix tree_rss=${tree_rss_mb}MB"
+      fi
       if [ -n "$log_bytes" ]; then
         heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
       fi
       if [ -n "$rss_kb" ]; then
         rss_mb="$((rss_kb / 1024))"
-        if [ -n "$child_pid" ]; then
-          echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix" >&2
-        else
-          echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid$heartbeat_suffix" >&2
+        if [ "$HXHX_STAGE0_MAX_RSS_MB" != "0" ] && [ "$tree_rss_mb" -ge "$HXHX_STAGE0_MAX_RSS_MB" ]; then
+          echo "Stage0 build exceeded RSS cap (${HXHX_STAGE0_MAX_RSS_MB}MB). Killing pid=$pid." >&2
+          kill -9 "$pid" >/dev/null 2>&1 || true
+          echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+          tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+          cleanup_stage0_log_file "$log_file"
+          exit 1
         fi
+        echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid focus=$rss_probe_pid$heartbeat_suffix" >&2
       else
-        if [ -n "$child_pid" ]; then
-          echo "== Stage0 build heartbeat: elapsed=${elapsed}s pid=$pid child=$child_pid$heartbeat_suffix" >&2
-        else
-          echo "== Stage0 build heartbeat: elapsed=${elapsed}s pid=$pid$heartbeat_suffix" >&2
-        fi
+        echo "== Stage0 build heartbeat: elapsed=${elapsed}s pid=$pid$heartbeat_suffix" >&2
       fi
       if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
         if [ -s "$log_file" ]; then
