@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/hxhx-logo.png" alt="hxhx logo" width="640" />
+</p>
+
 # hxhx
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
