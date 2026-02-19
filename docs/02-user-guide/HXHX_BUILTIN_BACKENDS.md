@@ -125,8 +125,16 @@ Dynamic registration notes:
   - `-D hxhx_backend_providers=TypeA;TypeB`
   - `-D hxhx.backend.provider=TypeA`
 - Provider type requirement:
-  - each declared provider must expose static `providerRegistrations():Array<BackendRegistrationSpec>`
-  - instance-only `registrations()` providers are intentionally not loaded in Stage3.
+  - each declared provider must resolve to a class implementing
+    `ITargetBackendProvider` with `new()` and
+    `registrations():Array<BackendRegistrationSpec>`.
+  - known builtin providers may still be fast-pathed through the compile-time
+    provider table in `BackendProviderResolver`.
+- Strategy choice (current): **mixed model**.
+  - Keep compile-time known-provider fast paths for bundled builtins.
+  - Keep typed dynamic loading for plugin/bundled provider classes by type path.
+  - Defer macro-generated provider registries until provider count/maintenance
+    overhead justifies the extra macro/build complexity.
 - Fallback behavior is explicit: if no provider declarations are present, Stage3 uses builtin
   registrations only (`BackendRegistry.clearDynamicRegistrations()` runs per request).
 - Optional diagnostics: `HXHX_TRACE_BACKEND_SELECTION=1` prints selected `implId`, and
@@ -134,8 +142,9 @@ Dynamic registration notes:
 - Cast policy for `GenIrProgram` boundary:
   - allowed in shared helper `backend.GenIrBoundary.requireProgram(...)` for interface-boundary
     recovery in target cores,
-  - and at Stage3 reflection seams (`Reflect.callMethod` provider registration bridge,
-    reflaxe backend bridge dispatch for known wrapper types),
+  - at the scoped provider boundary seam in
+    `hxhx.BackendProviderResolver.requireProvider(...)`,
+  - and at Stage3 reflaxe bridge dispatch for known wrapper types,
   - not allowed inside target-core emitters (`OcamlTargetCore`, `JsTargetCore`).
 
 ### Injection rules (important for predictable UX)

@@ -93,7 +93,7 @@ Chosen path (near-term): **Approach B** from the design options, with a strict c
   - `IBackend.emit(program:GenIrProgram, context:BackendContext):EmitResult`
   - `ITargetCore.emit(program:GenIrProgram, context:BackendContext):EmitResult`
 - Keep target-core implementations (`OcamlTargetCore`, `JsTargetCore`) free of `program` boundary casts.
-- Keep provider registration behind one explicit reflective boundary:
+- Keep provider registration behind one explicit typed boundary:
   - `BackendRegistry.registerProvider(regs)`
 
 Allowed cast boundaries (narrow and documented):
@@ -101,8 +101,8 @@ Allowed cast boundaries (narrow and documented):
 - Shared backend GenIR boundary helper:
   - `packages/hxhx-core/src/backend/GenIrBoundary.hx`
   - `GenIrBoundary.requireProgram(program:Dynamic):GenIrProgram`
-- Stage3 provider reflection bridge when loading provider static methods by type name
-  (`Reflect.callMethod` result cast to `Array<BackendRegistrationSpec>`).
+- Stage3 provider boundary seam in `hxhx.BackendProviderResolver.requireProvider(...)`
+  (`cast providerContract` after `Std.downcast(..., ITargetBackendProvider)` validation).
 - Stage3 reflaxe bridge dispatch for known backend wrapper types in `emitWithBackend(...)`.
 
 Not allowed:
@@ -112,7 +112,8 @@ Not allowed:
 
 Medium-term roadmap:
 
-1. Replace reflective provider static call with an explicitly typed adapter path.
+1. Keep provider dispatch on the current mixed model:
+   compile-time known-provider table + typed dynamic provider loading.
 2. Replace `GenIrProgram` typedef alias with a concrete wrapper value once backend IR extraction is ready.
 3. Keep a single enforcement check in CI so regressions are caught before bootstrap OCaml type-check.
 
