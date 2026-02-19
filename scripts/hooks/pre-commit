@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+
+resolve_gitleaks_bin() {
+	if command -v gitleaks >/dev/null 2>&1; then
+		command -v gitleaks
+		return 0
+	fi
+
+	if [ -x "$ROOT_DIR/gitleaks" ]; then
+		echo "$ROOT_DIR/gitleaks"
+		return 0
+	fi
+
+	return 1
+}
+
+run_gitleaks_staged() {
+	local gitleaks_bin="$1"
+	local gitleaks_help
+	gitleaks_help="$("$gitleaks_bin" --help 2>&1 || true)"
+
+	if printf '%s' "$gitleaks_help" | grep -q '\<protect\>'; then
+		"$gitleaks_bin" protect --staged --redact --config "$ROOT_DIR/.gitleaks.toml"
+		return 0
+	fi
+
+	if printf '%s' "$gitleaks_help" | grep -q '\<git\>'; then
+		"$gitleaks_bin" git --staged --redact --config "$ROOT_DIR/.gitleaks.toml"
+		return 0
+	fi
+
+	echo "[pre-commit] ERROR: unsupported gitleaks CLI; expected 'protect' or 'git' command." >&2
+	return 1
+}
+
+echo "[pre-commit] Running gitleaks on staged changes..."
+if ! GITLEAKS_BIN="$(resolve_gitleaks_bin)"; then
+	echo "[pre-commit] ERROR: gitleaks is required but was not found." >&2
+	echo "[pre-commit] Install: https://github.com/gitleaks/gitleaks#installing" >&2
+	exit 1
+fi
+run_gitleaks_staged "$GITLEAKS_BIN"
+
+if ! command -v haxelib >/dev/null 2>&1; then
+	echo "[pre-commit] ERROR: haxelib is required but not installed." >&2
+	exit 1
+fi
+
+if ! haxelib run formatter --help >/dev/null 2>&1; then
+	echo "[pre-commit] ERROR: haxelib formatter is required but not installed." >&2
+	echo "[pre-commit] Install: haxelib install formatter" >&2
+	exit 1
+fi
+
+STAGED_HX_FILES=()
+while IFS= read -r staged_file; do
+	if [ -n "$staged_file" ]; then
+		STAGED_HX_FILES+=("$staged_file")
+	fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -- '*.hx')
+
+if [ "${#STAGED_HX_FILES[@]}" -gt 0 ]; then
+	echo "[pre-commit] Formatting staged Haxe files..."
+	FORMAT_ARGS=()
+	for hx_file in "${STAGED_HX_FILES[@]}"; do
+		if [ -f "$ROOT_DIR/$hx_file" ]; then
+			FORMAT_ARGS+=("-s" "$ROOT_DIR/$hx_file")
+		fi
+	done
+
+	if [ "${#FORMAT_ARGS[@]}" -gt 0 ]; then
+		haxelib run formatter "${FORMAT_ARGS[@]}"
+		git add -- "${STAGED_HX_FILES[@]}"
+	fi
+fi
+
+echo "[pre-commit] OK"

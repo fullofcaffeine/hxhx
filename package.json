@@ -18,6 +18,8 @@
     "download": "lix download",
     "haxe": "haxe",
     "ci:guards": "node scripts/ci/version-sync-check.js && node scripts/ci/legacy-path-check.js && node scripts/ci/provider-boundary-check.js",
+    "guard:hx-format": "bash scripts/lint/hx_format_guard.sh",
+    "hooks:install": "bash scripts/install-git-hooks.sh",
     "clean": "bash scripts/dev/clean-artifacts.sh --safe",
     "clean:deep": "bash scripts/dev/clean-artifacts.sh --deep --yes",
     "clean:tmp": "bash scripts/dev/clean-artifacts.sh --tmp-only",

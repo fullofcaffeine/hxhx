@@ -66,6 +66,23 @@ npm install
 npx lix download
 ```
 
+Recommended local hooks (gitleaks + deterministic staged Haxe formatting):
+
+```bash
+npm run hooks:install
+```
+
+Pre-commit requirements:
+
+- `gitleaks` available on `PATH` (or repo-local `./gitleaks` binary).
+- `haxelib formatter` installed (`haxelib install formatter`).
+
+Manual formatting guard command:
+
+```bash
+npm run guard:hx-format
+```
+
 Generate `.ml` files into an output directory:
 
 ```bash

@@ -1,0 +1,25 @@
+{
+  "excludes": [
+    "\\.haxelib",
+    "\\.git",
+    "\\.beads",
+    "node_modules",
+    "vendor",
+    "dist",
+    "packages/hxhx/bootstrap_work",
+    "packages/hxhx/bootstrap_out",
+    "packages/hxhx-macro-host/bootstrap_work",
+    "packages/hxhx-macro-host/bootstrap_out"
+  ],
+  "indentation": {
+    "character": "tab",
+    "tabWidth": 4,
+    "trailingWhitespace": false
+  },
+  "lineEnds": {
+    "lineEndCharacter": "lf"
+  },
+  "emptyLines": {
+    "finalNewline": true
+  }
+}
