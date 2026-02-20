@@ -28,32 +28,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install host toolchains (OCaml + git)
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
         run: |
           set -euo pipefail
-          retry_apt() {
-            local max_attempts=4
-            local attempt=1
-            while true; do
-              if "$@"; then
-                return 0
-              fi
-              if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "APT command failed after ${attempt} attempts: $*" >&2
-                return 1
-              fi
-              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
-              attempt=$((attempt + 1))
-              sleep 5
-            done
-          }
-          retry_apt sudo apt-get update
-          retry_apt sudo apt-get install -y \
-            ocaml dune ocaml-findlib \
-            git
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
           dune --version
           ocamlc -version
           git --version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
