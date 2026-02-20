@@ -82,9 +82,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+          build_log="$RUNNER_TEMP/stage0_source_build.log"
+          HXHX_BIN="$(
+            bash scripts/hxhx/build-hxhx.sh \
+              2> >(tee "$build_log" >&2) \
+              | tail -n 1
+          )"
           test -f "$HXHX_BIN"
           echo "hxhx_bin=$HXHX_BIN"
+
+          peak_tree_rss_mb="$(bash scripts/ci/extract-stage0-peak-rss.sh "$build_log")"
+          echo "stage0_peak_tree_rss_mb=$peak_tree_rss_mb"
+          {
+            echo "### Stage0 source smoke telemetry"
+            echo ""
+            echo "- Peak tree RSS: ${peak_tree_rss_mb}MB"
+            echo "- RSS cap policy: disabled in CI (`HXHX_STAGE0_MAX_RSS_MB=0`)"
+          } >>"$GITHUB_STEP_SUMMARY"
 
           targets="$("$HXHX_BIN" --hxhx-list-targets)"
           echo "$targets"
@@ -98,3 +112,11 @@ jobs:
             exit 1
           fi
           grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$guard_log"
+      - name: Upload stage0 smoke build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage0-source-smoke-build-log-${{ github.run_id }}
+          path: ${{ runner.temp }}/stage0_source_build.log
+          if-no-files-found: warn
+          retention-days: 14

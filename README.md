@@ -497,6 +497,10 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
 - script default build mode uses stage0 (`HXHX_FORCE_STAGE0=1`); set `HXHX_FORCE_STAGE0=0` to validate the stage0-free bootstrap lane explicitly
 - stage0 build-lane observability defaults: `HXHX_STAGE0_HEARTBEAT=30`, `HXHX_STAGE0_FAILFAST_SECS=7200`; optional memory cap: `HXHX_STAGE0_MAX_RSS_MB=<limit>` (override test-lane defaults with `HXHX_TARGETS_STAGE0_HEARTBEAT_DEFAULT` / `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT`)
 - CI split: the main `Tests` lane runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free), while source-built stage0 behavior is validated in the separate `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`, nightly/manual; tuned with `HXHX_STAGE0_OCAML_BUILD=native` + `HXHX_STAGE0_DISABLE_PREPASSES=1` for runner memory headroom)
+- Stage0 source-smoke telemetry:
+  - workflow logs now print `stage0_peak_tree_rss_mb=<n>` and upload `stage0_source_build.log` as an artifact for each run
+  - parse one log locally: `bash scripts/ci/extract-stage0-peak-rss.sh <stage0_source_build.log>`
+  - aggregate recent GitHub baseline samples (default 5): `bash scripts/ci/stage0-source-rss-baseline.sh --allow-partial`
 - source-level Stage3 receiver-call regression (`other.add(n)` arity shape) is covered by `npm run test:m14:hih-emitter-receiver-call` (no stage0 bootstrap rebuild required)
 
 ## Two surfaces (design)

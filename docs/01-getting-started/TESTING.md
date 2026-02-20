@@ -197,6 +197,11 @@ Notes:
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=native` + `HXHX_STAGE0_DISABLE_PREPASSES=1` to reduce runner memory pressure).
+  - each Stage0 Source Smoke run emits `stage0_peak_tree_rss_mb=<n>` and uploads
+    `stage0_source_build.log` as a workflow artifact.
+  - local telemetry helpers:
+    - parse one build log: `bash scripts/ci/extract-stage0-peak-rss.sh <stage0_source_build.log>`
+    - aggregate recent GitHub samples (default 5): `bash scripts/ci/stage0-source-rss-baseline.sh --allow-partial`
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.
