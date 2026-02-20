@@ -1,3 +1,10 @@
+## [0.9.8](https://github.com/fullofcaffeine/hxhx/compare/v0.9.7...v0.9.8) (2026-02-20)
+
+
+### Bug Fixes
+
+* **gate2:** default Darwin resolution skip to fail-fast ([70f7891](https://github.com/fullofcaffeine/hxhx/commit/70f7891d27161606f071a4f541c8d4e22df60b7a))
+
 ## [0.9.7](https://github.com/fullofcaffeine/hxhx/compare/v0.9.6...v0.9.7) (2026-02-20)
 
 
