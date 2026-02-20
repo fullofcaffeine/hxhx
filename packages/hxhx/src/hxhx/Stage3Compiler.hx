@@ -989,12 +989,20 @@ class Stage3Compiler {
 		// - In a lix repo, `haxelib path <lib>` may be a wrapper that fails unless the `.hxml`
 		//   file exists. Parsing the `.hxml` directly keeps Stage3 non-delegating and avoids
 		//   toolchain variance.
-		var dir = (cwd == null || cwd.length == 0) ? "." : cwd;
+		inline function joinPath(base:String, tail:String):String {
+			if (base.length == 0)
+				return tail;
+			if (StringTools.endsWith(base, "/"))
+				return base + tail;
+			return base + "/" + tail;
+		}
+
+		var dir = sys.FileSystem.absolutePath((cwd == null || cwd.length == 0) ? "." : cwd);
 		for (_ in 0...10) {
-			final candidate = Path.normalize(Path.join([dir, "haxe_libraries", lib + ".hxml"]));
+			final candidate = sys.FileSystem.absolutePath(joinPath(dir, "haxe_libraries/" + lib + ".hxml"));
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate))
 				return candidate;
-			final parent = Path.normalize(Path.join([dir, ".."]));
+			final parent = sys.FileSystem.absolutePath(joinPath(dir, ".."));
 			if (parent == dir)
 				break;
 			dir = parent;
@@ -1069,13 +1077,22 @@ class Stage3Compiler {
 		var dir = try haxe.io.Path.directory(abs) catch (_:String) "";
 		if (dir == null || dir.length == 0)
 			return "";
+		dir = sys.FileSystem.absolutePath(dir);
+
+		inline function joinPath(base:String, tail:String):String {
+			if (base.length == 0)
+				return tail;
+			if (StringTools.endsWith(base, "/"))
+				return base + tail;
+			return base + "/" + tail;
+		}
 
 		// Walk upwards a few levels looking for `scripts/hxhx/build-hxhx-macro-host.sh`.
 		for (_ in 0...10) {
-			final candidate = Path.join([dir, "scripts", "hxhx", "build-hxhx-macro-host.sh"]);
+			final candidate = joinPath(dir, "scripts/hxhx/build-hxhx-macro-host.sh");
 			if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate))
 				return dir;
-			final parent = Path.normalize(Path.join([dir, ".."]));
+			final parent = sys.FileSystem.absolutePath(joinPath(dir, ".."));
 			if (parent == dir)
 				break;
 			dir = parent;

@@ -29,9 +29,23 @@ import haxe.io.Path;
 	  As Stage1 grows, we can extend this to match upstream behavior more closely.
 **/
 class Hxml {
+	static inline function joinPath(base:String, tail:String):String {
+		if (base == null || base.length == 0)
+			return tail;
+		if (StringTools.endsWith(base, "/"))
+			return base + tail;
+		return base + "/" + tail;
+	}
+
+	static function normalizeFsPath(path:String):String {
+		if (path == null || path.length == 0)
+			return sys.FileSystem.absolutePath(".");
+		return sys.FileSystem.absolutePath(path);
+	}
+
 	public static function parseFile(path:String):Null<Array<String>> {
 		final seen = new Map<String, Bool>();
-		return parseFileRec(Path.normalize(path), seen, 0, false);
+		return parseFileRec(normalizeFsPath(path), seen, 0, false);
 	}
 
 	/**
@@ -52,7 +66,7 @@ class Hxml {
 	**/
 	public static function parseFileUnits(path:String):Null<Array<Array<String>>> {
 		final seen = new Map<String, Bool>();
-		final toks = parseFileRec(Path.normalize(path), seen, 0, true);
+		final toks = parseFileRec(normalizeFsPath(path), seen, 0, true);
 		if (toks == null)
 			return null;
 		return splitIntoUnits(toks);
@@ -82,7 +96,7 @@ class Hxml {
 
 		for (a in args) {
 			if (a != null && a.length > 0 && !StringTools.startsWith(a, "-") && StringTools.endsWith(a, ".hxml")) {
-				final expanded = parseFileRec(Path.normalize(a), seen, 0, true);
+				final expanded = parseFileRec(normalizeFsPath(a), seen, 0, true);
 				if (expanded == null)
 					return null;
 				for (t in expanded)
@@ -141,7 +155,7 @@ class Hxml {
 			return null;
 		}
 
-		final norm = Path.normalize(path);
+		final norm = normalizeFsPath(path);
 		// `seen` is a recursion-stack guard, not a global "already expanded" cache.
 		//
 		// Why
@@ -188,7 +202,7 @@ class Hxml {
 					if (i + 1 < tokens.length) {
 						final cp = tokens[i + 1];
 						if (cp != null && cp.length > 0 && !Path.isAbsolute(cp)) {
-							tokens[i + 1] = Path.normalize(Path.join([fileDir, cp]));
+							tokens[i + 1] = normalizeFsPath(joinPath(fileDir, cp));
 						}
 					}
 					i += 2;
@@ -207,7 +221,7 @@ class Hxml {
 			}
 
 			if (!StringTools.startsWith(t, "-") && StringTools.endsWith(t, ".hxml")) {
-				final included = Path.isAbsolute(t) ? Path.normalize(t) : Path.normalize(Path.join([fileDir, t]));
+				final included = Path.isAbsolute(t) ? normalizeFsPath(t) : normalizeFsPath(joinPath(fileDir, t));
 				final expanded = parseFileRec(included, seen, depth + 1, allowNext);
 				if (expanded == null) {
 					seen.remove(norm);

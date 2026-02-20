@@ -1023,7 +1023,7 @@ export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 if [ -n "${HXHX_GATE2_WRAP_LOG:-}" ]; then
-  printf '%s\n' "haxe $*" >>"${HXHX_GATE2_WRAP_LOG}"
+  printf '%s\n' "haxe \$*" >>"${HXHX_GATE2_WRAP_LOG}"
 fi
 
 exec "${HXHX_BIN}" --hxhx-stage3 --hxhx-no-emit --hxhx-out out_hxhx_runci_stage3_no_emit "\$@"

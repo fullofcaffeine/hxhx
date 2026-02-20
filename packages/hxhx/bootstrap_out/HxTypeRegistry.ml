@@ -1306,7 +1306,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
   HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteStmt"; "shortenCall" ];
   HxType.register_class_instance_fields "hxhx.Hxml" [];
-  HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "parseFile"; "parseFileRec"; "parseFileUnits"; "splitIntoUnits"; "tokenizeLine" ];
+  HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "joinPath"; "normalizeFsPath"; "parseFile"; "parseFileRec"; "parseFileUnits"; "splitIntoUnits"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
   HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
   HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "displayRequest"; "hadCmd"; "libs"; "macros"; "main"; "noOutput"; "roots" ];

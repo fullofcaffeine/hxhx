@@ -16,14 +16,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$ROOT_DIR/run-upstream-runci-macro.sh"
 
 HOST_OS="$(uname -s)"
-if [ "$HOST_OS" = "Darwin" ]; then
-  RETRY_COUNT_DEFAULT=1
-else
-  RETRY_COUNT_DEFAULT=0
-fi
+RETRY_COUNT_DEFAULT=0
 RETRY_COUNT="${HXHX_GATE2_DISPLAY_RETRY_COUNT:-$RETRY_COUNT_DEFAULT}"
 RETRY_DELAY_SEC="${HXHX_GATE2_DISPLAY_RETRY_DELAY_SEC:-3}"
-DISPLAY_SKIP_DARWIN_SEGFAULT="${HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT:-1}"
+DISPLAY_SKIP_DARWIN_SEGFAULT="${HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT:-0}"
 
 attempt=0
 while true; do
@@ -43,7 +39,7 @@ while true; do
   fi
 
   if [ "$HOST_OS" = "Darwin" ] && [ "$exit_code" -eq 139 ] && [ "$DISPLAY_SKIP_DARWIN_SEGFAULT" = "1" ]; then
-    echo "Skipping Gate2 display rung on macOS after persistent SIGSEGV (HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT=1)."
+    echo "Skipping Gate2 display rung on macOS after SIGSEGV (HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT=1 opt-in)."
     echo "gate2_display_stage=skipped reason=darwin_sigsegv"
     exit 0
   fi
