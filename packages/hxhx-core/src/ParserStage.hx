@@ -1469,7 +1469,9 @@ class ParserStage {
 		final isStatic = (lines.length > 2 ? lines[2] : "1") == "1";
 		final typeHint = lines.length > 3 ? lines[3] : "";
 		final initRaw = lines.length > 4 ? lines.slice(4).join("\n") : "";
-		final init = initRaw.length > 0 ? parseReturnExprText(initRaw) : null;
+		var init:Null<HxExpr> = null;
+		if (initRaw.length > 0)
+			init = true ? parseReturnExprText(initRaw) : null;
 		return new HxFieldDecl(name, vis, isStatic, typeHint, init);
 	}
 

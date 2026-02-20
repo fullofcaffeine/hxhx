@@ -76,7 +76,12 @@ class ExprMacroExpander {
 			final newFields = new Array<HxFieldDecl>();
 			for (f in HxClassDecl.getFields(cls)) {
 				final init = HxFieldDecl.getInit(f);
-				final rewritten = rewriteExprOrNull(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, () -> expandedCount++);
+				var rewritten:Null<HxExpr> = init;
+				if (init != null) {
+					final rewrittenExpr = rewriteExpr(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, () -> expandedCount++);
+					if (rewrittenExpr != init)
+						rewritten = true ? rewrittenExpr : null;
+				}
 				if (rewritten != init)
 					changed = true;
 				newFields.push(new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f), HxFieldDecl.getIsStatic(f), HxFieldDecl.getTypeHint(f),
@@ -149,7 +154,12 @@ class ExprMacroExpander {
 				}
 				changed ? SBlock(out, pos) : s;
 			case SVar(name, typeHint, init, pos):
-				final rInit = rewriteExprOrNull(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+				var rInit:Null<HxExpr> = init;
+				if (init != null) {
+					final rewrittenInit = rewriteExpr(init, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
+					if (rewrittenInit != init)
+						rInit = true ? rewrittenInit : null;
+				}
 				rInit != init ? SVar(name, typeHint, rInit, pos) : s;
 			case SIf(cond, thenBranch, elseBranch, pos):
 				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
@@ -206,11 +216,6 @@ class ExprMacroExpander {
 				final re = rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				re != e ? SExpr(re, pos) : s;
 		}
-	}
-
-	static function rewriteExprOrNull(e:Null<HxExpr>, session:MacroHostSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
-			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, depth:Int, onExpand:() -> Void):Null<HxExpr> {
-		return e == null ? null : rewriteExpr(e, session, allowed, allowKeys, importMap, modulePkg, trace, depth, onExpand);
 	}
 
 	static function rewriteExpr(e:HxExpr, session:MacroHostSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
