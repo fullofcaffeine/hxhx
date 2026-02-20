@@ -1,0 +1,95 @@
+name: Stage0 Source Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "25 6 * * *"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  stage0-source-smoke:
+    name: Stage0 source-build smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+      - name: Build stage0 lane and run smoke checks
+        env:
+          HXHX_FORCE_STAGE0: "1"
+          HXHX_STAGE0_OCAML_BUILD: "byte"
+          HXHX_STAGE0_DISABLE_PREPASSES: "1"
+          HXHX_STAGE0_HEARTBEAT: "30"
+          HXHX_STAGE0_FAILFAST_SECS: "1800"
+          HXHX_STAGE0_MAX_RSS_MB: "0"
+        run: |
+          set -euo pipefail
+
+          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+          test -f "$HXHX_BIN"
+          echo "hxhx_bin=$HXHX_BIN"
+
+          targets="$("$HXHX_BIN" --hxhx-list-targets)"
+          echo "$targets"
+          echo "$targets" | grep -qx "ocaml-stage3"
+          echo "$targets" | grep -qx "js-native"
+
+          guard_log="$RUNNER_TEMP/stage0_source_guard.log"
+          if HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --version >"$guard_log" 2>&1; then
+            echo "Expected HXHX_FORBID_STAGE0=1 to block stage0 passthrough for source-build smoke." >&2
+            sed -n '1,60p' "$guard_log" >&2
+            exit 1
+          fi
+          grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$guard_log"

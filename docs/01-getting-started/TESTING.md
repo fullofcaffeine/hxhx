@@ -191,7 +191,8 @@ Notes:
     - `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT=<sec>`
 - CI split for stability:
   - `Tests` runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free bootstrap path).
-  - `Stage0 source-build smoke` separately validates stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`).
+  - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
+    stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane.
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.
