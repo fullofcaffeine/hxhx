@@ -53,7 +53,12 @@ jobs:
             done
           }
           retry_apt sudo apt-get update
-          retry_apt sudo apt-get install -y ocaml dune ocaml-findlib libextlib-ocaml-dev
+          if apt-cache show dune >/dev/null 2>&1; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+          retry_apt sudo apt-get install -y ocaml "${dune_pkg}" ocaml-findlib libextlib-ocaml-dev
           dune --version
           ocamlc -version
 
@@ -126,8 +131,13 @@ jobs:
             done
           }
           retry_apt sudo apt-get update
+          if apt-cache show dune >/dev/null 2>&1; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
           retry_apt sudo apt-get install -y \
-            ocaml dune ocaml-findlib \
+            ocaml "${dune_pkg}" ocaml-findlib \
             neko \
             python3 \
             default-jdk \

@@ -63,8 +63,13 @@ jobs:
             done
           }
           retry_apt sudo apt-get update
+          if apt-cache show dune >/dev/null 2>&1; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
           retry_apt sudo apt-get install -y \
-            ocaml dune ocaml-findlib \
+            ocaml "${dune_pkg}" ocaml-findlib \
             build-essential
           dune --version
           ocamlc -version
