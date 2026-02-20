@@ -247,6 +247,7 @@ Supported today (covered by `scripts/test-hxhx-targets.sh`):
 Known unsupported semantics (explicit fail-fast behavior):
 
 - full Haxe class/interface typed-catch semantics (`catch (e:SomeType)` with exact runtime type matching beyond primitive/common builtins)
+- class construction via `new SomeClass(...)` (non-Array constructors currently fail fast with explicit `ENew(Type)` MVP error)
 - full Haxe enum runtime/model parity (constructors with parameters, exact enum index semantics)
 - full Haxe `Type` API parity beyond the helpers above
 

@@ -119,23 +119,6 @@ class JsExprEmitter {
 		return calleeJs + "(" + argsJs + ")";
 	}
 
-	static function resolveTypePath(typePath:String, scope:JsEmitScope):Null<String> {
-		if (typePath == null || typePath.length == 0)
-			return null;
-		if (scope != null) {
-			final direct = scope.resolveClassRef(typePath);
-			if (direct != null)
-				return direct;
-			final parts = typePath.split(".");
-			if (parts.length > 0) {
-				final simple = scope.resolveClassRef(parts[parts.length - 1]);
-				if (simple != null)
-					return simple;
-			}
-		}
-		return null;
-	}
-
 	static function emitNew(typePath:String, args:Array<HxExpr>, scope:JsEmitScope):String {
 		final argsJs = args.map(a -> emit(a, scope)).join(", ");
 		switch (typePath) {
@@ -146,11 +129,8 @@ class JsExprEmitter {
 			case _:
 		}
 
-		final ctor = resolveTypePath(typePath, scope);
-		if (ctor == null) {
-			unsupported("ENew(" + typePath + ")");
-		}
-		return "new " + ctor + "(" + argsJs + ")";
+		unsupported("ENew(" + typePath + ")");
+		return "";
 	}
 
 	static function emitBinop(op:String, left:HxExpr, right:HxExpr, scope:JsEmitScope):String {

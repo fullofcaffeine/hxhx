@@ -311,6 +311,29 @@ class JsNativeNewArrayMain {
 }
 HX
 
+cat >"$tmpdir/src/JsNativeClassInstanceMain.hx" <<'HX'
+class JsNativeCounter {
+  public var value:Int;
+  public var label:String = "counter";
+
+  public function new(seed:Int) {
+    this.value = seed;
+  }
+
+  public function bump(delta:Int):Int {
+    this.value += delta;
+    return this.value;
+  }
+}
+
+class JsNativeClassInstanceMain {
+  static function main() {
+    var c = new JsNativeCounter(2);
+    Sys.println("js-native-class:" + c.label + ":" + c.bump(3) + ":" + c.bump(4));
+  }
+}
+HX
+
 cat >"$tmpdir/src/JsNativeEnumReflectionMain.hx" <<'HX'
 class JsNativeEnumReflectionMain {
   static function main() {
@@ -577,6 +600,13 @@ if [ "$has_js_native_target" -eq 1 ]; then
   echo "$out" | grep -q "^run=ok$"
   echo "$out" | grep -q "^js-native-new-array:2:7:9$"
   test -f "$tmpdir/out_js_native_new_array/main.js"
+
+  echo "== Builtin fast-path target: js-native instance class construction fails fast (explicit MVP boundary)"
+  if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-run --js "$tmpdir/out_js_class_instance/main.js" -cp "$tmpdir/src" -main JsNativeClassInstanceMain --hxhx-out "$tmpdir/out_js_class_instance" >"$legacy_log" 2>&1; then
+    echo "Expected js-native class construction to fail fast in MVP mode." >&2
+    exit 1
+  fi
+  grep -q "js-native MVP does not support expression kind: ENew(JsNativeCounter)" "$legacy_log"
 
   echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"
   mkdir -p "$tmpdir/workdir"
