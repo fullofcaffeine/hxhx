@@ -164,7 +164,8 @@ class ExprMacroExpander {
 			case SIf(cond, thenBranch, elseBranch, pos):
 				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				final rThen = rewriteStmt(thenBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-				final rElse = elseBranch == null ? null : rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+				var rElse:Null<HxStmt> = null;
+				if (elseBranch != null) rElse = true ? rewriteStmt(elseBranch, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand) : null;
 					(rCond != cond || rThen != thenBranch || rElse != elseBranch) ? SIf(rCond, rThen, rElse, pos) : s;
 			case SWhile(cond, body, pos):
 				final rCond = rewriteExpr(cond, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
