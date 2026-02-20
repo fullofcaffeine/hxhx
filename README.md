@@ -62,6 +62,12 @@ Build `hxhx` from committed bootstrap snapshots:
 bash scripts/hxhx/build-hxhx.sh
 ```
 
+Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior):
+
+```bash
+npm run test:upstream:js-oracle-smoke
+```
+
 ## Environment setup
 
 Required tools:

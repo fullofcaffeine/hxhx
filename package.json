@@ -97,6 +97,7 @@
     "test:upstream:runci-macro-stage1": "bash scripts/hxhx/run-upstream-runci-macro-stage1.sh",
     "test:upstream:runci-macro-stage3-typeonly": "bash scripts/hxhx/run-upstream-runci-macro-stage3-typeonly.sh",
     "test:upstream:runci-macro-stage3-no-emit": "bash scripts/hxhx/run-upstream-runci-macro-stage3-no-emit.sh",
+    "test:upstream:js-oracle-smoke": "bash scripts/hxhx/run-upstream-js-oracle-smoke.sh",
     "test:upstream:display-stage3-no-emit": "bash scripts/hxhx/run-upstream-display-stage3-no-emit.sh",
     "test:upstream:display-stage3-emit-stress": "bash scripts/hxhx/run-upstream-display-stage3-emit-stress.sh",
     "test:upstream:display-stage3-emit-run-smoke": "bash scripts/hxhx/run-upstream-display-stage3-emit-run-smoke.sh",

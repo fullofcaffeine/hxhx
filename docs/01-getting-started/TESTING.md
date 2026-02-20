@@ -270,6 +270,21 @@ Select targets via `HXHX_GATE3_TARGETS` (comma-separated) or pass them as args:
 HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
+Run a lightweight JS runtime oracle comparison (upstream `haxe` vs linked `hxhx js-native`):
+
+```bash
+npm run test:upstream:js-oracle-smoke
+```
+
+Notes:
+
+- This uses repo-local fixtures and compares runtime behavior (stdout + exit code) by compiling each fixture with both compilers.
+- Default fixture set covers loop arithmetic, switch expressions, enum reflection helpers, try/catch rethrow, and array comprehensions.
+- Optional controls:
+  - `HXHX_JS_ORACLE_FIXTURES=JsOracleLoopMain,JsOracleTryCatchMain` to run a subset.
+  - `HXHX_JS_ORACLE_REQUIRE_HAXE_437=0` to bypass strict `haxe --version` enforcement.
+  - `HXHX_FORBID_STAGE0=1` (default in this runner) to block delegation while compiling with `hxhx`.
+
 Run the linked builtin target smoke (delegated `--target ocaml` vs builtin `--target ocaml-stage3`):
 
 ```bash
