@@ -1,0 +1,5 @@
+-cp test
+-cp packages/hxhx-core/src
+
+-main M14HihNullableEnumBranchEmitIntegrationTest
+--interp
