@@ -375,7 +375,7 @@ fi
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
           cleanup_stage0_log_file "$log_file"
-          exit 1
+          return 1
         fi
       fi
 
@@ -426,7 +426,7 @@ fi
           echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
           tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
           cleanup_stage0_log_file "$log_file"
-          exit 1
+          return 1
         fi
         echo "== Stage0 build heartbeat: elapsed=${elapsed}s rss=${rss_mb}MB pid=$pid focus=$rss_probe_pid$heartbeat_suffix" >&2
       else
@@ -450,7 +450,7 @@ fi
       echo "Stage0 build failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
       tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
       cleanup_stage0_log_file "$log_file"
-      exit "$code"
+      return "$code"
     fi
     cleanup_stage0_log_file "$log_file"
   }
