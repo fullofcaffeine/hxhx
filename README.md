@@ -22,23 +22,27 @@ It is built to be:
 - behavior-compatible with upstream Haxe `4.3.7` (via oracle-driven gates),
 - MIT-friendly for embedding/commercial distribution scenarios.
 
+## Choose your path
+
+- **I want to evaluate `hxhx`** (scope, parity, readiness):
+  - [Roadmap and milestones](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
+  - [Acceptance criteria and gate definitions](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
+  - [Testing and gate workflows](docs/01-getting-started/TESTING.md)
+- **I want to use `reflaxe.ocaml` now** (with this repo or upstream Haxe):
+  - [`reflaxe.ocaml` package README](packages/reflaxe.ocaml/README.md)
+  - [Use `reflaxe.ocaml` with upstream Haxe](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
+- **I want to contribute to compiler/backend development**:
+  - [Backend architecture and contracts](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
+  - [Macro host protocol](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
+  - [Stdlib reuse + provenance boundaries](docs/00-project/STD_LIB_POLICY.md)
+  - [Public release preflight checklist](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
+
 ## Why this project exists
 
 - **Hackability first:** compiler code should be readable and practical to extend.
 - **Parity as a goal:** align behavior with upstream Haxe `4.3.7` through oracle-driven gates.
 - **Permissive distribution path:** keep implementation provenance clean so embedding/commercial usage stays practical.
 - **Performance path:** compile Reflaxe targets to native executables instead of relying only on eval workflows.
-
-## Start here
-
-- **Roadmap and milestones:** [docs/01-getting-started/HXHX_1_0_ROADMAP.md](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
-- **Acceptance criteria and gate definitions:** [docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
-- **`reflaxe.ocaml` package README:** [packages/reflaxe.ocaml/README.md](packages/reflaxe.ocaml/README.md)
-- **Use `reflaxe.ocaml` with upstream Haxe:** [docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
-- **Backend architecture and contracts:** [docs/02-user-guide/HXHX_BACKEND_LAYERING.md](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
-- **Macro host protocol:** [docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
-- **Public release preflight checklist:** [docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
-- **Stdlib reuse + provenance boundaries:** [docs/00-project/STD_LIB_POLICY.md](docs/00-project/STD_LIB_POLICY.md)
 
 ## Quick start (contributors)
 
