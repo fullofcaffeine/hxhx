@@ -1,0 +1,4 @@
+.haxerc
+haxe_libraries/
+out/
+deps/

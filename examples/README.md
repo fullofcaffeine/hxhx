@@ -26,3 +26,4 @@ npm run test:acceptance
 
 - `hxhx-target-ocaml`: runs a tiny app through `hxhx --target ocaml`.
 - `hxhx-library-reflaxe-ocaml-plugin`: Stage3 plugin fixture (`--library`, macro hooks, classpath injection).
+- `hxhx-js-todoapp`: lix-first JS todo app (`coconut.ui`, `tink_web`, `tink_sql` schema types) compiled via `hxhx --target js`.

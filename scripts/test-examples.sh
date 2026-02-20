@@ -83,7 +83,10 @@ build_hxhx_if_needed() {
   # Markers:
   # - USE_HXHX: run the example via `hxhx --target ocaml` (stage0 shim path).
   # - USE_HXHX_STAGE3: run the example via `hxhx --hxhx-stage3` (bring-up path).
-  if ! has_marker_in_roots "USE_HXHX" "${EXAMPLE_ROOTS[@]}" && ! has_marker_in_roots "USE_HXHX_STAGE3" "${EXAMPLE_ROOTS[@]}"; then
+  # - USE_HXHX_JS: run the example via `hxhx --target js`.
+  if ! has_marker_in_roots "USE_HXHX" "${EXAMPLE_ROOTS[@]}" \
+    && ! has_marker_in_roots "USE_HXHX_STAGE3" "${EXAMPLE_ROOTS[@]}" \
+    && ! has_marker_in_roots "USE_HXHX_JS" "${EXAMPLE_ROOTS[@]}"; then
     return 0
   fi
 
@@ -118,6 +121,18 @@ build_hxhx_if_needed() {
 }
 
 build_hxhx_if_needed
+
+run_example_setup() {
+  local setup_script="setup-lix.sh"
+  [ -f "$setup_script" ] || return 0
+
+  if ! command -v lix >/dev/null 2>&1; then
+    echo "Skipping example (missing lix): $(pwd)"
+    return 1
+  fi
+
+  bash "$setup_script"
+}
 
 apply_example_env() {
   local env_file="EXAMPLE_ENV"
@@ -177,9 +192,14 @@ for dir in "${EXAMPLE_DIRS[@]}"; do
     rm -rf out
     mkdir -p out
 
+    if ! run_example_setup; then
+      exit 0
+    fi
+
     apply_example_env
 
-    exe=""
+    artifact=""
+    run_cmd=()
     if [ -f "USE_HXHX_STAGE3" ]; then
       if ! command -v ocamlopt >/dev/null 2>&1; then
         echo "Skipping Stage3 example (missing ocamlopt): ${dir}"
@@ -205,22 +225,33 @@ for dir in "${EXAMPLE_DIRS[@]}"; do
         stage3_args=(build.hxml)
       fi
       HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --hxhx-stage3 --hxhx-no-run --hxhx-emit-full-bodies --hxhx-out out "${stage3_args[@]}" -D ocaml_build=native
-      exe="out/out.exe"
+      artifact="out/out.exe"
+      run_cmd=("./$artifact")
+    elif [ -f "USE_HXHX_JS" ]; then
+      if ! command -v node >/dev/null 2>&1; then
+        echo "Skipping JS example (missing node): ${dir}"
+        exit 0
+      fi
+      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target js build.hxml --js out/main.js
+      artifact="out/main.js"
+      run_cmd=(node -e "global.window={console:console};global.document={getElementById:function(){return null;}};global.window.document=global.document;global.navigator={};require('./${artifact}');")
     elif [ -f "USE_HXHX" ]; then
       HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml build.hxml -D ocaml_build=native
-      exe="out/_build/default/out.exe"
+      artifact="out/_build/default/out.exe"
+      run_cmd=("./$artifact")
     else
       "$HAXE_BIN" build.hxml -D ocaml_build=native
-      exe="out/_build/default/out.exe"
+      artifact="out/_build/default/out.exe"
+      run_cmd=("./$artifact")
     fi
 
-    if [ ! -f "$exe" ]; then
-      echo "Missing built executable: ${dir}/$exe" >&2
+    if [ ! -f "$artifact" ]; then
+      echo "Missing built artifact: ${dir}/$artifact" >&2
       exit 1
     fi
 
     tmp="$(mktemp)"
-    HX_TEST_ENV=ok "./$exe" > "$tmp"
+    HX_TEST_ENV=ok "${run_cmd[@]}" > "$tmp"
     diff -u "expected.stdout" "$tmp"
     rm -f "$tmp"
   )

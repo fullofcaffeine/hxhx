@@ -1,0 +1,6 @@
+-cp src
+-cp deps/tink_sql_src
+-main Main
+-lib coconut.ui
+-lib coconut.vdom
+-lib tink_web

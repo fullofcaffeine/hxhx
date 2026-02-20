@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HXHX Todo Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: ['class'],
+        theme: {
+          extend: {
+            colors: {
+              background: 'hsl(var(--background))',
+              foreground: 'hsl(var(--foreground))',
+              card: 'hsl(var(--card))',
+              'card-foreground': 'hsl(var(--card-foreground))',
+              primary: 'hsl(var(--primary))',
+              'primary-foreground': 'hsl(var(--primary-foreground))',
+              muted: 'hsl(var(--muted))',
+              'muted-foreground': 'hsl(var(--muted-foreground))',
+              border: 'hsl(var(--border))',
+              input: 'hsl(var(--input))',
+              ring: 'hsl(var(--ring))',
+            },
+            borderRadius: {
+              lg: 'var(--radius)',
+              md: 'calc(var(--radius) - 2px)',
+              sm: 'calc(var(--radius) - 4px)',
+            },
+            fontFamily: {
+              display: ['"Sora"', 'sans-serif'],
+              body: ['"Manrope"', 'sans-serif'],
+            },
+            boxShadow: {
+              panel: '0 30px 80px -40px rgba(14, 116, 144, 0.55)',
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@600;700;800&display=swap"
+    />
+    <style>
+      :root {
+        --background: 224 71% 4%;
+        --foreground: 213 31% 91%;
+        --card: 222 47% 11%;
+        --card-foreground: 213 31% 91%;
+        --primary: 189 85% 49%;
+        --primary-foreground: 222 47% 11%;
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20% 65%;
+        --border: 217 33% 22%;
+        --input: 217 33% 22%;
+        --ring: 189 85% 49%;
+        --radius: 0.95rem;
+        --bg-grid: rgba(148, 163, 184, 0.15);
+      }
+      body {
+        font-family: 'Manrope', sans-serif;
+        background-image:
+          linear-gradient(to right, var(--bg-grid) 1px, transparent 1px),
+          linear-gradient(to bottom, var(--bg-grid) 1px, transparent 1px),
+          radial-gradient(circle at 20% -10%, rgba(34, 211, 238, 0.3), transparent 35%),
+          radial-gradient(circle at 85% 5%, rgba(56, 189, 248, 0.24), transparent 30%),
+          linear-gradient(180deg, #020617 0%, #0f172a 65%, #020617 100%);
+        background-size: 26px 26px, 26px 26px, auto, auto, auto;
+        color: #e2e8f0;
+      }
+    </style>
+  </head>
+  <body class="font-body antialiased">
+    <div id="app"></div>
+    <script src="../out/main.js"></script>
+  </body>
+</html>
