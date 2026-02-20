@@ -603,18 +603,12 @@ if [ "$has_js_native_target" -eq 1 ]; then
 
   echo "== Builtin fast-path target: js-native instance class construction fails fast (explicit MVP boundary)"
   if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-run --js "$tmpdir/out_js_class_instance/main.js" -cp "$tmpdir/src" -main JsNativeClassInstanceMain --hxhx-out "$tmpdir/out_js_class_instance" >"$legacy_log" 2>&1; then
-    if [ "$stage0_build_force" = "1" ]; then
-      echo "Expected js-native class construction to fail fast in MVP mode." >&2
-      exit 1
-    fi
-    echo "WARN: stage0-free bootstrap snapshot still allows js-native class construction; strict ENew fail-fast assertion skipped in this lane."
+    echo "Expected js-native class construction to fail fast in MVP mode." >&2
+    exit 1
   elif ! grep -q "js-native MVP does not support expression kind: ENew(JsNativeCounter)" "$legacy_log"; then
-    if [ "$stage0_build_force" = "1" ]; then
-      echo "Expected js-native class construction failure to mention ENew(JsNativeCounter)." >&2
-      tail -n 40 "$legacy_log" >&2 || true
-      exit 1
-    fi
-    echo "WARN: stage0-free bootstrap snapshot failed class construction with non-ENew message; keeping lane permissive."
+    echo "Expected js-native class construction failure to mention ENew(JsNativeCounter)." >&2
+    tail -n 40 "$legacy_log" >&2 || true
+    exit 1
   fi
 
   echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"

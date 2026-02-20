@@ -1268,7 +1268,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsBackend" [ "capabilities"; "delegate"; "describe"; "emit"; "id"; "registrations" ];
   HxType.register_class_static_fields "backend.js.JsBackend" [ "capabilitiesStatic"; "descriptor"; "emitBridge"; "providerDescriptor"; "providerRegistrations"; "targetCore" ];
   HxType.register_class_instance_fields "backend.js.JsExprEmitter" [];
-  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitLambda"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "nestedScope"; "resolveIdent"; "resolveTypePath"; "unsupported" ];
+  HxType.register_class_static_fields "backend.js.JsExprEmitter" [ "emit"; "emitAnon"; "emitArrayComprehension"; "emitBinop"; "emitCall"; "emitLambda"; "emitNew"; "emitRangeExpr"; "emitSwitchExpr"; "nestedScope"; "resolveIdent"; "unsupported" ];
   HxType.register_class_instance_fields "backend.js.JsFunctionScope" [ "classRefs"; "declareLocal"; "exprScope"; "freshTemp"; "locals"; "reserve"; "resolveClassRef"; "resolveLocal"; "tempCounter"; "used" ];
   HxType.register_class_static_fields "backend.js.JsFunctionScope" [];
   HxType.register_class_instance_fields "backend.js.JsNameMangler" [];
@@ -1304,7 +1304,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.DisplayResponseSynthesizer" [];
   HxType.register_class_static_fields "hxhx.DisplayResponseSynthesizer" [ "compactWhitespace"; "countArgumentIndexBeforeToken"; "extractArgTypeHintFromSegment"; "extractExprOfInner"; "findCallNameBeforeParen"; "findFunctionArgTypeHint"; "findMatchingCloseToken"; "findTypedefStructBody"; "formatCompletionList"; "isIdentContinue"; "isIdentStart"; "parseDisplayRequestQuery"; "parseStrictInt"; "parseStructFieldNames"; "readDisplaySource"; "stripTypePath"; "synthesize"; "synthesizeExprOfStructCompletion"; "tokenizeDisplaySource"; "xmlEscape" ];
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
-  HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteExprOrNull"; "rewriteStmt"; "shortenCall" ];
+  HxType.register_class_static_fields "hxhx.ExprMacroExpander" [ "buildImportMap"; "escapeStringLiteral"; "expandResolvedModules"; "exprKind"; "isTrueEnv"; "matchAllowlistedCall"; "renderCalleePath"; "renderSimpleCall"; "rewriteExpr"; "rewriteStmt"; "shortenCall" ];
   HxType.register_class_instance_fields "hxhx.Hxml" [];
   HxType.register_class_static_fields "hxhx.Hxml" [ "expandArgsToUnits"; "isSpace"; "parseFile"; "parseFileRec"; "parseFileUnits"; "splitIntoUnits"; "tokenizeLine" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
