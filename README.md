@@ -5,6 +5,7 @@
 # hxhx
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
+[![Compatibility Gate 1 Lite](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1-lite.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1-lite.yml)
 [![Compatibility Gate 1](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml)
 [![Compatibility Gate 2](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml)
 [![Compatibility Gate 3](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml)
@@ -16,6 +17,7 @@
 ## CI badges (plain English)
 
 - **CI**: fast safety checks (guards + core tests) on regular changes.
+- **Compatibility Gate 1 Lite**: per-commit upstream macro smoke (`stage3 no-emit`).
 - **Compatibility Gate 1**: upstream unit macro compatibility baseline.
 - **Compatibility Gate 2**: wider upstream `runci` macro workload checks.
 - **Compatibility Gate 3**: target/workflow compatibility checks (`Macro`, `Js`, `Neko`, and opt-in targets).
@@ -358,7 +360,8 @@ bash scripts/vendor/fetch-haxe-upstream.sh
 npm run test:upstream:unit-macro
 ```
 
-Gate 1 CI (`.github/workflows/gate1.yml`) runs weekly on Linux and remains manually triggerable via `workflow_dispatch` + `run_upstream_unit_macro=true`.
+Gate 1 Lite CI (`.github/workflows/gate1-lite.yml`) runs on every push/PR and executes the upstream macro smoke rung (`test:upstream:unit-macro-stage3-no-emit`).
+Full Gate 1 CI (`.github/workflows/gate1.yml`) runs weekly on Linux and remains manually triggerable via `workflow_dispatch` + `run_upstream_unit_macro=true`.
 Gate 1 unit-macro rungs fail fast by default with no Darwin-specific retry fallback, and all Stage3 rungs (`no-emit`, `type-only`, `emit`) run with resolver widening enabled (`HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`).
 The Stage3 `emit` rung also enforces a warning-clean baseline for OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`); any of these warnings fails the gate.
 
@@ -407,7 +410,7 @@ HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run tes
 
 Gate 3 CI (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`) and also supports manual `workflow_dispatch` overrides for `targets`, `allow_skip`, and `macro_mode`.
 Builtin fast-path smoke CI (`.github/workflows/gate3-builtin.yml`) also runs weekly on Linux and supports manual `workflow_dispatch` (`reps`, `run_js_native`).
-PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job that runs the linked non-delegating `--target js-native` emit+run lane.
+PR/push CI now includes Gate 1 Lite (`.github/workflows/gate1-lite.yml`) plus the dedicated `JS-native smoke` job in `.github/workflows/ci.yml` for non-delegating `--target js-native` emit+run coverage.
 Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedule (Linux baseline) and remains manually triggerable via `run_upstream_macro`.
 M7 bundle workflow (`.github/workflows/gate-m7.yml`) is manually triggerable and runs the one-command replacement bundle (`fast` or `full`) with strict-skip control.
 

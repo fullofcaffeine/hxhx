@@ -81,7 +81,9 @@ Notes:
   resolver + typer + macro-host plumbing plus OCaml emit/build wiring without invoking a stage0 `haxe` binary.
   - The historical stage0-shim baseline remains available as:
     `npm run test:upstream:unit-macro-stage0`
-  - CI cadence: weekly Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
+  - CI cadence:
+    - per-push/PR macro smoke in `.github/workflows/gate1-lite.yml` (`test:upstream:unit-macro-stage3-no-emit`)
+    - weekly full Linux baseline in `.github/workflows/gate1.yml`, plus manual `workflow_dispatch` override (`run_upstream_unit_macro=true`).
   - Gate1 unit-macro rungs now fail fast across hosts (including macOS), and all Stage3 rungs (`no-emit`, `type-only`, `emit`) run with `HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=1`.
   - The Stage3 `emit` rung fails on OCaml warning classes `20` (`ignored-extra-argument`), `21` (`nonreturning-statement`), and `26` (`unused-var`).
 - By default, upstream gate runners look for `vendor/haxe`; override with `HAXE_UPSTREAM_DIR=/path/to/haxe`.
@@ -191,6 +193,7 @@ Notes:
     - `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT=<sec>`
 - CI split for stability:
   - `Tests` runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free bootstrap path).
+  - `Gate 1 Lite` workflow (`.github/workflows/gate1-lite.yml`) runs the upstream macro smoke rung (`test:upstream:unit-macro-stage3-no-emit`) on every push/PR.
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=native` + `HXHX_STAGE0_DISABLE_PREPASSES=1` to reduce runner memory pressure).
