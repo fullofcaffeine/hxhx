@@ -99,8 +99,9 @@ npm run test:upstream:runci-macro
 
 Notes:
 
-- This is **not** part of PR/push CI by default (it is network-heavy and relies on external toolchains).
-  A Linux baseline run is executed weekly in `.github/workflows/gate2.yml`, and it remains manually triggerable via `workflow_dispatch` + `run_upstream_macro=true`.
+- The **full upstream Gate 2** run is not part of PR/push CI (it is network-heavy and relies on external toolchains).
+  It runs weekly in `.github/workflows/gate2.yml` and remains manually triggerable via `workflow_dispatch` + `run_upstream_macro=true`.
+- PR/push CI gets a lightweight Gate 2 signal from `.github/workflows/gate2-lite.yml` (acceptance-only examples via `npm run test:acceptance`).
 - Host toolchain requirements and macOS sys-stage caveats are documented in `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`.
 - Debugging: set `HXHX_GATE2_MISC_FILTER=<pattern>` to run only a subset of `tests/misc` fixtures.
 - By default this uses a **non-delegating** Gate 2 mode (`HXHX_GATE2_MODE=stage3_no_emit_direct`): it runs the same stage
@@ -195,6 +196,7 @@ Notes:
 - CI split for stability:
   - `Tests` runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free bootstrap path).
   - `Gate 1 Lite` workflow (`.github/workflows/gate1-lite.yml`) runs the upstream macro smoke rung (`test:upstream:unit-macro-stage3-no-emit`) on every push/PR.
+  - `Gate 2 Lite` workflow (`.github/workflows/gate2-lite.yml`) runs acceptance-only examples on every push/PR.
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=byte`, `HXHX_STAGE0_DISABLE_PREPASSES=1`, and `HXHX_STAGE0_NO_INLINE=1`; the lane enforces `>=8GB` swapfile capacity on ubuntu runners to reduce OOM kills).
