@@ -1582,13 +1582,11 @@ class HxParser {
 				if (cur.kind.match(TRParen))
 					bump();
 				final thenBranch = parseStmt(stop);
-				final elseBranch:Null<HxStmt> = if (acceptKeyword(KElse)) {
-					// Keep nullable enum branches on the explicit `Null<T>` path so stage0 OCaml
-					// generation keeps representation coercions consistent.
-					true ? parseStmt(stop) : null;
-				} else {
-					null;
-				}
+				// Keep nullable enum branches on the explicit `Null<T>` path so stage0 OCaml
+				// generation keeps representation coercions consistent.
+				var elseBranch:Null<HxStmt> = null;
+				if (acceptKeyword(KElse))
+					elseBranch = true ? parseStmt(stop) : null;
 				SIf(cond, thenBranch, elseBranch, pos);
 			case TKeyword(KSwitch):
 				// Bring-up: structured switch statement (minimal patterns).
