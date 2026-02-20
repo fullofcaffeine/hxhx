@@ -73,14 +73,22 @@ jobs:
       - name: Provision swap for stage0 build headroom
         run: |
           set -euo pipefail
-          if swapon --show | grep -q '/swapfile'; then
-            echo "swapfile already active"
+          required_swap_bytes="$((8 * 1024 * 1024 * 1024))"
+          current_swap_bytes="$(swapon --show=NAME,SIZE --bytes | awk '$1 == "/swapfile" { print $2; exit }')"
+
+          if [ -n "${current_swap_bytes:-}" ] && [ "$current_swap_bytes" -ge "$required_swap_bytes" ]; then
+            echo "swapfile already active with sufficient capacity: ${current_swap_bytes} bytes"
           else
+            if swapon --show=NAME | awk '{ print $1 }' | grep -qx "/swapfile"; then
+              sudo swapoff /swapfile
+            fi
+            sudo rm -f /swapfile
             sudo fallocate -l 8G /swapfile
             sudo chmod 600 /swapfile
             sudo mkswap /swapfile
             sudo swapon /swapfile
           fi
+
           echo "== swap summary =="
           swapon --show
           free -h
