@@ -158,7 +158,7 @@ npm run ci:guards
 HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast
 ```
 
-Why these three:
+Why these checks:
 
 - `test:hxhx-targets`: broad local regressions for staged compiler behavior.
 - `runci-macro-stage3-display`: focused non-delegating display/Gate2 slice.
