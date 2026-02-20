@@ -1,6 +1,10 @@
 name: Gate 3 Builtin Target Smoke
 
 on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
   workflow_dispatch:
     inputs:
       reps:
@@ -98,9 +102,9 @@ jobs:
 
       - name: Run builtin target smoke
         env:
-          HXHX_BUILTIN_SMOKE_REPS: ${{ inputs.reps || '1' }}
-          HXHX_BUILTIN_SMOKE_JS_NATIVE: ${{ inputs.run_js_native && '1' || '0' }}
-          HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE: ${{ inputs.run_js_native && '1' || '0' }}
+          HXHX_BUILTIN_SMOKE_REPS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reps || '1' }}
+          HXHX_BUILTIN_SMOKE_JS_NATIVE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_js_native == 'true' && '1' || '0' }}
+          HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_js_native == 'true' && '1' || '0' }}
         run: |
           set -euo pipefail
           echo "HXHX_BUILTIN_SMOKE_REPS=${HXHX_BUILTIN_SMOKE_REPS}"

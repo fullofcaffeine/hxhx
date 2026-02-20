@@ -285,7 +285,7 @@ Notes:
 - Full delegated-vs-builtin OCaml timing smoke is **not** part of PR/push CI by default (toolchain/runtime cost).
 - Gate 3 CI workflow (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
   It is also manually triggerable with `workflow_dispatch` inputs for `targets`, `allow_skip`, and `macro_mode`.
-- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs weekly on Linux and is manually triggerable with `workflow_dispatch` (`reps`, `run_js_native`).
+- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR (main/master), and remains scheduled weekly plus manually triggerable with `workflow_dispatch` (`reps`, `run_js_native`).
 - PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job (`HXHX_BUILTIN_SMOKE_OCAML=0`, `HXHX_BUILTIN_SMOKE_JS_NATIVE=1`).
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
