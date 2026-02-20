@@ -1530,19 +1530,9 @@ class ParserStage {
 		if (s.length == 0)
 			return EUnsupported("<empty-return-expr>");
 
-		// Regex literals: `~/.../flags` (Stage3 bring-up).
-		//
-		// Why
-		// - Upstream std/macro code uses regex literals for pattern matching.
-		// - Our bootstrap expression parser does not model regex syntax; attempting to parse it as
-		//   a normal operator chain can produce structurally valid but nonsensical ASTs (and then
-		//   invalid OCaml like arithmetic on strings).
-		//
-		// Bring-up rule
-		// - Treat regex literals as unsupported expressions so downstream stages collapse them to
-		//   `(Obj.magic 0)` and we can progress to the next missing semantic.
-		if (StringTools.startsWith(s, "~/"))
-			return EUnsupported("<regex-literal>");
+		final regexLiteral = parseRegexLiteral(s);
+		if (regexLiteral != null)
+			return ENew("EReg", [EString(regexLiteral.pattern), EString(regexLiteral.flags)]);
 
 		if (s == "null")
 			return ENull;
@@ -1598,6 +1588,42 @@ class ParserStage {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
 			EUnsupported(s);
 		}
+	}
+
+	static function parseRegexLiteral(source:String):Null<{pattern:String, flags:String}> {
+		if (!StringTools.startsWith(source, "~/"))
+			return null;
+		var index = 2;
+		var escaped = false;
+		while (index < source.length) {
+			final code = source.charCodeAt(index);
+			if (escaped) {
+				escaped = false;
+				index++;
+				continue;
+			}
+			if (code == "\\".code) {
+				escaped = true;
+				index++;
+				continue;
+			}
+			if (code == "/".code) {
+				final pattern = source.substr(2, index - 2);
+				final flags = source.substr(index + 1);
+				var flagIndex = 0;
+				while (flagIndex < flags.length) {
+					final flagCode = flags.charCodeAt(flagIndex);
+					final isLower = flagCode >= "a".code && flagCode <= "z".code;
+					final isUpper = flagCode >= "A".code && flagCode <= "Z".code;
+					if (!isLower && !isUpper)
+						return null;
+					flagIndex++;
+				}
+				return {pattern: pattern, flags: flags};
+			}
+			index++;
+		}
+		return null;
 	}
 
 	static function throwFromErrLine(line:String):Void {
