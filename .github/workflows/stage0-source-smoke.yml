@@ -70,6 +70,20 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      - name: Provision swap for stage0 build headroom
+        run: |
+          set -euo pipefail
+          if swapon --show | grep -q '/swapfile'; then
+            echo "swapfile already active"
+          else
+            sudo fallocate -l 8G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+          fi
+          echo "== swap summary =="
+          swapon --show
+          free -h
       - name: Build stage0 lane and run smoke checks
         env:
           HXHX_FORCE_STAGE0: "1"
