@@ -10,7 +10,7 @@
 [![Compatibility Gate 2](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml)
 [![Compatibility Gate 3](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.4-blue)](https://github.com/fullofcaffeine/hxhx/releases)
+[![Version](https://img.shields.io/badge/version-0.9.5-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
 `hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility, paired with `reflaxe.ocaml` so the toolchain can bootstrap and ship native binaries under MIT.
 
