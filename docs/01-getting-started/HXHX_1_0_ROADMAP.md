@@ -78,7 +78,7 @@ Meaning in plain terms:
 
 - The non-delegating Gate2 direct rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`) now runs end-to-end with stable stage markers.
 - Runner diagnostics now include `subinvocations=<n>` and `last_subinvocation=<cmd>` for faster triage.
-- On macOS, intermittent `tests/misc/resolution` SIGSEGV can be handled deterministically via `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` (default).
+- On macOS, direct mode now fails fast by default; `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` remains available as an explicit local debugging escape hatch for intermittent `tests/misc/resolution` exit `139`.
 
 ### M4. Architecture hardening (target-agnostic core direction)
 

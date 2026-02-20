@@ -116,7 +116,7 @@ Notes:
       - `HXHX_GATE2_RUNCI_TIMEOUT_SEC` (default `600`; set `0` to disable timeout)
       - `HXHX_GATE2_RUNCI_HEARTBEAT_SEC` (default `20`; set `0` to disable heartbeat lines)
       - Heartbeat line format: `gate2_stage3_emit_runner_heartbeat elapsed=<sec>s subinvocations=<n> last="<command>"`
-      - `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` (default) converts intermittent macOS `tests/misc/resolution` SIGSEGV (exit 139) into a deterministic skipped-stage marker in direct mode; set `0` to force fail-fast during debugging.
+      - `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=0` (default) keeps direct mode fail-fast; set `1` only as a local debugging escape hatch to convert macOS `tests/misc/resolution` exit `139` into a deterministic skipped-stage marker.
       - Gate2 summary now prints `subinvocations=<n>` and `last_subinvocation=<cmd>` for direct/runner modes.
 - `HXHX_GATE2_MODE=stage3_emit_runner_minimal` is a bring-up rung that patches `tests/RunCi.hx` *in the temporary worktree*
   to a minimal harness so we can at least prove sub-invocation spawning.
