@@ -1,3 +1,10 @@
+## [0.9.7](https://github.com/fullofcaffeine/hxhx/compare/v0.9.6...v0.9.7) (2026-02-20)
+
+
+### Bug Fixes
+
+* **gate2:** eliminate stage3 .hxml Darwin segfault ([917b7e1](https://github.com/fullofcaffeine/hxhx/commit/917b7e1a1f6306fc6b964a82049bcec23a3b6506))
+
 ## [0.9.6](https://github.com/fullofcaffeine/hxhx/compare/v0.9.5...v0.9.6) (2026-02-20)
 
 
