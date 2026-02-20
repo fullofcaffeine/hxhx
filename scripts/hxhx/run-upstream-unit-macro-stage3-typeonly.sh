@@ -82,10 +82,71 @@ has_utest() {
   fi
 }
 
+prepare_haxelib_hxml() {
+  local lib="$1"
+  local hxml_dir="$UPSTREAM_DIR/tests/unit/haxe_libraries"
+  local hxml_path="$hxml_dir/$lib.hxml"
+  local raw_lines=""
+  local err_log=""
+  local code=0
+
+  mkdir -p "$hxml_dir"
+  err_log="$(mktemp)"
+
+  for attempt in 1 2 3; do
+    set +e
+    raw_lines="$("$HAXELIB_BIN" --always path "$lib" 2>"$err_log")"
+    code="$?"
+    set -e
+
+    if [ "$code" = "0" ]; then
+      break
+    fi
+
+    if [ "$code" = "244" ] && [ "$attempt" -lt 3 ]; then
+      sleep 1
+      continue
+    fi
+
+    echo "FAILED: haxelib path $lib exited with code $code" >&2
+    cat "$err_log" >&2 || true
+    rm -f "$err_log"
+    return "$code"
+  done
+
+  rm -f "$err_log"
+
+  : > "$hxml_path"
+  while IFS= read -r raw; do
+    local line
+    line="$(printf '%s' "$raw" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    if [ -z "$line" ]; then
+      continue
+    fi
+    case "$line" in
+      -D\ *|--macro\ *|-cp\ *|--class-path\ *|-*)
+        printf '%s\n' "$line" >> "$hxml_path"
+        ;;
+      *)
+        printf -- '-cp %s\n' "$line" >> "$hxml_path"
+        ;;
+    esac
+  done <<<"$raw_lines"
+
+  if [ ! -s "$hxml_path" ]; then
+    echo "FAILED: generated empty haxelib hxml: $hxml_path" >&2
+    return 1
+  fi
+}
+
 if ! has_utest; then
   echo "Installing utest (pinned $UTEST_COMMIT)..."
   "$HAXELIB_BIN" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
 fi
+
+# Precompute `haxe_libraries/utest.hxml` so Stage3 can resolve `-lib utest` without relying on
+# an in-process `haxelib path` call (which can intermittently fail on CI runners).
+prepare_haxelib_hxml utest
 
 echo "== Gate 1 (stage3 type-only rung): upstream tests/unit/compile-macro.hxml"
 set +e
