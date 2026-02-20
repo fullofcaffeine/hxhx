@@ -53,7 +53,8 @@ jobs:
             done
           }
           retry_apt sudo apt-get update
-          if apt-cache show dune >/dev/null 2>&1; then
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
             dune_pkg="dune"
           else
             dune_pkg="ocaml-dune"
@@ -131,7 +132,8 @@ jobs:
             done
           }
           retry_apt sudo apt-get update
-          if apt-cache show dune >/dev/null 2>&1; then
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
             dune_pkg="dune"
           else
             dune_pkg="ocaml-dune"
