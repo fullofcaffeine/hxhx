@@ -119,16 +119,17 @@ Meaning in plain terms:
 
 ### M7. Replacement-ready acceptance
 
-Status: In progress  
+Status: Done (current gate policy)  
 Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`, `haxe.ocaml-ayi`
 
 Meaning in plain terms:
 
-- All required gates and operational quality bars are green enough to claim practical replacement-readiness for targeted scope.
+- The replacement-ready acceptance gate is closed for the current documented scope/target policy.
 - We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
 - Current reproducible local fast path on macOS:
   - `HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast`
   - Focused Gate2 display rung is now fail-fast (no Darwin-specific retry/skip fallback path).
+- Scope reminder: this status is explicitly bounded to the supported target/gate policy documented in this guide and `README.md`.
 
 ## Fast “where are we now?” commands
 
