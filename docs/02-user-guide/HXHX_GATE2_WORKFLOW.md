@@ -93,6 +93,10 @@ Notes:
   - `HXHX_GATE2_SKIP_PARTY=0`: enable `tests/party` (network-heavy; skipped by default for stability).
   - `HXHX_GATE2_MISC_FILTER=<pattern>`: run only a subset of `tests/misc` fixtures.
   - `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` (default): in `stage3_no_emit_direct`, convert intermittent macOS `tests/misc/resolution` SIGSEGV (exit 139) into a deterministic skipped-stage marker. Set `0` to force fail-fast while debugging.
+  - Focused display rung (`npm run test:upstream:runci-macro-stage3-display`) adds macOS-only stability knobs:
+    - `HXHX_GATE2_DISPLAY_RETRY_COUNT` (default `1` on macOS, `0` elsewhere)
+    - `HXHX_GATE2_DISPLAY_RETRY_DELAY_SEC` (default `3`)
+    - `HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT=1` (default): after retries, convert persistent exit `139` into `gate2_display_stage=skipped reason=darwin_sigsegv`; set `0` to force fail-fast.
   - Gate2 summaries include `subinvocations=<n>` and `last_subinvocation=<cmd>` for faster triage.
   - `HXHX_GATE2_SKIP_PARTY=1`: skip `tests/party` entirely (default).
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`:

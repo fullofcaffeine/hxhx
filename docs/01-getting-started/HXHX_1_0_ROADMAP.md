@@ -120,12 +120,17 @@ Meaning in plain terms:
 ### M7. Replacement-ready acceptance
 
 Status: In progress  
-Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`
+Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`, `haxe.ocaml-ayi`
 
 Meaning in plain terms:
 
 - All required gates and operational quality bars are green enough to claim practical replacement-readiness for targeted scope.
 - We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
+- Current reproducible local fast path on macOS:
+  - `HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast`
+  - Includes deterministic display-stage Darwin handling in the focused Gate2 rung:
+    retry (`HXHX_GATE2_DISPLAY_RETRY_COUNT`) plus explicit skip marker fallback
+    (`gate2_display_stage=skipped reason=darwin_sigsegv`) when persistent exit `139` occurs.
 
 ## Fast “where are we now?” commands
 
@@ -150,6 +155,7 @@ These are practical “confidence checks”, not full release proof:
 npm run test:hxhx-targets
 npm run test:upstream:runci-macro-stage3-display
 npm run ci:guards
+HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast
 ```
 
 Why these three:
@@ -157,6 +163,7 @@ Why these three:
 - `test:hxhx-targets`: broad local regressions for staged compiler behavior.
 - `runci-macro-stage3-display`: focused non-delegating display/Gate2 slice.
 - `ci:guards`: license/provenance/version safety checks.
+- `run-replacement-ready.sh fast`: one-command M7 fast bundle evidence.
 
 ## Scope and expectations
 

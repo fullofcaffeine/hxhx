@@ -119,6 +119,8 @@ For full usage and mainstream Haxe integration, see
 - **Gate 2 Lite**: quick workload smoke.
 - **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3`; optional `js-native` lane on manual runs).
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
+- Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
+  [Testing command catalog](docs/01-getting-started/TESTING.md).
 
 ## Project layout (monorepo)
 
