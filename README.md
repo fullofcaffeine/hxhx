@@ -20,7 +20,7 @@
 
 - **CI**: fast safety checks (guards + core tests) on regular changes.
 - **Compatibility Gate 1 Lite**: per-commit upstream macro smoke (`stage3 no-emit`).
-- **Compatibility Gate 2 Lite**: per-commit acceptance workload smoke.
+- **Compatibility Gate 2 Lite**: per-commit workload smoke (fast profile).
 - **Compatibility Gate 3 Builtin**: per-commit linked backend smoke (`ocaml-stage3`, optional `js-native` on manual runs).
 - **Compatibility Gate 1**: weekly/manual upstream unit macro compatibility baseline.
 - **Compatibility Gate 2**: weekly/manual wider upstream `runci` macro workload checks.
@@ -414,7 +414,7 @@ HXHX_GATE3_TARGETS="Macro,Js,Neko" HXHX_GATE3_MACRO_MODE=stage0_shim npm run tes
 
 Gate 3 CI (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`) and also supports manual `workflow_dispatch` overrides for `targets`, `allow_skip`, and `macro_mode`.
 Builtin fast-path smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR (main/master) and also supports weekly/manual runs (`workflow_dispatch` with `reps`, `run_js_native`).
-Gate 2 Lite CI (`.github/workflows/gate2-lite.yml`) runs on push/PR (main/master) with acceptance-only validation.
+Gate 2 Lite CI (`.github/workflows/gate2-lite.yml`) runs on push/PR (main/master) with workload validation (`npm run test:workloads`).
 PR/push CI now includes Gate 1 Lite (`.github/workflows/gate1-lite.yml`), Gate 2 Lite (`.github/workflows/gate2-lite.yml`), plus the dedicated `JS-native smoke` job in `.github/workflows/ci.yml` for non-delegating `--target js-native` emit+run coverage.
 Gate 2 upstream Macro (`.github/workflows/gate2.yml`) now runs weekly on schedule (Linux baseline) and remains manually triggerable via `run_upstream_macro`.
 M7 bundle workflow (`.github/workflows/gate-m7.yml`) is manually triggerable and runs the one-command replacement bundle (`fast` or `full`) with strict-skip control.
