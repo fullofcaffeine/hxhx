@@ -22,6 +22,14 @@ It is built to be:
 - behavior-compatible with upstream Haxe `4.3.7` (via oracle-driven gates),
 - MIT-friendly for embedding/commercial distribution scenarios.
 
+## Current status
+
+- Compatibility target is **Haxe `4.3.7`** (tracked via upstream-oracle gates).
+- Per-commit checks include **Gate 1 Lite**, **Gate 2 Lite**, and **Gate 3 Builtin**.
+- Full upstream compatibility gates (**Gate 1/2/3**) run on weekly/manual cadence.
+- Legacy Flash/AS3 targets are intentionally unsupported in this implementation.
+- `hxhx` and `reflaxe.ocaml` are both usable today, but parity/performance work is still ongoing.
+
 ## Choose your path
 
 - **I want to evaluate `hxhx`** (scope, parity, readiness):
