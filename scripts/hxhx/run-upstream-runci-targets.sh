@@ -598,6 +598,28 @@ fi
 export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
 export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+if [ "\${1:-}" = "path" ]; then
+  retries="\${HXHX_HAXELIB_PATH_RETRIES:-3}"
+  delay="\${HXHX_HAXELIB_PATH_RETRY_DELAY_SEC:-1}"
+  if [ "\$retries" -lt 1 ] 2>/dev/null; then
+    retries=1
+  fi
+  for attempt in \$(seq 1 "\$retries"); do
+    set +e
+    "${STAGE0_HAXELIB}" "\$@"
+    code="\$?"
+    set -e
+    if [ "\$code" -eq 0 ]; then
+      exit 0
+    fi
+    if [ "\$code" -eq 244 ] && [ "\$attempt" -lt "\$retries" ]; then
+      sleep "\$delay"
+      continue
+    fi
+    exit "\$code"
+  done
+  exit 1
+fi
 exec "${STAGE0_HAXELIB}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/haxelib"

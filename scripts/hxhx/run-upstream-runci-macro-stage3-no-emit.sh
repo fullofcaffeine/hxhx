@@ -46,6 +46,80 @@ fi
 
 HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
 
+# Gate 2 stage3 diagnostic still needs `-lib utest` to resolve from `RunCi.hxml`.
+UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"
+has_utest() {
+  if command -v rg >/dev/null 2>&1; then
+    "$HAXELIB_BIN" list 2>/dev/null | rg -q "^utest:"
+  else
+    "$HAXELIB_BIN" list 2>/dev/null | grep -q "^utest:"
+  fi
+}
+
+prepare_haxelib_hxml() {
+  local lib="$1"
+  local hxml_dir="$UPSTREAM_DIR/tests/haxe_libraries"
+  local hxml_path="$hxml_dir/$lib.hxml"
+  local raw_lines=""
+  local err_log=""
+  local code=0
+
+  mkdir -p "$hxml_dir"
+  err_log="$(mktemp)"
+
+  for attempt in 1 2 3; do
+    set +e
+    raw_lines="$("$HAXELIB_BIN" --always path "$lib" 2>"$err_log")"
+    code="$?"
+    set -e
+
+    if [ "$code" = "0" ]; then
+      break
+    fi
+
+    if [ "$code" = "244" ] && [ "$attempt" -lt 3 ]; then
+      sleep 1
+      continue
+    fi
+
+    echo "FAILED: haxelib path $lib exited with code $code" >&2
+    cat "$err_log" >&2 || true
+    rm -f "$err_log"
+    return "$code"
+  done
+
+  rm -f "$err_log"
+
+  : > "$hxml_path"
+  while IFS= read -r raw; do
+    local line
+    line="$(printf '%s' "$raw" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    if [ -z "$line" ]; then
+      continue
+    fi
+    case "$line" in
+      -D\ *|--macro\ *|-cp\ *|--class-path\ *|-*)
+        printf '%s\n' "$line" >> "$hxml_path"
+        ;;
+      *)
+        printf -- '-cp %s\n' "$line" >> "$hxml_path"
+        ;;
+    esac
+  done <<<"$raw_lines"
+
+  if [ ! -s "$hxml_path" ]; then
+    echo "FAILED: generated empty haxelib hxml: $hxml_path" >&2
+    return 1
+  fi
+}
+
+if ! has_utest; then
+  echo "Installing utest (pinned $UTEST_COMMIT)..."
+  "$HAXELIB_BIN" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
+fi
+
+prepare_haxelib_hxml utest
+
 echo "== Gate 2 (stage3 no-emit rung): upstream tests/RunCi.hxml"
 out="$(
   cd "$UPSTREAM_DIR/tests"
@@ -55,4 +129,3 @@ out="$(
 echo "$out"
 
 echo "$out" | grep -q "^stage3=no_emit_ok$"
-
