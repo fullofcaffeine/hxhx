@@ -23,6 +23,7 @@ npm run test:acceptance
 
 ## Included examples
 
+- `hxhx-target-ocaml`: minimal native reflaxe smoke example (`hxhx --target ocaml`).
 - `build-macro`: small `@:build` macro behavior check.
 - `extlib-pmap`: external OCaml library interop (`extlib`) check (acceptance-only).
 - `file-io`: filesystem and sys API smoke checks.
