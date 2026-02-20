@@ -1,0 +1,7 @@
+# Keep Stage3 invocation explicit and deterministic for this example.
+-cp
+src
+--library
+reflaxe.ocaml
+-main
+Main
