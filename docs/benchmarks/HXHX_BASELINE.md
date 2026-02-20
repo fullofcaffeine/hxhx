@@ -4,6 +4,14 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 
 - `bash scripts/hxhx/bench.sh`
 - `npm run hxhx:bench`
+- `bash scripts/hxhx/bench-native-reflaxe.sh`
+- `npm run hxhx:bench:native-reflaxe`
+
+## Quick glossary (beginner-friendly)
+
+- **stage0**: your existing upstream Haxe compiler binary.
+- **`--target ocaml`**: compatibility/delegation-friendly preset path.
+- **`--target ocaml-stage3`**: linked Stage3 backend path (native, non-delegating direction).
 
 Today `hxhx` is still a **stage0 shim** delegating to a stage0 `haxe` binary, so the only meaningful metric is *shim overhead*.
 As `hxhx` becomes a real compiler, this suite must be expanded (macro-heavy projects, upstream `tests/runci`, curated real repos).
@@ -41,6 +49,29 @@ stage1: --target js-native emit  skipped  reason=target_unavailable
 ```
 
 Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and capture numeric js-native results on hosts where the current binary lacks that target.
+
+## Native reflaxe bench gate
+
+Use:
+
+```bash
+npm run hxhx:bench:native-reflaxe
+```
+
+This benchmark checks the same workload across:
+
+1. `haxe --interp` (eval baseline)
+2. `hxhx --target ocaml`
+3. `hxhx --target ocaml-stage3`
+
+Default pass rule:
+
+- `ocaml-stage3` median runtime must be at least `30%` faster than `--interp`.
+
+Controls:
+
+- `HXHX_NATIVE_BENCH_MIN_SPEEDUP_PCT` (default: `30`)
+- `HXHX_NATIVE_BENCH_BASELINE=interp|delegated|both` (default: `interp`)
 
 ## How to update
 

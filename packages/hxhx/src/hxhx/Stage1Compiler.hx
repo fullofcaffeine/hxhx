@@ -35,30 +35,9 @@ class Stage1Compiler {
 		return 2;
 	}
 
-	static function haxelibBin():String {
-		final v = Sys.getEnv("HAXELIB_BIN");
-		return (v == null || v.length == 0) ? "haxelib" : v;
-	}
-
-	static function resolveHaxelibPaths(lib:String):Array<String> {
-		final paths = new Array<String>();
-		final p = new sys.io.Process(haxelibBin(), ["path", lib]);
-		try {
-			while (true) {
-				final raw = p.stdout.readLine();
-				final line = StringTools.trim(raw);
-				if (line.length == 0)
-					continue;
-				if (StringTools.startsWith(line, "-"))
-					continue;
-				paths.push(line);
-			}
-		} catch (_:haxe.io.Eof) {}
-
-		final code = p.exitCode();
-		if (code != 0)
-			throw "haxelib path " + lib + " failed with exit code " + code;
-		return paths;
+	static function resolveLibraryPaths(lib:String, cwd:String):Array<String> {
+		final seen = new Map<String, Bool>();
+		return LibraryResolver.resolve(lib, cwd, seen, 0).classPaths;
 	}
 
 	static function formatParseError(e:HxParseError):String {
@@ -93,7 +72,7 @@ class Stage1Compiler {
 		if (permissive && parsed.libs.length > 0) {
 			for (lib in parsed.libs) {
 				try {
-					for (p in resolveHaxelibPaths(lib))
+					for (p in resolveLibraryPaths(lib, parsed.cwd))
 						classPaths.push(p);
 				} catch (e:String) {
 					return error("failed to resolve -lib " + lib + ": " + e);

@@ -8,7 +8,7 @@ class Main {
 		Sys.println("args:" + Sys.args().length);
 		Sys.println("env:" + Sys.getEnv("HX_TEST_ENV"));
 
-		final base = "examples/file-io/out/data";
+		final base = "out/data";
 		FileSystem.createDirectory(base);
 
 		final path = base + "/hello.txt";

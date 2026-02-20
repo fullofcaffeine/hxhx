@@ -2088,14 +2088,14 @@ grep -q 'external_flag' "$stage3_out3/HxHxExternal.ml"
 
 echo "== Stage3 bring-up: upstream-ish Macro.init() compiles + runs (haxe.macro.Context override)"
 stage3_out4="$tmpdir/out_stage3_upstream_macro"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/workloads/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/workloads/hih-compiler/fixtures/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main demo.A --macro 'Macro.init()' --hxhx-out "$stage3_out4")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^hook_onGenerate\\[0\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
 
 echo "== Stage3 bring-up: runs a non-builtin macro entrypoint with a String arg"
 stage3_out5="$tmpdir/out_stage3_arg_macro"
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/workloads/hih-compiler/fixtures/src" -cp "$ROOT/examples/hxhx-macros/src" -main demo.A --macro 'hxhxmacros.ArgsMacros.setArg("ok")' --hxhx-out "$stage3_out5")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 -cp "$ROOT/workloads/hih-compiler/fixtures/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main demo.A --macro 'hxhxmacros.ArgsMacros.setArg("ok")' --hxhx-out "$stage3_out5")"
 echo "$out" | grep -q "^macro_run\\[0\\]=ok$"
 echo "$out" | grep -q "^macro_define\\[HXHX_ARG\\]=ok$"
 echo "$out" | grep -q "^stage3=ok$"
@@ -2127,7 +2127,7 @@ out="$(
   HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
   "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
     -cp "$tmpplugin/src" \
-    -cp "$ROOT/examples/hxhx-macros/src" \
+    -cp "$ROOT/test/fixtures/hxhx-macros/src" \
     -main Main \
     --macro 'hxhxmacros.PluginFixtureMacros.init()' \
     --hxhx-out "$plugin_out"
@@ -2142,7 +2142,7 @@ echo "$out" | grep -q "^plugin_cp=ok$"
 echo "$out" | grep -q "^main=ok$"
 echo "$out" | grep -q "^run=ok$"
 
-echo "== Stage4 bring-up: fixture plugin works with --library reflaxe.ocaml (haxelib resolution)"
+echo "== Stage4 bring-up: fixture plugin works with --library reflaxe.ocaml (library resolution)"
 tmpplugin_lib="$tmpdir/plugin_fixture_lib"
 mkdir -p "$tmpplugin_lib/src"
 mkdir -p "$tmpplugin_lib/plugin_cp"
@@ -2169,7 +2169,7 @@ out="$(
   HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" \
   "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies \
     -cp "$tmpplugin_lib/src" \
-    -cp "$ROOT/examples/hxhx-macros/src" \
+    -cp "$ROOT/test/fixtures/hxhx-macros/src" \
     --library reflaxe.ocaml \
     -main Main \
     --macro 'hxhxmacros.PluginFixtureMacros.init()' \
@@ -2185,7 +2185,7 @@ echo "$out" | grep -q "^plugin_cp=ok$"
 echo "$out" | grep -q "^main=ok$"
 echo "$out" | grep -q "^run=ok$"
 
-echo "== Stage3 bring-up: ingests haxelib -D defines (haxe_libraries/*.hxml)"
+echo "== Stage3 bring-up: ingests library -D defines (haxe_libraries/*.hxml)"
 tmpmini="$tmpdir/haxelib_define_fixture"
 mini_src="$tmpmini/src"
 mkdir -p "$mini_src"
@@ -2245,7 +2245,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpexpr/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpexpr/out")"
+out="$(HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpexpr/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpexpr/out")"
 echo "$out" | grep -q "^expr_macros_expanded=1$"
 echo "$out" | grep -q "^HELLO$"
 echo "$out" | grep -q "^run=ok$"
@@ -2353,7 +2353,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
@@ -2372,7 +2372,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_ret/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_ret/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_ret/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_ret/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
@@ -2395,7 +2395,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_rep/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_rep/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_rep/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_rep/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
@@ -2415,7 +2415,7 @@ class Main {
   }
 }
 HX
-out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_print/src" -cp "$ROOT/examples/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_print/out")"
+out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpbuild_print/src" -cp "$ROOT/test/fixtures/hxhx-macros/src" -main Main --hxhx-out "$tmpbuild_print/out")"
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"

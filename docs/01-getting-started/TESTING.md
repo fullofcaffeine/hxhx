@@ -19,7 +19,10 @@ npm test
 If you have `ocamlc` + `dune` installed, this also runs:
 
 - portable conformance fixtures (`test/portable/**`)
-- example apps (`examples/**`, except acceptance-only examples)
+- example apps in both roots:
+  - `examples/**`
+  - `packages/reflaxe.ocaml/examples/**`
+  (except acceptance-only examples)
 
 To run heavier acceptance checks:
 
@@ -366,7 +369,9 @@ These catch regressions in:
 If `dune` and `ocamlc` are available, we additionally run:
 
 - **Portable fixtures** (`test/portable/fixtures/**`): compile → dune build → run → diff stdout.
-- **Examples** (`examples/**`): compile → dune build → run → diff stdout.
+- **Examples** (both roots): compile → dune build → run → diff stdout.
+  - `examples/**`
+  - `packages/reflaxe.ocaml/examples/**`
 
 These catch regressions that pure snapshot tests can’t, like:
 
@@ -378,7 +383,10 @@ These catch regressions that pure snapshot tests can’t, like:
 
 `npm run test:acceptance` runs two heavier layers:
 
-- acceptance-only examples under `examples/` (flagged with `ACCEPTANCE_ONLY`)
+- acceptance-only examples under:
+  - `examples/`
+  - `packages/reflaxe.ocaml/examples/`
+  (flagged with `ACCEPTANCE_ONLY`)
 - compiler-shaped workloads under `workloads/`
 
 Current workload set:

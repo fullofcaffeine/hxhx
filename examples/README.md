@@ -1,11 +1,15 @@
 # Examples
 
-These apps exist to:
+This folder now contains examples that are mainly about `hxhx` behavior itself
+(target presets, macro-host/plugin integration, and compiler wiring).
 
-- Provide real-world usage samples.
-- Act as QA/acceptance tests (compile → dune build → run).
+`reflaxe.ocaml`-focused examples live in:
 
-Run them all from the repo root:
+`packages/reflaxe.ocaml/examples/`
+
+The test runner checks both roots.
+
+Run all examples from the repo root:
 
 ```bash
 npm run test:examples
@@ -20,9 +24,5 @@ npm run test:acceptance
 
 ## Included examples
 
-- `mini-compiler`: small parser/evaluator smoke test (compiler-ish workload).
-- `build-macro`: exercises `@:build` macro expansion (plugin/macro surface smoke test).
-- `loop-control`: exercises `break`/`continue` lowering (prevents infinite-loop regressions).
-- `ocaml-native-collections`: exercises `ocaml.*` wrappers over `Stdlib` collections (`Array`, `Hashtbl`, `Seq`, `Bytes`).
-- `hih-workload` (acceptance-only): multi-file “project” compile with parsing, typechecking, and incremental rebuilds (Haxe-in-Haxe path Stage 1).
-- `hih-compiler` (acceptance-only): Stage 2 skeleton for a production-grade Haxe-in-Haxe compiler (Haxe 4.3.7 + macros).
+- `hxhx-target-ocaml`: runs a tiny app through `hxhx --target ocaml`.
+- `hxhx-library-reflaxe-ocaml-plugin`: Stage3 plugin fixture (`--library`, macro hooks, classpath injection).

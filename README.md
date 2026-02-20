@@ -128,7 +128,8 @@ For full usage and mainstream Haxe integration, see
 - `packages/hxhx-core`: compiler core and backend contracts.
 - `packages/hxhx-macro-host`: Stage4 macro host process.
 - `packages/reflaxe.ocaml`: OCaml backend/runtime package.
-- `examples/`: consumer-style examples.
+- `examples/`: `hxhx`-oriented examples (preset/plugin/compiler wiring).
+- `packages/reflaxe.ocaml/examples/`: `reflaxe.ocaml`-oriented examples (still exercised through `hxhx` in this repo).
 - `workloads/`: acceptance workloads.
 
 `hxhx` and `reflaxe.ocaml` stay together for now because they still share bootstrap/runtime iteration loops.

@@ -12,6 +12,37 @@ bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
 
+## Beginner-Friendly Terms (Read This First)
+
+This repo uses a few short labels a lot. Here is what they mean in plain language:
+
+- **stage0**: your already-installed upstream `haxe` compiler binary (the "starter" compiler).
+- **stage1**: the first native `hxhx` binary built using stage0.
+- **stage2**: `hxhx` rebuilt by stage1. Matching stage1/stage2 behavior is a bootstrap health check.
+- **stage3**: the linked/native `hxhx` pipeline path (the long-term non-delegating direction).
+- **`--target ocaml`**: compatibility lane; today this may still delegate parts of work to stage0.
+- **`--target ocaml-stage3`**: linked Stage3 OCaml lane inside `hxhx`; used to validate native path behavior.
+- **"native reflaxe"**: running Reflaxe backend behavior through native `hxhx` paths instead of relying on stage0 delegation.
+
+Package manager/resolver terms:
+
+- **Lix-first policy**: prefer Lix-managed library metadata (`haxe_libraries/<lib>.hxml`) first.
+- **`haxelib` support remains**: if Lix metadata is missing, fall back for compatibility.
+- Current resolver order in this repo:
+  1. `haxe_libraries/<lib>.hxml` (walking up directories)
+  2. `lix run-haxelib path <lib>`
+  3. `haxelib path <lib>`
+
+Quick examples:
+
+```bash
+# Delegated/compatibility lane
+hxhx --target ocaml -main Main -cp src
+
+# Native linked lane
+hxhx --target ocaml-stage3 -main Main -cp src --hxhx-no-emit
+```
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.

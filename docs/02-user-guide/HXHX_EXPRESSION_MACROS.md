@@ -72,7 +72,7 @@ Example:
 HXHX_EXPR_MACROS='hxhxmacros.ExprMacroShim.hello()' \
   HXHX_MACRO_HOST_EXE=/path/to/hxhx-macro-host \
   hxhx --hxhx-stage3 --hxhx-emit-full-bodies \
-    -cp src -cp examples/hxhx-macros/src -main Main --hxhx-out out
+    -cp src -cp test/fixtures/hxhx-macros/src -main Main --hxhx-out out
 ```
 
 Notes:

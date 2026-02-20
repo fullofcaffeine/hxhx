@@ -90,7 +90,7 @@ These are the callbacks libraries use to extend compilation:
 
 To keep us honest early, we have a tiny build-macro example that compiles to OCaml and runs under dune:
 
-- `examples/build-macro/`
+- `packages/reflaxe.ocaml/examples/build-macro/`
 
 This does **not** prove `hxhx` can execute macros yet; it proves that:
 

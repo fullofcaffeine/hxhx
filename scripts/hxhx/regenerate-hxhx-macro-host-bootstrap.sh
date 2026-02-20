@@ -49,7 +49,7 @@ echo "== Regenerating macro host via stage0 (this requires Haxe + reflaxe.ocaml)
 (
   cd "$ROOT"
   HXHX_MACRO_HOST_FORCE_STAGE0=1 \
-  HXHX_MACRO_HOST_EXTRA_CP="$ROOT/examples/hxhx-macros/src" \
+  HXHX_MACRO_HOST_EXTRA_CP="$ROOT/test/fixtures/hxhx-macros/src" \
   HXHX_MACRO_HOST_ENTRYPOINTS="$ENTRYPOINTS" \
   bash "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" >/dev/null
 )

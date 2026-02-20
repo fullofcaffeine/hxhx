@@ -3,6 +3,47 @@ set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EXAMPLE_ROOTS_RAW="${HXHX_EXAMPLE_ROOTS:-examples:packages/reflaxe.ocaml/examples}"
+
+read_example_roots() {
+  local raw="$1"
+  local -a roots=()
+  IFS=':' read -r -a roots <<<"$raw"
+  for root in "${roots[@]}"; do
+    root="$(echo "$root" | xargs || true)"
+    [ -n "$root" ] || continue
+    [ -d "$root" ] || continue
+    echo "$root"
+  done
+}
+
+collect_example_dirs() {
+  local -a roots=("$@")
+  for root in "${roots[@]}"; do
+    find "$root" -mindepth 1 -maxdepth 1 -type d | sort
+  done
+}
+
+has_marker_in_roots() {
+  local marker="$1"
+  shift
+  local -a roots=("$@")
+  for root in "${roots[@]}"; do
+    if find "$root" -maxdepth 2 -type f -name "$marker" -print -quit | grep -q .; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+EXAMPLE_ROOTS=()
+while IFS= read -r root; do
+  EXAMPLE_ROOTS+=("$root")
+done < <(read_example_roots "$EXAMPLE_ROOTS_RAW")
+if [ "${#EXAMPLE_ROOTS[@]}" -eq 0 ]; then
+  echo "No example roots found. Set HXHX_EXAMPLE_ROOTS or restore example directories." >&2
+  exit 1
+fi
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
   echo "Skipping examples: dune/ocamlc not found on PATH."
@@ -11,7 +52,7 @@ fi
 
 check_findlib_packages() {
   local dir="$1"
-  local req_file="${dir}OCAML_FINDLIB_PACKAGES"
+  local req_file="${dir}/OCAML_FINDLIB_PACKAGES"
   [ -f "$req_file" ] || return 0
 
   if ! command -v ocamlfind >/dev/null 2>&1; then
@@ -42,7 +83,7 @@ build_hxhx_if_needed() {
   # Markers:
   # - USE_HXHX: run the example via `hxhx --target ocaml` (stage0 shim path).
   # - USE_HXHX_STAGE3: run the example via `hxhx --hxhx-stage3` (bring-up path).
-  if ! find examples -maxdepth 2 -type f \( -name "USE_HXHX" -o -name "USE_HXHX_STAGE3" \) -print -quit | grep -q .; then
+  if ! has_marker_in_roots "USE_HXHX" "${EXAMPLE_ROOTS[@]}" && ! has_marker_in_roots "USE_HXHX_STAGE3" "${EXAMPLE_ROOTS[@]}"; then
     return 0
   fi
 
@@ -60,7 +101,7 @@ build_hxhx_if_needed() {
 
   # If any example needs Stage3, also build the macro host once (stage0-free via bootstrap snapshot)
   # and export HXHX_MACRO_HOST_EXE so `--macro ...` can run.
-  if find examples -maxdepth 2 -type f -name "USE_HXHX_STAGE3" -print -quit | grep -q .; then
+  if has_marker_in_roots "USE_HXHX_STAGE3" "${EXAMPLE_ROOTS[@]}"; then
     if ! command -v ocamlopt >/dev/null 2>&1; then
       echo "Skipping Stage3 examples: ocamlopt not found on PATH."
       return 0
@@ -104,9 +145,13 @@ apply_example_env() {
   done < "$env_file"
 }
 
-for dir in examples/*/; do
-  [ -f "${dir}build.hxml" ] || continue
-  if [ -f "${dir}ACCEPTANCE_ONLY" ]; then
+EXAMPLE_DIRS=()
+while IFS= read -r dir; do
+  EXAMPLE_DIRS+=("$dir")
+done < <(collect_example_dirs "${EXAMPLE_ROOTS[@]}")
+for dir in "${EXAMPLE_DIRS[@]}"; do
+  [ -f "${dir}/build.hxml" ] || continue
+  if [ -f "${dir}/ACCEPTANCE_ONLY" ]; then
     if [ "${ONLY_ACCEPTANCE_EXAMPLES:-0}" = "1" ]; then
       :
     elif [ "${RUN_ACCEPTANCE_EXAMPLES:-0}" = "1" ]; then
@@ -125,7 +170,7 @@ for dir in examples/*/; do
     continue
   fi
 
-  echo "== Example: ${dir}"
+  echo "== Example: ${dir}/"
 
   (
     cd "$dir"
@@ -170,7 +215,7 @@ for dir in examples/*/; do
     fi
 
     if [ ! -f "$exe" ]; then
-      echo "Missing built executable: ${dir}${exe}" >&2
+      echo "Missing built executable: ${dir}/$exe" >&2
       exit 1
     fi
 

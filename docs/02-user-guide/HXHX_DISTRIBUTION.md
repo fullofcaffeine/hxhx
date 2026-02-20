@@ -9,6 +9,12 @@ Today it is still a **stage0 shim**:
 
 Gate 4 exists so we can build and ship the `hxhx` binary with a predictable layout, and track a minimal performance baseline.
 
+## Quick glossary (beginner-friendly)
+
+- **stage0 `haxe`**: your already-installed upstream Haxe compiler binary.
+- **`hxhx --target ocaml`**: compatibility-friendly preset path. It wires OCaml target flags and follows the delegated workflow.
+- **`hxhx --target ocaml-stage3`**: linked Stage3 backend path. This is the native/non-delegating direction of travel.
+
 ## Version reporting (current behavior)
 
 For compatibility with upstream tooling/tests:
@@ -106,3 +112,36 @@ Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild (`HXHX_
 As `hxhx` becomes a real compiler (stops delegating), this benchmark suite should be expanded and the acceptance gates should include real-world workloads (upstream `tests/runci`, macro-heavy projects, and curated external repos).
 
 Baseline numbers live in: `docs/benchmarks/HXHX_BASELINE.md:1`.
+
+## Native reflaxe speed comparison bench
+
+Use this when you want a direct, plain-English comparison of:
+
+1. eval/interp baseline (`haxe --interp`)
+2. `hxhx --target ocaml`
+3. `hxhx --target ocaml-stage3`
+
+Command:
+
+```bash
+npm run hxhx:bench:native-reflaxe
+```
+
+Important defaults:
+
+- workload: `packages/reflaxe.ocaml/examples/hxhx-native-reflaxe-bench`
+- speed gate baseline: `interp`
+- minimum speedup: `30%` (`HXHX_NATIVE_BENCH_MIN_SPEEDUP_PCT`)
+
+Useful overrides:
+
+```bash
+# More reps
+HXHX_NATIVE_BENCH_REPS=15 npm run hxhx:bench:native-reflaxe
+
+# Compare against both baselines (interp + delegated)
+HXHX_NATIVE_BENCH_BASELINE=both npm run hxhx:bench:native-reflaxe
+
+# Increase workload size
+HXHX_BENCH_ITERS=400000 npm run hxhx:bench:native-reflaxe
+```
