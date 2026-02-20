@@ -28,6 +28,7 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
 
 - Compatibility target is **Haxe `4.3.7`**.
 - Per-commit checks run **Gate 1 Lite**, **Gate 2 Lite**, and **Gate 3 Builtin**.
+- Per-commit CI also runs a **JS oracle smoke** lane (upstream `haxe` vs `hxhx js-native` runtime output on repo-local fixtures).
 - Full upstream compatibility gates (**Gate 1/2/3**) run weekly and on manual trigger.
 - Legacy Flash/AS3 targets are intentionally unsupported.
 - `hxhx` and `reflaxe.ocaml` are usable now; parity/performance work continues.
