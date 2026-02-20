@@ -138,12 +138,7 @@ Success markers:
 Notes:
 - This focused rung sets `HXHX_GATE2_SKIP_UNIT=1` so it can isolate display semantics
   without being blocked by unrelated `tests/unit` bring-up gaps.
-- The focused display rung now fails fast by default on macOS:
-  - `HXHX_GATE2_DISPLAY_RETRY_COUNT` (default `0`)
-  - `HXHX_GATE2_DISPLAY_RETRY_DELAY_SEC` (default `3`)
-  - `HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT=0` (default): set `1` only as an explicit local
-    debugging escape hatch to convert exit `139` into
-    `gate2_display_stage=skipped reason=darwin_sigsegv`.
+- The focused display rung is fail-fast (no Darwin-specific retry/skip fallback path).
 
 ### Bootstrap stage map (quick reference)
 

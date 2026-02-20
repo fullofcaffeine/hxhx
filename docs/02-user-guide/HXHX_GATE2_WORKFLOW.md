@@ -92,10 +92,7 @@ Notes:
     minimal harness so we can prove sub-invocation spawning (not full runci acceptance).
   - `HXHX_GATE2_SKIP_PARTY=0`: enable `tests/party` (network-heavy; skipped by default for stability).
   - `HXHX_GATE2_MISC_FILTER=<pattern>`: run only a subset of `tests/misc` fixtures.
-  - Focused display rung (`npm run test:upstream:runci-macro-stage3-display`) keeps optional macOS fallback knobs, but fail-fast is the default:
-    - `HXHX_GATE2_DISPLAY_RETRY_COUNT` (default `0`)
-    - `HXHX_GATE2_DISPLAY_RETRY_DELAY_SEC` (default `3`)
-    - `HXHX_GATE2_DISPLAY_SKIP_DARWIN_SEGFAULT=0` (default): set `1` only as a local debugging escape hatch to convert exit `139` into `gate2_display_stage=skipped reason=darwin_sigsegv`.
+  - Focused display rung (`npm run test:upstream:runci-macro-stage3-display`) is fail-fast and no longer carries a Darwin-specific retry/skip fallback path.
   - Gate2 summaries include `subinvocations=<n>` and `last_subinvocation=<cmd>` for faster triage.
   - `HXHX_GATE2_SKIP_PARTY=1`: skip `tests/party` entirely (default).
   - `HXHX_GATE2_SEED_UTEST_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_HAXESERVER_FROM_GLOBAL=1`, `HXHX_GATE2_SEED_SOURCEMAP_FROM_GLOBAL=1`:

@@ -128,9 +128,7 @@ Meaning in plain terms:
 - We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
 - Current reproducible local fast path on macOS:
   - `HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast`
-  - Includes deterministic display-stage Darwin handling in the focused Gate2 rung:
-    retry (`HXHX_GATE2_DISPLAY_RETRY_COUNT`) plus explicit skip marker fallback
-    (`gate2_display_stage=skipped reason=darwin_sigsegv`) when persistent exit `139` occurs.
+  - Focused Gate2 display rung is now fail-fast (no Darwin-specific retry/skip fallback path).
 
 ## Fast “where are we now?” commands
 
