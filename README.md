@@ -16,16 +16,11 @@
 
 `hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility, paired with `reflaxe.ocaml` so the toolchain can bootstrap and ship native binaries under MIT.
 
-## CI badges (plain English)
+It is built to be:
 
-- **CI**: fast safety checks (guards + core tests) on regular changes.
-- **Compatibility Gate 1 Lite**: per-commit upstream macro smoke (`stage3 no-emit`).
-- **Compatibility Gate 2 Lite**: per-commit workload smoke (fast profile).
-- **Compatibility Gate 3 Builtin**: per-commit linked backend smoke (`ocaml-stage3`, optional `js-native` on manual runs).
-- **Compatibility Gate 1**: weekly/manual upstream unit macro compatibility baseline.
-- **Compatibility Gate 2**: weekly/manual wider upstream `runci` macro workload checks.
-- **Compatibility Gate 3**: weekly/manual upstream target/workflow compatibility checks (`Macro`, `Js`, `Neko`, and opt-in targets).
-- New contributor shortcut: start with `npm run ci:guards` and `npm test`; use gate docs for deeper validation: [docs/01-getting-started/TESTING.md](docs/01-getting-started/TESTING.md).
+- easier to understand and modify than the current compiler implementation,
+- behavior-compatible with upstream Haxe `4.3.7` (via oracle-driven gates),
+- MIT-friendly for embedding/commercial distribution scenarios.
 
 ## Why this project exists
 
@@ -45,6 +40,17 @@
 - **Public release preflight checklist:** [docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
 - **Stdlib reuse + provenance boundaries:** [docs/00-project/STD_LIB_POLICY.md](docs/00-project/STD_LIB_POLICY.md)
 
+## Quick start (contributors)
+
+```bash
+npm install
+npx lix download
+npm run ci:guards
+npm test
+```
+
+For deeper gate workflows and compatibility validation, use [docs/01-getting-started/TESTING.md](docs/01-getting-started/TESTING.md).
+
 ## Products in this repo
 
 - `hxhx`: the primary compiler product (Haxe-in-Haxe).
@@ -58,6 +64,17 @@ We are keeping `hxhx` and `reflaxe.ocaml` in one monorepo because they still sha
 ## Using reflaxe.ocaml with upstream Haxe
 
 See [docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md) for dedicated setup/usage.
+
+## Glossary (CI and gates)
+
+- **CI**: fast safety checks (guards + core tests) on regular changes.
+- **Compatibility Gate 1 Lite**: per-commit upstream macro smoke (`stage3 no-emit`).
+- **Compatibility Gate 2 Lite**: per-commit workload smoke (fast profile).
+- **Compatibility Gate 3 Builtin**: per-commit linked backend smoke (`ocaml-stage3`, optional `js-native` on manual runs).
+- **Compatibility Gate 1**: weekly/manual upstream unit macro compatibility baseline.
+- **Compatibility Gate 2**: weekly/manual wider upstream `runci` macro workload checks.
+- **Compatibility Gate 3**: weekly/manual upstream target/workflow compatibility checks (`Macro`, `Js`, `Neko`, and opt-in targets).
+- New contributor shortcut: start with `npm run ci:guards` and `npm test`; use gate docs for deeper validation: [docs/01-getting-started/TESTING.md](docs/01-getting-started/TESTING.md).
 
 ## Environment setup
 
