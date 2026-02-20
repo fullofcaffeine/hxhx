@@ -8,6 +8,7 @@
 [![Compatibility Gate 1 Lite](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1-lite.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1-lite.yml)
 [![Compatibility Gate 2 Lite](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2-lite.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2-lite.yml)
 [![Compatibility Gate 3 Builtin](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3-builtin.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3-builtin.yml)
+[![JS Oracle Smoke](https://github.com/fullofcaffeine/hxhx/actions/workflows/js-oracle-smoke.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/js-oracle-smoke.yml)
 [![Compatibility Gate 1](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate1.yml)
 [![Compatibility Gate 2](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate2.yml)
 [![Compatibility Gate 3](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/gate3.yml)

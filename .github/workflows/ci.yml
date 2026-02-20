@@ -225,67 +225,10 @@ jobs:
           echo "HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE}"
           npm run test:hxhx:builtin-target-smoke
 
-  js-oracle-smoke:
-    name: JS oracle smoke (upstream vs hxhx)
-    runs-on: ubuntu-latest
-    needs: [guards]
-    timeout-minutes: 25
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Setup OCaml toolchain (OCaml 5.2.1)
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5.2.1
-          dune-cache: true
-      - name: Install OCaml packages
-        run: |
-          set -euo pipefail
-          eval "$(opam env)"
-          opam install -y dune ocamlfind
-          eval "$(opam env)"
-          dune --version
-          ocamlc -version
-      - name: Export OCaml switch binaries to PATH
-        run: |
-          set -euo pipefail
-          eval "$(opam env)"
-          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - name: Cache Haxe toolchain (lix)
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/haxe
-          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
-      - name: Install npm dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Install Haxe (pinned via lix)
-        run: |
-          set -euo pipefail
-          npx lix download
-          npx lix download haxe "${{ env.HAXE_VERSION }}"
-          npx lix use haxe "${{ env.HAXE_VERSION }}"
-          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
-          export PATH="$(pwd)/node_modules/.bin:$PATH"
-          haxe -version
-      - name: Download Haxe libraries (lix)
-        run: npx lix download
-      - name: Run upstream-vs-hxhx JS oracle smoke
-        run: npm run test:upstream:js-oracle-smoke
-
   test:
     name: Tests
     runs-on: ubuntu-latest
-    needs: [guards, stage0-free-smoke, js-native-smoke, js-oracle-smoke]
+    needs: [guards, stage0-free-smoke, js-native-smoke]
     timeout-minutes: 30
     steps:
       - name: Checkout

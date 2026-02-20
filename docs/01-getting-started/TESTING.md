@@ -304,7 +304,7 @@ Notes:
   It is also manually triggerable with `workflow_dispatch` inputs for `targets`, `allow_skip`, and `macro_mode`.
 - Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR (main/master), and remains scheduled weekly plus manually triggerable with `workflow_dispatch` (`reps`, `run_js_native`).
 - PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job (`HXHX_BUILTIN_SMOKE_OCAML=0`, `HXHX_BUILTIN_SMOKE_JS_NATIVE=1`).
-- PR/push CI (`.github/workflows/ci.yml`) also includes `JS oracle smoke (upstream vs hxhx)`, which runs `npm run test:upstream:js-oracle-smoke`.
+- PR/push CI also includes `JS oracle smoke (upstream vs hxhx)` via `.github/workflows/js-oracle-smoke.yml`, which runs `npm run test:upstream:js-oracle-smoke`.
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
 - Long-run observability/guardrails: `HXHX_GATE3_TARGET_HEARTBEAT_SEC=20` prints periodic progress (set `0` to disable) and `HXHX_GATE3_TARGET_TIMEOUT_SEC=0` controls per-target timeout (set a non-zero value to fail hard hangs). The weekly CI baseline sets `HXHX_GATE3_TARGET_TIMEOUT_SEC=3600`.
