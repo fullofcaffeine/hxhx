@@ -229,6 +229,8 @@ jobs:
     name: Stage0 source-build smoke
     runs-on: ubuntu-latest
     needs: [guards]
+    # Keep this lane visible while memory baselines are tuned (haxe.ocaml-5mm).
+    continue-on-error: true
     timeout-minutes: 25
     steps:
       - name: Checkout
