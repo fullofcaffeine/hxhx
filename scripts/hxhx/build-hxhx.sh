@@ -14,6 +14,7 @@ HXHX_STAGE0_PREFER_NATIVE="${HXHX_STAGE0_PREFER_NATIVE:-0}"
 HXHX_STAGE0_TIMES="${HXHX_STAGE0_TIMES:-0}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
+HXHX_STAGE0_NO_INLINE="${HXHX_STAGE0_NO_INLINE:-0}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-30}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-7200}"
@@ -107,6 +108,14 @@ esac
 case "$HXHX_STAGE0_HEARTBEAT" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_STAGE0_HEARTBEAT: $HXHX_STAGE0_HEARTBEAT (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_NO_INLINE" in
+  0|1) ;;
+  *)
+    echo "Invalid HXHX_STAGE0_NO_INLINE: $HXHX_STAGE0_NO_INLINE (expected 0 or 1)." >&2
     exit 2
     ;;
 esac
@@ -323,6 +332,9 @@ fi
   if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
     haxe_args+=(--times)
   fi
+  if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
+    haxe_args+=(--no-inline)
+  fi
 
   run_stage0_build() {
     if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" = "0" ]; then
@@ -488,6 +500,9 @@ fi
       fi
       if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
         haxe_args+=(--times)
+      fi
+      if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
+        haxe_args+=(--no-inline)
       fi
       run_stage0_build
     else

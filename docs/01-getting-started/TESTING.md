@@ -188,6 +188,7 @@ Notes:
   - default heartbeat is bounded (`HXHX_STAGE0_HEARTBEAT=30`)
   - default failfast is bounded (`HXHX_STAGE0_FAILFAST_SECS=7200`)
   - optional RSS guard (`HXHX_STAGE0_MAX_RSS_MB=<limit>`) hard-stops runaway stage0 builds.
+  - optional lower-memory compile mode (`HXHX_STAGE0_NO_INLINE=1`) adds `--no-inline` to stage0 source builds.
   - override defaults for this test lane with:
     - `HXHX_TARGETS_STAGE0_HEARTBEAT_DEFAULT=<sec>`
     - `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT=<sec>`
@@ -196,7 +197,7 @@ Notes:
   - `Gate 1 Lite` workflow (`.github/workflows/gate1-lite.yml`) runs the upstream macro smoke rung (`test:upstream:unit-macro-stage3-no-emit`) on every push/PR.
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
-    (tuned with `HXHX_STAGE0_OCAML_BUILD=native` + `HXHX_STAGE0_DISABLE_PREPASSES=1` to reduce runner memory pressure).
+    (tuned with `HXHX_STAGE0_OCAML_BUILD=native`, `HXHX_STAGE0_DISABLE_PREPASSES=1`, and `HXHX_STAGE0_NO_INLINE=1` to reduce runner memory pressure).
   - each Stage0 Source Smoke run emits `stage0_peak_tree_rss_mb=<n>` and uploads
     `stage0_source_build.log` as a workflow artifact.
   - local telemetry helpers:

@@ -76,6 +76,7 @@ jobs:
           # Native mode lowers peak memory versus byte mode on ubuntu-latest.
           HXHX_STAGE0_OCAML_BUILD: "native"
           HXHX_STAGE0_DISABLE_PREPASSES: "1"
+          HXHX_STAGE0_NO_INLINE: "1"
           HXHX_STAGE0_HEARTBEAT: "30"
           HXHX_STAGE0_FAILFAST_SECS: "1800"
           HXHX_STAGE0_MAX_RSS_MB: "0"
