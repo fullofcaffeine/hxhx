@@ -80,11 +80,6 @@ if [ "${HXHX_GATE2_SKIP_HXJAVA}" = "1" ] && [ -z "${HXHX_GATE2_MISC_FILTER:-}" ]
   export HXHX_GATE2_MISC_FILTER='^(?!.*Issue11737).*$'
 fi
 
-# On macOS, a local debugging escape hatch can skip the resolution stage after SIGSEGV.
-# Default is fail-fast; set `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1` only when debugging.
-: "${HXHX_GATE2_SKIP_DARWIN_SEGFAULT:=0}"
-export HXHX_GATE2_SKIP_DARWIN_SEGFAULT
-
 UPSTREAM_DIR_ORIG="$UPSTREAM_DIR"
 UPSTREAM_WORKTREE_DIR=""
 WRAP_DIR=""
@@ -825,7 +820,6 @@ run_stage3_no_emit_direct_macro() {
     return 0
   fi
 
-  local resolution_status="ok"
   set +e
   (
     cd "$UPSTREAM_DIR/tests/misc/resolution"
@@ -836,22 +830,14 @@ run_stage3_no_emit_direct_macro() {
 
   if [ "$resolution_exit" -eq 0 ]; then
     echo "macro_stage=resolution status=ok"
-  elif [ "$resolution_exit" -eq 139 ] && [ "$(uname -s)" = "Darwin" ] && [ "${HXHX_GATE2_SKIP_DARWIN_SEGFAULT:-0}" = "1" ]; then
-    echo "Skipping resolution stage on macOS after SIGSEGV (HXHX_GATE2_SKIP_DARWIN_SEGFAULT=1 opt-in)."
-    echo "macro_stage=resolution status=skipped reason=darwin_sigsegv"
-    resolution_status="skipped"
   else
     echo "macro_stage=resolution status=failed exit=${resolution_exit}" >&2
     return "$resolution_exit"
   fi
 
   if [ "$stop_after" = "resolution" ]; then
-    if [ "$resolution_status" = "ok" ]; then
-      echo "gate2_stage3_no_emit_direct=ok stop_after=resolution"
-      return 0
-    fi
-    echo "Requested stop-after=resolution but stage is skipped on this host (set HXHX_GATE2_SKIP_DARWIN_SEGFAULT=0 to fail-fast)." >&2
-    return 1
+    echo "gate2_stage3_no_emit_direct=ok stop_after=resolution"
+    return 0
   fi
   if [ "${HXHX_GATE2_FORCE_SYS:-0}" = "1" ] || [ "$(uname -s)" != "Darwin" ]; then
     (

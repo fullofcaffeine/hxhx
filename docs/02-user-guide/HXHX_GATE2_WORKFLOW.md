@@ -92,7 +92,6 @@ Notes:
     minimal harness so we can prove sub-invocation spawning (not full runci acceptance).
   - `HXHX_GATE2_SKIP_PARTY=0`: enable `tests/party` (network-heavy; skipped by default for stability).
   - `HXHX_GATE2_MISC_FILTER=<pattern>`: run only a subset of `tests/misc` fixtures.
-  - `HXHX_GATE2_SKIP_DARWIN_SEGFAULT=0` (default): direct mode is fail-fast on macOS; set `1` only as a local debugging escape hatch to convert `tests/misc/resolution` exit `139` into a deterministic skipped-stage marker.
   - Focused display rung (`npm run test:upstream:runci-macro-stage3-display`) keeps optional macOS fallback knobs, but fail-fast is the default:
     - `HXHX_GATE2_DISPLAY_RETRY_COUNT` (default `0`)
     - `HXHX_GATE2_DISPLAY_RETRY_DELAY_SEC` (default `3`)
