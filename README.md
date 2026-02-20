@@ -501,6 +501,7 @@ Local Stage3 protocol regressions are covered by `npm run test:hxhx-targets`, in
   - workflow logs now print `stage0_peak_tree_rss_mb=<n>` and upload `stage0_source_build.log` as an artifact for each run
   - parse one log locally: `bash scripts/ci/extract-stage0-peak-rss.sh <stage0_source_build.log>`
   - aggregate recent GitHub baseline samples (default 5): `bash scripts/ci/stage0-source-rss-baseline.sh --allow-partial`
+  - while success samples are sparse, include failed runs for diagnostics: `bash scripts/ci/stage0-source-rss-baseline.sh --include-failures --allow-partial`
 - source-level Stage3 receiver-call regression (`other.add(n)` arity shape) is covered by `npm run test:m14:hih-emitter-receiver-call` (no stage0 bootstrap rebuild required)
 
 ## Two surfaces (design)

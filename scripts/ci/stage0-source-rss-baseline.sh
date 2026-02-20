@@ -9,6 +9,7 @@ run_limit=30
 workflow_name="Stage0 Source Smoke"
 job_name="Stage0 source-build smoke"
 allow_partial=0
+include_failures=0
 
 usage() {
   cat <<EOF
@@ -20,6 +21,7 @@ Options:
   --workflow <name>     Workflow name to scan (default: "$workflow_name")
   --job <name>          Job name inside runs (default: "$job_name")
   --allow-partial       Exit 0 when fewer than --samples runs are found
+  --include-failures    Include failed runs/jobs in sample set
   -h, --help            Show this help
 
 Requires:
@@ -47,6 +49,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --allow-partial)
       allow_partial=1
+      shift
+      ;;
+    --include-failures)
+      include_failures=1
       shift
       ;;
     -h|--help)
@@ -90,23 +96,35 @@ fi
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
-run_ids_file="$tmp_dir/run_ids.txt"
-gh run list \
-  --workflow "$workflow_name" \
-  --limit "$run_limit" \
-  --json databaseId,status,conclusion \
-  --jq '.[] | select(.status=="completed" and .conclusion=="success") | .databaseId' >"$run_ids_file"
+run_entries_file="$tmp_dir/run_entries.txt"
+if [ "$include_failures" = "1" ]; then
+  gh run list \
+    --workflow "$workflow_name" \
+    --limit "$run_limit" \
+    --json databaseId,status,conclusion \
+    --jq '.[] | select(.status=="completed" and (.conclusion=="success" or .conclusion=="failure")) | "\(.databaseId):\(.conclusion)"' >"$run_entries_file"
+else
+  gh run list \
+    --workflow "$workflow_name" \
+    --limit "$run_limit" \
+    --json databaseId,status,conclusion \
+    --jq '.[] | select(.status=="completed" and .conclusion=="success") | "\(.databaseId):\(.conclusion)"' >"$run_entries_file"
+fi
 
-run_ids=()
-while IFS= read -r run_id; do
-  if [ -z "$run_id" ]; then
+run_entries=()
+while IFS= read -r run_entry; do
+  if [ -z "$run_entry" ]; then
     continue
   fi
-  run_ids+=("$run_id")
-done <"$run_ids_file"
+  run_entries+=("$run_entry")
+done <"$run_entries_file"
 
-if [ "${#run_ids[@]}" -eq 0 ]; then
-  echo "No successful runs found for workflow: $workflow_name"
+if [ "${#run_entries[@]}" -eq 0 ]; then
+  if [ "$include_failures" = "1" ]; then
+    echo "No successful/failed completed runs found for workflow: $workflow_name"
+  else
+    echo "No successful runs found for workflow: $workflow_name"
+  fi
   if [ "$allow_partial" = "1" ]; then
     exit 0
   fi
@@ -114,18 +132,31 @@ if [ "${#run_ids[@]}" -eq 0 ]; then
 fi
 
 declare -a sampled_runs=()
+declare -a sampled_conclusions=()
 declare -a sampled_peaks=()
 
-for run_id in "${run_ids[@]}"; do
+for run_entry in "${run_entries[@]}"; do
   if [ "${#sampled_runs[@]}" -ge "$samples" ]; then
     break
   fi
 
-  job_id="$(
-    gh run view "$run_id" --json jobs \
-      --jq ".jobs[] | select(.name==\"$job_name\" and .conclusion==\"success\") | .databaseId" \
-      | head -n 1
-  )"
+  run_id="${run_entry%%:*}"
+  run_conclusion="${run_entry#*:}"
+
+  if [ "$include_failures" = "1" ]; then
+    job_id="$(
+      gh run view "$run_id" --json jobs \
+        --jq ".jobs[] | select(.name==\"$job_name\" and (.conclusion==\"success\" or .conclusion==\"failure\")) | .databaseId" \
+        | head -n 1
+    )"
+  else
+    job_id="$(
+      gh run view "$run_id" --json jobs \
+        --jq ".jobs[] | select(.name==\"$job_name\" and .conclusion==\"success\") | .databaseId" \
+        | head -n 1
+    )"
+  fi
+
   if [ -z "$job_id" ]; then
     continue
   fi
@@ -141,12 +172,17 @@ for run_id in "${run_ids[@]}"; do
   fi
 
   sampled_runs+=("$run_id")
+  sampled_conclusions+=("$run_conclusion")
   sampled_peaks+=("$peak")
 done
 
 count="${#sampled_runs[@]}"
 if [ "$count" -eq 0 ]; then
-  echo "No successful '$job_name' logs with Stage0 RSS samples were found."
+  if [ "$include_failures" = "1" ]; then
+    echo "No successful/failed '$job_name' logs with Stage0 RSS samples were found."
+  else
+    echo "No successful '$job_name' logs with Stage0 RSS samples were found."
+  fi
   if [ "$allow_partial" = "1" ]; then
     exit 0
   fi
@@ -155,7 +191,7 @@ fi
 
 echo "Stage0 RSS samples (workflow=\"$workflow_name\" job=\"$job_name\"):"
 for i in "${!sampled_runs[@]}"; do
-  echo "- run_id=${sampled_runs[$i]} peak_tree_rss_mb=${sampled_peaks[$i]}"
+  echo "- run_id=${sampled_runs[$i]} conclusion=${sampled_conclusions[$i]} peak_tree_rss_mb=${sampled_peaks[$i]}"
 done
 
 min_peak="$(printf '%s\n' "${sampled_peaks[@]}" | sort -n | head -n 1)"

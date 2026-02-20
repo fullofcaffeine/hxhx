@@ -83,22 +83,31 @@ jobs:
           set -euo pipefail
 
           build_log="$RUNNER_TEMP/stage0_source_build.log"
+          set +e
           HXHX_BIN="$(
             bash scripts/hxhx/build-hxhx.sh \
               2> >(tee "$build_log" >&2) \
               | tail -n 1
           )"
-          test -f "$HXHX_BIN"
-          echo "hxhx_bin=$HXHX_BIN"
+          build_code="$?"
+          set -e
 
           peak_tree_rss_mb="$(bash scripts/ci/extract-stage0-peak-rss.sh "$build_log")"
-          echo "stage0_peak_tree_rss_mb=$peak_tree_rss_mb"
+          echo "stage0_peak_tree_rss_mb=$peak_tree_rss_mb (build_exit=$build_code)"
           {
             echo "### Stage0 source smoke telemetry"
             echo ""
             echo "- Peak tree RSS: ${peak_tree_rss_mb}MB"
+            echo "- Stage0 build exit: ${build_code}"
             echo "- RSS cap policy: disabled in CI (`HXHX_STAGE0_MAX_RSS_MB=0`)"
           } >>"$GITHUB_STEP_SUMMARY"
+
+          if [ "$build_code" != "0" ] || [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+            echo "Stage0 source build failed (exit=$build_code)." >&2
+            exit "${build_code:-1}"
+          fi
+
+          echo "hxhx_bin=$HXHX_BIN"
 
           targets="$("$HXHX_BIN" --hxhx-list-targets)"
           echo "$targets"
