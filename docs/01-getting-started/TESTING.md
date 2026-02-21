@@ -142,6 +142,7 @@ Notes:
 - This focused rung sets `HXHX_GATE2_SKIP_UNIT=1` so it can isolate display semantics
   without being blocked by unrelated `tests/unit` bring-up gaps.
 - The focused display rung is fail-fast (no Darwin-specific retry/skip fallback path).
+- Current baseline (2026-02-21): `unsupported_exprs_total=0`, `unsupported_files=0`.
 
 ### Bootstrap stage map (quick reference)
 

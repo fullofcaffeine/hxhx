@@ -120,9 +120,28 @@ class HxParser {
 		- Reuses the same lexer + `parseExpr` routine as module parsing, but stops at EOF.
 	**/
 	public static function parseExprText(source:String):HxExpr {
-		final p = new HxParser(source);
+		final p = new HxParser(normalizeDenseEscapedQuotes(source));
 		final e = p.parseExpr(() -> p.cur.kind.match(TEof));
 		return e;
+	}
+
+	static function normalizeDenseEscapedQuotes(source:String):String {
+		// Native protocol expression payloads can occasionally arrive with escaped quote
+		// strings compacted to `"""` (for `"\\""`) when whitespace is stripped.
+		//
+		// Example:
+		//   [" ".code, ... , """.code, ...]
+		//
+		// Without this normalization, `readString` sees the first two quotes as an empty
+		// string and then fails with an unterminated literal on the third quote.
+		if (source == null || source.length == 0)
+			return source;
+		if (source.indexOf('"""') == -1)
+			return source;
+		final q = '"';
+		final triple = q + q + q;
+		final escapedQuoteString = q + "\\" + q + q;
+		return StringTools.replace(source, triple, escapedQuoteString);
 	}
 
 	/**
@@ -463,7 +482,7 @@ class HxParser {
 					bump();
 				inner;
 			case TLBrace:
-				parseAnonExpr();
+				parseBraceExpr();
 			case TKeyword(k):
 				if (k == KNull) {
 					bump();
@@ -786,13 +805,55 @@ class HxParser {
 		return EArrayDecl(values);
 	}
 
+	function parseBraceExpr():HxExpr {
+		// Expression-level `{ ... }` has two common shapes in upstream code:
+		// - anonymous object literal: `{ field: value }`
+		// - block expression initializer: `{ var h = ...; ...; h; }`
+		//
+		// For now we parse anon literals structurally and treat other brace expressions
+		// as opaque block expressions.
+		expect(TLBrace, "'{'");
+		if (cur.kind.match(TRBrace)) {
+			bump();
+			return EAnon([], []);
+		}
+
+		final isAnonLiteral = switch (cur.kind) {
+			case TIdent(_):
+				peekKind().match(TColon);
+			case _:
+				false;
+		}
+		if (isAnonLiteral)
+			return parseAnonExprAfterOpen();
+
+		var depth = 1;
+		while (depth > 0 && !cur.kind.match(TEof)) {
+			switch (cur.kind) {
+				case TLBrace:
+					depth += 1;
+					bump();
+				case TRBrace:
+					depth -= 1;
+					bump();
+				case _:
+					bump();
+			}
+		}
+		return ETryCatchRaw("opaque_block_expr");
+	}
+
 	function parseAnonExpr():HxExpr {
 		// `{ name: expr, ... }`
 		//
 		// Stage 3: parse a conservative subset (identifier keys + expressions).
+		expect(TLBrace, "'{'");
+		return parseAnonExprAfterOpen();
+	}
+
+	function parseAnonExprAfterOpen():HxExpr {
 		final names = new Array<String>();
 		final values = new Array<HxExpr>();
-		expect(TLBrace, "'{'");
 		if (cur.kind.match(TRBrace)) {
 			bump();
 			return EAnon(names, values);

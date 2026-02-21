@@ -79,6 +79,7 @@ Meaning in plain terms:
 - The non-delegating Gate2 direct rung (`HXHX_GATE2_MODE=stage3_no_emit_direct`) now runs end-to-end with stable stage markers.
 - Runner diagnostics now include `subinvocations=<n>` and `last_subinvocation=<cmd>` for faster triage.
 - On macOS, direct mode now fails fast for `tests/misc/resolution` as well (no default stage skip fallback).
+- Focused Gate2 display rung now reports `unsupported_exprs_total=0` (baseline refreshed on 2026-02-21).
 
 ### M4. Architecture hardening (target-agnostic core direction)
 
