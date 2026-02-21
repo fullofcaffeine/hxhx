@@ -1,6 +1,5 @@
 import todo.backend.TodoService;
 import todo.backend.TodoSqlCatalog;
-import todo.backend.TodoSqlCatalog.TodoTableInfo;
 import todo.frontend.TodoAppView;
 import tink.web.routing.Router;
 #if js
@@ -27,8 +26,9 @@ class Main {
 		final open = service.openCount();
 		final openSlugs = service.openSlugs().join(",");
 
-		final createSql = TodoSqlCatalog.createTableSql(new TodoTableInfo());
+		final createSql = TodoSqlCatalog.createTableSql();
 		final inserts = TodoSqlCatalog.seedInsertSql(todos);
+		final openSelectSql = TodoSqlCatalog.openTodosSelectSql(5);
 
 		printLine('router=' + (routerReady ? 'ready' : 'missing'));
 		printLine('todo-count=' + todos.length);
@@ -38,6 +38,7 @@ class Main {
 		printLine('sql-ddl=' + createSql);
 		printLine('sql-insert-1=' + inserts[0]);
 		printLine('sql-insert-2=' + inserts[1]);
+		printLine('sql-open-select=' + openSelectSql);
 
 		#if js
 		mountBrowserUi();

@@ -147,8 +147,20 @@ Notes:
 
 Use this when you want the repo to function as a compiler-bootstrap example:
 
+- Plain-language self-hosting status/checklist (includes a pass/partial/not-yet matrix):
+  - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
+
 - **Stage0**: external `haxe` compiles repo Haxe sources to OCaml.
   - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
+  - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
+    - Opt-in cleanup: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-stale-haxe-servers`
+  - Faster local iteration (reuse previous emit output + skip verify):
+    - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast`
+    - Equivalent env knobs:
+      - `HXHX_BOOTSTRAP_CLEAN_OUT=0` (incremental emit)
+      - `HXHX_BOOTSTRAP_VERIFY=0` (skip snapshot verify)
+  - If heartbeat is disabled (`HXHX_STAGE0_HEARTBEAT=0`), optional diagnostics are available via
+    `HXHX_STAGE0_DIAG_EVERY=<seconds>` (or `--diag-every <seconds>`).
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
   - Observability knobs: `HXHX_BOOTSTRAP_HEARTBEAT=20` (default; set `0` to disable) and `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS=0` (optional timeout).

@@ -12,4 +12,3 @@ class Main {
 		Sys.println(b.length);
 	}
 }
-

@@ -16,7 +16,27 @@ if ! haxelib run formatter --help >/dev/null 2>&1; then
 fi
 
 echo "[guard:hx-format] Checking Haxe formatting..."
-haxelib run formatter -s packages -s test -s examples -s workloads --check
+hx_list_file="$(mktemp)"
+git ls-files "*.hx" | awk '
+	$0 ~ /(^|\/)deps\// { next }
+	$0 ~ /(^|\/)out\// { next }
+	$0 ~ /(^|\/)bootstrap_work\// { next }
+	$0 ~ /(^|\/)bootstrap_verify\// { next }
+	{ print }
+' >"$hx_list_file"
+
+if [ ! -s "$hx_list_file" ]; then
+	rm -f "$hx_list_file"
+	echo "[guard:hx-format] ERROR: no tracked .hx files found." >&2
+	exit 1
+fi
+
+fmt_args=()
+while IFS= read -r hx_file; do
+	fmt_args+=(-s "$hx_file")
+done <"$hx_list_file"
+rm -f "$hx_list_file"
+haxelib run formatter "${fmt_args[@]}" --check
 
 SENTINEL_FILE="packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
 if [ -f "$SENTINEL_FILE" ]; then

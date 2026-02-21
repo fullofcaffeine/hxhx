@@ -112,6 +112,21 @@ Always run `git status --short` after cleanup to verify no tracked files were ac
 - Haxe compiler source (reference): `<path-to-haxe.elixir.reference>/haxe`
 - `haxe.elixir.codex` (compiler + testing patterns reference): `<path-to-haxe.elixir.codex>`
 
+## Haxe Library Research First (Required)
+
+Before using a Haxe library in code, do this first:
+
+1. Read the library source code to learn the real API and common usage patterns.
+2. Read the library docs/README to confirm intended behavior and public examples.
+3. Only then implement against that library in this repo.
+
+If the library is not available locally, you may fetch it in a temporary location by:
+
+- cloning from GitHub, or
+- using `lix` to download/install it.
+
+This is a hard rule to reduce API mistakes and keep integrations idiomatic.
+
 ## Licensing (MIT Goal, Keep Private for Now)
 
 This repository is intended to become:

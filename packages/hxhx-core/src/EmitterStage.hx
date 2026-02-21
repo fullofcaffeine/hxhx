@@ -158,6 +158,21 @@ class EmitterStage {
 	static var currentInstanceMethodsByTypePath:Null<Array<_InstanceMethodEntry>> = null;
 
 	/**
+		Statement-scope mutable local tracking for Stage3 full-body emission.
+
+		Why
+		- Haxe locals declared with `var` can be reassigned (`=`, `+=`, etc.).
+		- OCaml `let` bindings are immutable, so reassignment needs `ref` cells.
+
+		How
+		- `stmtListToOcaml` computes mutable locals for the current statement list and
+		  merges them with outer scope tracking.
+		- `exprToOcaml` reads mutable identifiers via `!x`.
+		- assignment statements lower to `x := value`.
+	**/
+	static var currentMutableLocalRefNames:Array<String> = [];
+
+	/**
 		Backend dialect seam for OCaml-coupled runtime expression snippets.
 
 		Why
@@ -249,6 +264,21 @@ class EmitterStage {
 		if (base == "_" || base.length == 0)
 			return "_";
 		return isOcamlKeyword(base) ? (base + "_") : base;
+	}
+
+	static function isMutableLocalRefIdent(name:String):Bool {
+		final refs = currentMutableLocalRefNames;
+		if (refs == null || refs.length == 0 || name == null || name.length == 0)
+			return false;
+		for (n in refs)
+			if (n == name)
+				return true;
+		return false;
+	}
+
+	static function ocamlReadValueIdent(raw:String):String {
+		final ident = ocamlValueIdent(raw);
+		return isMutableLocalRefIdent(raw) ? "(!" + ident + ")" : ident;
 	}
 
 	static function isUpperStart(name:String):Bool {
@@ -468,13 +498,13 @@ class EmitterStage {
 			case EBool(v): "string_of_bool " + (v ? "true" : "false");
 			case EFloat(v): "string_of_float " + Std.string(v);
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
-				"string_of_int " + ocamlValueIdent(name);
+				"string_of_int " + ocamlReadValueIdent(name);
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Float"):
-				"string_of_float " + ocamlValueIdent(name);
+				"string_of_float " + ocamlReadValueIdent(name);
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Bool"):
-				"string_of_bool " + ocamlValueIdent(name);
+				"string_of_bool " + ocamlReadValueIdent(name);
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "String"):
-				ocamlValueIdent(name);
+				ocamlReadValueIdent(name);
 			case EIdent(name) if (tyByIdent != null
 				&& tyByIdent.get(name) != null
 				&& StringTools.startsWith(tyByIdent.get(name).toString(), "Array<")):
@@ -486,11 +516,11 @@ class EmitterStage {
 				// "<object>" (because `dynamic_toStdString` can't reliably detect records).
 				final t = tyByIdent.get(name).toString();
 				final compact = StringTools.replace(t, " ", "");
-				(compact.indexOf("Array<String>") == 0) ? ("HxBootArray.join (" + ocamlValueIdent(name) +
+				(compact.indexOf("Array<String>") == 0) ? ("HxBootArray.join (" + ocamlReadValueIdent(name) +
 					") (\",\") (fun (s : string) -> s)") : ("HxRuntime.dynamic_toStdString (Obj.repr ("
-					+ ocamlValueIdent(name) + "))");
+					+ ocamlReadValueIdent(name) + "))");
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Array"):
-				"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlValueIdent(name) + "))";
+				"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 			case _:
 				// Bring-up default: prefer *some* stringification over `<unsupported>` so
 				// upstream harness logs remain readable (and don't change meaning).
@@ -509,6 +539,10 @@ class EmitterStage {
 				return "";
 			final t = tyByIdent.get(name);
 			return t == null ? "" : t.toString();
+		}
+
+		inline function readIdent(name:String):String {
+			return ocamlReadValueIdent(name);
 		}
 
 		function isIntExpr(expr:HxExpr):Bool {
@@ -668,7 +702,7 @@ class EmitterStage {
 					// Make sure negative int literals become floats in float contexts.
 					"(-.(" + exprToOcamlAsFloatValue(inner) + "))";
 				case EIdent(name) if (tyForIdent(name) == "Int"):
-					"float_of_int " + ocamlValueIdent(name);
+					"float_of_int " + readIdent(name);
 				case _ if (isInfNanFieldExpr(expr)):
 					"(Obj.magic (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
 						moduleNameByPkgAndClass) + ") : float)";
@@ -913,7 +947,7 @@ class EmitterStage {
 					ocamlValueIdent(name) + " (this_)";
 				} else if (tyByIdent != null && tyByIdent.get(name) != null) {
 					// Bound identifier (parameter / local / bring-up-allowed static field).
-					ocamlValueIdent(name);
+					readIdent(name);
 				} else if (arityByIdent != null && arityByIdent.exists(name)) {
 					// Static method call within the same generated module becomes a top-level OCaml binding.
 					ocamlValueIdent(name);
@@ -1973,7 +2007,7 @@ class EmitterStage {
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
 						case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
-							"float_of_int " + ocamlValueIdent(name);
+							"float_of_int " + readIdent(name);
 						case _:
 							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 					}
@@ -2382,7 +2416,7 @@ class EmitterStage {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
 					case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
-						"float_of_int " + ocamlValueIdent(name);
+						"float_of_int " + ocamlReadValueIdent(name);
 					case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
 						"(Obj.magic (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee) + ") : float)";
@@ -2409,6 +2443,153 @@ class EmitterStage {
 			?fnReturnTypes:Map<String, TyType>):String {
 		if (stmts == null || stmts.length == 0)
 			return "()";
+
+		final prevMutableLocalRefNames = currentMutableLocalRefNames == null ? [] : currentMutableLocalRefNames.copy();
+
+		inline function isAssignmentOp(op:String):Bool {
+			return switch (op) {
+				case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
+					true;
+				case _:
+					false;
+			};
+		}
+
+		function mergeMutableLocalRefNames(base:Array<String>, local:Null<Map<String, Bool>>):Array<String> {
+			final out:Array<String> = base == null ? [] : base.copy();
+			function hasName(name:String):Bool {
+				for (n in out)
+					if (n == name)
+						return true;
+				return false;
+			}
+			if (local != null)
+				for (k in local.keys())
+					if (local.get(k) == true && !hasName(k))
+						out.push(k);
+			return out;
+		}
+
+		function collectTopLevelDeclaredLocals(ss:Array<HxStmt>):Map<String, Bool> {
+			final out:Map<String, Bool> = new Map();
+			if (ss == null)
+				return out;
+			for (s in ss) {
+				switch (s) {
+					case SVar(name, _hint, _init, _pos):
+						if (name != null && name.length > 0)
+							out.set(name, true);
+					case _:
+				}
+			}
+			return out;
+		}
+
+		function collectAssignedNamesInExpr(e:HxExpr, out:Map<String, Bool>):Void {
+			if (e == null)
+				return;
+			switch (e) {
+				case EBinop(op, EIdent(name), rhs):
+					if (isAssignmentOp(op) && name != null && name.length > 0)
+						out.set(name, true);
+					collectAssignedNamesInExpr(rhs, out);
+				case EBinop(_op, left, right):
+					collectAssignedNamesInExpr(left, out);
+					collectAssignedNamesInExpr(right, out);
+				case EUnop(_op, inner):
+					collectAssignedNamesInExpr(inner, out);
+				case ECall(callee, args):
+					collectAssignedNamesInExpr(callee, out);
+					if (args != null)
+						for (a in args)
+							collectAssignedNamesInExpr(a, out);
+				case EField(obj, _field):
+					collectAssignedNamesInExpr(obj, out);
+				case EArrayDecl(values):
+					if (values != null)
+						for (v in values)
+							collectAssignedNamesInExpr(v, out);
+				case EArrayComprehension(_name, iterable, yieldExpr):
+					collectAssignedNamesInExpr(iterable, out);
+					collectAssignedNamesInExpr(yieldExpr, out);
+				case EArrayAccess(arr, idx):
+					collectAssignedNamesInExpr(arr, out);
+					collectAssignedNamesInExpr(idx, out);
+				case ETernary(cond, thenExpr, elseExpr):
+					collectAssignedNamesInExpr(cond, out);
+					collectAssignedNamesInExpr(thenExpr, out);
+					collectAssignedNamesInExpr(elseExpr, out);
+				case ESwitch(scrutinee, cases):
+					collectAssignedNamesInExpr(scrutinee, out);
+					if (cases != null)
+						for (c in cases)
+							collectAssignedNamesInExpr(c.expr, out);
+				case ECast(inner, _hint):
+					collectAssignedNamesInExpr(inner, out);
+				case EUntyped(inner):
+					collectAssignedNamesInExpr(inner, out);
+				case ENew(_typePath, args):
+					if (args != null)
+						for (a in args)
+							collectAssignedNamesInExpr(a, out);
+				case _:
+			}
+		}
+
+		function collectAssignedNamesInStmt(s:HxStmt, out:Map<String, Bool>):Void {
+			if (s == null)
+				return;
+			switch (s) {
+				case SExpr(expr, _pos):
+					collectAssignedNamesInExpr(expr, out);
+				case SVar(_name, _hint, init, _pos):
+					collectAssignedNamesInExpr(init, out);
+				case SBlock(ss, _pos):
+					if (ss != null)
+						for (ss0 in ss)
+							collectAssignedNamesInStmt(ss0, out);
+				case SIf(cond, thenBranch, elseBranch, _pos):
+					collectAssignedNamesInExpr(cond, out);
+					collectAssignedNamesInStmt(thenBranch, out);
+					if (elseBranch != null)
+						collectAssignedNamesInStmt(elseBranch, out);
+				case SWhile(cond, body, _pos):
+					collectAssignedNamesInExpr(cond, out);
+					collectAssignedNamesInStmt(body, out);
+				case SDoWhile(body, cond, _pos):
+					collectAssignedNamesInStmt(body, out);
+					collectAssignedNamesInExpr(cond, out);
+				case SForIn(_name, iterable, body, _pos):
+					collectAssignedNamesInExpr(iterable, out);
+					collectAssignedNamesInStmt(body, out);
+				case STry(tryBody, catches, _pos):
+					collectAssignedNamesInStmt(tryBody, out);
+					if (catches != null)
+						for (c in catches)
+							collectAssignedNamesInStmt(c.body, out);
+				case SSwitch(scrutinee, cases, _pos):
+					collectAssignedNamesInExpr(scrutinee, out);
+					if (cases != null)
+						for (c in cases)
+							collectAssignedNamesInStmt(c.body, out);
+				case SThrow(expr, _pos):
+					collectAssignedNamesInExpr(expr, out);
+				case SReturn(expr, _pos):
+					collectAssignedNamesInExpr(expr, out);
+				case _:
+			}
+		}
+
+		final declaredTopLevelLocals = collectTopLevelDeclaredLocals(stmts);
+		final assignedNamesDeep:Map<String, Bool> = new Map();
+		for (s in stmts)
+			collectAssignedNamesInStmt(s, assignedNamesDeep);
+		final mutableLocalsInScope:Map<String, Bool> = new Map();
+		for (name in declaredTopLevelLocals.keys()) {
+			if (assignedNamesDeep.get(name) == true)
+				mutableLocalsInScope.set(name, true);
+		}
+		currentMutableLocalRefNames = mergeMutableLocalRefNames(prevMutableLocalRefNames, mutableLocalsInScope);
 
 		// Stage 3 bring-up: merge any precomputed local type hints with a tiny, local
 		// initializer-based inference pass so later statements can emit more correct OCaml.
@@ -2600,6 +2781,37 @@ class EmitterStage {
 			};
 		}
 
+		function mutableAssignmentExpr(op:String, name:String, rhs:HxExpr):Null<HxExpr> {
+			return switch (op) {
+				case "=":
+					rhs;
+				case "+=":
+					EBinop("+", EIdent(name), rhs);
+				case "-=":
+					EBinop("-", EIdent(name), rhs);
+				case "*=":
+					EBinop("*", EIdent(name), rhs);
+				case "/=":
+					EBinop("/", EIdent(name), rhs);
+				case "%=":
+					EBinop("%", EIdent(name), rhs);
+				case _:
+					null;
+			}
+		}
+
+		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
+			if (!isMutableLocalRefIdent(name))
+				return null;
+			final assignExpr = mutableAssignmentExpr(op, name, rhs);
+			if (assignExpr == null)
+				return null;
+			final rhsCode = returnExprToOcaml(assignExpr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+				moduleNameByPkgAndClass, callSigByCallee);
+			final ident = ocamlValueIdent(name);
+			return "(let __hx_v = (" + rhsCode + ") in (" + ident + " := __hx_v; ()))";
+		}
+
 		function stmtToUnit(s:HxStmt, tyCtx:Null<Map<String, TyType>>):String {
 			return switch (s) {
 				case SBlock(ss, _pos):
@@ -2699,7 +2911,8 @@ class EmitterStage {
 					"()";
 				case SForIn(name, iterable, body, _pos):
 					final ident = ocamlValueIdent(name);
-					final bodyTy = extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
+					final loopVarTy = (tyCtx != null && tyCtx.get(name) != null) ? tyCtx.get(name) : ((localHints.get(name) != null) ? localHints.get(name) : TyType.fromHintText("Dynamic"));
+					final bodyTy = extendTyByIdentLocal(tyCtx, name, loopVarTy);
 					final bodyUnit = stmtToUnit(body, bodyTy);
 					switch (iterable) {
 						case ERange(startExpr, endExpr):
@@ -2741,6 +2954,16 @@ class EmitterStage {
 					// Avoid emitting invalid OCaml for unsupported assignment lvalues while still
 					// allowing modeled instance-field assignment side effects.
 					switch (expr) {
+						case EBinop(op, EIdent(name), rhs):
+							final lowered = mutableAssignmentStmtToUnit(op, name, rhs, tyCtx);
+							if (lowered != null) {
+								lowered;
+							} else if (op == "=") {
+								"()";
+							} else {
+								"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+									moduleNameByPkgAndClass, callSigByCallee) + ")";
+							}
 						case EBinop("=", EField(_, _), _):
 							"ignore (" + returnExprToOcaml(expr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 								moduleNameByPkgAndClass, callSigByCallee) + ")";
@@ -2779,7 +3002,8 @@ class EmitterStage {
 					// Keep OCaml warning discipline resilient: Haxe code (especially upstream-ish tests)
 					// can contain locals that are intentionally unused. In OCaml, that triggers warnings
 					// which can become hard errors under `-warn-error`.
-					out = "let " + ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))";
+					out = isMutableLocalRefIdent(name) ? ("let " + ident + " = ref (" + rhs + ") in (ignore " + ident + "; (" + out + "))") : ("let "
+						+ ident + " = " + rhs + " in (ignore " + ident + "; (" + out + "))");
 				case SIf(cond, thenBranch, elseBranch, _pos):
 					// Stage 3 bring-up: recognize and SSA-lower the common "null-coalescing assignment"
 					// idiom used by upstream RunCi:
@@ -2816,7 +3040,7 @@ class EmitterStage {
 					}
 
 					final assign = elseBranch == null ? unwrapSingleAssign(thenBranch) : null;
-					if (assign != null && isNullCheckFor(assign.name, cond)) {
+					if (assign != null && isNullCheckFor(assign.name, cond) && !isMutableLocalRefIdent(assign.name)) {
 						final ident = ocamlValueIdent(assign.name);
 						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee);
@@ -2833,6 +3057,7 @@ class EmitterStage {
 					out = stmtAlwaysReturns(s) ? stmtToUnit(s, tyCtx) : ("(" + stmtToUnit(s, tyCtx) + "; " + out + ")");
 			}
 		}
+		currentMutableLocalRefNames = prevMutableLocalRefNames;
 		return out;
 	}
 

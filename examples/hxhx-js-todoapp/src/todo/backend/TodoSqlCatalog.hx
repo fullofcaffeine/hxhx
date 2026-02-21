@@ -1,151 +1,105 @@
 package todo.backend;
 
-import tink.sql.Info;
-import todo.shared.TodoTypes.TodoItem;
 import StringTools;
+import tink.core.Any;
+import tink.core.Noise;
+import tink.core.Promise;
+import tink.sql.Connection;
+import tink.sql.DatabaseDefinition;
+import tink.sql.OrderBy.Order;
+import tink.sql.Query;
+import tink.sql.Transaction;
+import tink.sql.Types;
+import tink.sql.format.Sanitizer;
+import tink.sql.format.SqlFormatter;
+import todo.shared.TodoTypes.TodoItem;
 
 class TodoSqlCatalog {
-	public static function createTableSql(table:TableInfo):String {
-		final cols = [for (column in table.getColumns()) columnSql(column)];
-		final keys = [for (key in table.getKeys()) keySql(key)];
-		final allParts = cols.concat(keys);
-		return 'CREATE TABLE ' + ident(table.getName()) + ' (' + allParts.join(', ') + ')';
+	static final FORMATTER:SqlFormatter<{}, {}> = new SqlFormatter();
+	static final SANITIZER:Sanitizer = new TodoSqlSanitizer();
+
+	public static function createTableSql():String {
+		final tx = previewTx();
+		return renderQuery(CreateTable(tx.TodoItem.info, false));
 	}
 
-	public static function seedInsertSql(items:Array<TodoItem>):Array<String>
-		return [for (item in items) insertSql(item)];
-
-	static function insertSql(item:TodoItem):String {
-		return 'INSERT INTO `todo_item` (`id`, `title`, `description`, `done`, `created_at`) VALUES ('
-			+ item.id
-			+ ', '
-			+ quote(item.title)
-			+ ', '
-			+ quote(item.description)
-			+ ', '
-			+ (item.done ? 'true' : 'false')
-			+ ', '
-			+ quote(item.createdAt)
-			+ ')';
+	public static function seedInsertSql(items:Array<TodoItem>):Array<String> {
+		final tx = previewTx();
+		return [for (item in items) renderInsert(tx, item)];
 	}
 
-	static function columnSql(column:Column):String {
-		final nullable = column.nullable ? 'NULL' : 'NOT NULL';
-		return ident(column.name) + ' ' + dataTypeSql(column.type) + ' ' + nullable;
+	public static function openTodosSelectSql(limit:Int):String {
+		final tx = previewTx();
+		final query = tx.TodoItem.where(row -> !row.done).orderBy(row -> [{field: row.created_at, order: Asc}]).limit(limit);
+		return renderQuery(@:privateAccess query.toQuery());
 	}
 
-	static function keySql(key:Key):String {
-		return switch key {
-			case Primary(fields):
-				'PRIMARY KEY (' + fields.map(ident).join(', ') + ')';
-			case Unique(name, fields):
-				'UNIQUE KEY ' + ident(name) + ' (' + fields.map(ident).join(', ') + ')';
-			case Index(name, fields):
-				'KEY ' + ident(name) + ' (' + fields.map(ident).join(', ') + ')';
-		}
+	static function renderInsert(tx:TodoSqlPreviewTx, item:TodoItem):String {
+		final row:TodoSqlRow = {
+			id: cast item.id,
+			title: item.title,
+			description: item.description,
+			done: item.done,
+			created_at: item.createdAt,
+		};
+		return renderQuery(Insert({
+			table: tx.TodoItem.info,
+			data: Literal([row]),
+		}));
 	}
 
-	static function dataTypeSql(dataType:DataType):String {
-		return switch dataType {
-			case DBool(_):
-				'BOOLEAN';
-			case DInt(_, signed, autoIncrement, _):
-				(signed ? 'INT' : 'INT UNSIGNED') + (autoIncrement ? ' AUTO_INCREMENT' : '');
-			case DDouble(_):
-				'DOUBLE';
-			case DString(maxLength, _):
-				'VARCHAR(' + maxLength + ')';
-			case DText(size, _):
-				switch size {
-					case Tiny:
-						'TINYTEXT';
-					case Default:
-						'TEXT';
-					case Medium:
-						'MEDIUMTEXT';
-					case Long:
-						'LONGTEXT';
-				}
-			case DJson:
-				'JSON';
-			case DBlob(_):
-				'BLOB';
-			case DDate(_):
-				'DATE';
-			case DDateTime(_):
-				'DATETIME';
-			case DTimestamp(_):
-				'TIMESTAMP';
-			case DPoint:
-				'POINT';
-			case DLineString:
-				'LINESTRING';
-			case DPolygon:
-				'POLYGON';
-			case DMultiPoint:
-				'MULTIPOINT';
-			case DMultiLineString:
-				'MULTILINESTRING';
-			case DMultiPolygon:
-				'MULTIPOLYGON';
-			case DUnknown(type, _):
-				type;
-		}
-	}
+	static function previewTx():TodoSqlPreviewTx
+		return new TodoSqlPreviewTx(new TodoSqlPreviewConnection());
 
-	static function ident(value:String):String
-		return '`' + value + '`';
-
-	static function quote(value:String):String
-		return '"' + StringTools.replace(value, '"', '\\"') + '"';
+	static function renderQuery<Result>(query:Query<TodoSqlSchema, Result>):String
+		return FORMATTER.format(query).toString(SANITIZER);
 }
 
-class TodoTableInfo implements TableInfo {
+private typedef TodoSqlRow = {
+	@:autoIncrement @:primary var id(default, null):Id<TodoSqlRow>;
+	var title(default, null):VarChar<160>;
+	var description(default, null):VarChar<512>;
+	var done(default, null):Bool;
+	var created_at(default, null):VarChar<32>;
+}
+
+private interface TodoSqlSchema extends DatabaseDefinition {
+	@:table('todo_item') var TodoItem:TodoSqlRow;
+}
+
+private typedef TodoSqlPreviewTx = Transaction<TodoSqlSchema>;
+
+private class TodoSqlPreviewConnection implements Connection<TodoSqlSchema> {
+	final formatter:SqlFormatter<{}, {}> = new SqlFormatter();
+
 	public function new() {}
 
-	public function getName():String
-		return 'todo_item';
+	public function getFormatter()
+		return formatter;
 
-	public function getAlias():String
-		return null;
+	public function execute<Result>(query:Query<TodoSqlSchema, Result>):Result
+		throw 'TodoSqlPreviewConnection cannot execute queries';
 
-	public function getColumns():Iterable<Column>
-		return [
-			{
-				name: 'id',
-				nullable: false,
-				writable: false,
-				type: DInt(Default, false, true)
-			},
-			{
-				name: 'title',
-				nullable: false,
-				writable: true,
-				type: DString(160)
-			},
-			{
-				name: 'description',
-				nullable: false,
-				writable: true,
-				type: DText(Default)
-			},
-			{
-				name: 'done',
-				nullable: false,
-				writable: true,
-				type: DBool(false)
-			},
-			{
-				name: 'created_at',
-				nullable: false,
-				writable: true,
-				type: DDateTime()
-			},
-		];
+	public function executeSql(sql:String):Promise<Noise>
+		throw 'TodoSqlPreviewConnection cannot execute raw SQL';
+}
 
-	public function columnNames():Iterable<String>
-		return [for (column in getColumns()) column.name];
+private class TodoSqlSanitizer implements Sanitizer {
+	public function new() {}
 
-	public function getKeys():Iterable<Key>
-		return [Primary(['id'])];
+	public function value(v:Any):String {
+		if (v == null)
+			return 'null';
+		if (Std.isOfType(v, Bool))
+			return (cast v : Bool) ? 'true' : 'false';
+		if (Std.isOfType(v, Int) || Std.isOfType(v, Float))
+			return Std.string(v);
+		return quote(Std.string(v));
+	}
+
+	public function ident(s:String):String
+		return '`' + StringTools.replace(s, '`', '``') + '`';
+
+	static function quote(v:String):String
+		return '"' + StringTools.replace(v, '"', '\\"') + '"';
 }

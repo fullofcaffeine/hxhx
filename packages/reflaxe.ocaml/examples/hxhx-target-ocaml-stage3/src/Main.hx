@@ -1,6 +1,9 @@
 class Main {
 	static function main() {
-		final sum = 1 + 2 + 3 + 4;
+		var sum = 0;
+		for (n in [1, 2, 3, 4]) {
+			sum += n;
+		}
 
 		Sys.println("native-reflaxe-stage3=ok");
 		Sys.println("sum=" + sum);

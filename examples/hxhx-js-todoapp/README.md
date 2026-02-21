@@ -7,7 +7,7 @@ This example intentionally combines:
 - `coconut.ui` + `coconut.vdom` for the frontend component tree
 - Tailwind + shadcn-style design tokens for the UI system
 - `tink_web` route annotations + router typing for a tRPC-like typed API surface
-- `tink_sql` schema types (`tink.sql.Info`) for SQL DDL + seed insert generation
+- `tink_sql` typed schema + query DSL (`DatabaseDefinition`, `where/orderBy/limit`) with formatter rendering
 
 ## Why setup-lix.sh exists
 
@@ -21,6 +21,10 @@ tink stack used by `coconut.ui` and `tink_web`.
    of the build on the modern stack
 
 That keeps this example reproducible while still remaining lix-first and GitHub-sourced.
+
+The example also includes a tiny local `tink.sql.Schema` shim in `src/tink/sql/Schema.hx`.
+This avoids pulling non-JS driver modules from the `tink_sql` alpha schema-diff path,
+while still exercising typed SQL expression/formatter APIs on the JS target.
 
 ## Run
 

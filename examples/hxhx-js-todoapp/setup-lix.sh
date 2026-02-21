@@ -17,6 +17,7 @@ install_from_github "https://github.com/MVCoconut/coconut.ui.git"
 install_from_github "https://github.com/MVCoconut/coconut.vdom.git"
 install_from_github "https://github.com/haxetink/tink_web.git"
 install_from_github "https://github.com/haxetink/tink_sql.git"
+install_from_github "https://github.com/haxetink/tink_spatial.git"
 
 # Keep core on a modern version to avoid resolver edge-cases with older transitive pins.
 install_from_github "https://github.com/haxetink/tink_core.git"

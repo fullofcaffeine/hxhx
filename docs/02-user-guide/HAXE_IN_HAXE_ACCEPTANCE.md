@@ -316,6 +316,10 @@ In other words: passing upstream CI (or an equivalent subset) is the strongest o
 
 When we say `hxhx` is “bootstrapping”, we mean:
 
+If you want a beginner-oriented “are we self-hosting yet?” checklist, see:
+
+- `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
+
 - **Stage0**: we start from an existing `haxe` binary (the upstream OCaml compiler you install via releases or build yourself).
 - **Stage1**: use stage0 `haxe` to compile/build `hxhx` into a native OCaml binary.
 - **Stage2**: use the stage1 `hxhx` binary to build the next `hxhx` binary (itself), and check that it behaves equivalently.

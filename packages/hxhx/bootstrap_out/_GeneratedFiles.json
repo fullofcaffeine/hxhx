@@ -14,6 +14,7 @@
 		"hxhx_Stage3Compiler.ml",
 		"hxhx_Stage1Compiler.ml",
 		"hxhx_Main.ml",
+		"hxhx_LibraryResolver.ml",
 		"hxhx_Hxml.ml",
 		"hxhx_ExprMacroExpander.ml",
 		"hxhx_DisplayResponseSynthesizer.ml",

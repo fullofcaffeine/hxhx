@@ -64,10 +64,34 @@ Build `hxhx` from committed bootstrap snapshots:
 bash scripts/hxhx/build-hxhx.sh
 ```
 
+Refresh committed bootstrap snapshots (`packages/hxhx/bootstrap_out`):
+
+```bash
+# Full deterministic refresh (clean + verify)
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
+
+# Faster local loop (incremental emit + skip verify)
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+
+# If stale haxe --wait/--server-connect processes piled up:
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-stale-haxe-servers
+
+# If heartbeat is disabled but you still want periodic diagnostics:
+HXHX_STAGE0_HEARTBEAT=0 HXHX_STAGE0_DIAG_EVERY=30 \
+  bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+```
+
 Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior):
 
 ```bash
 npm run test:upstream:js-oracle-smoke
+```
+
+Self-hosting status/smoke:
+
+```bash
+npm run status:self-hosting
+npm run test:self-hosting-smoke
 ```
 
 ## Environment setup
@@ -137,6 +161,7 @@ For full usage and mainstream Haxe integration, see
 ## More docs
 
 - [Testing command catalog](docs/01-getting-started/TESTING.md)
+- [Self-hosting checklist (beginner-friendly)](docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md)
 - [1.0 roadmap (non-expert)](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
 - [Acceptance model](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
 - [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)

@@ -5,6 +5,7 @@ module BackendProviderResolver = Hxhx_BackendProviderResolver
 module DisplayResponseSynthesizer = Hxhx_DisplayResponseSynthesizer
 module ExprMacroExpander = Hxhx_ExprMacroExpander
 module Hxml = Hxhx_Hxml
+module LibraryResolver = Hxhx_LibraryResolver
 module Main = Hxhx_Main
 module Stage1Compiler = Hxhx_Stage1Compiler
 module Stage3Compiler = Hxhx_Stage3Compiler
