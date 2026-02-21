@@ -11,6 +11,12 @@ The program prints two lines:
 - `bench_iters=<n>`
 - `bench_result=<value>`
 
+Workload shape:
+
+- deterministic mutable arithmetic loop (`for (i in 0...n)`)
+- per-iteration coefficient mixing (`((i * 13 + 5) % 97) + 1`)
+- bounded modulo math to keep outputs stable across lanes
+
 By default it uses `20000` iterations.
 
 Supported `HXHX_BENCH_ITERS` values in this fixture:
