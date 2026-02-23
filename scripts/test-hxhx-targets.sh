@@ -1418,6 +1418,43 @@ echo "$out" | grep -q "^2$"
 echo "$out" | grep -qE "^[;:]$"
 echo "$out" | grep -q "^run=ok$"
 
+echo "== Stage3 regression: static-field modulo + array-comprehension arithmetic parity"
+tmpcompmod="$tmpdir/comprehension_modulo_parity"
+mkdir -p "$tmpcompmod/src"
+cat >"$tmpcompmod/src/Main.hx" <<'HX'
+class Main {
+  static var modulus = 1000003;
+
+  static function clamp(v:Int):Int {
+    final r = v % modulus;
+    return r < 0 ? r + modulus : r;
+  }
+
+  static function sumComprehension():Int {
+    final xs = [for (j in 0...5) j + 1];
+    var acc = 0;
+    for (x in xs) acc += x;
+    return acc;
+  }
+
+  static function main() {
+    var acc = 0;
+    for (i in 0...10) {
+      acc = clamp(acc + (i * 17) + 5);
+    }
+    Sys.println("sum=" + sumComprehension());
+    Sys.println("value=" + acc);
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpcompmod/src" -main Main --hxhx-out "$tmpcompmod/out")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^sum=15$"
+echo "$out" | grep -q "^value=815$"
+echo "$out" | grep -q "^run=ok$"
+grep -q "((v) mod (modulus))" "$tmpcompmod/out/Main.ml"
+grep -q "(((!acc)) + (x))" "$tmpcompmod/out/Main.ml"
+
 echo "== Stage3 regression: non-static class fields survive native protocol"
 tmpinstfield="$tmpdir/instance_field"
 mkdir -p "$tmpinstfield/src"

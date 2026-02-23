@@ -561,6 +561,20 @@ class EmitterStage {
 			}
 		}
 
+		function isUnknownNumericIdent(expr:HxExpr):Bool {
+			// Stage3 bring-up heuristic:
+			// when one side of an arithmetic op is definitely `Int` and the other side is an
+			// identifier we only know as broad/unknown, prefer integer lowering over poison.
+			//
+			// This keeps common patterns like `% modulus` viable when local inference has not yet
+			// propagated a precise type for `modulus`.
+			return switch (expr) {
+				case EIdent(name): final t = tyForIdent(name); t == "" || t == "Dynamic" || t == "Unknown" || t == "Array";
+				case _:
+					false;
+			}
+		}
+
 		function isInfNanFieldExpr(expr:HxExpr):Bool {
 			return switch (expr) {
 				case EField(_, field): field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN";
@@ -1021,7 +1035,13 @@ class EmitterStage {
 				// Note: for now we only support array/range iterables (matching bring-up needs).
 				final out = "__arr_comp_out";
 				final v = ocamlValueIdent(name);
-				final ty2 = extendTyByIdent(tyByIdent, name, TyType.fromHintText("Dynamic"));
+				final loopTy = switch (iterable) {
+					case ERange(_, _):
+						TyType.fromHintText("Int");
+					case _:
+						TyType.fromHintText("Dynamic");
+				};
+				final ty2 = extendTyByIdent(tyByIdent, name, loopTy);
 				final body = exprToOcaml(yieldExpr, arityByIdent, ty2, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 				return switch (iterable) {
 					case ERange(startExpr, endExpr):
@@ -2058,6 +2078,8 @@ class EmitterStage {
 								"(mod_float (" + fa + ") (" + fb + "))";
 							} else if (aIsI && bIsI) {
 								"((" + la + ") mod (" + rb + "))";
+							} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
+								"((" + la + ") mod (" + rb + "))";
 							} else {
 								"(Obj.magic 0)";
 							}
@@ -2073,6 +2095,8 @@ class EmitterStage {
 							final fb = exprToOcamlAsFloat(b);
 							"((" + fa + ") " + fop + " (" + fb + "))";
 						} else if (aIsI && bIsI) {
+							"((" + la + ") " + op + " (" + rb + "))";
+						} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
 							"((" + la + ") " + op + " (" + rb + "))";
 						} else {
 							"(Obj.magic 0)";
@@ -2386,7 +2410,14 @@ class EmitterStage {
 						if (hasBringupPoison(v))
 							return true;
 					false;
-				case EArrayComprehension(_name, iterable, yieldExpr): hasBringupPoison(iterable) || hasBringupPoison(yieldExpr);
+				case EArrayComprehension(_name, iterable, _yieldExpr):
+					// Stage 3 bring-up: don't poison the whole comprehension just because the yield
+					// expression mentions the binder name (which is introduced by the comprehension).
+					//
+					// The expression emitter models this binder when lowering `EArrayComprehension`
+					// itself, so collapsing here is overly aggressive and turns valid comprehensions
+					// into `(Obj.magic 0)`.
+					hasBringupPoison(iterable);
 				case EArrayAccess(arr, idx): hasBringupPoison(arr) || hasBringupPoison(idx);
 				case ECast(expr, _hint):
 					hasBringupPoison(expr);
@@ -2603,7 +2634,26 @@ class EmitterStage {
 			for (k in localTypeHints.keys())
 				localHints.set(k, localTypeHints.get(k));
 
-		function inferInitType(e:HxExpr):TyType {
+		inline function isTyNamed(t:Null<TyType>, expected:String):Bool {
+			if (t == null)
+				return false;
+			return t.toString() == expected;
+		}
+
+		function arrayElemTypeFromTy(t:Null<TyType>):TyType {
+			if (t == null)
+				return TyType.unknown();
+			final ts = t.toString();
+			if (ts == "Array")
+				return TyType.unknown();
+			if (StringTools.startsWith(ts, "Array<") && StringTools.endsWith(ts, ">")) {
+				final inner = ts.substr(6, ts.length - 7);
+				return TyType.fromHintText(inner);
+			}
+			return TyType.unknown();
+		}
+
+		function inferInitType(e:HxExpr, ?boundName:String, ?boundTy:TyType):TyType {
 			if (e == null)
 				return TyType.unknown();
 			return switch (e) {
@@ -2617,6 +2667,63 @@ class EmitterStage {
 					TyType.fromHintText("Bool");
 				case EField(EIdent("Math"), "NaN" | "POSITIVE_INFINITY" | "NEGATIVE_INFINITY" | "PI"):
 					TyType.fromHintText("Float");
+				case EIdent(name):
+					if (boundName != null && name == boundName && boundTy != null) boundTy; else {
+						final t = localHints.get(name);
+						t == null ? TyType.unknown() : t;
+					}
+				case EBinop(op, left, right):
+					final lt = inferInitType(left, boundName, boundTy);
+					final rt = inferInitType(right, boundName, boundTy);
+					if (op == "+"
+						&& (isTyNamed(lt,
+							"String") || isTyNamed(rt,
+								"String"))) TyType.fromHintText("String"); else if (op == "/"
+						&& ((isTyNamed(lt, "Int") || isTyNamed(lt, "Float"))
+							&& (isTyNamed(rt,
+								"Int") || isTyNamed(rt,
+									"Float")))) TyType.fromHintText("Float"); else if ((op == "+" || op == "-" || op == "*" || op == "%")
+						&& isTyNamed(lt, "Int")
+						&& isTyNamed(rt,
+							"Int")) TyType.fromHintText("Int"); else if ((op == "+" || op == "-" || op == "*")
+						&& (isTyNamed(lt, "Float") || isTyNamed(rt, "Float"))) TyType.fromHintText("Float"); else TyType.unknown();
+				case ETernary(_cond, thenExpr, elseExpr):
+					final tt = inferInitType(thenExpr, boundName, boundTy);
+					final te = inferInitType(elseExpr, boundName, boundTy);
+					(!tt.isUnknown() && tt.toString() == te.toString()) ? tt : TyType.unknown();
+				case EArrayDecl(values):
+					if (values == null || values.length == 0) {
+						TyType.fromHintText("Array");
+					} else {
+						final firstTy = inferInitType(values[0], boundName, boundTy);
+						if (firstTy.isUnknown()) {
+							TyType.fromHintText("Array");
+						} else {
+							var same = true;
+							for (i in 1...values.length) {
+								final ti = inferInitType(values[i], boundName, boundTy);
+								if (ti.isUnknown() || ti.toString() != firstTy.toString()) {
+									same = false;
+									break;
+								}
+							}
+							same ? TyType.fromHintText("Array<" + firstTy.toString() + ">") : TyType.fromHintText("Array");
+						}
+					}
+				case EArrayComprehension(name, iterable, yieldExpr):
+					final iterElemTy = switch (iterable) {
+						case ERange(_, _):
+							TyType.fromHintText("Int");
+						case EIdent(iterName):
+							arrayElemTypeFromTy(localHints.get(iterName));
+						case EArrayDecl(_):
+							arrayElemTypeFromTy(inferInitType(iterable, boundName, boundTy));
+						case _:
+							TyType.unknown();
+					};
+					final yielded = inferInitType(yieldExpr, name, iterElemTy);
+					final elemTy = yielded.isUnknown() ? iterElemTy : yielded;
+					elemTy.isUnknown() ? TyType.fromHintText("Array") : TyType.fromHintText("Array<" + elemTy.toString() + ">");
 				case ECall(EIdent(fn), _args) if (fnReturnTypes != null && fnReturnTypes.get(fn) != null):
 					fnReturnTypes.get(fn);
 				case _:
@@ -2634,7 +2741,10 @@ class EmitterStage {
 							continue;
 						final existing = localHints.get(name);
 						final inferred = inferInitType(init);
-						if (existing == null || (existing.isUnknown() && !inferred.isUnknown())) {
+						final existingNeedsUpgrade = existing == null || existing.isUnknown() || existing.toString() == "Dynamic"
+							|| existing.toString() == "Array";
+						final inferredUseful = !inferred.isUnknown() && inferred.toString() != "Dynamic";
+						if (existingNeedsUpgrade && inferredUseful) {
 							localHints.set(name, inferred);
 						}
 					case _:
@@ -2704,9 +2814,15 @@ class EmitterStage {
 				for (k in base.keys())
 					out.set(k, base.get(k));
 			for (name in locals.keys()) {
-				if (out.get(name) == null) {
-					final hinted = localHints.get(name);
+				final hinted = localHints.get(name);
+				final existing = out.get(name);
+				if (existing == null) {
 					out.set(name, hinted != null ? hinted : TyType.unknown());
+				} else if (hinted != null) {
+					final existingBroad = existing.isUnknown() || existing.toString() == "Dynamic" || existing.toString() == "Array";
+					final hintedUseful = !hinted.isUnknown() && hinted.toString() != "Dynamic";
+					if (existingBroad && hintedUseful)
+						out.set(name, hinted);
 				}
 			}
 			return out;
@@ -2812,6 +2928,174 @@ class EmitterStage {
 			return "(let __hx_v = (" + rhsCode + ") in (" + ident + " := __hx_v; ()))";
 		}
 
+		function bodyHintsIntLoopVar(s:HxStmt, loopVarName:String):Bool {
+			// Best-effort signal for loop-variable typing in Stage3.
+			//
+			// Why
+			// - For `for (x in xs)` where `xs` type is still broad (`Array`/`Dynamic`), we can still
+			//   infer that `x` is effectively numeric when the loop body immediately uses numeric
+			//   operators (`+`, `*`, `%`, compound assignments, etc.).
+			//
+			// What
+			// - Detect whether the loop variable appears in numeric expression contexts anywhere in
+			//   the loop body subtree.
+			//
+			// Non-goal
+			// - This is not full dataflow typing; it is a conservative bring-up hint only.
+			function exprContainsIdent(e:HxExpr, needle:String):Bool {
+				if (e == null || needle == null || needle.length == 0)
+					return false;
+				return switch (e) {
+					case EIdent(name):
+						name == needle;
+					case EUnop(_, inner):
+						exprContainsIdent(inner, needle);
+					case EBinop(_, left, right): exprContainsIdent(left, needle) || exprContainsIdent(right, needle);
+					case EField(obj, _):
+						exprContainsIdent(obj, needle);
+					case ECall(callee, args):
+						if (exprContainsIdent(callee, needle)) true; else {
+							var seen = false;
+							if (args != null)
+								for (a in args)
+									if (exprContainsIdent(a, needle)) {
+										seen = true;
+										break;
+									}
+							seen;
+						}
+					case EArrayDecl(values):
+						var seen = false;
+						if (values != null)
+							for (v in values)
+								if (exprContainsIdent(v, needle)) {
+									seen = true;
+									break;
+								}
+						seen;
+					case EArrayComprehension(name, iterable, yieldExpr):
+						(name != needle && (exprContainsIdent(iterable, needle) || exprContainsIdent(yieldExpr, needle)));
+					case EArrayAccess(arrayExpr, indexExpr): exprContainsIdent(arrayExpr, needle) || exprContainsIdent(indexExpr, needle);
+					case ERange(startExpr, endExpr): exprContainsIdent(startExpr, needle) || exprContainsIdent(endExpr, needle);
+					case ETernary(cond, thenExpr, elseExpr): exprContainsIdent(cond,
+							needle) || exprContainsIdent(thenExpr, needle) || exprContainsIdent(elseExpr, needle);
+					case ECast(inner, _):
+						exprContainsIdent(inner, needle);
+					case EUntyped(inner):
+						exprContainsIdent(inner, needle);
+					case ESwitch(scrutinee, cases):
+						if (exprContainsIdent(scrutinee, needle)) true; else {
+							var seen = false;
+							if (cases != null)
+								for (c in cases)
+									if (exprContainsIdent(c.expr, needle)) {
+										seen = true;
+										break;
+									}
+							seen;
+						}
+					case _:
+						false;
+				}
+			}
+
+			function exprHintsInt(e:HxExpr, needle:String):Bool {
+				if (e == null || needle == null || needle.length == 0)
+					return false;
+				return switch (e) {
+					case EBinop(op, left, right): final numericOp = op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "+="
+							|| op == "-=" || op == "*=" || op == "/=" || op == "%="; (numericOp
+							&& (exprContainsIdent(left,
+								needle) || exprContainsIdent(right, needle))) || exprHintsInt(left, needle) || exprHintsInt(right, needle);
+					case EUnop(_, inner):
+						exprHintsInt(inner, needle);
+					case EField(obj, _):
+						exprHintsInt(obj, needle);
+					case ECall(callee, args):
+						if (exprHintsInt(callee, needle)) true; else {
+							var seen = false;
+							if (args != null)
+								for (a in args)
+									if (exprHintsInt(a, needle)) {
+										seen = true;
+										break;
+									}
+							seen;
+						}
+					case EArrayDecl(values):
+						var seen = false;
+						if (values != null)
+							for (v in values)
+								if (exprHintsInt(v, needle)) {
+									seen = true;
+									break;
+								}
+						seen;
+					case EArrayComprehension(name, iterable, yieldExpr):
+						(name != needle && (exprHintsInt(iterable, needle) || exprHintsInt(yieldExpr, needle)));
+					case EArrayAccess(arrayExpr, indexExpr): exprHintsInt(arrayExpr, needle) || exprHintsInt(indexExpr, needle);
+					case ERange(startExpr, endExpr): exprHintsInt(startExpr, needle) || exprHintsInt(endExpr, needle);
+					case ETernary(cond, thenExpr, elseExpr): exprHintsInt(cond, needle) || exprHintsInt(thenExpr, needle) || exprHintsInt(elseExpr, needle);
+					case ECast(inner, _):
+						exprHintsInt(inner, needle);
+					case EUntyped(inner):
+						exprHintsInt(inner, needle);
+					case ESwitch(scrutinee, cases):
+						if (exprHintsInt(scrutinee, needle)) true; else {
+							var seen = false;
+							if (cases != null)
+								for (c in cases)
+									if (exprHintsInt(c.expr, needle)) {
+										seen = true;
+										break;
+									}
+							seen;
+						}
+					case _:
+						false;
+				}
+			}
+
+			return switch (s) {
+				case SExpr(expr, _):
+					exprHintsInt(expr, loopVarName);
+				case SBlock(stmts, _):
+					if (stmts == null) {
+						false;
+					} else {
+						var seen = false;
+						for (ss in stmts)
+							if (bodyHintsIntLoopVar(ss, loopVarName)) {
+								seen = true;
+								break;
+							}
+						seen;
+					}
+				case SIf(_cond, thenBranch, elseBranch, _): bodyHintsIntLoopVar(thenBranch,
+						loopVarName) || (elseBranch != null && bodyHintsIntLoopVar(elseBranch, loopVarName));
+				case SWhile(_cond, body, _):
+					bodyHintsIntLoopVar(body, loopVarName);
+				case SDoWhile(body, _cond, _):
+					bodyHintsIntLoopVar(body, loopVarName);
+				case SForIn(_name, _iterable, body, _):
+					bodyHintsIntLoopVar(body, loopVarName);
+				case SSwitch(_scrutinee, cases, _):
+					if (cases == null) {
+						false;
+					} else {
+						var seen = false;
+						for (c in cases)
+							if (bodyHintsIntLoopVar(c.body, loopVarName)) {
+								seen = true;
+								break;
+							}
+						seen;
+					}
+				case _:
+					false;
+			}
+		}
+
 		function stmtToUnit(s:HxStmt, tyCtx:Null<Map<String, TyType>>):String {
 			return switch (s) {
 				case SBlock(ss, _pos):
@@ -2911,7 +3195,26 @@ class EmitterStage {
 					"()";
 				case SForIn(name, iterable, body, _pos):
 					final ident = ocamlValueIdent(name);
-					final loopVarTy = (tyCtx != null && tyCtx.get(name) != null) ? tyCtx.get(name) : ((localHints.get(name) != null) ? localHints.get(name) : TyType.fromHintText("Dynamic"));
+					final defaultLoopTy = (tyCtx != null && tyCtx.get(name) != null) ? tyCtx.get(name) : ((localHints.get(name) != null) ? localHints.get(name) : TyType.fromHintText("Dynamic"));
+					final loopVarTy = switch (iterable) {
+						case ERange(_, _):
+							TyType.fromHintText("Int");
+						case EIdent(iterName):
+							final iterTy = (tyCtx != null && tyCtx.get(iterName) != null) ? tyCtx.get(iterName) : localHints.get(iterName);
+							final inferredElem = arrayElemTypeFromTy(iterTy);
+							if (!inferredElem.isUnknown()) {
+								inferredElem;
+							} else if (bodyHintsIntLoopVar(body, name)) {
+								TyType.fromHintText("Int");
+							} else {
+								defaultLoopTy;
+							}
+						case EArrayDecl(_), EArrayComprehension(_, _, _):
+							final inferredElem = arrayElemTypeFromTy(inferInitType(iterable));
+							inferredElem.isUnknown() ? defaultLoopTy : inferredElem;
+						case _:
+							defaultLoopTy;
+					};
 					final bodyTy = extendTyByIdentLocal(tyCtx, name, loopVarTy);
 					final bodyUnit = stmtToUnit(body, bodyTy);
 					switch (iterable) {
@@ -3781,6 +4084,60 @@ class EmitterStage {
 
 			final importInt64 = findInt64ImportTarget(tm.getEnv().getImports());
 
+			inline function isTyNamed(t:Null<TyType>, expected:String):Bool {
+				if (t == null)
+					return false;
+				return t.toString() == expected;
+			}
+
+			function inferExprTypeForStaticInit(expr:Null<HxExpr>, knownByIdent:Map<String, TyType>):TyType {
+				if (expr == null)
+					return TyType.unknown();
+				return switch (expr) {
+					case EInt(_):
+						TyType.fromHintText("Int");
+					case EFloat(_):
+						TyType.fromHintText("Float");
+					case EString(_):
+						TyType.fromHintText("String");
+					case EBool(_):
+						TyType.fromHintText("Bool");
+					case EIdent(name):
+						final t = knownByIdent == null ? null : knownByIdent.get(name);
+						t == null ? TyType.unknown() : t;
+					case ETernary(_cond, thenExpr, elseExpr):
+						final tt = inferExprTypeForStaticInit(thenExpr, knownByIdent);
+						final te = inferExprTypeForStaticInit(elseExpr, knownByIdent);
+						(!tt.isUnknown() && tt.toString() == te.toString()) ? tt : TyType.unknown();
+					case EBinop(op, left, right):
+						final lt = inferExprTypeForStaticInit(left, knownByIdent);
+						final rt = inferExprTypeForStaticInit(right, knownByIdent);
+						if (op == "+"
+							&& (isTyNamed(lt,
+								"String") || isTyNamed(rt,
+									"String"))) TyType.fromHintText("String"); else if (op == "/"
+							&& ((isTyNamed(lt, "Int") || isTyNamed(lt, "Float"))
+								&& (isTyNamed(rt,
+									"Int") || isTyNamed(rt,
+										"Float")))) TyType.fromHintText("Float"); else if ((op == "+" || op == "-" || op == "*" || op == "%")
+							&& isTyNamed(lt, "Int")
+							&& isTyNamed(rt,
+								"Int")) TyType.fromHintText("Int"); else if ((op == "+" || op == "-" || op == "*")
+							&& (isTyNamed(lt, "Float") || isTyNamed(rt, "Float"))) TyType.fromHintText("Float"); else TyType.unknown();
+					case EArrayDecl(_), EArrayComprehension(_, _, _):
+						TyType.fromHintText("Array");
+					case _:
+						TyType.unknown();
+				}
+			}
+
+			function inferStaticFieldType(field:HxFieldDecl, knownByIdent:Map<String, TyType>):TyType {
+				final hinted = TyType.fromHintText(HxFieldDecl.getTypeHint(field));
+				if (hinted != null && !hinted.isUnknown())
+					return hinted;
+				return inferExprTypeForStaticInit(HxFieldDecl.getInit(field), knownByIdent);
+			}
+
 			function emitStubClass(cls:HxClassDecl):Null<String> {
 				final nm = HxClassDecl.getName(cls);
 				if (nm == null || nm.length == 0 || nm == "Unknown")
@@ -3832,14 +4189,15 @@ class EmitterStage {
 						final nameRaw = HxFieldDecl.getName(f);
 						if (nameRaw == null || nameRaw.length == 0)
 							continue;
+						final inferredType = inferStaticFieldType(f, staticTyByIdent);
 						final init = HxFieldDecl.getInit(f);
 						final initOcaml = init == null ? "(Obj.magic HxRuntime.hx_null)" : exprToOcaml(init, null, staticTyByIdent, null,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, globalCallSigByCallee);
 						out.push("let " + ocamlValueIdent(nameRaw) + " = " + initOcaml);
 						out.push("");
-						// Treat the binding as "known" for subsequent static inits, even without a real type.
-						if (staticTyByIdent.get(nameRaw) == null)
-							staticTyByIdent.set(nameRaw, TyType.unknown());
+						final knownType = staticTyByIdent.get(nameRaw);
+						if (knownType == null || (knownType.isUnknown() && !inferredType.isUnknown()))
+							staticTyByIdent.set(nameRaw, inferredType);
 					}
 
 					// Emit function stubs with correct arity to avoid OCaml partial application issues.
@@ -4007,6 +4365,16 @@ class EmitterStage {
 					out.push("");
 
 					final parsedFields = HxClassDecl.getFields(mainClass);
+					final staticFieldTypeByName:Map<String, TyType> = new Map();
+					for (f in parsedFields) {
+						if (!HxFieldDecl.getIsStatic(f))
+							continue;
+						final fieldName = HxFieldDecl.getName(f);
+						if (fieldName == null || fieldName.length == 0)
+							continue;
+						final inferred = inferStaticFieldType(f, staticFieldTypeByName);
+						staticFieldTypeByName.set(fieldName, inferred == null ? TyType.unknown() : inferred);
+					}
 
 					// Stage 3 bring-up: static initializer ordering.
 					//
@@ -4456,8 +4824,16 @@ class EmitterStage {
 							for (tf2 in typedFns)
 								allowed.set(tf2.getName(), true);
 							for (f in parsedFields)
-								if (HxFieldDecl.getIsStatic(f))
-									allowed.set(HxFieldDecl.getName(f), true);
+								if (HxFieldDecl.getIsStatic(f)) {
+									final fieldName = HxFieldDecl.getName(f);
+									if (fieldName == null || fieldName.length == 0)
+										continue;
+									allowed.set(fieldName, true);
+									if (tyByIdent.get(fieldName) == null || tyByIdent.get(fieldName).isUnknown()) {
+										final inferred = staticFieldTypeByName.get(fieldName);
+										tyByIdent.set(fieldName, inferred == null ? TyType.unknown() : inferred);
+									}
+								}
 
 							final localTypeHints:Map<String, TyType> = new Map();
 							if (moduleEmitBodies) {
@@ -4517,6 +4893,9 @@ class EmitterStage {
 						final nameRaw = HxFieldDecl.getName(f);
 						if (nameRaw == null || nameRaw.length == 0)
 							continue;
+						final inferredType = staticFieldTypeByName.get(nameRaw);
+						if (inferredType != null && staticTyByIdent.get(nameRaw) == null)
+							staticTyByIdent.set(nameRaw, inferredType);
 						final init = HxFieldDecl.getInit(f);
 						final initOcaml = init == null ? "(Obj.magic 0)" : exprToOcaml(init, arityByName, staticTyByIdent, staticImportByIdent,
 							HxModuleDecl.getPackagePath(decl), moduleNameByPkgAndClass, callSigByCallee);
