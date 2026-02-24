@@ -10,6 +10,7 @@ import backend.IBackend;
 import backend.ITargetBackendProvider;
 import backend.TargetDescriptor;
 import backend.TargetCoreBackend;
+import backend.reflaxe.ReflaxeTargetAdapter;
 
 /**
 	Stage3 JS backend MVP (`js-native`).
@@ -102,8 +103,7 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 	}
 
 	public function new() {
-		final core = targetCore();
-		delegate = new TargetCoreBackend(descriptor(), function(program, context) return core.emit(program, context));
+		delegate = ReflaxeTargetAdapter.backend(descriptor(), targetCore);
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
@@ -116,14 +116,6 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 
 	public static function providerRegistrations():Array<BackendRegistrationSpec> {
 		final provided = providerDescriptor();
-		return [
-			{
-				descriptor: provided,
-				create: function() {
-					final core = targetCore();
-					return new TargetCoreBackend(provided, function(program, context) return core.emit(program, context));
-				}
-			}
-		];
+		return ReflaxeTargetAdapter.registrations(provided, targetCore);
 	}
 }

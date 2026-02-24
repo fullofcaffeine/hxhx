@@ -8,6 +8,7 @@ import backend.GenIrProgram;
 import backend.IBackend;
 import backend.TargetDescriptor;
 import backend.TargetCoreBackend;
+import backend.reflaxe.ReflaxeTargetAdapter;
 
 /**
 	OCaml Stage3 backend adapter.
@@ -78,8 +79,7 @@ class OcamlStage3Backend implements IBackend {
 	}
 
 	public function new() {
-		final core = targetCore();
-		delegate = new TargetCoreBackend(descriptor(), function(program, context) return core.emit(program, context));
+		delegate = ReflaxeTargetAdapter.backend(descriptor(), targetCore);
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {

@@ -171,11 +171,25 @@ Pilot status:
 
 - `packages/hxhx-core/src/backend/ITargetCore.hx` defines the reusable target-core contract.
 - `packages/hxhx-core/src/backend/TargetCoreBackend.hx` is the generic wrapper adapter (`TargetDescriptor` + `ITargetCore` -> `IBackend`).
+- `packages/hxhx-core/src/backend/reflaxe/ReflaxeTargetAdapter.hx` is the canonical reflaxe promotion helper
+  (`TargetDescriptor` + target-core factory -> builtin/provider wrappers).
 - `packages/hxhx-core/src/backend/ocaml/OcamlTargetCore.hx` is the first concrete target-core pilot.
 - `packages/hxhx-core/src/backend/js/JsTargetCore.hx` now applies the same pattern for JS.
-- `OcamlStage3Backend` and `JsBackend` now delegate emission to their target-core classes, proving wrapper/core separation without behavior changes.
+- `OcamlStage3Backend` and `JsBackend` now use `ReflaxeTargetAdapter` for wrapper construction,
+  proving wrapper/core separation without behavior changes.
 - `BackendRegistry` now supports a dynamic provider seam (`register`, `registerProvider`, `clearDynamicRegistrations`) so plugin wrappers can join builtin resolution without custom selection paths.
 - `Stage3Compiler` now loads provider declarations per request (`HXHX_BACKEND_PROVIDERS` / `-D hxhx_backend_provider=...`) before resolving `--hxhx-backend`, so fallback to builtins stays deterministic when no providers are declared.
+
+### Reflaxe adapter migration constraints
+
+When migrating an existing reflaxe backend to native plugin ABI wrappers, follow this hard contract:
+
+1. keep codegen inside one `ITargetCore` implementation (no wrapper-only codegen branches),
+2. build wrappers only via `ReflaxeTargetAdapter.backend(...)` / `ReflaxeTargetAdapter.registrations(...)`,
+3. keep descriptor compatibility explicit (`BackendAbi` versions + `TargetRequirements`),
+4. keep activation parity: plugin wrapper and builtin wrapper must expose identical emitted behavior for the same target core.
+
+This keeps “promotion” as a packaging/load choice and avoids backend rewrites.
 
 ## Why this helps immediately
 
