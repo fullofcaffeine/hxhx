@@ -6,6 +6,9 @@ import reflaxe.output.OutputManager;
 
 class RuntimeCopier {
 	static inline final HXHX_RUNTIME_PREFIX = "HxHx";
+	static inline final PROFILE_PORTABLE = "portable";
+	static inline final PROFILE_METAL = "metal";
+	static inline final RUNTIME_CORE_MODULE = "HxRuntime";
 
 	static function tryResolveStdDir():Null<String> {
 		#if macro
@@ -15,12 +18,135 @@ class RuntimeCopier {
 			final ocamlList = haxe.macro.Context.resolvePath("ocaml/List.hx");
 			final ocamlDir = Path.directory(ocamlList); // .../std/ocaml
 			return Path.directory(ocamlDir); // .../std
-		} catch (_:Dynamic) {
+		} catch (_:haxe.Exception) {
 			return null;
 		}
 		#else
 		return null;
 		#end
+	}
+
+	static function normalizeProfile(rawProfile:Null<String>):String {
+		if (rawProfile == null)
+			return PROFILE_PORTABLE;
+		final normalized = StringTools.trim(rawProfile).toLowerCase();
+		return normalized.length == 0 ? PROFILE_PORTABLE : normalized;
+	}
+
+	static function currentProfile():String {
+		#if macro
+		return normalizeProfile(haxe.macro.Context.definedValue("ocaml_profile"));
+		#else
+		return PROFILE_PORTABLE;
+		#end
+	}
+
+	static function moduleNameFromRuntimeFile(fileName:String):Null<String> {
+		if (StringTools.endsWith(fileName, ".mli"))
+			return fileName.substr(0, fileName.length - 4);
+		if (StringTools.endsWith(fileName, ".ml"))
+			return fileName.substr(0, fileName.length - 3);
+		return null;
+	}
+
+	static function isIdentifierChar(code:Int):Bool {
+		return (code >= "A".code && code <= "Z".code)
+			|| (code >= "a".code && code <= "z".code)
+			|| (code >= "0".code && code <= "9".code)
+			|| code == "_".code;
+	}
+
+	static function containsModuleToken(text:String, moduleName:String):Bool {
+		if (text == null || moduleName == null || moduleName.length == 0)
+			return false;
+
+		var idx = text.indexOf(moduleName, 0);
+		while (idx >= 0) {
+			final beforeIdx = idx - 1;
+			final afterIdx = idx + moduleName.length;
+			final beforeCode:Null<Int> = beforeIdx < 0 ? null : text.charCodeAt(beforeIdx);
+			final afterCode:Null<Int> = afterIdx >= text.length ? null : text.charCodeAt(afterIdx);
+			final beforeOk = beforeCode == null || !isIdentifierChar(beforeCode);
+			final afterOk = afterCode == null || !isIdentifierChar(afterCode);
+			if (beforeOk && afterOk)
+				return true;
+			idx = text.indexOf(moduleName, idx + 1);
+		}
+		return false;
+	}
+
+	static function compareStrings(a:String, b:String):Int {
+		return a < b ? -1 : (a > b ? 1 : 0);
+	}
+
+	static function collectOutputFilesRecursive(dir:String, out:Array<String>):Void {
+		if (!sys.FileSystem.exists(dir) || !sys.FileSystem.isDirectory(dir))
+			return;
+		for (name in sys.FileSystem.readDirectory(dir)) {
+			final path = Path.join([dir, name]);
+			if (sys.FileSystem.isDirectory(path)) {
+				collectOutputFilesRecursive(path, out);
+			} else {
+				out.push(path);
+			}
+		}
+	}
+
+	static function normalizedPath(path:String):String {
+		return path == null ? "" : StringTools.replace(path, "\\", "/");
+	}
+
+	static function addReferencedModules(content:String, availableModules:Array<String>, selectedModules:Map<String, Bool>, enqueue:Array<String>):Void {
+		for (moduleName in availableModules) {
+			if (selectedModules.exists(moduleName))
+				continue;
+			if (containsModuleToken(content, moduleName)) {
+				selectedModules.set(moduleName, true);
+				enqueue.push(moduleName);
+			}
+		}
+	}
+
+	static function collectMetalRuntimeModules(runtimeDir:String, outputDir:Null<String>, destSubdir:String, availableModules:Array<String>):Map<String, Bool> {
+		final selectedModules:Map<String, Bool> = [];
+		final queue:Array<String> = [];
+		selectedModules.set(RUNTIME_CORE_MODULE, true);
+		queue.push(RUNTIME_CORE_MODULE);
+
+		if (outputDir != null && outputDir.length > 0) {
+			final outputFiles:Array<String> = [];
+			collectOutputFilesRecursive(outputDir, outputFiles);
+			outputFiles.sort(compareStrings);
+
+			final runtimePrefix = normalizedPath(Path.join([outputDir, destSubdir])) + "/";
+			for (path in outputFiles) {
+				final normalizedPathValue = normalizedPath(path);
+				if (StringTools.startsWith(normalizedPathValue, runtimePrefix))
+					continue;
+				if (!StringTools.endsWith(normalizedPathValue, ".ml") && !StringTools.endsWith(normalizedPathValue, ".mli"))
+					continue;
+				final content = sys.io.File.getContent(path);
+				addReferencedModules(content, availableModules, selectedModules, queue);
+			}
+		}
+
+		while (queue.length > 0) {
+			final moduleName = queue.pop();
+			if (moduleName == null)
+				continue;
+			final mlPath = Path.join([runtimeDir, moduleName + ".ml"]);
+			if (sys.FileSystem.exists(mlPath) && !sys.FileSystem.isDirectory(mlPath)) {
+				final content = sys.io.File.getContent(mlPath);
+				addReferencedModules(content, availableModules, selectedModules, queue);
+			}
+			final mliPath = Path.join([runtimeDir, moduleName + ".mli"]);
+			if (sys.FileSystem.exists(mliPath) && !sys.FileSystem.isDirectory(mliPath)) {
+				final content = sys.io.File.getContent(mliPath);
+				addReferencedModules(content, availableModules, selectedModules, queue);
+			}
+		}
+
+		return selectedModules;
 	}
 
 	public static function copy(output:OutputManager, destSubdir:String = "runtime"):Void {
@@ -40,10 +166,38 @@ class RuntimeCopier {
 		final allowHxHxRuntime = false;
 		#end
 
-		for (name in sys.FileSystem.readDirectory(runtimeDir)) {
-			if (!StringTools.endsWith(name, ".ml") && !StringTools.endsWith(name, ".mli"))
+		final runtimeFiles = sys.FileSystem.readDirectory(runtimeDir);
+		runtimeFiles.sort(compareStrings);
+
+		final availableModules:Array<String> = [];
+		final availableModuleSet:Map<String, Bool> = [];
+		for (name in runtimeFiles) {
+			final moduleName = moduleNameFromRuntimeFile(name);
+			if (moduleName == null)
 				continue;
-			if (!allowHxHxRuntime && StringTools.startsWith(name, HXHX_RUNTIME_PREFIX))
+			if (!allowHxHxRuntime && StringTools.startsWith(moduleName, HXHX_RUNTIME_PREFIX))
+				continue;
+			if (!availableModuleSet.exists(moduleName)) {
+				availableModuleSet.set(moduleName, true);
+				availableModules.push(moduleName);
+			}
+		}
+		availableModules.sort(compareStrings);
+
+		final profile = currentProfile();
+		final selectedModules:Map<String, Bool> = switch (profile) {
+			case PROFILE_METAL:
+				collectMetalRuntimeModules(runtimeDir, output.outputDir, destSubdir, availableModules);
+			case _:
+				final all:Map<String, Bool> = [];
+				for (moduleName in availableModules)
+					all.set(moduleName, true);
+				all;
+		}
+
+		for (name in runtimeFiles) {
+			final moduleName = moduleNameFromRuntimeFile(name);
+			if (moduleName == null || !selectedModules.exists(moduleName))
 				continue;
 			final src = Path.join([runtimeDir, name]);
 			if (!sys.FileSystem.exists(src) || sys.FileSystem.isDirectory(src))

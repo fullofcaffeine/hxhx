@@ -25,8 +25,9 @@ Any other value is invalid and fails fast.
   - current default behavior for OCaml emission.
   - intended to preserve existing Haxe-oriented portability expectations.
 - `metal`:
-  - reserved contract value for upcoming stricter native-oriented behavior.
-  - currently recognized/plumbed but not yet behavior-divergent from `portable`.
+  - native-oriented runtime layering mode.
+  - links only runtime modules required by the emitted program + runtime transitive dependencies.
+  - keeps codegen semantics otherwise aligned with `portable` for now (stricter verifier/specialization phases land later).
 
 ## Scope
 
@@ -48,6 +49,6 @@ Invalid values fail with an actionable message:
 # explicit portable
 "$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=portable
 
-# explicit metal (contract-ready, behavior parity for now)
+# explicit metal (runtime-layered mode)
 "$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
 ```
