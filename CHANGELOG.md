@@ -1,3 +1,10 @@
+# [0.12.0](https://github.com/fullofcaffeine/hxhx/compare/v0.11.0...v0.12.0) (2026-02-24)
+
+
+### Features
+
+* **plugin:** add source-tiered loader precedence for Stage3 ([25a8141](https://github.com/fullofcaffeine/hxhx/commit/25a814188fb3fbaa7d15010b15e03629f45b2e08))
+
 # [0.11.0](https://github.com/fullofcaffeine/hxhx/compare/v0.10.0...v0.11.0) (2026-02-24)
 
 
