@@ -1,3 +1,11 @@
+# [0.11.0](https://github.com/fullofcaffeine/hxhx/compare/v0.10.0...v0.11.0) (2026-02-24)
+
+
+### Features
+
+* **plugin:** add backend plugin manifest schema and validation ([38c3ddc](https://github.com/fullofcaffeine/hxhx/commit/38c3ddc18fa513190f0d857c5782412fe485a117))
+* **plugin:** add native .cmxs build workflow and smoke ([8c2a694](https://github.com/fullofcaffeine/hxhx/commit/8c2a694039e6d256376e32a4ebff81dbbc1810af))
+
 # [0.10.0](https://github.com/fullofcaffeine/hxhx/compare/v0.9.8...v0.10.0) (2026-02-24)
 
 
