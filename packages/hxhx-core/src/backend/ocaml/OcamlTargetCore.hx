@@ -39,7 +39,7 @@ class OcamlTargetCore implements ITargetCore {
 		if (profile == OcamlProfile.Metal) {
 			MetalProfileVerifier.verifyProgram(typedProgram);
 		}
-		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable);
+		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable, profile);
 		return new EmitResult(entryPath, [
 			new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath)
 		], context.buildExecutable);

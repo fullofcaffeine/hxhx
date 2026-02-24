@@ -28,7 +28,7 @@ Any other value is invalid and fails fast.
   - native-oriented runtime layering mode.
   - links only runtime modules required by the emitted program + runtime transitive dependencies.
   - runs `MetalProfileVerifier` before OCaml emit and fails fast on dynamic/reflection-heavy constructs.
-  - keeps codegen semantics otherwise aligned with `portable` for now (stricter verifier/specialization phases land later).
+  - enables numeric-specialization fallback in Stage3 expression lowering for arithmetic hot paths (reduces `(Obj.magic 0)` poison for mixed numeric forms while keeping explicit verifier guardrails).
 
 ## Scope
 

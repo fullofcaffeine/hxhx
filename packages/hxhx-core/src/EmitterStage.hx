@@ -185,6 +185,24 @@ class EmitterStage {
 	 */
 	static final backendDialect:HihBackendDialect = new HihOcamlBackendDialect();
 
+	/**
+		Active OCaml profile for the current emit run.
+
+		Why
+		- Stage3 keeps one emitter implementation for both `portable` and `metal`.
+		- Some lowering choices (for example numeric fallback policy) need profile-aware
+		  behavior without changing all call sites.
+
+		How
+		- `emitToDir(...)` sets this value at entry.
+		- Expression lowering reads it through `isMetalProfileActive()`.
+	**/
+	static var currentOcamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable;
+
+	static inline function isMetalProfileActive():Bool {
+		return currentOcamlProfile == backend.OcamlProfile.Metal;
+	}
+
 	public static function emit(_:MacroExpandedModule):Void {
 		// Stub: eventually write output files / bytecode.
 	}
@@ -2034,10 +2052,13 @@ class EmitterStage {
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
 						case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
 							"float_of_int " + readIdent(name);
+						case EField(_obj, "length"):
+							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
 						case _:
 							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 					}
 				}
+				final metalNumeric = isMetalProfileActive();
 				switch (op) {
 					case "=":
 						switch (a) {
@@ -2066,7 +2087,11 @@ class EmitterStage {
 						final aIsF = isFloatExpr(a);
 						final bIsF = isFloatExpr(b);
 						final aIsI = isIntExpr(a);
-						final bIsI = isIntExpr(b); ((aIsF || bIsF) || (aIsI && bIsI)) ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
+						final bIsI = isIntExpr(b);
+						final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
+						final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+						final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
+						allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
 					case "+" | "-" | "*" | "%":
 						// Best-effort numeric lowering:
 						// - if both sides look like floats, use OCaml float operators,
@@ -2076,6 +2101,8 @@ class EmitterStage {
 						final bIsF = isFloatExpr(b);
 						final aIsI = isIntExpr(a);
 						final bIsI = isIntExpr(b);
+						final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
+						final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
 						final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
 						if (op == "%") {
 							if (aIsF || bIsF) {
@@ -2085,6 +2112,8 @@ class EmitterStage {
 							} else if (aIsI && bIsI) {
 								"((" + la + ") mod (" + rb + "))";
 							} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
+								"((" + la + ") mod (" + rb + "))";
+							} else if (allowMetalFallback) {
 								"((" + la + ") mod (" + rb + "))";
 							} else {
 								"(Obj.magic 0)";
@@ -2103,6 +2132,8 @@ class EmitterStage {
 						} else if (aIsI && bIsI) {
 							"((" + la + ") " + op + " (" + rb + "))";
 						} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
+							"((" + la + ") " + op + " (" + rb + "))";
+						} else if (allowMetalFallback) {
 							"((" + la + ") " + op + " (" + rb + "))";
 						} else {
 							"(Obj.magic 0)";
@@ -3388,10 +3419,12 @@ class EmitterStage {
 		  expressions from the parsed AST (we only support simple return shapes).
 		- Builds using `ocamlopt` (override via `OCAMLOPT` env var) when `buildExecutable=true`.
 	**/
-	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true):String {
+	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
+			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
 		if (outDir == null || StringTools.trim(outDir).length == 0)
 			throw "stage3 emitter: missing outDir";
 		final outAbs = haxe.io.Path.normalize(outDir);
+		currentOcamlProfile = ocamlProfile;
 		if (!sys.FileSystem.exists(outAbs))
 			sys.FileSystem.createDirectory(outAbs);
 
