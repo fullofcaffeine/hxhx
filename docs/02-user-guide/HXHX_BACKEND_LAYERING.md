@@ -73,6 +73,7 @@ To reduce backend-selection drift, builtin Stage3 targets now share a canonical 
 - `packages/hxhx-core/src/backend/TargetDescriptor.hx`
 - `packages/hxhx-core/src/backend/TargetRequirements.hx`
 - `packages/hxhx-core/src/backend/GenIrProgram.hx`
+- `packages/hxhx-core/src/backend/BackendAbi.hx`
 - `packages/hxhx-core/src/backend/BackendRegistry.hx`
 
 This registry is now the source of truth for:
@@ -84,6 +85,26 @@ This registry is now the source of truth for:
 - codegen input contract naming (`GenIrProgram` v0 alias)
 
 `Stage3Compiler` resolves backends through `BackendRegistry.requireForTarget(...)` rather than hardcoded switch branches.
+
+### Backend ABI v1 policy (frozen contract)
+
+`hxhx` now treats backend descriptor compatibility as a strict load-time contract:
+
+- Canonical ABI constants live in `backend.BackendAbi`:
+  - `VERSION`
+  - `GEN_IR_VERSION`
+  - `MACRO_API_VERSION`
+- `BackendRegistry.register(...)` validates every registration (builtin/provider) via
+  `BackendAbi.validateDescriptor(...)`.
+- Mismatch behavior is deterministic and fail-fast:
+  - ABI mismatch → reject registration
+  - GenIR mismatch → reject registration
+  - macro API mismatch → reject registration
+  - invalid host capability entries → reject registration
+- Duplicate `descriptor.implId` registrations are rejected to keep precedence deterministic.
+
+This gives us a single compatibility gate for plugin/builtin backends before manifest/dynlink
+work is layered in.
 
 ## GenIR boundary decision (`haxe.ocaml-3b7`)
 

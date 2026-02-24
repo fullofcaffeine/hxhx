@@ -1,6 +1,7 @@
 package backend.js;
 
 import backend.BackendCapabilities;
+import backend.BackendAbi;
 import backend.BackendContext;
 import backend.BackendRegistrationSpec;
 import backend.EmitResult;
@@ -33,7 +34,7 @@ import backend.TargetCoreBackend;
 class JsBackend implements IBackend implements ITargetBackendProvider {
 	public static inline var TARGET_ID = "js-native";
 	public static inline var IMPL_ID = "builtin/js-native";
-	public static inline var ABI_VERSION = 1;
+	public static inline var ABI_VERSION = BackendAbi.VERSION;
 	public static inline var PRIORITY = 100;
 	public static inline var PROVIDER_IMPL_ID = "provider/js-native-wrapper";
 	public static inline var PROVIDER_PRIORITY = 200;
@@ -57,8 +58,8 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 			description: "Native JS backend (MVP)",
 			capabilities: capabilitiesStatic(),
 			requires: {
-				genIrVersion: 1,
-				macroApiVersion: 1,
+				genIrVersion: BackendAbi.GEN_IR_VERSION,
+				macroApiVersion: BackendAbi.MACRO_API_VERSION,
 				hostCaps: ["filesystem", "process", "node"]
 			}
 		};
@@ -73,8 +74,8 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 			description: "JS backend provider wrapper (dynamic)",
 			capabilities: capabilitiesStatic(),
 			requires: {
-				genIrVersion: 1,
-				macroApiVersion: 1,
+				genIrVersion: BackendAbi.GEN_IR_VERSION,
+				macroApiVersion: BackendAbi.MACRO_API_VERSION,
 				hostCaps: ["filesystem", "process", "node"]
 			}
 		};

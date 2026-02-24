@@ -1,3 +1,4 @@
+import backend.BackendAbi;
 import backend.BackendRegistry;
 import backend.BackendRegistrationSpec;
 import backend.ITargetBackendProvider;
@@ -9,11 +10,46 @@ class M14BackendRegistryIntegrationTest {
 			throw message;
 	}
 
+	static function assertFailsContains(fn:Void->Void, expected:String):Void {
+		var message = "";
+		try {
+			fn();
+		} catch (e:haxe.Exception) {
+			message = e.message;
+		}
+		assertTrue(message.length > 0, "expected failing call with message containing: " + expected);
+		assertTrue(message.indexOf(expected) >= 0, "error mismatch: " + message);
+	}
+
 	static function has(values:Array<String>, target:String):Bool {
 		for (v in values)
 			if (v == target)
 				return true;
 		return false;
+	}
+
+	static function compatSpec(implId:String, abiVersion:Int, genIrVersion:Int, macroApiVersion:Int, hostCaps:Array<String>):BackendRegistrationSpec {
+		final descriptor:backend.TargetDescriptor = {
+			id: "compat-fixture",
+			implId: implId,
+			abiVersion: abiVersion,
+			priority: 10,
+			description: "ABI compatibility fixture",
+			capabilities: {
+				supportsNoEmit: true,
+				supportsBuildExecutable: false,
+				supportsCustomOutputFile: true
+			},
+			requires: {
+				genIrVersion: genIrVersion,
+				macroApiVersion: macroApiVersion,
+				hostCaps: hostCaps
+			}
+		};
+		return {
+			descriptor: descriptor,
+			create: function() return new TargetCoreBackend(descriptor, function(_program, _context) throw "compat fixture should not emit")
+		};
 	}
 
 	static function main():Void {
@@ -26,22 +62,31 @@ class M14BackendRegistryIntegrationTest {
 		final ocaml = BackendRegistry.descriptorForTarget("ocaml-stage3");
 		assertTrue(ocaml != null, "descriptorForTarget(ocaml-stage3) returned null");
 		assertTrue(ocaml.implId == "builtin/ocaml-stage3", "unexpected ocaml-stage3 implId");
-		assertTrue(ocaml.requires.genIrVersion == 1, "unexpected ocaml-stage3 GenIR version");
+		assertTrue(ocaml.requires.genIrVersion == BackendAbi.GEN_IR_VERSION, "unexpected ocaml-stage3 GenIR version");
 
 		final js = BackendRegistry.descriptorForTarget("js-native");
 		assertTrue(js != null, "descriptorForTarget(js-native) returned null");
 		assertTrue(js.implId == "builtin/js-native", "unexpected js-native implId");
-		assertTrue(js.requires.macroApiVersion == 1, "unexpected js-native macro API version");
+		assertTrue(js.requires.macroApiVersion == BackendAbi.MACRO_API_VERSION, "unexpected js-native macro API version");
 
-		var unknownError = "";
-		try {
-			BackendRegistry.requireForTarget("does-not-exist");
-		} catch (e:haxe.Exception) {
-			unknownError = e.message;
-		}
-		assertTrue(unknownError.length > 0, "requireForTarget should fail for unknown backend");
-		assertTrue(unknownError.indexOf("does-not-exist") >= 0, "unknown backend error should include target id");
-		assertTrue(unknownError.indexOf("ocaml-stage3") >= 0, "unknown backend error should list supported backends");
+		assertFailsContains(function() BackendRegistry.requireForTarget("does-not-exist"), "does-not-exist");
+		assertFailsContains(function() BackendRegistry.requireForTarget("does-not-exist"), "ocaml-stage3");
+
+		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/compat-abi-mismatch", BackendAbi.VERSION + 1, BackendAbi.GEN_IR_VERSION,
+			BackendAbi.MACRO_API_VERSION, ["filesystem"])),
+			"backend ABI mismatch");
+
+		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/compat-genir-mismatch", BackendAbi.VERSION, BackendAbi.GEN_IR_VERSION + 1,
+			BackendAbi.MACRO_API_VERSION, ["filesystem"])),
+			"backend GenIR mismatch");
+
+		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/compat-macro-mismatch", BackendAbi.VERSION, BackendAbi.GEN_IR_VERSION,
+			BackendAbi.MACRO_API_VERSION + 1, ["filesystem"])),
+			"backend macro API mismatch");
+
+		assertFailsContains(function() BackendRegistry.register(compatSpec("plugin/compat-hostcap-invalid", BackendAbi.VERSION, BackendAbi.GEN_IR_VERSION,
+			BackendAbi.MACRO_API_VERSION, ["filesystem", ""])),
+			"invalid backend host capability");
 
 		final pluginRegistered = BackendRegistry.registerProvider((new _M14PluginProvider()).registrations());
 		assertTrue(pluginRegistered == 1, "expected exactly one plugin registration");
@@ -66,7 +111,7 @@ private class _M14PluginProvider implements ITargetBackendProvider {
 		final descriptor:backend.TargetDescriptor = {
 			id: "js-native",
 			implId: "plugin/js-native@test",
-			abiVersion: 1,
+			abiVersion: BackendAbi.VERSION,
 			priority: 200,
 			description: "Plugin JS backend for test",
 			capabilities: {
@@ -75,8 +120,8 @@ private class _M14PluginProvider implements ITargetBackendProvider {
 				supportsCustomOutputFile: true
 			},
 			requires: {
-				genIrVersion: 1,
-				macroApiVersion: 1,
+				genIrVersion: BackendAbi.GEN_IR_VERSION,
+				macroApiVersion: BackendAbi.MACRO_API_VERSION,
 				hostCaps: []
 			}
 		};

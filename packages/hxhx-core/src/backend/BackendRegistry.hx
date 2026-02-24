@@ -79,6 +79,14 @@ class BackendRegistry {
 			throw "invalid backend registration: descriptor.id is required";
 		if (d.implId == null || d.implId.length == 0)
 			throw "invalid backend registration: descriptor.implId is required";
+		final compatibilityError = BackendAbi.validateDescriptor(d);
+		if (compatibilityError != null)
+			throw compatibilityError;
+		for (existing in allRegistrations()) {
+			if (existing.descriptor.implId == d.implId) {
+				throw "duplicate backend registration: descriptor.implId already registered: " + d.implId;
+			}
+		}
 		dynamicRegistrations.push(spec);
 	}
 

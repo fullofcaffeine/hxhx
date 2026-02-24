@@ -1,6 +1,7 @@
 package backend.ocaml;
 
 import backend.BackendCapabilities;
+import backend.BackendAbi;
 import backend.BackendContext;
 import backend.EmitResult;
 import backend.GenIrProgram;
@@ -27,7 +28,7 @@ import backend.TargetCoreBackend;
 class OcamlStage3Backend implements IBackend {
 	public static inline var TARGET_ID = "ocaml-stage3";
 	public static inline var IMPL_ID = "builtin/ocaml-stage3";
-	public static inline var ABI_VERSION = 1;
+	public static inline var ABI_VERSION = BackendAbi.VERSION;
 	public static inline var PRIORITY = 100;
 
 	final delegate:TargetCoreBackend;
@@ -49,8 +50,8 @@ class OcamlStage3Backend implements IBackend {
 			description: "Linked Stage3 OCaml emitter",
 			capabilities: capabilitiesStatic(),
 			requires: {
-				genIrVersion: 1,
-				macroApiVersion: 1,
+				genIrVersion: BackendAbi.GEN_IR_VERSION,
+				macroApiVersion: BackendAbi.MACRO_API_VERSION,
 				hostCaps: ["filesystem", "process", "ocaml", "dune"]
 			}
 		};
