@@ -19,7 +19,7 @@ case "$PROFILE" in
     echo "  HXHX_M7_KEEP_LOGS=0|1               (default 0)" >&2
     echo "  HXHX_M7_DRY_RUN=0|1                 (default 0)" >&2
     echo "  HXHX_M7_SCOPE_FILE=<json>           (default: docs/02-user-guide/compat/scoped-1.0-targets.json)" >&2
-    echo "  HXHX_M7_REQUIRE_PLUGIN_MATRIX=0|1   (default 0)" >&2
+    echo "  HXHX_M7_REQUIRE_PLUGIN_MATRIX=0|1   (default: strict full=1, otherwise 0)" >&2
     echo "  HAXE_UPSTREAM_DIR=/path/to/haxe     (default: $ROOT/vendor/haxe)" >&2
     exit 2
     ;;
@@ -29,9 +29,10 @@ FAIL_FAST="${HXHX_M7_FAIL_FAST:-0}"
 KEEP_LOGS="${HXHX_M7_KEEP_LOGS:-0}"
 DRY_RUN="${HXHX_M7_DRY_RUN:-0}"
 STRICT="${HXHX_M7_STRICT:-}"
-REQUIRE_PLUGIN_MATRIX="${HXHX_M7_REQUIRE_PLUGIN_MATRIX:-0}"
+REQUIRE_PLUGIN_MATRIX_RAW="${HXHX_M7_REQUIRE_PLUGIN_MATRIX:-}"
+REQUIRE_PLUGIN_MATRIX="0"
 
-for v in FAIL_FAST KEEP_LOGS DRY_RUN REQUIRE_PLUGIN_MATRIX; do
+for v in FAIL_FAST KEEP_LOGS DRY_RUN; do
   eval "value=\${$v}"
   case "$value" in
     0|1) ;;
@@ -49,6 +50,16 @@ fi
 case "$STRICT" in
   0|1) ;;
   *) echo "Invalid HXHX_M7_STRICT=$STRICT (expected 0 or 1)." >&2; exit 2 ;;
+esac
+
+if [ -n "$REQUIRE_PLUGIN_MATRIX_RAW" ]; then
+  REQUIRE_PLUGIN_MATRIX="$REQUIRE_PLUGIN_MATRIX_RAW"
+elif [ "$PROFILE" = "full" ] && [ "$STRICT" = "1" ]; then
+  REQUIRE_PLUGIN_MATRIX="1"
+fi
+case "$REQUIRE_PLUGIN_MATRIX" in
+  0|1) ;;
+  *) echo "Invalid HXHX_M7_REQUIRE_PLUGIN_MATRIX=$REQUIRE_PLUGIN_MATRIX (expected 0 or 1)." >&2; exit 2 ;;
 esac
 
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$ROOT/vendor/haxe}"

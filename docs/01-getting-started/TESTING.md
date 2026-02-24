@@ -224,6 +224,11 @@ Notes:
   - `Tests` runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free bootstrap path).
   - `Gate 1 Lite` workflow (`.github/workflows/gate1-lite.yml`) runs the upstream macro smoke rung (`test:upstream:unit-macro-stage3-no-emit`) on every push/PR.
   - `Gate 2 Lite` workflow (`.github/workflows/gate2-lite.yml`) runs fast workloads on every push/PR.
+  - `Plugin matrix (strict)` job in `.github/workflows/ci.yml` runs `npm run test:plugins:strict-matrix`
+    on every push/PR:
+    - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)
+    - eval.vm plugin API smoke (`eval.vm.Context.loadPlugin`)
+    - Stage3 plugin fixture (`hxhxmacros.PluginFixtureMacros.init()`) with hook/classpath/module emission checks.
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=byte`, `HXHX_STAGE0_DISABLE_PREPASSES=1`, and `HXHX_STAGE0_NO_INLINE=1`; the lane enforces `>=8GB` swapfile capacity on ubuntu runners to reduce OOM kills).
@@ -361,6 +366,8 @@ Profiles:
 
 - `fast` (default): `ci:guards`, `test:hxhx-targets`, focused Gate2 display rung, builtin target smoke.
 - `full`: includes `fast` plus Gate1 unit-macro, Gate2 runci Macro, and Gate3 runci targets.
+  - In strict mode (`HXHX_M7_STRICT=1`), full profile also enables plugin matrix checks by default
+    (`HXHX_M7_REQUIRE_PLUGIN_MATRIX=1`).
   - Host-aware default for Gate3 targets in this bundle: Linux=`Macro,Js,Neko`, macOS=`Macro,Neko` (override with `HXHX_GATE3_TARGETS=...`).
 
 Examples:

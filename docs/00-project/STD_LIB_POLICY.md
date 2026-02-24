@@ -36,6 +36,10 @@ The following upstream paths are never allowed to be vendored or copied into thi
   - source path(s) in `vendor/haxe/std/**`
   - destination path(s) in `packages/reflaxe.ocaml/std/_std/**`
 - Do not add copyleft license texts/headers to tracked source files.
+- Keep the required provenance artifacts current:
+  - `THIRD_PARTY_NOTICES.md`
+  - `docs/00-project/STDLIB_PROVENANCE_LEDGER.json`
+    - Every tracked file under `packages/reflaxe.ocaml/std/_std/**` must have a ledger entry.
 
 ## Sync workflow (upstream -> local stdlib overrides)
 
@@ -52,7 +56,10 @@ The following upstream paths are never allowed to be vendored or copied into thi
    npm run ci:guards
    npm test
    ```
-5. Record provenance details in the bead/PR notes.
+5. Update provenance artifacts:
+   - update `THIRD_PARTY_NOTICES.md` if third-party notice scope changes
+   - update `docs/00-project/STDLIB_PROVENANCE_LEDGER.json` for all touched `_std` files
+6. Record provenance details in the bead/PR notes.
 
 ## CI guardrails enforcing this policy
 
@@ -62,3 +69,6 @@ The following upstream paths are never allowed to be vendored or copied into thi
   - enforces stdlib-only upstream vendoring boundaries.
   - rejects tracked `vendor/haxe/src/**`, `vendor/haxe/tests/**`, and other non-stdlib upstream paths.
   - enforces stdlib sync destination policy for checked-in overrides.
+- `scripts/ci/stdlib-provenance-ledger-check.js`
+  - ensures `THIRD_PARTY_NOTICES.md` exists and includes the stdlib notice.
+  - ensures every tracked `_std` override file has coverage in the provenance ledger.

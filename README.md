@@ -28,7 +28,7 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
 ## Current status
 
 - Compatibility target is **Haxe `4.3.7`**.
-- Per-commit checks run **Gate 1 Lite**, **Gate 2 Lite**, and **Gate 3 Builtin**.
+- Per-commit checks run **Gate 1 Lite**, **Gate 2 Lite**, **Gate 3 Builtin**, and a **strict plugin matrix** lane.
 - Per-commit CI also runs a **JS oracle smoke** lane (upstream `haxe` vs `hxhx js-native` runtime output on repo-local fixtures).
 - Full upstream compatibility gates (**Gate 1/2/3**) run weekly and on manual trigger.
 - Legacy Flash/AS3 targets are intentionally unsupported.
@@ -116,7 +116,7 @@ npm run test:stage0-policy
 # Strict replacement-ready bundle (delegation blocked):
 HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full
 
-# Optional strict plugin matrix (requires plugin deps configured):
+# Strict plugin matrix (macro libs + eval.vm API smoke + Stage3 plugin fixture):
 HXHX_PLUGIN_MATRIX_STRICT=1 npm run test:plugins:strict-matrix
 ```
 
@@ -169,6 +169,7 @@ For full usage and mainstream Haxe integration, see
 - **Gate 2 Lite**: quick workload smoke.
 - **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3`; optional `js-native` lane on manual runs).
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
+- **Plugin matrix (strict)**: macro-library compatibility + eval.vm plugin API smoke + Stage3 plugin fixture checks.
 - Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
   [Testing command catalog](docs/01-getting-started/TESTING.md).
 
@@ -193,6 +194,7 @@ For full usage and mainstream Haxe integration, see
 - [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
 - [OCaml runtime capability matrix (`portable` vs `metal`)](docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md)
 - [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)
+- [Stdlib provenance policy + ledger](docs/00-project/STD_LIB_POLICY.md)
 - [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)
 - [Boundaries and long-term repo strategy](docs/00-project/BOUNDARIES.md)
 - [Provenance policy (ML2HX non-shipping)](docs/00-project/PROVENANCE_POLICY.md)

@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "description": "Provenance ledger for tracked OCaml stdlib override files.",
+  "baselineUpstream": {
+    "repository": "https://github.com/HaxeFoundation/haxe",
+    "tag": "4.3.7",
+    "license": "MIT"
+  },
+  "entries": [
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/Array.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/Array.hx",
+      "notes": "OCaml-target override with selective API sync."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/Date.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/Date.hx",
+      "notes": "Extern surface aligned with upstream Date API."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/EReg.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/EReg.hx",
+      "notes": "Extern surface aligned with upstream EReg API."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/Math.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/Math.hx",
+      "notes": "Extern surface aligned with upstream Math API."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/String.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/String.hx",
+      "notes": "String API surface kept compatible with upstream std."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/StringBuf.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/StringBuf.hx",
+      "notes": "Repo-authored non-inline implementation preserving upstream API."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/Sys.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/Sys.hx",
+      "notes": "Extern surface aligned with upstream Sys API."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/Bytes.hx",
+      "notes": "Bytes API override mapped to OCaml runtime helpers."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/BytesBuffer.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/BytesBuffer.hx",
+      "notes": "Target override preserving upstream surface."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/BytesData.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/BytesData.hx",
+      "notes": "Type alias override for OCaml runtime representation."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/FPHelper.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/FPHelper.hx",
+      "notes": "Compatibility surface with OCaml-native runtime implementation."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Input.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/Input.hx",
+      "notes": "Default methods rewritten for OCaml-safe BytesData semantics."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Output.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/Output.hx",
+      "notes": "Default methods rewritten for OCaml-safe BytesData semantics."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/sys/FileSystem.hx",
+      "notes": "Extern surface for sys.FileSystem mapped to runtime shims."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/io/File.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/sys/io/File.hx",
+      "notes": "sys.io.File API compatibility wrapper for OCaml runtime."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/io/FileInput.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/sys/io/FileInput.hx",
+      "notes": "FileInput stream override for OCaml runtime handles."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/sys/io/FileOutput.hx",
+      "notes": "FileOutput stream override for OCaml runtime handles."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/io/Process.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/sys/io/Process.hx",
+      "notes": "Process API override for Stage4 macro host transport."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/io/Stdio.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/Sys.hx",
+      "notes": "Repo-authored helper surface for stdin/stdout/stderr stream bridging."
+    }
+  ]
+}
