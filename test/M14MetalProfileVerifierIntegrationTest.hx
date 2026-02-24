@@ -87,7 +87,10 @@ class M14MetalProfileVerifierIntegrationTest {
 		assertContains(failureMessage, "metal profile verification failed", "verifier should fail with metal prefix");
 		assertContains(failureMessage, "[reflection_call]", "verifier should report reflection call");
 		assertContains(failureMessage, "[untyped_expr]", "verifier should report untyped usage");
+		assertContains(failureMessage, "construct: Reflect.field", "verifier should report construct for reflection calls");
 		assertContains(failureMessage, "context: Main.main", "verifier should include function context");
+		assertContains(failureMessage, "reason:", "verifier should include explicit reason");
+		assertContains(failureMessage, "migration:", "verifier should include migration hint");
 
 		final reflectionIndex = failureMessage.indexOf("[reflection_call]");
 		final untypedIndex = failureMessage.indexOf("[untyped_expr]");
@@ -96,5 +99,21 @@ class M14MetalProfileVerifierIntegrationTest {
 
 		final coreFailure = expectTargetCoreMetalFailure(failingSource, "MetalProfileCoreFail.hx");
 		assertContains(coreFailure, "[untyped_expr]", "metal profile verifier should run before emit in OcamlTargetCore");
+
+		final dynamicHintFailingSource = [
+			"class Main {",
+			"  static function helper(value:Dynamic):Int {",
+			"    var widened:Dynamic = value;",
+			"    return 0;",
+			"  }",
+			"  static function main() {",
+			"    Sys.println(Std.string(helper(1)));",
+			"  }",
+			"}"
+		].join("\n");
+		final dynamicFailureMessage = expectVerifierFailure(dynamicHintFailingSource, "MetalProfileDynamicTypeFail.hx");
+		assertContains(dynamicFailureMessage, "[dynamic_type_hint]", "verifier should report dynamic type hints");
+		assertContains(dynamicFailureMessage, "construct: argument `value` type", "verifier should report argument type construct");
+		assertContains(dynamicFailureMessage, "replace `Dynamic` with a concrete type", "verifier should include migration guidance for dynamic types");
 	}
 }

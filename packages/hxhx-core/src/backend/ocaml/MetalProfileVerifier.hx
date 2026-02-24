@@ -7,9 +7,10 @@ private typedef MetalViolation = {
 	final line:Int;
 	final column:Int;
 	final code:String;
+	final construct:String;
 	final context:String;
-	final message:String;
-	final hint:String;
+	final reason:String;
+	final migrationHint:String;
 }
 
 /**
@@ -116,8 +117,8 @@ class MetalProfileVerifier {
 				for (c in catches) {
 					final catchHint = normalizeTypeHint(c.typeHint);
 					if (catchHint.length == 0 || isDynamicTypeHint(c.typeHint)) {
-						addViolation(violations, filePath, className, fnName, HxPos.unknown(), CODE_DYNAMIC_TYPE_HINT,
-							"catch variable `" + c.name + "` uses dynamic catch typing",
+						addViolation(violations, filePath, className, fnName, HxPos.unknown(), CODE_DYNAMIC_TYPE_HINT, "catch variable `" + c.name + "` type",
+							"metal catch typing must stay concrete to preserve deterministic native exception matching",
 							"use a concrete catch type in metal profile (for example, `haxe.Exception` or a specific error type)");
 					}
 					verifyStmt(filePath, className, fnName, c.body, violations);
@@ -137,26 +138,24 @@ class MetalProfileVerifier {
 	static function verifyExpr(filePath:String, className:String, fnName:String, stmtPos:Null<HxPos>, expr:HxExpr, violations:Array<MetalViolation>):Void {
 		switch (expr) {
 			case EUntyped(inner):
-				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNTYPED, "untyped expression is not allowed in metal profile",
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNTYPED, "`untyped` expression",
+					"metal profile forbids `untyped` because it bypasses typed lowering and native guarantees",
 					"replace `untyped` with typed target abstractions or portable equivalents");
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case EUnsupported(raw):
-				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_EXPR,
-					"unsupported bootstrap expression encountered: `" + summarizeRaw(raw) + "`",
-					"rewrite the expression to a supported typed form before using metal profile");
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_EXPR, "EUnsupported(" + summarizeRaw(raw) + ")",
+					"bootstrap fallback nodes are not valid in metal mode", "rewrite the expression to a supported typed form before using metal profile");
 			case ETryCatchRaw(raw):
-				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC,
-					"raw try/catch expression is not allowed in metal profile: `" + summarizeRaw(raw) + "`",
-					"use statement-level try/catch with concrete catch types");
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "ETryCatchRaw(" + summarizeRaw(raw) + ")",
+					"raw try/catch fallback nodes cannot guarantee native metal semantics", "use statement-level try/catch with concrete catch types");
 			case ESwitchRaw(raw):
-				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC,
-					"raw switch expression is not allowed in metal profile: `" + summarizeRaw(raw) + "`",
-					"use structured switch forms that type-check without fallback nodes");
+				addViolation(violations, filePath, className, fnName, stmtPos, CODE_UNSUPPORTED_SEMANTIC, "ESwitchRaw(" + summarizeRaw(raw) + ")",
+					"raw switch fallback nodes cannot guarantee native metal semantics", "use structured switch forms that type-check without fallback nodes");
 			case ECall(callee, args):
 				final reflectionCall = reflectionCallName(callee);
 				if (reflectionCall != null) {
-					addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, reflectionCall + " is not allowed in metal profile",
-						"replace reflection calls with static/typed APIs");
+					addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, reflectionCall,
+						"reflection-driven calls prevent static specialization in metal mode", "replace reflection calls with static/typed APIs");
 				}
 				verifyExpr(filePath, className, fnName, stmtPos, callee, violations);
 				for (arg in args)
@@ -215,8 +214,8 @@ class MetalProfileVerifier {
 			violations:Array<MetalViolation>):Void {
 		if (!isDynamicTypeHint(rawTypeHint))
 			return;
-		addViolation(violations, filePath, className, fnName, pos, CODE_DYNAMIC_TYPE_HINT, label
-			+ " uses `Dynamic`", "replace `Dynamic` with a concrete type");
+		addViolation(violations, filePath, className, fnName, pos, CODE_DYNAMIC_TYPE_HINT, label,
+			"`Dynamic` type hints disable metal-profile specialization and deterministic native typing", "replace `Dynamic` with a concrete type");
 	}
 
 	static function isDynamicTypeHint(rawTypeHint:String):Bool {
@@ -251,7 +250,7 @@ class MetalProfileVerifier {
 	}
 
 	static function addViolation(violations:Array<MetalViolation>, filePath:String, className:String, fnName:Null<String>, pos:Null<HxPos>, code:String,
-			message:String, hint:String):Void {
+			construct:String, reason:String, migrationHint:String):Void {
 		final line = pos == null ? 0 : pos.getLine();
 		final column = pos == null ? 0 : pos.getColumn();
 		violations.push({
@@ -259,9 +258,10 @@ class MetalProfileVerifier {
 			line: line,
 			column: column,
 			code: code,
+			construct: construct,
 			context: formatContext(className, fnName),
-			message: message,
-			hint: hint
+			reason: reason,
+			migrationHint: migrationHint
 		});
 	}
 
@@ -270,8 +270,9 @@ class MetalProfileVerifier {
 		lines.push("metal profile verification failed: " + violations.length + " issue(s)");
 		for (v in violations) {
 			final lineCol = (v.line > 0 && v.column > 0) ? ":" + v.line + ":" + v.column : "";
-			lines.push("- " + v.filePath + lineCol + " [" + v.code + "] " + v.message + " (context: " + v.context + ")");
-			lines.push("  hint: " + v.hint);
+			lines.push("- " + v.filePath + lineCol + " [" + v.code + "] construct: " + v.construct + " (context: " + v.context + ")");
+			lines.push("  reason: " + v.reason);
+			lines.push("  migration: " + v.migrationHint);
 		}
 		return lines.join("\n");
 	}
