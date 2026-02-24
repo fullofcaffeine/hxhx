@@ -502,7 +502,13 @@ class EmitterStage {
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Float"):
 				"string_of_float " + ocamlReadValueIdent(name);
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Bool"):
-				"string_of_bool " + ocamlReadValueIdent(name);
+				// Keep stringification resilient when best-effort inference mislabels a non-bool
+				// value as `Bool` (for example, some stage0-fed static-final shapes during bring-up).
+				//
+				// `string_of_bool` would hard-fail OCaml typechecking in that case, while
+				// `Std.string`-style runtime stringification stays safe for both true bools and
+				// inference slips.
+				"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
 			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "String"):
 				ocamlReadValueIdent(name);
 			case EIdent(name) if (tyByIdent != null
