@@ -73,12 +73,30 @@ bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
 # Faster local loop (incremental emit + skip verify)
 bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
 
-# If stale haxe --wait/--server-connect processes piled up:
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-stale-haxe-servers
+# Reuse a repo-owned haxe --wait server:
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify
+
+# Skip stage0 emit entirely when inputs are unchanged:
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify
+
+# Server cleanup choices:
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server          # safe, repo-owned only
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers     # unsafe, global kill
+
+# Repo-owned haxe server helper:
+bash scripts/hxhx/haxe-server.sh start
+bash scripts/hxhx/haxe-server.sh status
+bash scripts/hxhx/haxe-server.sh stop
 
 # If heartbeat is disabled but you still want periodic diagnostics:
 HXHX_STAGE0_HEARTBEAT=0 HXHX_STAGE0_DIAG_EVERY=30 \
   bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+```
+
+Benchmark the regen harness (cold/warm/skip scenarios):
+
+```bash
+npm run hxhx:bench:bootstrap-regen
 ```
 
 Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior):

@@ -52,6 +52,12 @@ HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-boot
 Notes:
 
 - This can take several minutes because it runs stage0 Haxe macros for codegen.
+- For faster repeated loops, use a repo-owned Haxe server + incremental emit:
+  - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify`
+  - Optional skip when inputs are unchanged:
+    - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
+  - Repo-owned server helper:
+    - `bash scripts/hxhx/haxe-server.sh start|status|stop`
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
 - For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_PROFILE=1` (adds `-D reflaxe_ocaml_profile`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
@@ -59,6 +65,9 @@ Notes:
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
 - If you run a compilation server, you can pass `HAXE_CONNECT=<port>` to reuse it.
+- For targeted cleanup when haxe servers pile up:
+  - `--kill-repo-server` (safe: only repo-owned server)
+  - `--kill-all-haxe-servers` (unsafe: kills all local haxe servers)
 - Oversized generated bootstrap units are automatically sharded into deterministic `<Module>.ml.partNNN` chunks + `<Module>.ml.parts` manifest files to stay below GitHub's 50MB warning threshold.
 
 If you need to rebuild `hxhx` from stage0 source (instead of the committed `bootstrap_out`), use:
@@ -155,3 +164,9 @@ This now reports:
 
 If the selected `hxhx` binary does not expose `js-native`, the harness reports that row as skipped.
 Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and include the js-native row.
+
+Benchmark bootstrap regeneration scenarios (cold/warm/skip):
+
+```bash
+npm run hxhx:bench:bootstrap-regen
+```

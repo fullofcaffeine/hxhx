@@ -1,0 +1,132 @@
+name: Bootstrap Regen Bench
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios:
+        description: "Comma-separated scenarios (cold,warm,skip)"
+        required: true
+        default: "warm,skip"
+      reps:
+        description: "Repetitions per scenario"
+        required: true
+        default: "1"
+      verify:
+        description: "Run snapshot verify step (0/1)"
+        required: true
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-regen-bench-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  bench:
+    name: Benchmark bootstrap regen harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Run bootstrap regen benchmark
+        id: bench
+        run: |
+          set -euo pipefail
+          REPORT_DIR="$RUNNER_TEMP/bootstrap_regen_bench"
+          echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
+          HXHX_BOOTSTRAP_BENCH_SCENARIOS="${{ github.event.inputs.scenarios }}" \
+          HXHX_BOOTSTRAP_BENCH_REPS="${{ github.event.inputs.reps }}" \
+          HXHX_BOOTSTRAP_BENCH_VERIFY="${{ github.event.inputs.verify }}" \
+          HXHX_BOOTSTRAP_BENCH_REPORT_DIR="$REPORT_DIR" \
+          npm run hxhx:bench:bootstrap-regen
+
+      - name: Add benchmark summary
+        if: always()
+        run: |
+          set -euo pipefail
+          REPORT_DIR="${{ steps.bench.outputs.report_dir }}"
+          RESULTS="$REPORT_DIR/results.tsv"
+          if [ -f "$RESULTS" ]; then
+            {
+              echo "### Bootstrap regen benchmark"
+              echo ""
+              echo "- Scenarios: \`${{ github.event.inputs.scenarios }}\`"
+              echo "- Repetitions: \`${{ github.event.inputs.reps }}\`"
+              echo "- Verify: \`${{ github.event.inputs.verify }}\`"
+              echo ""
+              echo "\`\`\`"
+              cat "$RESULTS"
+              echo "\`\`\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-regen-bench-${{ github.run_id }}
+          path: ${{ steps.bench.outputs.report_dir }}
+          if-no-files-found: warn
+          retention-days: 14

@@ -21,55 +21,74 @@ set -euo pipefail
 # - Do not edit files inside `packages/hxhx/bootstrap_out/` by hand.
 
 usage() {
-  cat <<'USAGE'
+	cat <<'USAGE'
 Usage: bash scripts/hxhx/regenerate-hxhx-bootstrap.sh [options]
 
 Options:
-  --fast         Local iteration mode. Defaults to incremental emit and skips snapshot verify.
-  --full         Full deterministic mode (default): clean emit output and verify snapshot build.
-  --incremental  Reuse existing packages/hxhx/out before stage0 emit (faster local loop).
-  --clean-out    Clean packages/hxhx/out before stage0 emit.
-  --no-verify    Skip bootstrap snapshot verify build.
-  --verify       Run bootstrap snapshot verify build.
+  --fast                     Local iteration mode. Defaults to incremental emit and skips snapshot verify.
+  --full                     Full deterministic mode (default): clean emit output and verify snapshot build.
+  --incremental              Reuse existing packages/hxhx/out before stage0 emit (faster local loop).
+  --clean-out                Clean packages/hxhx/out before stage0 emit.
+  --no-verify                Skip bootstrap snapshot verify build.
+  --verify                   Run bootstrap snapshot verify build.
   --server-preflight         Check for stale haxe --wait/--server-connect processes before emit (default).
   --no-server-preflight      Skip stale haxe server preflight checks.
-  --kill-stale-haxe-servers  In preflight, terminate stale haxe server processes before emit.
+  --kill-repo-server         Stop only the repo-owned haxe --wait server before emit.
+  --kill-all-haxe-servers    Stop all local haxe --wait/--server-connect processes before emit (unsafe).
+  --kill-stale-haxe-servers  Deprecated alias for --kill-all-haxe-servers.
+  --use-repo-server          Start/reuse repo-owned haxe --wait server and pass --connect.
+  --keep-repo-server         Keep repo-owned server alive after this run (implies --use-repo-server).
+  --skip-if-unchanged        Skip stage0 emit when fingerprint matches previous successful regen.
+  --force                    Ignore fingerprint match and force stage0 emit.
+  --profile                  Enable stage0 `--times` and per-filter timing (`-D filter-times`).
+  --report-json <path>       Write a machine-readable timing summary JSON.
   --diag-every <seconds>     When heartbeat is disabled, print periodic stage0 diagnostics.
-  -h, --help     Show this help.
+  -h, --help                 Show this help.
 
 Environment knobs (all optional):
-  HXHX_BOOTSTRAP_FAST=1       Same effect as --fast.
-  HXHX_BOOTSTRAP_CLEAN_OUT=0  Reuse packages/hxhx/out (incremental).
-  HXHX_BOOTSTRAP_VERIFY=0     Skip verify step.
-  HXHX_HAXE_SERVER_PREFLIGHT=1  Enable stale haxe server preflight.
-  HXHX_KILL_STALE_HAXE_SERVERS=1  Kill stale haxe servers in preflight.
-  HXHX_STAGE0_DIAG_EVERY=30   Diagnostics cadence when heartbeat is disabled.
+  HXHX_BOOTSTRAP_FAST=1             Same effect as --fast.
+  HXHX_BOOTSTRAP_CLEAN_OUT=0        Reuse packages/hxhx/out (incremental).
+  HXHX_BOOTSTRAP_VERIFY=0           Skip verify step.
+  HXHX_HAXE_SERVER_PREFLIGHT=1      Enable stale haxe server preflight.
+  HXHX_KILL_STALE_HAXE_SERVERS=1    Kill all local haxe servers in preflight (unsafe).
+  HXHX_KILL_REPO_HAXE_SERVER=1      Kill only repo-owned haxe server in preflight.
+  HXHX_BOOTSTRAP_USE_REPO_SERVER=1  Use repo-owned haxe --wait server.
+  HXHX_BOOTSTRAP_KEEP_REPO_SERVER=1 Keep repo-owned server alive after run.
+  HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED=1  Enable fingerprint skip.
+  HXHX_BOOTSTRAP_FORCE=1            Force emit even when fingerprint matches.
+  HXHX_BOOTSTRAP_PROFILE=1          Enable `--times` + `-D filter-times`.
+  HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
+  HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
 USAGE
 }
 
 assert_bool_01() {
-  local name="$1"
-  local value="$2"
-  case "$value" in
-    0|1) ;;
-    *)
-      echo "Invalid value for $name: '$value' (expected 0 or 1)." >&2
-      exit 1
-      ;;
-  esac
+	local name="$1"
+	local value="$2"
+	case "$value" in
+		0|1) ;;
+		*)
+			echo "Invalid value for $name: '$value' (expected 0 or 1)." >&2
+			exit 1
+			;;
+	esac
 }
 
 assert_non_negative_int() {
-  local name="$1"
-  local value="$2"
-  case "$value" in
-    ''|*[!0-9]*)
-      echo "Invalid value for $name: '$value' (expected a non-negative integer)." >&2
-      exit 1
-      ;;
-    *)
-      ;;
-  esac
+	local name="$1"
+	local value="$2"
+	case "$value" in
+		''|*[!0-9]*)
+			echo "Invalid value for $name: '$value' (expected a non-negative integer)." >&2
+			exit 1
+			;;
+		*)
+			;;
+	esac
+}
+
+now_ts() {
+	date +%s
 }
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
@@ -93,69 +112,114 @@ HXHX_BOOTSTRAP_CLEAN_OUT="${HXHX_BOOTSTRAP_CLEAN_OUT:-}"
 HXHX_BOOTSTRAP_VERIFY="${HXHX_BOOTSTRAP_VERIFY:-}"
 HXHX_HAXE_SERVER_PREFLIGHT="${HXHX_HAXE_SERVER_PREFLIGHT:-1}"
 HXHX_KILL_STALE_HAXE_SERVERS="${HXHX_KILL_STALE_HAXE_SERVERS:-0}"
+HXHX_KILL_REPO_HAXE_SERVER="${HXHX_KILL_REPO_HAXE_SERVER:-0}"
 HXHX_STAGE0_DIAG_EVERY="${HXHX_STAGE0_DIAG_EVERY:-0}"
+HXHX_BOOTSTRAP_USE_REPO_SERVER="${HXHX_BOOTSTRAP_USE_REPO_SERVER:-0}"
+HXHX_BOOTSTRAP_KEEP_REPO_SERVER="${HXHX_BOOTSTRAP_KEEP_REPO_SERVER:-0}"
+HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED="${HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED:-0}"
+HXHX_BOOTSTRAP_FORCE="${HXHX_BOOTSTRAP_FORCE:-0}"
+HXHX_BOOTSTRAP_PROFILE="${HXHX_BOOTSTRAP_PROFILE:-0}"
+HXHX_BOOTSTRAP_REPORT_JSON="${HXHX_BOOTSTRAP_REPORT_JSON:-}"
 
+used_deprecated_kill_flag=0
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --fast)
-      HXHX_BOOTSTRAP_FAST=1
-      ;;
-    --full)
-      HXHX_BOOTSTRAP_FAST=0
-      ;;
-    --incremental)
-      HXHX_BOOTSTRAP_CLEAN_OUT=0
-      ;;
-    --clean-out)
-      HXHX_BOOTSTRAP_CLEAN_OUT=1
-      ;;
-    --no-verify)
-      HXHX_BOOTSTRAP_VERIFY=0
-      ;;
-    --verify)
-      HXHX_BOOTSTRAP_VERIFY=1
-      ;;
-    --server-preflight)
-      HXHX_HAXE_SERVER_PREFLIGHT=1
-      ;;
-    --no-server-preflight)
-      HXHX_HAXE_SERVER_PREFLIGHT=0
-      ;;
-    --kill-stale-haxe-servers)
-      HXHX_KILL_STALE_HAXE_SERVERS=1
-      ;;
-    --diag-every)
-      shift
-      if [ $# -eq 0 ]; then
-        echo "Missing value for --diag-every" >&2
-        exit 1
-      fi
-      HXHX_STAGE0_DIAG_EVERY="$1"
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      usage >&2
-      exit 1
-      ;;
-  esac
-  shift
+	case "$1" in
+		--fast)
+			HXHX_BOOTSTRAP_FAST=1
+			;;
+		--full)
+			HXHX_BOOTSTRAP_FAST=0
+			;;
+		--incremental)
+			HXHX_BOOTSTRAP_CLEAN_OUT=0
+			;;
+		--clean-out)
+			HXHX_BOOTSTRAP_CLEAN_OUT=1
+			;;
+		--no-verify)
+			HXHX_BOOTSTRAP_VERIFY=0
+			;;
+		--verify)
+			HXHX_BOOTSTRAP_VERIFY=1
+			;;
+		--server-preflight)
+			HXHX_HAXE_SERVER_PREFLIGHT=1
+			;;
+		--no-server-preflight)
+			HXHX_HAXE_SERVER_PREFLIGHT=0
+			;;
+		--kill-repo-server)
+			HXHX_KILL_REPO_HAXE_SERVER=1
+			;;
+		--kill-all-haxe-servers)
+			HXHX_KILL_STALE_HAXE_SERVERS=1
+			;;
+		--kill-stale-haxe-servers)
+			HXHX_KILL_STALE_HAXE_SERVERS=1
+			used_deprecated_kill_flag=1
+			;;
+		--use-repo-server)
+			HXHX_BOOTSTRAP_USE_REPO_SERVER=1
+			;;
+		--keep-repo-server)
+			HXHX_BOOTSTRAP_USE_REPO_SERVER=1
+			HXHX_BOOTSTRAP_KEEP_REPO_SERVER=1
+			;;
+		--skip-if-unchanged)
+			HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED=1
+			;;
+		--force)
+			HXHX_BOOTSTRAP_FORCE=1
+			;;
+		--profile)
+			HXHX_BOOTSTRAP_PROFILE=1
+			;;
+		--report-json)
+			shift
+			if [ $# -eq 0 ]; then
+				echo "Missing value for --report-json" >&2
+				exit 1
+			fi
+			HXHX_BOOTSTRAP_REPORT_JSON="$1"
+			;;
+		--diag-every)
+			shift
+			if [ $# -eq 0 ]; then
+				echo "Missing value for --diag-every" >&2
+				exit 1
+			fi
+			HXHX_STAGE0_DIAG_EVERY="$1"
+			;;
+		-h|--help)
+			usage
+			exit 0
+			;;
+		*)
+			echo "Unknown option: $1" >&2
+			usage >&2
+			exit 1
+			;;
+	esac
+	shift
 done
 
 assert_bool_01 "HXHX_BOOTSTRAP_FAST" "$HXHX_BOOTSTRAP_FAST"
 if [ -z "$HXHX_BOOTSTRAP_CLEAN_OUT" ]; then
-  HXHX_BOOTSTRAP_CLEAN_OUT="$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo 0 || echo 1)"
+	HXHX_BOOTSTRAP_CLEAN_OUT="$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo 0 || echo 1)"
 fi
 if [ -z "$HXHX_BOOTSTRAP_VERIFY" ]; then
-  HXHX_BOOTSTRAP_VERIFY="$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo 0 || echo 1)"
+	HXHX_BOOTSTRAP_VERIFY="$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo 0 || echo 1)"
 fi
 assert_bool_01 "HXHX_BOOTSTRAP_CLEAN_OUT" "$HXHX_BOOTSTRAP_CLEAN_OUT"
 assert_bool_01 "HXHX_BOOTSTRAP_VERIFY" "$HXHX_BOOTSTRAP_VERIFY"
 assert_bool_01 "HXHX_HAXE_SERVER_PREFLIGHT" "$HXHX_HAXE_SERVER_PREFLIGHT"
 assert_bool_01 "HXHX_KILL_STALE_HAXE_SERVERS" "$HXHX_KILL_STALE_HAXE_SERVERS"
+assert_bool_01 "HXHX_KILL_REPO_HAXE_SERVER" "$HXHX_KILL_REPO_HAXE_SERVER"
+assert_bool_01 "HXHX_BOOTSTRAP_USE_REPO_SERVER" "$HXHX_BOOTSTRAP_USE_REPO_SERVER"
+assert_bool_01 "HXHX_BOOTSTRAP_KEEP_REPO_SERVER" "$HXHX_BOOTSTRAP_KEEP_REPO_SERVER"
+assert_bool_01 "HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED" "$HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED"
+assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
+assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
 assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -163,352 +227,598 @@ PKG_DIR="$ROOT/packages/hxhx"
 OUT_DIR="$PKG_DIR/out"
 BOOTSTRAP_DIR="$PKG_DIR/bootstrap_out"
 BOOTSTRAP_VERIFY_DIR="${HXHX_BOOTSTRAP_VERIFY_DIR:-$PKG_DIR/bootstrap_verify}"
+STATE_DIR="${HXHX_STATE_DIR:-$ROOT/.hxhx/state}"
+FINGERPRINT_FILE="$STATE_DIR/bootstrap_regen_fingerprint.v1"
+HAXE_SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
+
+phase_preflight_sec=0
+phase_emit_sec=0
+phase_copy_sec=0
+phase_shard_sec=0
+phase_verify_sec=0
+total_sec=0
+skipped_emit=0
+resolved_haxe_connect="$HAXE_CONNECT"
+repo_server_started_here=0
+repo_server_was_running=0
+current_fingerprint=""
+
+ensure_state_dir() {
+	mkdir -p "$STATE_DIR"
+}
 
 create_stage0_log_file() {
-  local prefix="$1"
-  local template=""
-  if [ -n "$HXHX_LOG_DIR" ]; then
-    mkdir -p "$HXHX_LOG_DIR"
-    template="${HXHX_LOG_DIR%/}/${prefix}.XXXXXX"
-  else
-    template="${TMPDIR:-/tmp}/${prefix}.XXXXXX"
-  fi
-  mktemp "$template"
+	local prefix="$1"
+	local template=""
+	if [ -n "$HXHX_LOG_DIR" ]; then
+		mkdir -p "$HXHX_LOG_DIR"
+		template="${HXHX_LOG_DIR%/}/${prefix}.XXXXXX"
+	else
+		template="${TMPDIR:-/tmp}/${prefix}.XXXXXX"
+	fi
+	mktemp "$template"
 }
 
 cleanup_stage0_log_file() {
-  local path="$1"
-  if [ -z "$path" ] || [ ! -f "$path" ]; then
-    return
-  fi
-  if [ "$HXHX_KEEP_LOGS" = "1" ]; then
-    echo "== Stage0 emit log retained: $path"
-  else
-    rm -f "$path"
-  fi
+	local path="$1"
+	if [ -z "$path" ] || [ ! -f "$path" ]; then
+		return
+	fi
+	if [ "$HXHX_KEEP_LOGS" = "1" ]; then
+		echo "== Stage0 emit log retained: $path"
+	else
+		rm -f "$path"
+	fi
 }
 
 list_haxe_server_pids() {
-  ps -axo pid=,command= | awk '
-    {
-      pid = $1
-      $1 = ""
-      cmd = substr($0, 2)
-      if (cmd ~ /haxe/ && (cmd ~ /--wait([[:space:]]|$)/ || cmd ~ /--server-connect([[:space:]]|$)/))
-        print pid
-    }
-  ' | sort -u
+	ps -axo pid=,command= | awk '
+		{
+			pid = $1
+			$1 = ""
+			cmd = substr($0, 2)
+			if (cmd ~ /haxe/ && (cmd ~ /--wait([[:space:]]|$)/ || cmd ~ /--server-connect([[:space:]]|$)/))
+				print pid
+		}
+	' | sort -u
 }
 
 print_haxe_server_processes() {
-  local pids="$1"
-  if [ -z "$pids" ]; then
-    return
-  fi
-  local ps_pids
-  ps_pids="$(printf '%s\n' "$pids" | paste -sd, -)"
-  if [ -z "$ps_pids" ]; then
-    return
-  fi
-  ps -o pid=,etime=,rss=,command= -p "$ps_pids" 2>/dev/null || true
+	local pids="$1"
+	if [ -z "$pids" ]; then
+		return
+	fi
+	local ps_pids
+	ps_pids="$(printf '%s\n' "$pids" | paste -sd, -)"
+	if [ -z "$ps_pids" ]; then
+		return
+	fi
+	ps -o pid=,etime=,rss=,command= -p "$ps_pids" 2>/dev/null || true
 }
+
+kill_all_haxe_servers() {
+	local pids
+	pids="$(list_haxe_server_pids)"
+	if [ -z "$pids" ]; then
+		echo "== Haxe server preflight: no local haxe server processes found"
+		return
+	fi
+
+	local count
+	count="$(printf '%s\n' "$pids" | sed '/^$/d' | wc -l | tr -d ' ')"
+	echo "== Haxe server preflight: found $count local haxe server process(es):"
+	print_haxe_server_processes "$pids"
+	echo "== Haxe server preflight: terminating all local haxe server process(es)"
+	# shellcheck disable=SC2086
+	kill $pids >/dev/null 2>&1 || true
+	sleep 1
+
+	local remaining
+	remaining="$(list_haxe_server_pids)"
+	if [ -n "$remaining" ]; then
+		echo "== Haxe server preflight: forcing kill for remaining process(es)"
+		# shellcheck disable=SC2086
+		kill -9 $remaining >/dev/null 2>&1 || true
+		sleep 1
+	fi
+
+	local after
+	after="$(list_haxe_server_pids)"
+	if [ -n "$after" ]; then
+		local after_count
+		after_count="$(printf '%s\n' "$after" | sed '/^$/d' | wc -l | tr -d ' ')"
+		echo "== Haxe server preflight: warning - $after_count process(es) still present after cleanup attempt:"
+		print_haxe_server_processes "$after"
+	else
+		echo "== Haxe server preflight: global haxe server cleanup complete"
+	fi
+}
+
+repo_server_status_running() {
+	if [ ! -x "$HAXE_SERVER_HELPER" ]; then
+		return 1
+	fi
+	"$HAXE_SERVER_HELPER" status >/dev/null 2>&1
+}
+
+cleanup_repo_server() {
+	if [ "$repo_server_started_here" = "1" ] && [ "$HXHX_BOOTSTRAP_KEEP_REPO_SERVER" != "1" ]; then
+		if [ -x "$HAXE_SERVER_HELPER" ]; then
+			"$HAXE_SERVER_HELPER" stop >/dev/null 2>&1 || true
+		fi
+	fi
+}
+
+trap cleanup_repo_server EXIT
 
 run_haxe_server_preflight() {
-  if [ "$HXHX_HAXE_SERVER_PREFLIGHT" != "1" ]; then
-    echo "== Haxe server preflight: skipped (HXHX_HAXE_SERVER_PREFLIGHT=0)"
-    return
-  fi
+	if [ "$HXHX_HAXE_SERVER_PREFLIGHT" != "1" ]; then
+		echo "== Haxe server preflight: skipped (HXHX_HAXE_SERVER_PREFLIGHT=0)"
+		return
+	fi
 
-  local pids
-  pids="$(list_haxe_server_pids)"
-  if [ -z "$pids" ]; then
-    echo "== Haxe server preflight: no stale haxe --wait/--server-connect processes detected"
-    return
-  fi
+	if [ "$HXHX_KILL_REPO_HAXE_SERVER" = "1" ]; then
+		if [ ! -x "$HAXE_SERVER_HELPER" ]; then
+			echo "== Haxe server preflight: cannot kill repo-owned server (missing $HAXE_SERVER_HELPER)" >&2
+			exit 1
+		fi
+		echo "== Haxe server preflight: stopping repo-owned haxe server"
+		"$HAXE_SERVER_HELPER" stop >/dev/null 2>&1 || true
+	fi
 
-  local count
-  count="$(printf '%s\n' "$pids" | sed '/^$/d' | wc -l | tr -d ' ')"
-  echo "== Haxe server preflight: found $count existing haxe server process(es):"
-  print_haxe_server_processes "$pids"
+	if [ "$HXHX_KILL_STALE_HAXE_SERVERS" = "1" ]; then
+		kill_all_haxe_servers
+		return
+	fi
 
-  if [ "$HXHX_KILL_STALE_HAXE_SERVERS" != "1" ]; then
-    echo "== Haxe server preflight: not terminating by default."
-    echo "   Use --kill-stale-haxe-servers (or HXHX_KILL_STALE_HAXE_SERVERS=1) to auto-clean."
-    return
-  fi
+	local pids
+	pids="$(list_haxe_server_pids)"
+	if [ -z "$pids" ]; then
+		echo "== Haxe server preflight: no local haxe --wait/--server-connect processes detected"
+		return
+	fi
 
-  echo "== Haxe server preflight: terminating stale haxe server process(es)"
-  # shellcheck disable=SC2086
-  kill $pids >/dev/null 2>&1 || true
-  sleep 1
-  local remaining
-  remaining="$(list_haxe_server_pids)"
-  if [ -n "$remaining" ]; then
-    echo "== Haxe server preflight: forcing kill for remaining process(es)"
-    # shellcheck disable=SC2086
-    kill -9 $remaining >/dev/null 2>&1 || true
-    sleep 1
-  fi
-
-  local after
-  after="$(list_haxe_server_pids)"
-  if [ -n "$after" ]; then
-    local after_count
-    after_count="$(printf '%s\n' "$after" | sed '/^$/d' | wc -l | tr -d ' ')"
-    echo "== Haxe server preflight: warning - $after_count process(es) still present after cleanup attempt:"
-    print_haxe_server_processes "$after"
-  else
-    echo "== Haxe server preflight: stale haxe server process cleanup complete"
-  fi
+	local count
+	count="$(printf '%s\n' "$pids" | sed '/^$/d' | wc -l | tr -d ' ')"
+	echo "== Haxe server preflight: detected $count local haxe server process(es) (informational)."
+	echo "   Use --kill-repo-server for repo-owned cleanup or --kill-all-haxe-servers for global cleanup."
 }
 
+resolve_connect_arg() {
+	if [ -n "$resolved_haxe_connect" ]; then
+		return
+	fi
+	if [ "$HXHX_BOOTSTRAP_USE_REPO_SERVER" != "1" ]; then
+		return
+	fi
+	if [ ! -x "$HAXE_SERVER_HELPER" ]; then
+		echo "Missing helper script: $HAXE_SERVER_HELPER" >&2
+		exit 1
+	fi
+	if repo_server_status_running; then
+		repo_server_was_running=1
+	else
+		repo_server_was_running=0
+	fi
+	"$HAXE_SERVER_HELPER" start >/dev/null
+	if [ "$repo_server_was_running" = "0" ]; then
+		repo_server_started_here=1
+	fi
+	resolved_haxe_connect="$("$HAXE_SERVER_HELPER" port)"
+}
+
+hash_from_stdin() {
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256sum | awk '{print $1}'
+		return
+	fi
+	if command -v shasum >/dev/null 2>&1; then
+		shasum -a 256 | awk '{print $1}'
+		return
+	fi
+	echo "Missing sha256 hash tool (need sha256sum or shasum)." >&2
+	exit 1
+}
+
+hash_file() {
+	local path="$1"
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256sum "$path" | awk '{print $1}'
+		return
+	fi
+	if command -v shasum >/dev/null 2>&1; then
+		shasum -a 256 "$path" | awk '{print $1}'
+		return
+	fi
+	echo "Missing sha256 hash tool (need sha256sum or shasum)." >&2
+	exit 1
+}
+
+collect_fingerprint_files() {
+	local file="$1"
+	if [ -f "$file" ]; then
+		printf '%s\n' "$file"
+	fi
+}
+
+collect_fingerprint_tree() {
+	local dir="$1"
+	if [ ! -d "$dir" ]; then
+		return
+	fi
+	find "$dir" -type f | LC_ALL=C sort
+}
+
+compute_fingerprint() {
+	{
+		echo "schema=v1"
+		echo "haxe_bin=$(command -v "$HAXE_BIN" 2>/dev/null || echo "$HAXE_BIN")"
+		echo "haxe_version=$("$HAXE_BIN" --version 2>/dev/null || true)"
+		echo "stage0_disable_prepasses=$HXHX_STAGE0_DISABLE_PREPASSES"
+		echo "stage0_progress=$HXHX_STAGE0_PROGRESS"
+		echo "stage0_profile=$HXHX_STAGE0_PROFILE"
+		echo "stage0_profile_detail=$HXHX_STAGE0_PROFILE_DETAIL"
+		echo "stage0_profile_class=$HXHX_STAGE0_PROFILE_CLASS"
+		echo "stage0_profile_field=$HXHX_STAGE0_PROFILE_FIELD"
+		echo "bootstrap_profile=$HXHX_BOOTSTRAP_PROFILE"
+
+		while IFS= read -r file; do
+			local rel
+			rel="${file#$ROOT/}"
+			echo "file=$rel:$(hash_file "$file")"
+		done < <(
+			collect_fingerprint_files "$ROOT/packages/hxhx/build.hxml"
+			collect_fingerprint_files "$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
+			collect_fingerprint_files "$ROOT/scripts/hxhx/shard-bootstrap-ml.sh"
+			collect_fingerprint_tree "$ROOT/packages/hxhx/src"
+			collect_fingerprint_tree "$ROOT/packages/hxhx-core/src"
+			collect_fingerprint_tree "$ROOT/packages/reflaxe.ocaml/src"
+			collect_fingerprint_tree "$ROOT/packages/reflaxe.ocaml/std"
+			collect_fingerprint_tree "$ROOT/haxe_libraries"
+		)
+	} | hash_from_stdin
+}
+
+write_fingerprint() {
+	ensure_state_dir
+	printf '%s\n' "$1" >"$FINGERPRINT_FILE"
+}
+
+json_escape() {
+	local value="$1"
+	value="${value//\\/\\\\}"
+	value="${value//\"/\\\"}"
+	value="${value//$'\n'/\\n}"
+	printf '%s' "$value"
+}
+
+write_report_json() {
+	local report_path="$1"
+	if [ -z "$report_path" ]; then
+		return
+	fi
+	mkdir -p "$(dirname "$report_path")"
+	cat >"$report_path" <<JSON
+{
+  "mode": "$(json_escape "$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo fast || echo full)")",
+  "skipped_emit": $skipped_emit,
+  "haxe_bin": "$(json_escape "$HAXE_BIN")",
+  "haxe_connect": "$(json_escape "$resolved_haxe_connect")",
+  "phase_seconds": {
+    "preflight": $phase_preflight_sec,
+    "emit": $phase_emit_sec,
+    "copy": $phase_copy_sec,
+    "shard": $phase_shard_sec,
+    "verify": $phase_verify_sec,
+    "total": $total_sec
+  },
+  "fingerprint": "$(json_escape "$current_fingerprint")"
+}
+JSON
+}
+
+run_stage0_emit() {
+	local -a stage0_args=("$@")
+	local log_file
+	log_file="$(create_stage0_log_file hxhx-stage0-emit)"
+	echo "== Stage0 emit command: $HAXE_BIN ${stage0_args[*]}"
+	echo "== Stage0 emit log: $log_file"
+
+	(
+		cd "$PKG_DIR"
+		local pid=""
+		"$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
+		pid="$!"
+
+		local interval="0"
+		local status_mode="none"
+		if [ -n "${HXHX_STAGE0_HEARTBEAT}" ] && [ "$HXHX_STAGE0_HEARTBEAT" != "0" ]; then
+			interval="$HXHX_STAGE0_HEARTBEAT"
+			status_mode="heartbeat"
+		elif [ "$HXHX_STAGE0_DIAG_EVERY" != "0" ]; then
+			interval="$HXHX_STAGE0_DIAG_EVERY"
+			status_mode="diag"
+			echo "== Stage0 emit diagnostics: heartbeat disabled; reporting every ${interval}s"
+		else
+			echo "== Stage0 emit diagnostics: heartbeat disabled and diag polling off."
+			echo "== To inspect progress manually: tail -f \"$log_file\""
+		fi
+
+		local start_hb
+		start_hb="$(now_ts)"
+		local last_status_ts="$start_hb"
+		while kill -0 "$pid" >/dev/null 2>&1; do
+			sleep 1 || true
+			local now
+			now="$(now_ts)"
+			if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
+				local elapsed
+				elapsed="$((now - start_hb))"
+				if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
+					echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
+					kill -9 "$pid" >/dev/null 2>&1 || true
+					echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+					tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+					exit 1
+				fi
+			fi
+			if [ "$interval" = "0" ]; then
+				continue
+			fi
+			if [ "$((now - last_status_ts))" -lt "$interval" ]; then
+				continue
+			fi
+			last_status_ts="$now"
+
+			local child_pid
+			child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
+			local rss_probe_pid="$pid"
+			if [ -n "$child_pid" ]; then
+				rss_probe_pid="$child_pid"
+			fi
+			local rss_kb
+			rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+			local cpu_pct
+			cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+			local proc_state
+			proc_state="$(ps -o state= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
+			local log_bytes
+			log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
+			local heartbeat_suffix=""
+			if [ -n "$cpu_pct" ]; then
+				heartbeat_suffix="$heartbeat_suffix cpu=${cpu_pct}%"
+			fi
+			if [ -n "$proc_state" ]; then
+				heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
+			fi
+			if [ -n "$log_bytes" ]; then
+				heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
+			fi
+			if [ -n "$rss_kb" ]; then
+				local rss_mb
+				rss_mb="$((rss_kb / 1024))"
+				if [ -n "$child_pid" ]; then
+					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
+				else
+					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid$heartbeat_suffix"
+				fi
+			else
+				if [ -n "$child_pid" ]; then
+					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s pid=$pid child=$child_pid$heartbeat_suffix"
+				else
+					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s pid=$pid$heartbeat_suffix"
+				fi
+			fi
+			if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
+				if [ -s "$log_file" ]; then
+					echo "== Stage0 emit log tail (last $HXHX_STAGE0_HEARTBEAT_TAIL_LINES lines):"
+					tail -n "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" "$log_file" || true
+				else
+					echo "== Stage0 emit log: (empty so far)"
+				fi
+			fi
+		done
+
+		set +e
+		wait "$pid"
+		local code="$?"
+		set -e
+		if [ "$code" != "0" ]; then
+			echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
+			tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+			exit "$code"
+		fi
+	)
+
+	if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
+		echo "== Stage0 emit completed; last $HXHX_STAGE0_LOG_TAIL_LINES lines:"
+		tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" || true
+	fi
+	cleanup_stage0_log_file "$log_file"
+}
+
+run_bootstrap_verify() {
+	if [ "$HXHX_BOOTSTRAP_VERIFY" != "1" ]; then
+		echo "== Skipping bootstrap snapshot verify (HXHX_BOOTSTRAP_VERIFY=0)"
+		return
+	fi
+
+	echo "== Verifying bootstrap snapshot builds (hydrate + dune)"
+	rm -rf "$BOOTSTRAP_VERIFY_DIR"
+	mkdir -p "$BOOTSTRAP_VERIFY_DIR"
+	(cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_VERIFY_DIR" && tar -xf -)
+	if find "$BOOTSTRAP_VERIFY_DIR" -maxdepth 1 -type f -name "*.ml.parts" | grep -q .; then
+		bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_VERIFY_DIR"
+	fi
+	(
+		cd "$BOOTSTRAP_VERIFY_DIR"
+		# NOTE: On some platforms (notably macOS/arm64), extremely large generated compilation units
+		# can cause native `ocamlopt` assembly failures (e.g. "fixup value out of range").
+		#
+		# The bootstrap snapshot is primarily a stage0-free fallback; verifying the bytecode build
+		# is sufficient to ensure the snapshot is structurally sound and runnable everywhere.
+		dune build ./out.bc >/dev/null
+	)
+	rm -rf "$BOOTSTRAP_VERIFY_DIR"
+}
+
+if [ "$used_deprecated_kill_flag" = "1" ]; then
+	echo "WARN: --kill-stale-haxe-servers is deprecated; prefer --kill-all-haxe-servers." >&2
+fi
+
 if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-  echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-  exit 1
+	echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
+	exit 1
 fi
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
-  echo "Missing dune/ocamlc on PATH." >&2
-  exit 1
+	echo "Missing dune/ocamlc on PATH." >&2
+	exit 1
 fi
 
 if [ ! -d "$PKG_DIR" ]; then
-  echo "Missing package directory: $PKG_DIR" >&2
-  exit 1
+	echo "Missing package directory: $PKG_DIR" >&2
+	exit 1
 fi
 
 echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
 if [ "$HXHX_BOOTSTRAP_FAST" = "1" ]; then
-  echo "== Mode: fast (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
+	echo "== Mode: fast (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
 else
-  echo "== Mode: full (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
+	echo "== Mode: full (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
+fi
+if [ "$HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED" = "1" ]; then
+	echo "== Fingerprint skip: enabled"
 fi
 if [ -z "${HXHX_STAGE0_HEARTBEAT}" ] || [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
-  echo "== Stage0 heartbeat: disabled (set HXHX_STAGE0_HEARTBEAT=<seconds> to enable)"
+	echo "== Stage0 heartbeat: disabled (set HXHX_STAGE0_HEARTBEAT=<seconds> to enable)"
 else
-  echo "== Stage0 heartbeat: every ${HXHX_STAGE0_HEARTBEAT}s (set HXHX_STAGE0_HEARTBEAT=0 to disable)"
+	echo "== Stage0 heartbeat: every ${HXHX_STAGE0_HEARTBEAT}s (set HXHX_STAGE0_HEARTBEAT=0 to disable)"
 fi
 if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-  echo "== Stage0 failfast: ${HXHX_STAGE0_FAILFAST_SECS}s"
+	echo "== Stage0 failfast: ${HXHX_STAGE0_FAILFAST_SECS}s"
 else
-  echo "== Stage0 failfast: disabled"
+	echo "== Stage0 failfast: disabled"
+fi
+if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
+	echo "== Stage0 profile mode: enabled (--times + -D filter-times)"
 fi
 if [ "$HXHX_KEEP_LOGS" = "1" ]; then
-  echo "== Stage0 logs: retained (HXHX_KEEP_LOGS=1)"
+	echo "== Stage0 logs: retained (HXHX_KEEP_LOGS=1)"
 fi
 if [ -n "$HXHX_LOG_DIR" ]; then
-  echo "== Stage0 logs directory: $HXHX_LOG_DIR"
+	echo "== Stage0 logs directory: $HXHX_LOG_DIR"
 fi
 if [ "$HXHX_STAGE0_DIAG_EVERY" != "0" ]; then
-  echo "== Stage0 disabled-heartbeat diagnostics: every ${HXHX_STAGE0_DIAG_EVERY}s"
+	echo "== Stage0 disabled-heartbeat diagnostics: every ${HXHX_STAGE0_DIAG_EVERY}s"
 fi
 
+total_start="$(now_ts)"
+
+preflight_start="$(now_ts)"
 run_haxe_server_preflight
+phase_preflight_sec="$(( $(now_ts) - preflight_start ))"
 
-start_ts="$(date +%s)"
-(
-  # We only need the emitted OCaml sources for the snapshot. Running the full OCaml build step
-  # (dune/ocamlopt) here is redundant, and it can make snapshot refreshes significantly slower.
-  #
-  # `-D ocaml_emit_only` keeps stage0 as a codegen oracle while preserving the "stage0-free build"
-  # property for everyone else via the committed snapshot + dune build in CI.
-  cd "$PKG_DIR"
-  if [ "$HXHX_BOOTSTRAP_CLEAN_OUT" = "1" ]; then
-    rm -rf out
-  fi
-  mkdir -p out
-  haxe_args=(build.hxml -D ocaml_emit_only)
-  if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
-    haxe_args+=(-v)
-  fi
-  if [ -n "$HAXE_CONNECT" ]; then
-    haxe_args+=(--connect "$HAXE_CONNECT")
-  fi
-  if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
-  fi
-  if [ "$HXHX_STAGE0_PROFILE_DETAIL" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_profile_detail)
-  fi
-  if [ -n "$HXHX_STAGE0_PROFILE_CLASS" ]; then
-    haxe_args+=(-D "reflaxe_ocaml_profile_class=$HXHX_STAGE0_PROFILE_CLASS")
-  fi
-  if [ -n "$HXHX_STAGE0_PROFILE_FIELD" ]; then
-    haxe_args+=(-D "reflaxe_ocaml_profile_field=$HXHX_STAGE0_PROFILE_FIELD")
-  fi
-
-  # `--times` prints only at the end; keep it enabled in debug mode so maintainers can
-  # see where stage0 is spending time.
-  if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_progress)
-  fi
-  if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_profile)
-  fi
-  if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
-    haxe_args+=(--times)
-  fi
-
-  run_stage0_emit() {
-    log_file="$(create_stage0_log_file hxhx-stage0-emit)"
-    echo "== Stage0 emit command: $HAXE_BIN ${haxe_args[*]}"
-    echo "== Stage0 emit log: $log_file"
-    pid=""
-    "$HAXE_BIN" "${haxe_args[@]}" >"$log_file" 2>&1 &
-    pid="$!"
-
-    interval="0"
-    status_mode="none"
-    if [ -n "${HXHX_STAGE0_HEARTBEAT}" ] && [ "$HXHX_STAGE0_HEARTBEAT" != "0" ]; then
-      interval="$HXHX_STAGE0_HEARTBEAT"
-      status_mode="heartbeat"
-    elif [ "$HXHX_STAGE0_DIAG_EVERY" != "0" ]; then
-      interval="$HXHX_STAGE0_DIAG_EVERY"
-      status_mode="diag"
-      echo "== Stage0 emit diagnostics: heartbeat disabled; reporting every ${interval}s"
-    else
-      echo "== Stage0 emit diagnostics: heartbeat disabled and diag polling off."
-      echo "== To inspect progress manually: tail -f \"$log_file\""
-    fi
-
-    start_hb="$(date +%s)"
-    last_status_ts="$start_hb"
-    while kill -0 "$pid" >/dev/null 2>&1; do
-      sleep 1 || true
-      now="$(date +%s)"
-      if [ -n "${HXHX_STAGE0_FAILFAST_SECS}" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" != "0" ]; then
-        elapsed="$((now - start_hb))"
-        if [ "$elapsed" -ge "$HXHX_STAGE0_FAILFAST_SECS" ]; then
-          echo "Stage0 emit exceeded failfast limit (${HXHX_STAGE0_FAILFAST_SECS}s). Killing pid=$pid." >&2
-          kill -9 "$pid" >/dev/null 2>&1 || true
-          echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
-          tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-          cleanup_stage0_log_file "$log_file"
-          exit 1
-        fi
-      fi
-      if [ "$interval" = "0" ]; then
-        continue
-      fi
-      if [ "$((now - last_status_ts))" -lt "$interval" ]; then
-        continue
-      fi
-      last_status_ts="$now"
-
-      child_pid="$(pgrep -P "$pid" | head -n 1 || true)"
-      rss_probe_pid="$pid"
-      if [ -n "$child_pid" ]; then
-        rss_probe_pid="$child_pid"
-      fi
-      rss_kb="$(ps -o rss= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
-      cpu_pct="$(ps -o %cpu= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
-      proc_state="$(ps -o state= -p "$rss_probe_pid" 2>/dev/null | tr -d ' ' || true)"
-      log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
-      heartbeat_suffix=""
-      if [ -n "$cpu_pct" ]; then
-        heartbeat_suffix="$heartbeat_suffix cpu=${cpu_pct}%"
-      fi
-      if [ -n "$proc_state" ]; then
-        heartbeat_suffix="$heartbeat_suffix state=${proc_state}"
-      fi
-      if [ -n "$log_bytes" ]; then
-        heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
-      fi
-      if [ -n "$rss_kb" ]; then
-        rss_mb="$((rss_kb / 1024))"
-        if [ -n "$child_pid" ]; then
-          echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
-        else
-          echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid$heartbeat_suffix"
-        fi
-      else
-        if [ -n "$child_pid" ]; then
-          echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s pid=$pid child=$child_pid$heartbeat_suffix"
-        else
-          echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s pid=$pid$heartbeat_suffix"
-        fi
-      fi
-      if [ -n "${HXHX_STAGE0_HEARTBEAT_TAIL_LINES}" ] && [ "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" != "0" ]; then
-        if [ -s "$log_file" ]; then
-          echo "== Stage0 emit log tail (last $HXHX_STAGE0_HEARTBEAT_TAIL_LINES lines):"
-          tail -n "$HXHX_STAGE0_HEARTBEAT_TAIL_LINES" "$log_file" || true
-        else
-          echo "== Stage0 emit log: (empty so far)"
-        fi
-      fi
-    done
-
-    if [ -z "$pid" ]; then
-      echo "Stage0 emit internal error: missing pid for stage0 process." >&2
-      exit 1
-    fi
-
-    set +e
-    wait "$pid"
-    code="$?"
-    set -e
-    if [ "$code" != "0" ]; then
-      echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
-      tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
-      cleanup_stage0_log_file "$log_file"
-      exit "$code"
-    fi
-
-    if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
-      echo "== Stage0 emit completed; last $HXHX_STAGE0_LOG_TAIL_LINES lines:"
-      tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" || true
-    fi
-    cleanup_stage0_log_file "$log_file"
-  }
-
-  run_stage0_emit
-)
-end_ts="$(date +%s)"
-echo "== Stage0 emit duration: $((end_ts - start_ts))s"
-
-if [ ! -d "$OUT_DIR" ]; then
-  echo "Missing generated output directory: $OUT_DIR" >&2
-  exit 1
+resolve_connect_arg
+if [ -n "$resolved_haxe_connect" ]; then
+	echo "== Stage0 connect endpoint: $resolved_haxe_connect"
 fi
 
-echo "== Updating bootstrap snapshot: $BOOTSTRAP_DIR"
-copy_start_ts="$(date +%s)"
-rm -rf "$BOOTSTRAP_DIR"
-mkdir -p "$BOOTSTRAP_DIR"
-
-# Copy everything except build artifacts and generator sources.
-(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
-
-echo "== Sharding oversized bootstrap OCaml units (max ${HXHX_BOOTSTRAP_SHARD_MAX_BYTES:-50000000}B)"
-bash "$ROOT/scripts/hxhx/shard-bootstrap-ml.sh" "$BOOTSTRAP_DIR"
-
-copy_end_ts="$(date +%s)"
-bootstrap_files="$(find "$BOOTSTRAP_DIR" -type f | wc -l | tr -d ' ')"
-echo "== Bootstrap snapshot copy duration: $((copy_end_ts - copy_start_ts))s (files=$bootstrap_files)"
-
-if [ "$HXHX_BOOTSTRAP_VERIFY" = "1" ]; then
-  echo "== Verifying bootstrap snapshot builds (hydrate + dune)"
-  verify_start_ts="$(date +%s)"
-  rm -rf "$BOOTSTRAP_VERIFY_DIR"
-  mkdir -p "$BOOTSTRAP_VERIFY_DIR"
-  (cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_VERIFY_DIR" && tar -xf -)
-  if find "$BOOTSTRAP_VERIFY_DIR" -maxdepth 1 -type f -name "*.ml.parts" | grep -q .; then
-    bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_VERIFY_DIR"
-  fi
-  (
-    cd "$BOOTSTRAP_VERIFY_DIR"
-    # NOTE: On some platforms (notably macOS/arm64), extremely large generated compilation units
-    # can cause native `ocamlopt` assembly failures (e.g. "fixup value out of range").
-    #
-    # The bootstrap snapshot is primarily a stage0-free fallback; verifying the bytecode build
-    # is sufficient to ensure the snapshot is structurally sound and runnable everywhere.
-    dune build ./out.bc >/dev/null
-  )
-  rm -rf "$BOOTSTRAP_VERIFY_DIR"
-  verify_end_ts="$(date +%s)"
-  echo "== Bootstrap verification duration: $((verify_end_ts - verify_start_ts))s"
+current_fingerprint="$(compute_fingerprint)"
+if [ "$HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED" = "1" ] \
+	&& [ "$HXHX_BOOTSTRAP_FORCE" != "1" ] \
+	&& [ -f "$FINGERPRINT_FILE" ] \
+	&& [ -d "$BOOTSTRAP_DIR" ] \
+	&& [ "$current_fingerprint" = "$(cat "$FINGERPRINT_FILE")" ]; then
+	skipped_emit=1
+	echo "== Stage0 emit skipped (fingerprint unchanged)"
 else
-  echo "== Skipping bootstrap snapshot verify (HXHX_BOOTSTRAP_VERIFY=0)"
+	skipped_emit=0
 fi
 
-echo "OK: regenerated bootstrap snapshot"
+if [ "$skipped_emit" = "0" ]; then
+	emit_start="$(now_ts)"
+	if [ "$HXHX_BOOTSTRAP_CLEAN_OUT" = "1" ]; then
+		rm -rf "$OUT_DIR"
+	fi
+	mkdir -p "$OUT_DIR"
+	haxe_args=(build.hxml -D ocaml_emit_only)
+	if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
+		haxe_args+=(-v)
+	fi
+	if [ -n "$resolved_haxe_connect" ]; then
+		haxe_args+=(--connect "$resolved_haxe_connect")
+	fi
+	if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
+		haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
+	fi
+	if [ "$HXHX_STAGE0_PROFILE_DETAIL" = "1" ]; then
+		haxe_args+=(-D reflaxe_ocaml_profile_detail)
+	fi
+	if [ -n "$HXHX_STAGE0_PROFILE_CLASS" ]; then
+		haxe_args+=(-D "reflaxe_ocaml_profile_class=$HXHX_STAGE0_PROFILE_CLASS")
+	fi
+	if [ -n "$HXHX_STAGE0_PROFILE_FIELD" ]; then
+		haxe_args+=(-D "reflaxe_ocaml_profile_field=$HXHX_STAGE0_PROFILE_FIELD")
+	fi
+	if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
+		haxe_args+=(-D reflaxe_ocaml_progress)
+	fi
+	if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
+		haxe_args+=(-D reflaxe_ocaml_profile)
+	fi
+	if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
+		haxe_args+=(-D filter-times --times)
+	elif [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
+		haxe_args+=(--times)
+	fi
+
+	run_stage0_emit "${haxe_args[@]}"
+	phase_emit_sec="$(( $(now_ts) - emit_start ))"
+	echo "== Stage0 emit duration: ${phase_emit_sec}s"
+
+	if [ ! -d "$OUT_DIR" ]; then
+		echo "Missing generated output directory: $OUT_DIR" >&2
+		exit 1
+	fi
+
+	copy_start="$(now_ts)"
+	echo "== Updating bootstrap snapshot: $BOOTSTRAP_DIR"
+	rm -rf "$BOOTSTRAP_DIR"
+	mkdir -p "$BOOTSTRAP_DIR"
+	# Copy everything except build artifacts and generator sources.
+	(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+	phase_copy_sec="$(( $(now_ts) - copy_start ))"
+
+	shard_start="$(now_ts)"
+	echo "== Sharding oversized bootstrap OCaml units (max ${HXHX_BOOTSTRAP_SHARD_MAX_BYTES:-50000000}B)"
+	bash "$ROOT/scripts/hxhx/shard-bootstrap-ml.sh" "$BOOTSTRAP_DIR"
+	phase_shard_sec="$(( $(now_ts) - shard_start ))"
+
+	bootstrap_files="$(find "$BOOTSTRAP_DIR" -type f | wc -l | tr -d ' ')"
+	echo "== Bootstrap snapshot copy duration: ${phase_copy_sec}s (files=$bootstrap_files)"
+	echo "== Bootstrap snapshot sharding duration: ${phase_shard_sec}s"
+
+	write_fingerprint "$current_fingerprint"
+fi
+
+verify_start="$(now_ts)"
+run_bootstrap_verify
+phase_verify_sec="$(( $(now_ts) - verify_start ))"
+if [ "$HXHX_BOOTSTRAP_VERIFY" = "1" ]; then
+	echo "== Bootstrap verification duration: ${phase_verify_sec}s"
+fi
+
+total_sec="$(( $(now_ts) - total_start ))"
+echo "== Total regenerate duration: ${total_sec}s"
+
+write_report_json "$HXHX_BOOTSTRAP_REPORT_JSON"
+if [ -n "$HXHX_BOOTSTRAP_REPORT_JSON" ]; then
+	echo "== Wrote regen timing report: $HXHX_BOOTSTRAP_REPORT_JSON"
+fi
+
+if [ "$skipped_emit" = "1" ]; then
+	echo "OK: bootstrap snapshot unchanged"
+else
+	echo "OK: regenerated bootstrap snapshot"
+fi

@@ -154,7 +154,13 @@ Use this when you want the repo to function as a compiler-bootstrap example:
 - **Stage0**: external `haxe` compiles repo Haxe sources to OCaml.
   - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
-    - Opt-in cleanup: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-stale-haxe-servers`
+    - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
+    - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`
+  - Optional repo-owned server reuse:
+    - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify`
+    - Direct helper: `bash scripts/hxhx/haxe-server.sh start|status|stop`
+  - Optional skip-if-unchanged:
+    - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify`
   - Faster local iteration (reuse previous emit output + skip verify):
     - `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast`
     - Equivalent env knobs:
