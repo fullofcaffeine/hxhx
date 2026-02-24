@@ -27,6 +27,7 @@ Any other value is invalid and fails fast.
 - `metal`:
   - native-oriented runtime layering mode.
   - links only runtime modules required by the emitted program + runtime transitive dependencies.
+  - runs `MetalProfileVerifier` before OCaml emit and fails fast on dynamic/reflection-heavy constructs.
   - keeps codegen semantics otherwise aligned with `portable` for now (stricter verifier/specialization phases land later).
 
 ## Scope

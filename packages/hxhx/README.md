@@ -115,7 +115,7 @@ Current presets:
 - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
   - OCaml profile contract:
     - `-D ocaml_profile=portable` (default)
-    - `-D ocaml_profile=metal` (runtime-layered mode; links only required runtime modules)
+    - `-D ocaml_profile=metal` (runtime-layered mode; links only required runtime modules and runs a fail-fast metal verifier before emit)
     - any other value fails fast
 - `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
 - `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).

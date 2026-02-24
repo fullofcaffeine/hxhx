@@ -6,6 +6,7 @@ import backend.EmitResult;
 import backend.GenIrBoundary;
 import backend.GenIrProgram;
 import backend.ITargetCore;
+import backend.OcamlProfile;
 
 /**
 	Reusable OCaml target core.
@@ -33,8 +34,11 @@ class OcamlTargetCore implements ITargetCore {
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
-		context.ensureOcamlProfileDefine();
+		final profile = context.ensureOcamlProfileDefine();
 		final typedProgram = GenIrBoundary.requireProgram(program);
+		if (profile == OcamlProfile.Metal) {
+			MetalProfileVerifier.verifyProgram(typedProgram);
+		}
 		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable);
 		return new EmitResult(entryPath, [
 			new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath)
