@@ -118,6 +118,7 @@
     "test:stage0-policy:release": "bash scripts/hxhx/check-stage0-policy.sh release",
     "test:upstream:replacement-ready": "bash scripts/hxhx/run-replacement-ready.sh",
     "test:upstream:replacement-ready:full": "HXHX_M7_PROFILE=full bash scripts/hxhx/run-replacement-ready.sh",
+    "test:plugins:strict-matrix": "bash scripts/hxhx/run-plugin-matrix.sh",
     "status:self-hosting": "bash scripts/hxhx/self-hosting-status.sh",
     "test:m14:hih-emitter-receiver-call": "haxe test/m14_hxhx_stage3_receiver_call_integration_test.hxml"
   },

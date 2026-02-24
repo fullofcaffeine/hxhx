@@ -34,6 +34,16 @@ Refresh this matrix from repo/CI signals:
 npm run status:self-hosting
 ```
 
+Strict replacement-ready definition used by this checklist:
+
+```bash
+HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full
+```
+
+Expected strict marker:
+
+- `M7_STRICT_STAGE0:PASS`
+
 ## Two meanings of "self-hosting"
 
 There are two useful definitions:

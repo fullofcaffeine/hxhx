@@ -78,3 +78,8 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 # explicit metal (runtime-layered mode)
 "$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
 ```
+
+## Related docs
+
+- Runtime capability matrix (`portable` vs `metal`): `docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md`
+- Portable/OCaml-native compatibility map: `docs/02-user-guide/COMPATIBILITY_MATRIX.md`

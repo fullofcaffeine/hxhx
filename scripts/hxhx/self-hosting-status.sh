@@ -58,17 +58,11 @@ evidence_bootstrap="Bootstrap regen still uses stage0 emit."
 evidence_replacement="No strict stage0-forbidden replacement-ready lane yet."
 
 if has_text "$CI_WORKFLOW" "stage0-free-smoke:" \
-  && has_text "$CI_WORKFLOW" "HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used bash scripts/hxhx/build-hxhx.sh"; then
+  && has_text "$CI_WORKFLOW" "bash scripts/hxhx/check-stage0-policy.sh release"; then
   status_build_blocked="Pass"
   evidence_build=".github/workflows/ci.yml job stage0-free-smoke"
-fi
-
-if has_text "$CI_WORKFLOW" "--target ocaml-stage3 --hxhx-no-emit"; then
   status_stage3_blocked="Pass"
   evidence_stage3=".github/workflows/ci.yml job stage0-free-smoke"
-fi
-
-if has_text "$CI_WORKFLOW" "--hxhx-macro-selftest"; then
   status_macro_blocked="Pass"
   evidence_macro=".github/workflows/ci.yml job stage0-free-smoke"
 fi

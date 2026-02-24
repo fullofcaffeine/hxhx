@@ -18,6 +18,8 @@ case "$PROFILE" in
     echo "  HXHX_M7_STRICT=0|1                  (default: full=1, fast=0)" >&2
     echo "  HXHX_M7_KEEP_LOGS=0|1               (default 0)" >&2
     echo "  HXHX_M7_DRY_RUN=0|1                 (default 0)" >&2
+    echo "  HXHX_M7_SCOPE_FILE=<json>           (default: docs/02-user-guide/compat/scoped-1.0-targets.json)" >&2
+    echo "  HXHX_M7_REQUIRE_PLUGIN_MATRIX=0|1   (default 0)" >&2
     echo "  HAXE_UPSTREAM_DIR=/path/to/haxe     (default: $ROOT/vendor/haxe)" >&2
     exit 2
     ;;
@@ -27,8 +29,9 @@ FAIL_FAST="${HXHX_M7_FAIL_FAST:-0}"
 KEEP_LOGS="${HXHX_M7_KEEP_LOGS:-0}"
 DRY_RUN="${HXHX_M7_DRY_RUN:-0}"
 STRICT="${HXHX_M7_STRICT:-}"
+REQUIRE_PLUGIN_MATRIX="${HXHX_M7_REQUIRE_PLUGIN_MATRIX:-0}"
 
-for v in FAIL_FAST KEEP_LOGS DRY_RUN; do
+for v in FAIL_FAST KEEP_LOGS DRY_RUN REQUIRE_PLUGIN_MATRIX; do
   eval "value=\${$v}"
   case "$value" in
     0|1) ;;
@@ -49,13 +52,43 @@ case "$STRICT" in
 esac
 
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$ROOT/vendor/haxe}"
+SCOPE_FILE="${HXHX_M7_SCOPE_FILE:-$ROOT/docs/02-user-guide/compat/scoped-1.0-targets.json}"
 HOST_OS="$(uname -s)"
-if [ "$HOST_OS" = "Darwin" ]; then
-  M7_GATE3_TARGETS_DEFAULT="Macro,Neko"
+M7_GATE3_TARGETS_DEFAULT=""
+
+load_scope_targets() {
+  local scope_file="$1"
+  if [ ! -f "$scope_file" ]; then
+    return 1
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    return 1
+  fi
+
+  node -e '
+const fs = require("fs");
+const filePath = process.argv[1];
+const doc = JSON.parse(fs.readFileSync(filePath, "utf8"));
+if (!Array.isArray(doc.gate3Targets) || doc.gate3Targets.length === 0) {
+  process.exit(2);
+}
+process.stdout.write(doc.gate3Targets.join(","));
+' "$scope_file"
+}
+
+if [ -z "${HXHX_GATE3_TARGETS:-}" ]; then
+  if ! M7_GATE3_TARGETS_DEFAULT="$(load_scope_targets "$SCOPE_FILE" 2>/dev/null)"; then
+    if [ "$HOST_OS" = "Darwin" ]; then
+      M7_GATE3_TARGETS_DEFAULT="Macro,Neko"
+    else
+      M7_GATE3_TARGETS_DEFAULT="Macro,Js,Neko"
+    fi
+  fi
+  GATE3_TARGETS="$M7_GATE3_TARGETS_DEFAULT"
 else
-  M7_GATE3_TARGETS_DEFAULT="Macro,Js,Neko"
+  GATE3_TARGETS="${HXHX_GATE3_TARGETS}"
 fi
-GATE3_TARGETS="${HXHX_GATE3_TARGETS:-$M7_GATE3_TARGETS_DEFAULT}"
 
 need_cmd() {
   local cmd="$1"
@@ -94,6 +127,7 @@ failures=0
 run_check() {
   local name="$1"
   local cmd="$2"
+  local marker="$3"
   local log_file=""
   local code=0
   local start end elapsed
@@ -134,12 +168,14 @@ run_check() {
 
   if [ "$code" -eq 0 ]; then
     summary+=("$name: PASS (${elapsed}s)")
+    echo "${marker}:PASS"
   else
     if [ "$STRICT" = "1" ] && [ "$skipped" = "1" ]; then
       summary+=("$name: FAIL (${elapsed}s, skipped in strict mode)")
     else
       summary+=("$name: FAIL (${elapsed}s, exit=$code)")
     fi
+    echo "${marker}:FAIL"
     failures=1
     if [ "$FAIL_FAST" = "1" ]; then
       return "$code"
@@ -150,24 +186,42 @@ run_check() {
 }
 
 add_checks_fast() {
-  run_check "ci:guards" "cd '$ROOT' && npm run -s ci:guards"
-  run_check "hxhx-targets" "cd '$ROOT' && npm run -s test:hxhx-targets"
-  run_check "gate2-display" "cd '$ROOT' && npm run -s test:upstream:runci-macro-stage3-display"
-  run_check "builtin-target-smoke" "cd '$ROOT' && npm run -s test:hxhx:builtin-target-smoke"
+  run_check "ci:guards" "cd '$ROOT' && npm run -s ci:guards" "CI_GUARDS"
+  if [ "$STRICT" = "1" ]; then
+    run_check "stage0-policy-release" "cd '$ROOT' && npm run -s test:stage0-policy:release" "STAGE0_POLICY_RELEASE"
+    run_check "gate2-display" "cd '$ROOT' && npm run -s test:upstream:runci-macro-stage3-display" "GATE2_DISPLAY"
+    run_check \
+      "builtin-target-smoke (strict lanes)" \
+      "cd '$ROOT' && HXHX_BUILTIN_SMOKE_OCAML=0 HXHX_BUILTIN_SMOKE_JS_NATIVE=1 HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=1 npm run -s test:hxhx:builtin-target-smoke" \
+      "BUILTIN_TARGET_SMOKE"
+  else
+    run_check "hxhx-targets" "cd '$ROOT' && npm run -s test:hxhx-targets" "HXHX_TARGETS"
+    run_check "gate2-display" "cd '$ROOT' && npm run -s test:upstream:runci-macro-stage3-display" "GATE2_DISPLAY"
+    run_check "builtin-target-smoke" "cd '$ROOT' && npm run -s test:hxhx:builtin-target-smoke" "BUILTIN_TARGET_SMOKE"
+  fi
 }
 
 add_checks_full() {
   add_checks_fast
-  run_check "gate1-unit-macro" "cd '$ROOT' && npm run -s test:upstream:unit-macro"
-  run_check "gate2-runci-macro" "cd '$ROOT' && npm run -s test:upstream:runci-macro"
-  run_check "gate3-runci-targets" "cd '$ROOT' && HXHX_GATE3_TARGETS='${GATE3_TARGETS}' npm run -s test:upstream:runci-targets"
+  run_check "gate1-unit-macro" "cd '$ROOT' && npm run -s test:upstream:unit-macro" "GATE1_MACRO"
+  run_check "gate2-runci-macro" "cd '$ROOT' && npm run -s test:upstream:runci-macro" "GATE2_MACRO"
+  run_check "gate3-runci-targets" "cd '$ROOT' && HXHX_GATE3_TARGETS='${GATE3_TARGETS}' npm run -s test:upstream:runci-targets" "GATE3_TARGETS"
+  if [ "$REQUIRE_PLUGIN_MATRIX" = "1" ]; then
+    run_check "plugin-matrix" "cd '$ROOT' && npm run -s test:plugins:strict-matrix" "PLUGIN_MATRIX"
+  fi
 }
 
 echo "== HXHX replacement-ready bundle"
 echo "profile=$PROFILE strict=$STRICT fail_fast=$FAIL_FAST dry_run=$DRY_RUN"
 echo "upstream_dir=$UPSTREAM_DIR"
+echo "scope_file=$SCOPE_FILE"
 echo "gate3_targets=$GATE3_TARGETS"
-if [ "$HOST_OS" = "Darwin" ] && [ -z "${HXHX_GATE3_TARGETS:-}" ]; then
+echo "require_plugin_matrix=$REQUIRE_PLUGIN_MATRIX"
+if [ "$STRICT" = "1" ]; then
+  export HXHX_FORBID_STAGE0=1
+  echo "strict_stage0=enabled (HXHX_FORBID_STAGE0=1)"
+fi
+if [ "$HOST_OS" = "Darwin" ] && [ -z "${HXHX_GATE3_TARGETS:-}" ] && [ ! -f "$SCOPE_FILE" ]; then
   echo "note: using Darwin default Gate3 target set (Macro,Neko). Set HXHX_GATE3_TARGETS to override."
 fi
 
@@ -184,5 +238,14 @@ for line in "${summary[@]}"; do
 done
 
 if [ "$failures" -ne 0 ]; then
+  if [ "$STRICT" = "1" ]; then
+    echo "M7_STRICT_STAGE0:FAIL"
+  fi
+  echo "M7_REPLACEMENT_READY:FAIL"
   exit 1
 fi
+
+if [ "$STRICT" = "1" ]; then
+  echo "M7_STRICT_STAGE0:PASS"
+fi
+echo "M7_REPLACEMENT_READY:PASS"

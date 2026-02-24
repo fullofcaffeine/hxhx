@@ -120,13 +120,15 @@ Meaning in plain terms:
 
 ### M7. Replacement-ready acceptance
 
-Status: Done (current gate policy)  
+Status: Done (replacement bundle under current gate policy)  
 Beads: `haxe.ocaml-xgv.10`, `haxe.ocaml-xgv.10.40`, `haxe.ocaml-ayi`
 
 Meaning in plain terms:
 
 - The replacement-ready acceptance gate is closed for the current documented scope/target policy.
 - We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
+- This status does **not** mean strict stage0-forbidden closure for all replacement claims. For strict closure status, use:
+  - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 - Current reproducible local fast path on macOS:
   - `HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast`
   - Focused Gate2 display rung is now fail-fast (no Darwin-specific retry/skip fallback path).

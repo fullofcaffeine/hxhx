@@ -312,6 +312,18 @@ For Haxe **4.3.7**, we can credibly claim replacement when:
 
 In other words: passing upstream CI (or an equivalent subset) is the strongest objective signal we can use.
 
+Strict delegation-blocked replacement check:
+
+```bash
+HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full
+```
+
+Expected strict marker:
+
+- `M7_STRICT_STAGE0:PASS`
+- scoped target manifest (used by replacement runner defaults):
+  - `docs/02-user-guide/compat/scoped-1.0-targets.json`
+
 ## Bootstrapping model (Stage0 → Stage1 → Stage2)
 
 When we say `hxhx` is “bootstrapping”, we mean:

@@ -48,8 +48,8 @@ Repo-local testing layers are defined in `docs/01-getting-started/TESTING.md:1`.
 - [x] `if` / `else`.
 - [x] `switch` lowering (M4/M6).
 - [x] `while` loops (M2) + `break`/`continue` via control exceptions (M9).
-- [ ] `do { ... } while (cond)` semantics (currently lowered as `while`).
-  - bd: `haxe.ocaml-4dw`
+- [x] `do { ... } while (cond)` semantics.
+  - Repo fixture: `test/portable/fixtures/do_while_basic/src/Main.hx`
   - Upstream refs: `tests/runci/System.hx`, `tests/unit/src/unit/issues/Issue2763.hx`, `tests/unit/src/unit/issues/Issue3115.hx`, `tests/unit/src/unit/issues/Issue4421.hx`
 
 ### Exceptions
@@ -66,8 +66,8 @@ Repo-local testing layers are defined in `docs/01-getting-started/TESTING.md:1`.
 - [x] Single inheritance and method override via dispatch records (M10).
 - [x] Interfaces + interface-typed dynamic dispatch (M10).
   - Upstream refs: `tests/unit/src/unit/TestInterface.hx`
-- [ ] Method-as-value / bound closure semantics (taking `obj.method` as a value).
-  - bd: `haxe.ocaml-d3c`
+- [x] Method-as-value / bound closure semantics (taking `obj.method` as a value).
+  - Repo fixture: `test/portable/fixtures/method_as_value_basic/src/Main.hx`
   - Upstream refs: `tests/unit/src/unit/TestInterface.hx`, `tests/unit/src/unit/TestOps.hx`
 
 ## Anonymous structures / structural typing

@@ -112,16 +112,17 @@ List available presets:
 Current presets:
 
 - `--target ocaml`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
-- `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+  - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
   - OCaml profile contract:
     - `-D ocaml_profile=portable` (default)
     - `-D ocaml_profile=metal` (runtime-layered mode; links only required runtime modules and runs a fail-fast metal verifier before emit)
     - migration/error code map: `docs/02-user-guide/OCAML_PROFILE_CONTRACT.md` (see “Metal verifier code map”)
+    - runtime module matrix: `docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md`
     - any other value fails fast
 - `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
 - `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
-  - currently covered: enum-tag switch lowering + basic `Type` reflection helpers (`resolveClass`, `getClassName`, `enumConstructor`, `enumIndex`, `enumParameters`)
-  - currently explicit unsupported: try/catch + throw/rethrow lowering (fails fast with a clear unsupported marker)
+  - currently covered: enum-tag switch lowering, statement-level `try/catch` + `throw`, and basic `Type` reflection helpers (`resolveClass`, `getClassName`, `enumConstructor`, `enumIndex`, `enumParameters`)
+  - currently explicit unsupported: non-Array `new` class construction, full enum/runtime parity beyond MVP helpers, and class/interface typed-catch parity beyond common builtins (fails fast with clear unsupported markers)
 - Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
 Delegation guard:

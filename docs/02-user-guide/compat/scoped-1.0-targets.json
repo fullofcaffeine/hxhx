@@ -1,0 +1,26 @@
+{
+  "scopeId": "m7-current-policy",
+  "haxeCompatibilityBaseline": "4.3.7",
+  "legacyTargetsExcluded": [
+    "Flash",
+    "AS3",
+    "SWF"
+  ],
+  "gate3Targets": [
+    "Macro",
+    "Js",
+    "Neko"
+  ],
+  "broadTargetGoal": [
+    "Macro",
+    "Js",
+    "Neko",
+    "Python",
+    "Java",
+    "Cs",
+    "Cpp",
+    "Hl",
+    "Lua",
+    "Php"
+  ]
+}

@@ -14,9 +14,14 @@ The policy goal is simple:
 
 | Lane | Allowed stage0 usage | Required guardrails | Typical commands |
 | --- | --- | --- | --- |
-| Runtime | **Forbidden** for stage0 delegation paths | `HXHX_FORBID_STAGE0=1`; fail fast if delegation is attempted | `hxhx --target ocaml-stage3 ...`, `hxhx --target js-native ...` |
+| Runtime (native mode) | **Forbidden** for stage0 delegation paths | `HXHX_FORBID_STAGE0=1`; fail fast if delegation is attempted | `hxhx --target ocaml-stage3 ...`, `hxhx --target js-native ...` |
 | Build | Allowed only when explicitly requested | `HXHX_FORCE_STAGE0=1` for source regeneration/builds; otherwise use committed bootstrap snapshots | `bash scripts/hxhx/build-hxhx.sh`, `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh` |
 | Maintenance | Allowed for maintainer-only bootstrap refresh and diagnostics | Explicit maintainer scripts; never implicit in normal runtime/release lanes | `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`, `bash scripts/hxhx/regenerate-hxhx-macro-host-bootstrap.sh` |
+
+Terminology note:
+
+- `hxhx` still supports a Stage0 shim compatibility lane for bring-up/comparison workflows.
+- The runtime policy above applies to **native runtime mode** when `HXHX_FORBID_STAGE0=1` is enabled (the release default).
 
 ## CI enforcement
 

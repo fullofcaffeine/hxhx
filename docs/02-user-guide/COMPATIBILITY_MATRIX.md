@@ -14,6 +14,7 @@ For deeper implementation details, see:
 - `docs/02-user-guide/M10_LANGUAGE_SURFACE_AUDIT.md:1` (portable semantics checklist)
 - `docs/02-user-guide/STDLIB_COVERAGE_PLAN.md:1` (portable stdlib plan)
 - `docs/02-user-guide/OCAML_NATIVE_MODE.md:1` (OCaml-native surface)
+- `docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md:1` (portable vs metal runtime module status)
 
 ## Surfaces
 
