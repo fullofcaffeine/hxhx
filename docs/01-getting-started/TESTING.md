@@ -170,6 +170,9 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     `HXHX_STAGE0_DIAG_EVERY=<seconds>` (or `--diag-every <seconds>`).
 - **Stage1**: build `hxhx` from committed bootstrap snapshot (`out.bc` / native fallback).
   - Command: `bash scripts/hxhx/build-hxhx.sh`
+  - Stage0 source lane connect options (used when `HXHX_FORCE_STAGE0=1`):
+    - explicit `HAXE_CONNECT=<port>` override (highest precedence)
+    - helper-managed reuse: `HXHX_STAGE0_USE_REPO_SERVER=1` (with optional `HXHX_STAGE0_KEEP_REPO_SERVER=1`)
   - Observability knobs: `HXHX_BOOTSTRAP_HEARTBEAT=20` (default; set `0` to disable) and `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS=0` (optional timeout).
 - **Stage2**: stage1 builds stage2; compare behavior/codegen stability.
   - Command: `npm run test:upstream:stage2`

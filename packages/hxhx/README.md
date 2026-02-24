@@ -64,7 +64,10 @@ Notes:
 - For very verbose stage0 compiler logs (including typing/module loading), set `HXHX_STAGE0_VERBOSE=1` (passes `-v` to stage0 `haxe`).
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.
 - If you suspect stage0 performance issues are caused by output-shaping prepasses, you can try `HXHX_STAGE0_DISABLE_PREPASSES=1` (disables reflaxe.ocaml expression preprocessors for this stage0 run).
-- If you run a compilation server, you can pass `HAXE_CONNECT=<port>` to reuse it.
+- Stage0 source builds support two `--connect` paths:
+  - explicit override: `HAXE_CONNECT=<port>` (highest precedence)
+  - helper-backed reuse: `HXHX_STAGE0_USE_REPO_SERVER=1` (starts/reuses `scripts/hxhx/haxe-server.sh` and injects `--connect <port>`)
+  - optional helper cleanup policy: `HXHX_STAGE0_KEEP_REPO_SERVER=1` keeps a helper-started server alive after build (default is auto-stop if started by this build).
 - For targeted cleanup when haxe servers pile up:
   - `--kill-repo-server` (safe: only repo-owned server)
   - `--kill-all-haxe-servers` (unsafe: kills all local haxe servers)
@@ -74,6 +77,9 @@ If you need to rebuild `hxhx` from stage0 source (instead of the committed `boot
 
 ```bash
 HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_PROGRESS=1 HXHX_STAGE0_TIMES=1 HXHX_STAGE0_VERBOSE=1 bash scripts/hxhx/build-hxhx.sh
+
+# same, but with helper-managed --connect reuse
+HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" HXHX_FORCE_STAGE0=1 HXHX_STAGE0_USE_REPO_SERVER=1 HXHX_STAGE0_KEEP_REPO_SERVER=1 bash scripts/hxhx/build-hxhx.sh
 ```
 
 ## Run

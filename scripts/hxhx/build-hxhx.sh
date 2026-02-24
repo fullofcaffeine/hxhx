@@ -3,6 +3,8 @@ set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
+HXHX_STAGE0_USE_REPO_SERVER="${HXHX_STAGE0_USE_REPO_SERVER:-0}"
+HXHX_STAGE0_KEEP_REPO_SERVER="${HXHX_STAGE0_KEEP_REPO_SERVER:-0}"
 HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
 HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
@@ -29,6 +31,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
 BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-$HXHX_DIR/bootstrap_work}"
+HAXE_SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
 
 is_true() {
   local v="${1:-}"
@@ -116,6 +119,22 @@ case "$HXHX_STAGE0_NO_INLINE" in
   0|1) ;;
   *)
     echo "Invalid HXHX_STAGE0_NO_INLINE: $HXHX_STAGE0_NO_INLINE (expected 0 or 1)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_USE_REPO_SERVER" in
+  0|1) ;;
+  *)
+    echo "Invalid HXHX_STAGE0_USE_REPO_SERVER: $HXHX_STAGE0_USE_REPO_SERVER (expected 0 or 1)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_KEEP_REPO_SERVER" in
+  0|1) ;;
+  *)
+    echo "Invalid HXHX_STAGE0_KEEP_REPO_SERVER: $HXHX_STAGE0_KEEP_REPO_SERVER (expected 0 or 1)." >&2
     exit 2
     ;;
 esac
@@ -287,12 +306,50 @@ if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
   echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
   exit 1
 fi
+
+resolved_haxe_connect="$HAXE_CONNECT"
+repo_server_started_here=0
+
+cleanup_repo_server() {
+  if [ "$repo_server_started_here" = "1" ] && [ "$HXHX_STAGE0_KEEP_REPO_SERVER" != "1" ]; then
+    if [ -x "$HAXE_SERVER_HELPER" ]; then
+      "$HAXE_SERVER_HELPER" stop >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
+resolve_stage0_connect() {
+  if [ -n "$resolved_haxe_connect" ]; then
+    if [ "$HXHX_STAGE0_USE_REPO_SERVER" = "1" ]; then
+      echo "== Stage0 source build: using explicit HAXE_CONNECT=$resolved_haxe_connect (helper opt-in ignored)." >&2
+    fi
+    return
+  fi
+  if [ "$HXHX_STAGE0_USE_REPO_SERVER" != "1" ]; then
+    return
+  fi
+  if [ ! -x "$HAXE_SERVER_HELPER" ]; then
+    echo "Missing helper script for HXHX_STAGE0_USE_REPO_SERVER=1: $HAXE_SERVER_HELPER" >&2
+    exit 1
+  fi
+  if ! "$HAXE_SERVER_HELPER" status >/dev/null 2>&1; then
+    "$HAXE_SERVER_HELPER" start >/dev/null
+    repo_server_started_here=1
+  fi
+  resolved_haxe_connect="$("$HAXE_SERVER_HELPER" port)"
+  echo "== Stage0 source build: using repo-owned haxe server --connect $resolved_haxe_connect" >&2
+}
+
+trap cleanup_repo_server EXIT
+
 if [ "$HXHX_KEEP_LOGS" = "1" ]; then
   echo "== Stage0 logs: retained (HXHX_KEEP_LOGS=1)" >&2
 fi
 if [ -n "$HXHX_LOG_DIR" ]; then
   echo "== Stage0 logs directory: $HXHX_LOG_DIR" >&2
 fi
+
+resolve_stage0_connect
 
 (
   cd "$HXHX_DIR"
@@ -308,8 +365,8 @@ fi
   if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
     haxe_args+=(-v)
   fi
-  if [ -n "$HAXE_CONNECT" ]; then
-    haxe_args+=(--connect "$HAXE_CONNECT")
+  if [ -n "$resolved_haxe_connect" ]; then
+    haxe_args+=(--connect "$resolved_haxe_connect")
   fi
   if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
     haxe_args+=(-D reflaxe_ocaml_progress)
@@ -477,8 +534,8 @@ fi
       if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
         haxe_args+=(-v)
       fi
-      if [ -n "$HAXE_CONNECT" ]; then
-        haxe_args+=(--connect "$HAXE_CONNECT")
+      if [ -n "$resolved_haxe_connect" ]; then
+        haxe_args+=(--connect "$resolved_haxe_connect")
       fi
       if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
         haxe_args+=(-D reflaxe_ocaml_progress)
