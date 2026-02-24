@@ -4,6 +4,8 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 
 - `bash scripts/hxhx/bench.sh`
 - `npm run hxhx:bench`
+- `bash scripts/hxhx/bench-kpi.sh`
+- `npm run hxhx:bench:kpi`
 - `bash scripts/hxhx/bench-native-reflaxe.sh`
 - `npm run hxhx:bench:native-reflaxe`
 
@@ -72,6 +74,13 @@ Controls:
 
 - `HXHX_NATIVE_BENCH_MIN_SPEEDUP_PCT` (default: `30`)
 - `HXHX_NATIVE_BENCH_BASELINE=interp|delegated|both` (default: `interp`)
+
+## KPI profile/plugin baseline
+
+The KPI harness baseline (compile wall time, macro overhead, incremental rebuild, peak RSS across portable/metal and plugin/builtin lanes) is tracked in:
+
+- `docs/benchmarks/HXHX_KPI_BASELINE.md`
+- `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
 
 ## How to update
 

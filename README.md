@@ -100,6 +100,12 @@ Benchmark the regen harness (cold/warm/skip scenarios):
 npm run hxhx:bench:bootstrap-regen
 ```
 
+Benchmark profile/plugin KPIs (portable vs metal, builtin vs provider, macro overhead):
+
+```bash
+npm run hxhx:bench:kpi
+```
+
 Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior):
 
 ```bash
@@ -193,6 +199,8 @@ For full usage and mainstream Haxe integration, see
 - [Acceptance model](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
 - [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
 - [OCaml runtime capability matrix (`portable` vs `metal`)](docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md)
+- [KPI benchmark baseline](docs/benchmarks/HXHX_KPI_BASELINE.md)
+- [KPI benchmark thresholds](docs/benchmarks/HXHX_KPI_THRESHOLDS.md)
 - [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)
 - [Stdlib provenance policy + ledger](docs/00-project/STD_LIB_POLICY.md)
 - [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)

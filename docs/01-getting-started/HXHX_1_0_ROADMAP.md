@@ -157,6 +157,7 @@ These are practical “confidence checks”, not full release proof:
 npm run test:hxhx-targets
 npm run test:upstream:runci-macro-stage3-display
 npm run ci:guards
+HXHX_KPI_REPS=3 HXHX_KPI_RUN_MACRO_LANE=1 npm run hxhx:bench:kpi
 HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast
 ```
 
@@ -165,6 +166,7 @@ Why these checks:
 - `test:hxhx-targets`: broad local regressions for staged compiler behavior.
 - `runci-macro-stage3-display`: focused non-delegating display/Gate2 slice.
 - `ci:guards`: license/provenance/version safety checks.
+- `hxhx:bench:kpi`: profile/plugin KPI report (compile, macro overhead, incremental, peak RSS).
 - `run-replacement-ready.sh fast`: one-command M7 fast bundle evidence.
 
 ## Scope and expectations
@@ -179,3 +181,8 @@ It is a concrete engineering bar tied to:
 - and explicit MIT-provenance constraints.
 
 As we close remaining blockers (especially Linux baseline non-delegating confirmations and distribution/performance gates), this document and `README.md` should be updated in the same change so non-experts can follow the journey.
+
+Performance references:
+
+- KPI baseline: `docs/benchmarks/HXHX_KPI_BASELINE.md`
+- KPI thresholds: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`

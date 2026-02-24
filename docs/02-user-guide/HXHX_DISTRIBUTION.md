@@ -127,6 +127,15 @@ As `hxhx` becomes a real compiler (stops delegating), this benchmark suite shoul
 
 Baseline numbers live in: `docs/benchmarks/HXHX_BASELINE.md:1`.
 
+Run the profile/plugin KPI harness (portable vs metal, builtin vs provider, plus macro overhead lane):
+
+```bash
+HXHX_KPI_REPS=3 npm run hxhx:bench:kpi
+```
+
+KPI baseline numbers live in: `docs/benchmarks/HXHX_KPI_BASELINE.md:1`.
+KPI threshold policy lives in: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md:1`.
+
 ## Native reflaxe speed comparison bench
 
 Use this when you want a direct, plain-English comparison of:

@@ -1,0 +1,238 @@
+{
+  "config": {
+    "reps": 2,
+    "run_macro_lane": true
+  },
+  "environment": {
+    "haxe_bin": "haxe",
+    "haxe_version": "4.3.7",
+    "hxhx_bin": "packages/hxhx/bootstrap_work/_build/default/out.bc",
+    "platform": "macOS-15.4-arm64-arm-64bit-Mach-O",
+    "python_version": "3.14.2"
+  },
+  "generated_at_utc": "2026-02-24T14:40:28.728667+00:00",
+  "metrics": [
+    {
+      "lane": "js_builtin",
+      "metric": "compile_wall_ms",
+      "summary": {
+        "count": 2,
+        "max": 88,
+        "mean": 88.0,
+        "median": 88,
+        "min": 88,
+        "p95": 88,
+        "samples": [
+          88,
+          88
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "js_provider",
+      "metric": "compile_wall_ms",
+      "summary": {
+        "count": 2,
+        "max": 88,
+        "mean": 87.5,
+        "median": 87,
+        "min": 87,
+        "p95": 88,
+        "samples": [
+          88,
+          87
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_metal_builtin",
+      "metric": "compile_wall_ms",
+      "summary": {
+        "count": 2,
+        "max": 92,
+        "mean": 90.5,
+        "median": 90,
+        "min": 89,
+        "p95": 92,
+        "samples": [
+          92,
+          89
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "compile_wall_ms",
+      "summary": {
+        "count": 2,
+        "max": 93,
+        "mean": 91.5,
+        "median": 91,
+        "min": 90,
+        "p95": 93,
+        "samples": [
+          93,
+          90
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "incremental_rebuild_ms",
+      "summary": {
+        "count": 2,
+        "max": 87,
+        "mean": 87.0,
+        "median": 87,
+        "min": 87,
+        "p95": 87,
+        "samples": [
+          87,
+          87
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "macro_baseline_compile_ms",
+      "summary": {
+        "count": 2,
+        "max": 106,
+        "mean": 97.5,
+        "median": 97,
+        "min": 89,
+        "p95": 106,
+        "samples": [
+          89,
+          106
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "macro_enabled_compile_ms",
+      "summary": {
+        "count": 2,
+        "max": 107,
+        "mean": 103.0,
+        "median": 103,
+        "min": 99,
+        "p95": 107,
+        "samples": [
+          99,
+          107
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "macro_overhead_ms",
+      "summary": {
+        "count": 2,
+        "max": 10,
+        "mean": 5.5,
+        "median": 5,
+        "min": 1,
+        "p95": 10,
+        "samples": [
+          10,
+          1
+        ]
+      },
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "macro_peak_rss_kb",
+      "summary": {
+        "count": 2,
+        "max": 46800,
+        "mean": 46712.0,
+        "median": 46712,
+        "min": 46624,
+        "p95": 46800,
+        "samples": [
+          46800,
+          46624
+        ]
+      },
+      "unit": "kb"
+    },
+    {
+      "lane": "js_builtin",
+      "metric": "peak_rss_kb",
+      "summary": {
+        "count": 2,
+        "max": 46448,
+        "mean": 46416.0,
+        "median": 46416,
+        "min": 46384,
+        "p95": 46448,
+        "samples": [
+          46448,
+          46384
+        ]
+      },
+      "unit": "kb"
+    },
+    {
+      "lane": "js_provider",
+      "metric": "peak_rss_kb",
+      "summary": {
+        "count": 2,
+        "max": 46448,
+        "mean": 46296.0,
+        "median": 46296,
+        "min": 46144,
+        "p95": 46448,
+        "samples": [
+          46448,
+          46144
+        ]
+      },
+      "unit": "kb"
+    },
+    {
+      "lane": "ocaml_metal_builtin",
+      "metric": "peak_rss_kb",
+      "summary": {
+        "count": 2,
+        "max": 46400,
+        "mean": 46312.0,
+        "median": 46312,
+        "min": 46224,
+        "p95": 46400,
+        "samples": [
+          46400,
+          46224
+        ]
+      },
+      "unit": "kb"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "metric": "peak_rss_kb",
+      "summary": {
+        "count": 2,
+        "max": 46432,
+        "mean": 46416.0,
+        "median": 46416,
+        "min": 46400,
+        "p95": 46432,
+        "samples": [
+          46432,
+          46400
+        ]
+      },
+      "unit": "kb"
+    }
+  ],
+  "schema": "hxhx.kpi.v1"
+}

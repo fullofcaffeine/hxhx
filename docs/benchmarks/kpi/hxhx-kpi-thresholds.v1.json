@@ -1,0 +1,84 @@
+{
+  "schema": "hxhx.kpi.thresholds.v1",
+  "source_baseline_report": "docs/benchmarks/kpi/2026-02-24-macos-arm64-report.json",
+  "rules": [
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 140,
+      "metric": "compile_wall_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_metal_builtin",
+      "max_median": 140,
+      "metric": "compile_wall_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "js_builtin",
+      "max_median": 140,
+      "metric": "compile_wall_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "js_provider",
+      "max_median": 150,
+      "metric": "compile_wall_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 140,
+      "metric": "incremental_rebuild_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 160,
+      "metric": "macro_baseline_compile_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 180,
+      "metric": "macro_enabled_compile_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 60,
+      "metric": "macro_overhead_ms",
+      "unit": "ms"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 70000,
+      "metric": "peak_rss_kb",
+      "unit": "kb"
+    },
+    {
+      "lane": "ocaml_metal_builtin",
+      "max_median": 70000,
+      "metric": "peak_rss_kb",
+      "unit": "kb"
+    },
+    {
+      "lane": "js_builtin",
+      "max_median": 70000,
+      "metric": "peak_rss_kb",
+      "unit": "kb"
+    },
+    {
+      "lane": "js_provider",
+      "max_median": 70000,
+      "metric": "peak_rss_kb",
+      "unit": "kb"
+    },
+    {
+      "lane": "ocaml_portable_builtin",
+      "max_median": 75000,
+      "metric": "macro_peak_rss_kb",
+      "unit": "kb"
+    }
+  ]
+}
