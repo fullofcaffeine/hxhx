@@ -154,17 +154,21 @@ else
   grep -Eq 'Target "as3" is not supported in (hxhx|this implementation)|Legacy Flash/AS3 targets are intentionally unsupported|unknown option .*--as3|Unknown target: as3' "$legacy_log"
 fi
 
-echo "== Stage0 delegation guard: blocks shim delegation"
-if HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --version >"$legacy_log" 2>&1; then
-  if grep -Eq '^(Haxe Compiler 4\.3\.7|4\.)' "$legacy_log"; then
-    echo "WARN: HXHX_FORBID_STAGE0 --version guard unavailable in current bootstrap snapshot; skipping strict assertion."
-  else
-    echo "Expected HXHX_FORBID_STAGE0=1 to block stage0 passthrough (--version)." >&2
+echo "== Stage0 delegation guard: keeps --version stage0-free"
+if HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --version >"$legacy_log" 2>&1; then
+  if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' "$legacy_log"; then
+    echo "Unexpected --version output format under HXHX_FORBID_STAGE0=1." >&2
     sed -n '1,40p' "$legacy_log" >&2
     exit 1
   fi
 else
-  grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$legacy_log"
+  if grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$legacy_log"; then
+    echo "WARN: HXHX_FORBID_STAGE0 --version still uses fail-fast guard in current bootstrap snapshot."
+  else
+    echo "Unexpected --version failure output under HXHX_FORBID_STAGE0=1." >&2
+    sed -n '1,40p' "$legacy_log" >&2
+    exit 1
+  fi
 fi
 
 echo "== Preset injects missing flags (compile smoke)"

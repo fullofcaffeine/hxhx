@@ -76,7 +76,7 @@ fi
 stage1_ver="$("$STAGE1_BIN" --version)"
 stage2_ver="$("$STAGE2_BIN" --version)"
 if [ "$stage1_ver" != "$stage2_ver" ]; then
-  echo "Mismatch for --version output (expected stage0 passthrough)." >&2
+  echo "Mismatch for --version output (expected stable compatibility-semver output)." >&2
   echo "stage1: $stage1_ver" >&2
   echo "stage2: $stage2_ver" >&2
   exit 1

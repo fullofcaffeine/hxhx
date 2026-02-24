@@ -29,7 +29,8 @@ CI enforces this policy in the stage0-free smoke lane:
 
 - `bash scripts/hxhx/check-stage0-policy.sh release`
   - builds `hxhx` with `HXHX_FORBID_STAGE0=1` and an invalid `HAXE_BIN` sentinel,
-  - proves runtime delegation is blocked (`--version` fails fast),
+  - proves runtime delegation is blocked and validates `--version` behavior
+    (stage0-free SemVer output on refreshed snapshots; fail-fast guard accepted on older snapshots),
   - proves native stage3 and macro-host selftest paths still work.
 
 This keeps stage0 delegation failures explicit and reproducible.

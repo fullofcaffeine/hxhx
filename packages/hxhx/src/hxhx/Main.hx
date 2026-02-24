@@ -22,10 +22,16 @@ import hxhx.Stage1Compiler.Stage1Args;
 	  (e.g. parsing via the native frontend seam).
 **/
 class Main {
+	static inline final COMPAT_HAXE_VERSION:String = "4.3.7";
+
 	static function fatal<T>(msg:String):T {
 		Sys.println(msg);
 		Sys.exit(1);
 		return cast null;
+	}
+
+	static function isVersionQuery(args:Array<String>):Bool {
+		return args.length == 1 && (args[0] == "--version" || args[0] == "-version");
 	}
 
 	static function hasDefine(args:Array<String>, name:String):Bool {
@@ -555,8 +561,14 @@ class Main {
 		}
 
 		// Compatibility note:
-		// `hxhx` is intended to be drop-in compatible with the `haxe` CLI. Some tools (and upstream tests)
-		// parse `haxe --version` as a SemVer string, so we must not intercept `--version` here.
+		// `hxhx` is intended to be drop-in compatible with the `haxe` CLI.
+		// Many tools parse `haxe --version` as SemVer, so this shim must keep
+		// version output stable and stage0-free.
+		if (isVersionQuery(forwarded)) {
+			Sys.println(COMPAT_HAXE_VERSION);
+			return;
+		}
+
 		if (args.length == 1 && args[0] == "--hxhx-help") {
 			Sys.println("hxhx (stage0 shim + stage1 bring-up)");
 			Sys.println("");
@@ -573,7 +585,8 @@ class Main {
 			Sys.println("  HXHX_FORBID_STAGE0  Set to 1/true to fail any stage0 delegation path");
 			Sys.println("");
 			Sys.println("Notes:");
-			Sys.println("  - `--version` and `--help` are forwarded to stage0 `haxe` for compatibility.");
+			Sys.println("  - `--version` is served by hxhx and reports compatibility baseline " + COMPAT_HAXE_VERSION + ".");
+			Sys.println("  - `--help` is still forwarded to stage0 `haxe`.");
 			Sys.println("  - `--hxhx-strict-cli` rejects non-upstream flags (e.g. --target, --hxhx-stage3).");
 			Sys.println("  - Use `--hxhx-help` for this shim help.");
 			return;
