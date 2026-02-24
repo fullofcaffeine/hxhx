@@ -1,3 +1,10 @@
+# [0.14.0](https://github.com/fullofcaffeine/hxhx/compare/v0.13.0...v0.14.0) (2026-02-24)
+
+
+### Features
+
+* **plugin:** add reflaxe target adapter conventions ([b964eb0](https://github.com/fullofcaffeine/hxhx/commit/b964eb0b4ffb602676da36e15c66e5371f80c560))
+
 # [0.13.0](https://github.com/fullofcaffeine/hxhx/compare/v0.12.0...v0.13.0) (2026-02-24)
 
 
