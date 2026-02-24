@@ -5,10 +5,40 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-}"
+HXHX_DIST_FORBID_STAGE0="${HXHX_DIST_FORBID_STAGE0:-1}"
 
-if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
+is_true() {
+  local v="${1:-}"
+  [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" || "$v" == "on" ]]
+}
+
+case "$HXHX_DIST_FORBID_STAGE0" in
+  0|1|true|false|yes|no|on|off) ;;
+  *)
+    echo "Invalid HXHX_DIST_FORBID_STAGE0: $HXHX_DIST_FORBID_STAGE0 (expected boolean-like value)." >&2
+    exit 2
+    ;;
+esac
+
+DIST_FORBID_STAGE0=0
+if is_true "$HXHX_DIST_FORBID_STAGE0"; then
+  DIST_FORBID_STAGE0=1
+fi
+
+if [ "$DIST_FORBID_STAGE0" -eq 0 ] && ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
   echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
   exit 1
+fi
+
+if [ "$DIST_FORBID_STAGE0" -eq 1 ]; then
+  if is_true "${HXHX_FORCE_STAGE0:-0}"; then
+    echo "Dist stage0 policy violation: HXHX_FORCE_STAGE0=1 is not allowed when HXHX_DIST_FORBID_STAGE0=1." >&2
+    exit 1
+  fi
+  if is_true "${HXHX_MACRO_HOST_FORCE_STAGE0:-0}"; then
+    echo "Dist stage0 policy violation: HXHX_MACRO_HOST_FORCE_STAGE0=1 is not allowed when HXHX_DIST_FORBID_STAGE0=1." >&2
+    exit 1
+  fi
 fi
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
@@ -53,7 +83,11 @@ rm -rf "$dist_dir"
 mkdir -p "$bin_dir"
 
 echo "== Building hxhx stage1 binary"
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+if [ "$DIST_FORBID_STAGE0" -eq 1 ]; then
+  HXHX_BIN="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+else
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
 if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   echo "Missing built executable from build-hxhx.sh (expected a path to an .exe)." >&2
   exit 1
@@ -63,7 +97,11 @@ cp "$HXHX_BIN" "$bin_dir/hxhx"
 chmod +x "$bin_dir/hxhx"
 
 echo "== Building hxhx macro host binary"
-HXHX_MACRO_HOST_BIN="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+if [ "$DIST_FORBID_STAGE0" -eq 1 ]; then
+  HXHX_MACRO_HOST_BIN="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+else
+  HXHX_MACRO_HOST_BIN="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
+fi
 if [ -z "$HXHX_MACRO_HOST_BIN" ] || [ ! -f "$HXHX_MACRO_HOST_BIN" ]; then
   echo "Missing built executable from build-hxhx-macro-host.sh (expected a path to an .exe)." >&2
   exit 1
@@ -142,7 +180,13 @@ Platform: $platform
 Arch: $arch
 Built at (UTC): $built_at_utc
 SOURCE_DATE_EPOCH: ${SOURCE_DATE_EPOCH:-unset}
-Stage0 Haxe: $("$HAXE_BIN" -version 2>/dev/null || "$HAXE_BIN" --version 2>/dev/null || echo unknown)
+Stage0 Haxe: $(
+if [ "$DIST_FORBID_STAGE0" -eq 1 ]; then
+  echo "forbidden (HXHX_DIST_FORBID_STAGE0=1)"
+else
+  "$HAXE_BIN" -version 2>/dev/null || "$HAXE_BIN" --version 2>/dev/null || echo unknown
+fi
+)
 OCaml: $(ocamlc -version 2>/dev/null || echo unknown)
 Dune: $(dune --version 2>/dev/null || echo unknown)
 EOF

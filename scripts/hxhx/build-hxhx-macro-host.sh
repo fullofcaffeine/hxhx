@@ -2,6 +2,7 @@
 set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
+HXHX_FORBID_STAGE0="${HXHX_FORBID_STAGE0:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TOOL_DIR="$ROOT/packages/hxhx-macro-host"
@@ -56,6 +57,11 @@ if [ -d "$BOOTSTRAP_DIR" ] \
   fi
   echo "$BIN"
   exit 0
+fi
+
+if is_true "$HXHX_FORBID_STAGE0" && is_true "${HXHX_MACRO_HOST_FORCE_STAGE0:-}"; then
+  echo "hxhx macro host build: HXHX_FORBID_STAGE0=1 forbids HXHX_MACRO_HOST_FORCE_STAGE0=1." >&2
+  exit 1
 fi
 
 # Prefer stage0-free Stage3 builds for dynamic macro host compilation.
@@ -312,6 +318,10 @@ trim_ws() {
     if "${cmd[@]}" 1>&2; then
       exit 0
     fi
+    if is_true "$HXHX_FORBID_STAGE0"; then
+      echo "hxhx macro host build: HXHX_FORBID_STAGE0=1 forbids stage0 fallback after stage3 failure." >&2
+      exit 1
+    fi
     if [ "$HAVE_STAGE0" -eq 0 ]; then
       echo "hxhx(stage3) macro host build failed and no stage0 Haxe compiler is available." >&2
       exit 1
@@ -321,6 +331,12 @@ trim_ws() {
     rm -rf out
     mkdir -p out
     fi
+  fi
+
+  if is_true "$HXHX_FORBID_STAGE0"; then
+    echo "hxhx macro host build: HXHX_FORBID_STAGE0=1 forbids stage0 macro-host generation for this invocation." >&2
+    echo "Use committed bootstrap snapshots, or stage3 mode with compatible inputs." >&2
+    exit 1
   fi
 
   if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then

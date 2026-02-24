@@ -141,23 +141,7 @@ jobs:
       - name: Build and run stage0-free smoke
         run: |
           set -euo pipefail
-
-          HXHX_BIN="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
-          test -f "$HXHX_BIN"
-          echo "hxhx_bin=$HXHX_BIN"
-
-          stage3_out="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp workloads/hih-compiler/fixtures/src -main demo.A --hxhx-out "$RUNNER_TEMP/stage0_free_stage3")"
-          echo "$stage3_out"
-          echo "$stage3_out" | grep -q '^stage3=no_emit_ok$'
-
-          HXHX_MACRO_HOST_EXE="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used bash scripts/hxhx/build-hxhx-macro-host.sh | tail -n 1)"
-          test -f "$HXHX_MACRO_HOST_EXE"
-          echo "macro_host_exe=$HXHX_MACRO_HOST_EXE"
-
-          macro_out="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE" "$HXHX_BIN" --hxhx-macro-selftest)"
-          echo "$macro_out"
-          echo "$macro_out" | grep -q '^macro_host=ok$'
-          echo "$macro_out" | grep -q '^OK hxhx macro rpc$'
+          bash scripts/hxhx/check-stage0-policy.sh release
 
   js-native-smoke:
     name: JS-native smoke

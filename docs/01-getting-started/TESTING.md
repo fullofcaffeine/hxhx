@@ -219,6 +219,8 @@ Notes:
     - `HXHX_TARGETS_STAGE0_HEARTBEAT_DEFAULT=<sec>`
     - `HXHX_TARGETS_STAGE0_FAILFAST_DEFAULT=<sec>`
 - CI split for stability:
+  - `Stage0-free smoke` runs `bash scripts/hxhx/check-stage0-policy.sh release`
+    (runtime delegation guard + macro-host selftest + dist stage0 policy check).
   - `Tests` runs `npm run test:hxhx-targets` with `HXHX_FORCE_STAGE0=0` (stage0-free bootstrap path).
   - `Gate 1 Lite` workflow (`.github/workflows/gate1-lite.yml`) runs the upstream macro smoke rung (`test:upstream:unit-macro-stage3-no-emit`) on every push/PR.
   - `Gate 2 Lite` workflow (`.github/workflows/gate2-lite.yml`) runs fast workloads on every push/PR.
@@ -232,6 +234,9 @@ Notes:
     - aggregate recent GitHub samples (default 5): `bash scripts/ci/stage0-source-rss-baseline.sh --allow-partial`
     - include failed runs in the sample set for early diagnosis: `bash scripts/ci/stage0-source-rss-baseline.sh --include-failures --allow-partial`
   - current ubuntu-latest success baseline (5 samples, 2026-02-20): `min=15028MB`, `median=15103MB`, `avg=15134.4MB`, `max=15253MB`; CI policy keeps `HXHX_STAGE0_MAX_RSS_MB=0` (cap disabled) to avoid false-positive kills near runner limits.
+  - local stage0 policy checks:
+    - `npm run test:stage0-policy` (runtime guard)
+    - `npm run test:stage0-policy:release` (runtime + release/dist strict-mode checks)
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.

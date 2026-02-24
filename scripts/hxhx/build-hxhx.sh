@@ -6,6 +6,7 @@ HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_STAGE0_USE_REPO_SERVER="${HXHX_STAGE0_USE_REPO_SERVER:-0}"
 HXHX_STAGE0_KEEP_REPO_SERVER="${HXHX_STAGE0_KEEP_REPO_SERVER:-0}"
 HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-0}"
+HXHX_FORBID_STAGE0="${HXHX_FORBID_STAGE0:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
 HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
 HXHX_STAGE0_PROFILE_DETAIL="${HXHX_STAGE0_PROFILE_DETAIL:-0}"
@@ -135,6 +136,14 @@ case "$HXHX_STAGE0_KEEP_REPO_SERVER" in
   0|1) ;;
   *)
     echo "Invalid HXHX_STAGE0_KEEP_REPO_SERVER: $HXHX_STAGE0_KEEP_REPO_SERVER (expected 0 or 1)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_FORBID_STAGE0" in
+  0|1|true|false|yes|no|on|off) ;;
+  *)
+    echo "Invalid HXHX_FORBID_STAGE0: $HXHX_FORBID_STAGE0 (expected boolean-like value)." >&2
     exit 2
     ;;
 esac
@@ -299,6 +308,15 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
   fi
 
   echo "Missing built executable: $BIN_EXE (native) or $BIN_BC (bytecode)" >&2
+  exit 1
+fi
+
+if is_true "$HXHX_FORBID_STAGE0"; then
+  if is_true "$HXHX_FORCE_STAGE0"; then
+    echo "hxhx build: HXHX_FORBID_STAGE0=1 forbids HXHX_FORCE_STAGE0=1 (source lane delegates to stage0)." >&2
+    exit 1
+  fi
+  echo "hxhx build: HXHX_FORBID_STAGE0=1 forbids stage0 source builds. Use committed bootstrap snapshots instead." >&2
   exit 1
 fi
 

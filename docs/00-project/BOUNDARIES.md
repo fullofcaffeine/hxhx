@@ -30,6 +30,7 @@ This monorepo contains multiple packages, but one product direction:
 - Bootstrap builds are stage0-free by default when committed snapshots are available.
 - Delegated compatibility paths still exist and are intentionally guarded.
 - CI includes stage0-free smoke checks and upstream behavior-oracle gates.
+- Stage0 usage boundaries are documented in `docs/00-project/STAGE0_POLICY.md`.
 
 ## Provenance and licensing boundary
 

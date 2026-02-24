@@ -110,6 +110,7 @@ Self-hosting status/smoke:
 ```bash
 npm run status:self-hosting
 npm run test:self-hosting-smoke
+npm run test:stage0-policy
 ```
 
 ## Environment setup
@@ -183,6 +184,7 @@ For full usage and mainstream Haxe integration, see
 - [1.0 roadmap (non-expert)](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
 - [Acceptance model](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
 - [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
+- [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)
 - [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)
 - [Boundaries and long-term repo strategy](docs/00-project/BOUNDARIES.md)
 - [Public release checklist](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)

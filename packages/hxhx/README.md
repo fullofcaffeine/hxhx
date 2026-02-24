@@ -12,6 +12,10 @@ Today it is intentionally a **Stage 0 shim**:
 
 Long-term, `hxhx` becomes the real Haxe-in-Haxe compiler, and the delegation path is removed.
 
+Stage0 usage policy (runtime/build/maintenance boundaries):
+
+- `docs/00-project/STAGE0_POLICY.md`
+
 ## Build
 
 From repo root (requires `dune` + `ocamlc`):

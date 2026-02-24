@@ -79,6 +79,20 @@ HXHX_VERSION=0.8.0 \
 If `HXHX_VERSION` is not provided, the script uses `git describe --tags --always`.
 If `SOURCE_DATE_EPOCH` is provided, the artifact metadata becomes more reproducible (and GNU tar packaging becomes more deterministic).
 
+### Stage0 policy in dist builds
+
+By default, dist packaging enforces stage0-free build behavior:
+
+- `HXHX_DIST_FORBID_STAGE0=1` (default)
+- internally builds `hxhx` and `hxhx-macro-host` with `HXHX_FORBID_STAGE0=1`
+- any stage0 fallback attempt fails fast
+
+Maintainer opt-out exists for debugging only:
+
+```bash
+HXHX_DIST_FORBID_STAGE0=0 bash scripts/hxhx/build-dist.sh
+```
+
 ### CI / release usage (recommended)
 
 For CI releases, prefer setting both:
