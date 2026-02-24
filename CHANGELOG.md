@@ -1,3 +1,12 @@
+# [0.10.0](https://github.com/fullofcaffeine/hxhx/compare/v0.9.8...v0.10.0) (2026-02-24)
+
+
+### Features
+
+* **hxhx:** add helper-managed stage0 connect reuse for build-hxhx ([a3844c2](https://github.com/fullofcaffeine/hxhx/commit/a3844c24054c6ba749af700c2b62dc45d011f5ee))
+* **hxhx:** define ocaml_profile portable|metal contract ([855b5bb](https://github.com/fullofcaffeine/hxhx/commit/855b5bb4b3224005ced02e98cb651875b815cfb3))
+* **hxhx:** speed up bootstrap regen harness and add bench tooling ([d7089e1](https://github.com/fullofcaffeine/hxhx/commit/d7089e1c772b9be8ef93bb71f524528fd06baff1))
+
 ## [0.9.8](https://github.com/fullofcaffeine/hxhx/compare/v0.9.7...v0.9.8) (2026-02-20)
 
 
