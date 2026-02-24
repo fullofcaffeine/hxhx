@@ -191,6 +191,11 @@ When migrating an existing reflaxe backend to native plugin ABI wrappers, follow
 
 This keeps “promotion” as a packaging/load choice and avoids backend rewrites.
 
+Promotion pilot proof point:
+- `test/M14PromotionPluginBuiltinEquivalenceIntegrationTest.hx` runs `js-native` in both modes
+  (builtin wrapper + provider wrapper) and asserts byte-identical artifacts, equivalent runtime
+  output, and deterministic registry precedence/restore behavior.
+
 ## Why this helps immediately
 
 - Makes OCaml coupling visible and reviewable.
