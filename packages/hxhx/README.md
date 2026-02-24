@@ -109,6 +109,10 @@ Current presets:
 
 - `--target ocaml`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
 - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+  - OCaml profile contract:
+    - `-D ocaml_profile=portable` (default)
+    - `-D ocaml_profile=metal` (contract-ready value; currently behavior-equivalent to portable)
+    - any other value fails fast
 - `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
 - `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
   - currently covered: enum-tag switch lowering + basic `Type` reflection helpers (`resolveClass`, `getClassName`, `enumConstructor`, `enumIndex`, `enumParameters`)
@@ -128,6 +132,9 @@ Examples:
 
 # Linked Stage3 fast-path (no emit build)
 "$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+
+# Linked Stage3 fast-path with explicit OCaml profile
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
 
 # Stage0 JS preset
 "$(bash scripts/hxhx/build-hxhx.sh)" --target js -- -cp src -main Main

@@ -13,6 +13,7 @@ import backend.BackendDispatchBoundary;
 import backend.GenIrBoundary;
 import backend.GenIrProgram;
 import backend.IBackend;
+import backend.OcamlProfile;
 import backend.TargetCoreBackend;
 import backend.js.JsBackend;
 import backend.ocaml.OcamlStage3Backend;
@@ -1488,6 +1489,15 @@ class Stage3Compiler {
 		}
 		for (n in hxhx.macro.MacroState.listDefineNames()) {
 			definesMap.set(n, hxhx.macro.MacroState.definedValue(n));
+		}
+		if (backendId != "js-native") {
+			try {
+				final profile = OcamlProfile.fromDefineValue(definesMap.get("ocaml_profile"));
+				definesMap.set("ocaml_profile", OcamlProfile.toDefineValue(profile));
+			} catch (e:String) {
+				closeMacroSession();
+				return error(e);
+			}
 		}
 
 		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules());

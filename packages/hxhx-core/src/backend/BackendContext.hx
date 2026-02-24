@@ -48,4 +48,22 @@ class BackendContext {
 			return null;
 		return defines.get(name);
 	}
+
+	/**
+		Resolve and normalize the OCaml profile contract from `-D ocaml_profile=...`.
+
+		Why
+		- OCaml backends need a stable profile switch (`portable|metal`) with one parsing path.
+		- Callers should not reimplement define parsing or defaulting rules.
+
+		What
+		- Reads `ocaml_profile` from `defines`.
+		- Applies the shared contract parser (`backend.OcamlProfile`).
+		- Writes back the normalized value so downstream checks read a deterministic string.
+	**/
+	public function ensureOcamlProfileDefine():OcamlProfile {
+		final profile = OcamlProfile.fromDefineValue(defineValue("ocaml_profile"));
+		defines.set("ocaml_profile", OcamlProfile.toDefineValue(profile));
+		return profile;
+	}
 }

@@ -182,6 +182,7 @@ For full usage and mainstream Haxe integration, see
 - [Self-hosting checklist (beginner-friendly)](docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md)
 - [1.0 roadmap (non-expert)](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
 - [Acceptance model](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
+- [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
 - [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)
 - [Boundaries and long-term repo strategy](docs/00-project/BOUNDARIES.md)
 - [Public release checklist](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)

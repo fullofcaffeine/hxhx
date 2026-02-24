@@ -33,6 +33,7 @@ class OcamlTargetCore implements ITargetCore {
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
+		context.ensureOcamlProfileDefine();
 		final typedProgram = GenIrBoundary.requireProgram(program);
 		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable);
 		return new EmitResult(entryPath, [
