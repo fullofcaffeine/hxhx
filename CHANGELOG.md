@@ -1,3 +1,10 @@
+# [0.13.0](https://github.com/fullofcaffeine/hxhx/compare/v0.12.0...v0.13.0) (2026-02-24)
+
+
+### Features
+
+* **metal:** specialize array and string lowering ([63b1f77](https://github.com/fullofcaffeine/hxhx/commit/63b1f77a9280b1da33531da8e293ead9b2f64c10))
+
 # [0.12.0](https://github.com/fullofcaffeine/hxhx/compare/v0.11.0...v0.12.0) (2026-02-24)
 
 
