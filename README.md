@@ -47,7 +47,8 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
   - [Backend layering and contracts](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
   - [Builtin backend behavior](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md)
   - [Macro host protocol](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
-  - [Stdlib reuse + provenance boundaries](docs/00-project/STD_LIB_POLICY.md)
+  - [Stdlib sync boundary](docs/00-project/STD_LIB_POLICY.md)
+  - [Provenance policy (MIT shipping path)](docs/00-project/PROVENANCE_POLICY.md)
 
 ## Quick start (contributors)
 
@@ -187,6 +188,7 @@ For full usage and mainstream Haxe integration, see
 - [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)
 - [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)
 - [Boundaries and long-term repo strategy](docs/00-project/BOUNDARIES.md)
+- [Provenance policy (ML2HX non-shipping)](docs/00-project/PROVENANCE_POLICY.md)
 - [Public release checklist](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
 
 ## License

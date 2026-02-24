@@ -42,3 +42,9 @@ The repo pre-commit hook enforces staged local-path checks, staged secret scanni
 - Follow `docs/00-project/STD_LIB_POLICY.md` for upstream sync boundaries.
 - Upstream Haxe is used as a behavior oracle; direct reuse is limited to stdlib scope.
 - Do not copy upstream compiler or test sources into this repository.
+
+## Provenance policy (required)
+
+- Follow `docs/00-project/PROVENANCE_POLICY.md` for shipping-path provenance rules.
+- ML2HX/translation workflows are research-only and non-shipping in this repo.
+- If a translation experiment is used for exploration, only behavior-level conclusions may be reused; implementation must be fresh repo-owned code.

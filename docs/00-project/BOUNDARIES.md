@@ -38,6 +38,8 @@ This monorepo contains multiple packages, but one product direction:
 - Keep repository implementation content permissive-only.
 - Keep `vendor/haxe` untracked and used only for oracle test runs.
 - Follow stdlib sync boundary rules in `docs/00-project/STD_LIB_POLICY.md`.
+- Follow clean-room shipping rules in `docs/00-project/PROVENANCE_POLICY.md`.
+- ML2HX/translation experiments are explicitly non-shipping.
 
 ## Repo split policy
 

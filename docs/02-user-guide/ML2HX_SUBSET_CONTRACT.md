@@ -1,5 +1,11 @@
 # ML2HX Subset Contract (OCaml → Haxe Translation Shapes)
 
+> **Non-shipping policy**
+>
+> This document is for research/oracle workflow planning only.
+> ML2HX-style translated outputs are **not** a shipping path for MIT compiler artifacts in this repo.
+> See `docs/00-project/PROVENANCE_POLICY.md`.
+
 This doc defines the **subset of Haxe constructs** and **coding patterns** that an eventual `ml2hx` (OCaml → Haxe)
 translator should emit so that the resulting Haxe code:
 
