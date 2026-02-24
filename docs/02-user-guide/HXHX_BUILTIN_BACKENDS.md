@@ -157,6 +157,39 @@ Dynamic registration notes:
   - and at Stage3 reflaxe bridge dispatch for known wrapper types,
   - not allowed inside target-core emitters (`OcamlTargetCore`, `JsTargetCore`).
 
+### Native backend plugin build workflow (`.cmxs`)
+
+Use the native plugin build helper to produce a deterministic artifact bundle:
+
+```bash
+bash scripts/hxhx/build-backend-plugin.sh \
+  --plugin-id fixture.native.backend.plugin \
+  --plugin-version 0.1.0 \
+  --kind ocaml-cmxs \
+  --source-dir test/fixtures/native_backend_plugin \
+  --dune-target hxhx_backend_plugin_fixture.cmxs \
+  --entry plugins/hxhx_backend_plugin_fixture.cmxs \
+  --target-id js-native \
+  --out-dir .tmp/plugin-out
+```
+
+Outputs:
+
+- `.tmp/plugin-out/backend-plugin.json` (manifest, schema v1)
+- `.tmp/plugin-out/plugins/hxhx_backend_plugin_fixture.cmxs` (native plugin artifact)
+
+Manifest-only flow for Haxe providers (no `.cmxs` build step):
+
+```bash
+bash scripts/hxhx/build-backend-plugin.sh \
+  --plugin-id fixture.haxe.provider \
+  --plugin-version 0.1.0 \
+  --kind haxe-provider \
+  --entry my.backend.Provider \
+  --target-id js-native \
+  --out-dir .tmp/plugin-out
+```
+
 ### Injection rules (important for predictable UX)
 
 When `--target <id>` is used, injection follows these rules:

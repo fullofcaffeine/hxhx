@@ -125,6 +125,11 @@ run_check \
   "cd '$ROOT/packages/reflaxe.ocaml/examples/build-macro' && haxe build.hxml"
 
 run_check \
+  "native backend plugin build smoke (.cmxs + manifest)" \
+  "PLUGIN_NATIVE_BUILD" \
+  "cd '$ROOT' && npm run -s test:hxhx:native-plugin-build-smoke"
+
+run_check \
   "eval.vm plugin API smoke" \
   "PLUGIN_EVAL_VM" \
   "out=\"\$(haxe -cp '$tmpdir' -main EvalVmMain --interp 2>&1)\" && printf '%s\n' \"\$out\" && printf '%s\n' \"\$out\" | grep -q '^evalvm_api_available$'"
