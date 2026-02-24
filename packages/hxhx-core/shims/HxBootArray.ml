@@ -59,6 +59,9 @@ let copy (a : 'a t) : 'a t =
 let concat (a : 'a t) (b : 'a t) : 'a t =
   HxArray.concat a b
 
+let map (a : 'a t) (f : 'a -> 'b) : 'b t =
+  HxArray.map a f
+
 (* Stage3 emit-runner bridge for dynamic callbacks.
 
    Why
@@ -80,6 +83,9 @@ let map_dyn (a : 'a t) (f : Obj.t) : Obj.t t =
 (* Stage3 emit-runner bridge for Array.join with dynamic payloads. *)
 let join_dyn (a : Obj.t t) (sep : string) : string =
   HxArray.join a sep (fun v -> HxRuntime.dynamic_toStdString (Obj.repr v))
+
+let join_strict (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
+  HxArray.join a sep to_string
 
 let join (a : 'a t) (sep : string) (to_string : 'a -> string) : string =
   (* Stage3 emit-runner bring-up: we sometimes end up joining arrays that are *meant* to be

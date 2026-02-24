@@ -670,6 +670,21 @@ class EmitterStage {
 			}
 		}
 
+		function isBoolExpr(expr:HxExpr):Bool {
+			return switch (expr) {
+				case EBool(_):
+					true;
+				case EIdent(name):
+					tyForIdent(name) == "Bool";
+				case EUnop("!", inner):
+					isBoolExpr(inner);
+				case EBinop(op, _, _): op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||";
+				case ETernary(_cond, thenExpr, elseExpr): isBoolExpr(thenExpr) && isBoolExpr(elseExpr);
+				case _:
+					false;
+			}
+		}
+
 		function isSysIoProcessExpr(expr:HxExpr):Bool {
 			return switch (expr) {
 				case EIdent(name): final t = tyForIdent(name); t == "sys.io.Process" || t == "sys.io.Process.Process";
@@ -696,6 +711,55 @@ class EmitterStage {
 				case _:
 					false;
 			}
+		}
+
+		function isStringArrayTypeText(rawType:String):Bool {
+			if (rawType == null || rawType.length == 0)
+				return false;
+			final normalized = StringTools.replace(rawType, " ", "");
+			return normalized == "Array<String>" || StringTools.startsWith(normalized, "Array<String>");
+		}
+
+		function isLikelyStringArrayExpr(expr:HxExpr):Bool {
+			return switch (expr) {
+				case EArrayDecl(values):
+					if (values == null || values.length == 0) {
+						true;
+					} else {
+						var allString = true;
+						for (valueExpr in values)
+							if (!isStringExpr(valueExpr)) {
+								allString = false;
+								break;
+							}
+						allString;
+					}
+				case EIdent(name):
+					isStringArrayTypeText(tyForIdent(name));
+				case ECall(EField(inner, "toArray"), []):
+					isLikelyStringArrayExpr(inner);
+				case ECall(EField(inner, "copy"), []):
+					isLikelyStringArrayExpr(inner);
+				case ECall(EField(inner, "concat"), [other]): isLikelyStringArrayExpr(inner) && isLikelyStringArrayExpr(other);
+				case ECast(inner, _):
+					isLikelyStringArrayExpr(inner);
+				case EUntyped(inner):
+					isLikelyStringArrayExpr(inner);
+				case _:
+					false;
+			}
+		}
+
+		function metalArrayLiteralCategory(expr:HxExpr):String {
+			if (isStringExpr(expr))
+				return "string";
+			if (isFloatExpr(expr))
+				return "float";
+			if (isIntExpr(expr))
+				return "int";
+			if (isBoolExpr(expr))
+				return "bool";
+			return "";
 		}
 
 		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
@@ -1643,53 +1707,33 @@ class EmitterStage {
 						// OCaml sees a direct function call instead of dynamic-field invocation
 						// with warning-as-error over-application.
 						if (isLikelyArrayExpr(obj)) {
-							return "HxBootArray.map_dyn (Obj.magic ("
-								+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-								+ ")) (Obj.repr ("
-								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee)
-								+ "))";
+							final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee);
+							final mapper = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee);
+							if (isMetalProfileActive()) {
+								return "HxBootArray.map (" + receiver + ") (" + mapper + ")";
+							}
+							return "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + mapper + "))";
 						}
 					case EField(obj, "join") if (args.length == 1):
-						switch (obj) {
-							case EIdent(name):
-								final t = tyForIdent(name);
-								if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
-									return "HxBootArray.join ("
-										+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-											callSigByCallee)
-										+ ") ("
-										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-											callSigByCallee)
-										+ ") (fun (s : string) -> s)";
-								}
-							case ECall(EField(EIdent(name), "toArray"), []):
-								// Common upstream shape:
-								//   `rest.toArray().join(sep)`
-								//
-								// We lower rest params to `Array<T>` and `toArray()` to identity, so treat this as
-								// `rest.join(sep)` when the type is `Array<String>`.
-								final t = tyForIdent(name);
-								if (t == "Array<String>" || t == "Array< String >" || t.indexOf("Array<String>") == 0) {
-									return "HxBootArray.join ("
-										+ exprToOcaml(EIdent(name), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-											callSigByCallee)
-										+ ") ("
-										+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-											callSigByCallee)
-										+ ") (fun (s : string) -> s)";
-								}
-							case _:
-						}
-						// Stage3 emit-runner: fallback for array-like receivers where type
-						// inference did not preserve `Array<String>` shape through chained calls.
 						if (isLikelyArrayExpr(obj)) {
-							return "HxBootArray.join_dyn (Obj.magic ("
-								+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-								+ ")) ("
-								+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
-									callSigByCallee)
-								+ ")";
+							final receiver = exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee);
+							final separator = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+								callSigByCallee);
+							if (isMetalProfileActive()) {
+								if (!isLikelyStringArrayExpr(obj)) {
+									throw "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver";
+								}
+								return "HxBootArray.join_strict (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
+							}
+							if (isLikelyStringArrayExpr(obj)) {
+								return "HxBootArray.join (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
+							}
+							// Stage3 emit-runner: fallback for array-like receivers where type
+							// inference did not preserve `Array<String>` shape through chained calls.
+							return "HxBootArray.join_dyn (Obj.magic (" + receiver + ")) (" + separator + ")";
 						}
 					case _:
 				}
@@ -2246,28 +2290,55 @@ class EmitterStage {
 				// Important
 				// - This intentionally does *not* use the real reflaxe.ocaml runtime Array.
 				// - The Stage3 bootstrap emitter output is "plain OCaml" and should stay standalone.
-				final elems = values == null
-					|| values.length == 0 ? "" : values // Use `Obj.magic` per element so mixed-type array literals (common in upstream tests,
-						// e.g. `[1, "hello"]`) remain OCaml-typecheckable during bring-up.
-						.map(v -> "(Obj.magic ("
-							+ exprToOcaml(v, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-							+ "))").join("; ");
-				"HxBootArray.of_list [" + elems + "]";
+				if (isMetalProfileActive()) {
+					if (values == null || values.length == 0) {
+						"HxBootArray.of_list []";
+					} else {
+						var expectedCategory:Null<String> = null;
+						final elems = new Array<String>();
+						for (valueExpr in values) {
+							final category = metalArrayLiteralCategory(valueExpr);
+							if (category.length == 0) {
+								throw "stage3 emitter: metal profile unsupported semantics: array literals must use concrete element categories (string|int|float|bool)";
+							}
+							if (expectedCategory == null) {
+								expectedCategory = category;
+							} else if (expectedCategory != category) {
+								throw "stage3 emitter: metal profile unsupported semantics: mixed-type array literals are not allowed";
+							}
+							elems.push(exprToOcaml(valueExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass));
+						}
+						"HxBootArray.of_list [" + elems.join("; ") + "]";
+					}
+				} else {
+					final elems = values == null
+						|| values.length == 0 ? "" : values // Use `Obj.magic` per element so mixed-type array literals (common in upstream tests,
+							// e.g. `[1, "hello"]`) remain OCaml-typecheckable during bring-up.
+							.map(v -> "(Obj.magic ("
+								+ exprToOcaml(v, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+								+ "))").join("; ");
+					"HxBootArray.of_list [" + elems + "]";
+				}
 			case EArrayAccess(arr, idx):
 				// Stage 3 bring-up: Haxe `obj[key]` is used both for array indexing and dynamic
 				// string-key lookups (notably in upstream php boot helpers).
 				//
 				// Route obvious string-key access through `HxAnon.get`; keep numeric/other
 				// indexing on the array shim.
-				isStringExpr(idx) ? "(Obj.magic (HxAnon.get ("
-				+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") ("
-				+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ")))" : "HxBootArray.get ("
-				+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ") ("
-				+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-				+ ")";
+				if (isStringExpr(idx)) {if (isMetalProfileActive()) {
+					throw "stage3 emitter: metal profile unsupported semantics: string-key indexing is not supported";
+				}
+					"(Obj.magic (HxAnon.get ("
+					+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")))";
+				} else {"HxBootArray.get ("
+					+ exprToOcaml(arr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ") ("
+					+ exprToOcaml(idx, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
+					+ ")";
+				}
 			case ERange(_start, _end):
 				// Bring-up: ranges are emitted only as iterables in `for-in` lowering. If we see
 				// a range in expression position, collapse to poison.
