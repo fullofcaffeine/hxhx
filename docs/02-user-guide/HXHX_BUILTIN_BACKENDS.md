@@ -124,6 +124,16 @@ Dynamic registration notes:
   - `-D hxhx_backend_provider=TypeA`
   - `-D hxhx_backend_providers=TypeA;TypeB`
   - `-D hxhx.backend.provider=TypeA`
+- Stage3 can also resolve provider declarations from plugin manifests:
+  - `HXHX_BACKEND_PLUGIN_MANIFESTS=plugins/a.json;plugins/b.json`
+  - `-D hxhx_backend_plugin_manifest=plugins/a.json`
+  - `-D hxhx_backend_plugin_manifests=plugins/a.json;plugins/b.json`
+  - `-D hxhx.backend.plugin.manifest=plugins/a.json`
+- Manifest schema (v1):
+  - `docs/02-user-guide/compat/hxhx-backend-plugin-manifest-v1.schema.json`
+  - supported runtime kinds:
+    - `haxe-provider` (current Stage3 load path)
+    - `ocaml-cmxs` (validated now; native loading lands in Phase C5 loader task)
 - Provider type requirement:
   - each declared provider must resolve to a class implementing
     `ITargetBackendProvider` with `new()` and

@@ -966,6 +966,45 @@ class Stage3Compiler {
 	}
 
 	/**
+		Collect backend plugin manifest paths for this Stage3 request.
+
+		Supported declarations
+		- `HXHX_BACKEND_PLUGIN_MANIFESTS=plugins/a.json;plugins/b.json`
+		- `-D hxhx_backend_plugin_manifest=plugins/a.json`
+		- `-D hxhx_backend_plugin_manifests=plugins/a.json;plugins/b.json`
+		- `-D hxhx.backend.plugin.manifest=plugins/a.json`
+	**/
+	static function collectBackendPluginManifestPaths(rawDefines:Array<String>):Array<String> {
+		final out = parseDelimitedList(Sys.getEnv("HXHX_BACKEND_PLUGIN_MANIFESTS"));
+		if (rawDefines == null)
+			return out;
+
+		inline function pushUnique(values:Array<String>):Void {
+			for (v in values)
+				if (out.indexOf(v) == -1)
+					out.push(v);
+		}
+
+		for (raw in rawDefines) {
+			final def = trim(raw);
+			if (def.length == 0)
+				continue;
+			final eq = def.indexOf("=");
+			final name = eq == -1 ? def : trim(def.substr(0, eq));
+			final supportsManifestDecl = name == "hxhx_backend_plugin_manifest"
+				|| name == "hxhx_backend_plugin_manifests"
+				|| name == "hxhx.backend.plugin.manifest";
+			if (!supportsManifestDecl)
+				continue;
+			if (eq == -1 || eq + 1 >= def.length)
+				continue;
+			pushUnique(parseDelimitedList(def.substr(eq + 1)));
+		}
+
+		return out;
+	}
+
+	/**
 		Load request-scoped dynamic backend providers into the canonical Stage3 registry.
 
 		Why
@@ -981,11 +1020,20 @@ class Stage3Compiler {
 	**/
 	static function loadDynamicBackendProviders(rawDefines:Array<String>):Void {
 		BackendRegistry.clearDynamicRegistrations();
+		final trace = isTrueEnv("HXHX_TRACE_BACKEND_PROVIDERS");
 		final providerTypes = collectBackendProviderTypeNames(rawDefines);
+		final manifestPaths = collectBackendPluginManifestPaths(rawDefines);
+		for (manifestPath in manifestPaths) {
+			final manifestProviders = BackendPluginManifestResolver.providerTypeNamesForManifestPath(manifestPath);
+			for (providerType in manifestProviders)
+				if (providerTypes.indexOf(providerType) == -1)
+					providerTypes.push(providerType);
+			if (trace)
+				Sys.println("backend_plugin_manifest[" + manifestPath + "]=" + manifestProviders.length);
+		}
 		if (providerTypes.length == 0)
 			return;
 
-		final trace = isTrueEnv("HXHX_TRACE_BACKEND_PROVIDERS");
 		providerTypes.sort(function(a, b) return a < b ? -1 : (a > b ? 1 : 0));
 		var totalRegistered = 0;
 
