@@ -12,6 +12,10 @@ bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
 
+## Compatibility Policy
+
+- Use a hard cutover approach and never implement backward compatibility.
+
 ## Beginner-Friendly Terms (Read This First)
 
 This repo uses a few short labels a lot. Here is what they mean in plain language:

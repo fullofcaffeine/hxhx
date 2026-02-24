@@ -120,15 +120,27 @@ Dynamic registration notes:
 - Selection rule remains global and deterministic: higher `priority` wins, then `implId`
   lexical tie-break.
 - Stage3 now resolves dynamic providers per request (before backend selection) from:
-  - `HXHX_BACKEND_PROVIDERS=TypeA;TypeB`
-  - `-D hxhx_backend_provider=TypeA`
-  - `-D hxhx_backend_providers=TypeA;TypeB`
-  - `-D hxhx.backend.provider=TypeA`
+  - explicit provider declarations:
+    - `HXHX_BACKEND_PROVIDERS=TypeA;TypeB`
+    - `-D hxhx_backend_provider=TypeA`
+    - `-D hxhx_backend_providers=TypeA;TypeB`
+    - `-D hxhx.backend.provider=TypeA`
+  - bundled provider declarations:
+    - `HXHX_BACKEND_BUNDLED_PROVIDERS=TypeA;TypeB`
+    - `-D hxhx_backend_bundled_provider=TypeA`
+    - `-D hxhx_backend_bundled_providers=TypeA;TypeB`
+    - `-D hxhx.backend.bundled.provider=TypeA`
 - Stage3 can also resolve provider declarations from plugin manifests:
-  - `HXHX_BACKEND_PLUGIN_MANIFESTS=plugins/a.json;plugins/b.json`
-  - `-D hxhx_backend_plugin_manifest=plugins/a.json`
-  - `-D hxhx_backend_plugin_manifests=plugins/a.json;plugins/b.json`
-  - `-D hxhx.backend.plugin.manifest=plugins/a.json`
+  - explicit manifests:
+    - `HXHX_BACKEND_PLUGIN_MANIFESTS=plugins/a.json;plugins/b.json`
+    - `-D hxhx_backend_plugin_manifest=plugins/a.json`
+    - `-D hxhx_backend_plugin_manifests=plugins/a.json;plugins/b.json`
+    - `-D hxhx.backend.plugin.manifest=plugins/a.json`
+  - bundled manifests:
+    - `HXHX_BACKEND_BUNDLED_PLUGIN_MANIFESTS=plugins/a.json;plugins/b.json`
+    - `-D hxhx_backend_bundled_plugin_manifest=plugins/a.json`
+    - `-D hxhx_backend_bundled_plugin_manifests=plugins/a.json;plugins/b.json`
+    - `-D hxhx.backend.bundled.plugin.manifest=plugins/a.json`
 - Manifest schema (v1):
   - `docs/02-user-guide/compat/hxhx-backend-plugin-manifest-v1.schema.json`
   - supported runtime kinds:
@@ -145,6 +157,10 @@ Dynamic registration notes:
   - Keep typed dynamic loading for plugin/bundled provider classes by type path.
   - Defer macro-generated provider registries until provider count/maintenance
     overhead justifies the extra macro/build complexity.
+- Source precedence policy is deterministic:
+  - `explicit` plugin declarations override `bundled` declarations.
+  - plugin declarations override builtin targets via priority bands.
+  - duplicate plugin `implId` declarations in the same source tier fail fast.
 - Fallback behavior is explicit: if no provider declarations are present, Stage3 uses builtin
   registrations only (`BackendRegistry.clearDynamicRegistrations()` runs per request).
 - Optional diagnostics: `HXHX_TRACE_BACKEND_SELECTION=1` prints selected `implId`, and
