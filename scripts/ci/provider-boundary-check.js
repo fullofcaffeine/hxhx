@@ -17,8 +17,10 @@ const fs = require('fs')
 const cp = require('child_process')
 
 const allowedBoundaryFile = 'packages/hxhx/src/hxhx/BackendProviderResolver.hx'
+const stage3EmitFile = 'packages/hxhx/src/hxhx/Stage3Compiler.hx'
 const requiredBoundaryCast = /return\s+cast\s+providerContract\s*;/g
 const forbiddenProviderReflection = /Reflect\.callMethod/g
+const forbiddenStage3ReflectEmit = /Reflect\.(callMethod|field)\s*\(/g
 
 function fail(message) {
   console.error(`[ci:guards] ERROR: ${message}`)
@@ -87,8 +89,20 @@ function main() {
     fail(`unexpected Reflect.callMethod usage in ${allowedBoundaryFile}`)
   }
 
+  let stage3Source = ''
+  try {
+    stage3Source = readUtf8(stage3EmitFile)
+  } catch (_) {
+    fail(`missing required Stage3 file: ${stage3EmitFile}`)
+    return
+  }
+
+  if (forbiddenStage3ReflectEmit.test(stage3Source)) {
+    fail(`unexpected Reflect emit fallback in ${stage3EmitFile}; use typed backend dispatch boundary`)
+  }
+
   if (!process.exitCode) {
-    console.log('[ci:guards] OK: provider boundary cast policy')
+    console.log('[ci:guards] OK: provider boundary and Stage3 emit dispatch policy')
   }
 }
 

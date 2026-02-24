@@ -170,7 +170,8 @@ Dynamic registration notes:
     recovery in target cores,
   - at the scoped provider boundary seam in
     `hxhx.BackendProviderResolver.requireProvider(...)`,
-  - and at Stage3 reflaxe bridge dispatch for known wrapper types,
+  - and at `backend.BackendDispatchBoundary.emit(...)` for Stage3 wrapper fast-path dispatch,
+  - Stage3 emit fallback uses typed `IBackend.emit` (no `Reflect.callMethod` path),
   - not allowed inside target-core emitters (`OcamlTargetCore`, `JsTargetCore`).
 
 ### Native backend plugin build workflow (`.cmxs`)

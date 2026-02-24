@@ -44,4 +44,39 @@ class BackendDispatchBoundary {
 	public static inline function requireTargetCoreBackend(value:Dynamic):TargetCoreBackend {
 		return cast value;
 	}
+
+	/**
+		Typed backend emit dispatch bridge.
+
+		Why
+		- Stage3 currently compiles through a bootstrap lane where interface-typed values
+		  can lose concrete type information in generated OCaml.
+		- Builtin backends have static bridge entrypoints that keep this boundary explicit.
+
+		How
+		- Fast-path known backend wrappers (`JsBackend`, `OcamlStage3Backend`,
+		  `TargetCoreBackend`) through typed static bridges.
+		- Fallback for custom plugin/bundled backends uses the typed `IBackend.emit`
+		  interface call (no reflection).
+	**/
+	public static function emit(backend:IBackend, program:GenIrProgram, context:BackendContext):EmitResult {
+		#if reflaxe
+		final dispatchValue = asDispatchValue(backend);
+		if (Std.isOfType(dispatchValue, JsBackend)) {
+			final jsBackend = requireJsBackend(dispatchValue);
+			return JsBackend.emitBridge(jsBackend, program, context);
+		}
+		if (Std.isOfType(dispatchValue, OcamlStage3Backend)) {
+			final ocamlBackend = requireOcamlBackend(dispatchValue);
+			return OcamlStage3Backend.emitBridge(ocamlBackend, program, context);
+		}
+		if (Std.isOfType(dispatchValue, TargetCoreBackend)) {
+			final targetCoreBackend = requireTargetCoreBackend(dispatchValue);
+			return TargetCoreBackend.emitBridge(targetCoreBackend, program, context);
+		}
+		return backend.emit(program, context);
+		#else
+		return backend.emit(program, context);
+		#end
+	}
 }

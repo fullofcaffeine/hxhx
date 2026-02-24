@@ -7,16 +7,13 @@ import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroHostClient.MacroHostSession;
 import backend.BackendContext;
-import backend.EmitResult;
-import backend.BackendRegistry;
 import backend.BackendDispatchBoundary;
+import backend.BackendRegistry;
+import backend.EmitResult;
 import backend.GenIrBoundary;
 import backend.GenIrProgram;
 import backend.IBackend;
 import backend.OcamlProfile;
-import backend.TargetCoreBackend;
-import backend.js.JsBackend;
-import backend.ocaml.OcamlStage3Backend;
 
 private typedef HaxelibSpec = LibraryResolver.LibrarySpec;
 
@@ -176,30 +173,9 @@ class Stage3Compiler {
 		return BackendRegistry.requireForTarget(backendId);
 	}
 
-	static function emitWithBackend(backendId:String, backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
+	static function emitWithBackend(backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
 		final expandedProgram = GenIrBoundary.requireProgram(expanded);
-		#if reflaxe
-		final backendDispatchValue = BackendDispatchBoundary.asDispatchValue(backend);
-		if (Std.isOfType(backendDispatchValue, JsBackend)) {
-			final jsBackend = BackendDispatchBoundary.requireJsBackend(backendDispatchValue);
-			return JsBackend.emitBridge(jsBackend, expandedProgram, context);
-		}
-		if (Std.isOfType(backendDispatchValue, OcamlStage3Backend)) {
-			final ocamlBackend = BackendDispatchBoundary.requireOcamlBackend(backendDispatchValue);
-			return OcamlStage3Backend.emitBridge(ocamlBackend, expandedProgram, context);
-		}
-		if (Std.isOfType(backendDispatchValue, TargetCoreBackend)) {
-			final targetCoreBackend = BackendDispatchBoundary.requireTargetCoreBackend(backendDispatchValue);
-			return TargetCoreBackend.emitBridge(targetCoreBackend, expandedProgram, context);
-		}
-		final backendReflect:Dynamic = backendDispatchValue;
-		final emitFn = Reflect.field(backendReflect, "emit");
-		if (emitFn == null)
-			throw "backend missing emit() method: " + backendId;
-		return cast Reflect.callMethod(backendReflect, emitFn, [expandedProgram, context]);
-		#else
-		return backend.emit(expandedProgram, context);
-		#end
+		return BackendDispatchBoundary.emit(backend, expandedProgram, context);
 	}
 
 	/**
@@ -2045,7 +2021,7 @@ class Stage3Compiler {
 				null;
 			}
 			final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, supportsBuildExecutable, definesMap);
-			emitted = emitWithBackend(backendId, backend, cast expanded, context);
+			emitted = emitWithBackend(backend, cast expanded, context);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);

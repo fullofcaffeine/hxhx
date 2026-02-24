@@ -124,7 +124,8 @@ Allowed cast boundaries (narrow and documented):
   - `GenIrBoundary.requireProgram(program:Dynamic):GenIrProgram`
 - Stage3 provider boundary seam in `hxhx.BackendProviderResolver.requireProvider(...)`
   (`cast providerContract` after `Std.downcast(..., ITargetBackendProvider)` validation).
-- Stage3 reflaxe bridge dispatch for known backend wrapper types in `emitWithBackend(...)`.
+- Stage3 backend dispatch boundary in `backend.BackendDispatchBoundary.emit(...)`
+  (typed fast-path for known wrappers + typed `IBackend.emit` fallback; no reflection fallback).
 
 Not allowed:
 
