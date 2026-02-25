@@ -127,6 +127,7 @@ Meaning in plain terms:
 
 - The replacement-ready acceptance gate is closed for the current documented scope/target policy.
 - We now have a single replacement bundle runner (`scripts/hxhx/run-replacement-ready.sh`) with `fast` and `full` profiles so M7 evidence can be reproduced with one command.
+- CI now runs `.github/workflows/gate-m7.yml` weekly in strict/full mode, and keeps manual `workflow_dispatch` controls for profile/strict overrides.
 - This status does **not** mean strict stage0-forbidden closure for all replacement claims. For strict closure status, use:
   - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 - Current reproducible local fast path on macOS:

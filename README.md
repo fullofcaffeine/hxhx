@@ -32,6 +32,7 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
 - Per-commit checks also run **Stdlib Portable Lite** (baseline contract + portable fixture suite).
 - Per-commit CI also runs a **JS oracle smoke** lane (upstream `haxe` vs `hxhx js-native` runtime output on repo-local fixtures).
 - Full upstream compatibility gates (**Gate 1/2/3**) run weekly and on manual trigger.
+- **Gate M7 (replacement bundle)** runs weekly in strict/full mode and remains manually triggerable.
 - **Stdlib Portable Full** runs nightly/manual for broader Stage0 runtime/stdlib coverage.
 - Legacy Flash/AS3 targets are intentionally unsupported.
 - `hxhx` and `reflaxe.ocaml` are usable now; parity/performance work continues.
@@ -129,7 +130,7 @@ npm run test:self-hosting-smoke
 npm run test:stage0-policy
 
 # Strict replacement-ready bundle (delegation blocked):
-HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full
+npm run test:upstream:replacement-ready:strict
 
 # Strict plugin matrix (macro libs + eval.vm API smoke + Stage3 plugin fixture):
 HXHX_PLUGIN_MATRIX_STRICT=1 npm run test:plugins:strict-matrix
@@ -184,6 +185,7 @@ For full usage and mainstream Haxe integration, see
 - **Gate 2 Lite**: quick workload smoke.
 - **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3`; optional `js-native` lane on manual runs).
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
+- **Gate M7**: curated replacement-ready bundle (`fast|full`), with weekly strict/full CI.
 - **Plugin matrix (strict)**: macro-library compatibility + eval.vm plugin API smoke + Stage3 plugin fixture checks.
 - Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
   [Testing command catalog](docs/01-getting-started/TESTING.md).

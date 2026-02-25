@@ -379,9 +379,15 @@ HXHX_M7_PROFILE=full npm run test:upstream:replacement-ready
 
 # Full bundle, strict mode (fails on skipped upstream checks)
 HXHX_M7_PROFILE=full HXHX_M7_STRICT=1 npm run test:upstream:replacement-ready
+
+# Full bundle, strict + stage0-forbidden runtime guard
+npm run test:upstream:replacement-ready:strict
 ```
 
-The manual workflow `.github/workflows/gate-m7.yml` runs the same bundle with inputs for `profile` and `strict`.
+CI cadence:
+
+- `.github/workflows/gate-m7.yml` runs weekly on Linux in strict/full mode (`HXHX_M7_PROFILE=full`, `HXHX_M7_STRICT=1`).
+- The same workflow remains manually triggerable (`workflow_dispatch`) with `profile` and `strict` inputs.
 
 ## Layers
 
