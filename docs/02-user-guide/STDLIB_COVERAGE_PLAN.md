@@ -14,6 +14,7 @@ needing OCaml knowledge, while still producing idiomatic OCaml output.
 Portable stdlib parity is tracked against the OCaml portable baseline for Haxe `4.3.7`:
 
 - baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- tiered allowlist contract: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
 - generated parity matrix: `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
 Definition used by this repo:
@@ -65,7 +66,12 @@ M11 additions are primarily validated through portable fixtures.
 For the expanded parity track:
 
 - PR-lite: `npm run test:stdlib:portable:tier1`
+  - validates the tier1 allowlist contract
+  - runs portable fixtures under strict portable policy
 - Nightly/full: `npm run test:stdlib:portable:full`
+  - validates the full baseline contract
+  - runs the tier1 lane
+  - runs expanded M6 runtime/stdlib checks
 
 Portable contract strictness policy:
 

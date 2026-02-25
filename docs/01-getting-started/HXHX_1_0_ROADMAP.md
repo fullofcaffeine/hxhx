@@ -143,6 +143,8 @@ Meaning in plain terms:
 
 - We now track portable stdlib parity against a machine-readable baseline contract:
   - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- PR-lite scoping is pinned by a tiered allowlist contract:
+  - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
 - Coverage status is generated into:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 - PR CI includes a fast stdlib parity lane; nightly/manual CI includes a broader parity lane.
@@ -183,6 +185,7 @@ Why these checks:
 - `runci-macro-stage3-display`: focused non-delegating display/Gate2 slice.
 - `ci:guards`: license/provenance/version safety checks.
 - `test:stdlib:portable:tier1`: portable stdlib baseline drift + portable fixture behavior checks.
+- `test:stdlib:portable:tier1`: tier1 allowlist validation + strict portable fixture behavior checks.
 - `hxhx:bench:kpi`: profile/plugin KPI report (compile, macro overhead, incremental, peak RSS).
 - `run-replacement-ready.sh fast`: one-command M7 fast bundle evidence.
 

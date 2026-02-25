@@ -25,6 +25,7 @@
     "guard:upstream-stdlib": "node scripts/ci/upstream-stdlib-boundary-check.js",
     "guard:stdlib-ledger": "node scripts/ci/stdlib-provenance-ledger-check.js",
     "guard:stdlib-portable-baseline": "node scripts/ci/portable-stdlib-baseline-check.js",
+    "guard:stdlib-portable-tier1-allowlist": "node scripts/ci/portable-stdlib-tier-allowlist-check.js --tier tier1",
     "guard:hx-format": "bash scripts/lint/hx_format_guard.sh",
     "release:preflight": "npm run guard:gitleaks && npm run ci:guards",
     "hooks:install": "bash scripts/install-git-hooks.sh",

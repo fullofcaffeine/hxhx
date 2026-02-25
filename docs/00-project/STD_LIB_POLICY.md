@@ -9,6 +9,7 @@ This document defines how `hxhx`/`reflaxe.ocaml` use upstream Haxe stdlib code w
 - **Non-goal:** importing upstream compiler implementation details.
 - **Portable parity baseline contract:**
   - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+  - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json` (tiered PR/nightly scope)
   - generated from upstream `vendor/haxe/std/**` using platform-agnostic + `sys` policy.
 
 ## Allowed upstream reuse
@@ -78,3 +79,5 @@ The following upstream paths are never allowed to be vendored or copied into thi
   - ensures every tracked `_std` override file has coverage in the provenance ledger.
 - `scripts/ci/portable-stdlib-baseline-check.js`
   - verifies the committed portable baseline contract matches deterministic generation from upstream std.
+- `scripts/ci/portable-stdlib-tier-allowlist-check.js`
+  - verifies tiered allowlist contract integrity (`tier1`/`tier2`) against the baseline manifest.

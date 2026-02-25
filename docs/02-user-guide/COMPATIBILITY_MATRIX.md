@@ -61,6 +61,7 @@ This table is “what we validate continuously” for the current portable surfa
 Full portable stdlib parity is tracked against:
 
 - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json` (tiered gate scope)
 - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
 | Module / Area | Status | Notes |

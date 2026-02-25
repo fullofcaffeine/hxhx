@@ -4,7 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-echo "== stdlib portable full: tier1 baseline"
+echo "== stdlib portable full: full baseline check"
+node scripts/ci/portable-stdlib-baseline-check.js
+
+echo "== stdlib portable full: tier1 contract + fixture lane"
 bash scripts/test-stdlib-portable-tier1.sh
 
 echo "== stdlib portable full: Stage0 runtime/stdlib integration set"
