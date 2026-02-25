@@ -59,10 +59,21 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - verifier summary fields
 - `ocaml_runtime_plan_report.json`
   - `profile`
-  - `selectionMode` (`full` or selective mode)
+  - `selectionMode`
+    - `full` (portable)
+    - `compiler_tracked` (metal default)
+    - `compiler_tracked_plus_token_scan_fallback` (metal debug fallback)
   - `availableModules`
+  - `trackedModules` (compiler-tracked runtime module references)
+  - `tokenScanFallbackEnabled` (`true` only when debug fallback define is enabled)
   - `selectedModules`
   - `selectedFeatures`
+
+Debug fallback define (non-default, diagnostics only):
+
+- `-D ocaml_runtime_token_scan_fallback`
+  - Keeps compiler-tracked selection as the primary source of truth.
+  - Adds legacy output token scanning as a temporary merge source for investigations.
 
 ## Metal verifier code map (common migrations)
 

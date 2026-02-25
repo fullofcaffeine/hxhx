@@ -22,6 +22,8 @@ private typedef RuntimePlanReport = {
 	final profile:String;
 	final selectionMode:String;
 	final availableModules:Array<String>;
+	final trackedModules:Array<String>;
+	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
 }
@@ -139,13 +141,35 @@ class RuntimeCopier {
 		}
 	}
 
-	static function collectMetalRuntimeModules(runtimeDir:String, outputDir:Null<String>, destSubdir:String, availableModules:Array<String>):Map<String, Bool> {
+	static function enqueueModule(moduleName:String, availableModuleSet:Map<String, Bool>, selectedModules:Map<String, Bool>, enqueue:Array<String>):Void {
+		if (moduleName == null || moduleName.length == 0)
+			return;
+		if (!availableModuleSet.exists(moduleName))
+			return;
+		if (selectedModules.exists(moduleName))
+			return;
+		selectedModules.set(moduleName, true);
+		enqueue.push(moduleName);
+	}
+
+	static function availableModuleSet(availableModules:Array<String>):Map<String, Bool> {
+		final out:Map<String, Bool> = [];
+		for (moduleName in availableModules)
+			out.set(moduleName, true);
+		return out;
+	}
+
+	static function collectMetalRuntimeModules(runtimeDir:String, availableModules:Array<String>, compilerTrackedModules:Array<String>,
+			outputDir:Null<String>, destSubdir:String, tokenScanFallbackEnabled:Bool):Map<String, Bool> {
+		final moduleSet = availableModuleSet(availableModules);
 		final selectedModules:Map<String, Bool> = [];
 		final queue:Array<String> = [];
-		selectedModules.set(RUNTIME_CORE_MODULE, true);
-		queue.push(RUNTIME_CORE_MODULE);
+		enqueueModule(RUNTIME_CORE_MODULE, moduleSet, selectedModules, queue);
+		for (moduleName in compilerTrackedModules) {
+			enqueueModule(moduleName, moduleSet, selectedModules, queue);
+		}
 
-		if (outputDir != null && outputDir.length > 0) {
+		if (tokenScanFallbackEnabled && outputDir != null && outputDir.length > 0) {
 			final outputFiles:Array<String> = [];
 			collectOutputFilesRecursive(outputDir, outputFiles);
 			outputFiles.sort(compareStrings);
@@ -189,6 +213,19 @@ class RuntimeCopier {
 		return out;
 	}
 
+	static function trackedModulesSorted(trackedModules:Array<String>, availableModules:Array<String>):Array<String> {
+		final availableSet = availableModuleSet(availableModules);
+		final selected:Map<String, Bool> = [];
+		for (moduleName in trackedModules) {
+			if (moduleName == null || moduleName.length == 0)
+				continue;
+			if (!availableSet.exists(moduleName))
+				continue;
+			selected.set(moduleName, true);
+		}
+		return mapKeysSorted(selected);
+	}
+
 	static function writeProfileReport(output:OutputManager, requested:Null<String>, normalized:String):Void {
 		final report:ProfileReport = {
 			contractVersion: 1,
@@ -204,19 +241,21 @@ class RuntimeCopier {
 	}
 
 	static function writeRuntimePlanReport(output:OutputManager, profile:String, selectionMode:String, availableModules:Array<String>,
-			selectedModules:Array<String>):Void {
+			trackedModules:Array<String>, tokenScanFallbackEnabled:Bool, selectedModules:Array<String>):Void {
 		final report:RuntimePlanReport = {
 			contractVersion: 1,
 			profile: profile,
 			selectionMode: selectionMode,
 			availableModules: availableModules,
+			trackedModules: trackedModules,
+			tokenScanFallbackEnabled: tokenScanFallbackEnabled,
 			selectedModules: selectedModules,
 			selectedFeatures: selectedModules.copy()
 		};
 		output.saveFile(RUNTIME_PLAN_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
 	}
 
-	public static function copy(output:OutputManager, destSubdir:String = "runtime"):Void {
+	public static function copy(output:OutputManager, destSubdir:String = "runtime", compilerTrackedModules:Array<String>):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
 			return;
@@ -250,12 +289,23 @@ class RuntimeCopier {
 			}
 		}
 		availableModules.sort(compareStrings);
+		final trackedModules = trackedModulesSorted(compilerTrackedModules != null ? compilerTrackedModules : [], availableModules);
 
 		final profile = currentProfile();
-		final selectionMode = profile == PROFILE_METAL ? "selective_token_scan" : "full";
+		#if macro
+		final tokenScanFallbackEnabled = haxe.macro.Context.defined("ocaml_runtime_token_scan_fallback");
+		#else
+		final tokenScanFallbackEnabled = false;
+		#end
+		final selectionMode = switch (profile) {
+			case PROFILE_METAL:
+				tokenScanFallbackEnabled ? "compiler_tracked_plus_token_scan_fallback" : "compiler_tracked";
+			case _:
+				"full";
+		};
 		final selectedModules:Map<String, Bool> = switch (profile) {
 			case PROFILE_METAL:
-				collectMetalRuntimeModules(runtimeDir, output.outputDir, destSubdir, availableModules);
+				collectMetalRuntimeModules(runtimeDir, availableModules, trackedModules, output.outputDir, destSubdir, tokenScanFallbackEnabled);
 			case _:
 				final all:Map<String, Bool> = [];
 				for (moduleName in availableModules)
@@ -264,7 +314,7 @@ class RuntimeCopier {
 		}
 		final selectedModuleList = mapKeysSorted(selectedModules);
 		writeProfileReport(output, requestedProfile(), profile);
-		writeRuntimePlanReport(output, profile, selectionMode, availableModules.copy(), selectedModuleList);
+		writeRuntimePlanReport(output, profile, selectionMode, availableModules.copy(), trackedModules, tokenScanFallbackEnabled, selectedModuleList);
 
 		for (name in runtimeFiles) {
 			final moduleName = moduleNameFromRuntimeFile(name);

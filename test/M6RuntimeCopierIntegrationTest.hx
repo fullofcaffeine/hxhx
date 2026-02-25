@@ -16,6 +16,8 @@ private typedef RuntimePlanReport = {
 	final profile:String;
 	final selectionMode:String;
 	final availableModules:Array<String>;
+	final trackedModules:Array<String>;
+	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
 }
@@ -42,13 +44,22 @@ class M6RuntimeCopierIntegrationTest {
 			throw message;
 	}
 
-	static function compileRuntimeFixture(outDir:String, profile:Null<String>):Void {
+	static function assertArrayEquals(expected:Array<String>, actual:Array<String>, label:String):Void {
+		if (expected.length != actual.length)
+			throw label + ": length mismatch";
+		for (i in 0...expected.length) {
+			if (expected[i] != actual[i])
+				throw label + ": mismatch at index " + Std.string(i) + " expected=" + expected[i] + " actual=" + actual[i];
+		}
+	}
+
+	static function compileRuntimeFixture(outDir:String, profile:Null<String>, classPath:String = "test", mainClass:String = "Main"):Void {
 		sys.FileSystem.createDirectory(outDir);
 		final args = [
 			"-cp",
-			"test",
+			classPath,
 			"-main",
-			"Main",
+			mainClass,
 			"--no-output",
 			"-lib",
 			"reflaxe.ocaml",
@@ -102,10 +113,12 @@ class M6RuntimeCopierIntegrationTest {
 		final rootOutDir = "out_ocaml_m6_runtime_" + Std.string(Std.int(Date.now().getTime()));
 		final portableOutDir = rootOutDir + "/portable";
 		final metalOutDir = rootOutDir + "/metal";
+		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
 		sys.FileSystem.createDirectory(rootOutDir);
 
 		compileRuntimeFixture(portableOutDir, null);
 		compileRuntimeFixture(metalOutDir, "metal");
+		compileRuntimeFixture(metalTokenNoiseOutDir, "metal", "test/fixtures/m6_runtime_token_noise/src", "Main");
 
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))
@@ -130,6 +143,7 @@ class M6RuntimeCopierIntegrationTest {
 		final metalProfileReport = readProfileReport(metalOutDir);
 		final portableRuntimeReport = readRuntimePlanReport(portableOutDir);
 		final metalRuntimeReport = readRuntimePlanReport(metalOutDir);
+		final metalTokenNoiseRuntimeReport = readRuntimePlanReport(metalTokenNoiseOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
@@ -163,14 +177,24 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableRuntimeReport.contractVersion == 1, "portable runtime report contract version");
 		assertTrue(portableRuntimeReport.profile == "portable", "portable runtime report profile");
 		assertTrue(portableRuntimeReport.selectionMode == "full", "portable runtime report mode");
+		assertTrue(portableRuntimeReport.tokenScanFallbackEnabled == false, "portable runtime report token-scan fallback flag");
 		assertTrue(portableRuntimeReport.selectedModules.length == portableRuntimeReport.selectedFeatures.length, "portable selected modules/features size");
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
 
 		assertTrue(metalRuntimeReport.contractVersion == 1, "metal runtime report contract version");
 		assertTrue(metalRuntimeReport.profile == "metal", "metal runtime report profile");
-		assertTrue(metalRuntimeReport.selectionMode == "selective_token_scan", "metal runtime report mode");
+		assertTrue(metalRuntimeReport.selectionMode == "compiler_tracked", "metal runtime report mode");
+		assertTrue(metalRuntimeReport.tokenScanFallbackEnabled == false, "metal runtime report token-scan fallback flag");
 		assertTrue(metalRuntimeReport.selectedModules.length == metalRuntimeReport.selectedFeatures.length, "metal selected modules/features size");
+		assertContains("\n" + metalRuntimeReport.trackedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report tracked modules include HxRuntime");
 		assertContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report includes HxRuntime");
 		assertNotContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "metal report omits HxFile");
+
+		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
+		assertTrue(metalTokenNoiseRuntimeReport.selectionMode == "compiler_tracked", "token noise report mode");
+		assertNotContains("\n" + metalTokenNoiseRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n",
+			"token noise report omits HxFile despite HxFile string tokens");
+		assertArrayEquals(metalRuntimeReport.selectedModules, metalTokenNoiseRuntimeReport.selectedModules,
+			"token noise runtime plan should match baseline metal plan");
 	}
 }

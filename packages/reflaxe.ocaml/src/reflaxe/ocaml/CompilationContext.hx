@@ -312,6 +312,30 @@ class CompilationContext {
 	 */
 	public var needsOcamlNativeMapSet:Bool = false;
 
+	/**
+		Compiler-tracked runtime module usage (`Hx*` modules).
+
+		Why:
+		- Metal profile runtime slicing must be driven by compiler intent, not free-form text scans.
+		- Emission/lowering phases register runtime modules as they are referenced in generated OCaml AST.
+		- Runtime selection then consumes this map to decide which runtime units to link.
+	**/
+	public final runtimeModuleUsage:Map<String, Bool> = [];
+
+	public function markRuntimeModule(moduleName:String):Void {
+		if (moduleName == null || moduleName.length == 0)
+			return;
+		runtimeModuleUsage.set(moduleName, true);
+	}
+
+	public function runtimeModulesSorted():Array<String> {
+		final out:Array<String> = [];
+		for (moduleName => _ in runtimeModuleUsage)
+			out.push(moduleName);
+		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
+		return out;
+	}
+
 	public function isPrimaryTypeInModule(moduleId:String, typeName:String):Bool {
 		final primary = primaryTypeNameByModule.get(moduleId);
 		return primary != null ? (primary == typeName) : OcamlNameTools.isPrimaryTypeInModule(moduleId, typeName);
