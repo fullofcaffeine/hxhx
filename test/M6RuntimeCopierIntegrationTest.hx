@@ -181,6 +181,7 @@ class M6RuntimeCopierIntegrationTest {
 		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
 		final invalidProfileOutDir = rootOutDir + "/invalid_profile";
 		final invalidRuntimeModeOutDir = rootOutDir + "/invalid_runtime_mode";
+		final noneRuntimeModeOutDir = rootOutDir + "/none_runtime_mode";
 		sys.FileSystem.createDirectory(rootOutDir);
 
 		final portableCompile = compileRuntimeFixture(portableOutDir, null);
@@ -210,6 +211,11 @@ class M6RuntimeCopierIntegrationTest {
 		final invalidRuntimeModeOutput = invalidRuntimeModeCompile.stderr + "\n" + invalidRuntimeModeCompile.stdout;
 		assertContains(invalidRuntimeModeOutput, "ocaml_runtime_mode", "invalid runtime mode should mention define");
 		assertContains(invalidRuntimeModeOutput, "full|selective", "invalid runtime mode should mention expected values");
+		final noneRuntimeModeCompile = compileRuntimeFixture(noneRuntimeModeOutDir, "portable", "test", "Main", ["ocaml_runtime_mode=none"]);
+		assertTrue(noneRuntimeModeCompile.exitCode != 0, "none runtime mode should fail fast");
+		final noneRuntimeModeOutput = noneRuntimeModeCompile.stderr + "\n" + noneRuntimeModeCompile.stdout;
+		assertContains(noneRuntimeModeOutput, "ocaml_runtime_mode", "none runtime mode should mention define");
+		assertContains(noneRuntimeModeOutput, "none is not supported", "none runtime mode should use actionable error");
 
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))

@@ -38,6 +38,11 @@ Any other value is invalid and fails fast.
 - `-D ocaml_runtime_mode=full|selective`
   - default is profile-driven (`portable => full`, `metal => selective`)
   - explicit value overrides the profile default
+  - `none` is intentionally unsupported (fail-fast) to avoid ambiguous no-runtime semantics
+  - if you need minimal runtime planning, use:
+    - `-D ocaml_runtime_mode=selective`
+    - `-D ocaml_runtime_no_infer`
+    - optional `-D ocaml_runtime_modules=...`
 - `-D ocaml_runtime_modules=HxRuntime,HxArray,...`
   - manual runtime module seed list for selective mode
 - `-D ocaml_runtime_no_infer`
@@ -69,6 +74,8 @@ Any other value is invalid and fails fast.
 Invalid values fail with an actionable message:
 
 - `invalid -D ocaml_profile=<value> (expected portable|metal)`
+- `invalid -D ocaml_runtime_mode=<value> (expected full|selective)`
+- `invalid -D ocaml_runtime_mode=none (none is not supported; use selective + ocaml_runtime_no_infer + optional ocaml_runtime_modules)`
 
 Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 
