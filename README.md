@@ -120,6 +120,8 @@ Portable stdlib parity gates:
 ```bash
 npm run test:stdlib:portable:tier1
 npm run test:stdlib:portable:full
+npm run stdlib:closure:generate
+npm run stdlib:closure:sync
 ```
 
 Self-hosting status/smoke:
@@ -212,6 +214,7 @@ For full usage and mainstream Haxe integration, see
 - [OCaml runtime capability matrix (`portable` vs `metal`)](docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md)
 - [Portable stdlib baseline contract (`4.3.7`)](docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json)
 - [Portable stdlib parity matrix](docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md)
+- [Portable stdlib closure worklist](docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json)
 - [KPI benchmark baseline](docs/benchmarks/HXHX_KPI_BASELINE.md)
 - [KPI benchmark thresholds](docs/benchmarks/HXHX_KPI_THRESHOLDS.md)
 - [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)

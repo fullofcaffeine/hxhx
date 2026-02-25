@@ -16,6 +16,16 @@ Portable stdlib parity is tracked against the OCaml portable baseline for Haxe `
 - baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
 - tiered allowlist contract: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
 - generated parity matrix: `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+- generated closure worklist: `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json`
+
+Closure-tracker workflow (M16.9):
+
+- regenerate matrix + closure worklist:
+  - `npm run stdlib:matrix:generate`
+  - `npm run stdlib:closure:generate`
+- sync closure buckets into beads under `haxe.ocaml-yfh.5`:
+  - dry-run: `node scripts/stdlib/sync-portable-closure-beads.js`
+  - apply: `npm run stdlib:closure:sync`
 
 Definition used by this repo:
 

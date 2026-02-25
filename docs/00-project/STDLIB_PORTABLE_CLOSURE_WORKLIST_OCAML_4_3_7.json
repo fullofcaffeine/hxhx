@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 1,
+  "name": "ocaml_portable_closure_worklist",
+  "haxeVersion": "4.3.7",
+  "baselineRef": "docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json",
+  "matrixRef": "docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md",
+  "parentIssueId": "haxe.ocaml-yfh.5",
+  "statusFilter": [
+    "passthrough_or_unverified",
+    "passthrough_unverified"
+  ],
+  "bucketChunkSize": 12,
+  "totals": {
+    "baselineModules": 204,
+    "missingModules": 186,
+    "bucketCount": 29
+  },
+  "missingModules": [
+    "Any",
+    "Class",
+    "DateTools",
+    "Enum",
+    "EnumValue",
+    "IntIterator",
+    "Lambda",
+    "List",
+    "Map",
+    "Reflect",
+    "Std",
+    "StdTypes",
+    "StringTools",
+    "Type",
+    "UInt",
+    "UnicodeString",
+    "Xml",
+    "haxe.CallStack",
+    "haxe.Constraints",
+    "haxe.DynamicAccess",
+    "haxe.EntryPoint",
+    "haxe.EnumFlags",
+    "haxe.EnumTools",
+    "haxe.Exception",
+    "haxe.Http",
+    "haxe.Int32",
+    "haxe.Int64",
+    "haxe.Int64Helper",
+    "haxe.Json",
+    "haxe.Log",
+    "haxe.MainLoop",
+    "haxe.NativeStackTrace",
+    "haxe.PosInfos",
+    "haxe.Resource",
+    "haxe.Rest",
+    "haxe.Serializer",
+    "haxe.SysTools",
+    "haxe.Template",
+    "haxe.Timer",
+    "haxe.Ucs2",
+    "haxe.Unserializer",
+    "haxe.Utf8",
+    "haxe.ValueException",
+    "haxe.atomic.AtomicBool",
+    "haxe.atomic.AtomicInt",
+    "haxe.atomic.AtomicObject",
+    "haxe.crypto.Adler32",
+    "haxe.crypto.Base64",
+    "haxe.crypto.BaseCode",
+    "haxe.crypto.Crc32",
+    "haxe.crypto.Hmac",
+    "haxe.crypto.Md5",
+    "haxe.crypto.Sha1",
+    "haxe.crypto.Sha224",
+    "haxe.crypto.Sha256",
+    "haxe.display.Diagnostic",
+    "haxe.display.Display",
+    "haxe.display.FsPath",
+    "haxe.display.JsonModuleTypes",
+    "haxe.display.Position",
+    "haxe.display.Protocol",
+    "haxe.display.Server",
+    "haxe.ds.ArraySort",
+    "haxe.ds.BalancedTree",
+    "haxe.ds.Either",
+    "haxe.ds.EnumValueMap",
+    "haxe.ds.GenericStack",
+    "haxe.ds.HashMap",
+    "haxe.ds.IntMap",
+    "haxe.ds.List",
+    "haxe.ds.ListSort",
+    "haxe.ds.Map",
+    "haxe.ds.ObjectMap",
+    "haxe.ds.Option",
+    "haxe.ds.ReadOnlyArray",
+    "haxe.ds.StringMap",
+    "haxe.ds.Vector",
+    "haxe.ds.WeakMap",
+    "haxe.exceptions.ArgumentException",
+    "haxe.exceptions.NotImplementedException",
+    "haxe.exceptions.PosException",
+    "haxe.extern.AsVar",
+    "haxe.extern.EitherType",
+    "haxe.extern.Rest",
+    "haxe.format.JsonParser",
+    "haxe.format.JsonPrinter",
+    "haxe.http.HttpBase",
+    "haxe.http.HttpJs",
+    "haxe.http.HttpMethod",
+    "haxe.http.HttpNodeJs",
+    "haxe.http.HttpStatus",
+    "haxe.io.ArrayBufferView",
+    "haxe.io.BufferInput",
+    "haxe.io.BytesInput",
+    "haxe.io.BytesOutput",
+    "haxe.io.Encoding",
+    "haxe.io.Eof",
+    "haxe.io.Error",
+    "haxe.io.Float32Array",
+    "haxe.io.Float64Array",
+    "haxe.io.Int32Array",
+    "haxe.io.Mime",
+    "haxe.io.Path",
+    "haxe.io.Scheme",
+    "haxe.io.StringInput",
+    "haxe.io.UInt16Array",
+    "haxe.io.UInt32Array",
+    "haxe.io.UInt8Array",
+    "haxe.iterators.ArrayIterator",
+    "haxe.iterators.ArrayKeyValueIterator",
+    "haxe.iterators.DynamicAccessIterator",
+    "haxe.iterators.DynamicAccessKeyValueIterator",
+    "haxe.iterators.HashMapKeyValueIterator",
+    "haxe.iterators.MapKeyValueIterator",
+    "haxe.iterators.RestIterator",
+    "haxe.iterators.RestKeyValueIterator",
+    "haxe.iterators.StringIterator",
+    "haxe.iterators.StringIteratorUnicode",
+    "haxe.iterators.StringKeyValueIterator",
+    "haxe.iterators.StringKeyValueIteratorUnicode",
+    "haxe.macro.CompilationServer",
+    "haxe.macro.Compiler",
+    "haxe.macro.ComplexTypeTools",
+    "haxe.macro.Context",
+    "haxe.macro.DisplayMode",
+    "haxe.macro.ExampleJSGenerator",
+    "haxe.macro.Expr",
+    "haxe.macro.ExprTools",
+    "haxe.macro.Format",
+    "haxe.macro.JSGenApi",
+    "haxe.macro.MacroStringTools",
+    "haxe.macro.MacroType",
+    "haxe.macro.PlatformConfig",
+    "haxe.macro.PositionTools",
+    "haxe.macro.Printer",
+    "haxe.macro.Tools",
+    "haxe.macro.Type",
+    "haxe.macro.TypeTools",
+    "haxe.macro.TypedExprTools",
+    "haxe.rtti.CType",
+    "haxe.rtti.Meta",
+    "haxe.rtti.Rtti",
+    "haxe.rtti.XmlParser",
+    "haxe.xml.Access",
+    "haxe.xml.Check",
+    "haxe.xml.Fast",
+    "haxe.xml.Parser",
+    "haxe.xml.Printer",
+    "haxe.zip.Compress",
+    "haxe.zip.Entry",
+    "haxe.zip.FlushMode",
+    "haxe.zip.Huffman",
+    "haxe.zip.InflateImpl",
+    "haxe.zip.Reader",
+    "haxe.zip.Tools",
+    "haxe.zip.Uncompress",
+    "haxe.zip.Writer",
+    "sys.FileStat",
+    "sys.Http",
+    "sys.db.Connection",
+    "sys.db.Mysql",
+    "sys.db.ResultSet",
+    "sys.db.Sqlite",
+    "sys.io.FileSeek",
+    "sys.net.Address",
+    "sys.net.Host",
+    "sys.net.Socket",
+    "sys.net.UdpSocket",
+    "sys.ssl.Certificate",
+    "sys.ssl.Digest",
+    "sys.ssl.DigestAlgorithm",
+    "sys.ssl.Key",
+    "sys.ssl.Socket",
+    "sys.thread.Condition",
+    "sys.thread.Deque",
+    "sys.thread.ElasticThreadPool",
+    "sys.thread.EventLoop",
+    "sys.thread.FixedThreadPool",
+    "sys.thread.IThreadPool",
+    "sys.thread.Lock",
+    "sys.thread.Mutex",
+    "sys.thread.NoEventLoopException",
+    "sys.thread.Semaphore",
+    "sys.thread.Thread",
+    "sys.thread.ThreadPoolException",
+    "sys.thread.Tls"
+  ],
+  "buckets": [
+    {
+      "bucketKey": "core-01",
+      "group": "core",
+      "modules": [
+        "Any",
+        "Class",
+        "DateTools",
+        "Enum",
+        "EnumValue",
+        "IntIterator",
+        "Lambda",
+        "List",
+        "Map",
+        "Reflect",
+        "Std",
+        "StdTypes"
+      ]
+    },
+    {
+      "bucketKey": "core-02",
+      "group": "core",
+      "modules": [
+        "StringTools",
+        "Type",
+        "UInt",
+        "UnicodeString",
+        "Xml"
+      ]
+    },
+    {
+      "bucketKey": "haxe.atomic-01",
+      "group": "haxe.atomic",
+      "modules": [
+        "haxe.atomic.AtomicBool",
+        "haxe.atomic.AtomicInt",
+        "haxe.atomic.AtomicObject"
+      ]
+    },
+    {
+      "bucketKey": "haxe.core-01",
+      "group": "haxe.core",
+      "modules": [
+        "haxe.CallStack",
+        "haxe.Constraints",
+        "haxe.DynamicAccess",
+        "haxe.EntryPoint",
+        "haxe.EnumFlags",
+        "haxe.EnumTools",
+        "haxe.Exception",
+        "haxe.Http",
+        "haxe.Int32",
+        "haxe.Int64",
+        "haxe.Int64Helper",
+        "haxe.Json"
+      ]
+    },
+    {
+      "bucketKey": "haxe.core-02",
+      "group": "haxe.core",
+      "modules": [
+        "haxe.Log",
+        "haxe.MainLoop",
+        "haxe.NativeStackTrace",
+        "haxe.PosInfos",
+        "haxe.Resource",
+        "haxe.Rest",
+        "haxe.Serializer",
+        "haxe.SysTools",
+        "haxe.Template",
+        "haxe.Timer",
+        "haxe.Ucs2",
+        "haxe.Unserializer"
+      ]
+    },
+    {
+      "bucketKey": "haxe.core-03",
+      "group": "haxe.core",
+      "modules": [
+        "haxe.Utf8",
+        "haxe.ValueException"
+      ]
+    },
+    {
+      "bucketKey": "haxe.crypto-01",
+      "group": "haxe.crypto",
+      "modules": [
+        "haxe.crypto.Adler32",
+        "haxe.crypto.Base64",
+        "haxe.crypto.BaseCode",
+        "haxe.crypto.Crc32",
+        "haxe.crypto.Hmac",
+        "haxe.crypto.Md5",
+        "haxe.crypto.Sha1",
+        "haxe.crypto.Sha224",
+        "haxe.crypto.Sha256"
+      ]
+    },
+    {
+      "bucketKey": "haxe.display-01",
+      "group": "haxe.display",
+      "modules": [
+        "haxe.display.Diagnostic",
+        "haxe.display.Display",
+        "haxe.display.FsPath",
+        "haxe.display.JsonModuleTypes",
+        "haxe.display.Position",
+        "haxe.display.Protocol",
+        "haxe.display.Server"
+      ]
+    },
+    {
+      "bucketKey": "haxe.ds-01",
+      "group": "haxe.ds",
+      "modules": [
+        "haxe.ds.ArraySort",
+        "haxe.ds.BalancedTree",
+        "haxe.ds.Either",
+        "haxe.ds.EnumValueMap",
+        "haxe.ds.GenericStack",
+        "haxe.ds.HashMap",
+        "haxe.ds.IntMap",
+        "haxe.ds.List",
+        "haxe.ds.ListSort",
+        "haxe.ds.Map",
+        "haxe.ds.ObjectMap",
+        "haxe.ds.Option"
+      ]
+    },
+    {
+      "bucketKey": "haxe.ds-02",
+      "group": "haxe.ds",
+      "modules": [
+        "haxe.ds.ReadOnlyArray",
+        "haxe.ds.StringMap",
+        "haxe.ds.Vector",
+        "haxe.ds.WeakMap"
+      ]
+    },
+    {
+      "bucketKey": "haxe.exceptions-01",
+      "group": "haxe.exceptions",
+      "modules": [
+        "haxe.exceptions.ArgumentException",
+        "haxe.exceptions.NotImplementedException",
+        "haxe.exceptions.PosException"
+      ]
+    },
+    {
+      "bucketKey": "haxe.extern-01",
+      "group": "haxe.extern",
+      "modules": [
+        "haxe.extern.AsVar",
+        "haxe.extern.EitherType",
+        "haxe.extern.Rest"
+      ]
+    },
+    {
+      "bucketKey": "haxe.format-01",
+      "group": "haxe.format",
+      "modules": [
+        "haxe.format.JsonParser",
+        "haxe.format.JsonPrinter"
+      ]
+    },
+    {
+      "bucketKey": "haxe.http-01",
+      "group": "haxe.http",
+      "modules": [
+        "haxe.http.HttpBase",
+        "haxe.http.HttpJs",
+        "haxe.http.HttpMethod",
+        "haxe.http.HttpNodeJs",
+        "haxe.http.HttpStatus"
+      ]
+    },
+    {
+      "bucketKey": "haxe.io-01",
+      "group": "haxe.io",
+      "modules": [
+        "haxe.io.ArrayBufferView",
+        "haxe.io.BufferInput",
+        "haxe.io.BytesInput",
+        "haxe.io.BytesOutput",
+        "haxe.io.Encoding",
+        "haxe.io.Eof",
+        "haxe.io.Error",
+        "haxe.io.Float32Array",
+        "haxe.io.Float64Array",
+        "haxe.io.Int32Array",
+        "haxe.io.Mime",
+        "haxe.io.Path"
+      ]
+    },
+    {
+      "bucketKey": "haxe.io-02",
+      "group": "haxe.io",
+      "modules": [
+        "haxe.io.Scheme",
+        "haxe.io.StringInput",
+        "haxe.io.UInt16Array",
+        "haxe.io.UInt32Array",
+        "haxe.io.UInt8Array"
+      ]
+    },
+    {
+      "bucketKey": "haxe.iterators-01",
+      "group": "haxe.iterators",
+      "modules": [
+        "haxe.iterators.ArrayIterator",
+        "haxe.iterators.ArrayKeyValueIterator",
+        "haxe.iterators.DynamicAccessIterator",
+        "haxe.iterators.DynamicAccessKeyValueIterator",
+        "haxe.iterators.HashMapKeyValueIterator",
+        "haxe.iterators.MapKeyValueIterator",
+        "haxe.iterators.RestIterator",
+        "haxe.iterators.RestKeyValueIterator",
+        "haxe.iterators.StringIterator",
+        "haxe.iterators.StringIteratorUnicode",
+        "haxe.iterators.StringKeyValueIterator",
+        "haxe.iterators.StringKeyValueIteratorUnicode"
+      ]
+    },
+    {
+      "bucketKey": "haxe.macro-01",
+      "group": "haxe.macro",
+      "modules": [
+        "haxe.macro.CompilationServer",
+        "haxe.macro.Compiler",
+        "haxe.macro.ComplexTypeTools",
+        "haxe.macro.Context",
+        "haxe.macro.DisplayMode",
+        "haxe.macro.ExampleJSGenerator",
+        "haxe.macro.Expr",
+        "haxe.macro.ExprTools",
+        "haxe.macro.Format",
+        "haxe.macro.JSGenApi",
+        "haxe.macro.MacroStringTools",
+        "haxe.macro.MacroType"
+      ]
+    },
+    {
+      "bucketKey": "haxe.macro-02",
+      "group": "haxe.macro",
+      "modules": [
+        "haxe.macro.PlatformConfig",
+        "haxe.macro.PositionTools",
+        "haxe.macro.Printer",
+        "haxe.macro.Tools",
+        "haxe.macro.Type",
+        "haxe.macro.TypeTools",
+        "haxe.macro.TypedExprTools"
+      ]
+    },
+    {
+      "bucketKey": "haxe.rtti-01",
+      "group": "haxe.rtti",
+      "modules": [
+        "haxe.rtti.CType",
+        "haxe.rtti.Meta",
+        "haxe.rtti.Rtti",
+        "haxe.rtti.XmlParser"
+      ]
+    },
+    {
+      "bucketKey": "haxe.xml-01",
+      "group": "haxe.xml",
+      "modules": [
+        "haxe.xml.Access",
+        "haxe.xml.Check",
+        "haxe.xml.Fast",
+        "haxe.xml.Parser",
+        "haxe.xml.Printer"
+      ]
+    },
+    {
+      "bucketKey": "haxe.zip-01",
+      "group": "haxe.zip",
+      "modules": [
+        "haxe.zip.Compress",
+        "haxe.zip.Entry",
+        "haxe.zip.FlushMode",
+        "haxe.zip.Huffman",
+        "haxe.zip.InflateImpl",
+        "haxe.zip.Reader",
+        "haxe.zip.Tools",
+        "haxe.zip.Uncompress",
+        "haxe.zip.Writer"
+      ]
+    },
+    {
+      "bucketKey": "sys.core-01",
+      "group": "sys.core",
+      "modules": [
+        "sys.FileStat",
+        "sys.Http"
+      ]
+    },
+    {
+      "bucketKey": "sys.db-01",
+      "group": "sys.db",
+      "modules": [
+        "sys.db.Connection",
+        "sys.db.Mysql",
+        "sys.db.ResultSet",
+        "sys.db.Sqlite"
+      ]
+    },
+    {
+      "bucketKey": "sys.io-01",
+      "group": "sys.io",
+      "modules": [
+        "sys.io.FileSeek"
+      ]
+    },
+    {
+      "bucketKey": "sys.net-01",
+      "group": "sys.net",
+      "modules": [
+        "sys.net.Address",
+        "sys.net.Host",
+        "sys.net.Socket",
+        "sys.net.UdpSocket"
+      ]
+    },
+    {
+      "bucketKey": "sys.ssl-01",
+      "group": "sys.ssl",
+      "modules": [
+        "sys.ssl.Certificate",
+        "sys.ssl.Digest",
+        "sys.ssl.DigestAlgorithm",
+        "sys.ssl.Key",
+        "sys.ssl.Socket"
+      ]
+    },
+    {
+      "bucketKey": "sys.thread-01",
+      "group": "sys.thread",
+      "modules": [
+        "sys.thread.Condition",
+        "sys.thread.Deque",
+        "sys.thread.ElasticThreadPool",
+        "sys.thread.EventLoop",
+        "sys.thread.FixedThreadPool",
+        "sys.thread.IThreadPool",
+        "sys.thread.Lock",
+        "sys.thread.Mutex",
+        "sys.thread.NoEventLoopException",
+        "sys.thread.Semaphore",
+        "sys.thread.Thread",
+        "sys.thread.ThreadPoolException"
+      ]
+    },
+    {
+      "bucketKey": "sys.thread-02",
+      "group": "sys.thread",
+      "modules": [
+        "sys.thread.Tls"
+      ]
+    }
+  ]
+}

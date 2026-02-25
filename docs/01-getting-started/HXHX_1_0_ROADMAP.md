@@ -148,6 +148,10 @@ Meaning in plain terms:
   - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
 - Coverage status is generated into:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+- Missing-module closure is generated deterministically and auto-split into closure buckets under `haxe.ocaml-yfh.5`:
+  - `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json`
+  - `npm run stdlib:closure:generate`
+  - `npm run stdlib:closure:sync`
 - PR CI includes a fast stdlib parity lane; nightly/manual CI includes a broader parity lane.
 - Portability lanes run with `ocaml_portable_native_surface=error` (local default remains `warn`).
 - 1.0 is not considered complete until baseline portable stdlib parity closure is green for the declared scope.
