@@ -146,6 +146,9 @@ Meaning in plain terms:
   - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
 - PR-lite scoping is pinned by a tiered allowlist contract:
   - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
+- Matrix statuses are driven by explicit evidence taxonomy:
+  - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
+  - statuses: `override|runtime_backed|lowering_intrinsic|passthrough_verified|passthrough_unverified`
 - Coverage status is generated into:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 - Missing-module closure is generated deterministically and auto-split into closure buckets under `haxe.ocaml-yfh.5`:

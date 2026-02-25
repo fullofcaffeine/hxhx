@@ -213,6 +213,7 @@ For full usage and mainstream Haxe integration, see
 - [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
 - [OCaml runtime capability matrix (`portable` vs `metal`)](docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md)
 - [Portable stdlib baseline contract (`4.3.7`)](docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json)
+- [Portable stdlib evidence map (`4.3.7`)](docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json)
 - [Portable stdlib parity matrix](docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md)
 - [Portable stdlib closure worklist](docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json)
 - [KPI benchmark baseline](docs/benchmarks/HXHX_KPI_BASELINE.md)

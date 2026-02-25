@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 186,
-    "bucketCount": 29
+    "missingModules": 174,
+    "bucketCount": 28
   },
   "missingModules": [
     "Any",
@@ -24,12 +24,9 @@
     "IntIterator",
     "Lambda",
     "List",
-    "Map",
-    "Reflect",
     "Std",
     "StdTypes",
     "StringTools",
-    "Type",
     "UInt",
     "UnicodeString",
     "Xml",
@@ -41,7 +38,6 @@
     "haxe.EnumTools",
     "haxe.Exception",
     "haxe.Http",
-    "haxe.Int32",
     "haxe.Int64",
     "haxe.Int64Helper",
     "haxe.Json",
@@ -84,14 +80,10 @@
     "haxe.ds.EnumValueMap",
     "haxe.ds.GenericStack",
     "haxe.ds.HashMap",
-    "haxe.ds.IntMap",
     "haxe.ds.List",
     "haxe.ds.ListSort",
-    "haxe.ds.Map",
-    "haxe.ds.ObjectMap",
     "haxe.ds.Option",
     "haxe.ds.ReadOnlyArray",
-    "haxe.ds.StringMap",
     "haxe.ds.Vector",
     "haxe.ds.WeakMap",
     "haxe.exceptions.ArgumentException",
@@ -112,13 +104,10 @@
     "haxe.io.BytesInput",
     "haxe.io.BytesOutput",
     "haxe.io.Encoding",
-    "haxe.io.Eof",
-    "haxe.io.Error",
     "haxe.io.Float32Array",
     "haxe.io.Float64Array",
     "haxe.io.Int32Array",
     "haxe.io.Mime",
-    "haxe.io.Path",
     "haxe.io.Scheme",
     "haxe.io.StringInput",
     "haxe.io.UInt16Array",
@@ -173,7 +162,6 @@
     "haxe.zip.Tools",
     "haxe.zip.Uncompress",
     "haxe.zip.Writer",
-    "sys.FileStat",
     "sys.Http",
     "sys.db.Connection",
     "sys.db.Mysql",
@@ -216,19 +204,16 @@
         "IntIterator",
         "Lambda",
         "List",
-        "Map",
-        "Reflect",
         "Std",
-        "StdTypes"
+        "StdTypes",
+        "StringTools",
+        "UInt"
       ]
     },
     {
       "bucketKey": "core-02",
       "group": "core",
       "modules": [
-        "StringTools",
-        "Type",
-        "UInt",
         "UnicodeString",
         "Xml"
       ]
@@ -254,17 +239,16 @@
         "haxe.EnumTools",
         "haxe.Exception",
         "haxe.Http",
-        "haxe.Int32",
         "haxe.Int64",
         "haxe.Int64Helper",
-        "haxe.Json"
+        "haxe.Json",
+        "haxe.Log"
       ]
     },
     {
       "bucketKey": "haxe.core-02",
       "group": "haxe.core",
       "modules": [
-        "haxe.Log",
         "haxe.MainLoop",
         "haxe.NativeStackTrace",
         "haxe.PosInfos",
@@ -275,14 +259,14 @@
         "haxe.Template",
         "haxe.Timer",
         "haxe.Ucs2",
-        "haxe.Unserializer"
+        "haxe.Unserializer",
+        "haxe.Utf8"
       ]
     },
     {
       "bucketKey": "haxe.core-03",
       "group": "haxe.core",
       "modules": [
-        "haxe.Utf8",
         "haxe.ValueException"
       ]
     },
@@ -324,20 +308,10 @@
         "haxe.ds.EnumValueMap",
         "haxe.ds.GenericStack",
         "haxe.ds.HashMap",
-        "haxe.ds.IntMap",
         "haxe.ds.List",
         "haxe.ds.ListSort",
-        "haxe.ds.Map",
-        "haxe.ds.ObjectMap",
-        "haxe.ds.Option"
-      ]
-    },
-    {
-      "bucketKey": "haxe.ds-02",
-      "group": "haxe.ds",
-      "modules": [
+        "haxe.ds.Option",
         "haxe.ds.ReadOnlyArray",
-        "haxe.ds.StringMap",
         "haxe.ds.Vector",
         "haxe.ds.WeakMap"
       ]
@@ -388,22 +362,19 @@
         "haxe.io.BytesInput",
         "haxe.io.BytesOutput",
         "haxe.io.Encoding",
-        "haxe.io.Eof",
-        "haxe.io.Error",
         "haxe.io.Float32Array",
         "haxe.io.Float64Array",
         "haxe.io.Int32Array",
         "haxe.io.Mime",
-        "haxe.io.Path"
+        "haxe.io.Scheme",
+        "haxe.io.StringInput",
+        "haxe.io.UInt16Array"
       ]
     },
     {
       "bucketKey": "haxe.io-02",
       "group": "haxe.io",
       "modules": [
-        "haxe.io.Scheme",
-        "haxe.io.StringInput",
-        "haxe.io.UInt16Array",
         "haxe.io.UInt32Array",
         "haxe.io.UInt8Array"
       ]
@@ -497,7 +468,6 @@
       "bucketKey": "sys.core-01",
       "group": "sys.core",
       "modules": [
-        "sys.FileStat",
         "sys.Http"
       ]
     },

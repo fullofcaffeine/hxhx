@@ -2,214 +2,215 @@
 
 Generated from:
 - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `18` overrides, `0` runtime-backed, `186` passthrough/unverified.
+Summary: `204` modules total, `18` overrides, `2` runtime-backed, `5` lowering-intrinsic, `5` passthrough-verified, `174` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
-| `Any` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `Any` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `Array` | `override` | packages/reflaxe.ocaml/std/_std/Array.hx |
-| `Class` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `Class` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `Date` | `override` | packages/reflaxe.ocaml/std/_std/Date.hx |
-| `DateTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `DateTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `EReg` | `override` | packages/reflaxe.ocaml/std/_std/EReg.hx |
-| `Enum` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `EnumValue` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `IntIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `Lambda` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `List` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `Map` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `Enum` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `EnumValue` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `IntIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Lambda` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `List` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
 | `Math` | `override` | packages/reflaxe.ocaml/std/_std/Math.hx |
-| `Reflect` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `Std` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `StdTypes` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `Reflect` | `passthrough_verified` | test/portable/fixtures/reflect_call_method_basic/src/Main.hx; test/portable/fixtures/reflect_dynamic_fields/src/Main.hx |
+| `Std` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `StdTypes` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `String` | `override` | packages/reflaxe.ocaml/std/_std/String.hx |
 | `StringBuf` | `override` | packages/reflaxe.ocaml/std/_std/StringBuf.hx |
-| `StringTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `StringTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `Sys` | `override` | packages/reflaxe.ocaml/std/_std/Sys.hx |
-| `Type` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `UInt` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `UnicodeString` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `Xml` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.CallStack` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Constraints` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.DynamicAccess` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.EntryPoint` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.EnumFlags` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.EnumTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Exception` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Http` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Int32` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Int64` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Int64Helper` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Json` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Log` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.MainLoop` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.NativeStackTrace` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.PosInfos` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Resource` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Rest` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Serializer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.SysTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Template` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Timer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Ucs2` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Unserializer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.Utf8` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ValueException` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.atomic.AtomicBool` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.atomic.AtomicInt` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.atomic.AtomicObject` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Adler32` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Base64` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.BaseCode` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Crc32` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Hmac` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Md5` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Sha1` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Sha224` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.crypto.Sha256` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.Diagnostic` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.Display` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.FsPath` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.JsonModuleTypes` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.Position` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.Protocol` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.display.Server` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.ArraySort` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.BalancedTree` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.Either` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.EnumValueMap` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.GenericStack` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.HashMap` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.IntMap` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.List` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.ListSort` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.Map` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.ObjectMap` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.Option` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.ReadOnlyArray` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.StringMap` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.Vector` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.ds.WeakMap` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.exceptions.ArgumentException` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.exceptions.NotImplementedException` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.exceptions.PosException` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.extern.AsVar` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.extern.EitherType` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.extern.Rest` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.format.JsonParser` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.format.JsonPrinter` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.http.HttpBase` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.http.HttpJs` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.http.HttpMethod` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.http.HttpNodeJs` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.http.HttpStatus` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.ArrayBufferView` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.BufferInput` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `Type` | `passthrough_verified` | test/portable/fixtures/type_getclass_basic/src/Main.hx; test/portable/fixtures/type_reflection_basic/src/Main.hx |
+| `UInt` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `UnicodeString` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Xml` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.CallStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Constraints` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.DynamicAccess` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.EntryPoint` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.EnumFlags` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.EnumTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Exception` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Http` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Int32` | `passthrough_verified` | test/portable/fixtures/int32_semantics/src/Main.hx |
+| `haxe.Int64` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Int64Helper` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Json` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Log` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.MainLoop` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.NativeStackTrace` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.PosInfos` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Resource` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Rest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Serializer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.SysTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Template` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Timer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Ucs2` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Unserializer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Utf8` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ValueException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.atomic.AtomicBool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.atomic.AtomicInt` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.atomic.AtomicObject` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Adler32` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Base64` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.BaseCode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Crc32` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Hmac` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Md5` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Sha1` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Sha224` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Sha256` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.Diagnostic` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.Display` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.FsPath` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.JsonModuleTypes` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.Position` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.Protocol` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.Server` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.ArraySort` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.BalancedTree` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.Either` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.EnumValueMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.GenericStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.HashMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.IntMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.List` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.ListSort` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.ObjectMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.Option` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.ReadOnlyArray` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.StringMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
+| `haxe.ds.Vector` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.WeakMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.exceptions.ArgumentException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.exceptions.NotImplementedException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.exceptions.PosException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.extern.AsVar` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.extern.EitherType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.extern.Rest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.format.JsonParser` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.format.JsonPrinter` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.http.HttpBase` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.http.HttpJs` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.http.HttpMethod` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.http.HttpNodeJs` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.http.HttpStatus` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.ArrayBufferView` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.BufferInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.Bytes` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx |
 | `haxe.io.BytesBuffer` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesBuffer.hx |
 | `haxe.io.BytesData` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesData.hx |
-| `haxe.io.BytesInput` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.BytesOutput` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.Encoding` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.Eof` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.Error` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `haxe.io.BytesInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.BytesOutput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Encoding` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Eof` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
+| `haxe.io.Error` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
 | `haxe.io.FPHelper` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/FPHelper.hx |
-| `haxe.io.Float32Array` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.Float64Array` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `haxe.io.Float32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Float64Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.Input` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Input.hx |
-| `haxe.io.Int32Array` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.Mime` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `haxe.io.Int32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Mime` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.Output` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Output.hx |
-| `haxe.io.Path` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.Scheme` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.StringInput` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.UInt16Array` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.UInt32Array` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.io.UInt8Array` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.ArrayIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.ArrayKeyValueIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.DynamicAccessIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.DynamicAccessKeyValueIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.HashMapKeyValueIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.MapKeyValueIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.RestIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.RestKeyValueIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.StringIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.StringIteratorUnicode` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.StringKeyValueIterator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.iterators.StringKeyValueIteratorUnicode` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.CompilationServer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Compiler` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.ComplexTypeTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Context` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.DisplayMode` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.ExampleJSGenerator` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Expr` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.ExprTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Format` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.JSGenApi` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.MacroStringTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.MacroType` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.PlatformConfig` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.PositionTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Printer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Tools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.Type` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.TypeTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.macro.TypedExprTools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.rtti.CType` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.rtti.Meta` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.rtti.Rtti` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.rtti.XmlParser` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.xml.Access` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.xml.Check` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.xml.Fast` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.xml.Parser` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.xml.Printer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Compress` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Entry` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.FlushMode` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Huffman` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.InflateImpl` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Reader` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Tools` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Uncompress` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `haxe.zip.Writer` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.FileStat` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `haxe.io.Path` | `passthrough_verified` | test/portable/fixtures/path_basic/src/Main.hx |
+| `haxe.io.Scheme` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.StringInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.UInt16Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.UInt32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.UInt8Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.ArrayIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.ArrayKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.DynamicAccessIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.DynamicAccessKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.HashMapKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.MapKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.RestIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.RestKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.StringIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.StringIteratorUnicode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.StringKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.StringKeyValueIteratorUnicode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.CompilationServer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Compiler` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.ComplexTypeTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Context` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.DisplayMode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.ExampleJSGenerator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Expr` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.ExprTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Format` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.JSGenApi` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.MacroStringTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.MacroType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.PlatformConfig` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.PositionTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Printer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Tools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.Type` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.TypeTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.TypedExprTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.rtti.CType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.rtti.Meta` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.rtti.Rtti` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.rtti.XmlParser` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.xml.Access` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.xml.Check` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.xml.Fast` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.xml.Parser` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.xml.Printer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Compress` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Entry` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.FlushMode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Huffman` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.InflateImpl` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Reader` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Tools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Uncompress` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Writer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.FileStat` | `passthrough_verified` | test/portable/fixtures/file_stat_basic/src/Main.hx |
 | `sys.FileSystem` | `override` | packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx |
-| `sys.Http` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.db.Connection` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.db.Mysql` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.db.ResultSet` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.db.Sqlite` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `sys.Http` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.db.Connection` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.db.Mysql` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.db.ResultSet` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.db.Sqlite` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.io.File` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/File.hx |
 | `sys.io.FileInput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileInput.hx |
 | `sys.io.FileOutput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx |
-| `sys.io.FileSeek` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `sys.io.FileSeek` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.io.Process` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/Process.hx |
-| `sys.net.Address` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.net.Host` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.net.Socket` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.net.UdpSocket` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.ssl.Certificate` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.ssl.Digest` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.ssl.DigestAlgorithm` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.ssl.Key` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.ssl.Socket` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Condition` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Deque` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.ElasticThreadPool` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.EventLoop` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.FixedThreadPool` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.IThreadPool` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Lock` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Mutex` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.NoEventLoopException` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Semaphore` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Thread` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.ThreadPoolException` | `passthrough_or_unverified` | upstream std module, no local override yet |
-| `sys.thread.Tls` | `passthrough_or_unverified` | upstream std module, no local override yet |
+| `sys.net.Address` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.net.Host` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.net.Socket` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.net.UdpSocket` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.ssl.Certificate` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.ssl.Digest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.ssl.DigestAlgorithm` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.ssl.Key` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.ssl.Socket` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Condition` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Deque` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.ElasticThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.EventLoop` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.FixedThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.IThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Lock` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Mutex` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.NoEventLoopException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Semaphore` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Thread` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.ThreadPoolException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Tls` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 

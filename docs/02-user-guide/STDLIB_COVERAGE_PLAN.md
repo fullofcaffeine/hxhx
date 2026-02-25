@@ -33,6 +33,18 @@ Definition used by this repo:
   - explicit override/runtime/lowering support, or
   - validated passthrough behavior with fixture/oracle evidence.
 
+Parity matrix taxonomy (explicit, machine-comparable):
+
+- `override`: module has a tracked `_std` override in `packages/reflaxe.ocaml/std/_std/**`.
+- `runtime_backed`: module behavior is backed by runtime implementation evidence.
+- `lowering_intrinsic`: module behavior is handled directly by backend lowering/intrinsics.
+- `passthrough_verified`: no local override, but behavior is verified with explicit fixture/oracle evidence.
+- `passthrough_unverified`: module currently relies on upstream passthrough with no explicit evidence yet.
+
+Evidence source for non-override statuses:
+
+- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
+
 ## Current priority modules
 
 ### Core runtime-backed types

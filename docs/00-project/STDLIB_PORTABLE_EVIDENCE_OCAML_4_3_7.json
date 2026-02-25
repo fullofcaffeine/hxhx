@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "name": "ocaml_portable_stdlib_evidence",
+  "haxeVersion": "4.3.7",
+  "statusEvidence": {
+    "runtime_backed": [
+      {
+        "module": "haxe.io.Eof",
+        "evidence": [
+          "packages/reflaxe.ocaml/std/runtime/HxInput.ml"
+        ]
+      },
+      {
+        "module": "haxe.io.Error",
+        "evidence": [
+          "packages/reflaxe.ocaml/std/runtime/HxInput.ml"
+        ]
+      }
+    ],
+    "lowering_intrinsic": [
+      {
+        "module": "Map",
+        "evidence": [
+          "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.Map",
+        "evidence": [
+          "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.IntMap",
+        "evidence": [
+          "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.StringMap",
+        "evidence": [
+          "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.ObjectMap",
+        "evidence": [
+          "packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx"
+        ]
+      }
+    ],
+    "passthrough_verified": [
+      {
+        "module": "Reflect",
+        "evidence": [
+          "test/portable/fixtures/reflect_call_method_basic/src/Main.hx",
+          "test/portable/fixtures/reflect_dynamic_fields/src/Main.hx"
+        ]
+      },
+      {
+        "module": "Type",
+        "evidence": [
+          "test/portable/fixtures/type_getclass_basic/src/Main.hx",
+          "test/portable/fixtures/type_reflection_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Int32",
+        "evidence": [
+          "test/portable/fixtures/int32_semantics/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Path",
+        "evidence": [
+          "test/portable/fixtures/path_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.FileStat",
+        "evidence": [
+          "test/portable/fixtures/file_stat_basic/src/Main.hx"
+        ]
+      }
+    ]
+  }
+}

@@ -62,7 +62,12 @@ Full portable stdlib parity is tracked against:
 
 - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
 - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json` (tiered gate scope)
+- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json` (runtime/lowering/passthrough evidence)
 - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+
+Matrix status taxonomy:
+
+- `override` | `runtime_backed` | `lowering_intrinsic` | `passthrough_verified` | `passthrough_unverified`
 
 | Module / Area | Status | Notes |
 |---|---:|---|

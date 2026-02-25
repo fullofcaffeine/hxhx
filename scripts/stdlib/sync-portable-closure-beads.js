@@ -66,19 +66,13 @@ function main() {
 	}
 
 	let createdCount = 0
+	let updatedCount = 0
 	let existingCount = 0
 	const expectedRefs = new Set()
 
 	for (const bucket of worklist.buckets) {
 		const externalRef = `m16-closure:${bucket.bucketKey}`
 		expectedRefs.add(externalRef)
-		const existing = existingByExternalRef.get(externalRef)
-		if (existing != null) {
-			existingCount += 1
-			console.log(`[stdlib-closure-sync] keep ${existing.id} (${externalRef})`)
-			continue
-		}
-
 		const title = `M16.5 closure bucket ${bucket.bucketKey} (${bucket.modules.length} modules)`
 		const description = buildDescription(bucket)
 		const acceptance = [
@@ -86,6 +80,36 @@ function main() {
 			'- Parity matrix entries for these modules are no longer unverified',
 			'- Portable strict lane remains green in CI',
 		].join('\\n')
+		const existing = existingByExternalRef.get(externalRef)
+		if (existing != null) {
+			existingCount += 1
+			const needsUpdate =
+				existing.title !== title ||
+				existing.description !== description ||
+				existing.acceptance_criteria !== acceptance
+			if (needsUpdate) {
+				if (applyChanges) {
+					runCommand('bd', [
+						'update',
+						existing.id,
+						'--title',
+						title,
+						'--description',
+						description,
+						'--acceptance',
+						acceptance,
+					])
+					updatedCount += 1
+					console.log(`[stdlib-closure-sync] updated ${existing.id} (${externalRef})`)
+				} else {
+					console.log(`[stdlib-closure-sync] would update ${existing.id} (${externalRef})`)
+				}
+			} else {
+				console.log(`[stdlib-closure-sync] keep ${existing.id} (${externalRef})`)
+			}
+			continue
+		}
+
 		const args = [
 			'create',
 			title,
@@ -130,7 +154,7 @@ function main() {
 	}
 
 	console.log(
-		`[stdlib-closure-sync] summary: ${worklist.buckets.length} buckets, ${existingCount} existing, ${createdCount} created${
+		`[stdlib-closure-sync] summary: ${worklist.buckets.length} buckets, ${existingCount} existing, ${updatedCount} updated, ${createdCount} created${
 			applyChanges ? '' : ' (dry-run)'
 		}`
 	)
