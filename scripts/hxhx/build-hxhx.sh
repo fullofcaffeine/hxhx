@@ -8,10 +8,10 @@ HXHX_STAGE0_KEEP_REPO_SERVER="${HXHX_STAGE0_KEEP_REPO_SERVER:-0}"
 HXHX_FORCE_STAGE0="${HXHX_FORCE_STAGE0:-0}"
 HXHX_FORBID_STAGE0="${HXHX_FORBID_STAGE0:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
-HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
-HXHX_STAGE0_PROFILE_DETAIL="${HXHX_STAGE0_PROFILE_DETAIL:-0}"
-HXHX_STAGE0_PROFILE_CLASS="${HXHX_STAGE0_PROFILE_CLASS:-}"
-HXHX_STAGE0_PROFILE_FIELD="${HXHX_STAGE0_PROFILE_FIELD:-}"
+HXHX_STAGE0_TELEMETRY="${HXHX_STAGE0_TELEMETRY:-0}"
+HXHX_STAGE0_TELEMETRY_DETAIL="${HXHX_STAGE0_TELEMETRY_DETAIL:-0}"
+HXHX_STAGE0_TELEMETRY_CLASS="${HXHX_STAGE0_TELEMETRY_CLASS:-}"
+HXHX_STAGE0_TELEMETRY_FIELD="${HXHX_STAGE0_TELEMETRY_FIELD:-}"
 HXHX_STAGE0_OCAML_BUILD="${HXHX_STAGE0_OCAML_BUILD:-byte}"
 HXHX_STAGE0_PREFER_NATIVE="${HXHX_STAGE0_PREFER_NATIVE:-0}"
 HXHX_STAGE0_TIMES="${HXHX_STAGE0_TIMES:-0}"
@@ -389,17 +389,17 @@ resolve_stage0_connect
   if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
     haxe_args+=(-D reflaxe_ocaml_progress)
   fi
-  if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_profile)
+  if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_telemetry)
   fi
-  if [ "$HXHX_STAGE0_PROFILE_DETAIL" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_profile_detail)
+  if [ "$HXHX_STAGE0_TELEMETRY_DETAIL" = "1" ]; then
+    haxe_args+=(-D reflaxe_ocaml_telemetry_detail)
   fi
-  if [ -n "$HXHX_STAGE0_PROFILE_CLASS" ]; then
-    haxe_args+=(-D "reflaxe_ocaml_profile_class=$HXHX_STAGE0_PROFILE_CLASS")
+  if [ -n "$HXHX_STAGE0_TELEMETRY_CLASS" ]; then
+    haxe_args+=(-D "reflaxe_ocaml_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS")
   fi
-  if [ -n "$HXHX_STAGE0_PROFILE_FIELD" ]; then
-    haxe_args+=(-D "reflaxe_ocaml_profile_field=$HXHX_STAGE0_PROFILE_FIELD")
+  if [ -n "$HXHX_STAGE0_TELEMETRY_FIELD" ]; then
+    haxe_args+=(-D "reflaxe_ocaml_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD")
   fi
   if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
     haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
@@ -558,17 +558,17 @@ resolve_stage0_connect
       if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
         haxe_args+=(-D reflaxe_ocaml_progress)
       fi
-      if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
-        haxe_args+=(-D reflaxe_ocaml_profile)
+      if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
+        haxe_args+=(-D reflaxe_ocaml_telemetry)
       fi
-      if [ "$HXHX_STAGE0_PROFILE_DETAIL" = "1" ]; then
-        haxe_args+=(-D reflaxe_ocaml_profile_detail)
+      if [ "$HXHX_STAGE0_TELEMETRY_DETAIL" = "1" ]; then
+        haxe_args+=(-D reflaxe_ocaml_telemetry_detail)
       fi
-      if [ -n "$HXHX_STAGE0_PROFILE_CLASS" ]; then
-        haxe_args+=(-D "reflaxe_ocaml_profile_class=$HXHX_STAGE0_PROFILE_CLASS")
+      if [ -n "$HXHX_STAGE0_TELEMETRY_CLASS" ]; then
+        haxe_args+=(-D "reflaxe_ocaml_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS")
       fi
-      if [ -n "$HXHX_STAGE0_PROFILE_FIELD" ]; then
-        haxe_args+=(-D "reflaxe_ocaml_profile_field=$HXHX_STAGE0_PROFILE_FIELD")
+      if [ -n "$HXHX_STAGE0_TELEMETRY_FIELD" ]; then
+        haxe_args+=(-D "reflaxe_ocaml_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD")
       fi
       if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
         haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)

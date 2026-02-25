@@ -69,7 +69,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 		What
 		- If either define is set:
 		  - `-D reflaxe_ocaml_progress`
-		  - `-D reflaxe_ocaml_profile`
+		  - `-D reflaxe_ocaml_telemetry`
 		  we emit periodic `Context.warning(...)` messages with counts + elapsed time.
 
 		Notes
@@ -127,7 +127,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			return;
 		profileStartS = profileNowS();
 		profileLastS = profileStartS;
-		final msg = "reflaxe.ocaml: progress logging enabled (-D reflaxe_ocaml_progress/-D reflaxe_ocaml_profile)";
+		final msg = "reflaxe.ocaml: progress logging enabled (-D reflaxe_ocaml_progress/-D reflaxe_ocaml_telemetry)";
 		Context.warning(msg, Context.currentPos());
 		profileLogLine(msg);
 	}
@@ -199,11 +199,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 		instance = this;
 
 		#if macro
-		profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_profile");
-		profileVerbose = Context.defined("reflaxe_ocaml_profile");
-		profileClassFilter = Context.definedValue("reflaxe_ocaml_profile_class");
-		profileFieldFilter = Context.definedValue("reflaxe_ocaml_profile_field");
-		profileDetail = Context.defined("reflaxe_ocaml_profile_detail");
+		profileEnabled = Context.defined("reflaxe_ocaml_progress") || Context.defined("reflaxe_ocaml_telemetry");
+		profileVerbose = Context.defined("reflaxe_ocaml_telemetry");
+		profileClassFilter = Context.definedValue("reflaxe_ocaml_telemetry_class");
+		profileFieldFilter = Context.definedValue("reflaxe_ocaml_telemetry_field");
+		profileDetail = Context.defined("reflaxe_ocaml_telemetry_detail");
 		if (profileEnabled)
 			profileInit();
 		ctx.profileLogLine = profileEnabled ? ((msg:String) -> profileLogLine(msg)) : null;

@@ -19,7 +19,7 @@
     "haxe": "haxe",
     "stdlib:baseline:generate": "node scripts/stdlib/generate-portable-baseline-ocaml.js",
     "stdlib:matrix:generate": "node scripts/stdlib/generate-portable-parity-matrix.js",
-    "ci:guards": "node scripts/ci/version-sync-check.js && node scripts/ci/upstream-stdlib-boundary-check.js && node scripts/ci/stdlib-provenance-ledger-check.js && node scripts/ci/legacy-path-check.js && node scripts/ci/local-path-check.js && node scripts/ci/provider-boundary-check.js && npm run guard:hx-format",
+    "ci:guards": "node scripts/ci/version-sync-check.js && node scripts/ci/upstream-stdlib-boundary-check.js && node scripts/ci/stdlib-provenance-ledger-check.js && node scripts/ci/legacy-path-check.js && node scripts/ci/local-path-check.js && node scripts/ci/provider-boundary-check.js && node scripts/ci/reflaxe-ocaml-telemetry-define-check.js && npm run guard:hx-format",
     "guard:gitleaks": "bash scripts/ci/gitleaks-history-check.sh",
     "guard:local-paths": "node scripts/ci/local-path-check.js",
     "guard:upstream-stdlib": "node scripts/ci/upstream-stdlib-boundary-check.js",

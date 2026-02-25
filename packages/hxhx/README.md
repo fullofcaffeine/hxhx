@@ -63,7 +63,7 @@ Notes:
   - Repo-owned server helper:
     - `bash scripts/hxhx/haxe-server.sh start|status|stop`
 - For progress logs from `reflaxe.ocaml`, set `HXHX_STAGE0_PROGRESS=1` (emits periodic `Context.warning(...)` markers during the stage0 build).
-- For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_PROFILE=1` (adds `-D reflaxe_ocaml_profile`).
+- For more detailed progress (per-class begin markers in the log file), set `HXHX_STAGE0_TELEMETRY=1` (adds `-D reflaxe_ocaml_telemetry`).
 - For profiling, set `HXHX_BOOTSTRAP_DEBUG=1` to print `--times` output.
 - For very verbose stage0 compiler logs (including typing/module loading), set `HXHX_STAGE0_VERBOSE=1` (passes `-v` to stage0 `haxe`).
 - If your terminal/CI truncates logs, you can also capture progress markers to a file by setting `REFLAXE_OCAML_PROGRESS_FILE=/path/to/log.txt`.

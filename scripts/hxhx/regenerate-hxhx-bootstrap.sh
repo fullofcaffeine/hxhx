@@ -95,10 +95,10 @@ HAXE_BIN="${HAXE_BIN:-haxe}"
 HAXE_CONNECT="${HAXE_CONNECT:-}"
 HXHX_BOOTSTRAP_DEBUG="${HXHX_BOOTSTRAP_DEBUG:-0}"
 HXHX_STAGE0_PROGRESS="${HXHX_STAGE0_PROGRESS:-0}"
-HXHX_STAGE0_PROFILE="${HXHX_STAGE0_PROFILE:-0}"
-HXHX_STAGE0_PROFILE_DETAIL="${HXHX_STAGE0_PROFILE_DETAIL:-0}"
-HXHX_STAGE0_PROFILE_CLASS="${HXHX_STAGE0_PROFILE_CLASS:-}"
-HXHX_STAGE0_PROFILE_FIELD="${HXHX_STAGE0_PROFILE_FIELD:-}"
+HXHX_STAGE0_TELEMETRY="${HXHX_STAGE0_TELEMETRY:-0}"
+HXHX_STAGE0_TELEMETRY_DETAIL="${HXHX_STAGE0_TELEMETRY_DETAIL:-0}"
+HXHX_STAGE0_TELEMETRY_CLASS="${HXHX_STAGE0_TELEMETRY_CLASS:-}"
+HXHX_STAGE0_TELEMETRY_FIELD="${HXHX_STAGE0_TELEMETRY_FIELD:-}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
@@ -456,10 +456,10 @@ compute_fingerprint() {
 		echo "haxe_version=$("$HAXE_BIN" --version 2>/dev/null || true)"
 		echo "stage0_disable_prepasses=$HXHX_STAGE0_DISABLE_PREPASSES"
 		echo "stage0_progress=$HXHX_STAGE0_PROGRESS"
-		echo "stage0_profile=$HXHX_STAGE0_PROFILE"
-		echo "stage0_profile_detail=$HXHX_STAGE0_PROFILE_DETAIL"
-		echo "stage0_profile_class=$HXHX_STAGE0_PROFILE_CLASS"
-		echo "stage0_profile_field=$HXHX_STAGE0_PROFILE_FIELD"
+		echo "stage0_telemetry=$HXHX_STAGE0_TELEMETRY"
+		echo "stage0_telemetry_detail=$HXHX_STAGE0_TELEMETRY_DETAIL"
+		echo "stage0_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS"
+		echo "stage0_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD"
 		echo "bootstrap_profile=$HXHX_BOOTSTRAP_PROFILE"
 
 		while IFS= read -r file; do
@@ -752,20 +752,20 @@ if [ "$skipped_emit" = "0" ]; then
 	if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
 		haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
 	fi
-	if [ "$HXHX_STAGE0_PROFILE_DETAIL" = "1" ]; then
-		haxe_args+=(-D reflaxe_ocaml_profile_detail)
+	if [ "$HXHX_STAGE0_TELEMETRY_DETAIL" = "1" ]; then
+		haxe_args+=(-D reflaxe_ocaml_telemetry_detail)
 	fi
-	if [ -n "$HXHX_STAGE0_PROFILE_CLASS" ]; then
-		haxe_args+=(-D "reflaxe_ocaml_profile_class=$HXHX_STAGE0_PROFILE_CLASS")
+	if [ -n "$HXHX_STAGE0_TELEMETRY_CLASS" ]; then
+		haxe_args+=(-D "reflaxe_ocaml_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS")
 	fi
-	if [ -n "$HXHX_STAGE0_PROFILE_FIELD" ]; then
-		haxe_args+=(-D "reflaxe_ocaml_profile_field=$HXHX_STAGE0_PROFILE_FIELD")
+	if [ -n "$HXHX_STAGE0_TELEMETRY_FIELD" ]; then
+		haxe_args+=(-D "reflaxe_ocaml_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD")
 	fi
 	if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
 		haxe_args+=(-D reflaxe_ocaml_progress)
 	fi
-	if [ "$HXHX_STAGE0_PROFILE" = "1" ]; then
-		haxe_args+=(-D reflaxe_ocaml_profile)
+	if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
+		haxe_args+=(-D reflaxe_ocaml_telemetry)
 	fi
 	if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
 		haxe_args+=(-D filter-times --times)

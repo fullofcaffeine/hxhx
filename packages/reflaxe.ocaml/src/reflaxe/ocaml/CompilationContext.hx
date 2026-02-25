@@ -19,7 +19,7 @@ class CompilationContext {
 
 		What
 		- When non-null, internal compiler phases may call this with concise, newline-free messages.
-		- The OCaml backend wires this up when `-D reflaxe_ocaml_profile` is enabled.
+		- The OCaml backend wires this up when `-D reflaxe_ocaml_telemetry` is enabled.
 	**/
 	public var profileLogLine:Null<String->Void> = null;
 

@@ -3090,9 +3090,9 @@ class OcamlBuilder {
 			case TSwitch(scrutinee, cases, edef):
 				#if macro
 				final log = ctx.profileLogLine;
-				final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
+				final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
 				final profMatch = log != null
-					&& Context.defined("reflaxe_ocaml_profile_detail")
+					&& Context.defined("reflaxe_ocaml_telemetry_detail")
 					&& profClass != null
 					&& ctx.currentTypeFullName != null
 					&& ctx.currentTypeFullName == profClass;
@@ -5256,9 +5256,9 @@ class OcamlBuilder {
 	function buildFunctionBodyBlock(exprs:Array<TypedExpr>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
-		final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
+		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
 		final profMatch = log != null
-			&& Context.defined("reflaxe_ocaml_profile_detail")
+			&& Context.defined("reflaxe_ocaml_telemetry_detail")
 			&& profClass != null
 			&& ctx.currentTypeFullName != null
 			&& ctx.currentTypeFullName == profClass;
@@ -5341,9 +5341,9 @@ class OcamlBuilder {
 	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr, ?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
-		final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
+		final profClass = Context.definedValue("reflaxe_ocaml_telemetry_class");
 		final profMatch = log != null
-			&& Context.defined("reflaxe_ocaml_profile_detail")
+			&& Context.defined("reflaxe_ocaml_telemetry_detail")
 			&& profClass != null
 			&& ctx.currentTypeFullName != null
 			&& ctx.currentTypeFullName == profClass;
