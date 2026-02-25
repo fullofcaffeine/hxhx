@@ -22,7 +22,7 @@ let create = fun str2 -> let self = ({ __hx_type = HxType.class_ "haxe.format.Js
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.format.JsonParser"; str = ""; pos = 0 } : t)
 
-let parseString = fun self () -> try let __fallback_ignore_124 = let start = ref (self.pos) in let buf = ref (Obj.magic (HxRuntime.hx_null) : StringBuf.t) in let prev = ref (-1) in (
+let parseString = fun self () -> try let __fallback_result_124 = let start = ref (self.pos) in let buf = ref (Obj.magic (HxRuntime.hx_null) : StringBuf.t) in let prev = ref (-1) in (
   ignore (try while true do try ignore (let tempNumber = ref 0 in (
     ignore (let s = (self.str : string) in let index = let __obj_105 = self in let __old_106 = __obj_105.pos in let __new_107 = HxInt.add __old_106 1 in (
       ignore (__obj_105.pos <- __new_107);
@@ -106,7 +106,7 @@ let parseString = fun self () -> try let __fallback_ignore_124 = let start = ref
     ignore (StringBuf.addSub (!buf) (self.str : string) (!start) (Obj.repr (HxInt.sub (HxInt.sub (self.pos) (!start)) 1)));
     raise (HxRuntime.Hx_return (Obj.repr (StringBuf.toString (!buf) ())))
   ))
-) in "" with
+) in Obj.magic __fallback_result_124 with
   | HxRuntime.Hx_return __ret_123 -> Obj.obj __ret_123
 
 let invalidChar = fun self () -> ignore ((
@@ -119,7 +119,7 @@ let invalidChar = fun self () -> ignore ((
 
 let invalidNumber = fun self (start : int) -> ignore (HxType.hx_throw_typed_rtti (Obj.repr ((("Invalid number at position " ^ string_of_int start) ^ ": ") ^ HxString.toStdString (HxString.substr (self.str) start (HxInt.sub (self.pos) start)))) ["Dynamic"; "String"])
 
-let rec parseRec = fun self () -> try let __fallback_ignore_104 = while true do ignore (let tempNumber = ref 0 in (
+let rec parseRec = fun self () -> try let __fallback_result_104 = while true do ignore (let tempNumber = ref 0 in (
   ignore (let s = (self.str : string) in let index = let __obj_7 = self in let __old_8 = __obj_7.pos in let __new_9 = HxInt.add __old_8 1 in (
     ignore (__obj_7.pos <- __new_9);
     __old_8
@@ -130,7 +130,7 @@ let rec parseRec = fun self () -> try let __fallback_ignore_104 = while true do 
   let c = !tempNumber in match c with
     | 9 | 10 | 13 | 32 -> ignore ()
     | 34 -> raise (HxRuntime.Hx_return (Obj.repr (parseString self ())))
-    | 45 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 -> ignore (let tempResult = ref (Obj.magic ()) in (
+    | 45 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 -> ignore (let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (let c2 = ref c in let start = HxInt.sub (self.pos) 1 in let minus = ref (!c2 = 45) in let digit = ref (not (!minus)) in let zero = ref (!c2 = 48) in let point = ref false in let e = ref false in let pm = ref false in let hx_end = ref false in (
         ignore (try while true do try ignore (let tempRight = ref 0 in (
           ignore (let s = (self.str : string) in let index = let __obj_11 = self in let __old_12 = __obj_11.pos in let __new_13 = HxInt.add __old_12 1 in (
@@ -423,7 +423,7 @@ let rec parseRec = fun self () -> try let __fallback_ignore_104 = while true do 
         | _ -> ignore (invalidChar self ())
     )) done)
     | _ -> ignore (invalidChar self ())
-)) done in Obj.magic () with
+)) done in Obj.magic __fallback_result_104 with
   | HxRuntime.Hx_return __ret_103 -> Obj.obj __ret_103
 
 let doParse = fun self () -> let result = parseRec self () in let c = ref 0 in (

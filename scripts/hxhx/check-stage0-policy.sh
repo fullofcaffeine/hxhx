@@ -35,20 +35,15 @@ stage3_out="$(
 echo "$stage3_out" | grep -q '^stage3=no_emit_ok$'
 
 version_log="$tmpdir/version_guard.log"
-if HXHX_FORBID_STAGE0=1 HAXE_BIN="$HAXE_SENTINEL" "$HXHX_BIN" --version >"$version_log" 2>&1; then
-  if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' "$version_log"; then
-    echo "Stage0 policy check failed: unexpected --version output." >&2
-    sed -n '1,40p' "$version_log" >&2 || true
-    exit 1
-  fi
-else
-  if grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$version_log"; then
-    echo "WARN: bootstrap snapshot does not yet include local --version stage0-free path; accepting fail-fast guard."
-  else
-    echo "Stage0 policy check failed: unexpected --version failure output." >&2
-    sed -n '1,40p' "$version_log" >&2 || true
-    exit 1
-  fi
+if ! HXHX_FORBID_STAGE0=1 HAXE_BIN="$HAXE_SENTINEL" "$HXHX_BIN" --version >"$version_log" 2>&1; then
+  echo "Stage0 policy check failed: --version must be served locally under HXHX_FORBID_STAGE0=1." >&2
+  sed -n '1,40p' "$version_log" >&2 || true
+  exit 1
+fi
+if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' "$version_log"; then
+  echo "Stage0 policy check failed: unexpected --version output." >&2
+  sed -n '1,40p' "$version_log" >&2 || true
+  exit 1
 fi
 
 if [ "$MODE" = "release" ]; then

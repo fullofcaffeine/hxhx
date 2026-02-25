@@ -20,7 +20,7 @@ let create = fun classRefs2 -> let self = ({ __hx_type = HxType.class_ "backend.
       self.locals <- __assign_3;
       __assign_3
     ));
-    let tempRight = ref (Obj.magic ()) in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if classRefs2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = HxMap.create_string () in (
         tempRight := __assign_4;
         __assign_4
@@ -39,7 +39,7 @@ let create = fun classRefs2 -> let self = ({ __hx_type = HxType.class_ "backend.
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsFunctionScope"; locals = HxMap.create_string (); used = HxMap.create_string (); classRefs = Obj.magic (); tempCounter = 0 } : t)
 
-let reserve = fun self (name : string) -> try let __fallback_ignore_11 = let candidate = ref (Backend_js_JsNameMangler.identifier (name : string) : string) in (
+let reserve = fun self (name : string) -> try let __fallback_result_11 = let candidate = ref (Backend_js_JsNameMangler.identifier (name : string) : string) in (
   ignore (if HxString.length (!candidate) = 0 then ignore (let __assign_7 = ("_" : string) in (
     candidate := __assign_7;
     __assign_7
@@ -58,23 +58,23 @@ let reserve = fun self (name : string) -> try let __fallback_ignore_11 = let can
       unique
     )
   )
-) in "" with
+) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let declareLocal = fun self (raw : string) -> try let __fallback_ignore_13 = let existing = (HxMap.get_string (self.locals) raw : string) in (
+let declareLocal = fun self (raw : string) -> try let __fallback_result_13 = let existing = (HxMap.get_string (self.locals) raw : string) in (
   ignore (if existing != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr existing)) else ());
   let safe = (reserve self (raw : string) : string) in (
     ignore (HxMap.set_string (self.locals) raw safe);
     safe
   )
-) in "" with
+) in Obj.magic __fallback_result_13 with
   | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
 let resolveLocal = fun self (raw : string) -> HxMap.get_string (self.locals) raw
 
 let resolveClassRef = fun self (raw : string) -> HxMap.get_string (self.classRefs) raw
 
-let freshTemp = fun self (prefix : string) -> try let __fallback_ignore_20 = let tempString = ref "" in (
+let freshTemp = fun self (prefix : string) -> try let __fallback_result_20 = let tempString = ref "" in (
   ignore (if prefix == Obj.magic (HxRuntime.hx_null) || HxString.length prefix = 0 then let __assign_14 = ("__tmp" : string) in (
     tempString := __assign_14;
     __assign_14
@@ -90,7 +90,7 @@ let freshTemp = fun self (prefix : string) -> try let __fallback_ignore_20 = let
     if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then raise (HxRuntime.Hx_return (Obj.repr name)) else ()
   )) done);
   reserve self ("__tmp_fallback" : string)
-) in "" with
+) in Obj.magic __fallback_result_20 with
   | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
 
 let exprScope = fun self () -> let self = self in let __anon_21 = HxAnon.create () in (

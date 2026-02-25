@@ -3559,7 +3559,7 @@ class OcamlBuilder {
 	}
 
 	function defaultValueForType(t:Type):OcamlExpr {
-		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 
 		return switch (t) {
 			case TAbstract(aRef, _):
@@ -5403,8 +5403,9 @@ class OcamlBuilder {
 			final fallbackBody = if (isVoidType(resolvedReturnType)) {
 				body;
 			} else {
-				final fallbackIgnoreName = freshTmp("fallback_ignore");
-				OcamlExpr.ELet(fallbackIgnoreName, body, defaultValueForType(resolvedReturnType), false);
+				final fallbackResultName = freshTmp("fallback_result");
+				OcamlExpr.ELet(fallbackResultName, body,
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"), [OcamlExpr.EIdent(fallbackResultName)]), false);
 			}
 			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}
@@ -5464,8 +5465,9 @@ class OcamlBuilder {
 			final fallbackBody = if (isVoidType(functionReturnType)) {
 				body;
 			} else {
-				final fallbackIgnoreName = freshTmp("fallback_ignore");
-				OcamlExpr.ELet(fallbackIgnoreName, body, defaultValueForType(functionReturnType), false);
+				final fallbackResultName = freshTmp("fallback_result");
+				OcamlExpr.ELet(fallbackResultName, body,
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "magic"), [OcamlExpr.EIdent(fallbackResultName)]), false);
 			}
 			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}

@@ -21,15 +21,17 @@ let fatal = fun msg -> (
 
 let isVersionQuery = fun args -> HxArray.length args = 1 && (HxString.equals (HxArray.get args 0) "--version" || HxString.equals (HxArray.get args 0) "-version")
 
-let isTrueEnv = fun name -> try let __fallback_ignore_2 = let raw = (HxSys.getEnv name : string) in (
+let normalizeCliArgs = fun rawArgs -> HxArray.copy rawArgs
+
+let isTrueEnv = fun name -> try let __fallback_result_2 = let raw = (HxSys.getEnv name : string) in (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let _g = (HxString.toLowerCase raw () : string) in match _g with
     | "1" | "on" | "true" | "yes" -> raise (HxRuntime.Hx_return (Obj.repr true))
     | _ -> raise (HxRuntime.Hx_return (Obj.repr false))
-) in false with
+) in Obj.magic __fallback_result_2 with
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
-let getDefineValue = fun args name -> try let __fallback_ignore_6 = let i = ref 0 in (
+let getDefineValue = fun args name -> try let __fallback_result_6 = let i = ref 0 in (
   ignore (try while !i < HxArray.length args do try ignore (let a = (HxArray.get args (!i) : string) in (
     ignore (if HxString.equals a "-D" && HxInt.add (!i) 1 < HxArray.length args then ignore (let d = (HxArray.get args (HxInt.add (!i) 1) : string) in (
       ignore (if HxString.equals d name then raise (HxRuntime.Hx_return (Obj.repr "1")) else ());
@@ -45,7 +47,7 @@ let getDefineValue = fun args name -> try let __fallback_ignore_6 = let i = ref 
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic () with
+) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
 let hasDefine = fun args name -> getDefineValue args (name : string) != Obj.magic (HxRuntime.hx_null)
@@ -75,7 +77,7 @@ let stripAll = fun args flag -> let out = HxArray.create () in let _g = ref 0 in
   out
 )
 
-let hasAnyTarget = fun args -> try let __fallback_ignore_16 = let targetFlags = let __arr_12 = HxArray.create () in (
+let hasAnyTarget = fun args -> try let __fallback_result_16 = let targetFlags = let __arr_12 = HxArray.create () in (
   ignore (HxArray.push __arr_12 "-js");
   ignore (HxArray.push __arr_12 "--js");
   ignore (HxArray.push __arr_12 "-lua");
@@ -112,10 +114,10 @@ let hasAnyTarget = fun args -> try let __fallback_ignore_16 = let targetFlags = 
     if HxArray.indexOf targetFlags a 0 <> -1 then raise (HxRuntime.Hx_return (Obj.repr true)) else ()
   )) done);
   false
-) in false with
+) in Obj.magic __fallback_result_16 with
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
-let findUnsupportedLegacyTarget = fun args -> try let __fallback_ignore_20 = let _g = ref 0 in (
+let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_20 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
     ignore (let __old_17 = !_g in let __new_18 = HxInt.add __old_17 1 in (
       ignore (_g := __new_18);
@@ -127,10 +129,10 @@ let findUnsupportedLegacyTarget = fun args -> try let __fallback_ignore_20 = let
       | _ -> ignore ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic () with
+) in Obj.magic __fallback_result_20 with
   | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
 
-let hasStandardJsTargetFlag = fun args -> try let __fallback_ignore_24 = let _g = ref 0 in (
+let hasStandardJsTargetFlag = fun args -> try let __fallback_result_24 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
     ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
       ignore (_g := __new_22);
@@ -141,10 +143,10 @@ let hasStandardJsTargetFlag = fun args -> try let __fallback_ignore_24 = let _g 
       | _ -> ignore ()
   )) done);
   false
-) in false with
+) in Obj.magic __fallback_result_24 with
   | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
 
-let hasStandardNonJsTargetFlag = fun args -> try let __fallback_ignore_28 = let _g = ref 0 in (
+let hasStandardNonJsTargetFlag = fun args -> try let __fallback_result_28 = let _g = ref 0 in (
   ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
     ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
       ignore (_g := __new_26);
@@ -155,10 +157,10 @@ let hasStandardNonJsTargetFlag = fun args -> try let __fallback_ignore_28 = let 
       | _ -> ignore ()
   )) done);
   false
-) in false with
+) in Obj.magic __fallback_result_28 with
   | HxRuntime.Hx_return __ret_27 -> Obj.obj __ret_27
 
-let shouldRouteStandardJsToNative = fun forwarded -> try let __fallback_ignore_32 = let expanded = Hxhx_Stage1Compiler.stage1args_expandHxmlArgs forwarded in let tempMaybeArray = ref (Obj.magic ()) in (
+let shouldRouteStandardJsToNative = fun forwarded -> try let __fallback_result_32 = let expanded = Hxhx_Stage1Compiler.stage1args_expandHxmlArgs forwarded in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if expanded == Obj.magic (HxRuntime.hx_null) then let __assign_29 = forwarded in (
     tempMaybeArray := __assign_29;
     __assign_29
@@ -168,15 +170,15 @@ let shouldRouteStandardJsToNative = fun forwarded -> try let __fallback_ignore_3
   ));
   ignore (if not (hasStandardJsTargetFlag (!tempMaybeArray)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   not (hasStandardNonJsTargetFlag (!tempMaybeArray))
-) in false with
+) in Obj.magic __fallback_result_32 with
   | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
 
-let isStrictCliDisallowedFlag = fun flag -> try let __fallback_ignore_34 = (
+let isStrictCliDisallowedFlag = fun flag -> try let __fallback_result_34 = (
   ignore (if flag == Obj.magic (HxRuntime.hx_null) || HxString.length flag = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   ignore (if HxString.equals flag "--target" || HxString.equals flag "--hxhx-target" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if StringTools.startsWith (flag : string) ("--hxhx-" : string) && not (HxString.equals flag "--hxhx-strict-cli") then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
-) in false with
+) in Obj.magic __fallback_result_34 with
   | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
 
 let validateStrictCliShimArgs = fun shimArgs -> let _g = ref 0 in while !_g < HxArray.length shimArgs do ignore (let a = (HxArray.get shimArgs (!_g) : string) in (
@@ -234,7 +236,7 @@ let defaultExeName = fun outDir -> let base = (Haxe_io_Path.withoutDirectory (Ha
   HxString.toLowerCase (sanitizeName (!tempString : string)) ()
 )
 
-let absPath = fun p -> try let __fallback_ignore_69 = (
+let absPath = fun p -> try let __fallback_result_69 = (
   ignore (if p == Obj.magic (HxRuntime.hx_null) || HxString.length p = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   try raise (HxRuntime.Hx_return (Obj.repr (HxFileSystem.fullPath p))) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
@@ -248,7 +250,7 @@ let absPath = fun p -> try let __fallback_ignore_69 = (
       ignore _hx;
       raise (HxRuntime.Hx_return (Obj.repr p))
     ) else raise (__exn_67)
-) in "" with
+) in Obj.magic __fallback_result_69 with
   | HxRuntime.Hx_return __ret_68 -> Obj.obj __ret_68
 
 let rec rmrf = fun path -> try (
@@ -269,7 +271,7 @@ let rec rmrf = fun path -> try (
       ) else raise (__exn_73));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  let tempArray = ref (Obj.magic ()) in (
+  let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (try let __assign_74 = HxFileSystem.readDirectory path in (
       tempArray := __assign_74;
       __assign_74
@@ -400,12 +402,12 @@ let runOcamlInterpLike = fun haxeBin forwarded outOverride -> let expanded = ref
   )
 )
 
-let main = fun () -> try let args = HxSys.args () in (
+let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
   ignore (if HxArray.length args = 0 then ignore ((
     ignore (print_endline "OK hxhx");
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  let sep = HxArray.indexOf args "--" 0 in let tempArray = ref (Obj.magic ()) in (
+  let sep = HxArray.indexOf args "--" 0 in let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if sep = -1 then let __assign_102 = args in (
       tempArray := __assign_102;
       __assign_102
@@ -413,7 +415,7 @@ let main = fun () -> try let args = HxSys.args () in (
       tempArray := __assign_103;
       __assign_103
     ));
-    let tempArray1 = ref (Obj.magic ()) in (
+    let tempArray1 = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if sep = -1 then let __assign_104 = HxArray.copy args in (
         tempArray1 := __assign_104;
         __assign_104
@@ -604,7 +606,7 @@ let main = fun () -> try let args = HxSys.args () in (
                       ));
                       HxArray.splice (!tempArray1) i 2
                     )) else ());
-                    let tempResolvedTarget = ref (Obj.magic ()) in (
+                    let tempResolvedTarget = ref (Obj.magic (HxRuntime.hx_null)) in (
                       ignore (try let __assign_137 = Hxhx_TargetPresets.resolve (targetId : string) (!tempArray1) in (
                         tempResolvedTarget := __assign_137;
                         __assign_137
@@ -701,7 +703,7 @@ let main = fun () -> try let args = HxSys.args () in (
                     ignore (runOcamlInterpLike (!tempString4 : string) (!tempArray1) (!ocamlInterpOutDir : string));
                     raise (HxRuntime.Hx_return (Obj.repr ()))
                   )) else ());
-                  ignore (if !selectedShimTargetPreset == Obj.magic (HxRuntime.hx_null) && shouldRouteStandardJsToNative (!tempArray1) then ignore (let tempMaybeStruct = ref (Obj.magic ()) in (
+                  ignore (if !selectedShimTargetPreset == Obj.magic (HxRuntime.hx_null) && shouldRouteStandardJsToNative (!tempArray1) then ignore (let tempMaybeStruct = ref (Obj.magic (HxRuntime.hx_null)) in (
                     ignore (try let __assign_151 = Hxhx_TargetPresets.resolve ("js-native" : string) (!tempArray1) in (
                       tempMaybeStruct := __assign_151;
                       __assign_151

@@ -17,7 +17,7 @@ let flush__impl = fun (self : t) () -> ignore (HxFileStream.flush_out (self.h))
 
 let writeByte__impl = fun (self : t) (c : int) -> ignore (HxFileStream.write_byte (self.h) c)
 
-let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_5 = (
+let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_5 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
@@ -26,7 +26,7 @@ let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) 
     ) in self.writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
     len
   )
-) in 0 with
+) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
 let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (let tempNumber = ref 0 in (

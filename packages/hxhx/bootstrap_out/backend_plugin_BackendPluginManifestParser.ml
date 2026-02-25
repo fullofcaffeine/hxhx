@@ -160,7 +160,7 @@ let requireString = fun value fieldPath sourceLabel -> (
   )
 )
 
-let requireInt = fun value fieldPath sourceLabel -> try let __fallback_ignore_39 = (
+let requireInt = fun value fieldPath sourceLabel -> try let __fallback_result_39 = (
   ignore (if let __isInt_32 = value in if __isInt_32 == HxRuntime.hx_null then false else Obj.is_int __isInt_32 && not (HxRuntime.is_boxed_bool __isInt_32) then raise (HxRuntime.Hx_return (Obj.repr value)) else ());
   ignore (if let __isFloat_33 = value in if __isFloat_33 == HxRuntime.hx_null then false else Obj.is_int __isFloat_33 && not (HxRuntime.is_boxed_bool __isFloat_33) || Obj.tag __isFloat_33 = Obj.double_tag then ignore (let f = Std.parseFloat (HxRuntime.dynamic_toStdString value : string) in let i = int_of_float f in let iAsFloat = float_of_int i in if iAsFloat = f then raise (HxRuntime.Hx_return (Obj.repr i)) else ()) else ());
   let tempRight = ref "" in let tempString = ref "" in (
@@ -181,7 +181,7 @@ let requireInt = fun value fieldPath sourceLabel -> try let __fallback_ignore_39
     ignore (HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "field `") ^ HxString.toStdString fieldPath) ^ "` must be an integer")) ["Dynamic"; "String"]);
     -1
   )
-) in 0 with
+) in Obj.magic __fallback_result_39 with
   | HxRuntime.Hx_return __ret_38 -> Obj.obj __ret_38
 
 let requireStringArray = fun value fieldPath sourceLabel -> (
@@ -262,7 +262,7 @@ let requireStringArray = fun value fieldPath sourceLabel -> (
   )
 )
 
-let parseKind = fun value sourceLabel -> let tempResult = ref (Obj.magic ()) in (
+let parseKind = fun value sourceLabel -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (match value with
     | "haxe-provider" -> let __assign_60 = "haxe-provider" in (
       tempResult := __assign_60;
@@ -294,7 +294,7 @@ let parseKind = fun value sourceLabel -> let tempResult = ref (Obj.magic ()) in 
   !tempResult
 )
 
-let validate = fun manifest -> try let __fallback_ignore_75 = (
+let validate = fun manifest -> try let __fallback_result_75 = (
   ignore (if manifest == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "manifest is required")) else ());
   ignore (if Obj.obj (HxAnon.get manifest "schemaVersion") <> 1 then raise (HxRuntime.Hx_return (Obj.repr ((("schemaVersion mismatch: expected " ^ string_of_int 1) ^ ", got ") ^ string_of_int (Obj.obj (HxAnon.get manifest "schemaVersion"))))) else ());
   let tempString = ref "" in (
@@ -366,7 +366,7 @@ let validate = fun manifest -> try let __fallback_ignore_75 = (
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_75 with
   | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74
 
 let parse = fun content sourceLabel -> let tempString = ref "" in (
@@ -405,7 +405,7 @@ let parse = fun content sourceLabel -> let tempString = ref "" in (
     ));
     HxType.hx_throw_typed_rtti (Obj.repr ((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "content is empty")) ["Dynamic"; "String"]
   )) else ());
-  let tempVar = ref (Obj.magic ()) in (
+  let tempVar = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (try let __assign_84 = Haxe_format_JsonParser.doParse (Haxe_format_JsonParser.create (content : string)) () in (
       tempVar := __assign_84;
       __assign_84

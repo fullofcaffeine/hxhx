@@ -161,7 +161,7 @@ let withSourcePriority = fun spec source -> (
   )
 )
 
-let selectWinning = fun existing incoming -> try let __fallback_ignore_37 = let tempNumber = ref 0 in (
+let selectWinning = fun existing incoming -> try let __fallback_result_37 = let tempNumber = ref 0 in (
   ignore (match Obj.obj (HxAnon.get incoming "source") with
     | "bundled" -> let __assign_28 = 1 in (
       tempNumber := __assign_28;
@@ -210,10 +210,10 @@ let selectWinning = fun existing incoming -> try let __fallback_ignore_37 = let 
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_37 with
   | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36
 
-let registrationsForRequests = fun requests -> try let __fallback_ignore_56 = (
+let registrationsForRequests = fun requests -> try let __fallback_result_56 = (
   ignore (if requests == Obj.magic (HxRuntime.hx_null) || HxArray.length requests = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __arr_38 = HxArray.create () in __arr_38))) else ());
   let winnersByImplId = HxMap.create_string () in let index = ref 0 in let _g = ref 0 in (
     ignore (while !_g < HxArray.length requests do ignore (let request = HxArray.get requests (!_g) in (
@@ -254,7 +254,7 @@ let registrationsForRequests = fun requests -> try let __fallback_ignore_56 = (
     )) done);
     let out = HxArray.create () in let winner = HxIterator.of_array (HxMap.values_string winnersByImplId) in (
       ignore (while (let __iter_48 = winner in fun () -> HxIterator.hasNext __iter_48) () do ignore (let winner2 = (let __iter_49 = winner in fun () -> HxIterator.next __iter_49) () in HxArray.push out (Obj.obj (HxAnon.get winner2 "spec"))) done);
-      ignore (HxArray.sort out (fun a b -> try let __fallback_ignore_54 = (
+      ignore (HxArray.sort out (fun a b -> try let __fallback_result_54 = (
         ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
         let tempResult = ref 0 in (
           ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_50 = -1 in (
@@ -269,10 +269,10 @@ let registrationsForRequests = fun requests -> try let __fallback_ignore_56 = (
           ));
           !tempResult
         )
-      ) in 0 with
+      ) in Obj.magic __fallback_result_54 with
         | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53));
       out
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_56 with
   | HxRuntime.Hx_return __ret_55 -> Obj.obj __ret_55

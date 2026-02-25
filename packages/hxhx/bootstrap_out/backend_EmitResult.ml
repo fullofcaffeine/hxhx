@@ -19,7 +19,7 @@ let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_ty
       self.entryPath <- __assign_3;
       __assign_3
     ));
-    let tempRight1 = ref (Obj.magic ()) in (
+    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if artifacts2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = let __arr_5 = HxArray.create () in __arr_5 in (
         tempRight1 := __assign_4;
         __assign_4

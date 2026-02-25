@@ -16,7 +16,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 -> let self = ({ __hx_t
       self.hasStaticMain <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic ()) in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = let __arr_4 = HxArray.create () in __arr_4 in (
         tempRight := __assign_3;
         __assign_3
@@ -28,7 +28,7 @@ let create = fun name2 hasStaticMain2 functions2 fields2 -> let self = ({ __hx_t
         self.functions <- __assign_6;
         __assign_6
       ));
-      let tempRight1 = ref (Obj.magic ()) in (
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if fields2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = let __arr_8 = HxArray.create () in __arr_8 in (
           tempRight1 := __assign_7;
           __assign_7

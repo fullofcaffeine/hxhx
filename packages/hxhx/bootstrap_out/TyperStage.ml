@@ -15,13 +15,13 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperStage" } : t)
 
 let isStrict = fun () -> let v = (HxSys.getEnv "HXHX_TYPER_STRICT" : string) in HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes"
 
-let arrayElementType = fun t -> try let __fallback_ignore_4 = (
+let arrayElementType = fun t -> try let __fallback_result_4 = (
   ignore (if t == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let d = (TyType.getDisplay t () : string) in (
     ignore (if d == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     ignore (if not (StringTools.startsWith (d : string) ("Array<" : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     ignore (if not (StringTools.endsWith (d : string) (">" : string)) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let inner = (StringTools.trim (HxString.substr d (HxString.length "Array<") (HxInt.sub (HxInt.sub (HxString.length d) (HxString.length "Array<")) 1) : string) : string) in let tempResult = ref (Obj.magic ()) in (
+    let inner = (StringTools.trim (HxString.substr d (HxString.length "Array<") (HxInt.sub (HxInt.sub (HxString.length d) (HxString.length "Array<")) 1) : string) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if HxString.length inner = 0 then let __assign_1 = TyType.unknown () in (
         tempResult := __assign_1;
         __assign_1
@@ -32,10 +32,10 @@ let arrayElementType = fun t -> try let __fallback_ignore_4 = (
       !tempResult
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_4 with
   | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
 
-let typeFromHintInContext = fun hint ctx -> try let __fallback_ignore_12 = let tempString = ref "" in (
+let typeFromHintInContext = fun hint ctx -> try let __fallback_result_12 = let tempString = ref "" in (
   ignore (if hint == Obj.magic (HxRuntime.hx_null) then let __assign_5 = ("" : string) in (
     tempString := __assign_5;
     __assign_5
@@ -47,7 +47,7 @@ let typeFromHintInContext = fun hint ctx -> try let __fallback_ignore_12 = let t
   ignore (match !tempString with
     | "Bool" | "Dynamic" | "Float" | "Int" | "Null" | "String" | "Void" -> raise (HxRuntime.Hx_return (Obj.repr (TyType.fromHintText (!tempString : string))))
     | _ -> ignore ());
-  let tempMaybeTyClassInfo = ref (Obj.magic ()) in (
+  let tempMaybeTyClassInfo = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if ctx == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (HxRuntime.hx_null) in (
       tempMaybeTyClassInfo := __assign_7;
       __assign_7
@@ -55,7 +55,7 @@ let typeFromHintInContext = fun hint ctx -> try let __fallback_ignore_12 = let t
       tempMaybeTyClassInfo := __assign_8;
       __assign_8
     ));
-    let c = !tempMaybeTyClassInfo in let tempResult = ref (Obj.magic ()) in (
+    let c = !tempMaybeTyClassInfo in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if c != Obj.magic (HxRuntime.hx_null) then let __assign_9 = TyType.fromHintText (TyClassInfo.getFullName c () : string) in (
         tempResult := __assign_9;
         __assign_9
@@ -66,7 +66,7 @@ let typeFromHintInContext = fun hint ctx -> try let __fallback_ignore_12 = let t
       !tempResult
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_12 with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
 let isAssignmentBinop = fun op -> let tempResult = ref false in (
@@ -82,8 +82,8 @@ let isAssignmentBinop = fun op -> let tempResult = ref false in (
   !tempResult
 )
 
-let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 = let dottedFieldPath = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr -> string) in (
-  ignore (let __assign_57 = fun e -> let tempResult = ref (Obj.magic ()) in (
+let rec inferExprType = fun expr scope ctx pos -> try let __fallback_result_211 = let dottedFieldPath = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr -> string) in (
+  ignore (let __assign_57 = fun e -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (match e with
       | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_59 = (name : string) in (
         tempResult := __assign_59;
@@ -105,11 +105,11 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
     dottedFieldPath := __assign_57;
     __assign_57
   ));
-  let isUpperStartName = fun name -> try let __fallback_ignore_67 = (
+  let isUpperStartName = fun name -> try let __fallback_result_67 = (
     ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let c = HxString.charCodeAt name 0 in (let __nullable_62 = c in let __nullable_63 = 65 in if __nullable_62 == HxRuntime.hx_null then false else Obj.obj __nullable_62 >= __nullable_63) && (let __nullable_64 = c in let __nullable_65 = 90 in if __nullable_64 == HxRuntime.hx_null then false else Obj.obj __nullable_64 <= __nullable_65)
-  ) in false with
-    | HxRuntime.Hx_return __ret_66 -> Obj.obj __ret_66 in let tempResult1 = ref (Obj.magic ()) in (
+  ) in Obj.magic __fallback_result_67 with
+    | HxRuntime.Hx_return __ret_66 -> Obj.obj __ret_66 in let tempResult1 = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (match expr with
       | HxExpr.ENull -> let __assign_68 = TyType.fromHintText ("Null" : string) in (
         tempResult1 := __assign_68;
@@ -351,7 +351,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
           ) else let __assign_89 = TyType.unknown () in (
             tempResult1 := __assign_89;
             __assign_89
-          ) else let objTy = inferExprType obj scope ctx pos in let idx = TyperContext.getIndex ctx () in let tempMaybeTyClassInfo = ref (Obj.magic ()) in (
+          ) else let objTy = inferExprType obj scope ctx pos in let idx = TyperContext.getIndex ctx () in let tempMaybeTyClassInfo = ref (Obj.magic (HxRuntime.hx_null)) in (
             ignore (if idx == Obj.magic (HxRuntime.hx_null) then let __assign_90 = Obj.magic (HxRuntime.hx_null) in (
               tempMaybeTyClassInfo := __assign_90;
               __assign_90
@@ -588,7 +588,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
               ));
               inferExprType a scope ctx pos
             )) done);
-            let idx = TyperContext.getIndex ctx () in let tempMaybeTyClassInfo1 = ref (Obj.magic ()) in (
+            let idx = TyperContext.getIndex ctx () in let tempMaybeTyClassInfo1 = ref (Obj.magic (HxRuntime.hx_null)) in (
               ignore (if idx == Obj.magic (HxRuntime.hx_null) then let __assign_139 = Obj.magic (HxRuntime.hx_null) in (
                 tempMaybeTyClassInfo1 := __assign_139;
                 __assign_139
@@ -625,7 +625,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
                   ));
                   inferExprType a scope ctx pos
                 )) done);
-                let hx_sig = TyClassInfo.staticMethod c (field : string) in let tempResult2 = ref (Obj.magic ()) in (
+                let hx_sig = TyClassInfo.staticMethod c (field : string) in let tempResult2 = ref (Obj.magic (HxRuntime.hx_null)) in (
                   ignore (if hx_sig != Obj.magic (HxRuntime.hx_null) then let __assign_119 = TyFunSig.getReturnType hx_sig () in (
                     tempResult2 := __assign_119;
                     __assign_119
@@ -645,7 +645,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
                 ));
                 inferExprType a scope ctx pos
               )) done);
-              let idx = TyperContext.getIndex ctx () in let tempMaybeTyClassInfo2 = ref (Obj.magic ()) in (
+              let idx = TyperContext.getIndex ctx () in let tempMaybeTyClassInfo2 = ref (Obj.magic (HxRuntime.hx_null)) in (
                 ignore (if idx == Obj.magic (HxRuntime.hx_null) then let __assign_123 = Obj.magic (HxRuntime.hx_null) in (
                   tempMaybeTyClassInfo2 := __assign_123;
                   __assign_123
@@ -726,7 +726,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
               | HxSwitchPattern.PBind _ -> 5
               | HxSwitchPattern.POr _ -> 6) = 5 then ignore (let _g4 = (match _g3 with
               | HxSwitchPattern.PBind __enum_param_154 -> __enum_param_154
-              | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let tempTyType = ref (Obj.magic ()) in (
+              | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null)) in (
               ignore (if TyType.isUnknown scrutTy () then let __assign_155 = TyType.fromHintText ("Dynamic" : string) in (
                 tempTyType := __assign_155;
                 __assign_155
@@ -932,7 +932,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
           )
         )
       )
-      | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = _p1 in let _g2 = _p2 in let name = (_g : string) in let iterable = _g1 in let yieldExpr = _g2 in let itTy = inferExprType iterable scope ctx pos in let elemTy = arrayElementType itTy in let tempTyType1 = ref (Obj.magic ()) in (
+      | HxExpr.EArrayComprehension (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = _p1 in let _g2 = _p2 in let name = (_g : string) in let iterable = _g1 in let yieldExpr = _g2 in let itTy = inferExprType iterable scope ctx pos in let elemTy = arrayElementType itTy in let tempTyType1 = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if elemTy != Obj.magic (HxRuntime.hx_null) && not (TyType.isUnknown elemTy ()) then let __assign_193 = elemTy in (
           tempTyType1 := __assign_193;
           __assign_193
@@ -1030,7 +1030,7 @@ let rec inferExprType = fun expr scope ctx pos -> try let __fallback_ignore_211 
       ));
     !tempResult1
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_211 with
   | HxRuntime.Hx_return __ret_210 -> Obj.obj __ret_210
 
 let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in let unifyInto = fun t pos -> try (
@@ -1089,7 +1089,7 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (HxRuntime.hx
       ignore ((!typeStmt) thenBranch);
       if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore ((!typeStmt) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch))) else ()
     ))
-    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let name = (_g : string) in let iterable = _g1 in let body = _g2 in let pos = _g3 in let iterableTy = inferExprType iterable scope ctx pos in let tempMaybeTyType = ref (Obj.magic ()) in (
+    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let name = (_g : string) in let iterable = _g1 in let body = _g2 in let pos = _g3 in let iterableTy = inferExprType iterable scope ctx pos in let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if (match iterable with
         | HxExpr.ENull -> 0
         | HxExpr.EBool _ -> 1
@@ -1162,7 +1162,7 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (HxRuntime.hx
         | HxSwitchPattern.PBind _ -> 5
         | HxSwitchPattern.POr _ -> 6) = 5 then ignore (let _g5 = (match _g4 with
         | HxSwitchPattern.PBind __enum_param_45 -> __enum_param_45
-        | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let tempTyType = ref (Obj.magic ()) in (
+        | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if TyType.isUnknown scrutTy () then let __assign_46 = TyType.fromHintText ("Dynamic" : string) in (
           tempTyType := __assign_46;
           __assign_46
@@ -1198,7 +1198,7 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (HxRuntime.hx
     ))
     | HxStmt.SThrow (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in let expr = _g in let pos = _g1 in inferExprType expr scope ctx pos)
     | HxStmt.SReturnVoid _p0 -> ignore (let _g = _p0 in let pos = _g in unifyInto (TyType.fromHintText ("Void" : string)) pos)
-    | HxStmt.SReturn (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in let e = _g in let pos = _g1 in let t = inferExprType e scope ctx pos in let tempTyType1 = ref (Obj.magic ()) in (
+    | HxStmt.SReturn (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in let e = _g in let pos = _g1 in let t = inferExprType e scope ctx pos in let tempTyType1 = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if TyType.isUnknown t () then let __assign_50 = TyType.fromHintText ("Dynamic" : string) in (
         tempTyType1 := __assign_50;
         __assign_50
@@ -1220,7 +1220,7 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (HxRuntime.hx
     ));
     (!typeStmt) s
   )) done);
-  let tempResult = ref (Obj.magic ()) in (
+  let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if !out == Obj.magic (HxRuntime.hx_null) then let __assign_55 = TyType.unknown () in (
       tempResult := __assign_55;
       __assign_55
@@ -1240,7 +1240,7 @@ let typeFunction = fun fn ctx -> let params = HxArray.create () in let _g = ref 
     ));
     let name = (HxFunctionArg.getName arg : string) in let ty = typeFromHintInContext (HxFunctionArg.getTypeHint arg : string) ctx in HxArray.push params (TySymbol.create (name : string) ty)
   )) done);
-  let locals = HxArray.create () in let scope = TyFunctionEnv.create (HxFunctionDecl.getName fn : string) params locals (TyType.unknown ()) (TyType.unknown ()) in let returnExprTy = inferReturnType fn scope ctx in let retHintText = (HxFunctionDecl.getReturnTypeHint fn : string) in let tempTyType = ref (Obj.magic ()) in (
+  let locals = HxArray.create () in let scope = TyFunctionEnv.create (HxFunctionDecl.getName fn : string) params locals (TyType.unknown ()) (TyType.unknown ()) in let returnExprTy = inferReturnType fn scope ctx in let retHintText = (HxFunctionDecl.getReturnTypeHint fn : string) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if retHintText != Obj.magic (HxRuntime.hx_null) && HxString.length retHintText > 0 then let hinted = typeFromHintInContext (retHintText : string) ctx in (
       ignore (if not (TyType.isUnknown returnExprTy ()) then ignore (let unified = TyType.unify hinted returnExprTy in if unified == Obj.magic (HxRuntime.hx_null) then ignore (let v = (HxSys.getEnv "HXHX_TYPER_STRICT" : string) in let tempBool = HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes" in if tempBool then ignore (HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath ctx () : string) (HxPos.unknown ()) ((("return type hint " ^ HxString.toStdString (TyType.toString hinted ())) ^ " conflicts with inferred return ") ^ HxString.toStdString (TyType.toString returnExprTy ()) : string))) ["Dynamic"; "TyperError"]) else ()) else ()) else ());
       let __assign_25 = hinted in (

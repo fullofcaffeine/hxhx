@@ -140,7 +140,7 @@ let run = fun () -> let preferredFixtureRoot = ("workloads/hih-compiler/fixtures
                 ignore (if not (HxString.equals parsedPkg (FrontendFixture.getExpectPackagePath case_ ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package mismatch" : string) (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
                 ignore (if not (HxString.equals (HxClassDecl.getName parsedMain) (FrontendFixture.getExpectMainClassName case_ ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class mismatch" : string) (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
                 ignore (if HxClassDecl.getHasStaticMain parsedMain <> FrontendFixture.getExpectHasStaticMain case_ () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main mismatch" : string) (HxPos.create 0 0 0))) ["Dynamic"; "HxParseError"]) else ());
-                ignore (if HxString.indexOf label "ModWithStatic" 0 >= 0 then ignore (let tempArray = ref (Obj.magic ()) in (
+                ignore (if HxString.indexOf label "ModWithStatic" 0 >= 0 then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
                   ignore (let _this = HxClassDecl.getFunctions parsedMain in let _g2 = let __arr_27 = HxArray.create () in __arr_27 in (
                     ignore (let _g1 = ref 0 in let _g3 = _this in while !_g1 < HxArray.length _g3 do ignore (let v = HxArray.get _g3 (!_g1) in (
                       ignore (let __old_28 = !_g1 in let __new_29 = HxInt.add __old_28 1 in (

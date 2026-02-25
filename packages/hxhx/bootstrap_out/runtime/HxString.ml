@@ -14,6 +14,9 @@ let hx_null_string : string = Obj.magic HxRuntime.hx_null
 let isNull (s : string) : bool =
   s == hx_null_string
 
+let isRealStringObj (o : Obj.t) : bool =
+  not (Obj.is_int o) && Obj.tag o = Obj.string_tag
+
 (* Used for Haxe's `Std.string` semantics and string concatenation.
    - In Haxe, `Std.string(null)` yields "null"
    - In Haxe, `"x" + null` yields "xnull" *)
@@ -27,9 +30,13 @@ let toStdString (s : string) : string =
    OCaml's `=` can compile down to specialized string equality if the type is known
    to be `string`, which assumes both operands are real strings. *)
 let equals (a : string) (b : string) : bool =
-  if isNull a then
-    isNull b
-  else if isNull b then
+  let oa : Obj.t = Obj.magic a in
+  let ob : Obj.t = Obj.magic b in
+  if oa == HxRuntime.hx_null then
+    ob == HxRuntime.hx_null
+  else if ob == HxRuntime.hx_null then
+    false
+  else if not (isRealStringObj oa) || not (isRealStringObj ob) then
     false
   else
     String.equal a b

@@ -20,7 +20,7 @@ let requireProvider = fun providerContract typePath -> (
   providerContract
 )
 
-let knownProviderRegistrations = fun typePath -> let tempResult = ref (Obj.magic ()) in (
+let knownProviderRegistrations = fun typePath -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxString.equals typePath "backend.js.JsBackend" then let __assign_1 = Backend_js_JsBackend.providerRegistrations () in (
     tempResult := __assign_1;
     __assign_1
@@ -31,7 +31,7 @@ let knownProviderRegistrations = fun typePath -> let tempResult = ref (Obj.magic
   !tempResult
 )
 
-let registrationsForType = fun typePath -> try let __fallback_ignore_12 = let tempString = ref "" in (
+let registrationsForType = fun typePath -> try let __fallback_result_12 = let tempString = ref "" in (
   ignore (if typePath == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
     tempString := __assign_3;
     __assign_3
@@ -45,7 +45,7 @@ let registrationsForType = fun typePath -> try let __fallback_ignore_12 = let te
       ignore (if known != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr known)) else ());
       let cls = HxType.resolveClass normalized in (
         ignore (if cls == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend provider type not found: " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
-        let tempStruct = ref (Obj.magic ()) in (
+        let tempStruct = ref (Obj.magic (HxRuntime.hx_null)) in (
           ignore (try let __assign_5 = Obj.obj (HxType.createInstance cls (let __arr_6 = HxArray.create () in __arr_6)) in (
             tempStruct := __assign_5;
             __assign_5
@@ -66,5 +66,5 @@ let registrationsForType = fun typePath -> try let __fallback_ignore_12 = let te
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_12 with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11

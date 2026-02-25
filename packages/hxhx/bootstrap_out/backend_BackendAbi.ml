@@ -13,14 +13,14 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.BackendA
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendAbi" } : t)
 
-let descriptorLabel = fun descriptor -> try let __fallback_ignore_2 = (
+let descriptorLabel = fun descriptor -> try let __fallback_result_2 = (
   ignore (if Obj.obj (HxAnon.get descriptor "implId") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get descriptor "implId")) > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get descriptor "implId")))) else ());
   ignore (if Obj.obj (HxAnon.get descriptor "id") != Obj.magic (HxRuntime.hx_null) && HxString.length (Obj.obj (HxAnon.get descriptor "id")) > 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.obj (HxAnon.get descriptor "id")))) else ());
   "<unknown-backend>"
-) in "" with
+) in Obj.magic __fallback_result_2 with
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
-let validateDescriptor = fun descriptor -> try let __fallback_ignore_10 = (
+let validateDescriptor = fun descriptor -> try let __fallback_result_10 = (
   ignore (if descriptor == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "invalid backend registration: descriptor is required")) else ());
   ignore (if Obj.obj (HxAnon.get descriptor "requires") == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "invalid backend registration: descriptor.requires is required")) else ());
   let label = (descriptorLabel descriptor : string) in (
@@ -54,5 +54,5 @@ let validateDescriptor = fun descriptor -> try let __fallback_ignore_10 = (
       Obj.magic (HxRuntime.hx_null)
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_10 with
   | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9

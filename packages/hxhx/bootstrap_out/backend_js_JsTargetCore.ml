@@ -73,7 +73,7 @@ let collectClassUnits = fun program -> let bySimpleName = HxMap.create_string ()
   )
 )
 
-let simpleName = fun fullName -> let tempArray = ref (Obj.magic ()) in (
+let simpleName = fun fullName -> let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if fullName == Obj.magic (HxRuntime.hx_null) then let __assign_16 = let __arr_17 = HxArray.create () in __arr_17 in (
     tempArray := __assign_16;
     __assign_16
@@ -189,7 +189,7 @@ let emitClass = fun writer unit classRefs simpleNameRefs -> (
   )
 )
 
-let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_ignore_30 = (
+let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_result_30 = (
   ignore (if main == Obj.magic (HxRuntime.hx_null) || HxString.length main = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let direct = (HxMap.get_string byFullName main : string) in (
     ignore (if direct != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr direct)) else ());
@@ -198,12 +198,12 @@ let resolveMainRef = fun main bySimpleName byFullName -> try let __fallback_igno
       HxMap.get_string bySimpleName (HxArray.get parts (HxInt.sub (HxArray.length parts) 1))
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_30 with
   | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
 
 let emit__impl = fun (self : t) (program : Obj.t) (context : Backend_BackendContext.t) -> (
   ignore self;
-  let hint = (context.outputFileHint : string) in let tempMaybeString = ref (Obj.magic ()) in (
+  let hint = (context.outputFileHint : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if hint != Obj.magic (HxRuntime.hx_null) && HxString.length hint > 0 then let __assign_1 = (hint : string) in (
       tempMaybeString := __assign_1;
       __assign_1

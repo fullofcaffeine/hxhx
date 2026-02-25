@@ -155,20 +155,15 @@ else
 fi
 
 echo "== Stage0 delegation guard: keeps --version stage0-free"
-if HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --version >"$legacy_log" 2>&1; then
-  if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' "$legacy_log"; then
-    echo "Unexpected --version output format under HXHX_FORBID_STAGE0=1." >&2
-    sed -n '1,40p' "$legacy_log" >&2
-    exit 1
-  fi
-else
-  if grep -q "HXHX_FORBID_STAGE0=1 forbids stage0 delegation" "$legacy_log"; then
-    echo "WARN: HXHX_FORBID_STAGE0 --version still uses fail-fast guard in current bootstrap snapshot."
-  else
-    echo "Unexpected --version failure output under HXHX_FORBID_STAGE0=1." >&2
-    sed -n '1,40p' "$legacy_log" >&2
-    exit 1
-  fi
+if ! HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --version >"$legacy_log" 2>&1; then
+  echo "--version must be served locally under HXHX_FORBID_STAGE0=1." >&2
+  sed -n '1,40p' "$legacy_log" >&2
+  exit 1
+fi
+if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' "$legacy_log"; then
+  echo "Unexpected --version output format under HXHX_FORBID_STAGE0=1." >&2
+  sed -n '1,40p' "$legacy_log" >&2
+  exit 1
 fi
 
 echo "== Preset injects missing flags (compile smoke)"

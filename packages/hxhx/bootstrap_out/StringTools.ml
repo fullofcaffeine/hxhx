@@ -19,22 +19,22 @@ let endsWith = fun s hx_end -> let elen = HxString.length hx_end in let slen = H
 
 let isSpace = fun s pos -> let c = HxString.charCodeAt s pos in (let __nullable_1 = c in let __nullable_2 = 8 in if __nullable_1 == HxRuntime.hx_null then false else Obj.obj __nullable_1 > __nullable_2) && (let __nullable_3 = c in let __nullable_4 = 14 in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 < __nullable_4) || (let __nullable_5 = c in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 = 32)
 
-let ltrim = fun s -> try let __fallback_ignore_9 = let l = HxString.length s in let r = ref 0 in (
+let ltrim = fun s -> try let __fallback_result_9 = let l = HxString.length s in let r = ref 0 in (
   ignore (while !r < l && isSpace (s : string) (!r) do ignore (let __old_6 = !r in let __new_7 = HxInt.add __old_6 1 in (
     ignore (r := __new_7);
     __old_6
   )) done);
   if !r > 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr s (!r) (HxInt.sub l (!r))))) else raise (HxRuntime.Hx_return (Obj.repr s))
-) in "" with
+) in Obj.magic __fallback_result_9 with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
-let rtrim = fun s -> try let __fallback_ignore_13 = let l = HxString.length s in let r = ref 0 in (
+let rtrim = fun s -> try let __fallback_result_13 = let l = HxString.length s in let r = ref 0 in (
   ignore (while !r < l && isSpace (s : string) (HxInt.sub (HxInt.sub l (!r)) 1) do ignore (let __old_10 = !r in let __new_11 = HxInt.add __old_10 1 in (
     ignore (r := __new_11);
     __old_10
   )) done);
   if !r > 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr s 0 (HxInt.sub l (!r))))) else raise (HxRuntime.Hx_return (Obj.repr s))
-) in "" with
+) in Obj.magic __fallback_result_13 with
   | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
 let trim = fun s -> ltrim (rtrim (s : string) : string)

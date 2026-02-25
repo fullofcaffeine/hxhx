@@ -82,13 +82,13 @@ let seedFromCliDefines = fun defines -> try (
 ) with
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
-let defined = fun name -> try let __fallback_ignore_17 = (
+let defined = fun name -> try let __fallback_result_17 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   HxMap.exists_string defines name
-) in false with
+) in Obj.magic __fallback_result_17 with
   | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
 
-let definedValue = fun name -> try let __fallback_ignore_21 = (
+let definedValue = fun name -> try let __fallback_result_21 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let v = (HxMap.get_string defines name : string) in let tempResult = ref "" in (
     ignore (if v == Obj.magic (HxRuntime.hx_null) then let __assign_18 = ("" : string) in (
@@ -100,7 +100,7 @@ let definedValue = fun name -> try let __fallback_ignore_21 = (
     ));
     !tempResult
   )
-) in "" with
+) in Obj.magic __fallback_result_21 with
   | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
 
 let listDefineNames = fun () -> let out = HxArray.create () in let k = HxIterator.of_array (HxMap.keys_string defines) in (
@@ -187,7 +187,7 @@ let listOcamlModuleNames = fun () -> let out = HxArray.create () in let k = HxIt
   out
 )
 
-let getOcamlModuleSource = fun name -> try let __fallback_ignore_48 = (
+let getOcamlModuleSource = fun name -> try let __fallback_result_48 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let v = (HxMap.get_string ocamlModules name : string) in let tempResult = ref "" in (
     ignore (if v == Obj.magic (HxRuntime.hx_null) then let __assign_45 = ("" : string) in (
@@ -199,7 +199,7 @@ let getOcamlModuleSource = fun name -> try let __fallback_ignore_48 = (
     ));
     !tempResult
   )
-) in "" with
+) in Obj.magic __fallback_result_48 with
   | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
 
 let classPaths = let __arr_94 = HxArray.create () in __arr_94
@@ -319,13 +319,13 @@ let emitHxModule = fun name source -> try (
 ) with
   | HxRuntime.Hx_return __ret_71 -> Obj.obj __ret_71
 
-let hasGeneratedHxModules = fun () -> try let __fallback_ignore_75 = let _hx = HxIterator.of_array (HxMap.keys_string generatedHxModules) in (
+let hasGeneratedHxModules = fun () -> try let __fallback_result_75 = let _hx = HxIterator.of_array (HxMap.keys_string generatedHxModules) in (
   ignore (while (let __iter_72 = _hx in fun () -> HxIterator.hasNext __iter_72) () do ignore ((
     ignore ((let __iter_73 = _hx in fun () -> HxIterator.next __iter_73) ());
     raise (HxRuntime.Hx_return (Obj.repr true))
   )) done);
   false
-) in false with
+) in Obj.magic __fallback_result_75 with
   | HxRuntime.Hx_return __ret_74 -> Obj.obj __ret_74
 
 let buildFieldsByModule = HxMap.create_string ()
@@ -357,11 +357,11 @@ let emitBuildFields = fun modulePath membersSource -> try (
 ) with
   | HxRuntime.Hx_return __ret_80 -> Obj.obj __ret_80
 
-let listBuildFields = fun modulePath -> try let __fallback_ignore_87 = (
+let listBuildFields = fun modulePath -> try let __fallback_result_87 = (
   ignore (if modulePath == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (let __arr_81 = HxArray.create () in __arr_81))) else ());
   let m = (StringTools.trim (modulePath : string) : string) in (
     ignore (if HxString.length m = 0 then raise (HxRuntime.Hx_return (Obj.repr (let __arr_82 = HxArray.create () in __arr_82))) else ());
-    let arr = HxMap.get_string buildFieldsByModule m in let tempResult = ref (Obj.magic ()) in (
+    let arr = HxMap.get_string buildFieldsByModule m in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if arr == Obj.magic (HxRuntime.hx_null) then let __assign_83 = let __arr_84 = HxArray.create () in __arr_84 in (
         tempResult := __assign_83;
         __assign_83
@@ -372,7 +372,7 @@ let listBuildFields = fun modulePath -> try let __fallback_ignore_87 = (
       !tempResult
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_87 with
   | HxRuntime.Hx_return __ret_86 -> Obj.obj __ret_86
 
 let clearBuildFields = fun modulePath -> try (

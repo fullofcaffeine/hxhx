@@ -13,15 +13,15 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Me
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.MetalProfileVerifier" } : t)
 
-let normalizeTypeHint = fun rawTypeHint -> try let __fallback_ignore_32 = (
+let normalizeTypeHint = fun rawTypeHint -> try let __fallback_result_32 = (
   ignore (if rawTypeHint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   StringTools.replace (StringTools.replace (StringTools.replace (StringTools.trim (rawTypeHint : string) : string) (" " : string) ("" : string) : string) ("\t" : string) ("" : string) : string) ("\n" : string) ("" : string)
-) in "" with
+) in Obj.magic __fallback_result_32 with
   | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
 
 let isDynamicTypeHint = fun rawTypeHint -> let normalized = (HxString.toLowerCase (normalizeTypeHint (rawTypeHint : string)) () : string) in HxString.equals normalized "dynamic" || HxString.equals normalized "null<dynamic>" || HxString.equals normalized "array<dynamic>"
 
-let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic ()) in (
+let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if (match callee with
     | HxExpr.ENull -> 0
     | HxExpr.EBool _ -> 1
@@ -104,7 +104,7 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic ()) in (
   !tempResult
 )
 
-let summarizeRaw = fun raw -> try let __fallback_ignore_44 = (
+let summarizeRaw = fun raw -> try let __fallback_result_44 = (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "<unknown>")) else ());
   let oneLine = (StringTools.replace (StringTools.replace (StringTools.replace (raw : string) ("\r" : string) (" " : string) : string) ("\n" : string) (" " : string) : string) ("\t" : string) (" " : string) : string) in let trimmed = (StringTools.trim (oneLine : string) : string) in let tempResult = ref "" in (
     ignore (if HxString.length trimmed > 80 then let __assign_41 = (HxString.toStdString (HxString.substr trimmed 0 80) ^ "..." : string) in (
@@ -116,7 +116,7 @@ let summarizeRaw = fun raw -> try let __fallback_ignore_44 = (
     ));
     !tempResult
   )
-) in "" with
+) in Obj.magic __fallback_result_44 with
   | HxRuntime.Hx_return __ret_43 -> Obj.obj __ret_43
 
 let formatContext = fun className fnName -> let tempResult = ref "" in (

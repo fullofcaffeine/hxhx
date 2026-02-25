@@ -225,7 +225,7 @@ let exprKind = fun e -> let tempResult = ref "" in (
   !tempResult
 )
 
-let buildImportMap = fun imports modulePkg -> try let __fallback_ignore_162 = let map = HxMap.create_string () in (
+let buildImportMap = fun imports modulePkg -> try let __fallback_result_162 = let map = HxMap.create_string () in (
   ignore (if imports == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr map)) else ());
   let _g = ref 0 in (
     ignore (try while !_g < HxArray.length imports do try ignore (let raw = (HxArray.get imports (!_g) : string) in (
@@ -268,10 +268,10 @@ let buildImportMap = fun imports modulePkg -> try let __fallback_ignore_162 = le
       | HxRuntime.Hx_break -> ());
     map
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_162 with
   | HxRuntime.Hx_return __ret_161 -> Obj.obj __ret_161
 
-let shortenCall = fun callText -> try let __fallback_ignore_179 = (
+let shortenCall = fun callText -> try let __fallback_result_179 = (
   ignore (if callText == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let hx_open = HxString.indexOf callText "(" 0 in let tempString = ref "" in (
     ignore (if hx_open = -1 then let __assign_174 = (callText : string) in (
@@ -295,10 +295,10 @@ let shortenCall = fun callText -> try let __fallback_ignore_179 = (
       )
     )
   )
-) in "" with
+) in Obj.magic __fallback_result_179 with
   | HxRuntime.Hx_return __ret_178 -> Obj.obj __ret_178
 
-let matchAllowlistedCall = fun renderedCall allowed allowKeys importMap modulePkg -> try let __fallback_ignore_173 = (
+let matchAllowlistedCall = fun renderedCall allowed allowKeys importMap modulePkg -> try let __fallback_result_173 = (
   ignore (if renderedCall == Obj.magic (HxRuntime.hx_null) || HxString.length renderedCall = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (if HxMap.exists_string allowed renderedCall then raise (HxRuntime.Hx_return (Obj.repr renderedCall)) else ());
   let firstDot = HxString.indexOf renderedCall "." 0 in (
@@ -335,10 +335,10 @@ let matchAllowlistedCall = fun renderedCall allowed allowKeys importMap modulePk
       Obj.magic (HxRuntime.hx_null)
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_173 with
   | HxRuntime.Hx_return __ret_172 -> Obj.obj __ret_172
 
-let rec renderCalleePath = fun e -> let tempResult = ref (Obj.magic ()) in (
+let rec renderCalleePath = fun e -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (match e with
     | HxExpr.EIdent _p0 -> let _g = (_p0 : string) in let name = (_g : string) in let __assign_181 = (name : string) in (
       tempResult := __assign_181;
@@ -358,18 +358,18 @@ let rec renderCalleePath = fun e -> let tempResult = ref (Obj.magic ()) in (
   !tempResult
 )
 
-let escapeStringLiteral = fun s -> try let __fallback_ignore_185 = (
+let escapeStringLiteral = fun s -> try let __fallback_result_185 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   StringTools.replace (StringTools.replace (StringTools.replace (StringTools.replace (StringTools.replace (s : string) ("\\" : string) ("\\\\" : string) : string) ("\"" : string) ("\\\"" : string) : string) ("\n" : string) ("\\n" : string) : string) ("\r" : string) ("\\r" : string) : string) ("\t" : string) ("\\t" : string)
-) in "" with
+) in Obj.magic __fallback_result_185 with
   | HxRuntime.Hx_return __ret_184 -> Obj.obj __ret_184
 
-let renderSimpleCall = fun callee args -> try let __fallback_ignore_190 = (
+let renderSimpleCall = fun callee args -> try let __fallback_result_190 = (
   ignore (if callee == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let path = (renderCalleePath callee : string) in (
     ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     ignore (if args == Obj.magic (HxRuntime.hx_null) || HxArray.length args = 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.toStdString path ^ "()"))) else ());
-    ignore (if HxArray.length args = 1 then ignore (let tempResult = ref (Obj.magic ()) in (
+    ignore (if HxArray.length args = 1 then ignore (let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (let _g = HxArray.get args 0 in if (match _g with
         | HxExpr.ENull -> 0
         | HxExpr.EBool _ -> 1
@@ -410,12 +410,12 @@ let renderSimpleCall = fun callee args -> try let __fallback_ignore_190 = (
     )) else ());
     Obj.magic (HxRuntime.hx_null)
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_190 with
   | HxRuntime.Hx_return __ret_189 -> Obj.obj __ret_189
 
-let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace depth onExpand -> try let __fallback_ignore_122 = (
+let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace depth onExpand -> try let __fallback_result_122 = (
   ignore (if depth > 4 then raise (HxRuntime.Hx_return (Obj.repr e)) else ());
-  let tempResult = ref (Obj.magic ()) in (
+  let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (match e with
       | HxExpr.EField (_p0, _p1) -> let _g = _p0 in let _g1 = (_p1 : string) in let obj = _g in let field = (_g1 : string) in let ro = rewriteExpr obj session allowed allowKeys importMap (modulePkg : string) trace depth onExpand in if ro <> obj then let __assign_73 = HxExpr.EField (ro, field) in (
         tempResult := __assign_73;
@@ -438,7 +438,7 @@ let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace 
             HxArray.push rargs ra
           )
         )) done);
-        ignore (if trace then ignore (let calleePath = (renderCalleePath rc : string) in let tempArray = ref (Obj.magic ()) in (
+        ignore (if trace then ignore (let calleePath = (renderCalleePath rc : string) in let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
           ignore (let _g2 = let __arr_78 = HxArray.create () in __arr_78 in (
             ignore (let _g3 = ref 0 in let _g4 = rargs in while !_g3 < HxArray.length _g4 do ignore (let v = HxArray.get _g4 (!_g3) in (
               ignore (let __old_79 = !_g3 in let __new_80 = HxInt.add __old_79 1 in (
@@ -452,7 +452,7 @@ let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace 
               __assign_81
             )
           ));
-          let argKinds = (HxArray.join (!tempArray) "," (fun x -> x) : string) in let tempMaybeString = ref (Obj.magic ()) in (
+          let argKinds = (HxArray.join (!tempArray) "," (fun x -> x) : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null)) in (
             ignore (if calleePath == Obj.magic (HxRuntime.hx_null) then let __assign_82 = (exprKind rc : string) in (
               tempMaybeString := __assign_82;
               __assign_82
@@ -465,7 +465,7 @@ let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace 
         )) else ());
         let candidate = (renderSimpleCall rc rargs : string) in (
           ignore (if trace && candidate != Obj.magic (HxRuntime.hx_null) then ignore (print_endline ("expr_macro_candidate raw=" ^ HxString.toStdString candidate)) else ());
-          let tempMaybeString1 = ref (Obj.magic ()) in (
+          let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null)) in (
             ignore (if candidate == Obj.magic (HxRuntime.hx_null) then let __assign_84 = Obj.magic (HxRuntime.hx_null) in (
               tempMaybeString1 := __assign_84;
               __assign_84
@@ -625,10 +625,10 @@ let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace 
       ));
     !tempResult
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_122 with
   | HxRuntime.Hx_return __ret_121 -> Obj.obj __ret_121
 
-let rec rewriteStmt = fun s session allowed allowKeys importMap modulePkg trace onExpand -> let tempResult = ref (Obj.magic ()) in (
+let rec rewriteStmt = fun s session allowed allowKeys importMap modulePkg trace onExpand -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (match s with
     | HxStmt.SBlock (_p0, _p1) -> let _g = _p0 in let _g1 = _p1 in let stmts = _g in let pos = _g1 in let out = HxArray.create () in let changed = ref false in (
       ignore (let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let ss = HxArray.get stmts (!_g2) in (
@@ -797,8 +797,8 @@ let rec rewriteStmt = fun s session allowed allowKeys importMap modulePkg trace 
   !tempResult
 )
 
-let expandResolvedModules = fun modules session allowlist -> try let __fallback_ignore_31 = (
-  ignore (if modules == Obj.magic (HxRuntime.hx_null) || HxArray.length modules = 0 then ignore (let tempArray = ref (Obj.magic ()) in (
+let expandResolvedModules = fun modules session allowlist -> try let __fallback_result_31 = (
+  ignore (if modules == Obj.magic (HxRuntime.hx_null) || HxArray.length modules = 0 then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if modules == Obj.magic (HxRuntime.hx_null) then let __assign_1 = let __arr_2 = HxArray.create () in __arr_2 in (
       tempArray := __assign_1;
       __assign_1
@@ -932,5 +932,5 @@ let expandResolvedModules = fun modules session allowlist -> try let __fallback_
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_31 with
   | HxRuntime.Hx_return __ret_30 -> Obj.obj __ret_30

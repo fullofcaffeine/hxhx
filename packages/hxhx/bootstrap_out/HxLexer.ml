@@ -457,7 +457,7 @@ let readIdent = fun self (startPos : HxPos.t) -> let start = self.index in (
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let text = (HxString.substring (self.src) start (self.index) : string) in let tempResult = ref (Obj.magic ()) in (
+  let text = (HxString.substring (self.src) start (self.index) : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (match text with
       | "as" -> let __assign_172 = HxToken.create (HxTokenKind.TKeyword (HxKeyword.KAs)) startPos in (
         tempResult := __assign_172;
@@ -607,7 +607,7 @@ let readIdent = fun self (startPos : HxPos.t) -> let start = self.index in (
   )
 )
 
-let readNumber = fun self (startPos : HxPos.t) -> try let __fallback_ignore_369 = let start = self.index in (
+let readNumber = fun self (startPos : HxPos.t) -> try let __fallback_result_369 = let start = self.index in (
   ignore (try while true do try ignore (let tempRight = ref false in (
     ignore (let tempNumber = ref 0 in (
       ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_207 = -1 in (
@@ -1053,10 +1053,10 @@ let readNumber = fun self (startPos : HxPos.t) -> try let __fallback_ignore_369 
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_369 with
   | HxRuntime.Hx_return __ret_368 -> Obj.obj __ret_368
 
-let readString = fun self (startPos : HxPos.t) -> try let __fallback_ignore_437 = let _gthis = self in (
+let readString = fun self (startPos : HxPos.t) -> try let __fallback_result_437 = let _gthis = self in (
   ignore (let tempNumber = ref 0 in (
     ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_370 = -1 in (
       tempNumber := __assign_370;
@@ -1101,7 +1101,7 @@ let readString = fun self (startPos : HxPos.t) -> try let __fallback_ignore_437 
       __assign_386
     ));
     !tempResult
-  ) in let readHexDigits = fun count -> try let __fallback_ignore_407 = let acc = ref 0 in let _g = ref 0 in let _g1 = count in (
+  ) in let readHexDigits = fun count -> try let __fallback_result_407 = let acc = ref 0 in let _g = ref 0 in let _g1 = count in (
     ignore (while !_g < _g1 do ignore ((
       ignore (let __old_387 = !_g in let __new_388 = HxInt.add __old_387 1 in (
         ignore (_g := __new_388);
@@ -1157,7 +1157,7 @@ let readString = fun self (startPos : HxPos.t) -> try let __fallback_ignore_437 
       )
     )) done);
     !acc
-  ) in 0 with
+  ) in Obj.magic __fallback_result_407 with
     | HxRuntime.Hx_return __ret_406 -> Obj.obj __ret_406 in (
     ignore (try while self.index < HxString.length (self.src) do try ignore (let tempNumber3 = ref 0 in (
       ignore (let tempNumber4 = ref 0 in (
@@ -1250,10 +1250,10 @@ let readString = fun self (startPos : HxPos.t) -> try let __fallback_ignore_437 
       | HxRuntime.Hx_break -> ());
     HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create ("Unterminated string literal" : string) startPos)) ["Dynamic"; "HxParseError"]
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_437 with
   | HxRuntime.Hx_return __ret_436 -> Obj.obj __ret_436
 
-let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback_ignore_505 = let _gthis = self in (
+let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback_result_505 = let _gthis = self in (
   ignore (let tempNumber = ref 0 in (
     ignore (let i = self.index in if i >= HxString.length (self.src) then let __assign_438 = -1 in (
       tempNumber := __assign_438;
@@ -1298,7 +1298,7 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback
       __assign_454
     ));
     !tempResult
-  ) in let readHexDigits = fun count -> try let __fallback_ignore_475 = let acc = ref 0 in let _g = ref 0 in let _g1 = count in (
+  ) in let readHexDigits = fun count -> try let __fallback_result_475 = let acc = ref 0 in let _g = ref 0 in let _g1 = count in (
     ignore (while !_g < _g1 do ignore ((
       ignore (let __old_455 = !_g in let __new_456 = HxInt.add __old_455 1 in (
         ignore (_g := __new_456);
@@ -1354,7 +1354,7 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback
       )
     )) done);
     !acc
-  ) in 0 with
+  ) in Obj.magic __fallback_result_475 with
     | HxRuntime.Hx_return __ret_474 -> Obj.obj __ret_474 in (
     ignore (try while self.index < HxString.length (self.src) do try ignore (let tempNumber3 = ref 0 in (
       ignore (let tempNumber4 = ref 0 in (
@@ -1447,10 +1447,10 @@ let readSingleQuotedString = fun self (startPos : HxPos.t) -> try let __fallback
       | HxRuntime.Hx_break -> ());
     HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create ("Unterminated string literal" : string) startPos)) ["Dynamic"; "HxParseError"]
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_505 with
   | HxRuntime.Hx_return __ret_504 -> Obj.obj __ret_504
 
-let next = fun self () -> try let __fallback_ignore_640 = (
+let next = fun self () -> try let __fallback_result_640 = (
   ignore (skipWhitespaceAndComments self ());
   let p = HxPos.create (self.index) (self.line) (self.column) in (
     ignore (if self.index >= HxString.length (self.src) then raise (HxRuntime.Hx_return (Obj.repr (HxToken.create (HxTokenKind.TEof) p))) else ());
@@ -1462,7 +1462,7 @@ let next = fun self () -> try let __fallback_ignore_640 = (
         tempNumber := __assign_507;
         __assign_507
       ));
-      let c = !tempNumber in let tempResult = ref (Obj.magic ()) in (
+      let c = !tempNumber in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (match c with
           | 34 -> let __assign_525 = readString self p in (
             tempResult := __assign_525;
@@ -1795,7 +1795,7 @@ let next = fun self () -> try let __fallback_ignore_640 = (
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_640 with
   | HxRuntime.Hx_return __ret_639 -> Obj.obj __ret_639
 
 let isSpace = fun c -> c = 9 || c = 10 || c = 13 || c = 32

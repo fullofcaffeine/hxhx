@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsSwi
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsSwitchPatternLowering" } : t)
 
-let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic ()) in (
+let rec lower = fun pattern scrutineeVar -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (match pattern with
     | HxSwitchPattern.PNull -> let __assign_1 = let __anon_2 = HxAnon.create () in (
       ignore (HxAnon.set __anon_2 "cond" (Obj.repr (HxString.toStdString scrutineeVar ^ " == null")));

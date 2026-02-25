@@ -45,7 +45,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionDecl"; name = ""
 let getFirstReturnExpr = fun self () -> (
   ignore self;
   let find = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t -> Obj.t) in (
-    ignore (let __assign_8 = fun stmts -> try let __fallback_ignore_20 = let _g = ref 0 in (
+    ignore (let __assign_8 = fun stmts -> try let __fallback_result_20 = let _g = ref 0 in (
       ignore (while !_g < HxArray.length stmts do ignore (let s = HxArray.get stmts (!_g) in (
         ignore (let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
           ignore (_g := __new_10);
@@ -131,12 +131,12 @@ let getFirstReturnExpr = fun self () -> (
           | _ -> ignore ()
       )) done);
       Obj.magic (HxRuntime.hx_null)
-    ) in Obj.magic () with
+    ) in Obj.magic __fallback_result_20 with
       | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19 in (
       find := __assign_8;
       __assign_8
     ));
-    let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (self.body))) in let tempResult = ref (Obj.magic ()) in (
+    let r = Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((!find) (self.body))) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if r == Obj.magic (HxRuntime.hx_null) then let __assign_21 = HxExpr.EUnsupported "<no-return>" in (
         tempResult := __assign_21;
         __assign_21

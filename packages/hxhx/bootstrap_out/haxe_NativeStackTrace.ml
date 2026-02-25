@@ -27,7 +27,7 @@ let exceptionStack = fun () -> let __anon_2 = HxAnon.create () in (
   __anon_2
 )
 
-let parseFileLine = fun line -> try let __fallback_ignore_15 = let fileNeedle = ("file \"" : string) in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
+let parseFileLine = fun line -> try let __fallback_result_15 = let fileNeedle = ("file \"" : string) in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
   ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let fileStart = HxInt.add fileStart0 (HxString.length fileNeedle) in let fileEnd = HxString.indexOf line "\"" fileStart in (
     ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -61,7 +61,7 @@ let parseFileLine = fun line -> try let __fallback_ignore_15 = let fileNeedle = 
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_15 with
   | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
 
 let toHaxe = fun nativeStackTrace skip -> let native = nativeStackTrace in let toSkip = ref (HxInt.add skip (Obj.obj (HxAnon.get native "skip"))) in let out = HxArray.create () in let _g = ref 0 in let _g1 = Obj.obj (HxAnon.get native "stack") in (

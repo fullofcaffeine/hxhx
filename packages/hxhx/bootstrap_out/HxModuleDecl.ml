@@ -42,7 +42,7 @@ let create = fun packagePath2 imports2 mainClass2 classes2 headerOnly2 hasToplev
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      let tempRight = ref (Obj.magic ()) in (
+      let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if !hasMain then let __assign_9 = classes2 in (
           tempRight := __assign_9;
           __assign_9

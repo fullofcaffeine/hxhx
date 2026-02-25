@@ -16,9 +16,9 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsExprEmitter" 
 let unsupported = fun kind -> HxType.hx_throw_typed_rtti (Obj.repr ("js-native MVP does not support expression kind: " ^ HxString.toStdString kind)) ["Dynamic"; "String"]
 
 let nestedScope = fun parent locals -> let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "resolveLocal" (Obj.repr (fun name -> try let __fallback_ignore_5 = let v = (HxMap.get_string locals name : string) in (
+  ignore (HxAnon.set __anon_1 "resolveLocal" (Obj.repr (fun name -> try let __fallback_result_5 = let v = (HxMap.get_string locals name : string) in (
     ignore (if v != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr v)) else ());
-    let tempResult = ref (Obj.magic ()) in (
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if parent == Obj.magic (HxRuntime.hx_null) then let __assign_2 = Obj.magic (HxRuntime.hx_null) in (
         tempResult := __assign_2;
         __assign_2
@@ -28,9 +28,9 @@ let nestedScope = fun parent locals -> let __anon_1 = HxAnon.create () in (
       ));
       !tempResult
     )
-  ) in Obj.magic () with
+  ) in Obj.magic __fallback_result_5 with
     | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4)));
-  ignore (HxAnon.set __anon_1 "resolveClassRef" (Obj.repr (fun name -> let tempResult1 = ref (Obj.magic ()) in (
+  ignore (HxAnon.set __anon_1 "resolveClassRef" (Obj.repr (fun name -> let tempResult1 = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if parent == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (HxRuntime.hx_null) in (
       tempResult1 := __assign_6;
       __assign_6
@@ -43,13 +43,13 @@ let nestedScope = fun parent locals -> let __anon_1 = HxAnon.create () in (
   __anon_1
 )
 
-let resolveIdent = fun name scope -> try let __fallback_ignore_41 = (
+let resolveIdent = fun name scope -> try let __fallback_result_41 = (
   ignore (if scope != Obj.magic (HxRuntime.hx_null) then ignore (let local = (Obj.obj (HxAnon.get scope "resolveLocal") (name : string) : string) in (
     ignore (if local != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr local)) else ());
     let cls = (Obj.obj (HxAnon.get scope "resolveClassRef") (name : string) : string) in if cls != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr cls)) else ()
   )) else ());
   Backend_js_JsNameMangler.identifier (name : string)
-) in "" with
+) in Obj.magic __fallback_result_41 with
   | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40
 
 let rec emit = fun expr scope -> let tempResult = ref "" in (
@@ -147,7 +147,7 @@ let rec emit = fun expr scope -> let tempResult = ref "" in (
       tempResult := __assign_29;
       __assign_29
     )
-    | HxExpr.EArrayDecl _p0 -> let _g = _p0 in let values = _g in let tempArray = ref (Obj.magic ()) in (
+    | HxExpr.EArrayDecl _p0 -> let _g = _p0 in let values = _g in let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (let _g2 = let __arr_30 = HxArray.create () in __arr_30 in (
         ignore (let _g1 = ref 0 in let _g3 = values in while !_g1 < HxArray.length _g3 do ignore (let v = HxArray.get _g3 (!_g1) in (
           ignore (let __old_31 = !_g1 in let __new_32 = HxInt.add __old_31 1 in (
@@ -191,9 +191,9 @@ let rec emit = fun expr scope -> let tempResult = ref "" in (
     ));
   !tempResult
 )
-and emitCall = fun callee args scope -> try let __fallback_ignore_58 = (
+and emitCall = fun callee args scope -> try let __fallback_result_58 = (
   ignore (match callee with
-    | HxExpr.EIdent _p0 -> ignore (let _g = (_p0 : string) in if HxString.equals _g "trace" then ignore (let tempArray = ref (Obj.magic ()) in (
+    | HxExpr.EIdent _p0 -> ignore (let _g = (_p0 : string) in if HxString.equals _g "trace" then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (let _g2 = let __arr_42 = HxArray.create () in __arr_42 in (
         ignore (let _g1 = ref 0 in let _g3 = args in while !_g1 < HxArray.length _g3 do ignore (let v = HxArray.get _g3 (!_g1) in (
           ignore (let __old_43 = !_g1 in let __new_44 = HxInt.add __old_43 1 in (
@@ -249,7 +249,7 @@ and emitCall = fun callee args scope -> try let __fallback_ignore_58 = (
         ));
         let arg = (!tempString : string) in raise (HxRuntime.Hx_return (Obj.repr (("process.stdout.write(String(" ^ HxString.toStdString arg) ^ "))")))
       ))
-      | "println" -> ignore (let tempArray1 = ref (Obj.magic ()) in (
+      | "println" -> ignore (let tempArray1 = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (let _g3 = let __arr_49 = HxArray.create () in __arr_49 in (
           ignore (let _g4 = ref 0 in let _g5 = args in while !_g4 < HxArray.length _g5 do ignore (let v = HxArray.get _g5 (!_g4) in (
             ignore (let __old_50 = !_g4 in let __new_51 = HxInt.add __old_50 1 in (
@@ -267,7 +267,7 @@ and emitCall = fun callee args scope -> try let __fallback_ignore_58 = (
       ))
       | _ -> ignore ()) else ignore ()) else ignore ())
     | _ -> ignore ());
-  let calleeJs = (emit callee scope : string) in let tempArray2 = ref (Obj.magic ()) in (
+  let calleeJs = (emit callee scope : string) in let tempArray2 = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (let _g = let __arr_53 = HxArray.create () in __arr_53 in (
       ignore (let _g1 = ref 0 in while !_g1 < HxArray.length args do ignore (let v = HxArray.get args (!_g1) in (
         ignore (let __old_54 = !_g1 in let __new_55 = HxInt.add __old_54 1 in (
@@ -283,9 +283,9 @@ and emitCall = fun callee args scope -> try let __fallback_ignore_58 = (
     ));
     let argsJs = (HxArray.join (!tempArray2) ", " (fun x -> x) : string) in ((HxString.toStdString calleeJs ^ "(") ^ HxString.toStdString argsJs) ^ ")"
   )
-) in "" with
+) in Obj.magic __fallback_result_58 with
   | HxRuntime.Hx_return __ret_57 -> Obj.obj __ret_57
-and emitNew = fun typePath args scope -> try let __fallback_ignore_63 = let _g = let __arr_59 = HxArray.create () in __arr_59 in let _g1 = ref 0 in (
+and emitNew = fun typePath args scope -> try let __fallback_result_63 = let _g = let __arr_59 = HxArray.create () in __arr_59 in let _g1 = ref 0 in (
   ignore (while !_g1 < HxArray.length args do ignore (let v = HxArray.get args (!_g1) in (
     ignore (let __old_60 = !_g1 in let __new_61 = HxInt.add __old_60 1 in (
       ignore (_g1 := __new_61);
@@ -301,9 +301,9 @@ and emitNew = fun typePath args scope -> try let __fallback_ignore_63 = let _g =
     ignore (unsupported (("ENew(" ^ HxString.toStdString typePath) ^ ")" : string));
     ""
   )
-) in "" with
+) in Obj.magic __fallback_result_63 with
   | HxRuntime.Hx_return __ret_62 -> Obj.obj __ret_62
-and emitBinop = fun op left right scope -> try let __fallback_ignore_68 = (
+and emitBinop = fun op left right scope -> try let __fallback_result_68 = (
   ignore (if HxString.equals op "??" then ignore (let l = (emit left scope : string) in let r = (emit right scope : string) in raise (HxRuntime.Hx_return (Obj.repr (((((("((" ^ HxString.toStdString l) ^ " != null) ? ") ^ HxString.toStdString l) ^ " : ") ^ HxString.toStdString r) ^ ")")))) else ());
   let tempString = ref "" in (
     ignore (match op with
@@ -321,7 +321,7 @@ and emitBinop = fun op left right scope -> try let __fallback_ignore_68 = (
       ));
     ((((("(" ^ HxString.toStdString (emit left scope)) ^ " ") ^ HxString.toStdString (!tempString)) ^ " ") ^ HxString.toStdString (emit right scope)) ^ ")"
   )
-) in "" with
+) in Obj.magic __fallback_result_68 with
   | HxRuntime.Hx_return __ret_67 -> Obj.obj __ret_67
 and emitAnon = fun fieldNames fieldValues scope -> let pairs = HxArray.create () in let tempNumber = ref 0 in (
   ignore (if HxArray.length fieldNames < HxArray.length fieldValues then let __assign_69 = HxArray.length fieldNames in (

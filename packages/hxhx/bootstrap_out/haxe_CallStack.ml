@@ -178,7 +178,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let tempResult = ref (Obj.magic ()) in (
+  let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if !startIndex >= 0 then let __assign_11 = HxArray.slice this1 0 (!startIndex) in (
       tempResult := __assign_11;
       __assign_11
@@ -210,7 +210,7 @@ let rec itemToString = fun b s -> match s with
     )) else ());
     if s2 != Obj.magic (HxRuntime.hx_null) then ignore (StringBuf.add b (Obj.repr ")")) else ()
   ))
-  | Method (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let cname = (_g : string) in let meth = (_g1 : string) in let tempMaybeString = ref (Obj.magic ()) in (
+  | Method (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let cname = (_g : string) in let meth = (_g1 : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if cname == Obj.magic (HxRuntime.hx_null) then let __assign_72 = ("<unknown>" : string) in (
       tempMaybeString := __assign_72;
       __assign_72

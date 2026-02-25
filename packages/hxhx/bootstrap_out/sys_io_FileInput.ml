@@ -18,7 +18,7 @@ let readByte__impl = fun (self : t) () -> let b = HxFileStream.read_byte (self.h
   b
 )
 
-let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_9 = (
+let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_9 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
@@ -41,7 +41,7 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
       ) else raise (__exn_7));
     !i
   )
-) in 0 with
+) in Obj.magic __fallback_result_9 with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
 let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (let tempNumber = ref 0 in (

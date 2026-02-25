@@ -43,7 +43,7 @@ let lixBin = fun () -> let v = (HxSys.getEnv "LIX_BIN" : string) in let tempResu
   !tempResult
 )
 
-let findScopedHxml = fun lib cwd -> try let __fallback_ignore_24 = let tempString = ref "" in (
+let findScopedHxml = fun lib cwd -> try let __fallback_result_24 = let tempString = ref "" in (
   ignore (if cwd == Obj.magic (HxRuntime.hx_null) || HxString.length cwd = 0 then let __assign_12 = ("." : string) in (
     tempString := __assign_12;
     __assign_12
@@ -96,10 +96,10 @@ let findScopedHxml = fun lib cwd -> try let __fallback_ignore_24 = let tempStrin
       | HxRuntime.Hx_break -> ());
     ""
   )
-) in "" with
+) in Obj.magic __fallback_result_24 with
   | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
 
-let tryResolveViaCommand = fun bin args -> try let __fallback_ignore_41 = let p = ref (Obj.magic (HxRuntime.hx_null) : Sys_io_Process.t) in (
+let tryResolveViaCommand = fun bin args -> try let __fallback_result_41 = let p = ref (Obj.magic (HxRuntime.hx_null) : Sys_io_Process.t) in (
   ignore (try let __assign_29 = Sys_io_Process.create (bin : string) args (HxRuntime.hx_null) in (
     p := __assign_29;
     __assign_29
@@ -164,10 +164,10 @@ let tryResolveViaCommand = fun bin args -> try let __fallback_ignore_41 = let p 
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_41 with
   | HxRuntime.Hx_return __ret_40 -> Obj.obj __ret_40
 
-let resolveViaProcess = fun lib -> try let __fallback_ignore_28 = let lixSpec = tryResolveViaCommand (lixBin () : string) (let __arr_25 = HxArray.create () in (
+let resolveViaProcess = fun lib -> try let __fallback_result_28 = let lixSpec = tryResolveViaCommand (lixBin () : string) (let __arr_25 = HxArray.create () in (
   ignore (HxArray.push __arr_25 "run-haxelib");
   ignore (HxArray.push __arr_25 "path");
   ignore (HxArray.push __arr_25 lib);
@@ -182,10 +182,10 @@ let resolveViaProcess = fun lib -> try let __fallback_ignore_28 = let lixSpec = 
     ignore (if haxelibSpec != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr haxelibSpec)) else ());
     HxType.hx_throw_typed_rtti (Obj.repr (("failed to resolve -lib " ^ HxString.toStdString lib) ^ " via lix or haxelib")) ["Dynamic"; "String"]
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_28 with
   | HxRuntime.Hx_return __ret_27 -> Obj.obj __ret_27
 
-let rec resolve = fun lib cwd seen depth -> try let __fallback_ignore_11 = (
+let rec resolve = fun lib cwd seen depth -> try let __fallback_result_11 = (
   ignore (if depth > 25 then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("library resolution depth exceeded while resolving: " ^ HxString.toStdString lib)) ["Dynamic"; "String"]) else ());
   ignore (if HxMap.exists_string seen lib then raise (HxRuntime.Hx_return (Obj.repr (emptySpec ()))) else ());
   ignore (HxMap.set_string seen lib true);
@@ -193,7 +193,7 @@ let rec resolve = fun lib cwd seen depth -> try let __fallback_ignore_11 = (
     ignore (if HxString.length hxmlPath > 0 then raise (HxRuntime.Hx_return (Obj.repr (resolveFromHxml (hxmlPath : string) (cwd : string) seen depth))) else ());
     resolveViaProcess (lib : string)
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 and resolveFromHxml = fun hxmlPath cwd seen depth -> let args = Hxhx_Hxml.parseFile (hxmlPath : string) in (
   ignore (if args == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("failed to parse library hxml: " ^ HxString.toStdString hxmlPath)) ["Dynamic"; "String"]) else ());

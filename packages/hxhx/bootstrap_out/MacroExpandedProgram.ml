@@ -7,7 +7,7 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable macroMode : bool; mutable typedModules : TypedModule.t HxArray.t; mutable generatedOcamlModules : Obj.t HxArray.t }
 
 let create = fun typedModules2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic (); generatedOcamlModules = Obj.magic () } : t) in (
-  ignore (let tempRight = ref (Obj.magic ()) in (
+  ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if typedModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = let __arr_2 = HxArray.create () in __arr_2 in (
       tempRight := __assign_1;
       __assign_1
@@ -23,7 +23,7 @@ let create = fun typedModules2 macroMode2 generatedOcamlModules2 -> let self = (
       self.macroMode <- __assign_5;
       __assign_5
     ));
-    let tempRight1 = ref (Obj.magic ()) in (
+    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = let __arr_7 = HxArray.create () in __arr_7 in (
         tempRight1 := __assign_6;
         __assign_6

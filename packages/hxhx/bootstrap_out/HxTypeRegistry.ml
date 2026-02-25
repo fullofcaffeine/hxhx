@@ -1374,7 +1374,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.LibraryResolver" [];
   HxType.register_class_static_fields "hxhx.LibraryResolver" [ "emptySpec"; "findScopedHxml"; "haxelibBin"; "lixBin"; "resolve"; "resolveFromHxml"; "resolveViaProcess"; "tryResolveViaCommand" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
-  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "isVersionQuery"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
+  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "isVersionQuery"; "main"; "normalizeCliArgs"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
   HxType.register_class_instance_fields "hxhx.Stage1Args" [ "classPaths"; "cwd"; "defines"; "displayRequest"; "hadCmd"; "libs"; "macros"; "main"; "noOutput"; "roots" ];
   HxType.register_class_static_fields "hxhx.Stage1Args" [ "expandHxmlArgs"; "getClassPaths"; "getCwd"; "getDefines"; "getDisplayRequest"; "getHadCmd"; "getLibs"; "getMacros"; "getMain"; "getNoOutput"; "getRoots"; "inferStdRoot"; "parse" ];
   HxType.register_class_instance_fields "hxhx.Stage1Compiler" [];

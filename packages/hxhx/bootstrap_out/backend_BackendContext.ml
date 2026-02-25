@@ -36,7 +36,7 @@ let create = fun outputDir2 outputFileHint2 mainModule2 emitFullBodies2 buildExe
         self.buildExecutable <- __assign_7;
         __assign_7
       ));
-      let tempRight1 = ref (Obj.magic ()) in (
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if defines2 == Obj.magic (HxRuntime.hx_null) then let __assign_8 = HxMap.create_string () in (
           tempRight1 := __assign_8;
           __assign_8
@@ -58,10 +58,10 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendContext"; o
 
 let hasDefine = fun self (name : string) -> name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 && HxMap.exists_string (self.defines) name
 
-let defineValue = fun self (name : string) -> try let __fallback_ignore_12 = (
+let defineValue = fun self (name : string) -> try let __fallback_result_12 = (
   ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   HxMap.get_string (self.defines) name
-) in Obj.magic () with
+) in Obj.magic __fallback_result_12 with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
 let ensureOcamlProfileDefine = fun self () -> let profile = Backend_OcamlProfile.fromDefineValue (defineValue self ("ocaml_profile" : string) : string) in (

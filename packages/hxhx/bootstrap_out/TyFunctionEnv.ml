@@ -49,7 +49,7 @@ let declareLocal = fun self (name2 : string) (ty : TyType.t) -> let sym = TySymb
   sym
 )
 
-let resolveSymbol = fun self (name2 : string) -> try let __fallback_ignore_11 = (
+let resolveSymbol = fun self (name2 : string) -> try let __fallback_result_11 = (
   ignore (let _g = ref 0 in let _g1 = self.params in while !_g < HxArray.length _g1 do ignore (let p = HxArray.get _g1 (!_g) in (
     ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
       ignore (_g := __new_7);
@@ -65,10 +65,10 @@ let resolveSymbol = fun self (name2 : string) -> try let __fallback_ignore_11 = 
     if HxString.equals (TySymbol.getName l ()) name2 then raise (HxRuntime.Hx_return (Obj.repr l)) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic () with
+) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let resolveLocal = fun self (name2 : string) -> let sym = resolveSymbol self (name2 : string) in let tempResult = ref (Obj.magic ()) in (
+let resolveLocal = fun self (name2 : string) -> let sym = resolveSymbol self (name2 : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if sym == Obj.magic (HxRuntime.hx_null) then let __assign_12 = TyType.unknown () in (
     tempResult := __assign_12;
     __assign_12

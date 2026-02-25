@@ -16,7 +16,7 @@ let create = fun name2 isStatic2 args2 returnType2 -> let self = ({ __hx_type = 
       self.isStatic <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic ()) in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = let __arr_4 = HxArray.create () in __arr_4 in (
         tempRight := __assign_3;
         __assign_3
@@ -28,7 +28,7 @@ let create = fun name2 isStatic2 args2 returnType2 -> let self = ({ __hx_type = 
         self.args <- __assign_6;
         __assign_6
       ));
-      let tempRight1 = ref (Obj.magic ()) in (
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if returnType2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = TyType.unknown () in (
           tempRight1 := __assign_7;
           __assign_7

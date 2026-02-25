@@ -30,10 +30,10 @@ let emitReflective = fun backend program context -> let emitFn = Obj.obj (HxAnon
   ))))
 )
 
-let emit = fun backend program context -> try let __fallback_ignore_3 = let dispatchValue = backend in (
+let emit = fun backend program context -> try let __fallback_result_3 = let dispatchValue = backend in (
   ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.js.JsBackend") then ignore (let jsBackend = Obj.obj dispatchValue in raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsBackend.emitBridge jsBackend program context)))) else ());
   ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.ocaml.OcamlStage3Backend") then ignore (let ocamlBackend = Obj.obj dispatchValue in raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_OcamlStage3Backend.emitBridge ocamlBackend program context)))) else ());
   ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.TargetCoreBackend") then ignore (let targetCoreBackend = Obj.obj dispatchValue in raise (HxRuntime.Hx_return (Obj.repr (Backend_TargetCoreBackend.emitBridge targetCoreBackend program context)))) else ());
   emitReflective (Obj.repr dispatchValue) program context
-) in Obj.magic () with
+) in Obj.magic __fallback_result_3 with
   | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2

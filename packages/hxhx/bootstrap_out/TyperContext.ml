@@ -52,7 +52,7 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
             self.packagePath <- __assign_11;
             __assign_11
           ));
-          let tempRight3 = ref (Obj.magic ()) in (
+          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null)) in (
             ignore (if imports2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = let __arr_13 = HxArray.create () in __arr_13 in (
               tempRight3 := __assign_12;
               __assign_12
@@ -99,11 +99,11 @@ let getImports = fun self () -> self.imports
 
 let getClassFullName = fun self () -> self.classFullName
 
-let resolveType = fun self (typePath : string) -> try let __fallback_ignore_23 = (
+let resolveType = fun self (typePath : string) -> try let __fallback_result_23 = (
   ignore (if self.index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let hit = TyperIndex.resolveTypePath (self.index) (typePath : string) (self.packagePath : string) (self.imports) in (
     ignore (if hit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr hit)) else ());
-    let tempResult = ref (Obj.magic ()) in (
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if self.loader == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (HxRuntime.hx_null) in (
         tempResult := __assign_19;
         __assign_19
@@ -114,10 +114,10 @@ let resolveType = fun self (typePath : string) -> try let __fallback_ignore_23 =
       !tempResult
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let currentClass = fun self () -> let tempResult = ref (Obj.magic ()) in (
+let currentClass = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxString.length (self.classFullName) = 0 then let __assign_24 = Obj.magic (HxRuntime.hx_null) in (
     tempResult := __assign_24;
     __assign_24

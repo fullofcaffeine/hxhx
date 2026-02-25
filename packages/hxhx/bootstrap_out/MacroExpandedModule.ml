@@ -16,7 +16,7 @@ let create = fun typed2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_
       self.macroMode <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic ()) in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = let __arr_4 = HxArray.create () in __arr_4 in (
         tempRight := __assign_3;
         __assign_3

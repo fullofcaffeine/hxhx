@@ -61,7 +61,7 @@ let argscan_listExplicitTargets = fun args -> let out = HxArray.create () in let
   out
 )
 
-let argscan_firstExplicitTarget = fun args -> let all = argscan_listExplicitTargets args in let tempResult = ref (Obj.magic ()) in (
+let argscan_firstExplicitTarget = fun args -> let all = argscan_listExplicitTargets args in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxArray.length all = 0 then let __assign_3 = Obj.magic (HxRuntime.hx_null) in (
     tempResult := __assign_3;
     __assign_3
@@ -83,7 +83,7 @@ let argscan_hasTargetFlag = fun args targetId -> let tempString = ref "" in (
   HxString.equals (argscan_firstExplicitTarget args) (!tempString)
 )
 
-let argscan_hasLib = fun args name -> try let __fallback_ignore_12 = let i = ref 0 in (
+let argscan_hasLib = fun args name -> try let __fallback_result_12 = let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore (let a = (HxArray.get args (!i) : string) in (
     ignore (if (HxString.equals a "-lib" || HxString.equals a "--library") && HxInt.add (!i) 1 < HxArray.length args && HxString.equals (HxArray.get args (HxInt.add (!i) 1)) name then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
     let __old_9 = !i in let __new_10 = HxInt.add __old_9 1 in (
@@ -92,10 +92,10 @@ let argscan_hasLib = fun args name -> try let __fallback_ignore_12 = let i = ref
     )
   )) done);
   false
-) in false with
+) in Obj.magic __fallback_result_12 with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
-let argscan_hasMacro = fun args macroExpr -> try let __fallback_ignore_16 = let i = ref 0 in (
+let argscan_hasMacro = fun args macroExpr -> try let __fallback_result_16 = let i = ref 0 in (
   ignore (while !i < HxArray.length args do ignore ((
     ignore (if HxString.equals (HxArray.get args (!i)) "--macro" && HxInt.add (!i) 1 < HxArray.length args && HxString.equals (HxArray.get args (HxInt.add (!i) 1)) macroExpr then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
     let __old_13 = !i in let __new_14 = HxInt.add __old_13 1 in (
@@ -104,7 +104,7 @@ let argscan_hasMacro = fun args macroExpr -> try let __fallback_ignore_16 = let 
     )
   )) done);
   false
-) in false with
+) in Obj.magic __fallback_result_16 with
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
 let argscan_addMacroIfMissing = fun args macroExpr -> try (
@@ -114,7 +114,7 @@ let argscan_addMacroIfMissing = fun args macroExpr -> try (
 ) with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let argscan_getDefineValue = fun args name -> try let __fallback_ignore_24 = let i = ref 0 in (
+let argscan_getDefineValue = fun args name -> try let __fallback_result_24 = let i = ref 0 in (
   ignore (try while !i < HxArray.length args do try ignore (let a = (HxArray.get args (!i) : string) in (
     ignore (if HxString.equals a "-D" && HxInt.add (!i) 1 < HxArray.length args then ignore (let d = (HxArray.get args (HxInt.add (!i) 1) : string) in (
       ignore (if HxString.equals d name then raise (HxRuntime.Hx_return (Obj.repr "1")) else ());
@@ -130,7 +130,7 @@ let argscan_getDefineValue = fun args name -> try let __fallback_ignore_24 = let
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic () with
+) in Obj.magic __fallback_result_24 with
   | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
 
 let argscan_hasDefine = fun args name -> argscan_getDefineValue args (name : string) != Obj.magic (HxRuntime.hx_null)
@@ -238,7 +238,7 @@ let applyJsNative = fun forwarded -> let out = applyJs forwarded in (
   out
 )
 
-let findBundledLibRoot = fun () -> try let __fallback_ignore_26 = try let exe = (HxSys.programPath () : string) in (
+let findBundledLibRoot = fun () -> try let __fallback_result_26 = try let exe = (HxSys.programPath () : string) in (
   ignore (if exe == Obj.magic (HxRuntime.hx_null) || HxString.length exe = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let abs = (HxFileSystem.fullPath exe : string) in let root = (Haxe_io_Path.directory (Haxe_io_Path.directory (abs : string) : string) : string) in let libRoot = (Haxe_io_Path.join (let __arr_18 = HxArray.create () in (
     ignore (HxArray.push __arr_18 root);
@@ -270,7 +270,7 @@ let findBundledLibRoot = fun () -> try let __fallback_ignore_26 = try let exe = 
   | __exn_24 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_24) : string) in (
     ignore _hx;
     raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
-  ) else raise (__exn_24) in Obj.magic () with
+  ) else raise (__exn_24) in Obj.magic __fallback_result_26 with
   | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
 
 let applyOcaml = fun forwarded -> let out = HxArray.copy forwarded in let reflaxeTarget = (argscan_getDefineValue out ("reflaxe-target" : string) : string) in (
@@ -321,7 +321,7 @@ let resolve = fun targetId forwarded -> let tempString = ref "" in (
     tempString := __assign_3;
     __assign_3
   ));
-  let tempResult = ref (Obj.magic ()) in (
+  let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (match !tempString with
       | "as3" | "flash" | "swf" -> HxType.hx_throw_typed_rtti (Obj.repr (unsupportedLegacyTargetMessage (!tempString : string))) ["Dynamic"; "String"]
       | "js" -> let __assign_4 = let __anon_5 = HxAnon.create () in (

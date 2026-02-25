@@ -13,11 +13,11 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend._OcamlPr
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_" } : t)
 
-let fromDefineValue = fun raw -> try let __fallback_ignore_4 = (
+let fromDefineValue = fun raw -> try let __fallback_result_4 = (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
   let trimmed = (StringTools.trim (raw : string) : string) in (
     ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
-    let normalized = (HxString.toLowerCase trimmed () : string) in let tempResult = ref (Obj.magic ()) in (
+    let normalized = (HxString.toLowerCase trimmed () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (match normalized with
         | "metal" -> let __assign_1 = "metal" in (
           tempResult := __assign_1;
@@ -31,7 +31,7 @@ let fromDefineValue = fun raw -> try let __fallback_ignore_4 = (
       !tempResult
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_4 with
   | HxRuntime.Hx_return __ret_3 -> Obj.obj __ret_3
 
 let toDefineValue = fun profile -> profile

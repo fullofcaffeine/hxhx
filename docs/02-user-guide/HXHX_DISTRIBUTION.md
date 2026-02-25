@@ -20,7 +20,6 @@ Gate 4 exists so we can build and ship the `hxhx` binary with a predictable layo
 For compatibility with upstream tooling/tests:
 
 - `hxhx --version` prints a SemVer-style compatibility version (e.g. `4.3.7`) without requiring stage0 delegation
-  - transitional note: older bootstrap snapshots may still use the strict fail-fast guard under `HXHX_FORBID_STAGE0=1` until refreshed
 - `hxhx --hxhx-help` prints shim-specific help
 
 The “hxhx build artifact version” is the repo release tag / version used when packaging (see below).

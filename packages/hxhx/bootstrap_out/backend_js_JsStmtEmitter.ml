@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsStm
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsStmtEmitter" } : t)
 
-let normalizeCatchType = fun typeHint -> try let __fallback_ignore_16 = (
+let normalizeCatchType = fun typeHint -> try let __fallback_result_16 = (
   ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let hint = ref (StringTools.trim (typeHint : string) : string) in (
     ignore (if HxString.length (!hint) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
@@ -45,16 +45,16 @@ let normalizeCatchType = fun typeHint -> try let __fallback_ignore_16 = (
       !hint
     )
   )
-) in "" with
+) in Obj.magic __fallback_result_16 with
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
-let simpleTypeName = fun fullName -> try let __fallback_ignore_18 = (
+let simpleTypeName = fun fullName -> try let __fallback_result_18 = (
   ignore (if fullName == Obj.magic (HxRuntime.hx_null) || HxString.length fullName = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let parts = HxString.split fullName "." in HxArray.get parts (HxInt.sub (HxArray.length parts) 1)
-) in "" with
+) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let emitCatchCondition = fun typeHint errRef -> try let __fallback_ignore_26 = let normalized = (normalizeCatchType (typeHint : string) : string) in (
+let emitCatchCondition = fun typeHint errRef -> try let __fallback_result_26 = let normalized = (normalizeCatchType (typeHint : string) : string) in (
   ignore (if HxString.length normalized = 0 || HxString.equals normalized "Dynamic" || HxString.equals normalized "Any" then raise (HxRuntime.Hx_return (Obj.repr "true")) else ());
   let tempResult = ref "" in (
     ignore (match normalized with
@@ -84,7 +84,7 @@ let emitCatchCondition = fun typeHint errRef -> try let __fallback_ignore_26 = l
       ));
     !tempResult
   )
-) in "" with
+) in Obj.magic __fallback_result_26 with
   | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
 
 let rec emitStmtBlockContent = fun writer stmt scope -> if (match stmt with

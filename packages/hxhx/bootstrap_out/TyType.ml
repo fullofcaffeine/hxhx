@@ -28,11 +28,11 @@ let getDisplay = fun self () -> self.display
 
 let unknown = fun () -> create ("Unknown" : string)
 
-let fromHintText = fun hint -> try let __fallback_ignore_5 = (
+let fromHintText = fun hint -> try let __fallback_result_5 = (
   ignore (if hint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (unknown ()))) else ());
   let s = (StringTools.trim (hint : string) : string) in (
     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr (unknown ()))) else ());
-    let tempResult = ref (Obj.magic ()) in (
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (match s with
         | "Bool" | "Dynamic" | "Float" | "Int" | "String" | "Void" -> let __assign_3 = create (s : string) in (
           tempResult := __assign_3;
@@ -45,10 +45,10 @@ let fromHintText = fun hint -> try let __fallback_ignore_5 = (
       !tempResult
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
-let unify = fun a b -> try let __fallback_ignore_7 = (
+let unify = fun a b -> try let __fallback_result_7 = (
   ignore (if a == Obj.magic (HxRuntime.hx_null) || b == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (if isUnknown a () then raise (HxRuntime.Hx_return (Obj.repr b)) else ());
   ignore (if isUnknown b () then raise (HxRuntime.Hx_return (Obj.repr a)) else ());
@@ -59,5 +59,5 @@ let unify = fun a b -> try let __fallback_ignore_7 = (
   ignore (if HxString.equals (a.display) "Dynamic" then raise (HxRuntime.Hx_return (Obj.repr a)) else ());
   ignore (if HxString.equals (b.display) "Dynamic" then raise (HxRuntime.Hx_return (Obj.repr b)) else ());
   Obj.magic (HxRuntime.hx_null)
-) in Obj.magic () with
+) in Obj.magic __fallback_result_7 with
   | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6

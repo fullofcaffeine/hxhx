@@ -120,13 +120,13 @@ let withoutDirectory = fun path -> let s = create (path : string) in (
   toString s ()
 )
 
-let directory = fun path -> try let __fallback_ignore_23 = let s = create (path : string) in (
+let directory = fun path -> try let __fallback_result_23 = let s = create (path : string) in (
   ignore (if s.dir == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   s.dir
-) in "" with
+) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let normalize = fun path -> try let __fallback_ignore_51 = let slash = ("/" : string) in let path = (HxArray.join (HxString.split path "\\") slash (fun x -> x) : string) in (
+let normalize = fun path -> try let __fallback_result_51 = let slash = ("/" : string) in let path = (HxArray.join (HxString.split path "\\") slash (fun x -> x) : string) in (
   ignore (if HxString.equals path slash then raise (HxRuntime.Hx_return (Obj.repr slash)) else ());
   let target = let __arr_33 = HxArray.create () in __arr_33 in let _g = ref 0 in let _g1 = HxString.split path slash in (
     ignore (while !_g < HxArray.length _g1 do ignore (let token = (HxArray.get _g1 (!_g) : string) in (
@@ -206,10 +206,10 @@ let normalize = fun path -> try let __fallback_ignore_51 = let slash = ("/" : st
       StringBuf.toString acc ()
     )
   )
-) in "" with
+) in Obj.magic __fallback_result_51 with
   | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
 
-let addTrailingSlash = fun path -> try let __fallback_ignore_57 = (
+let addTrailingSlash = fun path -> try let __fallback_result_57 = (
   ignore (if HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr "/")) else ());
   let c1 = HxString.lastIndexOf path "/" (HxString.length path) in let c2 = HxString.lastIndexOf path "\\" (HxString.length path) in let tempResult = ref "" in (
     ignore (if c1 < c2 then if c2 <> HxInt.sub (HxString.length path) 1 then let __assign_52 = (HxString.toStdString path ^ "\\" : string) in (
@@ -227,10 +227,10 @@ let addTrailingSlash = fun path -> try let __fallback_ignore_57 = (
     ));
     !tempResult
   )
-) in "" with
+) in Obj.magic __fallback_result_57 with
   | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56
 
-let join = fun paths -> try let __fallback_ignore_32 = let tempArray = ref (Obj.magic ()) in (
+let join = fun paths -> try let __fallback_result_32 = let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (let _g = let __arr_24 = HxArray.create () in __arr_24 in (
     ignore (let _g1 = ref 0 in while !_g1 < HxArray.length paths do ignore (let v = (HxArray.get paths (!_g1) : string) in (
       ignore (let __old_25 = !_g1 in let __new_26 = HxInt.add __old_25 1 in (
@@ -258,13 +258,13 @@ let join = fun paths -> try let __fallback_ignore_32 = let tempArray = ref (Obj.
     )) done);
     normalize (!path : string)
   )
-) in "" with
+) in Obj.magic __fallback_result_32 with
   | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
 
-let isAbsolute = fun path -> try let __fallback_ignore_59 = (
+let isAbsolute = fun path -> try let __fallback_result_59 = (
   ignore (if StringTools.startsWith (path : string) ("/" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if HxString.equals (HxString.charAt path 1) ":" then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   ignore (if StringTools.startsWith (path : string) ("\\\\" : string) then raise (HxRuntime.Hx_return (Obj.repr true)) else ());
   false
-) in false with
+) in Obj.magic __fallback_result_59 with
   | HxRuntime.Hx_return __ret_58 -> Obj.obj __ret_58

@@ -46,7 +46,7 @@ let getModulePath = fun self () -> self.modulePath
 
 let hasField = fun self (name : string) -> HxMap.exists_string (self.fields) name
 
-let fieldType = fun self (name : string) -> let tempResult = ref (Obj.magic ()) in (
+let fieldType = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxMap.exists_string (self.fields) name then let __assign_7 = HxMap.get_string (self.fields) name in (
     tempResult := __assign_7;
     __assign_7
@@ -57,7 +57,7 @@ let fieldType = fun self (name : string) -> let tempResult = ref (Obj.magic ()) 
   !tempResult
 )
 
-let staticMethod = fun self (name : string) -> let tempResult = ref (Obj.magic ()) in (
+let staticMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxMap.exists_string (self.staticMethods) name then let __assign_9 = HxMap.get_string (self.staticMethods) name in (
     tempResult := __assign_9;
     __assign_9
@@ -68,7 +68,7 @@ let staticMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (
   !tempResult
 )
 
-let instanceMethod = fun self (name : string) -> let tempResult = ref (Obj.magic ()) in (
+let instanceMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxMap.exists_string (self.instanceMethods) name then let __assign_11 = HxMap.get_string (self.instanceMethods) name in (
     tempResult := __assign_11;
     __assign_11

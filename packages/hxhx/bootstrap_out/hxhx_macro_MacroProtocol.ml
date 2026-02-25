@@ -13,13 +13,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroProtocol" } : t)
 
-let escapePayload = fun s -> try let __fallback_ignore_2 = (
+let escapePayload = fun s -> try let __fallback_result_2 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   HxArray.join (HxString.split (HxArray.join (HxString.split (HxArray.join (HxString.split (HxArray.join (HxString.split s "\\") "\\\\" (fun x -> x)) "\n") "\\n" (fun x -> x)) "\r") "\\r" (fun x -> x)) "\t") "\\t" (fun x -> x)
-) in "" with
+) in Obj.magic __fallback_result_2 with
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
-let unescapePayload = fun s -> try let __fallback_ignore_11 = (
+let unescapePayload = fun s -> try let __fallback_result_11 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let out = StringBuf.create () in let i = ref 0 in (
     ignore (try while !i < HxString.length s do try ignore (let c = HxString.charCodeAt s (!i) in (
@@ -43,12 +43,12 @@ let unescapePayload = fun s -> try let __fallback_ignore_11 = (
       | HxRuntime.Hx_break -> ());
     StringBuf.toString out ()
   )
-) in "" with
+) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
 let encodeLen = fun label value -> let enc = (escapePayload (value : string) : string) in (((HxString.toStdString label ^ "=") ^ string_of_int (HxString.length enc)) ^ ":") ^ HxString.toStdString enc
 
-let decodeLenValue = fun part -> try let __fallback_ignore_18 = let eq = HxString.indexOf part "=" 0 in (
+let decodeLenValue = fun part -> try let __fallback_result_18 = let eq = HxString.indexOf part "=" 0 in (
   ignore (if eq <= 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let rest = (HxString.substr part (HxInt.add eq 1) (-1) : string) in let colon = HxString.indexOf rest ":" 0 in (
     ignore (if colon <= 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
@@ -60,10 +60,10 @@ let decodeLenValue = fun part -> try let __fallback_ignore_18 = let eq = HxStrin
       )
     )
   )
-) in "" with
+) in Obj.magic __fallback_result_18 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let kvParse = fun tail -> try let __fallback_ignore_51 = let out = HxMap.create_string () in (
+let kvParse = fun tail -> try let __fallback_result_51 = let out = HxMap.create_string () in (
   ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let i = ref 0 in (
     ignore (try while !i < HxString.length tail do try ignore ((
@@ -161,7 +161,7 @@ let kvParse = fun tail -> try let __fallback_ignore_51 = let out = HxMap.create_
       | HxRuntime.Hx_break -> ());
     out
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_51 with
   | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
 
 let splitN = fun s n -> let head = HxArray.create () in let i = ref 0 in let start = ref 0 in (

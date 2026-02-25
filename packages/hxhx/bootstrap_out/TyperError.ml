@@ -19,7 +19,7 @@ let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.cla
       self.filePath <- __assign_3;
       __assign_3
     ));
-    let tempRight1 = ref (Obj.magic ()) in (
+    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if pos2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = HxPos.unknown () in (
         tempRight1 := __assign_4;
         __assign_4

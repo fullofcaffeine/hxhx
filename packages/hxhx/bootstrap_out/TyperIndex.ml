@@ -22,7 +22,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "TyperIndex"; byF
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperIndex"; byFullName = Obj.magic (); byShortName = Obj.magic () } : t)
 
-let getByFullName = fun self (fullName : string) -> let tempResult = ref (Obj.magic ()) in (
+let getByFullName = fun self (fullName : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxMap.exists_string (self.byFullName) fullName then let __assign_3 = HxMap.get_string (self.byFullName) fullName in (
     tempResult := __assign_3;
     __assign_3
@@ -33,7 +33,7 @@ let getByFullName = fun self (fullName : string) -> let tempResult = ref (Obj.ma
   !tempResult
 )
 
-let getByShortName = fun self (shortName : string) -> let tempResult = ref (Obj.magic ()) in (
+let getByShortName = fun self (shortName : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
   ignore (if HxMap.exists_string (self.byShortName) shortName then let __assign_5 = HxMap.get_string (self.byShortName) shortName in (
     tempResult := __assign_5;
     __assign_5
@@ -48,7 +48,7 @@ let addClass = fun self (info : TyClassInfo.t) -> ignore (try (
   ignore (if info == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let fullName = (TyClassInfo.getFullName info () : string) in (
     ignore (HxMap.set_string (self.byFullName) fullName info);
-    let shortName = (TyClassInfo.getShortName info () : string) in let tempMaybeArray = ref (Obj.magic ()) in (
+    let shortName = (TyClassInfo.getShortName info () : string) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null)) in (
       ignore (if HxMap.exists_string (self.byShortName) shortName then let __assign_8 = HxMap.get_string (self.byShortName) shortName in (
         tempMaybeArray := __assign_8;
         __assign_8
@@ -65,7 +65,7 @@ let addClass = fun self (info : TyClassInfo.t) -> ignore (try (
 ) with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11)
 
-let resolveTypePath = fun self (typePath : string) (packagePath : string) (imports : string HxArray.t) -> try let __fallback_ignore_22 = (
+let resolveTypePath = fun self (typePath : string) (packagePath : string) (imports : string HxArray.t) -> try let __fallback_result_22 = (
   ignore (if typePath == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let raw = (StringTools.trim (typePath : string) : string) in (
     ignore (if HxString.length raw = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
@@ -109,7 +109,7 @@ let resolveTypePath = fun self (typePath : string) (packagePath : string) (impor
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ()) else ());
-      let alts = getByShortName self (raw : string) in let tempResult = ref (Obj.magic ()) in (
+      let alts = getByShortName self (raw : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
         ignore (if HxArray.length alts = 1 then let __assign_19 = HxArray.get alts 0 in (
           tempResult := __assign_19;
           __assign_19
@@ -121,7 +121,7 @@ let resolveTypePath = fun self (typePath : string) (packagePath : string) (impor
       )
     )
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_22 with
   | HxRuntime.Hx_return __ret_21 -> Obj.obj __ret_21
 
 let classFullName = fun pkg cls -> let tempString = ref "" in (
@@ -144,9 +144,9 @@ let classFullName = fun pkg cls -> let tempString = ref "" in (
   )
 )
 
-let expectedModuleNameFromFile = fun filePath -> try let __fallback_ignore_30 = (
+let expectedModuleNameFromFile = fun filePath -> try let __fallback_result_30 = (
   ignore (if filePath == Obj.magic (HxRuntime.hx_null) || HxString.length filePath = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let name = (Haxe_io_Path.withoutDirectory (filePath : string) : string) in let dot = HxString.lastIndexOf name "." (HxString.length name) in let tempResult = ref (Obj.magic ()) in (
+  let name = (Haxe_io_Path.withoutDirectory (filePath : string) : string) in let dot = HxString.lastIndexOf name "." (HxString.length name) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
     ignore (if dot <= 0 then let __assign_27 = (name : string) in (
       tempResult := __assign_27;
       __assign_27
@@ -156,7 +156,7 @@ let expectedModuleNameFromFile = fun filePath -> try let __fallback_ignore_30 = 
     ));
     !tempResult
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_30 with
   | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
 
 let classFullNameInModule = fun pkg moduleName clsName -> let tempString = ref "" in (
@@ -219,7 +219,7 @@ let classFullNameInModule = fun pkg moduleName clsName -> let tempString = ref "
   )
 )
 
-let build = fun resolved -> try let __fallback_ignore_57 = let idx = create () in (
+let build = fun resolved -> try let __fallback_result_57 = let idx = create () in (
   ignore (if resolved == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr idx)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length resolved do ignore (let m = HxArray.get resolved (!_g) in (
@@ -256,7 +256,7 @@ let build = fun resolved -> try let __fallback_ignore_57 = let idx = create () i
                     ));
                     HxArray.push args (TyType.fromHintText (HxFunctionArg.getTypeHint a : string))
                   )) done);
-                  let retHint = (HxFunctionDecl.getReturnTypeHint fn : string) in let tempTyType = ref (Obj.magic ()) in (
+                  let retHint = (HxFunctionDecl.getReturnTypeHint fn : string) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null)) in (
                     ignore (if HxString.equals fnName "new" then let __assign_54 = TyType.fromHintText (full : string) in (
                       tempTyType := __assign_54;
                       __assign_54
@@ -278,5 +278,5 @@ let build = fun resolved -> try let __fallback_ignore_57 = let idx = create () i
     )) done);
     idx
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_57 with
   | HxRuntime.Hx_return __ret_56 -> Obj.obj __ret_56

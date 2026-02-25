@@ -31,7 +31,7 @@ let addRawDefine = fun dst raw -> try (
 ) with
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
-let fromRawDefines = fun rawDefines -> try let __fallback_ignore_5 = let out = HxMap.create_string () in (
+let fromRawDefines = fun rawDefines -> try let __fallback_result_5 = let out = HxMap.create_string () in (
   ignore (if rawDefines == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let _g = ref 0 in (
     ignore (while !_g < HxArray.length rawDefines do ignore (let raw = (HxArray.get rawDefines (!_g) : string) in (
@@ -43,7 +43,7 @@ let fromRawDefines = fun rawDefines -> try let __fallback_ignore_5 = let out = H
     )) done);
     out
   )
-) in Obj.magic () with
+) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
 let mergeInto = fun dst src -> try (

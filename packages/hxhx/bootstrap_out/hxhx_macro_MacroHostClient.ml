@@ -22,7 +22,7 @@ let macroclient_create = fun proc2 -> let self = ({ __hx_type = HxType.class_ "h
 
 let macroclient___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic (); nextId = 1 } : macroclient_t)
 
-let macroclient_drainStderr = fun self (maxLines : int) -> try let __fallback_ignore_54 = (
+let macroclient_drainStderr = fun self (maxLines : int) -> try let __fallback_result_54 = (
   ignore (if maxLines <= 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let lines = HxArray.create () in (
     ignore (try while HxArray.length lines < maxLines do ignore (HxArray.push lines (let __obj_48 = self.proc.stderr in __obj_48.readLine (Obj.magic __obj_48) ())) done with
@@ -51,7 +51,7 @@ let macroclient_drainStderr = fun self (maxLines : int) -> try let __fallback_ig
       ) else raise (__exn_52));
     HxArray.join lines "\n" (fun x -> x)
   )
-) in "" with
+) in Obj.magic __fallback_result_54 with
   | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53
 
 let macroclient_replyOk = fun self (id : int) (tail : string) -> ignore ((
@@ -316,7 +316,7 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let p
 ) with
   | HxRuntime.Hx_return __ret_153 -> Obj.obj __ret_153)
 
-let macroclient_call = fun self (hx_method : string) (tail : string) -> try let __fallback_ignore_47 = let id = let __obj_3 = self in let __old_4 = __obj_3.nextId in let __new_5 = HxInt.add __old_4 1 in (
+let macroclient_call = fun self (hx_method : string) (tail : string) -> try let __fallback_result_47 = let id = let __obj_3 = self in let __old_4 = __obj_3.nextId in let __new_5 = HxInt.add __old_4 1 in (
   ignore (__obj_3.nextId <- __new_5);
   __old_4
 ) in (
@@ -487,7 +487,7 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
       | HxRuntime.Hx_break -> ());
     ""
   )
-) in "" with
+) in Obj.magic __fallback_result_47 with
   | HxRuntime.Hx_return __ret_46 -> Obj.obj __ret_46
 
 let macroclient_TRACE_HOST = let v = (HxSys.getEnv "HXHX_MACRO_HOST_TRACE" : string) in HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes"
@@ -589,7 +589,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostClient" } : t)
 
-let resolveMacroHostExe = fun () -> try let __fallback_ignore_40 = let env = (HxSys.getEnv "HXHX_MACRO_HOST_EXE" : string) in (
+let resolveMacroHostExe = fun () -> try let __fallback_result_40 = let env = (HxSys.getEnv "HXHX_MACRO_HOST_EXE" : string) in (
   ignore (if env != Obj.magic (HxRuntime.hx_null) && HxString.length env > 0 then raise (HxRuntime.Hx_return (Obj.repr env)) else ());
   let prog = (HxSys.programPath () : string) in (
     ignore (if prog == Obj.magic (HxRuntime.hx_null) || HxString.length prog = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
@@ -672,7 +672,7 @@ let resolveMacroHostExe = fun () -> try let __fallback_ignore_40 = let env = (Hx
       )
     )
   )
-) in "" with
+) in Obj.magic __fallback_result_40 with
   | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39
 
 let resolveMacroHostExePath = fun () -> resolveMacroHostExe ()
@@ -682,7 +682,7 @@ let connect = fun () -> let exe = (resolveMacroHostExe () : string) in (
   macroclient_connect (exe : string)
 )
 
-let withClient = fun run -> try let __fallback_ignore_6 = let client = connect () in try let out = Obj.repr (run client) in (
+let withClient = fun run -> try let __fallback_result_6 = let client = connect () in try let out = Obj.repr (run client) in (
   ignore (macroclient_close client ());
   raise (HxRuntime.Hx_return (Obj.repr out))
 ) with
@@ -702,7 +702,7 @@ let withClient = fun run -> try let __fallback_ignore_6 = let client = connect (
       ignore (macroclient_close client ());
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "String"]
     )
-  ) else raise (__exn_4) in Obj.magic () with
+  ) else raise (__exn_4) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
 let selftest = fun () -> withClient (fun client -> let lines = HxArray.create () in (
@@ -727,7 +727,7 @@ let run = fun expr -> withClient (fun client -> macroclient_call client ("macro.
 
 let openSession = fun () -> macrohostsession_create (connect ())
 
-let withSession = fun run -> try let __fallback_ignore_12 = let session = openSession () in try let out = Obj.repr (run session) in (
+let withSession = fun run -> try let __fallback_result_12 = let session = openSession () in try let out = Obj.repr (run session) in (
   ignore (macrohostsession_close session ());
   raise (HxRuntime.Hx_return (Obj.repr out))
 ) with
@@ -747,7 +747,7 @@ let withSession = fun run -> try let __fallback_ignore_12 = let session = openSe
       ignore (macrohostsession_close session ());
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "String"]
     )
-  ) else raise (__exn_10) in Obj.magic () with
+  ) else raise (__exn_10) in Obj.magic __fallback_result_12 with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
 
 let runAll = fun exprs -> withSession (fun session -> let out = HxArray.create () in let _g = ref 0 in (

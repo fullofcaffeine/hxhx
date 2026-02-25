@@ -16,7 +16,7 @@ let ocamlstdioinput_readByte__impl = fun (self : ocamlstdioinput_t) () -> let b 
   b
 )
 
-let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_9 = (
+let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_9 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
@@ -39,7 +39,7 @@ let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBy
       ) else raise (__exn_7));
     !i
   )
-) in 0 with
+) in Obj.magic __fallback_result_9 with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
 let ocamlstdioinput_readLine__impl = fun (self : ocamlstdioinput_t) () -> let s = (HxStdio.read_line (self.stream) : string) in (
@@ -71,7 +71,7 @@ let ocamlstdiooutput___ctor = fun (self : ocamlstdiooutput_t) stream2 -> ignore 
 
 let ocamlstdiooutput_writeByte__impl = fun (self : ocamlstdiooutput_t) (c : int) -> ignore (HxStdio.write_byte (self.stream) c)
 
-let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_5 = (
+let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_5 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
@@ -80,7 +80,7 @@ let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : H
     ) in self.writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
     len
   )
-) in 0 with
+) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
 let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore (try (
