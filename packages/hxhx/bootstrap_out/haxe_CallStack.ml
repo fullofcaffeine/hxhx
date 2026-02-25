@@ -51,9 +51,9 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
       tempResult := __assign_18;
       __assign_18
     )
-    | 1 -> let _g = let __enum_param_20 = item1 in if __enum_param_20 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_20 with
+    | 1 -> let _g = (let __enum_param_20 = item1 in if __enum_param_20 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_20 with
       | Module __enum_param_19 -> __enum_param_19
-      | _ -> failwith "Unexpected enum parameter" in if item2 == Obj.magic (HxRuntime.hx_null) then let __assign_21 = false in (
+      | _ -> failwith "Unexpected enum parameter" : string) in if item2 == Obj.magic (HxRuntime.hx_null) then let __assign_21 = false in (
       tempResult := __assign_21;
       __assign_21
     ) else if (let __enum_idx_22 = item2 in if __enum_idx_22 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_22 with
@@ -61,9 +61,9 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
       | Module _ -> 1
       | FilePos (_, _, _, _) -> 2
       | Method (_, _) -> 3
-      | LocalFunction _ -> 4) = 1 then let _g1 = let __enum_param_24 = item2 in if __enum_param_24 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_24 with
+      | LocalFunction _ -> 4) = 1 then let _g1 = (let __enum_param_24 = item2 in if __enum_param_24 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_24 with
       | Module __enum_param_23 -> __enum_param_23
-      | _ -> failwith "Unexpected enum parameter" in let m2 = _g1 in let m1 = _g in let __assign_25 = HxString.equals m1 m2 in (
+      | _ -> failwith "Unexpected enum parameter" : string) in let m2 = (_g1 : string) in let m1 = (_g : string) in let __assign_25 = HxString.equals m1 m2 in (
       tempResult := __assign_25;
       __assign_25
     ) else let __assign_26 = false in (
@@ -72,9 +72,9 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
     )
     | 2 -> let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (let __enum_param_28 = item1 in if __enum_param_28 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_28 with
       | FilePos (__enum_param_27, _, _, _) -> __enum_param_27
-      | _ -> failwith "Unexpected enum parameter")) in let _g1 = let __enum_param_30 = item1 in if __enum_param_30 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_30 with
+      | _ -> failwith "Unexpected enum parameter")) in let _g1 = (let __enum_param_30 = item1 in if __enum_param_30 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_30 with
       | FilePos (_, __enum_param_29, _, _) -> __enum_param_29
-      | _ -> failwith "Unexpected enum parameter" in let _g2 = let __enum_param_32 = item1 in if __enum_param_32 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_32 with
+      | _ -> failwith "Unexpected enum parameter" : string) in let _g2 = let __enum_param_32 = item1 in if __enum_param_32 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_32 with
       | FilePos (_, _, __enum_param_31, _) -> __enum_param_31
       | _ -> failwith "Unexpected enum parameter" in let _g3 = let __enum_param_34 = item1 in if __enum_param_34 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_34 with
       | FilePos (_, _, _, __enum_param_33) -> __enum_param_33
@@ -88,24 +88,24 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
       | Method (_, _) -> 3
       | LocalFunction _ -> 4) = 2 then let _g4 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (let __enum_param_38 = item2 in if __enum_param_38 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_38 with
       | FilePos (__enum_param_37, _, _, _) -> __enum_param_37
-      | _ -> failwith "Unexpected enum parameter")) in let _g5 = let __enum_param_40 = item2 in if __enum_param_40 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_40 with
+      | _ -> failwith "Unexpected enum parameter")) in let _g5 = (let __enum_param_40 = item2 in if __enum_param_40 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_40 with
       | FilePos (_, __enum_param_39, _, _) -> __enum_param_39
-      | _ -> failwith "Unexpected enum parameter" in let _g6 = let __enum_param_42 = item2 in if __enum_param_42 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42 with
+      | _ -> failwith "Unexpected enum parameter" : string) in let _g6 = let __enum_param_42 = item2 in if __enum_param_42 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42 with
       | FilePos (_, _, __enum_param_41, _) -> __enum_param_41
       | _ -> failwith "Unexpected enum parameter" in let _g7 = let __enum_param_44 = item2 in if __enum_param_44 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_44 with
       | FilePos (_, _, _, __enum_param_43) -> __enum_param_43
-      | _ -> failwith "Unexpected enum parameter" in let item3 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g4) in let file2 = _g5 in let line2 = _g6 in let col2 = _g7 in let col1 = _g3 in let line1 = _g2 in let file1 = _g1 in let item4 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let __assign_45 = HxString.equals file1 file2 && line1 = line2 && (let __nullable_46 = col1 in let __nullable_47 = col2 in if __nullable_46 == HxRuntime.hx_null then __nullable_46 == HxRuntime.hx_null && __nullable_47 == HxRuntime.hx_null else not (__nullable_47 == HxRuntime.hx_null) && Obj.obj __nullable_46 = Obj.obj __nullable_47) && equalItems (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" item4)) (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" item3)) in (
+      | _ -> failwith "Unexpected enum parameter" in let item3 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g4) in let file2 = (_g5 : string) in let line2 = _g6 in let col2 = _g7 in let col1 = _g3 in let line1 = _g2 in let file1 = (_g1 : string) in let item4 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let __assign_45 = HxString.equals file1 file2 && line1 = line2 && (let __nullable_46 = col1 in let __nullable_47 = col2 in if __nullable_46 == HxRuntime.hx_null then __nullable_46 == HxRuntime.hx_null && __nullable_47 == HxRuntime.hx_null else not (__nullable_47 == HxRuntime.hx_null) && Obj.obj __nullable_46 = Obj.obj __nullable_47) && equalItems (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" item4)) (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" item3)) in (
       tempResult := __assign_45;
       __assign_45
     ) else let __assign_48 = false in (
       tempResult := __assign_48;
       __assign_48
     )
-    | 3 -> let _g = let __enum_param_50 = item1 in if __enum_param_50 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_50 with
+    | 3 -> let _g = (let __enum_param_50 = item1 in if __enum_param_50 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_50 with
       | Method (__enum_param_49, _) -> __enum_param_49
-      | _ -> failwith "Unexpected enum parameter" in let _g1 = let __enum_param_52 = item1 in if __enum_param_52 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_52 with
+      | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = (let __enum_param_52 = item1 in if __enum_param_52 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_52 with
       | Method (_, __enum_param_51) -> __enum_param_51
-      | _ -> failwith "Unexpected enum parameter" in if item2 == Obj.magic (HxRuntime.hx_null) then let __assign_53 = false in (
+      | _ -> failwith "Unexpected enum parameter" : string) in if item2 == Obj.magic (HxRuntime.hx_null) then let __assign_53 = false in (
       tempResult := __assign_53;
       __assign_53
     ) else if (let __enum_idx_54 = item2 in if __enum_idx_54 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_54 with
@@ -113,11 +113,11 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
       | Module _ -> 1
       | FilePos (_, _, _, _) -> 2
       | Method (_, _) -> 3
-      | LocalFunction _ -> 4) = 3 then let _g2 = let __enum_param_56 = item2 in if __enum_param_56 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_56 with
+      | LocalFunction _ -> 4) = 3 then let _g2 = (let __enum_param_56 = item2 in if __enum_param_56 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_56 with
       | Method (__enum_param_55, _) -> __enum_param_55
-      | _ -> failwith "Unexpected enum parameter" in let _g3 = let __enum_param_58 = item2 in if __enum_param_58 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_58 with
+      | _ -> failwith "Unexpected enum parameter" : string) in let _g3 = (let __enum_param_58 = item2 in if __enum_param_58 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_58 with
       | Method (_, __enum_param_57) -> __enum_param_57
-      | _ -> failwith "Unexpected enum parameter" in let class2 = _g2 in let method2 = _g3 in let method1 = _g1 in let class1 = _g in let __assign_59 = HxString.equals class1 class2 && HxString.equals method1 method2 in (
+      | _ -> failwith "Unexpected enum parameter" : string) in let class2 = (_g2 : string) in let method2 = (_g3 : string) in let method1 = (_g1 : string) in let class1 = (_g : string) in let __assign_59 = HxString.equals class1 class2 && HxString.equals method1 method2 in (
       tempResult := __assign_59;
       __assign_59
     ) else let __assign_60 = false in (
@@ -192,11 +192,11 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
 
 let rec itemToString = fun b s -> match s with
   | CFunction -> ignore (StringBuf.add b (Obj.repr "a C function"))
-  | Module _p0 -> ignore (let _g = _p0 in let m = _g in (
+  | Module _p0 -> ignore (let _g = (_p0 : string) in let m = (_g : string) in (
     ignore (StringBuf.add b (Obj.repr "module "));
     StringBuf.add b (Obj.repr m)
   ))
-  | FilePos (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _p0) in let _g1 = _p1 in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let file = _g1 in let line = _g2 in let col = _g3 in (
+  | FilePos (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _p0) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let file = (_g1 : string) in let line = _g2 in let col = _g3 in (
     ignore (if s2 != Obj.magic (HxRuntime.hx_null) then ignore ((
       ignore (itemToString b (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" s2)));
       StringBuf.add b (Obj.repr " (")
@@ -210,11 +210,11 @@ let rec itemToString = fun b s -> match s with
     )) else ());
     if s2 != Obj.magic (HxRuntime.hx_null) then ignore (StringBuf.add b (Obj.repr ")")) else ()
   ))
-  | Method (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in let cname = _g in let meth = _g1 in let tempMaybeString = ref (Obj.magic ()) in (
-    ignore (if cname == Obj.magic (HxRuntime.hx_null) then let __assign_72 = "<unknown>" in (
+  | Method (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let cname = (_g : string) in let meth = (_g1 : string) in let tempMaybeString = ref (Obj.magic ()) in (
+    ignore (if cname == Obj.magic (HxRuntime.hx_null) then let __assign_72 = ("<unknown>" : string) in (
       tempMaybeString := __assign_72;
       __assign_72
-    ) else let __assign_73 = cname in (
+    ) else let __assign_73 = (cname : string) in (
       tempMaybeString := __assign_73;
       __assign_73
     ));

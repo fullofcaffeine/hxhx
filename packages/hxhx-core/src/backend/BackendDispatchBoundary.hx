@@ -46,6 +46,27 @@ class BackendDispatchBoundary {
 	}
 
 	/**
+		Reflective fallback for backend wrappers not known at compile time.
+
+		Why
+		- Reflaxe-generated OCaml can erase interface method tables for `IBackend`, so direct
+		  interface dispatch is not always representable at this boundary.
+		- Dynamic/plugin backends still need one escape hatch that does not hardcode every
+		  concrete backend class in the core.
+
+		How
+		- Resolve `emit` reflectively from the runtime backend value and call it with the
+		  standard `(program, context)` payload.
+		- Keep this reflection confined to this boundary class.
+	**/
+	public static function emitReflective(backend:Dynamic, program:GenIrProgram, context:BackendContext):EmitResult {
+		final emitFn:Dynamic = Reflect.field(backend, "emit");
+		if (emitFn == null)
+			throw "stage3 backend dispatch: missing emit method on backend runtime value";
+		return cast Reflect.callMethod(backend, emitFn, [program, context]);
+	}
+
+	/**
 		Typed backend emit dispatch bridge.
 
 		Why
@@ -74,7 +95,7 @@ class BackendDispatchBoundary {
 			final targetCoreBackend = requireTargetCoreBackend(dispatchValue);
 			return TargetCoreBackend.emitBridge(targetCoreBackend, program, context);
 		}
-		return backend.emit(program, context);
+		return emitReflective(dispatchValue, program, context);
 		#else
 		return backend.emit(program, context);
 		#end

@@ -31,17 +31,17 @@ let knownProviderRegistrations = fun typePath -> let tempResult = ref (Obj.magic
   !tempResult
 )
 
-let registrationsForType = fun typePath -> try let tempString = ref "" in (
-  ignore (if typePath == Obj.magic (HxRuntime.hx_null) then let __assign_3 = "" in (
+let registrationsForType = fun typePath -> try let __fallback_ignore_12 = let tempString = ref "" in (
+  ignore (if typePath == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
     tempString := __assign_3;
     __assign_3
-  ) else let __assign_4 = typePath in (
+  ) else let __assign_4 = (typePath : string) in (
     tempString := __assign_4;
     __assign_4
   ));
-  let normalized = StringTools.trim (!tempString) in (
+  let normalized = (StringTools.trim (!tempString : string) : string) in (
     ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "backend provider type path is required") ["Dynamic"; "String"]) else ());
-    let known = knownProviderRegistrations normalized in (
+    let known = knownProviderRegistrations (normalized : string) in (
       ignore (if known != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr known)) else ());
       let cls = HxType.resolveClass normalized in (
         ignore (if cls == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend provider type not found: " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
@@ -61,10 +61,10 @@ let registrationsForType = fun typePath -> try let tempString = ref "" in (
               ignore error;
               HxType.hx_throw_typed_rtti (Obj.repr ((("backend provider construction failed for " ^ HxString.toStdString normalized) ^ ": ") ^ HxString.toStdString (error.get_message (Obj.magic error) ()))) ["Dynamic"; "String"]
             ) else raise (__exn_10));
-          let providerContract = Std.downcast (!tempStruct) (HxType.class_ "backend.ITargetBackendProvider") in let provider = requireProvider providerContract normalized in Obj.obj (HxAnon.get provider "registrations") ()
+          let providerContract = Std.downcast (!tempStruct) (HxType.class_ "backend.ITargetBackendProvider") in let provider = requireProvider providerContract (normalized : string) in Obj.obj (HxAnon.get provider "registrations") ()
         )
       )
     )
   )
-) with
+) in Obj.magic () with
   | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11

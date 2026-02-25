@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable params : TySymbol.t
 
 let create = fun name2 params2 locals2 returnType2 returnExprType2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; params = Obj.magic (); locals = Obj.magic (); returnType = Obj.magic (); returnExprType = Obj.magic () } : t) in (
   ignore ((
-    ignore (let __assign_1 = name2 in (
+    ignore (let __assign_1 = (name2 : string) in (
       self.name <- __assign_1;
       __assign_1
     ));
@@ -44,12 +44,12 @@ let getReturnType = fun self () -> self.returnType
 
 let getReturnExprType = fun self () -> self.returnExprType
 
-let declareLocal = fun self (name2 : string) (ty : TyType.t) -> let sym = TySymbol.create name2 ty in (
+let declareLocal = fun self (name2 : string) (ty : TyType.t) -> let sym = TySymbol.create (name2 : string) ty in (
   ignore (HxArray.push (self.locals) sym);
   sym
 )
 
-let resolveSymbol = fun self (name2 : string) -> try (
+let resolveSymbol = fun self (name2 : string) -> try let __fallback_ignore_11 = (
   ignore (let _g = ref 0 in let _g1 = self.params in while !_g < HxArray.length _g1 do ignore (let p = HxArray.get _g1 (!_g) in (
     ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
       ignore (_g := __new_7);
@@ -65,16 +65,16 @@ let resolveSymbol = fun self (name2 : string) -> try (
     if HxString.equals (TySymbol.getName l ()) name2 then raise (HxRuntime.Hx_return (Obj.repr l)) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
-) with
+) in Obj.magic () with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let resolveLocal = fun self (name2 : string) -> let sym = resolveSymbol self name2 in let tempResult = ref (Obj.magic ()) in (
-  ignore (if sym == Obj.magic (HxRuntime.hx_null) then let __assign_11 = TyType.unknown () in (
-    tempResult := __assign_11;
-    __assign_11
-  ) else let __assign_12 = TySymbol.getType sym () in (
+let resolveLocal = fun self (name2 : string) -> let sym = resolveSymbol self (name2 : string) in let tempResult = ref (Obj.magic ()) in (
+  ignore (if sym == Obj.magic (HxRuntime.hx_null) then let __assign_12 = TyType.unknown () in (
     tempResult := __assign_12;
     __assign_12
+  ) else let __assign_13 = TySymbol.getType sym () in (
+    tempResult := __assign_13;
+    __assign_13
   ));
   !tempResult
 )

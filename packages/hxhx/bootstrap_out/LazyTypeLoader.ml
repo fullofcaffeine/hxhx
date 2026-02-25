@@ -13,11 +13,11 @@ let __ctor = fun (self : t) () -> ignore ((
 
 let ensureTypeAvailable__impl = fun (self : t) (typePath : string) (packagePath : string) (imports : string HxArray.t) -> (
   ignore self;
-  try (
+  try let __fallback_ignore_2 = (
     ignore (if HxString.equals typePath "__hxhx_never__" || HxString.equals packagePath "__hxhx_never__" then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     ignore (if imports != Obj.magic (HxRuntime.hx_null) && HxArray.length imports = -1 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     Obj.magic (HxRuntime.hx_null)
-  ) with
+  ) in Obj.magic () with
     | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 )
 

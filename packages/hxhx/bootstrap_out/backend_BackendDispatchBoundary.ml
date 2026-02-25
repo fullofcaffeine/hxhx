@@ -20,3 +20,20 @@ let requireJsBackend = fun value -> Obj.obj value
 let requireOcamlBackend = fun value -> Obj.obj value
 
 let requireTargetCoreBackend = fun value -> Obj.obj value
+
+let emitReflective = fun backend program context -> let emitFn = Obj.obj (HxAnon.get backend "emit") in (
+  ignore (if emitFn == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "stage3 backend dispatch: missing emit method on backend runtime value") ["Dynamic"; "String"]) else ());
+  Obj.obj (Obj.obj (HxReflect.callMethod backend emitFn (let __arr_1 = HxArray.create () in (
+    ignore (HxArray.push __arr_1 program);
+    ignore (HxArray.push __arr_1 context);
+    __arr_1
+  ))))
+)
+
+let emit = fun backend program context -> try let __fallback_ignore_3 = let dispatchValue = backend in (
+  ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.js.JsBackend") then ignore (let jsBackend = Obj.obj dispatchValue in raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsBackend.emitBridge jsBackend program context)))) else ());
+  ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.ocaml.OcamlStage3Backend") then ignore (let ocamlBackend = Obj.obj dispatchValue in raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_OcamlStage3Backend.emitBridge ocamlBackend program context)))) else ());
+  ignore (if HxType.isOfType (Obj.repr dispatchValue) (HxType.class_ "backend.TargetCoreBackend") then ignore (let targetCoreBackend = Obj.obj dispatchValue in raise (HxRuntime.Hx_return (Obj.repr (Backend_TargetCoreBackend.emitBridge targetCoreBackend program context)))) else ());
+  emitReflective (Obj.repr dispatchValue) program context
+) in Obj.magic () with
+  | HxRuntime.Hx_return __ret_2 -> Obj.obj __ret_2

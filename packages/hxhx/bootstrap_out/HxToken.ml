@@ -21,3 +21,7 @@ let create = fun kind2 pos2 -> let self = ({ __hx_type = HxType.class_ "HxToken"
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxToken"; kind = Obj.magic (); pos = Obj.magic () } : t)
+
+let getKind = fun self () -> self.kind
+
+let getPos = fun self () -> self.pos

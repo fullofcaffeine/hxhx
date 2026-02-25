@@ -18,18 +18,21 @@ let coreId__impl = fun (self : t) () -> (
 
 let emit__impl = fun (self : t) (program : Obj.t) (context : Backend_BackendContext.t) -> (
   ignore self;
-  let entryPath = EmitterStage.emitToDir (Obj.obj program) (context.outputDir) (context.emitFullBodies) (context.buildExecutable) in let tempString = ref "" in (
-    ignore (if context.buildExecutable then let __assign_1 = "entry_executable" in (
-      tempString := __assign_1;
-      __assign_1
-    ) else let __assign_2 = "entry_planned_executable" in (
-      tempString := __assign_2;
-      __assign_2
-    ));
-    Backend_EmitResult.create entryPath (let __arr_3 = HxArray.create () in (
-      ignore (HxArray.push __arr_3 (Backend_EmitArtifact.create (!tempString) entryPath));
-      __arr_3
-    )) (context.buildExecutable)
+  let profile = Backend_BackendContext.ensureOcamlProfileDefine context () in (
+    ignore (if profile = "metal" then ignore (Backend_ocaml_MetalProfileVerifier.verifyProgram (Obj.obj program)) else ());
+    let entryPath = (EmitterStage.emitToDir (Obj.obj program) (context.outputDir : string) (context.emitFullBodies) (context.buildExecutable) profile : string) in let tempString = ref "" in (
+      ignore (if context.buildExecutable then let __assign_1 = ("entry_executable" : string) in (
+        tempString := __assign_1;
+        __assign_1
+      ) else let __assign_2 = ("entry_planned_executable" : string) in (
+        tempString := __assign_2;
+        __assign_2
+      ));
+      Backend_EmitResult.create (entryPath : string) (let __arr_3 = HxArray.create () in (
+        ignore (HxArray.push __arr_3 (Backend_EmitArtifact.create (!tempString : string) (entryPath : string)));
+        __arr_3
+      )) (context.buildExecutable)
+    )
   )
 )
 
@@ -42,3 +45,5 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.Oc
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> coreId__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1) } : t)
+
+let emitBridge = fun core program context -> core.emit (Obj.magic core) program context

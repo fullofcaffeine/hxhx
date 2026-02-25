@@ -36,6 +36,10 @@ class JsTargetCore implements ITargetCore {
 
 	public function new() {}
 
+	public static function emitBridge(core:JsTargetCore, program:GenIrProgram, context:BackendContext):EmitResult {
+		return core.emit(program, context);
+	}
+
 	public function coreId():String {
 		return CORE_ID;
 	}

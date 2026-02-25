@@ -1,8 +1,8 @@
 import backend.BackendAbi;
+import backend.BackendContext;
 import backend.EmitArtifact;
 import backend.EmitResult;
 import backend.GenIrProgram;
-import backend.ITargetCore;
 import backend.TargetCoreBackend;
 import backend.reflaxe.ReflaxeTargetAdapter;
 import backend.js.JsBackend;
@@ -33,12 +33,12 @@ class M14ReflaxeTargetAdapterIntegrationTest {
 			}
 		};
 
-		final wrapped = ReflaxeTargetAdapter.backend(descriptor, function() return new _FixtureCore());
+		final wrapped = ReflaxeTargetAdapter.backend(descriptor, fixtureCoreEmitFactory);
 		assertTrue(wrapped.id() == descriptor.id, "adapter backend should expose descriptor id");
 		assertTrue(wrapped.describe() == descriptor.description, "adapter backend should expose descriptor description");
 		assertTrue(wrapped.capabilities().supportsNoEmit, "adapter backend should preserve descriptor capabilities");
 
-		final regs = ReflaxeTargetAdapter.registrations(descriptor, function() return new _FixtureCore());
+		final regs = ReflaxeTargetAdapter.registrations(descriptor, fixtureCoreEmitFactory);
 		assertTrue(regs.length == 1, "adapter registrations should emit a single registration");
 		final created = regs[0].create();
 		assertTrue(Std.isOfType(created, TargetCoreBackend), "adapter registration should create TargetCoreBackend wrapper");
@@ -52,16 +52,29 @@ class M14ReflaxeTargetAdapterIntegrationTest {
 		final ocamlBackend = new OcamlStage3Backend();
 		assertTrue(ocamlBackend.id() == OcamlStage3Backend.TARGET_ID, "ocaml backend should remain constructible through adapter path");
 	}
+
+	static function fixtureCoreEmitFactory():GenIrProgram->BackendContext->EmitResult {
+		final core = new _FixtureCore();
+		return function(program:GenIrProgram, context:BackendContext):EmitResult {
+			return _FixtureCore.emitBridge(core, program, context);
+		};
+	}
 }
 
-private class _FixtureCore implements ITargetCore {
+private class _FixtureCore {
+	public static inline var CORE_ID = "fixture.target-core";
+
 	public function new() {}
 
 	public function coreId():String {
-		return "fixture.target-core";
+		return CORE_ID;
 	}
 
-	public function emit(_program:GenIrProgram, _context:backend.BackendContext):EmitResult {
+	public static function emitBridge(core:_FixtureCore, program:GenIrProgram, context:BackendContext):EmitResult {
+		return core.emit(program, context);
+	}
+
+	public function emit(_program:GenIrProgram, _context:BackendContext):EmitResult {
 		return new EmitResult("fixture.out", [new EmitArtifact("fixture", "fixture.out")], false);
 	}
 }

@@ -29,6 +29,10 @@ class OcamlTargetCore implements ITargetCore {
 
 	public function new() {}
 
+	public static function emitBridge(core:OcamlTargetCore, program:GenIrProgram, context:BackendContext):EmitResult {
+		return core.emit(program, context);
+	}
+
 	public function coreId():String {
 		return CORE_ID;
 	}

@@ -74,12 +74,19 @@ class OcamlStage3Backend implements IBackend {
 		return new OcamlTargetCore();
 	}
 
+	public static function targetCoreEmit():GenIrProgram->BackendContext->EmitResult {
+		final core = targetCore();
+		return function(program:GenIrProgram, context:BackendContext):EmitResult {
+			return OcamlTargetCore.emitBridge(core, program, context);
+		};
+	}
+
 	public static function emitBridge(backend:OcamlStage3Backend, program:GenIrProgram, context:BackendContext):EmitResult {
 		return backend.emit(program, context);
 	}
 
 	public function new() {
-		delegate = ReflaxeTargetAdapter.backend(descriptor(), targetCore);
+		delegate = ReflaxeTargetAdapter.backend(descriptor(), targetCoreEmit);
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {

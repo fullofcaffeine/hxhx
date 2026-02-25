@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable visibility : HxVisi
 
 let create = fun name2 visibility2 isStatic2 typeHint2 init2 -> let self = ({ __hx_type = HxType.class_ "HxFieldDecl"; name = ""; visibility = Obj.magic (); isStatic = false; typeHint = ""; init = Obj.magic () } : t) in (
   ignore ((
-    ignore (let __assign_1 = name2 in (
+    ignore (let __assign_1 = (name2 : string) in (
       self.name <- __assign_1;
       __assign_1
     ));
@@ -21,14 +21,14 @@ let create = fun name2 visibility2 isStatic2 typeHint2 init2 -> let self = ({ __
       __assign_3
     ));
     let tempRight = ref "" in (
-      ignore (if typeHint2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = "" in (
+      ignore (if typeHint2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
         tempRight := __assign_4;
         __assign_4
-      ) else let __assign_5 = typeHint2 in (
+      ) else let __assign_5 = (typeHint2 : string) in (
         tempRight := __assign_5;
         __assign_5
       ));
-      ignore (let __assign_6 = !tempRight in (
+      ignore (let __assign_6 = (!tempRight : string) in (
         self.typeHint <- __assign_6;
         __assign_6
       ));

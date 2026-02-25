@@ -17,14 +17,14 @@ let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.
       __assign_2
     ));
     let tempRight = ref "" in (
-      ignore (if indentUnit == Obj.magic (HxRuntime.hx_null) then let __assign_3 = "  " in (
+      ignore (if indentUnit == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("  " : string) in (
         tempRight := __assign_3;
         __assign_3
-      ) else let __assign_4 = indentUnit in (
+      ) else let __assign_4 = (indentUnit : string) in (
         tempRight := __assign_4;
         __assign_4
       ));
-      let __assign_5 = !tempRight in (
+      let __assign_5 = (!tempRight : string) in (
         self.unit <- __assign_5;
         __assign_5
       )
@@ -48,10 +48,10 @@ let writeln = fun self (line : string) -> ignore (let _g = ref 0 in let _g1 = se
     StringBuf.add (self.out) (Obj.repr (self.unit))
   )) done);
   let tempString = ref "" in (
-    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_10 = "" in (
+    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_10 = ("" : string) in (
       tempString := __assign_10;
       __assign_10
-    ) else let __assign_11 = line in (
+    ) else let __assign_11 = (line : string) in (
       tempString := __assign_11;
       __assign_11
     ));

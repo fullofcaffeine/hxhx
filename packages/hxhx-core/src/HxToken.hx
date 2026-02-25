@@ -13,4 +13,12 @@ class HxToken {
 		this.kind = kind;
 		this.pos = pos;
 	}
+
+	public function getKind():HxTokenKind {
+		return kind;
+	}
+
+	public function getPos():HxPos {
+		return pos;
+	}
 }

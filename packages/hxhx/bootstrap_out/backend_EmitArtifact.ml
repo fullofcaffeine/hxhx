@@ -8,26 +8,26 @@ type t = { __hx_type : Obj.t; mutable kind : string; mutable path : string }
 
 let create = fun kind2 path2 -> let self = ({ __hx_type = HxType.class_ "backend.EmitArtifact"; kind = ""; path = "" } : t) in (
   ignore (let tempRight = ref "" in (
-    ignore (if kind2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = "artifact" in (
+    ignore (if kind2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("artifact" : string) in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_2 = kind2 in (
+    ) else let __assign_2 = (kind2 : string) in (
       tempRight := __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = !tempRight in (
+    ignore (let __assign_3 = (!tempRight : string) in (
       self.kind <- __assign_3;
       __assign_3
     ));
     let tempRight1 = ref "" in (
-      ignore (if path2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = "" in (
+      ignore (if path2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
         tempRight1 := __assign_4;
         __assign_4
-      ) else let __assign_5 = path2 in (
+      ) else let __assign_5 = (path2 : string) in (
         tempRight1 := __assign_5;
         __assign_5
       ));
-      let __assign_6 = !tempRight1 in (
+      let __assign_6 = (!tempRight1 : string) in (
         self.path <- __assign_6;
         __assign_6
       )

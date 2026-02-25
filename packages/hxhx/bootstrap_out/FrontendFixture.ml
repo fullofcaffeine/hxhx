@@ -8,19 +8,19 @@ type t = { __hx_type : Obj.t; mutable label : string; mutable source : string; m
 
 let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHasStaticMain2 -> let self = ({ __hx_type = HxType.class_ "FrontendFixture"; label = ""; source = ""; expectPackagePath = ""; expectMainClassName = ""; expectHasStaticMain = false } : t) in (
   ignore ((
-    ignore (let __assign_1 = label2 in (
+    ignore (let __assign_1 = (label2 : string) in (
       self.label <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = source2 in (
+    ignore (let __assign_2 = (source2 : string) in (
       self.source <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = expectPackagePath2 in (
+    ignore (let __assign_3 = (expectPackagePath2 : string) in (
       self.expectPackagePath <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = expectMainClassName2 in (
+    ignore (let __assign_4 = (expectMainClassName2 : string) in (
       self.expectMainClassName <- __assign_4;
       __assign_4
     ));

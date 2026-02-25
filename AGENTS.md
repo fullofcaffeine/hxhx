@@ -320,6 +320,20 @@ Prefer adding tests that match the repo’s testing layers:
 - Portable fixture (compile → dune build → run → stdout diff) when behavior matters
 - Acceptance example only when it’s a compiler-shaped workload / integration boundary
 
+## Test-First Workflow (TDD by default)
+
+Use expectation-first development for all behavior changes.
+
+- For bug fixes and semantic changes, write a failing test first.
+- Prefer the smallest test layer that captures the regression:
+  - unit/integration test for local logic,
+  - snapshot for codegen shape,
+  - portable fixture for runtime behavior,
+  - upstream oracle gate only when the behavior must be validated externally.
+- Implement only what is needed to make the new failing test pass.
+- Then run broader relevant suites (layered validation) to confirm no regressions.
+- If test-first is not feasible, document why in the bead before implementation.
+
 ## Documentation (hxdoc)
 
 Use hxdoc (`/** ... */`) proactively.

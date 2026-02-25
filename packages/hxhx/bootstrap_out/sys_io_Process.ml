@@ -22,7 +22,7 @@ let ocamlprocessinput_readByte__impl = fun (self : ocamlprocessinput_t) () -> le
   b
 )
 
-let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try (
+let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_10 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
@@ -45,10 +45,10 @@ let ocamlprocessinput_readBytes__impl = fun (self : ocamlprocessinput_t) (buf : 
       ) else raise (__exn_8));
     !i
   )
-) with
+) in 0 with
   | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
 
-let ocamlprocessinput_readLine__impl = fun (self : ocamlprocessinput_t) () -> let s = HxProcess.read_line (self.handle) (self.stream) in (
+let ocamlprocessinput_readLine__impl = fun (self : ocamlprocessinput_t) () -> let s = (HxProcess.read_line (self.handle) (self.stream) : string) in (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ());
   s
 )
@@ -83,7 +83,7 @@ let ocamlprocessoutput___ctor = fun (self : ocamlprocessoutput_t) handle2 -> ign
 
 let ocamlprocessoutput_writeByte__impl = fun (self : ocamlprocessoutput_t) (c : int) -> ignore (HxProcess.write_byte (self.handle) c)
 
-let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try (
+let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_5 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
@@ -92,15 +92,15 @@ let ocamlprocessoutput_writeBytes__impl = fun (self : ocamlprocessoutput_t) (buf
     ) in self.writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
     len
   )
-) with
+) in 0 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
 let ocamlprocessoutput_writeString__impl = fun (self : ocamlprocessoutput_t) (s : string) (encoding : Obj.t) -> ignore (try (
   ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
   ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  HxProcess.write_string (self.handle) s
+  HxProcess.write_string (self.handle) (s : string)
 ) with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5)
+  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6)
 
 let ocamlprocessoutput_flush__impl = fun (self : ocamlprocessoutput_t) () -> ignore (HxProcess.flush_stdin (self.handle))
 
@@ -140,7 +140,7 @@ let create = fun cmd args detached -> let self = ({ __hx_type = HxType.class_ "s
         __assign_5
       ));
       ignore (detached != HxRuntime.hx_null);
-      ignore (let __assign_6 = HxProcess.spawn cmd (!tempMaybeArray) in (
+      ignore (let __assign_6 = HxProcess.spawn (cmd : string) (!tempMaybeArray) in (
         self.handle <- __assign_6;
         __assign_6
       ));
@@ -187,7 +187,7 @@ let close = fun self () -> ignore (try (
 ) with
   | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13)
 
-let exitCode = fun self () -> try (
+let exitCode = fun self () -> try let __fallback_ignore_18 = (
   ignore (if self.cachedExitCode != HxRuntime.hx_null then raise (HxRuntime.Hx_return (Obj.repr (self.cachedExitCode))) else ());
   ignore (close self ());
   let tempResult = ref 0 in (
@@ -200,5 +200,5 @@ let exitCode = fun self () -> try (
     ));
     !tempResult
   )
-) with
+) in 0 with
   | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17

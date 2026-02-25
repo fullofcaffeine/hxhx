@@ -10,6 +10,6 @@ let create = fun size -> Stdlib.Buffer.create size
 
 let length = fun b -> Stdlib.Buffer.length b
 
-let addString = fun b s -> Stdlib.Buffer.add_string b s
+let addString = fun b s -> Stdlib.Buffer.add_string b (s : string)
 
 let contents = fun b -> Stdlib.Buffer.contents b

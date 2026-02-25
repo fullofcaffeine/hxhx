@@ -27,10 +27,10 @@ let isReserved = fun name -> let tempResult = ref false in (
 )
 
 let identifier = fun raw -> let tempString = ref "" in (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_3 = "" in (
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
     tempString := __assign_3;
     __assign_3
-  ) else let __assign_4 = raw in (
+  ) else let __assign_4 = (raw : string) in (
     tempString := __assign_4;
     __assign_4
   ));
@@ -39,36 +39,36 @@ let identifier = fun raw -> let tempString = ref "" in (
       ignore (_g := __new_6);
       __old_5
     ) in let c = HxString.charCodeAt (!tempString) i in let isAlpha = (let __nullable_7 = c in let __nullable_8 = 97 in if __nullable_7 == HxRuntime.hx_null then false else Obj.obj __nullable_7 >= __nullable_8) && (let __nullable_9 = c in let __nullable_10 = 122 in if __nullable_9 == HxRuntime.hx_null then false else Obj.obj __nullable_9 <= __nullable_10) || (let __nullable_11 = c in let __nullable_12 = 65 in if __nullable_11 == HxRuntime.hx_null then false else Obj.obj __nullable_11 >= __nullable_12) && (let __nullable_13 = c in let __nullable_14 = 90 in if __nullable_13 == HxRuntime.hx_null then false else Obj.obj __nullable_13 <= __nullable_14) in let isNum = (let __nullable_15 = c in let __nullable_16 = 48 in if __nullable_15 == HxRuntime.hx_null then false else Obj.obj __nullable_15 >= __nullable_16) && (let __nullable_17 = c in let __nullable_18 = 57 in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 <= __nullable_18) in let tempString1 = ref "" in (
-      ignore (if isAlpha || isNum || (let __nullable_19 = c in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 = 95) then let __assign_20 = HxString.fromCharCode (let __nullable_int_21 = c in if __nullable_int_21 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_21) in (
+      ignore (if isAlpha || isNum || (let __nullable_19 = c in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 = 95) then let __assign_20 = (HxString.fromCharCode (let __nullable_int_21 = c in if __nullable_int_21 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_21) : string) in (
         tempString1 := __assign_20;
         __assign_20
-      ) else let __assign_22 = "_" in (
+      ) else let __assign_22 = ("_" : string) in (
         tempString1 := __assign_22;
         __assign_22
       ));
-      let ch = !tempString1 in (
+      let ch = (!tempString1 : string) in (
         ignore (if i = 0 && isNum then ignore (StringBuf.add out (Obj.repr "_")) else ());
         StringBuf.add out (Obj.repr ch)
       )
     )) done);
-    let r = ref (StringBuf.toString out ()) in (
-      ignore (if HxString.length (!r) = 0 then ignore (let __assign_23 = "_" in (
+    let r = ref (StringBuf.toString out () : string) in (
+      ignore (if HxString.length (!r) = 0 then ignore (let __assign_23 = ("_" : string) in (
         r := __assign_23;
         __assign_23
       )) else ());
-      ignore (if isReserved (!r) then ignore (r := HxString.toStdString (!r) ^ "_") else ());
+      ignore (if isReserved (!r : string) then ignore (r := HxString.toStdString (!r) ^ "_") else ());
       !r
     )
   )
 )
 
-let classVarName = fun fullName -> "__hx_cls_" ^ HxString.toStdString (identifier fullName)
+let classVarName = fun fullName -> "__hx_cls_" ^ HxString.toStdString (identifier (fullName : string))
 
 let quoteString = fun raw -> let tempString = ref "" in (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_24 = "" in (
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_24 = ("" : string) in (
     tempString := __assign_24;
     __assign_24
-  ) else let __assign_25 = raw in (
+  ) else let __assign_25 = (raw : string) in (
     tempString := __assign_25;
     __assign_25
   ));
@@ -93,11 +93,11 @@ let quoteString = fun raw -> let tempString = ref "" in (
   )
 )
 
-let propertySuffix = fun name -> let id = identifier name in let tempResult = ref "" in (
-  ignore (if HxString.equals id name then let __assign_41 = "." ^ HxString.toStdString id in (
+let propertySuffix = fun name -> let id = (identifier (name : string) : string) in let tempResult = ref "" in (
+  ignore (if HxString.equals id name then let __assign_41 = ("." ^ HxString.toStdString id : string) in (
     tempResult := __assign_41;
     __assign_41
-  ) else let __assign_42 = ("[" ^ HxString.toStdString (quoteString name)) ^ "]" in (
+  ) else let __assign_42 = (("[" ^ HxString.toStdString (quoteString (name : string))) ^ "]" : string) in (
     tempResult := __assign_42;
     __assign_42
   ));

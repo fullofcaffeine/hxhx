@@ -18,7 +18,7 @@ let readByte__impl = fun (self : t) () -> let b = HxFileStream.read_byte (self.h
   b
 )
 
-let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try (
+let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_ignore_9 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
@@ -41,22 +41,22 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
       ) else raise (__exn_7));
     !i
   )
-) with
+) in 0 with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
 let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (let tempNumber = ref 0 in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_9 = 0 in (
-      tempNumber := __assign_9;
-      __assign_9
-    )
-    | Sys_io_FileSeek.SeekCur -> let __assign_10 = 1 in (
+    | Sys_io_FileSeek.SeekBegin -> let __assign_10 = 0 in (
       tempNumber := __assign_10;
       __assign_10
     )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_11 = 2 in (
+    | Sys_io_FileSeek.SeekCur -> let __assign_11 = 1 in (
       tempNumber := __assign_11;
       __assign_11
+    )
+    | Sys_io_FileSeek.SeekEnd -> let __assign_12 = 2 in (
+      tempNumber := __assign_12;
+      __assign_12
     ));
   HxFileStream.seek_in (self.h) p (!tempNumber)
 ))
@@ -77,17 +77,17 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileInput"; bigEndi
 
 let seekKind = fun pos -> let tempResult = ref 0 in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_12 = 0 in (
-      tempResult := __assign_12;
-      __assign_12
-    )
-    | Sys_io_FileSeek.SeekCur -> let __assign_13 = 1 in (
+    | Sys_io_FileSeek.SeekBegin -> let __assign_13 = 0 in (
       tempResult := __assign_13;
       __assign_13
     )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_14 = 2 in (
+    | Sys_io_FileSeek.SeekCur -> let __assign_14 = 1 in (
       tempResult := __assign_14;
       __assign_14
+    )
+    | Sys_io_FileSeek.SeekEnd -> let __assign_15 = 2 in (
+      tempResult := __assign_15;
+      __assign_15
     ));
   !tempResult
 )

@@ -65,21 +65,16 @@ let providerDescriptor = fun () -> let __anon_9 = HxAnon.create () in (
 
 let targetCore = fun () -> Backend_js_JsTargetCore.create ()
 
-let __ctor = fun (self : t) () -> ignore (let core = targetCore () in let __assign_1 = Backend_TargetCoreBackend.create (descriptor ()) (fun program context -> core.emit (Obj.magic core) program context) in (
+let targetCoreEmit = fun () -> let core = targetCore () in fun program context -> Backend_js_JsTargetCore.emitBridge core program context
+
+let __ctor = fun (self : t) () -> ignore (let __assign_1 = Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit in (
   self.delegate <- __assign_1;
   __assign_1
 ))
 
 let emitBridge = fun backend program context -> backend.emit (Obj.magic backend) program context
 
-let providerRegistrations = fun () -> let provided = providerDescriptor () in let __arr_13 = HxArray.create () in (
-  ignore (HxArray.push __arr_13 (let __anon_14 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_14 "descriptor" (Obj.repr provided));
-    ignore (HxAnon.set __anon_14 "create" (Obj.repr (fun () -> let core = targetCore () in Backend_TargetCoreBackend.create provided (fun program context -> core.emit (Obj.magic core) program context))));
-    __anon_14
-  )));
-  __arr_13
-)
+let providerRegistrations = fun () -> let provided = providerDescriptor () in Backend_reflaxe_ReflaxeTargetAdapter.registrations provided targetCoreEmit
 
 let registrations__impl = fun (self : t) () -> (
   ignore self;
@@ -87,7 +82,7 @@ let registrations__impl = fun (self : t) () -> (
 )
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsBackend"; delegate = Obj.magic (); id = (fun o () -> id__impl (Obj.magic o) ()); describe = (fun o () -> describe__impl (Obj.magic o) ()); capabilities = (fun o () -> capabilities__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1); registrations = (fun o () -> registrations__impl (Obj.magic o) ()) } : t) in (
-  ignore (let core = targetCore () in let __assign_1 = Backend_TargetCoreBackend.create (descriptor ()) (fun program context -> core.emit (Obj.magic core) program context) in (
+  ignore (let __assign_1 = Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit in (
     self.delegate <- __assign_1;
     __assign_1
   ));

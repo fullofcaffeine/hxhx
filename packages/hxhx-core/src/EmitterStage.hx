@@ -197,10 +197,10 @@ class EmitterStage {
 		- `emitToDir(...)` sets this value at entry.
 		- Expression lowering reads it through `isMetalProfileActive()`.
 	**/
-	static var currentOcamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable;
+	static var currentOcamlProfile:String = backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable);
 
 	static inline function isMetalProfileActive():Bool {
-		return currentOcamlProfile == backend.OcamlProfile.Metal;
+		return currentOcamlProfile == backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Metal);
 	}
 
 	public static function emit(_:MacroExpandedModule):Void {
@@ -2102,6 +2102,21 @@ class EmitterStage {
 							exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 					}
 				}
+
+				function coerceNullableBoolIdent(expr:HxExpr, rendered:String):String {
+					return switch (expr) {
+						case EIdent(name):
+							if (!isMutableLocalRefIdent(name)) {
+								rendered;
+							} else {
+								"(let __nullable_bool = Obj.repr (" + rendered +
+								") in if __nullable_bool == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool)";
+							}
+						case _:
+							rendered;
+					}
+				}
+
 				final metalNumeric = isMetalProfileActive();
 				switch (op) {
 					case "=":
@@ -2201,7 +2216,9 @@ class EmitterStage {
 							"((" + la + ") " + op + " (" + rb + "))";
 						}
 					case "&&" | "||":
-						"((" + la + ") " + op + " (" + rb + "))";
+						final lhsBool = coerceNullableBoolIdent(a, la);
+						final rhsBool = coerceNullableBoolIdent(b, rb);
+						"((" + lhsBool + ") " + op + " (" + rhsBool + "))";
 					case _:
 						"(Obj.magic 0)";
 				}
@@ -2576,6 +2593,256 @@ class EmitterStage {
 		return exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 	}
 
+	static inline function isAssignmentOpToken(op:String):Bool {
+		return switch (op) {
+			case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	static function collectAssignedNamesInExprRec(e:HxExpr, out:Map<String, Bool>):Void {
+		if (e == null)
+			return;
+		switch (e) {
+			case EBinop(op, EIdent(name), rhs):
+				if (isAssignmentOpToken(op) && name != null && name.length > 0)
+					out.set(name, true);
+				collectAssignedNamesInExprRec(rhs, out);
+			case EBinop(_op, left, right):
+				collectAssignedNamesInExprRec(left, out);
+				collectAssignedNamesInExprRec(right, out);
+			case EUnop(_op, inner):
+				collectAssignedNamesInExprRec(inner, out);
+			case ECall(callee, args):
+				collectAssignedNamesInExprRec(callee, out);
+				if (args != null)
+					for (a in args)
+						collectAssignedNamesInExprRec(a, out);
+			case EField(obj, _field):
+				collectAssignedNamesInExprRec(obj, out);
+			case EArrayDecl(values):
+				if (values != null)
+					for (v in values)
+						collectAssignedNamesInExprRec(v, out);
+			case EArrayComprehension(_name, iterable, yieldExpr):
+				collectAssignedNamesInExprRec(iterable, out);
+				collectAssignedNamesInExprRec(yieldExpr, out);
+			case EArrayAccess(arr, idx):
+				collectAssignedNamesInExprRec(arr, out);
+				collectAssignedNamesInExprRec(idx, out);
+			case ETernary(cond, thenExpr, elseExpr):
+				collectAssignedNamesInExprRec(cond, out);
+				collectAssignedNamesInExprRec(thenExpr, out);
+				collectAssignedNamesInExprRec(elseExpr, out);
+			case ESwitch(scrutinee, cases):
+				collectAssignedNamesInExprRec(scrutinee, out);
+				if (cases != null)
+					for (c in cases)
+						collectAssignedNamesInExprRec(c.expr, out);
+			case ECast(inner, _hint):
+				collectAssignedNamesInExprRec(inner, out);
+			case EUntyped(inner):
+				collectAssignedNamesInExprRec(inner, out);
+			case ENew(_typePath, args):
+				if (args != null)
+					for (a in args)
+						collectAssignedNamesInExprRec(a, out);
+			case _:
+		}
+	}
+
+	static function collectAssignedNamesInStmtRec(s:HxStmt, out:Map<String, Bool>):Void {
+		if (s == null)
+			return;
+		switch (s) {
+			case SExpr(expr, _pos):
+				collectAssignedNamesInExprRec(expr, out);
+			case SVar(_name, _hint, init, _pos):
+				collectAssignedNamesInExprRec(init, out);
+			case SBlock(ss, _pos):
+				if (ss != null)
+					for (ss0 in ss)
+						collectAssignedNamesInStmtRec(ss0, out);
+			case SIf(cond, thenBranch, elseBranch, _pos):
+				collectAssignedNamesInExprRec(cond, out);
+				collectAssignedNamesInStmtRec(thenBranch, out);
+				if (elseBranch != null)
+					collectAssignedNamesInStmtRec(elseBranch, out);
+			case SWhile(cond, body, _pos):
+				collectAssignedNamesInExprRec(cond, out);
+				collectAssignedNamesInStmtRec(body, out);
+			case SDoWhile(body, cond, _pos):
+				collectAssignedNamesInStmtRec(body, out);
+				collectAssignedNamesInExprRec(cond, out);
+			case SForIn(_name, iterable, body, _pos):
+				collectAssignedNamesInExprRec(iterable, out);
+				collectAssignedNamesInStmtRec(body, out);
+			case STry(tryBody, catches, _pos):
+				collectAssignedNamesInStmtRec(tryBody, out);
+				if (catches != null)
+					for (c in catches)
+						collectAssignedNamesInStmtRec(c.body, out);
+			case SSwitch(scrutinee, cases, _pos):
+				collectAssignedNamesInExprRec(scrutinee, out);
+				if (cases != null)
+					for (c in cases)
+						collectAssignedNamesInStmtRec(c.body, out);
+			case SThrow(expr, _pos):
+				collectAssignedNamesInExprRec(expr, out);
+			case SReturn(expr, _pos):
+				collectAssignedNamesInExprRec(expr, out);
+			case _:
+		}
+	}
+
+	static function collectLocalsForPreludeFromStmtRec(s:HxStmt, locals:Map<String, Bool>):Void {
+		if (s == null)
+			return;
+		switch (s) {
+			case SBlock(stmts, _):
+				if (stmts != null)
+					for (ss in stmts)
+						collectLocalsForPreludeFromStmtRec(ss, locals);
+			case SVar(name, _, _, _):
+				if (name != null && name.length > 0)
+					locals.set(name, true);
+			case SIf(_, thenBranch, elseBranch, _):
+				collectLocalsForPreludeFromStmtRec(thenBranch, locals);
+				if (elseBranch != null)
+					collectLocalsForPreludeFromStmtRec(elseBranch, locals);
+			case SWhile(_, body, _):
+				collectLocalsForPreludeFromStmtRec(body, locals);
+			case SDoWhile(body, _, _):
+				collectLocalsForPreludeFromStmtRec(body, locals);
+			case SForIn(name, _, body, _):
+				if (name != null && name.length > 0)
+					locals.set(name, true);
+				collectLocalsForPreludeFromStmtRec(body, locals);
+			case SSwitch(_, cases, _):
+				if (cases != null)
+					for (c in cases)
+						collectLocalsForPreludeFromStmtRec(c.body, locals);
+			case _:
+		}
+	}
+
+	static function scanExprForPreludeDepsRec(e:Null<HxExpr>, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
+		if (e == null)
+			return;
+		switch (e) {
+			case EIdent(name):
+				if (name != null && name.length > 0 && !locals.exists(name))
+					idents.set(name, true);
+			case EField(obj, _):
+				scanExprForPreludeDepsRec(obj, locals, calls, idents);
+			case ECall(callee, args):
+				switch (callee) {
+					case EIdent(name):
+						if (name != null && name.length > 0 && !locals.exists(name)) calls.set(name, true);
+					case EField(_obj, field):
+						if (field != null && field.length > 0 && !locals.exists(field)) calls.set(field, true);
+					case _:
+				}
+				scanExprForPreludeDepsRec(callee, locals, calls, idents);
+				if (args != null)
+					for (a in args)
+						scanExprForPreludeDepsRec(a, locals, calls, idents);
+			case ELambda(args, body):
+				final nestedLocals:Map<String, Bool> = new Map();
+				for (k in locals.keys())
+					nestedLocals.set(k, true);
+				if (args != null)
+					for (a in args)
+						if (a != null && a.length > 0)
+							nestedLocals.set(a, true);
+				scanExprForPreludeDepsRec(body, nestedLocals, calls, idents);
+			case ETernary(cond, thenExpr, elseExpr):
+				scanExprForPreludeDepsRec(cond, locals, calls, idents);
+				scanExprForPreludeDepsRec(thenExpr, locals, calls, idents);
+				scanExprForPreludeDepsRec(elseExpr, locals, calls, idents);
+			case EAnon(_, values):
+				if (values != null)
+					for (v in values)
+						scanExprForPreludeDepsRec(v, locals, calls, idents);
+			case ESwitch(scrutinee, cases):
+				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
+				if (cases != null)
+					for (c in cases)
+						scanExprForPreludeDepsRec(c.expr, locals, calls, idents);
+			case ENew(_, args):
+				if (args != null)
+					for (a in args)
+						scanExprForPreludeDepsRec(a, locals, calls, idents);
+			case EUnop(_, expr):
+				scanExprForPreludeDepsRec(expr, locals, calls, idents);
+			case EBinop(_, left, right):
+				scanExprForPreludeDepsRec(left, locals, calls, idents);
+				scanExprForPreludeDepsRec(right, locals, calls, idents);
+			case EArrayComprehension(name, iterable, yieldExpr):
+				final nestedLocals:Map<String, Bool> = new Map();
+				for (k in locals.keys())
+					nestedLocals.set(k, true);
+				if (name != null && name.length > 0)
+					nestedLocals.set(name, true);
+				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
+				scanExprForPreludeDepsRec(yieldExpr, nestedLocals, calls, idents);
+			case EArrayDecl(values):
+				if (values != null)
+					for (v in values)
+						scanExprForPreludeDepsRec(v, locals, calls, idents);
+			case EArrayAccess(array, index):
+				scanExprForPreludeDepsRec(array, locals, calls, idents);
+				scanExprForPreludeDepsRec(index, locals, calls, idents);
+			case ERange(start, end):
+				scanExprForPreludeDepsRec(start, locals, calls, idents);
+				scanExprForPreludeDepsRec(end, locals, calls, idents);
+			case ECast(expr, _):
+				scanExprForPreludeDepsRec(expr, locals, calls, idents);
+			case EUntyped(expr):
+				scanExprForPreludeDepsRec(expr, locals, calls, idents);
+			case _:
+		}
+	}
+
+	static function scanStmtForPreludeDepsRec(s:HxStmt, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
+		if (s == null)
+			return;
+		switch (s) {
+			case SBlock(stmts, _):
+				if (stmts != null)
+					for (ss in stmts)
+						scanStmtForPreludeDepsRec(ss, locals, calls, idents);
+			case SVar(_name, _typeHint, init, _):
+				scanExprForPreludeDepsRec(init, locals, calls, idents);
+			case SIf(cond, thenBranch, elseBranch, _):
+				scanExprForPreludeDepsRec(cond, locals, calls, idents);
+				scanStmtForPreludeDepsRec(thenBranch, locals, calls, idents);
+				if (elseBranch != null)
+					scanStmtForPreludeDepsRec(elseBranch, locals, calls, idents);
+			case SWhile(cond, body, _):
+				scanExprForPreludeDepsRec(cond, locals, calls, idents);
+				scanStmtForPreludeDepsRec(body, locals, calls, idents);
+			case SDoWhile(body, cond, _):
+				scanStmtForPreludeDepsRec(body, locals, calls, idents);
+				scanExprForPreludeDepsRec(cond, locals, calls, idents);
+			case SForIn(_name, iterable, body, _):
+				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
+				scanStmtForPreludeDepsRec(body, locals, calls, idents);
+			case SSwitch(scrutinee, cases, _):
+				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
+				if (cases != null)
+					for (c in cases)
+						scanStmtForPreludeDepsRec(c.body, locals, calls, idents);
+			case SReturn(expr, _):
+				scanExprForPreludeDepsRec(expr, locals, calls, idents);
+			case SExpr(expr, _):
+				scanExprForPreludeDepsRec(expr, locals, calls, idents);
+			case _:
+		}
+	}
+
 	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>, ?localTypeHints:Map<String, TyType>,
@@ -2584,15 +2851,6 @@ class EmitterStage {
 			return "()";
 
 		final prevMutableLocalRefNames = currentMutableLocalRefNames == null ? [] : currentMutableLocalRefNames.copy();
-
-		inline function isAssignmentOp(op:String):Bool {
-			return switch (op) {
-				case "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "&=" | "|=" | "^=":
-					true;
-				case _:
-					false;
-			};
-		}
 
 		function mergeMutableLocalRefNames(base:Array<String>, local:Null<Map<String, Bool>>):Array<String> {
 			final out:Array<String> = base == null ? [] : base.copy();
@@ -2624,105 +2882,10 @@ class EmitterStage {
 			return out;
 		}
 
-		function collectAssignedNamesInExpr(e:HxExpr, out:Map<String, Bool>):Void {
-			if (e == null)
-				return;
-			switch (e) {
-				case EBinop(op, EIdent(name), rhs):
-					if (isAssignmentOp(op) && name != null && name.length > 0)
-						out.set(name, true);
-					collectAssignedNamesInExpr(rhs, out);
-				case EBinop(_op, left, right):
-					collectAssignedNamesInExpr(left, out);
-					collectAssignedNamesInExpr(right, out);
-				case EUnop(_op, inner):
-					collectAssignedNamesInExpr(inner, out);
-				case ECall(callee, args):
-					collectAssignedNamesInExpr(callee, out);
-					if (args != null)
-						for (a in args)
-							collectAssignedNamesInExpr(a, out);
-				case EField(obj, _field):
-					collectAssignedNamesInExpr(obj, out);
-				case EArrayDecl(values):
-					if (values != null)
-						for (v in values)
-							collectAssignedNamesInExpr(v, out);
-				case EArrayComprehension(_name, iterable, yieldExpr):
-					collectAssignedNamesInExpr(iterable, out);
-					collectAssignedNamesInExpr(yieldExpr, out);
-				case EArrayAccess(arr, idx):
-					collectAssignedNamesInExpr(arr, out);
-					collectAssignedNamesInExpr(idx, out);
-				case ETernary(cond, thenExpr, elseExpr):
-					collectAssignedNamesInExpr(cond, out);
-					collectAssignedNamesInExpr(thenExpr, out);
-					collectAssignedNamesInExpr(elseExpr, out);
-				case ESwitch(scrutinee, cases):
-					collectAssignedNamesInExpr(scrutinee, out);
-					if (cases != null)
-						for (c in cases)
-							collectAssignedNamesInExpr(c.expr, out);
-				case ECast(inner, _hint):
-					collectAssignedNamesInExpr(inner, out);
-				case EUntyped(inner):
-					collectAssignedNamesInExpr(inner, out);
-				case ENew(_typePath, args):
-					if (args != null)
-						for (a in args)
-							collectAssignedNamesInExpr(a, out);
-				case _:
-			}
-		}
-
-		function collectAssignedNamesInStmt(s:HxStmt, out:Map<String, Bool>):Void {
-			if (s == null)
-				return;
-			switch (s) {
-				case SExpr(expr, _pos):
-					collectAssignedNamesInExpr(expr, out);
-				case SVar(_name, _hint, init, _pos):
-					collectAssignedNamesInExpr(init, out);
-				case SBlock(ss, _pos):
-					if (ss != null)
-						for (ss0 in ss)
-							collectAssignedNamesInStmt(ss0, out);
-				case SIf(cond, thenBranch, elseBranch, _pos):
-					collectAssignedNamesInExpr(cond, out);
-					collectAssignedNamesInStmt(thenBranch, out);
-					if (elseBranch != null)
-						collectAssignedNamesInStmt(elseBranch, out);
-				case SWhile(cond, body, _pos):
-					collectAssignedNamesInExpr(cond, out);
-					collectAssignedNamesInStmt(body, out);
-				case SDoWhile(body, cond, _pos):
-					collectAssignedNamesInStmt(body, out);
-					collectAssignedNamesInExpr(cond, out);
-				case SForIn(_name, iterable, body, _pos):
-					collectAssignedNamesInExpr(iterable, out);
-					collectAssignedNamesInStmt(body, out);
-				case STry(tryBody, catches, _pos):
-					collectAssignedNamesInStmt(tryBody, out);
-					if (catches != null)
-						for (c in catches)
-							collectAssignedNamesInStmt(c.body, out);
-				case SSwitch(scrutinee, cases, _pos):
-					collectAssignedNamesInExpr(scrutinee, out);
-					if (cases != null)
-						for (c in cases)
-							collectAssignedNamesInStmt(c.body, out);
-				case SThrow(expr, _pos):
-					collectAssignedNamesInExpr(expr, out);
-				case SReturn(expr, _pos):
-					collectAssignedNamesInExpr(expr, out);
-				case _:
-			}
-		}
-
 		final declaredTopLevelLocals = collectTopLevelDeclaredLocals(stmts);
 		final assignedNamesDeep:Map<String, Bool> = new Map();
 		for (s in stmts)
-			collectAssignedNamesInStmt(s, assignedNamesDeep);
+			collectAssignedNamesInStmtRec(s, assignedNamesDeep);
 		final mutableLocalsInScope:Map<String, Bool> = new Map();
 		for (name in declaredTopLevelLocals.keys()) {
 			if (assignedNamesDeep.get(name) == true)
@@ -2936,13 +3099,13 @@ class EmitterStage {
 			return out;
 		}
 
-		function extendTyByIdentLocal(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+		function extendTyByIdentLocal(ty:Null<Map<String, TyType>>, name:String, t:TyType):Dynamic {
 			final out:Map<String, TyType> = new Map();
 			if (ty != null)
 				for (k in ty.keys())
 					out.set(k, ty.get(k));
 			out.set(name, t);
-			return out;
+			return cast out;
 		}
 
 		final localsBefore = localsInScopeBefore(stmts);
@@ -2981,7 +3144,22 @@ class EmitterStage {
 			}
 		}
 
-		function condToOcamlBool(e:HxExpr, tyCtx:Null<Map<String, TyType>>):String {
+		/**
+			Recovers a typed local type-context map at recursion boundaries.
+
+			This is one of the few justified `Dynamic` seams in the emitter. Generated OCaml
+			for local-recursive functions can surface `Obj.t` here; we recover immediately and
+			keep internal logic fully typed.
+		**/
+		function recoverTyCtxMap(value:Dynamic):Null<Map<String, TyType>> {
+			if (value == null)
+				return null;
+			final typed:Map<String, TyType> = cast value;
+			return typed;
+		}
+
+		function condToOcamlBool(e:HxExpr, tyCtxRaw:Dynamic):String {
+			final tyCtx = recoverTyCtxMap(tyCtxRaw);
 			inline function boolOrTrue(s:String):String {
 				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
 				// In a condition position we prefer "always true" over emitting an unbound identifier
@@ -3005,33 +3183,33 @@ class EmitterStage {
 			};
 		}
 
-		function mutableAssignmentExpr(op:String, name:String, rhs:HxExpr):Null<HxExpr> {
-			return switch (op) {
-				case "=":
-					rhs;
-				case "+=":
-					EBinop("+", EIdent(name), rhs);
-				case "-=":
-					EBinop("-", EIdent(name), rhs);
-				case "*=":
-					EBinop("*", EIdent(name), rhs);
-				case "/=":
-					EBinop("/", EIdent(name), rhs);
-				case "%=":
-					EBinop("%", EIdent(name), rhs);
-				case _:
-					null;
-			}
-		}
-
 		function mutableAssignmentStmtToUnit(op:String, name:String, rhs:HxExpr, tyCtx:Null<Map<String, TyType>>):Null<String> {
 			if (!isMutableLocalRefIdent(name))
 				return null;
-			final assignExpr = mutableAssignmentExpr(op, name, rhs);
-			if (assignExpr == null)
+			final rhsCode:Null<String> = switch (op) {
+				case "=":
+					returnExprToOcaml(rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						callSigByCallee);
+				case "+=":
+					returnExprToOcaml(EBinop("+", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+				case "-=":
+					returnExprToOcaml(EBinop("-", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+				case "*=":
+					returnExprToOcaml(EBinop("*", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+				case "/=":
+					returnExprToOcaml(EBinop("/", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+				case "%=":
+					returnExprToOcaml(EBinop("%", EIdent(name), rhs), allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee);
+				case _:
+					null;
+			}
+			if (rhsCode == null)
 				return null;
-			final rhsCode = returnExprToOcaml(assignExpr, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
-				moduleNameByPkgAndClass, callSigByCallee);
 			final ident = ocamlValueIdent(name);
 			return "(let __hx_v = (" + rhsCode + ") in (" + ident + " := __hx_v; ()))";
 		}
@@ -3204,7 +3382,8 @@ class EmitterStage {
 			}
 		}
 
-		function stmtToUnit(s:HxStmt, tyCtx:Null<Map<String, TyType>>):String {
+		function stmtToUnit(s:HxStmt, tyCtxRaw:Dynamic):String {
+			final tyCtx = recoverTyCtxMap(tyCtxRaw);
 			return switch (s) {
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3213,7 +3392,7 @@ class EmitterStage {
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
 				case STry(tryBody, _catches, _pos):
-					stmtToUnit(tryBody, tyCtx);
+					stmtToUnit(tryBody, tyCtxRaw);
 				case SThrow(_expr, _pos):
 					"()";
 				case SSwitch(scrutinee, cases, _pos):
@@ -3251,7 +3430,7 @@ class EmitterStage {
 								case _:
 									tyCtx;
 							};
-							final bodyUnit = stmtToUnit(c.body, caseTy);
+							final bodyUnit = stmtToUnit(c.body, cast caseTy);
 							final thenUnit = switch (c.pattern) {
 								case PBind(name):
 									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
@@ -3264,9 +3443,9 @@ class EmitterStage {
 					}
 					"(let __sw = (" + sw + ") in " + chain + ")";
 				case SIf(cond, thenBranch, elseBranch, _pos):
-					final thenUnit = stmtToUnit(thenBranch, tyCtx);
-					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
-					final condS = condToOcamlBool(cond, tyCtx);
+					final thenUnit = stmtToUnit(thenBranch, tyCtxRaw);
+					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtxRaw);
+					final condS = condToOcamlBool(cond, tyCtxRaw);
 					// Avoid typechecking dead branches in bring-up:
 					// - Unknown conditions are lowered as `true` by default.
 					// - Keeping the unused branch can still constrain types and break compilation
@@ -3279,16 +3458,16 @@ class EmitterStage {
 						"if " + condS + " then (" + thenUnit + ") else (" + elseUnit + ")";
 					}
 				case SWhile(cond, body, _pos):
-					final condS = condToOcamlBool(cond, tyCtx);
-					final bodyUnit = stmtToUnit(body, tyCtx);
+					final condS = condToOcamlBool(cond, tyCtxRaw);
+					final bodyUnit = stmtToUnit(body, tyCtxRaw);
 					if (condS == "false") {
 						"()";
 					} else {
 						"(while " + condS + " do " + bodyUnit + " done)";
 					}
 				case SDoWhile(body, cond, _pos):
-					final bodyUnit = stmtToUnit(body, tyCtx);
-					final condS = condToOcamlBool(cond, tyCtx);
+					final bodyUnit = stmtToUnit(body, tyCtxRaw);
+					final condS = condToOcamlBool(cond, tyCtxRaw);
 					"(let __hx_do_continue = ref true in "
 					+ "while !__hx_do_continue do "
 					+ "__hx_do_continue := false; "
@@ -3324,7 +3503,7 @@ class EmitterStage {
 							defaultLoopTy;
 					};
 					final bodyTy = extendTyByIdentLocal(tyCtx, name, loopVarTy);
-					final bodyUnit = stmtToUnit(body, bodyTy);
+					final bodyUnit = stmtToUnit(body, cast bodyTy);
 					switch (iterable) {
 						case ERange(startExpr, endExpr):
 							final start = exprToOcaml(startExpr, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3455,17 +3634,17 @@ class EmitterStage {
 						final ident = ocamlValueIdent(assign.name);
 						final rhs = returnExprToOcaml(assign.rhs, allowedValueIdents, null, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee);
-						out = "(let " + ident + " = (if " + condToOcamlBool(cond, tyCtx) + " then (" + rhs + ") else " + ident + ") in (ignore " + ident
-							+ "; (" + out + ")))";
+						out = "(let " + ident + " = (if " + condToOcamlBool(cond, cast tyCtx) + " then (" + rhs + ") else " + ident + ") in (ignore "
+							+ ident + "; (" + out + ")))";
 					} else {
 						// Default lowering for if-statements.
-						out = stmtAlwaysReturns(s) ? stmtToUnit(s, tyCtx) : ("(" + stmtToUnit(s, tyCtx) + "; " + out + ")");
+						out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
 					}
 				case _:
 					// Avoid emitting `...; <nonreturning expr>` sequences, which produce warning 21
 					// (nonreturning-statement). This also naturally drops statements that appear after
 					// a definite `return` in the same block (unreachable in Haxe).
-					out = stmtAlwaysReturns(s) ? stmtToUnit(s, tyCtx) : ("(" + stmtToUnit(s, tyCtx) + "; " + out + ")");
+					out = stmtAlwaysReturns(s) ? stmtToUnit(s, cast tyCtx) : ("(" + stmtToUnit(s, cast tyCtx) + "; " + out + ")");
 			}
 		}
 		currentMutableLocalRefNames = prevMutableLocalRefNames;
@@ -3495,7 +3674,7 @@ class EmitterStage {
 		if (outDir == null || StringTools.trim(outDir).length == 0)
 			throw "stage3 emitter: missing outDir";
 		final outAbs = haxe.io.Path.normalize(outDir);
-		currentOcamlProfile = ocamlProfile;
+		currentOcamlProfile = backend.OcamlProfile.toDefineValue(ocamlProfile);
 		if (!sys.FileSystem.exists(outAbs))
 			sys.FileSystem.createDirectory(outAbs);
 
@@ -4200,7 +4379,31 @@ class EmitterStage {
 				return t.toString() == expected;
 			}
 
-			function inferExprTypeForStaticInit(expr:Null<HxExpr>, knownByIdent:Map<String, TyType>):TyType {
+			/**
+				Best-effort expression type inference for static-field initializers.
+			**/
+			function inferExprTypeForStaticInit(expr:Null<HxExpr>, knownByIdent:Null<Map<String, TyType>>):TyType {
+				inline function inferStaticAtom(e:Null<HxExpr>):TyType {
+					if (e == null)
+						return TyType.unknown();
+					return switch (e) {
+						case EInt(_):
+							TyType.fromHintText("Int");
+						case EFloat(_):
+							TyType.fromHintText("Float");
+						case EString(_):
+							TyType.fromHintText("String");
+						case EBool(_):
+							TyType.fromHintText("Bool");
+						case EIdent(name):
+							final t = knownByIdent == null ? null : knownByIdent.get(name);
+							t == null ? TyType.unknown() : t;
+						case EArrayDecl(_), EArrayComprehension(_, _, _):
+							TyType.fromHintText("Array");
+						case _:
+							TyType.unknown();
+					}
+				}
 				if (expr == null)
 					return TyType.unknown();
 				return switch (expr) {
@@ -4216,12 +4419,12 @@ class EmitterStage {
 						final t = knownByIdent == null ? null : knownByIdent.get(name);
 						t == null ? TyType.unknown() : t;
 					case ETernary(_cond, thenExpr, elseExpr):
-						final tt = inferExprTypeForStaticInit(thenExpr, knownByIdent);
-						final te = inferExprTypeForStaticInit(elseExpr, knownByIdent);
+						final tt = inferStaticAtom(thenExpr);
+						final te = inferStaticAtom(elseExpr);
 						(!tt.isUnknown() && tt.toString() == te.toString()) ? tt : TyType.unknown();
 					case EBinop(op, left, right):
-						final lt = inferExprTypeForStaticInit(left, knownByIdent);
-						final rt = inferExprTypeForStaticInit(right, knownByIdent);
+						final lt = inferStaticAtom(left);
+						final rt = inferStaticAtom(right);
 						if (op == "+"
 							&& (isTyNamed(lt,
 								"String") || isTyNamed(rt,
@@ -4628,148 +4831,6 @@ class EmitterStage {
 						preludeFnNames.set(name, true);
 					}
 
-					function collectLocalsFromStmt(s:HxStmt, locals:Map<String, Bool>):Void {
-						switch (s) {
-							case SBlock(stmts, _):
-								if (stmts != null)
-									for (ss in stmts)
-										collectLocalsFromStmt(ss, locals);
-							case SVar(name, _, _, _):
-								if (name != null && name.length > 0)
-									locals.set(name, true);
-							case SIf(_, thenBranch, elseBranch, _):
-								collectLocalsFromStmt(thenBranch, locals);
-								if (elseBranch != null)
-									collectLocalsFromStmt(elseBranch, locals);
-							case SWhile(_, body, _):
-								collectLocalsFromStmt(body, locals);
-							case SDoWhile(body, _, _):
-								collectLocalsFromStmt(body, locals);
-							case SForIn(name, _, body, _):
-								if (name != null && name.length > 0)
-									locals.set(name, true);
-								collectLocalsFromStmt(body, locals);
-							case SSwitch(_, cases, _):
-								if (cases != null)
-									for (c in cases)
-										collectLocalsFromStmt(c.body, locals);
-							case _:
-						}
-					}
-
-					function scanExprForDeps(e:Null<HxExpr>, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
-						if (e == null)
-							return;
-						switch (e) {
-							case EIdent(name):
-								if (name != null && name.length > 0 && !locals.exists(name))
-									idents.set(name, true);
-							case EField(obj, _):
-								scanExprForDeps(obj, locals, calls, idents);
-							case ECall(callee, args):
-								switch (callee) {
-									case EIdent(name):
-										if (name != null && name.length > 0 && !locals.exists(name)) calls.set(name, true);
-									case EField(_obj, field):
-										if (field != null && field.length > 0 && !locals.exists(field)) calls.set(field, true);
-									case _:
-								}
-								scanExprForDeps(callee, locals, calls, idents);
-								if (args != null)
-									for (a in args)
-										scanExprForDeps(a, locals, calls, idents);
-							case ELambda(args, body):
-								final nestedLocals:Map<String, Bool> = new Map();
-								for (k in locals.keys())
-									nestedLocals.set(k, true);
-								if (args != null)
-									for (a in args)
-										if (a != null && a.length > 0)
-											nestedLocals.set(a, true);
-								scanExprForDeps(body, nestedLocals, calls, idents);
-							case ETernary(cond, thenExpr, elseExpr):
-								scanExprForDeps(cond, locals, calls, idents);
-								scanExprForDeps(thenExpr, locals, calls, idents);
-								scanExprForDeps(elseExpr, locals, calls, idents);
-							case EAnon(_, values):
-								if (values != null)
-									for (v in values)
-										scanExprForDeps(v, locals, calls, idents);
-							case ESwitch(scrutinee, cases):
-								scanExprForDeps(scrutinee, locals, calls, idents);
-								if (cases != null)
-									for (c in cases)
-										scanExprForDeps(c.expr, locals, calls, idents);
-							case ENew(_, args):
-								if (args != null)
-									for (a in args)
-										scanExprForDeps(a, locals, calls, idents);
-							case EUnop(_, expr):
-								scanExprForDeps(expr, locals, calls, idents);
-							case EBinop(_, left, right):
-								scanExprForDeps(left, locals, calls, idents);
-								scanExprForDeps(right, locals, calls, idents);
-							case EArrayComprehension(name, iterable, yieldExpr):
-								final nestedLocals:Map<String, Bool> = new Map();
-								for (k in locals.keys())
-									nestedLocals.set(k, true);
-								if (name != null && name.length > 0)
-									nestedLocals.set(name, true);
-								scanExprForDeps(iterable, locals, calls, idents);
-								scanExprForDeps(yieldExpr, nestedLocals, calls, idents);
-							case EArrayDecl(values):
-								if (values != null)
-									for (v in values)
-										scanExprForDeps(v, locals, calls, idents);
-							case EArrayAccess(array, index):
-								scanExprForDeps(array, locals, calls, idents);
-								scanExprForDeps(index, locals, calls, idents);
-							case ERange(start, end):
-								scanExprForDeps(start, locals, calls, idents);
-								scanExprForDeps(end, locals, calls, idents);
-							case ECast(expr, _):
-								scanExprForDeps(expr, locals, calls, idents);
-							case EUntyped(expr):
-								scanExprForDeps(expr, locals, calls, idents);
-							case _:
-						}
-					}
-
-					function scanStmtForDeps(s:HxStmt, locals:Map<String, Bool>, calls:Map<String, Bool>, idents:Map<String, Bool>):Void {
-						switch (s) {
-							case SBlock(stmts, _):
-								if (stmts != null)
-									for (ss in stmts)
-										scanStmtForDeps(ss, locals, calls, idents);
-							case SVar(_name, _typeHint, init, _):
-								scanExprForDeps(init, locals, calls, idents);
-							case SIf(cond, thenBranch, elseBranch, _):
-								scanExprForDeps(cond, locals, calls, idents);
-								scanStmtForDeps(thenBranch, locals, calls, idents);
-								if (elseBranch != null)
-									scanStmtForDeps(elseBranch, locals, calls, idents);
-							case SWhile(cond, body, _):
-								scanExprForDeps(cond, locals, calls, idents);
-								scanStmtForDeps(body, locals, calls, idents);
-							case SDoWhile(body, cond, _):
-								scanStmtForDeps(body, locals, calls, idents);
-								scanExprForDeps(cond, locals, calls, idents);
-							case SForIn(_name, iterable, body, _):
-								scanExprForDeps(iterable, locals, calls, idents);
-								scanStmtForDeps(body, locals, calls, idents);
-							case SSwitch(scrutinee, cases, _):
-								scanExprForDeps(scrutinee, locals, calls, idents);
-								if (cases != null)
-									for (c in cases)
-										scanStmtForDeps(c.body, locals, calls, idents);
-							case SReturn(expr, _):
-								scanExprForDeps(expr, locals, calls, idents);
-							case SExpr(expr, _):
-								scanExprForDeps(expr, locals, calls, idents);
-							case _:
-						}
-					}
-
 					final fnCallsByName:Map<String, Map<String, Bool>> = new Map();
 					final fnRefsStaticByName:Map<String, Bool> = new Map();
 					function analyzeFn(nameRaw:String):Void {
@@ -4793,10 +4854,10 @@ class EmitterStage {
 									locals.set(pn, true);
 							}
 							for (s in HxFunctionDecl.getBody(parsedFn))
-								collectLocalsFromStmt(s, locals);
+								collectLocalsForPreludeFromStmtRec(s, locals);
 							final idents:Map<String, Bool> = new Map();
 							for (s in HxFunctionDecl.getBody(parsedFn))
-								scanStmtForDeps(s, locals, calls, idents);
+								scanStmtForPreludeDepsRec(s, locals, calls, idents);
 							for (n in idents.keys()) {
 								if (staticFieldNames.exists(n)) {
 									refsStatic = true;

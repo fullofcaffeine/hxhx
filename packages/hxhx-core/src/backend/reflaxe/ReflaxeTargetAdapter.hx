@@ -1,9 +1,13 @@
 package backend.reflaxe;
 
+import backend.BackendContext;
 import backend.BackendRegistrationSpec;
-import backend.ITargetCore;
+import backend.EmitResult;
+import backend.GenIrProgram;
 import backend.TargetCoreBackend;
 import backend.TargetDescriptor;
+
+private typedef TargetCoreEmit = GenIrProgram->BackendContext->EmitResult;
 
 /**
 	Reusable adapter for reflaxe-style backend promotion.
@@ -32,19 +36,18 @@ import backend.TargetDescriptor;
 	  target core + descriptor pair.
 **/
 class ReflaxeTargetAdapter {
-	public static function backend(descriptor:TargetDescriptor, coreFactory:Void->ITargetCore):TargetCoreBackend {
-		final core = coreFactory();
-		return new TargetCoreBackend(descriptor, function(program, context) return core.emit(program, context));
+	public static function backend(descriptor:TargetDescriptor, coreEmitFactory:Void->TargetCoreEmit):TargetCoreBackend {
+		return new TargetCoreBackend(descriptor, coreEmitFactory());
 	}
 
-	public static function registration(descriptor:TargetDescriptor, coreFactory:Void->ITargetCore):BackendRegistrationSpec {
+	public static function registration(descriptor:TargetDescriptor, coreEmitFactory:Void->TargetCoreEmit):BackendRegistrationSpec {
 		return {
 			descriptor: descriptor,
-			create: function() return backend(descriptor, coreFactory)
+			create: function() return backend(descriptor, coreEmitFactory)
 		};
 	}
 
-	public static function registrations(descriptor:TargetDescriptor, coreFactory:Void->ITargetCore):Array<BackendRegistrationSpec> {
-		return [registration(descriptor, coreFactory)];
+	public static function registrations(descriptor:TargetDescriptor, coreEmitFactory:Void->TargetCoreEmit):Array<BackendRegistrationSpec> {
+		return [registration(descriptor, coreEmitFactory)];
 	}
 }

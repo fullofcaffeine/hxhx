@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable ty : TyType.t }
 
 let create = fun name2 ty2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic () } : t) in (
   ignore ((
-    ignore (let __assign_1 = name2 in (
+    ignore (let __assign_1 = (name2 : string) in (
       self.name <- __assign_1;
       __assign_1
     ));

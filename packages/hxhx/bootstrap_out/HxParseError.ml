@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable pos : HxPos.t; mutable message : string }
 
 let create = fun message2 pos2 -> let self = ({ __hx_type = HxType.class_ "HxParseError"; pos = Obj.magic (); message = "" } : t) in (
   ignore ((
-    ignore (let __assign_1 = message2 in (
+    ignore (let __assign_1 = (message2 : string) in (
       self.message <- __assign_1;
       __assign_1
     ));

@@ -98,12 +98,19 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 		return new JsTargetCore();
 	}
 
+	public static function targetCoreEmit():GenIrProgram->BackendContext->EmitResult {
+		final core = targetCore();
+		return function(program:GenIrProgram, context:BackendContext):EmitResult {
+			return JsTargetCore.emitBridge(core, program, context);
+		};
+	}
+
 	public static function emitBridge(backend:JsBackend, program:GenIrProgram, context:BackendContext):EmitResult {
 		return backend.emit(program, context);
 	}
 
 	public function new() {
-		delegate = ReflaxeTargetAdapter.backend(descriptor(), targetCore);
+		delegate = ReflaxeTargetAdapter.backend(descriptor(), targetCoreEmit);
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
@@ -116,6 +123,6 @@ class JsBackend implements IBackend implements ITargetBackendProvider {
 
 	public static function providerRegistrations():Array<BackendRegistrationSpec> {
 		final provided = providerDescriptor();
-		return ReflaxeTargetAdapter.registrations(provided, targetCore);
+		return ReflaxeTargetAdapter.registrations(provided, targetCoreEmit);
 	}
 }

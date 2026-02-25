@@ -19,48 +19,48 @@ let endsWith = fun s hx_end -> let elen = HxString.length hx_end in let slen = H
 
 let isSpace = fun s pos -> let c = HxString.charCodeAt s pos in (let __nullable_1 = c in let __nullable_2 = 8 in if __nullable_1 == HxRuntime.hx_null then false else Obj.obj __nullable_1 > __nullable_2) && (let __nullable_3 = c in let __nullable_4 = 14 in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 < __nullable_4) || (let __nullable_5 = c in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 = 32)
 
-let ltrim = fun s -> try let l = HxString.length s in let r = ref 0 in (
-  ignore (while !r < l && isSpace s (!r) do ignore (let __old_6 = !r in let __new_7 = HxInt.add __old_6 1 in (
+let ltrim = fun s -> try let __fallback_ignore_9 = let l = HxString.length s in let r = ref 0 in (
+  ignore (while !r < l && isSpace (s : string) (!r) do ignore (let __old_6 = !r in let __new_7 = HxInt.add __old_6 1 in (
     ignore (r := __new_7);
     __old_6
   )) done);
   if !r > 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr s (!r) (HxInt.sub l (!r))))) else raise (HxRuntime.Hx_return (Obj.repr s))
-) with
+) in "" with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
-let rtrim = fun s -> try let l = HxString.length s in let r = ref 0 in (
-  ignore (while !r < l && isSpace s (HxInt.sub (HxInt.sub l (!r)) 1) do ignore (let __old_9 = !r in let __new_10 = HxInt.add __old_9 1 in (
-    ignore (r := __new_10);
-    __old_9
+let rtrim = fun s -> try let __fallback_ignore_13 = let l = HxString.length s in let r = ref 0 in (
+  ignore (while !r < l && isSpace (s : string) (HxInt.sub (HxInt.sub l (!r)) 1) do ignore (let __old_10 = !r in let __new_11 = HxInt.add __old_10 1 in (
+    ignore (r := __new_11);
+    __old_10
   )) done);
   if !r > 0 then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr s 0 (HxInt.sub l (!r))))) else raise (HxRuntime.Hx_return (Obj.repr s))
-) with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
+) in "" with
+  | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
-let trim = fun s -> ltrim (rtrim s)
+let trim = fun s -> ltrim (rtrim (s : string) : string)
 
 let replace = fun s sub by -> HxArray.join (HxString.split s sub) by (fun x -> x)
 
-let hex = fun n digits -> let n = ref n in let s = ref "" in let hexChars = "0123456789ABCDEF" in (
+let hex = fun n digits -> let n = ref n in let s = ref ("" : string) in let hexChars = ("0123456789ABCDEF" : string) in (
   ignore ((
     ignore ((
-      ignore (let __assign_12 = HxString.toStdString (HxString.charAt hexChars (HxInt.logand (!n) 15)) ^ HxString.toStdString (!s) in (
-        s := __assign_12;
-        __assign_12
+      ignore (let __assign_14 = (HxString.toStdString (HxString.charAt hexChars (HxInt.logand (!n) 15)) ^ HxString.toStdString (!s) : string) in (
+        s := __assign_14;
+        __assign_14
       ));
       n := HxInt.ushr (!n) 4
     ));
     while !n > 0 do ignore ((
-      ignore (let __assign_12 = HxString.toStdString (HxString.charAt hexChars (HxInt.logand (!n) 15)) ^ HxString.toStdString (!s) in (
-        s := __assign_12;
-        __assign_12
+      ignore (let __assign_14 = (HxString.toStdString (HxString.charAt hexChars (HxInt.logand (!n) 15)) ^ HxString.toStdString (!s) : string) in (
+        s := __assign_14;
+        __assign_14
       ));
       n := HxInt.ushr (!n) 4
     )) done
   ));
-  ignore (if digits != HxRuntime.hx_null then ignore (while let __nullable_13 = HxString.length (!s) in let __nullable_14 = digits in if __nullable_14 == HxRuntime.hx_null then false else __nullable_13 < Obj.obj __nullable_14 do ignore (let __assign_15 = "0" ^ HxString.toStdString (!s) in (
-    s := __assign_15;
-    __assign_15
+  ignore (if digits != HxRuntime.hx_null then ignore (while let __nullable_15 = HxString.length (!s) in let __nullable_16 = digits in if __nullable_16 == HxRuntime.hx_null then false else __nullable_15 < Obj.obj __nullable_16 do ignore (let __assign_17 = ("0" ^ HxString.toStdString (!s) : string) in (
+    s := __assign_17;
+    __assign_17
   )) done) else ());
   !s
 )

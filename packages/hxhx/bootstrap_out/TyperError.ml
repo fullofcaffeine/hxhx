@@ -8,14 +8,14 @@ type t = { __hx_type : Obj.t; mutable filePath : string; mutable pos : HxPos.t; 
 
 let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.class_ "TyperError"; filePath = ""; pos = Obj.magic (); message = "" } : t) in (
   ignore (let tempRight = ref "" in (
-    ignore (if filePath2 == Obj.magic (HxRuntime.hx_null) || HxString.length filePath2 = 0 then let __assign_1 = "<unknown>" in (
+    ignore (if filePath2 == Obj.magic (HxRuntime.hx_null) || HxString.length filePath2 = 0 then let __assign_1 = ("<unknown>" : string) in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_2 = filePath2 in (
+    ) else let __assign_2 = (filePath2 : string) in (
       tempRight := __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = !tempRight in (
+    ignore (let __assign_3 = (!tempRight : string) in (
       self.filePath <- __assign_3;
       __assign_3
     ));
@@ -32,14 +32,14 @@ let create = fun filePath2 pos2 message2 -> let self = ({ __hx_type = HxType.cla
         __assign_6
       ));
       let tempRight2 = ref "" in (
-        ignore (if message2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = "<no message>" in (
+        ignore (if message2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("<no message>" : string) in (
           tempRight2 := __assign_7;
           __assign_7
-        ) else let __assign_8 = message2 in (
+        ) else let __assign_8 = (message2 : string) in (
           tempRight2 := __assign_8;
           __assign_8
         ));
-        let __assign_9 = !tempRight2 in (
+        let __assign_9 = (!tempRight2 : string) in (
           self.message <- __assign_9;
           __assign_9
         )

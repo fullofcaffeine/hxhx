@@ -8,11 +8,11 @@ type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; 
 
 let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (); isOptional = false; isRest = false } : t) in (
   ignore ((
-    ignore (let __assign_1 = name2 in (
+    ignore (let __assign_1 = (name2 : string) in (
       self.name <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = typeHint2 in (
+    ignore (let __assign_2 = (typeHint2 : string) in (
       self.typeHint <- __assign_2;
       __assign_2
     ));

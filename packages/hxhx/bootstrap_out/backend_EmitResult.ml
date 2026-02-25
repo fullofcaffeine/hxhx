@@ -8,14 +8,14 @@ type t = { __hx_type : Obj.t; mutable entryPath : string; mutable artifacts : Ba
 
 let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = ""; artifacts = Obj.magic (); builtExecutable = false } : t) in (
   ignore (let tempRight = ref "" in (
-    ignore (if entryPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = "" in (
+    ignore (if entryPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_2 = entryPath2 in (
+    ) else let __assign_2 = (entryPath2 : string) in (
       tempRight := __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = !tempRight in (
+    ignore (let __assign_3 = (!tempRight : string) in (
       self.entryPath <- __assign_3;
       __assign_3
     ));

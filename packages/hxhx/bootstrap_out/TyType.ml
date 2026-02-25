@@ -7,7 +7,7 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable display : string }
 
 let create = fun display2 -> let self = ({ __hx_type = HxType.class_ "TyType"; display = "" } : t) in (
-  ignore (let __assign_1 = display2 in (
+  ignore (let __assign_1 = (display2 : string) in (
     self.display <- __assign_1;
     __assign_1
   ));
@@ -26,38 +26,38 @@ let toString = fun self () -> self.display
 
 let getDisplay = fun self () -> self.display
 
-let unknown = fun () -> create "Unknown"
+let unknown = fun () -> create ("Unknown" : string)
 
-let fromHintText = fun hint -> try (
+let fromHintText = fun hint -> try let __fallback_ignore_5 = (
   ignore (if hint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (unknown ()))) else ());
-  let s = StringTools.trim hint in (
+  let s = (StringTools.trim (hint : string) : string) in (
     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr (unknown ()))) else ());
     let tempResult = ref (Obj.magic ()) in (
       ignore (match s with
-        | "Bool" | "Dynamic" | "Float" | "Int" | "String" | "Void" -> let __assign_3 = create s in (
+        | "Bool" | "Dynamic" | "Float" | "Int" | "String" | "Void" -> let __assign_3 = create (s : string) in (
           tempResult := __assign_3;
           __assign_3
         )
-        | _ -> let __assign_2 = create s in (
+        | _ -> let __assign_2 = create (s : string) in (
           tempResult := __assign_2;
           __assign_2
         ));
       !tempResult
     )
   )
-) with
+) in Obj.magic () with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
-let unify = fun a b -> try (
+let unify = fun a b -> try let __fallback_ignore_7 = (
   ignore (if a == Obj.magic (HxRuntime.hx_null) || b == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   ignore (if isUnknown a () then raise (HxRuntime.Hx_return (Obj.repr b)) else ());
   ignore (if isUnknown b () then raise (HxRuntime.Hx_return (Obj.repr a)) else ());
   ignore (if HxString.equals (a.display) (b.display) then raise (HxRuntime.Hx_return (Obj.repr a)) else ());
   ignore (if HxString.equals (a.display) "Null" then raise (HxRuntime.Hx_return (Obj.repr b)) else ());
   ignore (if HxString.equals (b.display) "Null" then raise (HxRuntime.Hx_return (Obj.repr a)) else ());
-  ignore (if isNumeric a () && isNumeric b () then raise (HxRuntime.Hx_return (Obj.repr (create "Float"))) else ());
+  ignore (if isNumeric a () && isNumeric b () then raise (HxRuntime.Hx_return (Obj.repr (create ("Float" : string)))) else ());
   ignore (if HxString.equals (a.display) "Dynamic" then raise (HxRuntime.Hx_return (Obj.repr a)) else ());
   ignore (if HxString.equals (b.display) "Dynamic" then raise (HxRuntime.Hx_return (Obj.repr b)) else ());
   Obj.magic (HxRuntime.hx_null)
-) with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+) in Obj.magic () with
+  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6

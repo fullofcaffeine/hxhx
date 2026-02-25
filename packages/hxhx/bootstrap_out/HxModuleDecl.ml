@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable packagePath : string; mutable imports : st
 
 let create = fun packagePath2 imports2 mainClass2 classes2 headerOnly2 hasToplevelMain2 -> let self = ({ __hx_type = HxType.class_ "HxModuleDecl"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic (); classes = Obj.magic (); headerOnly = false; hasToplevelMain = false } : t) in (
   ignore ((
-    ignore (let __assign_1 = packagePath2 in (
+    ignore (let __assign_1 = (packagePath2 : string) in (
       self.packagePath <- __assign_1;
       __assign_1
     ));

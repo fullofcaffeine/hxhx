@@ -47,15 +47,17 @@ let descriptor = fun () -> let __anon_6 = HxAnon.create () in (
 
 let targetCore = fun () -> Backend_ocaml_OcamlTargetCore.create ()
 
+let targetCoreEmit = fun () -> let core = targetCore () in fun program context -> Backend_ocaml_OcamlTargetCore.emitBridge core program context
+
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlStage3Backend"; delegate = Obj.magic (); id = (fun o () -> id__impl (Obj.magic o) ()); describe = (fun o () -> describe__impl (Obj.magic o) ()); capabilities = (fun o () -> capabilities__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1) } : t) in (
-  ignore (let core = targetCore () in let __assign_1 = Backend_TargetCoreBackend.create (descriptor ()) (fun program context -> core.emit (Obj.magic core) program context) in (
+  ignore (let __assign_1 = Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit in (
     self.delegate <- __assign_1;
     __assign_1
   ));
   self
 )
 
-let __ctor = fun (self : t) () -> ignore (let core = targetCore () in let __assign_1 = Backend_TargetCoreBackend.create (descriptor ()) (fun program context -> core.emit (Obj.magic core) program context) in (
+let __ctor = fun (self : t) () -> ignore (let __assign_1 = Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit in (
   self.delegate <- __assign_1;
   __assign_1
 ))

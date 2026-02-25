@@ -8,15 +8,15 @@ type t = { __hx_type : Obj.t; mutable fullName : string; mutable shortName : str
 
 let create = fun fullName2 shortName2 modulePath2 fields2 staticMethods2 instanceMethods2 -> let self = ({ __hx_type = HxType.class_ "TyClassInfo"; fullName = ""; shortName = ""; modulePath = ""; fields = Obj.magic (); staticMethods = Obj.magic (); instanceMethods = Obj.magic () } : t) in (
   ignore ((
-    ignore (let __assign_1 = fullName2 in (
+    ignore (let __assign_1 = (fullName2 : string) in (
       self.fullName <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = shortName2 in (
+    ignore (let __assign_2 = (shortName2 : string) in (
       self.shortName <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = modulePath2 in (
+    ignore (let __assign_3 = (modulePath2 : string) in (
       self.modulePath <- __assign_3;
       __assign_3
     ));

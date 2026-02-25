@@ -13,79 +13,79 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsStm
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsStmtEmitter" } : t)
 
-let normalizeCatchType = fun typeHint -> try (
+let normalizeCatchType = fun typeHint -> try let __fallback_ignore_16 = (
   ignore (if typeHint == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let hint = ref (StringTools.trim typeHint) in (
+  let hint = ref (StringTools.trim (typeHint : string) : string) in (
     ignore (if HxString.length (!hint) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-    ignore (let __assign_9 = StringTools.replace (!hint) " " "" in (
+    ignore (let __assign_9 = (StringTools.replace (!hint : string) (" " : string) ("" : string) : string) in (
       hint := __assign_9;
       __assign_9
     ));
-    ignore (let __assign_10 = StringTools.replace (!hint) "\t" "" in (
+    ignore (let __assign_10 = (StringTools.replace (!hint : string) ("\t" : string) ("" : string) : string) in (
       hint := __assign_10;
       __assign_10
     ));
-    ignore (let __assign_11 = StringTools.replace (!hint) "\n" "" in (
+    ignore (let __assign_11 = (StringTools.replace (!hint : string) ("\n" : string) ("" : string) : string) in (
       hint := __assign_11;
       __assign_11
     ));
-    ignore (let __assign_12 = StringTools.replace (!hint) "\r" "" in (
+    ignore (let __assign_12 = (StringTools.replace (!hint : string) ("\r" : string) ("" : string) : string) in (
       hint := __assign_12;
       __assign_12
     ));
-    ignore (while StringTools.startsWith (!hint) "Null<" && StringTools.endsWith (!hint) ">" do ignore (let __assign_13 = HxString.substr (!hint) 5 (HxInt.sub (HxString.length (!hint)) 6) in (
+    ignore (while StringTools.startsWith (!hint : string) ("Null<" : string) && StringTools.endsWith (!hint : string) (">" : string) do ignore (let __assign_13 = (HxString.substr (!hint) 5 (HxInt.sub (HxString.length (!hint)) 6) : string) in (
       hint := __assign_13;
       __assign_13
     )) done);
     let genericAt = HxString.indexOf (!hint) "<" 0 in (
-      ignore (if genericAt >= 0 then ignore (let __assign_14 = HxString.substr (!hint) 0 genericAt in (
+      ignore (if genericAt >= 0 then ignore (let __assign_14 = (HxString.substr (!hint) 0 genericAt : string) in (
         hint := __assign_14;
         __assign_14
       )) else ());
       !hint
     )
   )
-) with
+) in "" with
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
-let simpleTypeName = fun fullName -> try (
+let simpleTypeName = fun fullName -> try let __fallback_ignore_18 = (
   ignore (if fullName == Obj.magic (HxRuntime.hx_null) || HxString.length fullName = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
   let parts = HxString.split fullName "." in HxArray.get parts (HxInt.sub (HxArray.length parts) 1)
-) with
-  | HxRuntime.Hx_return __ret_16 -> Obj.obj __ret_16
+) in "" with
+  | HxRuntime.Hx_return __ret_17 -> Obj.obj __ret_17
 
-let emitCatchCondition = fun typeHint errRef -> try let normalized = normalizeCatchType typeHint in (
+let emitCatchCondition = fun typeHint errRef -> try let __fallback_ignore_26 = let normalized = (normalizeCatchType (typeHint : string) : string) in (
   ignore (if HxString.length normalized = 0 || HxString.equals normalized "Dynamic" || HxString.equals normalized "Any" then raise (HxRuntime.Hx_return (Obj.repr "true")) else ());
   let tempResult = ref "" in (
     ignore (match normalized with
-      | "Array" | "StdTypes.Array" -> let __assign_18 = ("Array.isArray(" ^ HxString.toStdString errRef) ^ ")" in (
-        tempResult := __assign_18;
-        __assign_18
-      )
-      | "Bool" | "StdTypes.Bool" -> let __assign_19 = ("(typeof " ^ HxString.toStdString errRef) ^ " === \"boolean\")" in (
-        tempResult := __assign_19;
-        __assign_19
-      )
-      | "Float" | "StdTypes.Float" -> let __assign_20 = ("(typeof " ^ HxString.toStdString errRef) ^ " === \"number\")" in (
+      | "Array" | "StdTypes.Array" -> let __assign_20 = (("Array.isArray(" ^ HxString.toStdString errRef) ^ ")" : string) in (
         tempResult := __assign_20;
         __assign_20
       )
-      | "Int" | "StdTypes.Int" -> let __assign_21 = ((((("(typeof " ^ HxString.toStdString errRef) ^ " === \"number\" && ((") ^ HxString.toStdString errRef) ^ " | 0) === ") ^ HxString.toStdString errRef) ^ "))" in (
+      | "Bool" | "StdTypes.Bool" -> let __assign_21 = (("(typeof " ^ HxString.toStdString errRef) ^ " === \"boolean\")" : string) in (
         tempResult := __assign_21;
         __assign_21
       )
-      | "StdTypes.String" | "String" -> let __assign_22 = ((("(typeof " ^ HxString.toStdString errRef) ^ " === \"string\" || ") ^ HxString.toStdString errRef) ^ " instanceof String)" in (
+      | "Float" | "StdTypes.Float" -> let __assign_22 = (("(typeof " ^ HxString.toStdString errRef) ^ " === \"number\")" : string) in (
         tempResult := __assign_22;
         __assign_22
       )
-      | _ -> let simple = simpleTypeName normalized in let normalizedQuoted = Backend_js_JsNameMangler.quoteString normalized in let simpleQuoted = Backend_js_JsNameMangler.quoteString simple in let __assign_17 = ((((((((((((((((((((("(" ^ HxString.toStdString errRef) ^ " != null && typeof ") ^ HxString.toStdString errRef) ^ " === \"object\" && (") ^ HxString.toStdString errRef) ^ ".__hx_name === ") ^ HxString.toStdString normalizedQuoted) ^ " || ") ^ HxString.toStdString errRef) ^ ".__hx_name === ") ^ HxString.toStdString simpleQuoted) ^ " || (") ^ HxString.toStdString errRef) ^ ".constructor != null && (") ^ HxString.toStdString errRef) ^ ".constructor.__hx_name === ") ^ HxString.toStdString normalizedQuoted) ^ " || ") ^ HxString.toStdString errRef) ^ ".constructor.__hx_name === ") ^ HxString.toStdString simpleQuoted) ^ "))))" in (
-        tempResult := __assign_17;
-        __assign_17
+      | "Int" | "StdTypes.Int" -> let __assign_23 = (((((("(typeof " ^ HxString.toStdString errRef) ^ " === \"number\" && ((") ^ HxString.toStdString errRef) ^ " | 0) === ") ^ HxString.toStdString errRef) ^ "))" : string) in (
+        tempResult := __assign_23;
+        __assign_23
+      )
+      | "StdTypes.String" | "String" -> let __assign_24 = (((("(typeof " ^ HxString.toStdString errRef) ^ " === \"string\" || ") ^ HxString.toStdString errRef) ^ " instanceof String)" : string) in (
+        tempResult := __assign_24;
+        __assign_24
+      )
+      | _ -> let simple = (simpleTypeName (normalized : string) : string) in let normalizedQuoted = (Backend_js_JsNameMangler.quoteString (normalized : string) : string) in let simpleQuoted = (Backend_js_JsNameMangler.quoteString (simple : string) : string) in let __assign_19 = (((((((((((((((((((((("(" ^ HxString.toStdString errRef) ^ " != null && typeof ") ^ HxString.toStdString errRef) ^ " === \"object\" && (") ^ HxString.toStdString errRef) ^ ".__hx_name === ") ^ HxString.toStdString normalizedQuoted) ^ " || ") ^ HxString.toStdString errRef) ^ ".__hx_name === ") ^ HxString.toStdString simpleQuoted) ^ " || (") ^ HxString.toStdString errRef) ^ ".constructor != null && (") ^ HxString.toStdString errRef) ^ ".constructor.__hx_name === ") ^ HxString.toStdString normalizedQuoted) ^ " || ") ^ HxString.toStdString errRef) ^ ".constructor.__hx_name === ") ^ HxString.toStdString simpleQuoted) ^ "))))" : string) in (
+        tempResult := __assign_19;
+        __assign_19
       ));
     !tempResult
   )
-) with
-  | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
+) in "" with
+  | HxRuntime.Hx_return __ret_25 -> Obj.obj __ret_25
 
 let rec emitStmtBlockContent = fun writer stmt scope -> if (match stmt with
   | HxStmt.SBlock (_, _) -> 0
@@ -119,7 +119,7 @@ and emitStmt = fun writer stmt scope -> match stmt with
   | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = _p0 in (
     ignore _p1;
     let stmts = _g in (
-      ignore (Backend_js_JsWriter.writeln writer "{");
+      ignore (Backend_js_JsWriter.writeln writer ("{" : string));
       ignore (Backend_js_JsWriter.pushIndent writer ());
       ignore (let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = HxArray.get stmts (!_g2) in (
         ignore (let __old_7 = !_g2 in let __new_8 = HxInt.add __old_7 1 in (
@@ -129,54 +129,54 @@ and emitStmt = fun writer stmt scope -> match stmt with
         emitStmt writer s scope
       )) done);
       ignore (Backend_js_JsWriter.popIndent writer ());
-      Backend_js_JsWriter.writeln writer "}"
+      Backend_js_JsWriter.writeln writer ("}" : string)
     )
   ))
-  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
+  | HxStmt.SVar (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _p2) in (
     ignore _p3;
-    let name = _g in (
+    let name = (_g : string) in (
       ignore _g1;
-      let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let local = Backend_js_JsFunctionScope.declareLocal scope name in if init != Obj.magic (HxRuntime.hx_null) then ignore (Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";")) else ignore (Backend_js_JsWriter.writeln writer (("var " ^ HxString.toStdString local) ^ ";"))
+      let init = Obj.obj (HxEnum.unbox_or_obj "HxExpr" _g2) in let local = (Backend_js_JsFunctionScope.declareLocal scope (name : string) : string) in if init != Obj.magic (HxRuntime.hx_null) then ignore (Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";" : string)) else ignore (Backend_js_JsWriter.writeln writer (("var " ^ HxString.toStdString local) ^ ";" : string))
     )
   ))
   | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = _p0 in let _g1 = _p1 in let _g2 = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _p2) in (
     ignore _p3;
     let cond = _g in let thenBranch = _g1 in let elseBranch = Obj.obj (HxEnum.unbox_or_obj "HxStmt" _g2) in (
-      ignore (Backend_js_JsWriter.writeln writer (("if (" ^ HxString.toStdString (Backend_js_JsExprEmitter.emit cond (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ") {"));
+      ignore (Backend_js_JsWriter.writeln writer (("if (" ^ HxString.toStdString (Backend_js_JsExprEmitter.emit cond (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ") {" : string));
       ignore (Backend_js_JsWriter.pushIndent writer ());
       ignore (emitStmtBlockContent writer thenBranch scope);
       ignore (Backend_js_JsWriter.popIndent writer ());
-      if elseBranch == Obj.magic (HxRuntime.hx_null) then ignore (Backend_js_JsWriter.writeln writer "}") else ignore ((
-        ignore (Backend_js_JsWriter.writeln writer "} else {");
+      if elseBranch == Obj.magic (HxRuntime.hx_null) then ignore (Backend_js_JsWriter.writeln writer ("}" : string)) else ignore ((
+        ignore (Backend_js_JsWriter.writeln writer ("} else {" : string));
         ignore (Backend_js_JsWriter.pushIndent writer ());
         ignore (emitStmtBlockContent writer (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) scope);
         ignore (Backend_js_JsWriter.popIndent writer ());
-        Backend_js_JsWriter.writeln writer "}"
+        Backend_js_JsWriter.writeln writer ("}" : string)
       ))
     )
   ))
-  | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = _p0 in let _g1 = _p1 in let _g2 = _p2 in (
+  | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = _p1 in let _g2 = _p2 in (
     ignore _p3;
-    let name = _g in let iterable = _g1 in let body = _g2 in emitForIn writer name iterable body scope
+    let name = (_g : string) in let iterable = _g1 in let body = _g2 in emitForIn writer (name : string) iterable body scope
   ))
   | HxStmt.SWhile (_p0, _p1, _p2) -> ignore (let _g = _p0 in let _g1 = _p1 in (
     ignore _p2;
     let cond = _g in let body = _g1 in (
-      ignore (Backend_js_JsWriter.writeln writer (("while (" ^ HxString.toStdString (Backend_js_JsExprEmitter.emit cond (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ") {"));
+      ignore (Backend_js_JsWriter.writeln writer (("while (" ^ HxString.toStdString (Backend_js_JsExprEmitter.emit cond (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ") {" : string));
       ignore (Backend_js_JsWriter.pushIndent writer ());
       ignore (emitStmtBlockContent writer body scope);
       ignore (Backend_js_JsWriter.popIndent writer ());
-      Backend_js_JsWriter.writeln writer "}"
+      Backend_js_JsWriter.writeln writer ("}" : string)
     )
   ))
   | HxStmt.SDoWhile (_p0, _p1, _p2) -> ignore (let _g = _p0 in let _g1 = _p1 in (
     ignore _p2;
     let body = _g in let cond = _g1 in (
-      ignore (Backend_js_JsWriter.writeln writer "do {");
+      ignore (Backend_js_JsWriter.writeln writer ("do {" : string));
       ignore (Backend_js_JsWriter.pushIndent writer ());
       ignore (emitStmtBlockContent writer body scope);
       ignore (Backend_js_JsWriter.popIndent writer ());
-      Backend_js_JsWriter.writeln writer (("} while (" ^ HxString.toStdString (Backend_js_JsExprEmitter.emit cond (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ");")
+      Backend_js_JsWriter.writeln writer (("} while (" ^ HxString.toStdString (Backend_js_JsExprEmitter.emit cond (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ");" : string)
     )
   ))
   | HxStmt.SSwitch (_p0, _p1, _p2) -> ignore (let _g = _p0 in let _g1 = _p1 in (
@@ -189,66 +189,66 @@ and emitStmt = fun writer stmt scope -> match stmt with
   ))
   | HxStmt.SBreak _p0 -> ignore ((
     ignore _p0;
-    Backend_js_JsWriter.writeln writer "break;"
+    Backend_js_JsWriter.writeln writer ("break;" : string)
   ))
   | HxStmt.SContinue _p0 -> ignore ((
     ignore _p0;
-    Backend_js_JsWriter.writeln writer "continue;"
+    Backend_js_JsWriter.writeln writer ("continue;" : string)
   ))
   | HxStmt.SThrow (_p0, _p1) -> ignore (let _g = _p0 in (
     ignore _p1;
-    let expr = _g in Backend_js_JsWriter.writeln writer (("throw " ^ HxString.toStdString (Backend_js_JsExprEmitter.emit expr (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";")
+    let expr = _g in Backend_js_JsWriter.writeln writer (("throw " ^ HxString.toStdString (Backend_js_JsExprEmitter.emit expr (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";" : string)
   ))
   | HxStmt.SReturnVoid _p0 -> ignore ((
     ignore _p0;
-    Backend_js_JsWriter.writeln writer "return;"
+    Backend_js_JsWriter.writeln writer ("return;" : string)
   ))
   | HxStmt.SReturn (_p0, _p1) -> ignore (let _g = _p0 in (
     ignore _p1;
-    let expr = _g in Backend_js_JsWriter.writeln writer (("return " ^ HxString.toStdString (Backend_js_JsExprEmitter.emit expr (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";")
+    let expr = _g in Backend_js_JsWriter.writeln writer (("return " ^ HxString.toStdString (Backend_js_JsExprEmitter.emit expr (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";" : string)
   ))
   | HxStmt.SExpr (_p0, _p1) -> ignore (let _g = _p0 in (
     ignore _p1;
-    let expr = _g in Backend_js_JsWriter.writeln writer (HxString.toStdString (Backend_js_JsExprEmitter.emit expr (Backend_js_JsFunctionScope.exprScope scope ())) ^ ";")
+    let expr = _g in Backend_js_JsWriter.writeln writer (HxString.toStdString (Backend_js_JsExprEmitter.emit expr (Backend_js_JsFunctionScope.exprScope scope ())) ^ ";" : string)
   ))
 and emitTry = fun writer tryBody catches scope -> (
-  ignore (Backend_js_JsWriter.writeln writer "try {");
+  ignore (Backend_js_JsWriter.writeln writer ("try {" : string));
   ignore (Backend_js_JsWriter.pushIndent writer ());
   ignore (emitStmtBlockContent writer tryBody scope);
   ignore (Backend_js_JsWriter.popIndent writer ());
-  ignore (Backend_js_JsWriter.writeln writer "} catch (__hx_err) {");
+  ignore (Backend_js_JsWriter.writeln writer ("} catch (__hx_err) {" : string));
   ignore (Backend_js_JsWriter.pushIndent writer ());
-  ignore (if catches == Obj.magic (HxRuntime.hx_null) || HxArray.length catches = 0 then ignore (Backend_js_JsWriter.writeln writer "throw __hx_err;") else ignore (let _g = ref 0 in let _g1 = HxArray.length catches in (
-    ignore (while !_g < _g1 do ignore (let i = let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
-      ignore (_g := __new_25);
-      __old_24
+  ignore (if catches == Obj.magic (HxRuntime.hx_null) || HxArray.length catches = 0 then ignore (Backend_js_JsWriter.writeln writer ("throw __hx_err;" : string)) else ignore (let _g = ref 0 in let _g1 = HxArray.length catches in (
+    ignore (while !_g < _g1 do ignore (let i = let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
+      ignore (_g := __new_28);
+      __old_27
     ) in let c = HxArray.get catches i in let tempString = ref "" in (
-      ignore (if i = 0 then let __assign_26 = "if" in (
-        tempString := __assign_26;
-        __assign_26
-      ) else let __assign_27 = "else if" in (
-        tempString := __assign_27;
-        __assign_27
+      ignore (if i = 0 then let __assign_29 = ("if" : string) in (
+        tempString := __assign_29;
+        __assign_29
+      ) else let __assign_30 = ("else if" : string) in (
+        tempString := __assign_30;
+        __assign_30
       ));
-      let head = !tempString in let condition = emitCatchCondition (Obj.obj (HxAnon.get c "typeHint")) "__hx_err" in (
-        ignore (Backend_js_JsWriter.writeln writer (((HxString.toStdString head ^ " (") ^ HxString.toStdString condition) ^ ") {"));
+      let head = (!tempString : string) in let condition = (emitCatchCondition (Obj.obj (HxAnon.get c "typeHint") : string) ("__hx_err" : string) : string) in (
+        ignore (Backend_js_JsWriter.writeln writer (((HxString.toStdString head ^ " (") ^ HxString.toStdString condition) ^ ") {" : string));
         ignore (Backend_js_JsWriter.pushIndent writer ());
-        let bind = Backend_js_JsFunctionScope.declareLocal scope (Obj.obj (HxAnon.get c "name")) in (
-          ignore (Backend_js_JsWriter.writeln writer (("var " ^ HxString.toStdString bind) ^ " = __hx_err;"));
+        let bind = (Backend_js_JsFunctionScope.declareLocal scope (Obj.obj (HxAnon.get c "name") : string) : string) in (
+          ignore (Backend_js_JsWriter.writeln writer (("var " ^ HxString.toStdString bind) ^ " = __hx_err;" : string));
           ignore (emitStmtBlockContent writer (Obj.obj (HxAnon.get c "body")) scope);
           ignore (Backend_js_JsWriter.popIndent writer ());
-          Backend_js_JsWriter.writeln writer "}"
+          Backend_js_JsWriter.writeln writer ("}" : string)
         )
       )
     )) done);
-    ignore (Backend_js_JsWriter.writeln writer "else {");
+    ignore (Backend_js_JsWriter.writeln writer ("else {" : string));
     ignore (Backend_js_JsWriter.pushIndent writer ());
-    ignore (Backend_js_JsWriter.writeln writer "throw __hx_err;");
+    ignore (Backend_js_JsWriter.writeln writer ("throw __hx_err;" : string));
     ignore (Backend_js_JsWriter.popIndent writer ());
-    Backend_js_JsWriter.writeln writer "}"
+    Backend_js_JsWriter.writeln writer ("}" : string)
   )));
   ignore (Backend_js_JsWriter.popIndent writer ());
-  Backend_js_JsWriter.writeln writer "}"
+  Backend_js_JsWriter.writeln writer ("}" : string)
 )
 and emitForIn = fun writer name iterable body scope -> if (match iterable with
   | HxExpr.ENull -> 0
@@ -278,49 +278,49 @@ and emitForIn = fun writer name iterable body scope -> if (match iterable with
   | HxExpr.ECast (_, _) -> 24
   | HxExpr.EUntyped _ -> 25
   | HxExpr.EUnsupported _ -> 26) = 23 then ignore (let _g = match iterable with
-  | HxExpr.ERange (__enum_param_28, _) -> __enum_param_28
+  | HxExpr.ERange (__enum_param_31, _) -> __enum_param_31
   | _ -> failwith "Unexpected enum parameter" in let _g1 = match iterable with
-  | HxExpr.ERange (_, __enum_param_29) -> __enum_param_29
-  | _ -> failwith "Unexpected enum parameter" in let start = _g in let hx_end = _g1 in let local = Backend_js_JsFunctionScope.declareLocal scope name in (
-  ignore (Backend_js_JsWriter.writeln writer (((((((((("for (var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit start (Backend_js_JsFunctionScope.exprScope scope ()))) ^ "; ") ^ HxString.toStdString local) ^ " < ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit hx_end (Backend_js_JsFunctionScope.exprScope scope ()))) ^ "; ") ^ HxString.toStdString local) ^ "++) {"));
+  | HxExpr.ERange (_, __enum_param_32) -> __enum_param_32
+  | _ -> failwith "Unexpected enum parameter" in let start = _g in let hx_end = _g1 in let local = (Backend_js_JsFunctionScope.declareLocal scope (name : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln writer (((((((((("for (var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit start (Backend_js_JsFunctionScope.exprScope scope ()))) ^ "; ") ^ HxString.toStdString local) ^ " < ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit hx_end (Backend_js_JsFunctionScope.exprScope scope ()))) ^ "; ") ^ HxString.toStdString local) ^ "++) {" : string));
   ignore (Backend_js_JsWriter.pushIndent writer ());
   ignore (emitStmtBlockContent writer body scope);
   ignore (Backend_js_JsWriter.popIndent writer ());
-  Backend_js_JsWriter.writeln writer "}"
-)) else ignore (let sourceVar = Backend_js_JsFunctionScope.freshTemp scope "__iter" in let indexVar = Backend_js_JsFunctionScope.freshTemp scope "__i" in let local = Backend_js_JsFunctionScope.declareLocal scope name in (
-  ignore (Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString sourceVar) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit iterable (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";"));
-  ignore (Backend_js_JsWriter.writeln writer (((((((("for (var " ^ HxString.toStdString indexVar) ^ " = 0; ") ^ HxString.toStdString indexVar) ^ " < ") ^ HxString.toStdString sourceVar) ^ ".length; ") ^ HxString.toStdString indexVar) ^ "++) {"));
+  Backend_js_JsWriter.writeln writer ("}" : string)
+)) else ignore (let sourceVar = (Backend_js_JsFunctionScope.freshTemp scope ("__iter" : string) : string) in let indexVar = (Backend_js_JsFunctionScope.freshTemp scope ("__i" : string) : string) in let local = (Backend_js_JsFunctionScope.declareLocal scope (name : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString sourceVar) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit iterable (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";" : string));
+  ignore (Backend_js_JsWriter.writeln writer (((((((("for (var " ^ HxString.toStdString indexVar) ^ " = 0; ") ^ HxString.toStdString indexVar) ^ " < ") ^ HxString.toStdString sourceVar) ^ ".length; ") ^ HxString.toStdString indexVar) ^ "++) {" : string));
   ignore (Backend_js_JsWriter.pushIndent writer ());
-  ignore (Backend_js_JsWriter.writeln writer (((((("var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString sourceVar) ^ "[") ^ HxString.toStdString indexVar) ^ "];"));
+  ignore (Backend_js_JsWriter.writeln writer (((((("var " ^ HxString.toStdString local) ^ " = ") ^ HxString.toStdString sourceVar) ^ "[") ^ HxString.toStdString indexVar) ^ "];" : string));
   ignore (emitStmtBlockContent writer body scope);
   ignore (Backend_js_JsWriter.popIndent writer ());
-  Backend_js_JsWriter.writeln writer "}"
+  Backend_js_JsWriter.writeln writer ("}" : string)
 ))
-and emitSwitch = fun writer scrutinee cases scope -> let scrutineeVar = Backend_js_JsFunctionScope.freshTemp scope "__sw" in (
-  ignore (Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString scrutineeVar) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit scrutinee (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";"));
+and emitSwitch = fun writer scrutinee cases scope -> let scrutineeVar = (Backend_js_JsFunctionScope.freshTemp scope ("__sw" : string) : string) in (
+  ignore (Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString scrutineeVar) ^ " = ") ^ HxString.toStdString (Backend_js_JsExprEmitter.emit scrutinee (Backend_js_JsFunctionScope.exprScope scope ()))) ^ ";" : string));
   let isFirst = ref true in let _g = ref 0 in while !_g < HxArray.length cases do ignore (let c = HxArray.get cases (!_g) in (
-    ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
-      ignore (_g := __new_31);
-      __new_31
+    ignore (let __old_33 = !_g in let __new_34 = HxInt.add __old_33 1 in (
+      ignore (_g := __new_34);
+      __new_34
     ));
-    let lowered = Backend_js_JsSwitchPatternLowering.lower (Obj.obj (HxAnon.get c "pattern")) scrutineeVar in let tempString = ref "" in (
-      ignore (if !isFirst then let __assign_32 = "if" in (
-        tempString := __assign_32;
-        __assign_32
-      ) else let __assign_33 = "else if" in (
-        tempString := __assign_33;
-        __assign_33
+    let lowered = Backend_js_JsSwitchPatternLowering.lower (Obj.obj (HxAnon.get c "pattern")) (scrutineeVar : string) in let tempString = ref "" in (
+      ignore (if !isFirst then let __assign_35 = ("if" : string) in (
+        tempString := __assign_35;
+        __assign_35
+      ) else let __assign_36 = ("else if" : string) in (
+        tempString := __assign_36;
+        __assign_36
       ));
-      let head = !tempString in (
-        ignore (Backend_js_JsWriter.writeln writer (((HxString.toStdString head ^ " (") ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") {"));
+      let head = (!tempString : string) in (
+        ignore (Backend_js_JsWriter.writeln writer (((HxString.toStdString head ^ " (") ^ HxString.toStdString (Obj.obj (HxAnon.get lowered "cond"))) ^ ") {" : string));
         ignore (Backend_js_JsWriter.pushIndent writer ());
-        ignore (if Obj.obj (HxAnon.get lowered "bindName") != Obj.magic (HxRuntime.hx_null) then ignore (let bind = Backend_js_JsFunctionScope.declareLocal scope (Obj.obj (HxAnon.get lowered "bindName")) in Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString bind) ^ " = ") ^ HxString.toStdString scrutineeVar) ^ ";")) else ());
+        ignore (if Obj.obj (HxAnon.get lowered "bindName") != Obj.magic (HxRuntime.hx_null) then ignore (let bind = (Backend_js_JsFunctionScope.declareLocal scope (Obj.obj (HxAnon.get lowered "bindName") : string) : string) in Backend_js_JsWriter.writeln writer (((("var " ^ HxString.toStdString bind) ^ " = ") ^ HxString.toStdString scrutineeVar) ^ ";" : string)) else ());
         ignore (emitStmtBlockContent writer (Obj.obj (HxAnon.get c "body")) scope);
         ignore (Backend_js_JsWriter.popIndent writer ());
-        ignore (Backend_js_JsWriter.writeln writer "}");
-        let __assign_34 = false in (
-          isFirst := __assign_34;
-          __assign_34
+        ignore (Backend_js_JsWriter.writeln writer ("}" : string));
+        let __assign_37 = false in (
+          isFirst := __assign_37;
+          __assign_37
         )
       )
     )

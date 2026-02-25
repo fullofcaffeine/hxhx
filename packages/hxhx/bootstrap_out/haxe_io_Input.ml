@@ -124,11 +124,11 @@ let readLine__impl = fun (self : t) () -> let buf = Haxe_io_BytesBuffer.create (
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    ignore (let __assign_16 = HxBytes.toString (Haxe_io_BytesBuffer.getBytes buf ()) () in (
+    ignore (let __assign_16 = (HxBytes.toString (Haxe_io_BytesBuffer.getBytes buf ()) () : string) in (
       s := __assign_16;
       __assign_16
     ));
-    if HxString.length (!s) > 0 && (let __nullable_17 = HxString.charCodeAt (!s) (HxInt.sub (HxString.length (!s)) 1) in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 = 13) then ignore (let __assign_18 = HxString.substr (!s) 0 (-1) in (
+    if HxString.length (!s) > 0 && (let __nullable_17 = HxString.charCodeAt (!s) (HxInt.sub (HxString.length (!s)) 1) in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 = 13) then ignore (let __assign_18 = (HxString.substr (!s) 0 (-1) : string) in (
       s := __assign_18;
       __assign_18
     )) else ()
@@ -139,7 +139,7 @@ let readLine__impl = fun (self : t) () -> let buf = Haxe_io_BytesBuffer.create (
     | HxRuntime.Hx_exception (__exn_v_20, __exn_tags_21) -> if HxRuntime.tags_has __exn_tags_21 "haxe.io.Eof" then let e = (Obj.obj __exn_v_20 : Haxe_io_Eof.t) in (
       ignore e;
       (
-        ignore (let __assign_22 = HxBytes.toString (Haxe_io_BytesBuffer.getBytes buf ()) () in (
+        ignore (let __assign_22 = (HxBytes.toString (Haxe_io_BytesBuffer.getBytes buf ()) () : string) in (
           s := __assign_22;
           __assign_22
         ));
@@ -149,7 +149,7 @@ let readLine__impl = fun (self : t) () -> let buf = Haxe_io_BytesBuffer.create (
     | __exn_23 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let e = (Obj.obj (Obj.repr __exn_23) : Haxe_io_Eof.t) in (
       ignore e;
       (
-        ignore (let __assign_24 = HxBytes.toString (Haxe_io_BytesBuffer.getBytes buf ()) () in (
+        ignore (let __assign_24 = (HxBytes.toString (Haxe_io_BytesBuffer.getBytes buf ()) () : string) in (
           s := __assign_24;
           __assign_24
         ));

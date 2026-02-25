@@ -64,9 +64,10 @@ class BackendPluginManifestParser {
 		if (Std.isOfType(value, Int))
 			return cast value;
 		if (Std.isOfType(value, Float)) {
-			final f:Float = cast value;
+			final f = Std.parseFloat(Std.string(value));
 			final i = Std.int(f);
-			if (i == f)
+			final iAsFloat:Float = i;
+			if (iAsFloat == f)
 				return i;
 		}
 		fail(sourceLabel, "field `" + fieldPath + "` must be an integer");

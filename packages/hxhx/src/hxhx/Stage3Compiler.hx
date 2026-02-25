@@ -37,12 +37,35 @@ private typedef WaitStdioReply = {
 	final isError:Bool;
 };
 
-private typedef BuildFieldPayloadItem = {
-	final name:String;
-	final kind:String;
-	final isStatic:Bool;
-	final visibility:String;
-};
+private class BuildFieldPayloadItem {
+	public final name:String;
+	public final kind:String;
+	public final isStatic:Bool;
+	public final visibility:String;
+
+	public function new(name:String, kind:String, isStatic:Bool, visibility:String) {
+		this.name = name;
+		this.kind = kind;
+		this.isStatic = isStatic;
+		this.visibility = visibility;
+	}
+
+	public function getName():String {
+		return name;
+	}
+
+	public function getKind():String {
+		return kind;
+	}
+
+	public function getIsStatic():Bool {
+		return isStatic;
+	}
+
+	public function getVisibility():String {
+		return visibility;
+	}
+}
 
 /**
 	Stage 3 compiler bring-up (`--hxhx-stage3`).
@@ -1099,7 +1122,7 @@ class Stage3Compiler {
 		var t = lex.next();
 
 		while (true) {
-			switch (t.kind) {
+			switch (t.getKind()) {
 				case TEof:
 					return out;
 				case TKeyword(KClass):
@@ -1109,7 +1132,7 @@ class Stage3Compiler {
 					final t3 = lex.next();
 					final t4 = lex.next();
 
-					final isMeta = switch ([t2.kind, t3.kind, t4.kind]) {
+					final isMeta = switch ([t2.getKind(), t3.getKind(), t4.getKind()]) {
 						case [TColon, TIdent("build"), TLParen]: true;
 						case [TColon, TIdent("autoBuild"), TLParen]: true;
 						case _: false;
@@ -1120,12 +1143,12 @@ class Stage3Compiler {
 					}
 
 					// Capture raw text between balanced parens.
-					final startIndex = t4.pos.getIndex() + 1; // after '('
+					final startIndex = t4.getPos().getIndex() + 1; // after '('
 					var depth = 1;
 					var endIndex = startIndex;
 					var inner = lex.next();
 					while (true) {
-						switch (inner.kind) {
+						switch (inner.getKind()) {
 							case TEof:
 								endIndex = source.length;
 								break;
@@ -1134,7 +1157,7 @@ class Stage3Compiler {
 							case TRParen:
 								depth -= 1;
 								if (depth == 0) {
-									endIndex = inner.pos.getIndex(); // start of ')'
+									endIndex = inner.getPos().getIndex(); // start of ')'
 									break;
 								}
 							case _:
@@ -1178,20 +1201,11 @@ class Stage3Compiler {
 		final items = new Array<BuildFieldPayloadItem>();
 
 		for (fn in HxClassDecl.getFunctions(cls)) {
-			items.push({
-				name: HxFunctionDecl.getName(fn),
-				kind: "fun",
-				isStatic: HxFunctionDecl.getIsStatic(fn),
-				visibility: Std.string(HxFunctionDecl.getVisibility(fn)),
-			});
+			items.push(new BuildFieldPayloadItem(HxFunctionDecl.getName(fn), "fun", HxFunctionDecl.getIsStatic(fn),
+				Std.string(HxFunctionDecl.getVisibility(fn))));
 		}
 		for (f in HxClassDecl.getFields(cls)) {
-			items.push({
-				name: HxFieldDecl.getName(f),
-				kind: "var",
-				isStatic: HxFieldDecl.getIsStatic(f),
-				visibility: Std.string(HxFieldDecl.getVisibility(f)),
-			});
+			items.push(new BuildFieldPayloadItem(HxFieldDecl.getName(f), "var", HxFieldDecl.getIsStatic(f), Std.string(HxFieldDecl.getVisibility(f))));
 		}
 
 		// Encode as a length-prefixed fragment list so the macro host can parse it with `Protocol.kvParse`.
@@ -1199,10 +1213,10 @@ class Stage3Compiler {
 		parts.push(hxhx.macro.MacroProtocol.encodeLen("c", Std.string(items.length)));
 		for (i in 0...items.length) {
 			final it = items[i];
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("n" + i, it.name));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("k" + i, it.kind));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("s" + i, it.isStatic ? "1" : "0"));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("v" + i, it.visibility));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("n" + i, it.getName()));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("k" + i, it.getKind()));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("s" + i, it.getIsStatic() ? "1" : "0"));
+			parts.push(hxhx.macro.MacroProtocol.encodeLen("v" + i, it.getVisibility()));
 		}
 		return parts.join(" ");
 	}
@@ -1230,9 +1244,18 @@ class Stage3Compiler {
 		final parsed = Stage1Args.parse(rest, true);
 		if (parsed == null)
 			return 2;
+		final parsedDefines = Stage1Args.getDefines(parsed);
+		final parsedNoOutput = Stage1Args.getNoOutput(parsed);
+		final parsedMain = Stage1Args.getMain(parsed);
+		final parsedRoots = Stage1Args.getRoots(parsed);
+		final parsedMacros = Stage1Args.getMacros(parsed);
+		final parsedCwd = Stage1Args.getCwd(parsed);
+		final parsedClassPaths = Stage1Args.getClassPaths(parsed);
+		final parsedLibs = Stage1Args.getLibs(parsed);
+		final parsedHadCmd = Stage1Args.getHadCmd(parsed);
 		// Upstream often uses `--interp` as “compile + run now”. In Stage3 (native OCaml),
 		// we emulate this by enabling the full-body emission rung.
-		final sawInterp = parsed.defines != null && parsed.defines.indexOf("interp=1") != -1;
+		final sawInterp = parsedDefines != null && parsedDefines.indexOf("interp=1") != -1;
 		emitFullBodies = emitFullBodies || sawInterp;
 		if (backendId == "js-native") {
 			emitFullBodies = true;
@@ -1244,9 +1267,8 @@ class Stage3Compiler {
 		// - If the caller explicitly provides `--hxhx-out <dir>`, treat that as an explicit request
 		//   to emit/build even if the `.hxml` contains `--no-output` (some Stage3 examples share
 		//   `.hxml` files with stage0 paths where `--no-output` is desirable).
-		if (outDir.length == 0) {
-			noEmit = noEmit || parsed.noOutput;
-		}
+		if (outDir.length == 0)
+			noEmit = noEmit || parsedNoOutput;
 
 		function inferMainFromMacroExpr(expr:String):String {
 			if (expr == null)
@@ -1273,14 +1295,14 @@ class Stage3Compiler {
 		// 3) first `--macro` entrypoint's type path (before the final `.method(...)`)
 		final roots0 = new Array<String>();
 		final displayRequest = Stage1Args.getDisplayRequest(parsed);
-		if (parsed.main != null && parsed.main.length > 0) {
-			roots0.push(parsed.main);
-		} else if (parsed.roots != null && parsed.roots.length > 0) {
-			for (r in parsed.roots)
+		if (parsedMain != null && parsedMain.length > 0) {
+			roots0.push(parsedMain);
+		} else if (parsedRoots != null && parsedRoots.length > 0) {
+			for (r in parsedRoots)
 				if (r != null && r.length > 0)
 					roots0.push(r);
-		} else if (parsed.macros.length > 0) {
-			final inferred = inferMainFromMacroExpr(parsed.macros[0]);
+		} else if (parsedMacros.length > 0) {
+			final inferred = inferMainFromMacroExpr(parsedMacros[0]);
 			if (inferred.length == 0)
 				return error("missing -main <TypeName>");
 			roots0.push(inferred);
@@ -1295,9 +1317,9 @@ class Stage3Compiler {
 		//
 		// Note: This is a bring-up behavior. The Gate1 “non-delegating” acceptance run will
 		// require real macro execution; type-only is only for diagnostics.
-		if (typeOnly && parsed.macros.length > 0) {
-			for (i in 0...parsed.macros.length) {
-				Sys.println("macro_skipped[" + i + "]=" + parsed.macros[i]);
+		if (typeOnly && parsedMacros.length > 0) {
+			for (i in 0...parsedMacros.length) {
+				Sys.println("macro_skipped[" + i + "]=" + parsedMacros[i]);
 			}
 		}
 
@@ -1316,13 +1338,13 @@ class Stage3Compiler {
 		}
 
 		final hostCwd = try Sys.getCwd() catch (_:String) ".";
-		final cwd = absFromCwd(hostCwd, parsed.cwd);
+		final cwd = absFromCwd(hostCwd, parsedCwd);
 		if (!sys.FileSystem.exists(cwd) || !sys.FileSystem.isDirectory(cwd)) {
 			return error("cwd is not a directory: " + cwd);
 		}
 
 		if (roots0.length == 0 && displayRequest != null && displayRequest.length > 0) {
-			final inferred = inferMainFromDisplayRequest(displayRequest, parsed.classPaths, cwd);
+			final inferred = inferMainFromDisplayRequest(displayRequest, parsedClassPaths, cwd);
 			if (inferred.length > 0)
 				roots0.push(inferred);
 		}
@@ -1333,7 +1355,7 @@ class Stage3Compiler {
 			//
 			// For Stage3 bring-up we do not execute `-cmd`/`--cmd`; treat these units as skipped so
 			// diagnostic runners can still traverse the rest of the multi-unit file.
-			if (Stage1Args.getHadCmd(parsed)) {
+			if (parsedHadCmd) {
 				Sys.println("stage3=skipped_cmd_only");
 				return 0;
 			}
@@ -1347,7 +1369,7 @@ class Stage3Compiler {
 		final libsResolved = {
 			final seen = new Map<String, Bool>();
 			final out = new Array<HaxelibSpec>();
-			for (lib in parsed.libs)
+			for (lib in parsedLibs)
 				out.push(resolveHaxelibSpec(lib, cwd, seen, 0));
 			out;
 		}
@@ -1359,7 +1381,7 @@ class Stage3Compiler {
 						out.push(d);
 			out;
 		}
-		final allDefines = parsed.defines.concat(libDefines);
+		final allDefines = parsedDefines.concat(libDefines);
 		hxhx.macro.MacroState.seedFromCliDefines(allDefines);
 		hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
@@ -1374,7 +1396,7 @@ class Stage3Compiler {
 		final runHaxelibMacros = isTrueEnv("HXHX_RUN_HAXELIB_MACROS");
 
 		final macroHostClassPaths = {
-			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
+			final base = parsedClassPaths.map(cp -> absFromCwd(cwd, cp));
 			final libs = new Array<String>();
 			for (s in libsResolved)
 				for (p in s.classPaths)
@@ -1401,7 +1423,7 @@ class Stage3Compiler {
 			}
 		}
 
-		if (!typeOnly && (parsed.macros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0))) {
+		if (!typeOnly && (parsedMacros.length > 0 || exprMacros.length > 0 || (runHaxelibMacros && libMacros.length > 0))) {
 			// Stage3 dev/CI convenience: auto-build a macro host that includes the classpaths needed
 			// for:
 			// - requested CLI `--macro` entrypoints, and
@@ -1426,8 +1448,8 @@ class Stage3Compiler {
 								entrypoints.push(e);
 					}
 					// CLI macros: include only non-builtin expressions (builtins are already compiled into the host).
-					if (anyNonBuiltinMacro(parsed.macros)) {
-						for (e in parsed.macros)
+					if (anyNonBuiltinMacro(parsedMacros)) {
+						for (e in parsedMacros)
 							if (!isBuiltinMacroExpr(e) && entrypoints.indexOf(e) == -1)
 								entrypoints.push(e);
 					}
@@ -1452,8 +1474,8 @@ class Stage3Compiler {
 					for (i in 0...libMacros.length)
 						Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
 				}
-				for (i in 0...parsed.macros.length)
-					Sys.println("macro_run[" + i + "]=" + macroSession.run(parsed.macros[i]));
+				for (i in 0...parsedMacros.length)
+					Sys.println("macro_run[" + i + "]=" + macroSession.run(parsedMacros[i]));
 			} catch (e:String) {
 				closeMacroSession();
 				return error("macro failed: " + e);
@@ -1468,7 +1490,7 @@ class Stage3Compiler {
 		}
 
 		final classPaths = {
-			final base = parsed.classPaths.map(cp -> absFromCwd(cwd, cp));
+			final base = parsedClassPaths.map(cp -> absFromCwd(cwd, cp));
 			final libs = new Array<String>();
 			for (s in libsResolved)
 				for (p in s.classPaths)
@@ -2020,7 +2042,7 @@ class Stage3Compiler {
 			} else {
 				null;
 			}
-			final context = new BackendContext(outAbs, outputFileHint, parsed.main, emitFullBodies, supportsBuildExecutable, definesMap);
+			final context = new BackendContext(outAbs, outputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap);
 			emitted = emitWithBackend(backend, cast expanded, context);
 		} catch (e:String) {
 			closeMacroSession();

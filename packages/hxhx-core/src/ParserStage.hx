@@ -1297,7 +1297,7 @@ class ParserStage {
 		inline function pushFieldMaybe(f:Null<HxFieldDecl>) {
 			if (f == null)
 				return;
-			final key = f.name + "|" + (f.isStatic ? "1" : "0");
+			final key = HxFieldDecl.getName(f) + "|" + (HxFieldDecl.getIsStatic(f) ? "1" : "0");
 			if (seenFields.exists(key))
 				return;
 			seenFields.set(key, true);

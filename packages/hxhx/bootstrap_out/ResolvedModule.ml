@@ -8,11 +8,11 @@ type t = { __hx_type : Obj.t; mutable modulePath : string; mutable filePath : st
 
 let create = fun modulePath2 filePath2 parsed2 -> let self = ({ __hx_type = HxType.class_ "ResolvedModule"; modulePath = ""; filePath = ""; parsed = Obj.magic () } : t) in (
   ignore ((
-    ignore (let __assign_1 = modulePath2 in (
+    ignore (let __assign_1 = (modulePath2 : string) in (
       self.modulePath <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = filePath2 in (
+    ignore (let __assign_2 = (filePath2 : string) in (
       self.filePath <- __assign_2;
       __assign_2
     ));

@@ -1803,7 +1803,7 @@ class OcamlBuilder {
 												case "field" if (args.length == 2):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
-															[toObjArg(args[0]), buildExpr(args[1])])
+															[toObjArg(args[0]), buildStdString(args[1])])
 													]);
 												case "callMethod" if (args.length == 3):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
@@ -1837,15 +1837,15 @@ class OcamlBuilder {
 													]);
 												case "setField" if (args.length == 3):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
-														[toObjArg(args[0]), buildExpr(args[1]), toObjValue(args[2])]);
+														[toObjArg(args[0]), buildStdString(args[1]), toObjValue(args[2])]);
 												case "hasField" if (args.length == 2):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "has"),
-														[toObjArg(args[0]), buildExpr(args[1])]);
+														[toObjArg(args[0]), buildStdString(args[1])]);
 												case "fields" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "fields"), [toObjArg(args[0])]);
 												case "deleteField" if (args.length == 2):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "delete"),
-														[toObjArg(args[0]), buildExpr(args[1])]);
+														[toObjArg(args[0]), buildStdString(args[1])]);
 												case "copy" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "copy"), [toObjArg(args[0])])
@@ -3535,7 +3535,18 @@ class OcamlBuilder {
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {
 		// Kept for compatibility when TVar occurs outside of a block (rare in typed output).
 		// Prefer `buildBlock` handling for correct scoping.
-		final initExpr = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+		final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+		final initExpr = switch (init) {
+			case null:
+				initExprRaw;
+			case _:
+				switch (unwrap(init).expr) {
+					case TConst(TNull):
+						OcamlExpr.EAnnot(initExprRaw, typeExprFromHaxeType(v.t));
+					case _:
+						initExprRaw;
+				}
+		};
 		final isMutable = currentMutatedLocalIds != null
 			&& currentMutatedLocalIds.exists(v.id)
 			&& currentMutatedLocalIds.get(v.id) == true;
@@ -4273,8 +4284,14 @@ class OcamlBuilder {
 					final c = coerceForComparison(e1, e2);
 					OcamlExpr.EBinop(OcamlBinop.Gte, c.l, c.r);
 				}
-			case OpBoolAnd: OcamlExpr.EBinop(OcamlBinop.And, buildExpr(e1), buildExpr(e2));
-			case OpBoolOr: OcamlExpr.EBinop(OcamlBinop.Or, buildExpr(e1), buildExpr(e2));
+			case OpBoolAnd:
+				final lhs = nullablePrimitiveKind(e1.t) == "bool" ? safeUnboxNullableBool(buildExpr(e1)) : buildExpr(e1);
+				final rhs = nullablePrimitiveKind(e2.t) == "bool" ? safeUnboxNullableBool(buildExpr(e2)) : buildExpr(e2);
+				OcamlExpr.EBinop(OcamlBinop.And, lhs, rhs);
+			case OpBoolOr:
+				final lhs = nullablePrimitiveKind(e1.t) == "bool" ? safeUnboxNullableBool(buildExpr(e1)) : buildExpr(e1);
+				final rhs = nullablePrimitiveKind(e2.t) == "bool" ? safeUnboxNullableBool(buildExpr(e2)) : buildExpr(e2);
+				OcamlExpr.EBinop(OcamlBinop.Or, lhs, rhs);
 			case _:
 				OcamlExpr.EConst(OcamlConst.CUnit);
 		}
@@ -4314,6 +4331,27 @@ class OcamlBuilder {
 	function coerceForAssignment(lhsType:Type, rhs:TypedExpr):OcamlExpr {
 		final lhsKind = nullablePrimitiveKind(lhsType);
 		final rhsKind = nullablePrimitiveKind(rhs.t);
+
+		// String / Null<String> slots: keep OCaml inference anchored to `string`.
+		//
+		// Why
+		// - Some upstream stdlib parser helpers initialize local string slots with `null`
+		//   and later assign string-producing calls.
+		// - Without an explicit type anchor, OCaml can infer those locals/functions as `unit`
+		//   through try/raise control-flow joins, which then explodes at string callsites.
+		//
+		// How
+		// - Preserve `null` as the canonical string sentinel (`Obj.magic hx_null`).
+		// - Annotate non-null RHS values against the LHS string type.
+		if (isStringType(lhsType)) {
+			final rhsUnwrapped = unwrap(rhs);
+			return switch (rhsUnwrapped.expr) {
+				case TConst(TNull):
+					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+				case _:
+					OcamlExpr.EAnnot(buildExpr(rhs), typeExprFromHaxeType(lhsType));
+			}
+		}
 
 		// Dynamic / anonymous slots: represent arbitrary values as `Obj.t`.
 		//
@@ -5078,6 +5116,15 @@ class OcamlBuilder {
 			}
 		}
 
+		inline function isNullInitializer(initExpr:Null<TypedExpr>):Bool {
+			if (initExpr == null)
+				return false;
+			return switch (unwrap(initExpr).expr) {
+				case TConst(TNull): true;
+				case _: false;
+			}
+		}
+
 		final wraps:Array<{kind:String, name:Null<String>, expr:OcamlExpr}> = [];
 
 		var base:OcamlExpr = OcamlExpr.EConst(OcamlConst.CUnit);
@@ -5105,7 +5152,8 @@ class OcamlBuilder {
 							hasBase = true;
 						}
 					} else {
-						final initExpr = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+						final initExprRaw = init != null ? coerceForAssignment(v.t, init) : defaultValueForType(v.t);
+						final initExpr = isNullInitializer(init) ? OcamlExpr.EAnnot(initExprRaw, typeExprFromHaxeType(v.t)) : initExprRaw;
 						final isMutable = currentMutatedLocalIds != null
 							&& currentMutatedLocalIds.exists(v.id)
 							&& currentMutatedLocalIds.get(v.id) == true;
@@ -5290,7 +5338,7 @@ class OcamlBuilder {
 		return found;
 	}
 
-	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr):OcamlExpr {
+	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr, ?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
 		final profClass = Context.definedValue("reflaxe_ocaml_profile_class");
@@ -5345,13 +5393,20 @@ class OcamlBuilder {
 		#end
 
 		if (needsReturnCatch) {
+			final resolvedReturnType:Type = expectedReturnType != null ? expectedReturnType : bodyExpr.t;
 			final returnVar = freshTmp("ret");
 			final returnCase:OcamlMatchCase = {
 				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
 				guard: null,
 				expr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVar)])
 			};
-			body = OcamlExpr.ETry(body, [returnCase]);
+			final fallbackBody = if (isVoidType(resolvedReturnType)) {
+				body;
+			} else {
+				final fallbackIgnoreName = freshTmp("fallback_ignore");
+				OcamlExpr.ELet(fallbackIgnoreName, body, defaultValueForType(resolvedReturnType), false);
+			}
+			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}
 
 		for (a in args) {
@@ -5397,12 +5452,22 @@ class OcamlBuilder {
 
 		if (needsReturnCatch) {
 			final returnVar = freshTmp("ret");
+			final functionReturnType:Type = switch (tfunc.t) {
+				case TFun(_, ret): ret;
+				case _: tfunc.t;
+			};
 			final returnCase:OcamlMatchCase = {
 				pat: OcamlPat.PConstructor("HxRuntime.Hx_return", [OcamlPat.PVar(returnVar)]),
 				guard: null,
 				expr: OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(returnVar)])
 			};
-			body = OcamlExpr.ETry(body, [returnCase]);
+			final fallbackBody = if (isVoidType(functionReturnType)) {
+				body;
+			} else {
+				final fallbackIgnoreName = freshTmp("fallback_ignore");
+				OcamlExpr.ELet(fallbackIgnoreName, body, defaultValueForType(functionReturnType), false);
+			}
+			body = OcamlExpr.ETry(fallbackBody, [returnCase]);
 		}
 
 		// Shadow mutated params as refs (`let x = ref x in ...`).

@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; mutable source : string; mutable filePath : string
 
 let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic () } : t) in (
   ignore ((
-    ignore (let __assign_1 = source2 in (
+    ignore (let __assign_1 = (source2 : string) in (
       self.source <- __assign_1;
       __assign_1
     ));
@@ -16,7 +16,7 @@ let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.cla
       self.decl <- __assign_2;
       __assign_2
     ));
-    let __assign_3 = filePath2 in (
+    let __assign_3 = (filePath2 : string) in (
       self.filePath <- __assign_3;
       __assign_3
     )

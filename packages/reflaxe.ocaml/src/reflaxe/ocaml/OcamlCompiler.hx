@@ -1095,7 +1095,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 					id: a.tvar != null ? a.tvar.id : -1,
 					name: a.getName()
 				}));
-				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr)) {
+				final ctorReturnType:Type = switch (TypeTools.follow(ctorFunc.field.type)) {
+					case TFun(_, ret): ret;
+					case _: ctorFunc.expr.t;
+				};
+				switch (builder.buildFunctionFromArgsAndExpr(argInfo, ctorFunc.expr, ctorReturnType)) {
 					case OcamlExpr.EFun(params, body):
 						createParams = params;
 						ctorBody = body;
@@ -1263,7 +1267,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 						id: a.tvar != null ? a.tvar.id : -1,
 						name: a.getName()
 					}));
-					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr)) {
+					final methodReturnType:Type = switch (TypeTools.follow(f.field.type)) {
+						case TFun(_, ret): ret;
+						case _: f.expr.t;
+					};
+					switch (builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, methodReturnType)) {
 						case OcamlExpr.EFun(params, b):
 							final annotatedParams = if (expectedArgs != null && params.length == expectedArgs.length) {
 								final out:Array<OcamlPat> = [];
@@ -1348,7 +1356,11 @@ class OcamlCompiler extends DirectToStringCompiler {
 			#if macro
 			final profFieldStartS = (profileVerbose && profClassMatch && profileDetail) ? profileNowS() : 0.0;
 			#end
-			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr);
+			final staticReturnType:Type = switch (TypeTools.follow(f.field.type)) {
+				case TFun(_, ret): ret;
+				case _: f.expr.t;
+			};
+			final compiled = builder.buildFunctionFromArgsAndExpr(argInfo, f.expr, staticReturnType);
 			#if macro
 			if (profileVerbose && profClassMatch && profileDetail) {
 				if (profileFieldFilter == null || profileFieldFilter.length == 0 || profileFieldFilter == f.field.name) {
