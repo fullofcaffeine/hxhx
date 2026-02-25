@@ -1,3 +1,25 @@
+private typedef ProfileReportVerifier = {
+	final mode:String;
+	final enabled:Bool;
+	final result:String;
+}
+
+private typedef ProfileReport = {
+	final contractVersion:Int;
+	final requestedProfile:Null<String>;
+	final normalizedProfile:String;
+	final verifier:ProfileReportVerifier;
+}
+
+private typedef RuntimePlanReport = {
+	final contractVersion:Int;
+	final profile:String;
+	final selectionMode:String;
+	final availableModules:Array<String>;
+	final selectedModules:Array<String>;
+	final selectedFeatures:Array<String>;
+}
+
 class M6RuntimeCopierIntegrationTest {
 	static function compareStrings(a:String, b:String):Int {
 		return a < b ? -1 : (a > b ? 1 : 0);
@@ -62,6 +84,20 @@ class M6RuntimeCopierIntegrationTest {
 		return modules;
 	}
 
+	static function readProfileReport(outDir:String):ProfileReport {
+		final reportPath = outDir + "/ocaml_profile_report.json";
+		if (!sys.FileSystem.exists(reportPath))
+			throw "missing profile report: " + reportPath;
+		return cast haxe.Json.parse(sys.io.File.getContent(reportPath));
+	}
+
+	static function readRuntimePlanReport(outDir:String):RuntimePlanReport {
+		final reportPath = outDir + "/ocaml_runtime_plan_report.json";
+		if (!sys.FileSystem.exists(reportPath))
+			throw "missing runtime plan report: " + reportPath;
+		return cast haxe.Json.parse(sys.io.File.getContent(reportPath));
+	}
+
 	static function main() {
 		final rootOutDir = "out_ocaml_m6_runtime_" + Std.string(Std.int(Date.now().getTime()));
 		final portableOutDir = rootOutDir + "/portable";
@@ -90,6 +126,10 @@ class M6RuntimeCopierIntegrationTest {
 
 		final portableModules = runtimeModules(portableOutDir);
 		final metalModules = runtimeModules(metalOutDir);
+		final portableProfileReport = readProfileReport(portableOutDir);
+		final metalProfileReport = readProfileReport(metalOutDir);
+		final portableRuntimeReport = readRuntimePlanReport(portableOutDir);
+		final metalRuntimeReport = readRuntimePlanReport(metalOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
@@ -108,5 +148,29 @@ class M6RuntimeCopierIntegrationTest {
 		assertNotContains(metalJoined, "\nHxFileStream.ml\n", "metal runtime omits unused file stream runtime");
 		assertNotContains(metalJoined, "\nHxReflect.ml\n", "metal runtime omits unused reflect runtime");
 		assertNotContains(metalJoined, "\nHxSys.ml\n", "metal runtime omits unused sys runtime");
+
+		assertTrue(portableProfileReport.contractVersion == 1, "portable profile report contract version");
+		assertTrue(portableProfileReport.requestedProfile == null, "portable report keeps null requested profile");
+		assertTrue(portableProfileReport.normalizedProfile == "portable", "portable report normalized profile");
+		assertTrue(portableProfileReport.verifier.enabled == false, "portable report verifier mode");
+		assertTrue(portableProfileReport.verifier.result == "not_run_in_runtime_copier", "portable report verifier result");
+
+		assertTrue(metalProfileReport.contractVersion == 1, "metal profile report contract version");
+		assertTrue(metalProfileReport.requestedProfile == "metal", "metal report requested profile");
+		assertTrue(metalProfileReport.normalizedProfile == "metal", "metal report normalized profile");
+		assertTrue(metalProfileReport.verifier.mode == "reflaxe_stage0_macro", "metal report verifier mode label");
+
+		assertTrue(portableRuntimeReport.contractVersion == 1, "portable runtime report contract version");
+		assertTrue(portableRuntimeReport.profile == "portable", "portable runtime report profile");
+		assertTrue(portableRuntimeReport.selectionMode == "full", "portable runtime report mode");
+		assertTrue(portableRuntimeReport.selectedModules.length == portableRuntimeReport.selectedFeatures.length, "portable selected modules/features size");
+		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
+
+		assertTrue(metalRuntimeReport.contractVersion == 1, "metal runtime report contract version");
+		assertTrue(metalRuntimeReport.profile == "metal", "metal runtime report profile");
+		assertTrue(metalRuntimeReport.selectionMode == "selective_token_scan", "metal runtime report mode");
+		assertTrue(metalRuntimeReport.selectedModules.length == metalRuntimeReport.selectedFeatures.length, "metal selected modules/features size");
+		assertContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report includes HxRuntime");
+		assertNotContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "metal report omits HxFile");
 	}
 }

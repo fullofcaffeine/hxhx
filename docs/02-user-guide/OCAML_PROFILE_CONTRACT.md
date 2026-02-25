@@ -48,6 +48,22 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 - `reason`: why metal mode rejects it
 - `migration`: concrete code-level alternative
 
+## Compile reports
+
+`reflaxe.ocaml` emits machine-readable profile/runtime plan reports into `ocaml_output`:
+
+- `ocaml_profile_report.json`
+  - `contractVersion`
+  - `requestedProfile`
+  - `normalizedProfile`
+  - verifier summary fields
+- `ocaml_runtime_plan_report.json`
+  - `profile`
+  - `selectionMode` (`full` or selective mode)
+  - `availableModules`
+  - `selectedModules`
+  - `selectedFeatures`
+
 ## Metal verifier code map (common migrations)
 
 - `[untyped_expr]`

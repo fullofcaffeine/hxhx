@@ -4,11 +4,35 @@ package reflaxe.ocaml.runtimegen;
 import haxe.io.Path;
 import reflaxe.output.OutputManager;
 
+private typedef ProfileReportVerifier = {
+	final mode:String;
+	final enabled:Bool;
+	final result:String;
+}
+
+private typedef ProfileReport = {
+	final contractVersion:Int;
+	final requestedProfile:Null<String>;
+	final normalizedProfile:String;
+	final verifier:ProfileReportVerifier;
+}
+
+private typedef RuntimePlanReport = {
+	final contractVersion:Int;
+	final profile:String;
+	final selectionMode:String;
+	final availableModules:Array<String>;
+	final selectedModules:Array<String>;
+	final selectedFeatures:Array<String>;
+}
+
 class RuntimeCopier {
 	static inline final HXHX_RUNTIME_PREFIX = "HxHx";
 	static inline final PROFILE_PORTABLE = "portable";
 	static inline final PROFILE_METAL = "metal";
 	static inline final RUNTIME_CORE_MODULE = "HxRuntime";
+	static inline final PROFILE_REPORT_FILE = "ocaml_profile_report.json";
+	static inline final RUNTIME_PLAN_REPORT_FILE = "ocaml_runtime_plan_report.json";
 
 	static function tryResolveStdDir():Null<String> {
 		#if macro
@@ -38,6 +62,14 @@ class RuntimeCopier {
 		return normalizeProfile(haxe.macro.Context.definedValue("ocaml_profile"));
 		#else
 		return PROFILE_PORTABLE;
+		#end
+	}
+
+	static function requestedProfile():Null<String> {
+		#if macro
+		return haxe.macro.Context.definedValue("ocaml_profile");
+		#else
+		return null;
 		#end
 	}
 
@@ -149,6 +181,41 @@ class RuntimeCopier {
 		return selectedModules;
 	}
 
+	static function mapKeysSorted(values:Map<String, Bool>):Array<String> {
+		final out = new Array<String>();
+		for (name in values.keys())
+			out.push(name);
+		out.sort(compareStrings);
+		return out;
+	}
+
+	static function writeProfileReport(output:OutputManager, requested:Null<String>, normalized:String):Void {
+		final report:ProfileReport = {
+			contractVersion: 1,
+			requestedProfile: requested,
+			normalizedProfile: normalized,
+			verifier: {
+				mode: "reflaxe_stage0_macro",
+				enabled: false,
+				result: "not_run_in_runtime_copier"
+			}
+		};
+		output.saveFile(PROFILE_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
+	}
+
+	static function writeRuntimePlanReport(output:OutputManager, profile:String, selectionMode:String, availableModules:Array<String>,
+			selectedModules:Array<String>):Void {
+		final report:RuntimePlanReport = {
+			contractVersion: 1,
+			profile: profile,
+			selectionMode: selectionMode,
+			availableModules: availableModules,
+			selectedModules: selectedModules,
+			selectedFeatures: selectedModules.copy()
+		};
+		output.saveFile(RUNTIME_PLAN_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
+	}
+
 	public static function copy(output:OutputManager, destSubdir:String = "runtime"):Void {
 		final stdDir = tryResolveStdDir();
 		if (stdDir == null)
@@ -185,6 +252,7 @@ class RuntimeCopier {
 		availableModules.sort(compareStrings);
 
 		final profile = currentProfile();
+		final selectionMode = profile == PROFILE_METAL ? "selective_token_scan" : "full";
 		final selectedModules:Map<String, Bool> = switch (profile) {
 			case PROFILE_METAL:
 				collectMetalRuntimeModules(runtimeDir, output.outputDir, destSubdir, availableModules);
@@ -194,6 +262,9 @@ class RuntimeCopier {
 					all.set(moduleName, true);
 				all;
 		}
+		final selectedModuleList = mapKeysSorted(selectedModules);
+		writeProfileReport(output, requestedProfile(), profile);
+		writeRuntimePlanReport(output, profile, selectionMode, availableModules.copy(), selectedModuleList);
 
 		for (name in runtimeFiles) {
 			final moduleName = moduleNameFromRuntimeFile(name);
