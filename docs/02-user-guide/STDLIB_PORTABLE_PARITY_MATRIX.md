@@ -5,33 +5,33 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `18` overrides, `2` runtime-backed, `5` lowering-intrinsic, `5` passthrough-verified, `174` passthrough-unverified.
+Summary: `204` modules total, `18` overrides, `2` runtime-backed, `5` lowering-intrinsic, `19` passthrough-verified, `160` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
-| `Any` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Any` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Array` | `override` | packages/reflaxe.ocaml/std/_std/Array.hx |
-| `Class` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Class` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Date` | `override` | packages/reflaxe.ocaml/std/_std/Date.hx |
-| `DateTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `DateTools` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `EReg` | `override` | packages/reflaxe.ocaml/std/_std/EReg.hx |
-| `Enum` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `EnumValue` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `IntIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `Lambda` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `List` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Enum` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `EnumValue` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `IntIterator` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `Lambda` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `List` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
 | `Math` | `override` | packages/reflaxe.ocaml/std/_std/Math.hx |
 | `Reflect` | `passthrough_verified` | test/portable/fixtures/reflect_call_method_basic/src/Main.hx; test/portable/fixtures/reflect_dynamic_fields/src/Main.hx |
-| `Std` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `StdTypes` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Std` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `StdTypes` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `String` | `override` | packages/reflaxe.ocaml/std/_std/String.hx |
 | `StringBuf` | `override` | packages/reflaxe.ocaml/std/_std/StringBuf.hx |
-| `StringTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `StringTools` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Sys` | `override` | packages/reflaxe.ocaml/std/_std/Sys.hx |
 | `Type` | `passthrough_verified` | test/portable/fixtures/type_getclass_basic/src/Main.hx; test/portable/fixtures/type_reflection_basic/src/Main.hx |
-| `UInt` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `UnicodeString` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `UInt` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `UnicodeString` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Xml` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.CallStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.Constraints` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
@@ -58,7 +58,7 @@ Summary: `204` modules total, `18` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.Ucs2` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.Unserializer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.Utf8` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ValueException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ValueException` | `passthrough_verified` | test/portable/fixtures/haxe_value_exception_basic/src/Main.hx |
 | `haxe.atomic.AtomicBool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.atomic.AtomicInt` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.atomic.AtomicObject` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

@@ -12,23 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 174,
-    "bucketCount": 28
+    "missingModules": 160,
+    "bucketCount": 26
   },
   "missingModules": [
-    "Any",
-    "Class",
-    "DateTools",
-    "Enum",
-    "EnumValue",
-    "IntIterator",
-    "Lambda",
-    "List",
-    "Std",
-    "StdTypes",
-    "StringTools",
-    "UInt",
-    "UnicodeString",
     "Xml",
     "haxe.CallStack",
     "haxe.Constraints",
@@ -54,7 +41,6 @@
     "haxe.Ucs2",
     "haxe.Unserializer",
     "haxe.Utf8",
-    "haxe.ValueException",
     "haxe.atomic.AtomicBool",
     "haxe.atomic.AtomicInt",
     "haxe.atomic.AtomicObject",
@@ -196,25 +182,6 @@
       "bucketKey": "core-01",
       "group": "core",
       "modules": [
-        "Any",
-        "Class",
-        "DateTools",
-        "Enum",
-        "EnumValue",
-        "IntIterator",
-        "Lambda",
-        "List",
-        "Std",
-        "StdTypes",
-        "StringTools",
-        "UInt"
-      ]
-    },
-    {
-      "bucketKey": "core-02",
-      "group": "core",
-      "modules": [
-        "UnicodeString",
         "Xml"
       ]
     },
@@ -261,13 +228,6 @@
         "haxe.Ucs2",
         "haxe.Unserializer",
         "haxe.Utf8"
-      ]
-    },
-    {
-      "bucketKey": "haxe.core-03",
-      "group": "haxe.core",
-      "modules": [
-        "haxe.ValueException"
       ]
     },
     {

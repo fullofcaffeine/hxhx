@@ -51,10 +51,76 @@
     ],
     "passthrough_verified": [
       {
+        "module": "Any",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "Class",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "DateTools",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "Enum",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "EnumValue",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "IntIterator",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "Lambda",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "List",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
         "module": "Reflect",
         "evidence": [
           "test/portable/fixtures/reflect_call_method_basic/src/Main.hx",
           "test/portable/fixtures/reflect_dynamic_fields/src/Main.hx"
+        ]
+      },
+      {
+        "module": "Std",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "StdTypes",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "StringTools",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
         ]
       },
       {
@@ -77,9 +143,27 @@
         ]
       },
       {
+        "module": "haxe.ValueException",
+        "evidence": [
+          "test/portable/fixtures/haxe_value_exception_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "sys.FileStat",
         "evidence": [
           "test/portable/fixtures/file_stat_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "UnicodeString",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "UInt",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
         ]
       }
     ]

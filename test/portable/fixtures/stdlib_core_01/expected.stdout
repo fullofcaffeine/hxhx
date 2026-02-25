@@ -1,0 +1,4 @@
+typed=true:true:true:true:true
+sum=3,stdInt=7,ms=2500,u=7
+trim=hi,replace=a+b+c,stdTypeInt=7
+unicode=3
