@@ -50,7 +50,11 @@ Any other value is invalid and fails fast.
   - useful for explicit/manual runtime planning experiments
 - `-D ocaml_runtime_token_scan_fallback`
   - debug-only selective fallback for token scan merge
+  - requires `-D ocaml_runtime_debug_lane` (debug diagnostics lane)
   - ignored when inference is disabled or runtime mode is `full`
+- `-D ocaml_runtime_debug_lane`
+  - explicit opt-in lane for runtime diagnostics knobs
+  - non-release by design; CI/release lanes must keep this disabled
 - `-D ocaml_portable_native_surface=warn|allow|error`
   - policy for `ocaml.*` usage while `ocaml_profile=portable`
   - default: `warn`
@@ -129,6 +133,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `trackedModules` (compiler-tracked runtime module references)
   - `manualModules` (manual selective seeds)
   - `runtimeInferenceDisabled`
+  - `runtimeDebugLaneEnabled`
   - `tokenScanFallbackEnabled` (`true` only when debug fallback define is enabled)
   - `selectedModules`
   - `selectedFeatures`
@@ -139,6 +144,7 @@ Debug fallback define (non-default, diagnostics only):
 - `-D ocaml_runtime_token_scan_fallback`
   - Keeps compiler-tracked selection as the primary source of truth.
   - Adds legacy output token scanning as a temporary merge source for investigations.
+  - Requires `-D ocaml_runtime_debug_lane`; otherwise it is ignored with a warning.
   - Explicitly debug-only (non-release); this does not enable any implicit profile fallback.
   - Ignored in `full` runtime mode and when `-D ocaml_runtime_no_infer` is set.
 

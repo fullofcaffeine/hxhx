@@ -33,6 +33,7 @@ private typedef RuntimePlanReport = {
 	final trackedModules:Array<String>;
 	final manualModules:Array<String>;
 	final runtimeInferenceDisabled:Bool;
+	final runtimeDebugLaneEnabled:Bool;
 	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
@@ -179,6 +180,8 @@ class M6RuntimeCopierIntegrationTest {
 		final emptyProfileOutDir = rootOutDir + "/portable_empty";
 		final portableManualOutDir = rootOutDir + "/portable_manual_selective";
 		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
+		final metalTokenFallbackNoDebugOutDir = rootOutDir + "/metal_token_fallback_no_debug";
+		final metalTokenFallbackDebugOutDir = rootOutDir + "/metal_token_fallback_debug";
 		final invalidProfileOutDir = rootOutDir + "/invalid_profile";
 		final invalidRuntimeModeOutDir = rootOutDir + "/invalid_runtime_mode";
 		final noneRuntimeModeOutDir = rootOutDir + "/none_runtime_mode";
@@ -200,6 +203,13 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableManualCompile.exitCode == 0, "portable manual selective compile failed: " + portableManualCompile.stderr);
 		final metalTokenNoiseCompile = compileRuntimeFixture(metalTokenNoiseOutDir, "metal", "test/fixtures/m6_runtime_token_noise/src", "Main");
 		assertTrue(metalTokenNoiseCompile.exitCode == 0, "metal token-noise compile failed: " + metalTokenNoiseCompile.stderr);
+		final metalTokenFallbackNoDebugCompile = compileRuntimeFixture(metalTokenFallbackNoDebugOutDir, "metal", "test", "Main",
+			["ocaml_runtime_token_scan_fallback"]);
+		assertTrue(metalTokenFallbackNoDebugCompile.exitCode == 0,
+			"metal token fallback (no debug lane) compile failed: " + metalTokenFallbackNoDebugCompile.stderr);
+		final metalTokenFallbackDebugCompile = compileRuntimeFixture(metalTokenFallbackDebugOutDir, "metal", "test", "Main",
+			["ocaml_runtime_token_scan_fallback", "ocaml_runtime_debug_lane"]);
+		assertTrue(metalTokenFallbackDebugCompile.exitCode == 0, "metal token fallback (debug lane) compile failed: " + metalTokenFallbackDebugCompile.stderr);
 		final invalidProfileCompile = compileRuntimeFixture(invalidProfileOutDir, "weird");
 		assertTrue(invalidProfileCompile.exitCode != 0, "invalid profile should fail fast");
 		final invalidCombinedOutput = invalidProfileCompile.stderr + "\n" + invalidProfileCompile.stdout;
@@ -250,6 +260,8 @@ class M6RuntimeCopierIntegrationTest {
 		final emptyProfileRuntimeReport = readRuntimePlanReport(emptyProfileOutDir);
 		final portableManualRuntimeReport = readRuntimePlanReport(portableManualOutDir);
 		final metalTokenNoiseRuntimeReport = readRuntimePlanReport(metalTokenNoiseOutDir);
+		final metalTokenFallbackNoDebugRuntimeReport = readRuntimePlanReport(metalTokenFallbackNoDebugOutDir);
+		final metalTokenFallbackDebugRuntimeReport = readRuntimePlanReport(metalTokenFallbackDebugOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
@@ -303,6 +315,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableRuntimeReport.profile == "portable", "portable runtime report profile");
 		assertTrue(portableRuntimeReport.runtimeMode == "full", "portable runtime report mode");
 		assertTrue(portableRuntimeReport.selectionMode == "full", "portable runtime report mode");
+		assertTrue(portableRuntimeReport.runtimeDebugLaneEnabled == false, "portable runtime report debug-lane flag");
 		assertTrue(portableRuntimeReport.tokenScanFallbackEnabled == false, "portable runtime report token-scan fallback flag");
 		assertTrue(portableRuntimeReport.selectedModules.length == portableRuntimeReport.selectedFeatures.length, "portable selected modules/features size");
 		assertTrue(portableRuntimeReport.inclusionReasons.length == portableRuntimeReport.selectedModules.length, "portable inclusion reasons should align");
@@ -314,6 +327,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalRuntimeReport.profile == "metal", "metal runtime report profile");
 		assertTrue(metalRuntimeReport.runtimeMode == "selective", "metal runtime mode should default to selective");
 		assertTrue(metalRuntimeReport.selectionMode == "compiler_tracked", "metal runtime report mode");
+		assertTrue(metalRuntimeReport.runtimeDebugLaneEnabled == false, "metal runtime report debug-lane flag");
 		assertTrue(metalRuntimeReport.tokenScanFallbackEnabled == false, "metal runtime report token-scan fallback flag");
 		assertTrue(metalRuntimeReport.selectedModules.length == metalRuntimeReport.selectedFeatures.length, "metal selected modules/features size");
 		assertTrue(metalRuntimeReport.inclusionReasons.length == metalRuntimeReport.selectedModules.length, "metal inclusion reasons should align");
@@ -326,6 +340,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalFullRuntimeReport.profile == "metal", "metal full runtime report profile");
 		assertTrue(metalFullRuntimeReport.runtimeMode == "full", "metal full runtime report mode");
 		assertTrue(metalFullRuntimeReport.selectionMode == "full", "metal full runtime report selection mode");
+		assertTrue(metalFullRuntimeReport.runtimeDebugLaneEnabled == false, "metal full runtime report debug-lane flag");
 		assertTrue(metalFullRuntimeReport.trackedModules.length == 0, "metal full runtime report should not expose selective tracked modules");
 		assertContains("\n" + reasonsForModule(metalFullRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
 			"metal full report includes full-runtime reason");
@@ -338,6 +353,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableManualRuntimeReport.runtimeMode == "selective", "portable manual runtime mode");
 		assertTrue(portableManualRuntimeReport.selectionMode == "manual_only", "portable manual runtime selection mode");
 		assertTrue(portableManualRuntimeReport.runtimeInferenceDisabled == true, "portable manual runtime should disable inference");
+		assertTrue(portableManualRuntimeReport.runtimeDebugLaneEnabled == false, "portable manual runtime report debug-lane flag");
 		assertContains("\n" + portableManualRuntimeReport.manualModules.join("\n") + "\n", "\nHxRuntime\n", "portable manual report includes manual modules");
 		assertTrue(portableManualRuntimeReport.trackedModules.length == 0, "portable manual runtime should suppress tracked modules");
 		assertNotContains("\n" + portableManualRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "portable manual runtime omits file runtime");
@@ -345,9 +361,25 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
 		assertTrue(metalTokenNoiseRuntimeReport.runtimeMode == "selective", "token noise runtime mode");
 		assertTrue(metalTokenNoiseRuntimeReport.selectionMode == "compiler_tracked", "token noise report mode");
+		assertTrue(metalTokenNoiseRuntimeReport.runtimeDebugLaneEnabled == false, "token noise runtime report debug-lane flag");
 		assertNotContains("\n" + metalTokenNoiseRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n",
 			"token noise report omits HxFile despite HxFile string tokens");
 		assertArrayEquals(metalRuntimeReport.selectedModules, metalTokenNoiseRuntimeReport.selectedModules,
 			"token noise runtime plan should match baseline metal plan");
+
+		assertTrue(metalTokenFallbackNoDebugRuntimeReport.profile == "metal", "fallback-no-debug report profile");
+		assertTrue(metalTokenFallbackNoDebugRuntimeReport.runtimeMode == "selective", "fallback-no-debug runtime mode");
+		assertTrue(metalTokenFallbackNoDebugRuntimeReport.runtimeDebugLaneEnabled == false, "fallback-no-debug should keep debug lane disabled");
+		assertTrue(metalTokenFallbackNoDebugRuntimeReport.tokenScanFallbackEnabled == false, "fallback-no-debug should remain disabled");
+		assertTrue(metalTokenFallbackNoDebugRuntimeReport.selectionMode == "compiler_tracked", "fallback-no-debug should stay compiler-tracked mode");
+		assertArrayEquals(metalRuntimeReport.selectedModules, metalTokenFallbackNoDebugRuntimeReport.selectedModules,
+			"fallback-no-debug runtime plan should match baseline metal plan");
+
+		assertTrue(metalTokenFallbackDebugRuntimeReport.profile == "metal", "fallback-debug report profile");
+		assertTrue(metalTokenFallbackDebugRuntimeReport.runtimeMode == "selective", "fallback-debug runtime mode");
+		assertTrue(metalTokenFallbackDebugRuntimeReport.runtimeDebugLaneEnabled == true, "fallback-debug should enable debug lane");
+		assertTrue(metalTokenFallbackDebugRuntimeReport.tokenScanFallbackEnabled == true, "fallback-debug should be enabled");
+		assertContains(metalTokenFallbackDebugRuntimeReport.selectionMode, "plus_token_scan_fallback",
+			"fallback-debug selection mode should expose token-scan suffix");
 	}
 }

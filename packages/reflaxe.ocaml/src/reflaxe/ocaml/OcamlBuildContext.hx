@@ -24,6 +24,7 @@ class OcamlBuildContext {
 	public static inline final RUNTIME_MODULES_DEFINE = "ocaml_runtime_modules";
 	public static inline final RUNTIME_NO_INFER_DEFINE = "ocaml_runtime_no_infer";
 	public static inline final RUNTIME_TOKEN_SCAN_FALLBACK_DEFINE = "ocaml_runtime_token_scan_fallback";
+	public static inline final RUNTIME_DEBUG_LANE_DEFINE = "ocaml_runtime_debug_lane";
 
 	public final profile:OcamlProfileContract;
 	public final metalFallbackAllowed:Bool;
@@ -33,11 +34,12 @@ class OcamlBuildContext {
 	public final runtimeMode:OcamlRuntimeMode;
 	public final runtimeManualModules:Array<String>;
 	public final runtimeInferenceDisabled:Bool;
+	public final runtimeDebugLaneEnabled:Bool;
 	public final runtimeTokenScanFallbackEnabled:Bool;
 
 	public function new(profile:OcamlProfileContract, metalFallbackAllowed:Bool, strictUserBoundaries:Bool,
 			portableNativeSurfacePolicy:OcamlPortableNativeSurfacePolicy, runtimeMode:OcamlRuntimeMode, runtimeManualModules:Array<String>,
-			runtimeInferenceDisabled:Bool, runtimeTokenScanFallbackEnabled:Bool) {
+			runtimeInferenceDisabled:Bool, runtimeDebugLaneEnabled:Bool, runtimeTokenScanFallbackEnabled:Bool) {
 		this.profile = profile;
 		this.metalFallbackAllowed = metalFallbackAllowed;
 		this.metalContractHardError = profile == OcamlProfileContract.Metal && !metalFallbackAllowed;
@@ -46,6 +48,7 @@ class OcamlBuildContext {
 		this.runtimeMode = runtimeMode;
 		this.runtimeManualModules = runtimeManualModules == null ? [] : runtimeManualModules.copy();
 		this.runtimeInferenceDisabled = runtimeInferenceDisabled;
+		this.runtimeDebugLaneEnabled = runtimeDebugLaneEnabled;
 		this.runtimeTokenScanFallbackEnabled = runtimeTokenScanFallbackEnabled;
 	}
 
@@ -103,20 +106,25 @@ class OcamlBuildContext {
 		final runtimeManualModules = parseRuntimeModules(Context.definedValue(RUNTIME_MODULES_DEFINE));
 		final runtimeInferenceDisabled = Context.defined(RUNTIME_NO_INFER_DEFINE);
 		final tokenScanFallbackRequested = Context.defined(RUNTIME_TOKEN_SCAN_FALLBACK_DEFINE);
+		final runtimeDebugLaneEnabled = Context.defined(RUNTIME_DEBUG_LANE_DEFINE);
 		final runtimeTokenScanFallbackEnabled = tokenScanFallbackRequested
+			&& runtimeDebugLaneEnabled
 			&& runtimeMode == OcamlRuntimeMode.Selective
 			&& !runtimeInferenceDisabled;
-		if (tokenScanFallbackRequested && !runtimeTokenScanFallbackEnabled) {
+		if (tokenScanFallbackRequested && !runtimeDebugLaneEnabled) {
+			Context.warning("ocaml_runtime_token_scan_fallback ignored unless -D ocaml_runtime_debug_lane is enabled (debug-only diagnostics lane).",
+				Context.currentPos());
+		} else if (tokenScanFallbackRequested && !runtimeTokenScanFallbackEnabled) {
 			Context.warning("ocaml_runtime_token_scan_fallback ignored unless runtime mode is selective and inference is enabled.", Context.currentPos());
 		}
 
 		return new OcamlBuildContext(profile, metalFallbackAllowed, strictUserBoundaries, portableNativeSurfacePolicy, runtimeMode, runtimeManualModules,
-			runtimeInferenceDisabled, runtimeTokenScanFallbackEnabled);
+			runtimeInferenceDisabled, runtimeDebugLaneEnabled, runtimeTokenScanFallbackEnabled);
 	}
 	#else
 	public static function resolve():OcamlBuildContext {
 		return new OcamlBuildContext(OcamlProfileContract.Portable, false, false, OcamlPortableNativeSurfacePolicy.Warn, OcamlRuntimeMode.Full, [], false,
-			false);
+			false, false);
 	}
 	#end
 }

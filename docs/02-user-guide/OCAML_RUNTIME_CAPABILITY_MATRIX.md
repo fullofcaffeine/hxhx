@@ -65,8 +65,8 @@ This matrix documents runtime module status for:
 - Portable builds can opt in strict metal checks for selected modules via `@:haxeMetal`.
 - Metal mode has no implicit fallback to portable; switching lanes requires explicit
   `-D ocaml_profile=portable`.
-- Optional runtime token-scan fallback (`-D ocaml_runtime_token_scan_fallback`) is
-  debug-only and must not be enabled for release builds.
+- Optional runtime token-scan fallback (`-D ocaml_runtime_token_scan_fallback`) requires
+  `-D ocaml_runtime_debug_lane`; it is debug-only and must not be enabled for release builds.
 - These constraints are intentional for predictable native performance and deterministic semantics.
 
 ## Related docs

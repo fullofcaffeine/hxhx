@@ -46,6 +46,7 @@ private typedef RuntimePlanReport = {
 	final trackedModules:Array<String>;
 	final manualModules:Array<String>;
 	final runtimeInferenceDisabled:Bool;
+	final runtimeDebugLaneEnabled:Bool;
 	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
@@ -331,6 +332,7 @@ class RuntimeCopier {
 			trackedModules: trackedModules,
 			manualModules: manualModules,
 			runtimeInferenceDisabled: context.runtimeInferenceDisabled,
+			runtimeDebugLaneEnabled: context.runtimeDebugLaneEnabled,
 			tokenScanFallbackEnabled: context.runtimeTokenScanFallbackEnabled,
 			selectedModules: selectedModules,
 			selectedFeatures: selectedModules.copy(),
