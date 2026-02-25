@@ -3,36 +3,57 @@ package reflaxe.ocaml.runtimegen;
 #if (macro || reflaxe_runtime)
 import haxe.io.Path;
 import reflaxe.output.OutputManager;
+import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
+import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
+import reflaxe.ocaml.OcamlRuntimeMode;
+#if macro
+import reflaxe.ocaml.macros.StrictModeEnforcer;
+#end
 
 private typedef ProfileReportVerifier = {
 	final mode:String;
 	final enabled:Bool;
 	final result:String;
+	final strictScope:String;
+	final violationCount:Int;
+	final violations:Array<String>;
+	final laneModules:Array<String>;
 }
 
 private typedef ProfileReport = {
-	final contractVersion:Int;
+	final schemaVersion:Int;
 	final requestedProfile:Null<String>;
 	final normalizedProfile:String;
+	final runtimeMode:String;
+	final portableNativeSurfacePolicy:String;
+	final strictUserBoundaries:Bool;
+	final metalFallbackAllowed:Bool;
 	final verifier:ProfileReportVerifier;
 }
 
+private typedef RuntimePlanInclusionReason = {
+	final module:String;
+	final reasons:Array<String>;
+}
+
 private typedef RuntimePlanReport = {
-	final contractVersion:Int;
+	final schemaVersion:Int;
 	final profile:String;
+	final runtimeMode:String;
 	final selectionMode:String;
 	final availableModules:Array<String>;
 	final trackedModules:Array<String>;
+	final manualModules:Array<String>;
+	final runtimeInferenceDisabled:Bool;
 	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
+	final inclusionReasons:Array<RuntimePlanInclusionReason>;
 }
 
 class RuntimeCopier {
 	static inline final HXHX_RUNTIME_PREFIX = "HxHx";
-	static inline final PROFILE_PORTABLE = "portable";
-	static inline final PROFILE_METAL = "metal";
 	static inline final RUNTIME_CORE_MODULE = "HxRuntime";
 	static inline final PROFILE_REPORT_FILE = "ocaml_profile_report.json";
 	static inline final RUNTIME_PLAN_REPORT_FILE = "ocaml_runtime_plan_report.json";
@@ -50,29 +71,6 @@ class RuntimeCopier {
 		}
 		#else
 		return null;
-		#end
-	}
-
-	static function resolveProfile(rawProfile:Null<String>):OcamlProfileContract {
-		try {
-			return OcamlProfileContract.fromDefineValue(rawProfile);
-		} catch (e:String) {
-			#if macro
-			haxe.macro.Context.error(e, haxe.macro.Context.currentPos());
-			return OcamlProfileContract.Portable;
-			#else
-			throw e;
-			#end
-		}
-	}
-
-	static function currentProfile(rawRequestedProfile:Null<String>):OcamlProfileContract {
-		#if macro
-		final profile = resolveProfile(rawRequestedProfile);
-		haxe.macro.Compiler.define("ocaml_profile", OcamlProfileContract.toDefineValue(profile));
-		return profile;
-		#else
-		return OcamlProfileContract.Portable;
 		#end
 	}
 
@@ -139,18 +137,34 @@ class RuntimeCopier {
 		return path == null ? "" : StringTools.replace(path, "\\", "/");
 	}
 
-	static function addReferencedModules(content:String, availableModules:Array<String>, selectedModules:Map<String, Bool>, enqueue:Array<String>):Void {
+	static function addInclusionReason(reasonMap:Map<String, Map<String, Bool>>, moduleName:String, reason:String):Void {
+		if (moduleName == null || moduleName.length == 0 || reason == null || reason.length == 0)
+			return;
+		final existing = reasonMap.get(moduleName);
+		if (existing != null) {
+			existing.set(reason, true);
+		} else {
+			final created:Map<String, Bool> = [];
+			created.set(reason, true);
+			reasonMap.set(moduleName, created);
+		}
+	}
+
+	static function addReferencedModules(content:String, availableModules:Array<String>, selectedModules:Map<String, Bool>, enqueue:Array<String>,
+			reasonMap:Map<String, Map<String, Bool>>, reason:String):Void {
 		for (moduleName in availableModules) {
 			if (selectedModules.exists(moduleName))
 				continue;
 			if (containsModuleToken(content, moduleName)) {
 				selectedModules.set(moduleName, true);
 				enqueue.push(moduleName);
+				addInclusionReason(reasonMap, moduleName, reason);
 			}
 		}
 	}
 
-	static function enqueueModule(moduleName:String, availableModuleSet:Map<String, Bool>, selectedModules:Map<String, Bool>, enqueue:Array<String>):Void {
+	static function enqueueModule(moduleName:String, availableModuleSet:Map<String, Bool>, selectedModules:Map<String, Bool>, enqueue:Array<String>,
+			reasonMap:Map<String, Map<String, Bool>>, reason:String):Void {
 		if (moduleName == null || moduleName.length == 0)
 			return;
 		if (!availableModuleSet.exists(moduleName))
@@ -159,6 +173,7 @@ class RuntimeCopier {
 			return;
 		selectedModules.set(moduleName, true);
 		enqueue.push(moduleName);
+		addInclusionReason(reasonMap, moduleName, reason);
 	}
 
 	static function availableModuleSet(availableModules:Array<String>):Map<String, Bool> {
@@ -168,14 +183,18 @@ class RuntimeCopier {
 		return out;
 	}
 
-	static function collectMetalRuntimeModules(runtimeDir:String, availableModules:Array<String>, compilerTrackedModules:Array<String>,
-			outputDir:Null<String>, destSubdir:String, tokenScanFallbackEnabled:Bool):Map<String, Bool> {
+	static function collectSelectiveRuntimeModules(runtimeDir:String, availableModules:Array<String>, trackedSeedModules:Array<String>,
+			manualSeedModules:Array<String>, outputDir:Null<String>, destSubdir:String, tokenScanFallbackEnabled:Bool,
+			inclusionReasonMap:Map<String, Map<String, Bool>>):Map<String, Bool> {
 		final moduleSet = availableModuleSet(availableModules);
 		final selectedModules:Map<String, Bool> = [];
 		final queue:Array<String> = [];
-		enqueueModule(RUNTIME_CORE_MODULE, moduleSet, selectedModules, queue);
-		for (moduleName in compilerTrackedModules) {
-			enqueueModule(moduleName, moduleSet, selectedModules, queue);
+		enqueueModule(RUNTIME_CORE_MODULE, moduleSet, selectedModules, queue, inclusionReasonMap, "core_runtime");
+		for (moduleName in trackedSeedModules) {
+			enqueueModule(moduleName, moduleSet, selectedModules, queue, inclusionReasonMap, "compiler_tracked");
+		}
+		for (moduleName in manualSeedModules) {
+			enqueueModule(moduleName, moduleSet, selectedModules, queue, inclusionReasonMap, "manual_seed");
 		}
 
 		if (tokenScanFallbackEnabled && outputDir != null && outputDir.length > 0) {
@@ -191,7 +210,7 @@ class RuntimeCopier {
 				if (!StringTools.endsWith(normalizedPathValue, ".ml") && !StringTools.endsWith(normalizedPathValue, ".mli"))
 					continue;
 				final content = sys.io.File.getContent(path);
-				addReferencedModules(content, availableModules, selectedModules, queue);
+				addReferencedModules(content, availableModules, selectedModules, queue, inclusionReasonMap, "token_scan");
 			}
 		}
 
@@ -202,12 +221,12 @@ class RuntimeCopier {
 			final mlPath = Path.join([runtimeDir, moduleName + ".ml"]);
 			if (sys.FileSystem.exists(mlPath) && !sys.FileSystem.isDirectory(mlPath)) {
 				final content = sys.io.File.getContent(mlPath);
-				addReferencedModules(content, availableModules, selectedModules, queue);
+				addReferencedModules(content, availableModules, selectedModules, queue, inclusionReasonMap, "transitive:" + moduleName);
 			}
 			final mliPath = Path.join([runtimeDir, moduleName + ".mli"]);
 			if (sys.FileSystem.exists(mliPath) && !sys.FileSystem.isDirectory(mliPath)) {
 				final content = sys.io.File.getContent(mliPath);
-				addReferencedModules(content, availableModules, selectedModules, queue);
+				addReferencedModules(content, availableModules, selectedModules, queue, inclusionReasonMap, "transitive:" + moduleName);
 			}
 		}
 
@@ -235,31 +254,87 @@ class RuntimeCopier {
 		return mapKeysSorted(selected);
 	}
 
-	static function writeProfileReport(output:OutputManager, requested:Null<String>, profile:OcamlProfileContract):Void {
+	static function runtimeSelectionModeLabel(context:OcamlBuildContext, compilerTrackedModules:Array<String>, manualModules:Array<String>):String {
+		return switch (context.runtimeMode) {
+			case Full:
+				"full";
+			case Selective:
+				final hasTracked = compilerTrackedModules.length > 0;
+				final hasManual = manualModules.length > 0;
+				final base = if (hasTracked && hasManual) "compiler_tracked_plus_manual" else if (hasTracked) "compiler_tracked" else if (hasManual)
+					"manual_only" else "minimal_core";
+				context.runtimeTokenScanFallbackEnabled ? (base + "_plus_token_scan_fallback") : base;
+		}
+	}
+
+	static function inclusionReasonsSorted(reasonMap:Map<String, Map<String, Bool>>, selectedModules:Array<String>):Array<RuntimePlanInclusionReason> {
+		final out:Array<RuntimePlanInclusionReason> = [];
+		for (moduleName in selectedModules) {
+			final reasonSet = reasonMap.get(moduleName);
+			final reasons:Array<String> = [];
+			if (reasonSet != null) {
+				for (reason in reasonSet.keys())
+					reasons.push(reason);
+				reasons.sort(compareStrings);
+			}
+			out.push({
+				module: moduleName,
+				reasons: reasons
+			});
+		}
+		return out;
+	}
+
+	static function writeProfileReport(output:OutputManager, requested:Null<String>, context:OcamlBuildContext):Void {
+		#if macro
+		final strictSnapshot = StrictModeEnforcer.snapshot();
+		#else
+		final strictSnapshot:ProfileReportVerifier = {
+			mode: "reflaxe_stage0_macro",
+			enabled: false,
+			result: "not_enabled",
+			strictScope: "disabled",
+			violationCount: 0,
+			violations: [],
+			laneModules: []
+		};
+		#end
 		final report:ProfileReport = {
-			contractVersion: 1,
+			schemaVersion: 2,
 			requestedProfile: requested,
-			normalizedProfile: OcamlProfileContract.toDefineValue(profile),
+			normalizedProfile: OcamlProfileContract.toDefineValue(context.profile),
+			runtimeMode: OcamlRuntimeMode.toDefineValue(context.runtimeMode),
+			portableNativeSurfacePolicy: OcamlPortableNativeSurfacePolicy.toDefineValue(context.portableNativeSurfacePolicy),
+			strictUserBoundaries: context.strictUserBoundaries,
+			metalFallbackAllowed: context.metalFallbackAllowed,
 			verifier: {
-				mode: "reflaxe_stage0_macro",
-				enabled: false,
-				result: "not_run_in_runtime_copier"
+				mode: strictSnapshot.mode,
+				enabled: strictSnapshot.enabled,
+				result: strictSnapshot.result,
+				strictScope: strictSnapshot.strictScope,
+				violationCount: strictSnapshot.violationCount,
+				violations: strictSnapshot.violations.copy(),
+				laneModules: strictSnapshot.laneModules.copy()
 			}
 		};
 		output.saveFile(PROFILE_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
 	}
 
-	static function writeRuntimePlanReport(output:OutputManager, profile:OcamlProfileContract, selectionMode:String, availableModules:Array<String>,
-			trackedModules:Array<String>, tokenScanFallbackEnabled:Bool, selectedModules:Array<String>):Void {
+	static function writeRuntimePlanReport(output:OutputManager, context:OcamlBuildContext, selectionMode:String, availableModules:Array<String>,
+			trackedModules:Array<String>, manualModules:Array<String>, selectedModules:Array<String>, inclusionReasons:Array<RuntimePlanInclusionReason>):Void {
 		final report:RuntimePlanReport = {
-			contractVersion: 1,
-			profile: OcamlProfileContract.toDefineValue(profile),
+			schemaVersion: 2,
+			profile: OcamlProfileContract.toDefineValue(context.profile),
+			runtimeMode: OcamlRuntimeMode.toDefineValue(context.runtimeMode),
 			selectionMode: selectionMode,
 			availableModules: availableModules,
 			trackedModules: trackedModules,
-			tokenScanFallbackEnabled: tokenScanFallbackEnabled,
+			manualModules: manualModules,
+			runtimeInferenceDisabled: context.runtimeInferenceDisabled,
+			tokenScanFallbackEnabled: context.runtimeTokenScanFallbackEnabled,
 			selectedModules: selectedModules,
-			selectedFeatures: selectedModules.copy()
+			selectedFeatures: selectedModules.copy(),
+			inclusionReasons: inclusionReasons
 		};
 		output.saveFile(RUNTIME_PLAN_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
 	}
@@ -298,37 +373,30 @@ class RuntimeCopier {
 			}
 		}
 		availableModules.sort(compareStrings);
-		final trackedModules = trackedModulesSorted(compilerTrackedModules != null ? compilerTrackedModules : [], availableModules);
-
+		final trackedModulesAll = trackedModulesSorted(compilerTrackedModules != null ? compilerTrackedModules : [], availableModules);
 		final rawRequestedProfile = requestedProfile();
-		final profile = currentProfile(rawRequestedProfile);
-		#if macro
-		final tokenScanFallbackEnabled = haxe.macro.Context.defined("ocaml_runtime_token_scan_fallback");
-		if (tokenScanFallbackEnabled) {
-			haxe.macro.Context.warning("ocaml_runtime_token_scan_fallback is debug-only and non-release; metal remains strict-by-default with no implicit fallback.",
-				haxe.macro.Context.currentPos());
-		}
-		#else
-		final tokenScanFallbackEnabled = false;
-		#end
-		final selectionMode = switch (profile) {
-			case OcamlProfileContract.Metal:
-				tokenScanFallbackEnabled ? "compiler_tracked_plus_token_scan_fallback" : "compiler_tracked";
-			case OcamlProfileContract.Portable:
-				"full";
-		};
-		final selectedModules:Map<String, Bool> = switch (profile) {
-			case OcamlProfileContract.Metal:
-				collectMetalRuntimeModules(runtimeDir, availableModules, trackedModules, output.outputDir, destSubdir, tokenScanFallbackEnabled);
-			case OcamlProfileContract.Portable:
+		final buildContext = OcamlBuildContext.resolve();
+		final trackedModules = buildContext.runtimeMode == Selective && !buildContext.runtimeInferenceDisabled ? trackedModulesAll : [];
+		final manualModules = trackedModulesSorted(buildContext.runtimeManualModules, availableModules);
+		final selectionMode = runtimeSelectionModeLabel(buildContext, trackedModules, manualModules);
+		final inclusionReasonMap:Map<String, Map<String, Bool>> = [];
+		final selectedModules:Map<String, Bool> = switch (buildContext.runtimeMode) {
+			case Selective:
+				collectSelectiveRuntimeModules(runtimeDir, availableModules, trackedModules, manualModules, output.outputDir, destSubdir,
+					buildContext.runtimeTokenScanFallbackEnabled, inclusionReasonMap);
+			case Full:
 				final all:Map<String, Bool> = [];
-				for (moduleName in availableModules)
+				for (moduleName in availableModules) {
 					all.set(moduleName, true);
+					addInclusionReason(inclusionReasonMap, moduleName, "full_runtime_mode");
+				}
 				all;
 		}
 		final selectedModuleList = mapKeysSorted(selectedModules);
-		writeProfileReport(output, rawRequestedProfile, profile);
-		writeRuntimePlanReport(output, profile, selectionMode, availableModules.copy(), trackedModules, tokenScanFallbackEnabled, selectedModuleList);
+		final inclusionReasons = inclusionReasonsSorted(inclusionReasonMap, selectedModuleList);
+		writeProfileReport(output, rawRequestedProfile, buildContext);
+		writeRuntimePlanReport(output, buildContext, selectionMode, availableModules.copy(), trackedModules, manualModules, selectedModuleList,
+			inclusionReasons);
 
 		for (name in runtimeFiles) {
 			final moduleName = moduleNameFromRuntimeFile(name);

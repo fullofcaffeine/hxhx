@@ -2,24 +2,41 @@ private typedef ProfileReportVerifier = {
 	final mode:String;
 	final enabled:Bool;
 	final result:String;
+	final strictScope:String;
+	final violationCount:Int;
+	final violations:Array<String>;
+	final laneModules:Array<String>;
 }
 
 private typedef ProfileReport = {
-	final contractVersion:Int;
+	final schemaVersion:Int;
 	final requestedProfile:Null<String>;
 	final normalizedProfile:String;
+	final runtimeMode:String;
+	final portableNativeSurfacePolicy:String;
+	final strictUserBoundaries:Bool;
+	final metalFallbackAllowed:Bool;
 	final verifier:ProfileReportVerifier;
 }
 
+private typedef RuntimePlanInclusionReason = {
+	final module:String;
+	final reasons:Array<String>;
+}
+
 private typedef RuntimePlanReport = {
-	final contractVersion:Int;
+	final schemaVersion:Int;
 	final profile:String;
+	final runtimeMode:String;
 	final selectionMode:String;
 	final availableModules:Array<String>;
 	final trackedModules:Array<String>;
+	final manualModules:Array<String>;
+	final runtimeInferenceDisabled:Bool;
 	final tokenScanFallbackEnabled:Bool;
 	final selectedModules:Array<String>;
 	final selectedFeatures:Array<String>;
+	final inclusionReasons:Array<RuntimePlanInclusionReason>;
 }
 
 private typedef CompileInvocationResult = {
@@ -59,6 +76,14 @@ class M6RuntimeCopierIntegrationTest {
 		}
 	}
 
+	static function reasonsForModule(report:RuntimePlanReport, moduleName:String):Array<String> {
+		for (entry in report.inclusionReasons) {
+			if (entry.module == moduleName)
+				return entry.reasons.copy();
+		}
+		return [];
+	}
+
 	static function shellQuote(value:String):String {
 		return "'" + StringTools.replace(value, "'", "'\"'\"'") + "'";
 	}
@@ -86,7 +111,8 @@ class M6RuntimeCopierIntegrationTest {
 		};
 	}
 
-	static function compileRuntimeFixture(outDir:String, profile:Null<String>, classPath:String = "test", mainClass:String = "Main"):CompileInvocationResult {
+	static function compileRuntimeFixture(outDir:String, profile:Null<String>, classPath:String = "test", mainClass:String = "Main",
+			extraDefines:Array<String> = null):CompileInvocationResult {
 		sys.FileSystem.createDirectory(outDir);
 		final args = [
 			"-cp",
@@ -108,6 +134,12 @@ class M6RuntimeCopierIntegrationTest {
 		if (profile != null) {
 			args.push("-D");
 			args.push("ocaml_profile=" + profile);
+		}
+		if (extraDefines != null) {
+			for (defineValue in extraDefines) {
+				args.push("-D");
+				args.push(defineValue);
+			}
 		}
 		return runHaxe(args);
 	}
@@ -143,17 +175,28 @@ class M6RuntimeCopierIntegrationTest {
 		final rootOutDir = "out_ocaml_m6_runtime_" + Std.string(Std.int(Date.now().getTime()));
 		final portableOutDir = rootOutDir + "/portable";
 		final metalOutDir = rootOutDir + "/metal";
+		final metalFullOutDir = rootOutDir + "/metal_full";
 		final emptyProfileOutDir = rootOutDir + "/portable_empty";
+		final portableManualOutDir = rootOutDir + "/portable_manual_selective";
 		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
 		final invalidProfileOutDir = rootOutDir + "/invalid_profile";
+		final invalidRuntimeModeOutDir = rootOutDir + "/invalid_runtime_mode";
 		sys.FileSystem.createDirectory(rootOutDir);
 
 		final portableCompile = compileRuntimeFixture(portableOutDir, null);
 		assertTrue(portableCompile.exitCode == 0, "portable compile failed: " + portableCompile.stderr);
 		final metalCompile = compileRuntimeFixture(metalOutDir, "MeTaL");
 		assertTrue(metalCompile.exitCode == 0, "metal mixed-case compile failed: " + metalCompile.stderr);
+		final metalFullCompile = compileRuntimeFixture(metalFullOutDir, "metal", "test", "Main", ["ocaml_runtime_mode=full"]);
+		assertTrue(metalFullCompile.exitCode == 0, "metal full-runtime override compile failed: " + metalFullCompile.stderr);
 		final emptyProfileCompile = compileRuntimeFixture(emptyProfileOutDir, "");
 		assertTrue(emptyProfileCompile.exitCode == 0, "empty-profile compile failed: " + emptyProfileCompile.stderr);
+		final portableManualCompile = compileRuntimeFixture(portableManualOutDir, "portable", "test", "Main", [
+			"ocaml_runtime_mode=selective",
+			"ocaml_runtime_no_infer",
+			"ocaml_runtime_modules=HxRuntime"
+		]);
+		assertTrue(portableManualCompile.exitCode == 0, "portable manual selective compile failed: " + portableManualCompile.stderr);
 		final metalTokenNoiseCompile = compileRuntimeFixture(metalTokenNoiseOutDir, "metal", "test/fixtures/m6_runtime_token_noise/src", "Main");
 		assertTrue(metalTokenNoiseCompile.exitCode == 0, "metal token-noise compile failed: " + metalTokenNoiseCompile.stderr);
 		final invalidProfileCompile = compileRuntimeFixture(invalidProfileOutDir, "weird");
@@ -162,6 +205,11 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains(invalidCombinedOutput, "ocaml_profile", "invalid profile should mention ocaml_profile");
 		assertContains(invalidCombinedOutput, "portable|metal", "invalid profile should mention expected values");
 		assertTrue(!sys.FileSystem.exists(invalidProfileOutDir + "/ocaml_profile_report.json"), "invalid profile should fail before profile report generation");
+		final invalidRuntimeModeCompile = compileRuntimeFixture(invalidRuntimeModeOutDir, "portable", "test", "Main", ["ocaml_runtime_mode=weird"]);
+		assertTrue(invalidRuntimeModeCompile.exitCode != 0, "invalid runtime mode should fail fast");
+		final invalidRuntimeModeOutput = invalidRuntimeModeCompile.stderr + "\n" + invalidRuntimeModeCompile.stdout;
+		assertContains(invalidRuntimeModeOutput, "ocaml_runtime_mode", "invalid runtime mode should mention define");
+		assertContains(invalidRuntimeModeOutput, "full|selective", "invalid runtime mode should mention expected values");
 
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))
@@ -182,19 +230,28 @@ class M6RuntimeCopierIntegrationTest {
 
 		final portableModules = runtimeModules(portableOutDir);
 		final metalModules = runtimeModules(metalOutDir);
+		final metalFullModules = runtimeModules(metalFullOutDir);
 		final emptyProfileModules = runtimeModules(emptyProfileOutDir);
+		final portableManualModules = runtimeModules(portableManualOutDir);
 		final portableProfileReport = readProfileReport(portableOutDir);
 		final metalProfileReport = readProfileReport(metalOutDir);
+		final metalFullProfileReport = readProfileReport(metalFullOutDir);
 		final emptyProfileReport = readProfileReport(emptyProfileOutDir);
+		final portableManualProfileReport = readProfileReport(portableManualOutDir);
 		final portableRuntimeReport = readRuntimePlanReport(portableOutDir);
 		final metalRuntimeReport = readRuntimePlanReport(metalOutDir);
+		final metalFullRuntimeReport = readRuntimePlanReport(metalFullOutDir);
 		final emptyProfileRuntimeReport = readRuntimePlanReport(emptyProfileOutDir);
+		final portableManualRuntimeReport = readRuntimePlanReport(portableManualOutDir);
 		final metalTokenNoiseRuntimeReport = readRuntimePlanReport(metalTokenNoiseOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
 		assertTrue(metalModules.length < portableModules.length, "metal runtime should link fewer modules than portable");
+		assertArrayEquals(portableModules, metalFullModules, "metal full override should match portable runtime module set");
 		assertArrayEquals(portableModules, emptyProfileModules, "empty profile should match portable runtime module set");
+		assertTrue(portableManualModules.length > 0, "portable manual runtime should include modules");
+		assertTrue(portableManualModules.length < portableModules.length, "portable manual runtime should link fewer modules than portable");
 
 		final portableJoined = "\n" + portableModules.join("\n") + "\n";
 		final metalJoined = "\n" + metalModules.join("\n") + "\n";
@@ -210,41 +267,77 @@ class M6RuntimeCopierIntegrationTest {
 		assertNotContains(metalJoined, "\nHxReflect.ml\n", "metal runtime omits unused reflect runtime");
 		assertNotContains(metalJoined, "\nHxSys.ml\n", "metal runtime omits unused sys runtime");
 
-		assertTrue(portableProfileReport.contractVersion == 1, "portable profile report contract version");
+		assertTrue(portableProfileReport.schemaVersion == 2, "portable profile report schema version");
 		assertTrue(portableProfileReport.requestedProfile == null, "portable report keeps null requested profile");
 		assertTrue(portableProfileReport.normalizedProfile == "portable", "portable report normalized profile");
-		assertTrue(portableProfileReport.verifier.enabled == false, "portable report verifier mode");
-		assertTrue(portableProfileReport.verifier.result == "not_run_in_runtime_copier", "portable report verifier result");
+		assertTrue(portableProfileReport.runtimeMode == "full", "portable profile report runtime mode");
+		assertTrue(portableProfileReport.portableNativeSurfacePolicy == "warn", "portable profile report native-surface policy");
+		assertTrue(portableProfileReport.verifier.enabled == true, "portable report verifier enabled");
+		assertTrue(portableProfileReport.verifier.result == "pass", "portable report verifier pass");
+		assertTrue(portableProfileReport.verifier.violationCount == 0, "portable report verifier violation count");
+		assertTrue(portableProfileReport.verifier.strictScope == "disabled", "portable report strict scope");
 
-		assertTrue(metalProfileReport.contractVersion == 1, "metal profile report contract version");
+		assertTrue(metalProfileReport.schemaVersion == 2, "metal profile report schema version");
 		assertTrue(metalProfileReport.requestedProfile == "MeTaL", "metal report should keep requested mixed-case profile");
 		assertTrue(metalProfileReport.normalizedProfile == "metal", "metal report normalized profile");
 		assertTrue(metalProfileReport.verifier.mode == "reflaxe_stage0_macro", "metal report verifier mode label");
+		assertTrue(metalProfileReport.verifier.enabled == true, "metal report verifier enabled");
+		assertTrue(metalProfileReport.verifier.result == "pass", "metal report verifier pass");
+		assertTrue(metalProfileReport.verifier.strictScope == "global_metal", "metal report strict scope");
+		assertTrue(metalProfileReport.verifier.violationCount == 0, "metal report verifier violation count");
 
-		assertTrue(emptyProfileReport.contractVersion == 1, "empty profile report contract version");
+		assertTrue(metalFullProfileReport.normalizedProfile == "metal", "metal full override keeps metal profile");
+
+		assertTrue(emptyProfileReport.schemaVersion == 2, "empty profile report schema version");
 		assertTrue(emptyProfileReport.requestedProfile == "", "empty profile report keeps empty requested profile");
 		assertTrue(emptyProfileReport.normalizedProfile == "portable", "empty profile normalizes to portable");
+		assertTrue(portableManualProfileReport.normalizedProfile == "portable", "portable manual report keeps portable profile");
 
-		assertTrue(portableRuntimeReport.contractVersion == 1, "portable runtime report contract version");
+		assertTrue(portableRuntimeReport.schemaVersion == 2, "portable runtime report schema version");
 		assertTrue(portableRuntimeReport.profile == "portable", "portable runtime report profile");
+		assertTrue(portableRuntimeReport.runtimeMode == "full", "portable runtime report mode");
 		assertTrue(portableRuntimeReport.selectionMode == "full", "portable runtime report mode");
 		assertTrue(portableRuntimeReport.tokenScanFallbackEnabled == false, "portable runtime report token-scan fallback flag");
 		assertTrue(portableRuntimeReport.selectedModules.length == portableRuntimeReport.selectedFeatures.length, "portable selected modules/features size");
+		assertTrue(portableRuntimeReport.inclusionReasons.length == portableRuntimeReport.selectedModules.length, "portable inclusion reasons should align");
 		assertContains("\n" + portableRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "portable report includes HxRuntime");
+		assertContains("\n" + reasonsForModule(portableRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
+			"portable report includes full-runtime reason");
 
-		assertTrue(metalRuntimeReport.contractVersion == 1, "metal runtime report contract version");
+		assertTrue(metalRuntimeReport.schemaVersion == 2, "metal runtime report schema version");
 		assertTrue(metalRuntimeReport.profile == "metal", "metal runtime report profile");
+		assertTrue(metalRuntimeReport.runtimeMode == "selective", "metal runtime mode should default to selective");
 		assertTrue(metalRuntimeReport.selectionMode == "compiler_tracked", "metal runtime report mode");
 		assertTrue(metalRuntimeReport.tokenScanFallbackEnabled == false, "metal runtime report token-scan fallback flag");
 		assertTrue(metalRuntimeReport.selectedModules.length == metalRuntimeReport.selectedFeatures.length, "metal selected modules/features size");
+		assertTrue(metalRuntimeReport.inclusionReasons.length == metalRuntimeReport.selectedModules.length, "metal inclusion reasons should align");
 		assertContains("\n" + metalRuntimeReport.trackedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report tracked modules include HxRuntime");
 		assertContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report includes HxRuntime");
+		assertContains("\n" + reasonsForModule(metalRuntimeReport, "HxRuntime").join("\n") + "\n", "\ncore_runtime\n",
+			"metal report includes core-runtime reason");
 		assertNotContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "metal report omits HxFile");
 
+		assertTrue(metalFullRuntimeReport.profile == "metal", "metal full runtime report profile");
+		assertTrue(metalFullRuntimeReport.runtimeMode == "full", "metal full runtime report mode");
+		assertTrue(metalFullRuntimeReport.selectionMode == "full", "metal full runtime report selection mode");
+		assertTrue(metalFullRuntimeReport.trackedModules.length == 0, "metal full runtime report should not expose selective tracked modules");
+		assertContains("\n" + reasonsForModule(metalFullRuntimeReport, "HxRuntime").join("\n") + "\n", "\nfull_runtime_mode\n",
+			"metal full report includes full-runtime reason");
+
 		assertTrue(emptyProfileRuntimeReport.profile == "portable", "empty profile runtime report profile");
+		assertTrue(emptyProfileRuntimeReport.runtimeMode == "full", "empty profile runtime mode");
 		assertTrue(emptyProfileRuntimeReport.selectionMode == "full", "empty profile runtime report selection mode");
 
+		assertTrue(portableManualRuntimeReport.profile == "portable", "portable manual runtime report profile");
+		assertTrue(portableManualRuntimeReport.runtimeMode == "selective", "portable manual runtime mode");
+		assertTrue(portableManualRuntimeReport.selectionMode == "manual_only", "portable manual runtime selection mode");
+		assertTrue(portableManualRuntimeReport.runtimeInferenceDisabled == true, "portable manual runtime should disable inference");
+		assertContains("\n" + portableManualRuntimeReport.manualModules.join("\n") + "\n", "\nHxRuntime\n", "portable manual report includes manual modules");
+		assertTrue(portableManualRuntimeReport.trackedModules.length == 0, "portable manual runtime should suppress tracked modules");
+		assertNotContains("\n" + portableManualRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "portable manual runtime omits file runtime");
+
 		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
+		assertTrue(metalTokenNoiseRuntimeReport.runtimeMode == "selective", "token noise runtime mode");
 		assertTrue(metalTokenNoiseRuntimeReport.selectionMode == "compiler_tracked", "token noise report mode");
 		assertNotContains("\n" + metalTokenNoiseRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n",
 			"token noise report omits HxFile despite HxFile string tokens");

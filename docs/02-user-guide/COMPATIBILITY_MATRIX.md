@@ -57,7 +57,11 @@ Legend:
 
 ## Stdlib coverage (portable)
 
-This is “what we validate continuously” rather than a complete list of the Haxe stdlib.
+This table is “what we validate continuously” for the current portable surface.
+Full portable stdlib parity is tracked against:
+
+- `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
 | Module / Area | Status | Notes |
 |---|---:|---|

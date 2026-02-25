@@ -4,6 +4,7 @@ package reflaxe.ocaml;
 import reflaxe.ReflectCompiler;
 import reflaxe.preprocessors.ExpressionPreprocessor;
 import reflaxe.preprocessors.ExpressionPreprocessor.ExpressionPreprocessorHelper;
+import reflaxe.ocaml.macros.StrictModeEnforcer;
 import reflaxe.ocaml.preprocessor.InlineSwitchTempImpl;
 
 /**
@@ -38,6 +39,8 @@ class CompilerInit {
 			|| haxe.macro.Context.definedValue("target.name") == "ocaml"
 			|| haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
 		if (isOcamlTarget) {
+			final buildContext = OcamlBuildContext.resolve();
+			StrictModeEnforcer.init(buildContext);
 			// Force-link OCaml-only std overrides that are reached via backend intrinsics
 			// rather than direct Haxe references (so DCE/module reachability would drop them).
 			//

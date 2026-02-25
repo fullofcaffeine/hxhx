@@ -134,6 +134,21 @@ Meaning in plain terms:
   - Focused Gate2 display rung is now fail-fast (no Darwin-specific retry/skip fallback path).
 - Scope reminder: this status is explicitly bounded to the supported target/gate policy documented in this guide and `README.md`.
 
+### M16. Portable stdlib parity closure (hard 1.0 blocker)
+
+Status: In progress  
+Bead: `haxe.ocaml-yfh`
+
+Meaning in plain terms:
+
+- We now track portable stdlib parity against a machine-readable baseline contract:
+  - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- Coverage status is generated into:
+  - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+- PR CI includes a fast stdlib parity lane; nightly/manual CI includes a broader parity lane.
+- Portability lanes run with `ocaml_portable_native_surface=error` (local default remains `warn`).
+- 1.0 is not considered complete until baseline portable stdlib parity closure is green for the declared scope.
+
 ## Fast “where are we now?” commands
 
 ```bash
@@ -157,6 +172,7 @@ These are practical “confidence checks”, not full release proof:
 npm run test:hxhx-targets
 npm run test:upstream:runci-macro-stage3-display
 npm run ci:guards
+npm run test:stdlib:portable:tier1
 HXHX_KPI_REPS=3 HXHX_KPI_RUN_MACRO_LANE=1 npm run hxhx:bench:kpi
 HXHX_FORCE_STAGE0=0 bash scripts/hxhx/run-replacement-ready.sh fast
 ```
@@ -166,6 +182,7 @@ Why these checks:
 - `test:hxhx-targets`: broad local regressions for staged compiler behavior.
 - `runci-macro-stage3-display`: focused non-delegating display/Gate2 slice.
 - `ci:guards`: license/provenance/version safety checks.
+- `test:stdlib:portable:tier1`: portable stdlib baseline drift + portable fixture behavior checks.
 - `hxhx:bench:kpi`: profile/plugin KPI report (compile, macro overhead, incremental, peak RSS).
 - `run-replacement-ready.sh fast`: one-command M7 fast bundle evidence.
 

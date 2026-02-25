@@ -7,6 +7,9 @@ This document defines how `hxhx`/`reflaxe.ocaml` use upstream Haxe stdlib code w
 - **Baseline upstream tag:** `4.3.7`
 - **Use case:** stdlib compatibility for supported targets.
 - **Non-goal:** importing upstream compiler implementation details.
+- **Portable parity baseline contract:**
+  - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+  - generated from upstream `vendor/haxe/std/**` using platform-agnostic + `sys` policy.
 
 ## Allowed upstream reuse
 
@@ -54,6 +57,7 @@ The following upstream paths are never allowed to be vendored or copied into thi
 4. Run guardrails and tests:
    ```bash
    npm run ci:guards
+   npm run guard:stdlib-portable-baseline
    npm test
    ```
 5. Update provenance artifacts:
@@ -72,3 +76,5 @@ The following upstream paths are never allowed to be vendored or copied into thi
 - `scripts/ci/stdlib-provenance-ledger-check.js`
   - ensures `THIRD_PARTY_NOTICES.md` exists and includes the stdlib notice.
   - ensures every tracked `_std` override file has coverage in the provenance ledger.
+- `scripts/ci/portable-stdlib-baseline-check.js`
+  - verifies the committed portable baseline contract matches deterministic generation from upstream std.

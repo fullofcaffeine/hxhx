@@ -49,11 +49,20 @@ This matrix documents runtime module status for:
 ## Policy notes
 
 - Metal mode links runtime modules **on-demand** from emitted references plus transitive runtime dependencies.
+- Runtime planning can be overridden in Stage0 with:
+  - `-D ocaml_runtime_mode=full|selective`
+  - `-D ocaml_runtime_modules=<comma-separated module list>`
+  - `-D ocaml_runtime_no_infer`
 - Metal mode currently forbids dynamic/reflection-heavy constructs via `MetalProfileVerifier`:
   - `untyped`
   - `Reflect.*` and `Type.*`
   - explicit `Dynamic` hints in key typed positions
   - bootstrap fallback nodes (`EUnsupported`, `ETryCatchRaw`, `ESwitchRaw`)
+- Stage0 metal boundary checks can be downgraded to warnings with
+  `-D ocaml_metal_allow_fallback` during migration/debugging.
+- Portable profile can enforce `ocaml.*` usage policy with:
+  - `-D ocaml_portable_native_surface=warn|allow|error` (default: `warn`)
+- Portable builds can opt in strict metal checks for selected modules via `@:haxeMetal`.
 - Metal mode has no implicit fallback to portable; switching lanes requires explicit
   `-D ocaml_profile=portable`.
 - Optional runtime token-scan fallback (`-D ocaml_runtime_token_scan_fallback`) is

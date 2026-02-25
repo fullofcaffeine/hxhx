@@ -29,8 +29,10 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
 
 - Compatibility target is **Haxe `4.3.7`**.
 - Per-commit checks run **Gate 1 Lite**, **Gate 2 Lite**, **Gate 3 Builtin**, and a **strict plugin matrix** lane.
+- Per-commit checks also run **Stdlib Portable Lite** (baseline contract + portable fixture suite).
 - Per-commit CI also runs a **JS oracle smoke** lane (upstream `haxe` vs `hxhx js-native` runtime output on repo-local fixtures).
 - Full upstream compatibility gates (**Gate 1/2/3**) run weekly and on manual trigger.
+- **Stdlib Portable Full** runs nightly/manual for broader Stage0 runtime/stdlib coverage.
 - Legacy Flash/AS3 targets are intentionally unsupported.
 - `hxhx` and `reflaxe.ocaml` are usable now; parity/performance work continues.
 
@@ -110,6 +112,13 @@ Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior
 
 ```bash
 npm run test:upstream:js-oracle-smoke
+```
+
+Portable stdlib parity gates:
+
+```bash
+npm run test:stdlib:portable:tier1
+npm run test:stdlib:portable:full
 ```
 
 Self-hosting status/smoke:
@@ -199,6 +208,8 @@ For full usage and mainstream Haxe integration, see
 - [Acceptance model](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
 - [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
 - [OCaml runtime capability matrix (`portable` vs `metal`)](docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md)
+- [Portable stdlib baseline contract (`4.3.7`)](docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json)
+- [Portable stdlib parity matrix](docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md)
 - [KPI benchmark baseline](docs/benchmarks/HXHX_KPI_BASELINE.md)
 - [KPI benchmark thresholds](docs/benchmarks/HXHX_KPI_THRESHOLDS.md)
 - [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)

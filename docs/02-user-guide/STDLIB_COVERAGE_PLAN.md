@@ -1,4 +1,4 @@
-# Stdlib Coverage Plan (Portable / stdlib-first) — M11
+# Stdlib Coverage Plan (Portable / stdlib-first) — M11 → M16
 
 This document tracks which parts of the Haxe standard library are:
 
@@ -8,6 +8,19 @@ This document tracks which parts of the Haxe standard library are:
 
 The goal is to keep a “portable” surface where users can target OCaml without
 needing OCaml knowledge, while still producing idiomatic OCaml output.
+
+## 1.0 parity target (hard blocker)
+
+Portable stdlib parity is tracked against the OCaml portable baseline for Haxe `4.3.7`:
+
+- baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- generated parity matrix: `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+
+Definition used by this repo:
+
+- `100% portable parity` = all modules in the baseline contract are covered by either:
+  - explicit override/runtime/lowering support, or
+  - validated passthrough behavior with fixture/oracle evidence.
 
 ## Current priority modules
 
@@ -48,3 +61,14 @@ We use layered tests (mirrors the repo-wide strategy in `docs/01-getting-started
 3. Acceptance examples: `examples/` (integration/compiler-shaped workloads)
 
 M11 additions are primarily validated through portable fixtures.
+
+For the expanded parity track:
+
+- PR-lite: `npm run test:stdlib:portable:tier1`
+- Nightly/full: `npm run test:stdlib:portable:full`
+
+Portable contract strictness policy:
+
+- local development default keeps `ocaml_portable_native_surface=warn`
+- stdlib parity gates run portable fixtures with `ocaml_portable_native_surface=error`
+  so `ocaml.*` usage fails fast in portability lanes

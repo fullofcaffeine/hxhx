@@ -2,6 +2,7 @@
 set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
+PORTABLE_NATIVE_SURFACE_STRICT="${PORTABLE_NATIVE_SURFACE_STRICT:-0}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIXTURE_ROOT="$ROOT/test/portable/fixtures"
@@ -25,11 +26,16 @@ for dir in "$FIXTURE_ROOT"/*/; do
   [ -f "${dir}build.hxml" ] || continue
   echo "== Portable: ${dir#"$ROOT/"}"
 
+  extra_defines=()
+  if [ "$PORTABLE_NATIVE_SURFACE_STRICT" = "1" ]; then
+    extra_defines+=("-D" "ocaml_portable_native_surface=error")
+  fi
+
   (
     cd "$dir"
     rm -rf out
     mkdir -p out
-    "$HAXE_BIN" build.hxml -D ocaml_build=native
+    "$HAXE_BIN" build.hxml -D ocaml_build=native "${extra_defines[@]}"
   )
 
   exe="${dir}out/_build/default/out.exe"
