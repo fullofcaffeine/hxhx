@@ -47,6 +47,15 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
 - `construct`: what was rejected
 - `reason`: why metal mode rejects it
 - `migration`: concrete code-level alternative
+- `next`: explicit next step (fix in metal or switch lane explicitly)
+
+## Strict default policy (`metal`)
+
+- `metal` is strict-by-default and fail-fast.
+- There is **no implicit `metal -> portable` fallback** in normal compile paths.
+- If compilation must continue without metal constraints, users must explicitly choose:
+  - `-D ocaml_profile=portable`
+- Any debug fallback knobs are opt-in diagnostics tooling and are non-release.
 
 ## Compile reports
 
@@ -74,6 +83,7 @@ Debug fallback define (non-default, diagnostics only):
 - `-D ocaml_runtime_token_scan_fallback`
   - Keeps compiler-tracked selection as the primary source of truth.
   - Adds legacy output token scanning as a temporary merge source for investigations.
+  - Explicitly debug-only (non-release); this does not enable any implicit profile fallback.
 
 ## Metal verifier code map (common migrations)
 

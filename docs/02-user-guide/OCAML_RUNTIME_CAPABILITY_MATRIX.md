@@ -54,6 +54,10 @@ This matrix documents runtime module status for:
   - `Reflect.*` and `Type.*`
   - explicit `Dynamic` hints in key typed positions
   - bootstrap fallback nodes (`EUnsupported`, `ETryCatchRaw`, `ESwitchRaw`)
+- Metal mode has no implicit fallback to portable; switching lanes requires explicit
+  `-D ocaml_profile=portable`.
+- Optional runtime token-scan fallback (`-D ocaml_runtime_token_scan_fallback`) is
+  debug-only and must not be enabled for release builds.
 - These constraints are intentional for predictable native performance and deterministic semantics.
 
 ## Related docs

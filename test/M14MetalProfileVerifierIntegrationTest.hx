@@ -91,6 +91,8 @@ class M14MetalProfileVerifierIntegrationTest {
 		assertContains(failureMessage, "context: Main.main", "verifier should include function context");
 		assertContains(failureMessage, "reason:", "verifier should include explicit reason");
 		assertContains(failureMessage, "migration:", "verifier should include migration hint");
+		assertContains(failureMessage, "next: keep metal by applying the migrations above", "verifier should include explicit next steps");
+		assertContains(failureMessage, "no implicit metal->portable fallback", "verifier should state strict fallback policy");
 
 		final reflectionIndex = failureMessage.indexOf("[reflection_call]");
 		final untypedIndex = failureMessage.indexOf("[untyped_expr]");

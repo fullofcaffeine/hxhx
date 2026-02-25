@@ -294,6 +294,10 @@ class RuntimeCopier {
 		final profile = currentProfile();
 		#if macro
 		final tokenScanFallbackEnabled = haxe.macro.Context.defined("ocaml_runtime_token_scan_fallback");
+		if (tokenScanFallbackEnabled) {
+			haxe.macro.Context.warning("ocaml_runtime_token_scan_fallback is debug-only and non-release; metal remains strict-by-default with no implicit fallback.",
+				haxe.macro.Context.currentPos());
+		}
 		#else
 		final tokenScanFallbackEnabled = false;
 		#end

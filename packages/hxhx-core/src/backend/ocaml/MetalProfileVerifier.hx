@@ -274,6 +274,8 @@ class MetalProfileVerifier {
 			lines.push("  reason: " + v.reason);
 			lines.push("  migration: " + v.migrationHint);
 		}
+		lines.push("next: keep metal by applying the migrations above, or explicitly switch lanes with -D ocaml_profile=portable.");
+		lines.push("policy: no implicit metal->portable fallback is performed.");
 		return lines.join("\n");
 	}
 }
