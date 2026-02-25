@@ -19,10 +19,19 @@ class M14OcamlProfileContractIntegrationTest {
 
 		final portableExplicit = makeContext(["ocaml_profile=portable"]);
 		assertTrue(portableExplicit.ensureOcamlProfileDefine() == OcamlProfile.Portable, "explicit portable profile should resolve");
+		assertTrue(portableExplicit.defineValue("ocaml_profile") == "portable", "portable explicit value should remain normalized");
 
 		final metalExplicit = makeContext(["ocaml_profile=metal"]);
 		assertTrue(metalExplicit.ensureOcamlProfileDefine() == OcamlProfile.Metal, "explicit metal profile should resolve");
 		assertTrue(metalExplicit.defineValue("ocaml_profile") == "metal", "metal profile should be normalized");
+
+		final metalMixedCase = makeContext(["ocaml_profile=MeTaL"]);
+		assertTrue(metalMixedCase.ensureOcamlProfileDefine() == OcamlProfile.Metal, "mixed-case metal should resolve");
+		assertTrue(metalMixedCase.defineValue("ocaml_profile") == "metal", "mixed-case metal should normalize to lowercase");
+
+		final portableEmpty = makeContext(["ocaml_profile="]);
+		assertTrue(portableEmpty.ensureOcamlProfileDefine() == OcamlProfile.Portable, "empty profile should default to portable");
+		assertTrue(portableEmpty.defineValue("ocaml_profile") == "portable", "empty profile should be written back as portable");
 
 		final invalid = makeContext(["ocaml_profile=unsupported"]);
 		var failed = false;

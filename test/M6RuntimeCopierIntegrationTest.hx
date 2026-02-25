@@ -22,6 +22,12 @@ private typedef RuntimePlanReport = {
 	final selectedFeatures:Array<String>;
 }
 
+private typedef CompileInvocationResult = {
+	final exitCode:Int;
+	final stdout:String;
+	final stderr:String;
+}
+
 class M6RuntimeCopierIntegrationTest {
 	static function compareStrings(a:String, b:String):Int {
 		return a < b ? -1 : (a > b ? 1 : 0);
@@ -53,7 +59,34 @@ class M6RuntimeCopierIntegrationTest {
 		}
 	}
 
-	static function compileRuntimeFixture(outDir:String, profile:Null<String>, classPath:String = "test", mainClass:String = "Main"):Void {
+	static function shellQuote(value:String):String {
+		return "'" + StringTools.replace(value, "'", "'\"'\"'") + "'";
+	}
+
+	static function runHaxe(args:Array<String>):CompileInvocationResult {
+		final tempRoot = ".tmp/m6_runtime_haxe_run_" + Std.string(Std.int(Date.now().getTime())) + "_" + Std.string(Std.random(1000000));
+		sys.FileSystem.createDirectory(tempRoot);
+		final stdoutPath = tempRoot + "/stdout.log";
+		final stderrPath = tempRoot + "/stderr.log";
+		final quotedArgs = [for (arg in args) shellQuote(arg)];
+		final command = "haxe " + quotedArgs.join(" ") + " > " + shellQuote(stdoutPath) + " 2> " + shellQuote(stderrPath);
+		final exitCode = Sys.command("sh", ["-c", command]);
+		final stdout = sys.FileSystem.exists(stdoutPath) ? sys.io.File.getContent(stdoutPath) : "";
+		final stderr = sys.FileSystem.exists(stderrPath) ? sys.io.File.getContent(stderrPath) : "";
+		if (sys.FileSystem.exists(stdoutPath))
+			sys.FileSystem.deleteFile(stdoutPath);
+		if (sys.FileSystem.exists(stderrPath))
+			sys.FileSystem.deleteFile(stderrPath);
+		if (sys.FileSystem.exists(tempRoot))
+			sys.FileSystem.deleteDirectory(tempRoot);
+		return {
+			exitCode: exitCode,
+			stdout: stdout,
+			stderr: stderr
+		};
+	}
+
+	static function compileRuntimeFixture(outDir:String, profile:Null<String>, classPath:String = "test", mainClass:String = "Main"):CompileInvocationResult {
 		sys.FileSystem.createDirectory(outDir);
 		final args = [
 			"-cp",
@@ -76,10 +109,7 @@ class M6RuntimeCopierIntegrationTest {
 			args.push("-D");
 			args.push("ocaml_profile=" + profile);
 		}
-
-		final exitCode = Sys.command("haxe", args);
-		if (exitCode != 0)
-			throw "haxe compile failed: " + exitCode;
+		return runHaxe(args);
 	}
 
 	static function runtimeModules(outDir:String):Array<String> {
@@ -113,12 +143,25 @@ class M6RuntimeCopierIntegrationTest {
 		final rootOutDir = "out_ocaml_m6_runtime_" + Std.string(Std.int(Date.now().getTime()));
 		final portableOutDir = rootOutDir + "/portable";
 		final metalOutDir = rootOutDir + "/metal";
+		final emptyProfileOutDir = rootOutDir + "/portable_empty";
 		final metalTokenNoiseOutDir = rootOutDir + "/metal_token_noise";
+		final invalidProfileOutDir = rootOutDir + "/invalid_profile";
 		sys.FileSystem.createDirectory(rootOutDir);
 
-		compileRuntimeFixture(portableOutDir, null);
-		compileRuntimeFixture(metalOutDir, "metal");
-		compileRuntimeFixture(metalTokenNoiseOutDir, "metal", "test/fixtures/m6_runtime_token_noise/src", "Main");
+		final portableCompile = compileRuntimeFixture(portableOutDir, null);
+		assertTrue(portableCompile.exitCode == 0, "portable compile failed: " + portableCompile.stderr);
+		final metalCompile = compileRuntimeFixture(metalOutDir, "MeTaL");
+		assertTrue(metalCompile.exitCode == 0, "metal mixed-case compile failed: " + metalCompile.stderr);
+		final emptyProfileCompile = compileRuntimeFixture(emptyProfileOutDir, "");
+		assertTrue(emptyProfileCompile.exitCode == 0, "empty-profile compile failed: " + emptyProfileCompile.stderr);
+		final metalTokenNoiseCompile = compileRuntimeFixture(metalTokenNoiseOutDir, "metal", "test/fixtures/m6_runtime_token_noise/src", "Main");
+		assertTrue(metalTokenNoiseCompile.exitCode == 0, "metal token-noise compile failed: " + metalTokenNoiseCompile.stderr);
+		final invalidProfileCompile = compileRuntimeFixture(invalidProfileOutDir, "weird");
+		assertTrue(invalidProfileCompile.exitCode != 0, "invalid profile should fail fast");
+		final invalidCombinedOutput = invalidProfileCompile.stderr + "\n" + invalidProfileCompile.stdout;
+		assertContains(invalidCombinedOutput, "ocaml_profile", "invalid profile should mention ocaml_profile");
+		assertContains(invalidCombinedOutput, "portable|metal", "invalid profile should mention expected values");
+		assertTrue(!sys.FileSystem.exists(invalidProfileOutDir + "/ocaml_profile_report.json"), "invalid profile should fail before profile report generation");
 
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))
@@ -139,15 +182,19 @@ class M6RuntimeCopierIntegrationTest {
 
 		final portableModules = runtimeModules(portableOutDir);
 		final metalModules = runtimeModules(metalOutDir);
+		final emptyProfileModules = runtimeModules(emptyProfileOutDir);
 		final portableProfileReport = readProfileReport(portableOutDir);
 		final metalProfileReport = readProfileReport(metalOutDir);
+		final emptyProfileReport = readProfileReport(emptyProfileOutDir);
 		final portableRuntimeReport = readRuntimePlanReport(portableOutDir);
 		final metalRuntimeReport = readRuntimePlanReport(metalOutDir);
+		final emptyProfileRuntimeReport = readRuntimePlanReport(emptyProfileOutDir);
 		final metalTokenNoiseRuntimeReport = readRuntimePlanReport(metalTokenNoiseOutDir);
 
 		assertTrue(portableModules.length > 0, "portable runtime should include modules");
 		assertTrue(metalModules.length > 0, "metal runtime should include modules");
 		assertTrue(metalModules.length < portableModules.length, "metal runtime should link fewer modules than portable");
+		assertArrayEquals(portableModules, emptyProfileModules, "empty profile should match portable runtime module set");
 
 		final portableJoined = "\n" + portableModules.join("\n") + "\n";
 		final metalJoined = "\n" + metalModules.join("\n") + "\n";
@@ -170,9 +217,13 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableProfileReport.verifier.result == "not_run_in_runtime_copier", "portable report verifier result");
 
 		assertTrue(metalProfileReport.contractVersion == 1, "metal profile report contract version");
-		assertTrue(metalProfileReport.requestedProfile == "metal", "metal report requested profile");
+		assertTrue(metalProfileReport.requestedProfile == "MeTaL", "metal report should keep requested mixed-case profile");
 		assertTrue(metalProfileReport.normalizedProfile == "metal", "metal report normalized profile");
 		assertTrue(metalProfileReport.verifier.mode == "reflaxe_stage0_macro", "metal report verifier mode label");
+
+		assertTrue(emptyProfileReport.contractVersion == 1, "empty profile report contract version");
+		assertTrue(emptyProfileReport.requestedProfile == "", "empty profile report keeps empty requested profile");
+		assertTrue(emptyProfileReport.normalizedProfile == "portable", "empty profile normalizes to portable");
 
 		assertTrue(portableRuntimeReport.contractVersion == 1, "portable runtime report contract version");
 		assertTrue(portableRuntimeReport.profile == "portable", "portable runtime report profile");
@@ -189,6 +240,9 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains("\n" + metalRuntimeReport.trackedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report tracked modules include HxRuntime");
 		assertContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxRuntime\n", "metal report includes HxRuntime");
 		assertNotContains("\n" + metalRuntimeReport.selectedModules.join("\n") + "\n", "\nHxFile\n", "metal report omits HxFile");
+
+		assertTrue(emptyProfileRuntimeReport.profile == "portable", "empty profile runtime report profile");
+		assertTrue(emptyProfileRuntimeReport.selectionMode == "full", "empty profile runtime report selection mode");
 
 		assertTrue(metalTokenNoiseRuntimeReport.profile == "metal", "token noise report profile");
 		assertTrue(metalTokenNoiseRuntimeReport.selectionMode == "compiler_tracked", "token noise report mode");

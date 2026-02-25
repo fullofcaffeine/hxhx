@@ -1,6 +1,6 @@
 # OCaml Profile Contract (`-D ocaml_profile=portable|metal`)
 
-This document defines the canonical OCaml profile switch used by `hxhx` Stage3 OCaml backends.
+This document defines the canonical OCaml profile switch used by OCaml backends in this repo (`hxhx` Stage3 and `reflaxe.ocaml` Stage0 runtime planning).
 
 ## Goal
 
@@ -33,7 +33,11 @@ Any other value is invalid and fails fast.
 
 ## Scope
 
-- The contract is enforced on Stage3 OCaml backend paths (`ocaml-stage3` and compatible OCaml wrappers).
+- The value contract (`portable|metal`, defaulting, normalization, invalid-value failures) is enforced on:
+  - Stage3 OCaml backend paths (`ocaml-stage3` and compatible OCaml wrappers)
+  - Stage0 `reflaxe.ocaml` runtime planning/report generation path
+- Stage3 currently runs the metal verifier before emit.
+- Stage0 currently does not run the metal verifier in `RuntimeCopier`; reports mark verifier as not-run.
 - JS-native paths do not enforce this define.
 
 ## Failure behavior

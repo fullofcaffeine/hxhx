@@ -3,6 +3,7 @@ package reflaxe.ocaml.runtimegen;
 #if (macro || reflaxe_runtime)
 import haxe.io.Path;
 import reflaxe.output.OutputManager;
+import reflaxe.ocaml.OcamlProfileContract;
 
 private typedef ProfileReportVerifier = {
 	final mode:String;
@@ -52,18 +53,26 @@ class RuntimeCopier {
 		#end
 	}
 
-	static function normalizeProfile(rawProfile:Null<String>):String {
-		if (rawProfile == null)
-			return PROFILE_PORTABLE;
-		final normalized = StringTools.trim(rawProfile).toLowerCase();
-		return normalized.length == 0 ? PROFILE_PORTABLE : normalized;
+	static function resolveProfile(rawProfile:Null<String>):OcamlProfileContract {
+		try {
+			return OcamlProfileContract.fromDefineValue(rawProfile);
+		} catch (e:String) {
+			#if macro
+			haxe.macro.Context.error(e, haxe.macro.Context.currentPos());
+			return OcamlProfileContract.Portable;
+			#else
+			throw e;
+			#end
+		}
 	}
 
-	static function currentProfile():String {
+	static function currentProfile(rawRequestedProfile:Null<String>):OcamlProfileContract {
 		#if macro
-		return normalizeProfile(haxe.macro.Context.definedValue("ocaml_profile"));
+		final profile = resolveProfile(rawRequestedProfile);
+		haxe.macro.Compiler.define("ocaml_profile", OcamlProfileContract.toDefineValue(profile));
+		return profile;
 		#else
-		return PROFILE_PORTABLE;
+		return OcamlProfileContract.Portable;
 		#end
 	}
 
@@ -226,11 +235,11 @@ class RuntimeCopier {
 		return mapKeysSorted(selected);
 	}
 
-	static function writeProfileReport(output:OutputManager, requested:Null<String>, normalized:String):Void {
+	static function writeProfileReport(output:OutputManager, requested:Null<String>, profile:OcamlProfileContract):Void {
 		final report:ProfileReport = {
 			contractVersion: 1,
 			requestedProfile: requested,
-			normalizedProfile: normalized,
+			normalizedProfile: OcamlProfileContract.toDefineValue(profile),
 			verifier: {
 				mode: "reflaxe_stage0_macro",
 				enabled: false,
@@ -240,11 +249,11 @@ class RuntimeCopier {
 		output.saveFile(PROFILE_REPORT_FILE, haxe.Json.stringify(report, null, "  ") + "\n");
 	}
 
-	static function writeRuntimePlanReport(output:OutputManager, profile:String, selectionMode:String, availableModules:Array<String>,
+	static function writeRuntimePlanReport(output:OutputManager, profile:OcamlProfileContract, selectionMode:String, availableModules:Array<String>,
 			trackedModules:Array<String>, tokenScanFallbackEnabled:Bool, selectedModules:Array<String>):Void {
 		final report:RuntimePlanReport = {
 			contractVersion: 1,
-			profile: profile,
+			profile: OcamlProfileContract.toDefineValue(profile),
 			selectionMode: selectionMode,
 			availableModules: availableModules,
 			trackedModules: trackedModules,
@@ -291,7 +300,8 @@ class RuntimeCopier {
 		availableModules.sort(compareStrings);
 		final trackedModules = trackedModulesSorted(compilerTrackedModules != null ? compilerTrackedModules : [], availableModules);
 
-		final profile = currentProfile();
+		final rawRequestedProfile = requestedProfile();
+		final profile = currentProfile(rawRequestedProfile);
 		#if macro
 		final tokenScanFallbackEnabled = haxe.macro.Context.defined("ocaml_runtime_token_scan_fallback");
 		if (tokenScanFallbackEnabled) {
@@ -302,22 +312,22 @@ class RuntimeCopier {
 		final tokenScanFallbackEnabled = false;
 		#end
 		final selectionMode = switch (profile) {
-			case PROFILE_METAL:
+			case OcamlProfileContract.Metal:
 				tokenScanFallbackEnabled ? "compiler_tracked_plus_token_scan_fallback" : "compiler_tracked";
-			case _:
+			case OcamlProfileContract.Portable:
 				"full";
 		};
 		final selectedModules:Map<String, Bool> = switch (profile) {
-			case PROFILE_METAL:
+			case OcamlProfileContract.Metal:
 				collectMetalRuntimeModules(runtimeDir, availableModules, trackedModules, output.outputDir, destSubdir, tokenScanFallbackEnabled);
-			case _:
+			case OcamlProfileContract.Portable:
 				final all:Map<String, Bool> = [];
 				for (moduleName in availableModules)
 					all.set(moduleName, true);
 				all;
 		}
 		final selectedModuleList = mapKeysSorted(selectedModules);
-		writeProfileReport(output, requestedProfile(), profile);
+		writeProfileReport(output, rawRequestedProfile, profile);
 		writeRuntimePlanReport(output, profile, selectionMode, availableModules.copy(), trackedModules, tokenScanFallbackEnabled, selectedModuleList);
 
 		for (name in runtimeFiles) {
