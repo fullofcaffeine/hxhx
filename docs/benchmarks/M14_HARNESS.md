@@ -17,6 +17,8 @@ This writes JSON results to:
 - `bench/results/m14-<timestamp>.json`
 - `bench/results/m14-latest.json`
 
+CI includes a report-only M14 lane (`.github/workflows/m14-perf-report.yml`) that uploads these JSON files as artifacts and publishes a portable/metal ratio summary.
+
 ## Tuning
 
 Environment variables:

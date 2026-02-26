@@ -1,0 +1,163 @@
+name: M14 Perf (report-only)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+concurrency:
+  group: m14-perf-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+  M14_BENCH_REPS: "3"
+  M14_BENCH_COMPILE_REPS: "1"
+  M14_STRINGBUF_N: "50000"
+  M14_INT_ARRAY_N: "20000"
+  M14_ANON_ITERATIONS: "100000"
+  M14_PROFILES: "portable,metal"
+  M14_RUNTIME_MODE: "full"
+
+jobs:
+  m14-report:
+    name: M14 portable/metal benchmark (report-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Run M14 benchmark (report-only)
+        id: bench
+        run: |
+          set +e
+          npm run bench:m14
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -ne 0 ]; then
+            echo "M14 benchmark failed (report-only)." >&2
+          fi
+          exit 0
+
+      - name: Add benchmark summary
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          report_path = Path("bench/results/m14-latest.json")
+          exit_code = os.environ.get("M14_EXIT_CODE", "")
+
+          lines = []
+          lines.append("### M14 portable/metal benchmark (report-only)")
+          lines.append("")
+          lines.append(f"- Exit code: `{exit_code}`")
+          lines.append("- Mode: `report-only` (non-blocking)")
+          lines.append("")
+
+          if not report_path.exists():
+            lines.append("No benchmark report generated.")
+            summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            raise SystemExit(0)
+
+          payload = json.loads(report_path.read_text(encoding="utf-8"))
+          params = payload.get("params", {})
+          lines.append(
+            f"- Profiles: `{','.join(params.get('profiles', []))}` | Runtime mode: `{params.get('runtime_mode', 'unknown')}`"
+          )
+          lines.append(f"- Reps: `{params.get('reps')}` | Compile reps: `{params.get('compile_reps')}`")
+          lines.append("")
+
+          ratios = payload.get("runtime_profile_ratios", [])
+          if ratios:
+            lines.append("| Benchmark | Build ratio (portable/metal) | Run ratio (portable/metal) |")
+            lines.append("|---|---:|---:|")
+            for row in ratios:
+              ratio = row.get("portable_over_metal", {})
+              lines.append(
+                f"| `{row.get('id','?')}` | `{ratio.get('build_avg_ms')}` | `{ratio.get('run_avg_ms')}` |"
+              )
+          else:
+            lines.append("No portable/metal ratio rows were emitted.")
+
+          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+        env:
+          M14_EXIT_CODE: ${{ steps.bench.outputs.exit_code }}
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m14-perf-report-${{ github.run_id }}
+          path: |
+            bench/results/m14-latest.json
+            bench/results/m14-*.json
+          if-no-files-found: warn
+          retention-days: 14
