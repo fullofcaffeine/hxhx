@@ -94,6 +94,7 @@ function main() {
 	const runtimeEvidenceByModule = new Map()
 	const loweringEvidenceByModule = new Map()
 	const passthroughEvidenceByModule = new Map()
+	const overrideEvidenceByModule = new Map()
 	const runtimeBackedModules = makeDeterministicMapFromEvidenceEntries(
 		evidence.statusEvidence.runtime_backed,
 		'runtime_backed',
@@ -109,6 +110,13 @@ function main() {
 		'passthrough_verified',
 		passthroughEvidenceByModule
 	)
+	const overrideEvidenceModules = evidence.statusEvidence.override != null
+		? makeDeterministicMapFromEvidenceEntries(
+			evidence.statusEvidence.override,
+			'override',
+			overrideEvidenceByModule
+		)
+		: new Set()
 
 	const statusRows = []
 	const counts = {
@@ -136,13 +144,22 @@ function main() {
 			fail(`passthrough_verified module not in baseline: ${moduleName}`)
 		}
 	}
+	for (const moduleName of overrideEvidenceModules) {
+		if (!baselineModuleSet.has(moduleName)) {
+			fail(`override module not in baseline: ${moduleName}`)
+		}
+	}
 
 	for (const moduleName of modules) {
 		let status = 'passthrough_unverified'
 		let evidenceText = 'upstream std module, no explicit portable evidence yet'
 		if (overrideModules.has(moduleName)) {
 			status = 'override'
-			evidenceText = `packages/reflaxe.ocaml/std/_std/${moduleName.split('.').join('/')}.hx`
+			const overrideEvidence = [`packages/reflaxe.ocaml/std/_std/${moduleName.split('.').join('/')}.hx`]
+			if (overrideEvidenceModules.has(moduleName)) {
+				overrideEvidence.push(...overrideEvidenceByModule.get(moduleName))
+			}
+			evidenceText = overrideEvidence.join('; ')
 		} else if (runtimeBackedModules.has(moduleName)) {
 			status = 'runtime_backed'
 			evidenceText = runtimeEvidenceByModule.get(moduleName).join('; ')

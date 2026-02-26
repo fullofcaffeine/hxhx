@@ -71,8 +71,9 @@ class Xml {
 	static inline function get_Document():XmlType
 		return documentValue;
 
-	static public function parse(_str:String):Xml {
-		throw "Xml.parse is not supported yet by this OCaml override.";
+	static public function parse(source:String):Xml {
+		final state = new XmlParseState(source);
+		return parseDocument(state);
 	}
 
 	public var nodeType(default, null):XmlType;
@@ -80,7 +81,7 @@ class Xml {
 	@:isVar public var nodeValue(get, set):String;
 	public var parent(default, null):Xml;
 
-	var children:Array<Xml>;
+	var children:Array<Dynamic>;
 	var attributeMap:haxe.ds.StringMap<String>;
 
 	function get_nodeName():String {
@@ -188,39 +189,42 @@ class Xml {
 
 	public function iterator():Iterator<Xml> {
 		ensureElementType();
-		return createArrayIterator(children);
+		return cast children.iterator();
 	}
 
 	public function elements():Iterator<Xml> {
 		ensureElementType();
 		var ret:Array<Xml> = [];
-		for (child in children) {
+		for (childValue in children) {
+			final child:Xml = cast childValue;
 			if (child.nodeType == Element) {
 				ret.push(child);
 			}
 		}
-		return createArrayIterator(ret);
+		return cast ret.iterator();
 	}
 
 	public function elementsNamed(name:String):Iterator<Xml> {
 		ensureElementType();
 		var ret:Array<Xml> = [];
-		for (child in children) {
+		for (childValue in children) {
+			final child:Xml = cast childValue;
 			if (child.nodeType == Element && child.nodeName == name) {
 				ret.push(child);
 			}
 		}
-		return createArrayIterator(ret);
+		return cast ret.iterator();
 	}
 
 	public function firstChild():Xml {
 		ensureElementType();
-		return children[0];
+		return cast children[0];
 	}
 
 	public function firstElement():Xml {
 		ensureElementType();
-		for (child in children) {
+		for (childValue in children) {
+			final child:Xml = cast childValue;
 			if (child.nodeType == Element) {
 				return child;
 			}
@@ -233,13 +237,15 @@ class Xml {
 		if (x.parent != null) {
 			x.parent.removeChild(x);
 		}
-		children.push(x);
+		final xDyn:Dynamic = untyped __ocaml__("x");
+		children.push(xDyn);
 		x.parent = this;
 	}
 
 	public function removeChild(x:Xml):Bool {
 		ensureElementType();
-		if (children.remove(x)) {
+		final xDyn:Dynamic = untyped __ocaml__("x");
+		if (children.remove(xDyn)) {
 			x.parent = null;
 			return true;
 		}
@@ -248,10 +254,11 @@ class Xml {
 
 	public function insertChild(x:Xml, pos:Int):Void {
 		ensureElementType();
+		final xDyn:Dynamic = untyped __ocaml__("x");
 		if (x.parent != null) {
-			x.parent.children.remove(x);
+			x.parent.children.remove(xDyn);
 		}
-		children.insert(pos, x);
+		children.insert(pos, xDyn);
 		x.parent = this;
 	}
 
@@ -279,7 +286,7 @@ class Xml {
 		} else if (value.nodeType == Document) {
 			var i = 0;
 			while (i < value.children.length) {
-				final child:Xml = value.children[i];
+				final child:Xml = cast value.children[i];
 				writeNode(child, tabs, output, pretty);
 				i++;
 			}
@@ -297,7 +304,7 @@ class Xml {
 					output.add("\n");
 				var childIndex = 0;
 				while (childIndex < value.children.length) {
-					final child:Xml = value.children[childIndex];
+					final child:Xml = cast value.children[childIndex];
 					writeNode(child, pretty ? tabs + "\t" : tabs, output, pretty);
 					childIndex++;
 				}
@@ -332,7 +339,7 @@ class Xml {
 	private static function hasChildren(value:Xml):Bool {
 		var i = 0;
 		while (i < value.children.length) {
-			final child:Xml = value.children[i];
+			final child:Xml = cast value.children[i];
 			if (child.nodeType == Element || child.nodeType == PCData) {
 				return true;
 			}
@@ -346,18 +353,292 @@ class Xml {
 		return false;
 	}
 
-	private static function createArrayIterator(values:Array<Xml>):Iterator<Xml> {
-		var index = 0;
-		return {
-			hasNext: function():Bool {
-				return index < values.length;
-			},
-			next: function():Xml {
-				var current = values[index];
-				index++;
-				return current;
+	private static function parseDocument(state:XmlParseState):Xml {
+		final document = Xml.createDocument();
+		skipWhitespace(state);
+		while (!isEnd(state)) {
+			if (matchString(state, "<!--")) {
+				document.addChild(Xml.createComment(readUntil(state, "-->")));
+				skipWhitespace(state);
+				continue;
 			}
+			if (matchString(state, "<?")) {
+				document.addChild(Xml.createProcessingInstruction(StringTools.trim(readUntil(state, "?>"))));
+				skipWhitespace(state);
+				continue;
+			}
+			if (matchString(state, "<!DOCTYPE")) {
+				document.addChild(Xml.createDocType(StringTools.trim(readUntil(state, ">"))));
+				skipWhitespace(state);
+				continue;
+			}
+			if (peekChar(state) == "<") {
+				document.addChild(parseElement(state));
+				skipWhitespace(state);
+				continue;
+			}
+			final text = decodeEntities(readText(state));
+			if (text.length > 0) {
+				document.addChild(Xml.createPCData(text));
+			}
+			skipWhitespace(state);
+		}
+		return document;
+	}
+
+	private static function parseElement(state:XmlParseState):Xml {
+		expectChar(state, "<");
+		if (matchChar(state, "/")) {
+			failParse(state, "Unexpected closing tag start");
+		}
+		final name = parseName(state);
+		final element = Xml.createElement(name);
+		skipWhitespace(state);
+
+		while (!isEnd(state)) {
+			if (matchString(state, "/>")) {
+				return element;
+			}
+			if (matchChar(state, ">")) {
+				return parseChildren(state, element, name);
+			}
+			final attributeName = parseName(state);
+			skipWhitespace(state);
+			expectChar(state, "=");
+			skipWhitespace(state);
+			final attributeValue = parseAttributeValue(state);
+			element.set(attributeName, decodeEntities(attributeValue));
+			skipWhitespace(state);
+		}
+
+		failParse(state, "Unexpected end of input while reading start tag `" + name + "`");
+		return element;
+	}
+
+	private static function parseChildren(state:XmlParseState, element:Xml, name:String):Xml {
+		while (!isEnd(state)) {
+			if (matchString(state, "</")) {
+				final closeName = parseName(state);
+				skipWhitespace(state);
+				expectChar(state, ">");
+				if (closeName != name) {
+					failParse(state, "Mismatched closing tag, expected `" + name + "` but got `" + closeName + "`");
+				}
+				return element;
+			}
+			if (matchString(state, "<!--")) {
+				element.addChild(Xml.createComment(readUntil(state, "-->")));
+				continue;
+			}
+			if (matchString(state, "<![CDATA[")) {
+				element.addChild(Xml.createCData(readUntil(state, "]]>")));
+				continue;
+			}
+			if (matchString(state, "<?")) {
+				element.addChild(Xml.createProcessingInstruction(StringTools.trim(readUntil(state, "?>"))));
+				continue;
+			}
+			if (matchString(state, "<!DOCTYPE")) {
+				element.addChild(Xml.createDocType(StringTools.trim(readUntil(state, ">"))));
+				continue;
+			}
+			if (peekChar(state) == "<") {
+				element.addChild(parseElement(state));
+				continue;
+			}
+			final text = decodeEntities(readText(state));
+			if (text.length > 0) {
+				element.addChild(Xml.createPCData(text));
+			}
+		}
+
+		failParse(state, "Unexpected end of input while reading element `" + name + "`");
+		return element;
+	}
+
+	private static function parseName(state:XmlParseState):String {
+		if (isEnd(state)) {
+			failParse(state, "Unexpected end of input while reading name");
+		}
+		final start = state.index;
+		final startCode = codeAt(state, state.index);
+		if (!isNameStart(startCode)) {
+			failParse(state, "Invalid name start");
+		}
+		state.index++;
+		while (!isEnd(state) && isNameChar(codeAt(state, state.index))) {
+			state.index++;
+		}
+		return state.source.substring(start, state.index);
+	}
+
+	private static function parseAttributeValue(state:XmlParseState):String {
+		if (isEnd(state)) {
+			failParse(state, "Unexpected end of input while reading attribute value");
+		}
+		final quote = state.source.charAt(state.index);
+		if (quote != "\"" && quote != "'") {
+			failParse(state, "Expected quoted attribute value");
+		}
+		state.index++;
+		final start = state.index;
+		while (!isEnd(state) && state.source.charAt(state.index) != quote) {
+			state.index++;
+		}
+		if (isEnd(state)) {
+			failParse(state, "Unterminated attribute value");
+		}
+		final value = state.source.substring(start, state.index);
+		state.index++;
+		return value;
+	}
+
+	private static function readText(state:XmlParseState):String {
+		final start = state.index;
+		while (!isEnd(state) && state.source.charAt(state.index) != "<") {
+			state.index++;
+		}
+		return state.source.substring(start, state.index);
+	}
+
+	private static function readUntil(state:XmlParseState, terminator:String):String {
+		final start = state.index;
+		final end = state.source.indexOf(terminator, state.index);
+		if (end == -1) {
+			failParse(state, "Unterminated sequence, expected `" + terminator + "`");
+		}
+		state.index = end + terminator.length;
+		return state.source.substring(start, end);
+	}
+
+	private static function decodeEntities(text:String):String {
+		if (text.indexOf("&") == -1) {
+			return text;
+		}
+		final output = new StringBuf();
+		var position = 0;
+		while (position < text.length) {
+			final char = text.charAt(position);
+			if (char != "&") {
+				output.add(char);
+				position++;
+				continue;
+			}
+			final semicolon = text.indexOf(";", position + 1);
+			if (semicolon == -1) {
+				output.add(char);
+				position++;
+				continue;
+			}
+			final entity = text.substring(position + 1, semicolon);
+			final decoded = decodeEntity(entity);
+			if (decoded == null) {
+				output.add("&");
+				output.add(entity);
+				output.add(";");
+			} else {
+				output.add(decoded);
+			}
+			position = semicolon + 1;
+		}
+		return output.toString();
+	}
+
+	private static function decodeEntity(entity:String):Null<String> {
+		return switch (entity) {
+			case "amp": "&";
+			case "lt": "<";
+			case "gt": ">";
+			case "quot": "\"";
+			case "apos": "'";
+			case _:
+				decodeNumericEntity(entity);
 		};
+	}
+
+	private static function decodeNumericEntity(entity:String):Null<String> {
+		if (!StringTools.startsWith(entity, "#")) {
+			return null;
+		}
+		final numericValue:Null<Int> = if (StringTools.startsWith(entity, "#x") || StringTools.startsWith(entity, "#X")) {
+			Std.parseInt("0x" + entity.substring(2));
+		} else {
+			Std.parseInt(entity.substring(1));
+		};
+		if (numericValue == null) {
+			return null;
+		}
+		if (numericValue < 0 || numericValue > 0x10ffff) {
+			return null;
+		}
+		return String.fromCharCode(numericValue);
+	}
+
+	private static function skipWhitespace(state:XmlParseState):Void {
+		while (!isEnd(state)) {
+			final code = codeAt(state, state.index);
+			if (code == 32 || code == 9 || code == 10 || code == 13) {
+				state.index++;
+			} else {
+				return;
+			}
+		}
+	}
+
+	private static function matchString(state:XmlParseState, value:String):Bool {
+		if (value.length == 0) {
+			return true;
+		}
+		if (state.index + value.length > state.length) {
+			return false;
+		}
+		if (state.source.substr(state.index, value.length) == value) {
+			state.index += value.length;
+			return true;
+		}
+		return false;
+	}
+
+	private static function matchChar(state:XmlParseState, value:String):Bool {
+		if (isEnd(state)) {
+			return false;
+		}
+		if (state.source.charAt(state.index) == value) {
+			state.index++;
+			return true;
+		}
+		return false;
+	}
+
+	private static function expectChar(state:XmlParseState, value:String):Void {
+		if (!matchChar(state, value)) {
+			failParse(state, "Expected `" + value + "`");
+		}
+	}
+
+	private static function peekChar(state:XmlParseState):String {
+		return isEnd(state) ? "" : state.source.charAt(state.index);
+	}
+
+	private static function isEnd(state:XmlParseState):Bool {
+		return state.index >= state.length;
+	}
+
+	private static function codeAt(state:XmlParseState, position:Int):Int {
+		final code = state.source.charCodeAt(position);
+		return code == null ? -1 : code;
+	}
+
+	private static function isNameStart(code:Int):Bool {
+		return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code == 95 || code == 58 || code > 127;
+	}
+
+	private static function isNameChar(code:Int):Bool {
+		return isNameStart(code) || (code >= 48 && code <= 57) || code == 45 || code == 46;
+	}
+
+	private static function failParse(state:XmlParseState, message:String):Void {
+		throw message + " at position " + state.index;
 	}
 
 	function new(nodeType:XmlType) {
@@ -371,5 +652,17 @@ class Xml {
 		if (nodeType != Document && nodeType != Element) {
 			throw "Bad node type, expected Element or Document";
 		}
+	}
+}
+
+private class XmlParseState {
+	public final source:String;
+	public final length:Int;
+	public var index:Int;
+
+	public function new(source:String) {
+		this.source = source;
+		this.length = source.length;
+		this.index = 0;
 	}
 }

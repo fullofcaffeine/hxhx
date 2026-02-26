@@ -166,6 +166,15 @@
           "test/portable/fixtures/stdlib_core_01/src/Main.hx"
         ]
       }
+    ],
+    "override": [
+      {
+        "module": "Xml",
+        "evidence": [
+          "test/portable/fixtures/xml_basic/src/Main.hx",
+          "test/portable/fixtures/xml_parse_basic/src/Main.hx"
+        ]
+      }
     ]
   }
 }

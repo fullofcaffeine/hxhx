@@ -1,0 +1,3 @@
+root=root,id=7
+child=child,text=hi & bye
+roundtrip=<root id="7"><child>hi &amp; bye</child><leaf/></root>

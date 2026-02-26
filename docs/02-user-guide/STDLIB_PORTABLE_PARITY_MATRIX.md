@@ -32,7 +32,7 @@ Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-i
 | `Type` | `passthrough_verified` | test/portable/fixtures/type_getclass_basic/src/Main.hx; test/portable/fixtures/type_reflection_basic/src/Main.hx |
 | `UInt` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `UnicodeString` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `Xml` | `override` | packages/reflaxe.ocaml/std/_std/Xml.hx |
+| `Xml` | `override` | packages/reflaxe.ocaml/std/_std/Xml.hx; test/portable/fixtures/xml_basic/src/Main.hx; test/portable/fixtures/xml_parse_basic/src/Main.hx |
 | `haxe.CallStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.Constraints` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.DynamicAccess` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
