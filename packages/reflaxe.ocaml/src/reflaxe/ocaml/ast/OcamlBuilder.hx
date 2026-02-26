@@ -288,6 +288,18 @@ class OcamlBuilder {
 	static function isStringType(t:Type):Bool {
 		return switch (followNoAbstracts(t)) {
 			case TAbstract(aRef, [inner]): final a = aRef.get(); a.pack != null && a.pack.length == 0 && a.name == "Null" && isStringType(inner);
+			case TAbstract(aRef, _):
+				final a = aRef.get();
+				if (a.pack != null && a.pack.length == 1 && a.pack[0] == "haxe" && a.name == "Ucs2") {
+					true;
+				} else {
+					switch (TypeTools.follow(a.type)) {
+						case TInst(cRef, _):
+							isStdStringClass(cRef.get());
+						case _:
+							false;
+					}
+				}
 			case TInst(cRef, _):
 				final c = cRef.get();
 				isStdStringClass(c);
@@ -4151,7 +4163,7 @@ class OcamlBuilder {
 					case TLocal(v) if (isRefLocalId(v.id)):
 						final lhs = buildLocal(v);
 						final floatMode = isFloatType(v.t) || nullablePrimitiveKind(v.t) == "float";
-						final rhs = switch (inner) {
+						var rhs = switch (inner) {
 							case OpAdd:
 								if (isStringType(v.t) || isStringType(e2.t)) {
 									OcamlExpr.EBinop(OcamlBinop.Concat, toStdString(lhs), buildStdString(e2));
@@ -4185,6 +4197,18 @@ class OcamlBuilder {
 							case OpUShr:
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxInt"), "ushr"), [lhs, toIntExpr(e2)]);
 							case _: OcamlExpr.EConst(OcamlConst.CUnit);
+						}
+						final lhsRefObjSlot = isObjRefLocalId(v.id) || switch (followNoAbstracts(unwrapNullType(v.t))) {
+							case TDynamic(_):
+								true;
+							case TAbstract(_, _) if (isStdAnyAbstract(v.t)):
+								true;
+							case _: isNullableEnumType(v.t) != null || (unwrapNullType(v.t) != v.t && nullablePrimitiveKind(v.t) == null);
+						} if (lhsRefObjSlot) {
+							rhs = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [rhs]);
+						}
+						if (isWeakRefLocalId(v.id)) {
+							rhs = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [rhs]);
 						}
 						OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(renameVar(v.name)), rhs);
 					case TField(_, FStatic(clsRef, cfRef)):
@@ -4687,13 +4711,24 @@ class OcamlBuilder {
 		// - Preserve `null` as the canonical string sentinel (`Obj.magic hx_null`).
 		// - Annotate non-null RHS values against the LHS string type.
 		if (isStringType(lhsType)) {
+			final lhsTypeExpr = typeExprFromHaxeType(lhsType);
+			final lhsIsObjCarrier = switch (lhsTypeExpr) {
+				case TIdent("Obj.t"): true;
+				case _: false;
+			}
 			final rhsUnwrapped = unwrap(rhs);
 			return switch (rhsUnwrapped.expr) {
 				case TConst(TNull):
-					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+					lhsIsObjCarrier ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
+						"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 				case _:
-					rhsDynamicCarrier ? OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-						[buildExpr(rhs)]) : OcamlExpr.EAnnot(buildExpr(rhs), typeExprFromHaxeType(lhsType));
+					if (rhsDynamicCarrier) {
+						lhsIsObjCarrier ? coerceToObjCarrier(rhs.t, buildExpr(rhs)) : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(rhs)]);
+					} else if (lhsIsObjCarrier) {
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
+					} else {
+						OcamlExpr.EAnnot(buildExpr(rhs), lhsTypeExpr);
+					}
 			}
 		}
 
@@ -4828,6 +4863,19 @@ class OcamlBuilder {
 					case _:
 						return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
 				}
+			case TAbstract(_, _) if (!isStdAnyAbstract(lhsUnwrapped) && switch (typeExprFromHaxeType(lhsType)) {
+					case TIdent("Obj.t"): true;
+					case _: false;
+				}):
+				final rhsUnwrapped = unwrap(rhs);
+				final rhsIsNull = switch (rhsUnwrapped.expr) {
+					case TConst(TNull): true;
+					case _: false;
+				}
+				if (rhsIsNull) {
+					return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+				}
+				return coerceToObjCarrier(rhs.t, buildExpr(rhs));
 			case TAbstract(_, _) if (isStdAnyAbstract(lhsUnwrapped)):
 				final rhsUnwrapped = unwrap(rhs);
 				final rhsIsNull = switch (rhsUnwrapped.expr) {
@@ -5401,16 +5449,22 @@ class OcamlBuilder {
 									scoped);
 								incDecDynamic(OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal));
 							}
-						case TField(obj, FInstance(_, _, cfRef)):
+						case TField(obj, FInstance(clsRef, _, cfRef)):
 							final cf = cfRef.get();
 							switch (cf.kind) {
 								case FVar(_, _):
+									final cls = clsRef.get();
 									final objName = freshTmp("obj");
 									final fieldName = ctx.ocamlRecordLabel(cf.name);
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
+									final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
+									final recvExpr = OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(objName)]),
+										OcamlTypeExpr.TIdent(fullType));
 									OcamlExpr.ELet(objName, buildExpr(obj),
-										incDecDynamic(OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
-											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
-												newVal)),
+										incDecDynamic(OcamlExpr.EField(recvExpr, fieldName),
+											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(recvExpr, fieldName), newVal)),
 										false);
 								case _:
 									OcamlExpr.EConst(OcamlConst.CUnit);
@@ -5517,16 +5571,22 @@ class OcamlBuilder {
 									scoped);
 								incDec(OcamlExpr.EUnop(OcamlUnop.Deref, lhsCell), (newVal) -> OcamlExpr.EAssign(OcamlAssignOp.RefSet, lhsCell, newVal));
 							}
-						case TField(obj, FInstance(_, _, cfRef)):
+						case TField(obj, FInstance(clsRef, _, cfRef)):
 							final cf = cfRef.get();
 							switch (cf.kind) {
 								case FVar(_, _):
+									final cls = clsRef.get();
 									final objName = freshTmp("obj");
 									final fieldName = ctx.ocamlRecordLabel(cf.name);
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
+									final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
+									final recvExpr = OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(objName)]),
+										OcamlTypeExpr.TIdent(fullType));
 									OcamlExpr.ELet(objName, buildExpr(obj),
-										incDec(OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
-											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
-												newVal)),
+										incDec(OcamlExpr.EField(recvExpr, fieldName),
+											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(recvExpr, fieldName), newVal)),
 										false);
 								case _:
 									OcamlExpr.EConst(OcamlConst.CUnit);

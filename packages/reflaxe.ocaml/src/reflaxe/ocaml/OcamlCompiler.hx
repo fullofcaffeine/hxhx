@@ -2604,6 +2604,23 @@ class OcamlCompiler extends DirectToStringCompiler {
 				if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int64") {
 					return OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t");
 				}
+				// haxe.Ucs2 is an abstract over String and should stay string-typed in OCaml.
+				// This keeps helper calls like `toNativeString()` and direct comparisons typed.
+				if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Ucs2") {
+					return OcamlTypeExpr.TIdent("string");
+				}
+				// haxe.extern.AsVar<T> is an extern typing helper and should erase to `T`.
+				if (aPack.length == 2 && aPack[0] == "haxe" && aPack[1] == "extern" && a.name == "AsVar" && params != null && params.length == 1) {
+					return ocamlTypeExprFromHaxeType(params[0]);
+				}
+				// String-backed abstracts should keep `string` typing in OCaml.
+				// Falling back to `Obj.t` for these wrappers causes mismatches at string callsites.
+				if (switch (TypeTools.follow(a.type)) {
+						case TInst(cRef, _): final c = cRef.get(); c.pack != null && c.pack.length == 0 && c.name == "String";
+						case _: false;
+					}) {
+					return OcamlTypeExpr.TIdent("string");
+					}
 				#if macro
 				// Enum abstracts (`@:enum abstract X(Int)`) should keep their underlying primitive
 				// representation in OCaml. Falling back to `Obj.t` breaks comparisons and pattern
@@ -2716,7 +2733,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 						} else {
 							OcamlTypeExpr.TIdent("Obj.t");
 						}
-					default: OcamlTypeExpr.TIdent("Obj.t");
+					default:
+						final followed = TypeTools.follow(a.type);
+						switch (followed) {
+							case TAbstract(innerRef, _):
+								final inner = innerRef.get();
+								final samePack = (inner.pack ?? []).join(".") == aPack.join(".");
+								(samePack && inner.name == a.name) ? OcamlTypeExpr.TIdent("Obj.t") : ocamlTypeExprFromHaxeType(followed);
+							case _:
+								ocamlTypeExprFromHaxeType(followed);
+						}
 				}
 			case TInst(cRef, params):
 				final c = cRef.get();
@@ -2784,8 +2810,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 				final typeName = ocamlTypeName(e.name);
 				final full = (selfMod != null && selfMod == modName) ? typeName : (modName + "." + typeName);
 				params.length == 0 ? OcamlTypeExpr.TIdent(full) : OcamlTypeExpr.TApp(full, params.map(ocamlTypeExprFromHaxeType));
-			case TType(tRef, _):
-				OcamlTypeExpr.TIdent("Obj.t");
+			case TType(tRef, params):
+				final td = tRef.get();
+				final applied = TypeTools.applyTypeParameters(td.type, td.params, params);
+				ocamlTypeExprFromHaxeType(applied);
 			case TDynamic(_), TAnonymous(_), TMono(_), TLazy(_):
 				OcamlTypeExpr.TIdent("Obj.t");
 			case TFun(args, ret):
