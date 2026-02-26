@@ -1043,7 +1043,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					switch (entry.kind) {
 						case "var":
 							typeFields.push({
-								name: entry.name,
+								name: ctx.ocamlRecordLabel(entry.name),
 								isMutable: true,
 								typ: ocamlTypeExprFromHaxeType(entry.field.type)
 							});
@@ -1052,7 +1052,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 							if (info == null)
 								continue;
 							typeFields.push({
-								name: entry.name,
+								name: ctx.ocamlRecordLabel(entry.name),
 								isMutable: false,
 								typ: buildDispatchMethodType(info.field.type)
 							});
@@ -1063,7 +1063,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				if (hasInstanceVarsLocal) {
 					for (v in instanceVarsLocal) {
 						typeFields.push({
-							name: v.field.name,
+							name: ctx.ocamlRecordLabel(v.field.name),
 							isMutable: true,
 							typ: ocamlTypeExprFromHaxeType(v.field.type)
 						});
@@ -1097,7 +1097,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 						if (info == null)
 							continue;
 						typeFields.push({
-							name: name,
+							name: ctx.ocamlRecordLabel(name),
 							isMutable: false,
 							typ: buildDispatchMethodType(info.field.type)
 						});
@@ -1171,7 +1171,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 							case "var":
 								final init = localVarInitByName.exists(entry.name) ? localVarInitByName.get(entry.name) : null;
 								final value = init != null ? builder.buildExpr(init) : defaultValueForType(entry.field.type);
-								fields.push({name: entry.name, value: value});
+								fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 							case "method":
 								final info = dispatchMethodDecl.get(entry.name);
 								if (info == null)
@@ -1179,7 +1179,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 								final owner = info.owner;
 								final ownerBinding = ctx.scopedValueName(owner.module, owner.name, entry.name + "__impl");
 								final value = wrapperFor(owner, info.field.type, ownerBinding);
-								fields.push({name: entry.name, value: value});
+								fields.push({name: ctx.ocamlRecordLabel(entry.name), value: value});
 							case _:
 						}
 					}
@@ -1187,7 +1187,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 					for (v in instanceVarsLocal) {
 						final init = v.findDefaultExpr();
 						final value = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
-						fields.push({name: v.field.name, value: value});
+						fields.push({name: ctx.ocamlRecordLabel(v.field.name), value: value});
 					}
 					if (isDispatchInstance) {
 						function wrapperFor(owner:ClassType, methodType:Type, ownerBindingName:String):OcamlExpr {
@@ -1223,7 +1223,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 							final owner = info.owner;
 							final ownerBinding = ctx.scopedValueName(owner.module, owner.name, name + "__impl");
 							final value = wrapperFor(owner, info.field.type, ownerBinding);
-							fields.push({name: name, value: value});
+							fields.push({name: ctx.ocamlRecordLabel(name), value: value});
 						}
 					}
 				}

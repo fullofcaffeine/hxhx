@@ -2561,7 +2561,7 @@ class OcamlBuilder {
 															case _: freshTmp("obj");
 														}
 														final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
-														final methodField = OcamlExpr.EField(recvVar, cf.name);
+														final methodField = OcamlExpr.EField(recvVar, ctx.ocamlRecordLabel(cf.name));
 														final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(coercedArgs);
 														// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
 														if (expectsNoArgs)
@@ -3773,8 +3773,9 @@ class OcamlBuilder {
 							case FVar(_, _):
 								final tmp = freshTmp("assign");
 								final rhs = coerceForAssignment(e1.t, e2);
+								final fieldName = ctx.ocamlRecordLabel(cf.name);
 								OcamlExpr.ELet(tmp, rhs, OcamlExpr.ESeq([
-									OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(buildExpr(obj), cf.name), OcamlExpr.EIdent(tmp)),
+									OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(buildExpr(obj), fieldName), OcamlExpr.EIdent(tmp)),
 									OcamlExpr.EIdent(tmp)
 								]), false);
 							case _:
@@ -3959,7 +3960,7 @@ class OcamlBuilder {
 								// We avoid re-evaluating the receiver expression by binding it once.
 								final recvTmp = freshTmp("recv");
 								final recvExpr = buildExpr(obj);
-								final lhsField = OcamlExpr.EField(OcamlExpr.EIdent(recvTmp), cf.name);
+								final lhsField = OcamlExpr.EField(OcamlExpr.EIdent(recvTmp), ctx.ocamlRecordLabel(cf.name));
 								final floatMode = isFloatType(e1.t) || nullablePrimitiveKind(e1.t) == "float";
 								final rhs = switch (inner) {
 									case OpAdd:
@@ -4926,9 +4927,10 @@ class OcamlBuilder {
 							switch (cf.kind) {
 								case FVar(_, _):
 									final objName = freshTmp("obj");
+									final fieldName = ctx.ocamlRecordLabel(cf.name);
 									OcamlExpr.ELet(objName, buildExpr(obj),
-										incDecDynamic(OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
-											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
+										incDecDynamic(OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
+											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
 												newVal)),
 										false);
 								case _:
@@ -5033,9 +5035,10 @@ class OcamlBuilder {
 							switch (cf.kind) {
 								case FVar(_, _):
 									final objName = freshTmp("obj");
+									final fieldName = ctx.ocamlRecordLabel(cf.name);
 									OcamlExpr.ELet(objName, buildExpr(obj),
-										incDec(OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
-											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(OcamlExpr.EIdent(objName), cf.name),
+										incDec(OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
+											(newVal) -> OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(OcamlExpr.EIdent(objName), fieldName),
 												newVal)),
 										false);
 								case _:
@@ -6142,6 +6145,7 @@ class OcamlBuilder {
 			case FInstance(clsRef, _, cfRef):
 				final cls = clsRef.get();
 				final cf = cfRef.get();
+				final instanceFieldName = ctx.ocamlRecordLabel(cf.name);
 				switch (cf.kind) {
 					case FVar(_, _):
 						if (isStdArrayClass(cls) && cf.name == "length") {
@@ -6165,9 +6169,9 @@ class OcamlBuilder {
 							final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
 							final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
 							final coerced = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(obj)]);
-							OcamlExpr.EField(OcamlExpr.EAnnot(coerced, OcamlTypeExpr.TIdent(fullType)), cf.name);
+							OcamlExpr.EField(OcamlExpr.EAnnot(coerced, OcamlTypeExpr.TIdent(fullType)), instanceFieldName);
 						} else {
-							OcamlExpr.EField(buildExpr(obj), cf.name);
+							OcamlExpr.EField(buildExpr(obj), instanceFieldName);
 						}
 					case FMethod(_):
 						// Array iterator bring-up: allow `arr.iterator` to be used as a value when
@@ -6349,7 +6353,7 @@ class OcamlBuilder {
 				callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 			OcamlExpr.EApp(callFn, callArgs);
 		} else if (isDispatchRecv) {
-			final methodField = OcamlExpr.EField(recvVar, cf.name);
+			final methodField = OcamlExpr.EField(recvVar, ctx.ocamlRecordLabel(cf.name));
 			final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(argExprs);
 			if (argCount == 0)
 				callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
@@ -6413,7 +6417,7 @@ class OcamlBuilder {
 		final isDispatchRecv = recvFullName != null && (ctx.dispatchTypes.exists(recvFullName) || ctx.interfaceTypes.exists(recvFullName));
 
 		final call:OcamlExpr = if (isDispatchRecv) {
-			final methodField = OcamlExpr.EField(recvVar, cf.name);
+			final methodField = OcamlExpr.EField(recvVar, ctx.ocamlRecordLabel(cf.name));
 			final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(argExprs);
 			if (argCount == 0)
 				callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));

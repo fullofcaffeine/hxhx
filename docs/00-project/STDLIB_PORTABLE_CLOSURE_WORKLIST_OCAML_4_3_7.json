@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 115,
-    "bucketCount": 18
+    "missingModules": 114,
+    "bucketCount": 17
   },
   "missingModules": [
     "haxe.MainLoop",
@@ -28,7 +28,6 @@
     "haxe.Ucs2",
     "haxe.Unserializer",
     "haxe.Utf8",
-    "haxe.crypto.Hmac",
     "haxe.display.Diagnostic",
     "haxe.display.Display",
     "haxe.display.FsPath",
@@ -149,13 +148,6 @@
         "haxe.Ucs2",
         "haxe.Unserializer",
         "haxe.Utf8"
-      ]
-    },
-    {
-      "bucketKey": "haxe.crypto-01",
-      "group": "haxe.crypto",
-      "modules": [
-        "haxe.crypto.Hmac"
       ]
     },
     {

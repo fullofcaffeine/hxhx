@@ -347,6 +347,12 @@
         ]
       },
       {
+        "module": "haxe.crypto.Hmac",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_hmac_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.crypto.Md5",
         "evidence": [
           "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"

@@ -350,5 +350,18 @@ class CompilationContext {
 		return OcamlNameTools.normalizeValueIdentifier(base);
 	}
 
+	/**
+		Normalizes OCaml record labels used for emitted class instance fields.
+
+		Why:
+		- Haxe class fields can use identifiers that are OCaml keywords (for example, `method`).
+		- Our class representation uses OCaml records; labels must therefore be valid OCaml value identifiers.
+		- We keep a single normalization policy so type declarations, record literals, and field access
+		  callsites all agree on the same label spelling.
+	**/
+	public function ocamlRecordLabel(fieldName:String):String {
+		return OcamlNameTools.normalizeValueIdentifier(fieldName);
+	}
+
 	public function new() {}
 }
