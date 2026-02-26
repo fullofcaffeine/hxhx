@@ -705,6 +705,78 @@
         "evidence": [
           "test/portable/fixtures/haxe_io_bucket02_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "haxe.macro.CompilationServer",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.Compiler",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.ComplexTypeTools",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.Context",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.DisplayMode",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.ExampleJSGenerator",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.Expr",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.ExprTools",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.Format",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.JSGenApi",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.MacroStringTools",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.macro.MacroType",
+        "evidence": [
+          "test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [

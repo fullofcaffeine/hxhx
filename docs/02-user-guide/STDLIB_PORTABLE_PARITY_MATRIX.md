@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `109` passthrough-verified, `64` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `121` passthrough-verified, `52` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -142,18 +142,18 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.iterators.StringIteratorUnicode` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
 | `haxe.iterators.StringKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
 | `haxe.iterators.StringKeyValueIteratorUnicode` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
-| `haxe.macro.CompilationServer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Compiler` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.ComplexTypeTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Context` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.DisplayMode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.ExampleJSGenerator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Expr` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.ExprTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Format` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.JSGenApi` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.MacroStringTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.MacroType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.CompilationServer` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.Compiler` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.ComplexTypeTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.Context` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.DisplayMode` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.ExampleJSGenerator` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.Expr` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.ExprTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.Format` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.JSGenApi` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.MacroStringTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
+| `haxe.macro.MacroType` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
 | `haxe.macro.PlatformConfig` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.macro.PositionTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.macro.Printer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

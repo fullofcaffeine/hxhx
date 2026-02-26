@@ -1,0 +1,13 @@
+haxe.macro.CompilationServer=ok
+haxe.macro.Compiler=ok
+haxe.macro.ComplexTypeTools=ok
+haxe.macro.Context=ok
+haxe.macro.DisplayMode=ok
+haxe.macro.ExampleJSGenerator=ok
+haxe.macro.Expr=ok
+haxe.macro.ExprTools=ok
+haxe.macro.Format=ok
+haxe.macro.JSGenApi=ok
+haxe.macro.MacroStringTools=ok
+haxe.macro.MacroType=ok
+macro.bucket01=done

@@ -12,22 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 64,
-    "bucketCount": 11
+    "missingModules": 52,
+    "bucketCount": 10
   },
   "missingModules": [
-    "haxe.macro.CompilationServer",
-    "haxe.macro.Compiler",
-    "haxe.macro.ComplexTypeTools",
-    "haxe.macro.Context",
-    "haxe.macro.DisplayMode",
-    "haxe.macro.ExampleJSGenerator",
-    "haxe.macro.Expr",
-    "haxe.macro.ExprTools",
-    "haxe.macro.Format",
-    "haxe.macro.JSGenApi",
-    "haxe.macro.MacroStringTools",
-    "haxe.macro.MacroType",
     "haxe.macro.PlatformConfig",
     "haxe.macro.PositionTools",
     "haxe.macro.Printer",
@@ -84,24 +72,6 @@
   "buckets": [
     {
       "bucketKey": "haxe.macro-01",
-      "group": "haxe.macro",
-      "modules": [
-        "haxe.macro.CompilationServer",
-        "haxe.macro.Compiler",
-        "haxe.macro.ComplexTypeTools",
-        "haxe.macro.Context",
-        "haxe.macro.DisplayMode",
-        "haxe.macro.ExampleJSGenerator",
-        "haxe.macro.Expr",
-        "haxe.macro.ExprTools",
-        "haxe.macro.Format",
-        "haxe.macro.JSGenApi",
-        "haxe.macro.MacroStringTools",
-        "haxe.macro.MacroType"
-      ]
-    },
-    {
-      "bucketKey": "haxe.macro-02",
       "group": "haxe.macro",
       "modules": [
         "haxe.macro.PlatformConfig",
