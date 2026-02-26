@@ -983,6 +983,30 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 			}
 
+			function paramNameFromPattern(p:OcamlPat):Null<String> {
+				return switch (p) {
+					case PVar(name):
+						name;
+					case PAnnot(inner, _):
+						paramNameFromPattern(inner);
+					case _:
+						null;
+				}
+			}
+
+			function ensureParamUsage(body:OcamlExpr, params:Array<OcamlPat>):OcamlExpr {
+				var out = body;
+				var i = params.length - 1;
+				while (i >= 0) {
+					final name = paramNameFromPattern(params[i]);
+					if (name != null && name != "_" && !exprMentionsIdent(out, name)) {
+						out = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(name)]), out]);
+					}
+					i -= 1;
+				}
+				return out;
+			}
+
 			final typeFields:Array<OcamlTypeRecordField> = [];
 
 			// Runtime class identity (M10): all class instances carry their most-derived class value
@@ -1206,8 +1230,8 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 				// Dune defaults can be warning-as-error; avoid `unused-var-strict` for `self`
 				// by forcing a use when the body doesn't reference it.
-				if (isDispatch && !exprMentionsIdent(ctorBody, "self")) {
-					ctorBody = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody]);
+				if (isDispatch) {
+					ctorBody = ensureParamUsage(ctorBody, [OcamlPat.PVar("self")]);
 				}
 				final recordExpr = OcamlExpr.ERecord(fields);
 				// Always annotate: `__hx_type` is a shared label across many records, and
@@ -1243,8 +1267,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// the constructor body used in `create`, but takes `self` explicitly.
 			if (isDispatch) {
 				final selfPat = OcamlPat.PAnnot(OcamlPat.PVar("self"), OcamlTypeExpr.TIdent(instanceTypeName));
-				final ctorBodyForCtor = !exprMentionsIdent(ctorBody,
-					"self") ? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), ctorBody]) : ctorBody;
+				final ctorBodyForCtor = ensureParamUsage(ctorBody, [selfPat].concat(createParams));
 				lets.push({
 					name: ctorName,
 					expr: OcamlExpr.EFun([selfPat].concat(createParams), OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [ctorBodyForCtor]))
@@ -1305,12 +1328,10 @@ class OcamlCompiler extends DirectToStringCompiler {
 							} else {
 								params;
 							}
-							// Dune/OCaml flags can be warning-as-error; avoid `unused-var-strict` for `self`
-							// by forcing a use when the method body doesn't reference it.
-							final body = (!exprMentionsIdent(b,
-								"self")) ? OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent("self")]), b]) : b;
+							final allParams = [OcamlPat.PVar("self")].concat(annotatedParams);
+							final body = ensureParamUsage(b, allParams);
 							final unitBody = funReturnsVoid(f.field.type) ? OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [body]) : body;
-							OcamlExpr.EFun([OcamlPat.PVar("self")].concat(annotatedParams), unitBody);
+							OcamlExpr.EFun(allParams, unitBody);
 						case _:
 							OcamlExpr.EFun([OcamlPat.PVar("self")], OcamlExpr.EConst(OcamlConst.CUnit));
 					}
@@ -1379,13 +1400,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 			final isDynamicMethod = switch (f.field.kind) {
 				case FMethod(MethDynamic): true;
 				case _: false;
-			}
+			};
 			final expr = if (isDynamicMethod) {
 				final t = ocamlTypeExprFromHaxeType(f.field.type);
 				OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EAnnot(compiled, t)]);
 			} else {
 				compiled;
-			}
+			};
 			lets.push({name: name, expr: expr});
 		}
 

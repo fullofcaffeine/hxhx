@@ -12,22 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 147,
-    "bucketCount": 20
+    "missingModules": 135,
+    "bucketCount": 19
   },
   "missingModules": [
-    "haxe.CallStack",
-    "haxe.Constraints",
-    "haxe.DynamicAccess",
-    "haxe.EntryPoint",
-    "haxe.EnumFlags",
-    "haxe.EnumTools",
-    "haxe.Exception",
-    "haxe.Http",
-    "haxe.Int64",
-    "haxe.Int64Helper",
-    "haxe.Json",
-    "haxe.Log",
     "haxe.MainLoop",
     "haxe.NativeStackTrace",
     "haxe.PosInfos",
@@ -167,24 +155,6 @@
   "buckets": [
     {
       "bucketKey": "haxe.core-01",
-      "group": "haxe.core",
-      "modules": [
-        "haxe.CallStack",
-        "haxe.Constraints",
-        "haxe.DynamicAccess",
-        "haxe.EntryPoint",
-        "haxe.EnumFlags",
-        "haxe.EnumTools",
-        "haxe.Exception",
-        "haxe.Http",
-        "haxe.Int64",
-        "haxe.Int64Helper",
-        "haxe.Json",
-        "haxe.Log"
-      ]
-    },
-    {
-      "bucketKey": "haxe.core-02",
       "group": "haxe.core",
       "modules": [
         "haxe.MainLoop",

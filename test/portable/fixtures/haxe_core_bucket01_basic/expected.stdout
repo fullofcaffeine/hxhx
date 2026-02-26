@@ -1,0 +1,17 @@
+constraints.fn=true
+dyn.sum=42
+dyn.hasA=false
+stack.nonneg=true
+entry.class=true
+flags.ready=true
+flags.busy=false
+enum.name=BucketState
+enum.ctors=Ready,Busy,Done
+enum.createdDone=true
+ex.message=bucket
+ex.prev=true
+ex.caught=wrapped
+http.url=http://example.invalid/path
+int64.eq42=true
+json.value=7
+log.formatted=Main.hx:12: hello

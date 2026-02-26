@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `26` passthrough-verified, `147` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `38` passthrough-verified, `135` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -33,19 +33,19 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `UInt` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `UnicodeString` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `Xml` | `override` | packages/reflaxe.ocaml/std/_std/Xml.hx; test/portable/fixtures/xml_basic/src/Main.hx; test/portable/fixtures/xml_parse_basic/src/Main.hx |
-| `haxe.CallStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Constraints` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.DynamicAccess` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.EntryPoint` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.EnumFlags` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.EnumTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Exception` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Http` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.CallStack` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Constraints` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.DynamicAccess` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.EntryPoint` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.EnumFlags` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.EnumTools` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Exception` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Http` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.Int32` | `passthrough_verified` | test/portable/fixtures/int32_semantics/src/Main.hx |
-| `haxe.Int64` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Int64Helper` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Json` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Log` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.Int64` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Int64Helper` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Json` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
+| `haxe.Log` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.MainLoop` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.NativeStackTrace` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.PosInfos` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
