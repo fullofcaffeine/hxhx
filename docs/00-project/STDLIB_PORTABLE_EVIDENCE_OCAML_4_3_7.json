@@ -1083,6 +1083,12 @@
         "evidence": [
           "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "sys.thread.Tls",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx"
+        ]
       }
     ],
     "override": [

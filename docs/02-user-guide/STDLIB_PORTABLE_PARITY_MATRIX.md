@@ -212,4 +212,4 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.thread.Semaphore` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
 | `sys.thread.Thread` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
 | `sys.thread.ThreadPoolException` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Tls` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Tls` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx (target.threaded=false on OCaml lane) |
