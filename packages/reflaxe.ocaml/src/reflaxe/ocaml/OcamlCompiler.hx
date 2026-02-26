@@ -2604,6 +2604,14 @@ class OcamlCompiler extends DirectToStringCompiler {
 				if (aPack.length == 1 && aPack[0] == "haxe" && a.name == "Int64") {
 					return OcamlTypeExpr.TIdent("Haxe_Int64.___int64_t");
 				}
+				#if macro
+				// Enum abstracts (`@:enum abstract X(Int)`) should keep their underlying primitive
+				// representation in OCaml. Falling back to `Obj.t` breaks comparisons and pattern
+				// matches in modules like `Xml` / `haxe.xml.Parser` / `haxe.xml.Printer`.
+				if (a.meta != null && a.meta.has(":enum")) {
+					return ocamlTypeExprFromHaxeType(a.type);
+				}
+				#end
 				// haxe.ds.Map is an abstract over `haxe.Constraints.IMap` with specialization
 				// for common key types (String/Int) and a fallback to ObjectMap.
 				//

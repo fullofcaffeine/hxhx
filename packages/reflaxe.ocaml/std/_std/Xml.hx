@@ -48,13 +48,13 @@ class Xml {
 	static public var ProcessingInstruction(get, never):XmlType;
 	static public var Document(get, never):XmlType;
 
-	static var elementValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 0)"));
-	static var pcDataValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 1)"));
-	static var cDataValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 2)"));
-	static var commentValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 3)"));
-	static var docTypeValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 4)"));
-	static var processingInstructionValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 5)"));
-	static var documentValue(default, never):XmlType = cast(untyped __ocaml__("(Obj.repr 6)"));
+	static var elementValue(default, never):XmlType = cast 0;
+	static var pcDataValue(default, never):XmlType = cast 1;
+	static var cDataValue(default, never):XmlType = cast 2;
+	static var commentValue(default, never):XmlType = cast 3;
+	static var docTypeValue(default, never):XmlType = cast 4;
+	static var processingInstructionValue(default, never):XmlType = cast 5;
+	static var documentValue(default, never):XmlType = cast 6;
 
 	static inline function get_Element():XmlType
 		return elementValue;
@@ -193,9 +193,17 @@ class Xml {
 		return attributeMap.keys();
 	}
 
+	static inline function arrayIterator<T>(values:Array<T>):Iterator<T> {
+		var index = 0;
+		return {
+			hasNext: function() return index < values.length,
+			next: function() return values[index++]
+		};
+	}
+
 	public function iterator():Iterator<Xml> {
 		ensureElementType();
-		return cast children.iterator();
+		return arrayIterator(cast children);
 	}
 
 	public function elements():Iterator<Xml> {
@@ -207,7 +215,7 @@ class Xml {
 				ret.push(child);
 			}
 		}
-		return cast ret.iterator();
+		return arrayIterator(ret);
 	}
 
 	public function elementsNamed(name:String):Iterator<Xml> {
@@ -219,7 +227,7 @@ class Xml {
 				ret.push(child);
 			}
 		}
-		return cast ret.iterator();
+		return arrayIterator(ret);
 	}
 
 	public function firstChild():Xml {

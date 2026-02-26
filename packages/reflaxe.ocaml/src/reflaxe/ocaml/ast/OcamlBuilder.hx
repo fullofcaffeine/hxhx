@@ -407,6 +407,27 @@ class OcamlBuilder {
 		}
 	}
 
+	static function iteratorAnonItemType(t:Type):Null<Type> {
+		return switch (followNoAbstracts(t)) {
+			case TAnonymous(aRef):
+				final a = aRef.get();
+				var itemType:Null<Type> = null;
+				for (f in a.fields) {
+					if (f.name == "next") {
+						switch (followNoAbstracts(f.type)) {
+							case TFun(args, ret) if (args.length == 0):
+								itemType = ret;
+							case _:
+						}
+						break;
+					}
+				}
+				itemType;
+			case _:
+				null;
+		}
+	}
+
 	static function isKeyValueAnon(t:Type):Bool {
 		return switch (followNoAbstracts(t)) {
 			case TAnonymous(aRef): final a = aRef.get(); var hasKey = false; var hasValue = false; for (f in a.fields) {
@@ -2713,6 +2734,21 @@ class OcamlBuilder {
 													builtArgs.push(i < expectedArgs.length ? coerceForAssignment(expectedArgs[i].t,
 														args[i]) : buildExpr(args[i]));
 												}
+												if (args.length < expectedArgs.length) {
+													for (i in args.length...expectedArgs.length) {
+														final ea = expectedArgs[i];
+														if (!ea.opt) {
+															#if macro
+															guardrailError("reflaxe.ocaml: enum constructor call is missing required argument '"
+																+ ea.name
+																+ "'.", e.pos);
+															#end
+															builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+														} else {
+															builtArgs.push(missingOptionalArgValue(ea.t));
+														}
+													}
+												}
 											} else {
 												for (a in args)
 													builtArgs.push(buildExpr(a));
@@ -2993,14 +3029,22 @@ class OcamlBuilder {
 							final scrutRaw = buildExpr(enumValueExpr);
 							final scrut = isNullable ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [scrutRaw]) : scrutRaw;
 
-							final matchExpr = OcamlExpr.EMatch(scrut, [
-								{pat: OcamlPat.PConstructor(ctorName, patArgs), guard: null, expr: OcamlExpr.EIdent(wanted)},
+							final includeFallback = enumType.names != null && enumType.names.length > 1;
+							final matchCases:Array<OcamlMatchCase> = [
 								{
+									pat: OcamlPat.PConstructor(ctorName, patArgs),
+									guard: null,
+									expr: OcamlExpr.EIdent(wanted)
+								}
+							];
+							if (includeFallback) {
+								matchCases.push({
 									pat: OcamlPat.PAny,
 									guard: null,
 									expr: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Unexpected enum parameter"))])
-								}
-							]);
+								});
+							}
+							final matchExpr = OcamlExpr.EMatch(scrut, matchCases);
 
 							if (isNullable) {
 								final tmp = freshTmp("enum_param");
@@ -3008,19 +3052,9 @@ class OcamlBuilder {
 								OcamlExpr.ELet(tmp, scrutRaw,
 									OcamlExpr.EIf(OcamlExpr.EBinop(OcamlBinop.PhysEq, OcamlExpr.EIdent(tmp), hxNull),
 										OcamlExpr.EApp(OcamlExpr.EIdent("failwith"), [OcamlExpr.EConst(OcamlConst.CString("Unexpected enum parameter"))]),
-										OcamlExpr.EMatch(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]), [
-											{
-												pat: OcamlPat.PConstructor(ctorName, patArgs),
-												guard: null,
-												expr: OcamlExpr.EIdent(wanted)
-											},
-											{
-												pat: OcamlPat.PAny,
-												guard: null,
-												expr: OcamlExpr.EApp(OcamlExpr.EIdent("failwith"),
-													[OcamlExpr.EConst(OcamlConst.CString("Unexpected enum parameter"))])
-											}
-										])), false);
+										OcamlExpr.EMatch(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [OcamlExpr.EIdent(tmp)]),
+											matchCases)),
+									false);
 							} else {
 								matchExpr;
 							}
@@ -3231,20 +3265,32 @@ class OcamlBuilder {
 			case TObjectDecl(fields):
 				// Anonymous structure literal: `{ foo: 1, bar: "x" }`.
 				//
-				// In OCaml we represent this as a runtime object (`HxAnon.t`) wrapped in `Obj.t`,
-				// so distinct anonymous-structure types can share a uniform representation.
-				final tmp = freshTmp("anon");
-				final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
-				final seq:Array<OcamlExpr> = [];
-				for (f in fields) {
-					final rhs = toObjValueExpr(f.expr);
-					seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
-							[OcamlExpr.EIdent(tmp), OcamlExpr.EConst(OcamlConst.CString(f.name)), rhs])
-					]));
+				// Most anonymous values lower to `HxAnon` (`Obj.t`), but structural iterators
+				// (`{ hasNext:Void->Bool, next:Void->T }`) are represented as typed OCaml records
+				// consumed by `HxIterator.hasNext/next`.
+				if (isIteratorAnon(e.t)) {
+					final itemType = iteratorAnonItemType(e.t);
+					final iteratorType = OcamlTypeExpr.TApp("HxIterator.t", [
+						itemType != null ? typeExprFromHaxeType(itemType) : OcamlTypeExpr.TIdent("Obj.t")
+					]);
+					OcamlExpr.EAnnot(OcamlExpr.ERecord(fields.map(f -> ({
+						name: f.name,
+						value: buildExpr(f.expr)
+					}))), iteratorType);
+				} else {
+					final tmp = freshTmp("anon");
+					final create = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "create"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+					final seq:Array<OcamlExpr> = [];
+					for (f in fields) {
+						final rhs = toObjValueExpr(f.expr);
+						seq.push(OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "set"),
+								[OcamlExpr.EIdent(tmp), OcamlExpr.EConst(OcamlConst.CString(f.name)), rhs])
+						]));
+					}
+					seq.push(OcamlExpr.EIdent(tmp));
+					OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
 				}
-				seq.push(OcamlExpr.EIdent(tmp));
-				OcamlExpr.ELet(tmp, create, OcamlExpr.ESeq(seq), false);
 			case TThrow(expr):
 				final built = buildExpr(expr);
 				final kind = nullablePrimitiveKind(expr.t);
@@ -4651,6 +4697,50 @@ class OcamlBuilder {
 			}
 		}
 
+		final lhsUnwrapped = unwrapNullType(lhsType);
+
+		// Structural iterator coercion: class instance -> `{ hasNext, next }` record.
+		//
+		// Why:
+		// - OCaml runtime helpers (`HxIterator.hasNext/next`) expect iterator values with
+		//   record fields `hasNext` and `next`.
+		// - Haxe iterators often arrive as class instances (e.g. `haxe.iterators.ArrayIterator`)
+		//   and must be adapted when assigned/coerced to `Iterator<T>`.
+		//
+		// Without this bridge, callsites can cast class instances to iterator records and
+		// crash at runtime when invoking `it.next`.
+		if (isIteratorAnon(lhsUnwrapped)) {
+			function findField(owner:ClassType, name:String):Null<{owner:ClassType, field:ClassField}> {
+				for (f in owner.fields.get()) {
+					if (f.name == name)
+						return {owner: owner, field: f};
+				}
+				return owner.superClass != null ? findField(owner.superClass.t.get(), name) : null;
+			}
+
+			switch (followNoAbstracts(unwrapNullType(rhs.t))) {
+				case TInst(cRef, _) if (!isDynamicLike(rhs.t)):
+					final cls = cRef.get();
+					final hasNextField = findField(cls, "hasNext");
+					final nextField = findField(cls, "next");
+					if (hasNextField != null && nextField != null) {
+						final recvTmp = freshTmp("iter_obj");
+						final recvVar = OcamlExpr.EIdent(recvTmp);
+						return OcamlExpr.ELet(recvTmp, buildExpr(rhs), OcamlExpr.ERecord([
+							{
+								name: "hasNext",
+								value: buildBoundMethodClosureFromReceiverVar(recvVar, rhs.t, hasNextField.owner, hasNextField.field, rhs.pos)
+							},
+							{
+								name: "next",
+								value: buildBoundMethodClosureFromReceiverVar(recvVar, rhs.t, nextField.owner, nextField.field, rhs.pos)
+							}
+						]), false);
+					}
+				case _:
+			}
+		}
+
 		// Dynamic / anonymous slots: represent arbitrary values as `Obj.t`.
 		//
 		// This is required for patterns like:
@@ -4661,7 +4751,6 @@ class OcamlBuilder {
 		//
 		// Important: anonymous structures already use the `HxAnon` runtime representation (`Obj.t`),
 		// so we must *not* double-box those.
-		final lhsUnwrapped = unwrapNullType(lhsType);
 		switch (followNoAbstracts(lhsUnwrapped)) {
 			case TDynamic(_):
 				final rhsUnwrapped = unwrap(rhs);
