@@ -113,7 +113,7 @@ class NativeBackendPluginHostAbi {
 		return rows;
 	}
 
-	public static function providerTypesForPlugin(snapshot:String, pluginId:String, sourceLabel:String, ?allowEmpty:Bool = false):Array<String> {
+	static function providerTypesForPluginInternal(snapshot:String, pluginId:String, sourceLabel:String, allowEmpty:Bool):Array<String> {
 		final expectedPluginId = requireToken(pluginId, "pluginId", sourceLabel);
 		final rows = decodeSnapshot(snapshot, sourceLabel);
 		final out = new Array<String>();
@@ -137,6 +137,14 @@ class NativeBackendPluginHostAbi {
 		if (!allowEmpty && out.length == 0)
 			fail(sourceLabel, "plugin `" + expectedPluginId + "` did not register any provider types");
 		return out;
+	}
+
+	public static function providerTypesForPlugin(snapshot:String, pluginId:String, sourceLabel:String):Array<String> {
+		return providerTypesForPluginInternal(snapshot, pluginId, sourceLabel, false);
+	}
+
+	public static function providerTypesForPluginAllowEmpty(snapshot:String, pluginId:String, sourceLabel:String):Array<String> {
+		return providerTypesForPluginInternal(snapshot, pluginId, sourceLabel, true);
 	}
 
 	public static function captureProviderTypesForPlugin(pluginId:String, sourceLabel:String):Array<String> {

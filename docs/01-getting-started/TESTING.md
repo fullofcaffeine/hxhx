@@ -248,6 +248,8 @@ Notes:
   - `Plugin matrix (strict)` job in `.github/workflows/ci.yml` runs `npm run test:plugins:strict-matrix`
     on every push/PR:
     - native backend plugin build smoke (`npm run test:hxhx:native-plugin-build-smoke`) producing `.cmxs` + manifest
+    - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
+      (currently soft-gated as `PLUGIN_NATIVE_RUNTIME:SKIP` when bootstrap snapshot parser/runtime is behind source lane)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)
     - eval.vm plugin API smoke (`eval.vm.Context.loadPlugin`)
     - Stage3 plugin fixture (`hxhxmacros.PluginFixtureMacros.init()`) with hook/classpath/module emission checks.

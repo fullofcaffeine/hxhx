@@ -14,8 +14,8 @@
 
    How
    - Most operations delegate to `HxArray`.
-   - `to_list` reads the underlying representation directly; this is safe because the
-     alias means both modules share the same record layout.
+   - `to_list` uses only public `HxArray` operations (`length` + `get`) so it stays
+     compatible when `HxArray` storage changes (for example adaptive typed stores).
 *)
 
 type 'a t = 'a HxArray.t
@@ -47,11 +47,14 @@ let of_list (xs : 'a list) : 'a t =
   a
 
 let to_list (a : 'a t) : 'a list =
-  (* `HxArray.t` is a record; the type alias lets us access the fields. *)
+  let len = HxArray.length a in
   let rec loop i acc =
-    if i < 0 then acc else loop (i - 1) (Obj.obj (Stdlib.Array.get a.data i) :: acc)
+    if i < 0 then
+      acc
+    else
+      loop (i - 1) (HxArray.get a i :: acc)
   in
-  loop (a.length - 1) []
+  loop (len - 1) []
 
 let copy (a : 'a t) : 'a t =
   HxArray.copy a

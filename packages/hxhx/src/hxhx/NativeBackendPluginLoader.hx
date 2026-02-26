@@ -51,7 +51,7 @@ class NativeBackendPluginLoader {
 			fail(manifestPath, "native plugin load failed: " + error.message);
 			return [];
 		}
-		final providerTypes = NativeBackendPluginHostAbi.providerTypesForPlugin(snapshot, manifest.pluginId, manifestPath, true);
+		final providerTypes = NativeBackendPluginHostAbi.providerTypesForPluginAllowEmpty(snapshot, manifest.pluginId, manifestPath);
 		if (providerTypes.length == 0)
 			return [];
 		final specs = resolvedSpecsForProviders(providerTypes);

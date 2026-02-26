@@ -197,7 +197,7 @@ class Stage3Compiler {
 	}
 
 	static function emitWithBackend(backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
-		final expandedProgram = GenIrBoundary.requireProgram(expanded);
+		final expandedProgram = GenIrBoundary.fromDynamic(expanded);
 		return BackendDispatchBoundary.emit(backend, expandedProgram, context);
 	}
 

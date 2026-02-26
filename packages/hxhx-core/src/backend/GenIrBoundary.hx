@@ -30,7 +30,11 @@ class GenIrBoundary {
 		return cast program;
 	}
 
-	public static inline function requireProgram(program:Dynamic):GenIrProgram {
+	public static inline function fromDynamic(program:Dynamic):GenIrProgram {
 		return cast program;
+	}
+
+	public static inline function requireProgram(program:GenIrProgram):GenIrProgram {
+		return program;
 	}
 }

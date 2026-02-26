@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_SCRIPT="$ROOT/scripts/hxhx/build-backend-plugin.sh"
 FIXTURE_DIR="$ROOT/test/fixtures/native_backend_plugin"
+OCAMLOPT_WRAPPER="$ROOT/scripts/hxhx/ocamlopt-with-threads.sh"
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlopt >/dev/null 2>&1; then
   echo "Skipping native plugin runtime smoke: dune/ocamlopt not found on PATH."
@@ -23,6 +24,10 @@ fi
 if [ ! -d "$FIXTURE_DIR" ]; then
   echo "Missing native plugin fixture directory: $FIXTURE_DIR" >&2
   exit 2
+fi
+
+if [ -z "${OCAMLOPT:-}" ] && [ -x "$OCAMLOPT_WRAPPER" ]; then
+  export OCAMLOPT="$OCAMLOPT_WRAPPER"
 fi
 
 HXHX_BIN_RESOLVED="${HXHX_BIN:-}"
@@ -87,8 +92,8 @@ run_compile_with_manifest() {
   local out_dir="$2"
   mkdir -p "$out_dir"
   HXHX_FORBID_STAGE0=1 \
-  HXHX_TRACE_BACKEND_SELECTION=1 \
-  HXHX_TRACE_BACKEND_PROVIDERS=1 \
+    HXHX_TRACE_BACKEND_SELECTION=1 \
+    HXHX_TRACE_BACKEND_PROVIDERS=1 \
     "$HXHX_BIN_RESOLVED" \
       --target js-native \
       --js "$out_dir/main.js" \
@@ -97,12 +102,31 @@ run_compile_with_manifest() {
       -main Main \
       --hxhx-out "$out_dir" \
       -D "hxhx_backend_provider=backend.js.JsBackend" \
-      -D "hxhx_backend_plugin_manifest=$manifest_path" 2>&1
+      -D "hxhx_backend_plugin_manifest=$manifest_path"
+}
+
+run_compile_capture() {
+  local manifest_path="$1"
+  local out_dir="$2"
+  local output_file="$tmp_root/compile.$(basename "$out_dir").log"
+  set +e
+  run_compile_with_manifest "$manifest_path" "$out_dir" >"$output_file" 2>&1
+  local code="$?"
+  set -e
+  cat "$output_file"
+  return "$code"
 }
 
 out_rel="$tmp_root/out_rel"
-compile_rel_output="$(run_compile_with_manifest "$manifest_rel" "$out_rel")"
+set +e
+compile_rel_output="$(run_compile_capture "$manifest_rel" "$out_rel")"
+compile_rel_code="$?"
+set -e
 printf '%s\n' "$compile_rel_output"
+if [ "$compile_rel_code" -ne 0 ]; then
+  echo "Native plugin runtime smoke failed for relative manifest." >&2
+  exit "$compile_rel_code"
+fi
 printf '%s\n' "$compile_rel_output" | grep -q '^backend_selected_impl=provider/js-native-wrapper$'
 node_output_rel="$(node "$out_rel/main.js")"
 printf '%s\n' "$node_output_rel"
@@ -119,8 +143,15 @@ fs.writeFileSync(outPath, JSON.stringify(manifest, null, 2) + '\n')
 NODE
 
 out_abs="$tmp_root/out_abs"
-compile_abs_output="$(run_compile_with_manifest "$manifest_abs" "$out_abs")"
+set +e
+compile_abs_output="$(run_compile_capture "$manifest_abs" "$out_abs")"
+compile_abs_code="$?"
+set -e
 printf '%s\n' "$compile_abs_output"
+if [ "$compile_abs_code" -ne 0 ]; then
+  echo "Native plugin runtime smoke failed for absolute manifest." >&2
+  exit "$compile_abs_code"
+fi
 printf '%s\n' "$compile_abs_output" | grep -q '^backend_selected_impl=provider/js-native-wrapper$'
 node_output_abs="$(node "$out_abs/main.js")"
 printf '%s\n' "$node_output_abs"
