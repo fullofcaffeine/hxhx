@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `132` passthrough-verified, `41` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `137` passthrough-verified, `36` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -165,11 +165,11 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.rtti.Meta` | `passthrough_verified` | test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx |
 | `haxe.rtti.Rtti` | `passthrough_verified` | test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx |
 | `haxe.rtti.XmlParser` | `passthrough_verified` | test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx |
-| `haxe.xml.Access` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.xml.Check` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.xml.Fast` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.xml.Parser` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.xml.Printer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.xml.Access` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
+| `haxe.xml.Check` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
+| `haxe.xml.Fast` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
+| `haxe.xml.Parser` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
+| `haxe.xml.Printer` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
 | `haxe.zip.Compress` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.zip.Entry` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.zip.FlushMode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

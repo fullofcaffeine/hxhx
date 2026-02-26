@@ -12,15 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 41,
-    "bucketCount": 8
+    "missingModules": 36,
+    "bucketCount": 7
   },
   "missingModules": [
-    "haxe.xml.Access",
-    "haxe.xml.Check",
-    "haxe.xml.Fast",
-    "haxe.xml.Parser",
-    "haxe.xml.Printer",
     "haxe.zip.Compress",
     "haxe.zip.Entry",
     "haxe.zip.FlushMode",
@@ -59,17 +54,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.xml-01",
-      "group": "haxe.xml",
-      "modules": [
-        "haxe.xml.Access",
-        "haxe.xml.Check",
-        "haxe.xml.Fast",
-        "haxe.xml.Parser",
-        "haxe.xml.Printer"
-      ]
-    },
     {
       "bucketKey": "haxe.zip-01",
       "group": "haxe.zip",
