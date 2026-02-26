@@ -19,7 +19,7 @@ This matrix documents runtime module status for:
 |---|---|---|---|
 | `Date` | yes | `metal-supported` | Keep as typed date/time usage. |
 | `EReg` | yes | `metal-supported` | Regex support is allowed; keep typed call sites. |
-| `HxAnon` | yes | `metal-forbidden (current)` | Dynamic anonymous-object reflection path; migrate to typed records/classes. |
+| `HxAnon` | yes | `metal-forbidden (current)` | Dynamic anonymous-object reflection path (portable uses shape/slot runtime with explicit presence tracking + repeated-field cache); migrate to typed records/classes for metal. |
 | `HxArray` | yes | `metal-supported` | Arrays are supported; future metal specialization may reduce runtime dependence. |
 | `HxBacktrace` | yes | `metal-supported` | Runtime stack/backtrace helpers. |
 | `HxBytes` | yes | `metal-supported` | Typed bytes APIs. |

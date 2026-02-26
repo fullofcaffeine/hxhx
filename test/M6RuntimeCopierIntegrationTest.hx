@@ -248,6 +248,16 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains(runtimeArrayContent, "StringStore", "HxArray runtime should include StringStore variant");
 		assertContains(runtimeArrayContent, "promote_obj_store_if_possible", "HxArray runtime should include typed-store promotion helper");
 		assertContains(runtimeArrayContent, "ensure_obj_store", "HxArray runtime should include deopt helper");
+		final runtimeAnonPath = portableOutDir + "/runtime/HxAnon.ml";
+		if (!sys.FileSystem.exists(runtimeAnonPath))
+			throw "missing runtime anon module: " + runtimeAnonPath;
+		final runtimeAnonContent = sys.io.File.getContent(runtimeAnonPath);
+		assertContains(runtimeAnonContent, "type shape =", "HxAnon runtime should define shape metadata");
+		assertContains(runtimeAnonContent, "type t = {", "HxAnon runtime should define shape-backed object record");
+		assertContains(runtimeAnonContent, "slot_index", "HxAnon runtime should expose slot index lookup helper");
+		assertContains(runtimeAnonContent, "ensure_value_capacity", "HxAnon runtime should expose slot-capacity helper");
+		assertContains(runtimeAnonContent, "present : bool array", "HxAnon runtime should track field presence independently from value nullability");
+		assertContains(runtimeAnonContent, "last_field", "HxAnon runtime should include repeated-field fast-path cache");
 
 		final dunePath = portableOutDir + "/dune";
 		if (!sys.FileSystem.exists(dunePath))
