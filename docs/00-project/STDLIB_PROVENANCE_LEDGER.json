@@ -110,6 +110,12 @@
       "notes": "Type alias override for OCaml runtime representation."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/io/BytesInput.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/io/BytesInput.hx",
+      "notes": "Repo-authored BytesInput override that routes byte reads/copies through Bytes.fastGet + Bytes.set for OCaml-safe portable behavior."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/haxe/io/FPHelper.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/FPHelper.hx",

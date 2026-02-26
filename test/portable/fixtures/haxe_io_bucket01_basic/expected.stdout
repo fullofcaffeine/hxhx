@@ -1,12 +1,17 @@
 abv=1:4:2:2:3:2
 bufferinput.created=true
+bufferinput.readByte=104
 bytesinput.len=3
 bytesoutput=3:ABC
 encoding=0:1
 f32.len=2
+f32.values=1.5:2.25
 f64.len=2
+f64.values=3.5:4.75
 i32.len=2
+i32.values=10:20
 mime=<unsupported>
 scheme=<unsupported>
 stringinput.created=true
 u16.len=2
+u16.values=65535:7

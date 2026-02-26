@@ -215,6 +215,15 @@ class OcamlBuilder {
 		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "io" && cls.name == "Bytes";
 	}
 
+	static inline function isStdBytesType(t:Type):Bool {
+		return switch (followNoAbstracts(unwrapNullType(t))) {
+			case TInst(cRef, _):
+				isStdBytesClass(cRef.get());
+			case _:
+				false;
+		}
+	}
+
 	static inline function isSupportedBytesEncodingExpr(expr:TypedExpr):Bool {
 		return switch (unwrap(expr).expr) {
 			case TConst(TNull):
@@ -498,6 +507,18 @@ class OcamlBuilder {
 			case _:
 				t;
 		}
+	}
+
+	/**
+	 * Value used when a callsite omits an optional parameter.
+	 *
+	 * Nullable primitives carry `HxRuntime.hx_null`; everything else keeps
+	 * the existing `Obj.magic hx_null` sentinel behavior.
+	 */
+	function missingOptionalArgValue(t:Type):OcamlExpr {
+		if (nullablePrimitiveKind(t) != null)
+			return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
+		return OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 	}
 
 	inline function isDynamicLike(t:Type):Bool {
@@ -1030,8 +1051,7 @@ class OcamlBuilder {
 					final builtArgs:Array<OcamlExpr> = [];
 					if (expectedCtorArgs != null) {
 						inline function hxNullForType(t:Type):OcamlExpr {
-							return nullablePrimitiveKind(t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-								"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+							return missingOptionalArgValue(t);
 						}
 
 						for (i in 0...args.length) {
@@ -1116,9 +1136,7 @@ class OcamlBuilder {
 											ctorName);
 
 										inline function hxNullForType(t:Type):OcamlExpr {
-											return nullablePrimitiveKind(t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-												"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-												[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+											return missingOptionalArgValue(t);
 										}
 
 										final builtArgs = args.map(buildExpr);
@@ -1958,8 +1976,11 @@ class OcamlBuilder {
 												case "fastGet" if (args.length == 2):
 													// Upstream stdlib uses Bytes.fastGet(BytesData, pos) for performance.
 													// Map to bounds-checked runtime read for now.
-													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
-														[buildExpr(args[0]), buildExpr(args[1])]);
+													// BytesData is target-opaque in portable mode, so cast dynamic carriers
+													// back to runtime bytes before calling `HxBytes.get`.
+													final bytesArg = isDynamicLike(args[0].t) ? OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
+														[buildExpr(args[0])]) : buildExpr(args[0]);
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [bytesArg, buildExpr(args[1])]);
 												case _:
 													#if macro
 													guardrailError("reflaxe.ocaml (M6): unsupported Bytes static method '" + cf.name
@@ -2095,13 +2116,16 @@ class OcamlBuilder {
 											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxString"), "urlDecode"), [buildExpr(args[0])]);
 										} else {
 											final expectedArgs:Null<Array<{name:String, opt:Bool, t:Type}>> = switch (TypeTools.follow(cf.type)) {
-												case TFun(fargs, _): fargs;
-												case _: null;
+												case TFun(fargs, _):
+													fargs;
+												case _:
+													switch (followNoAbstracts(unwrapNullType(fn.t))) {
+														case TFun(fargs, _): fargs;
+														case _: null;
+													}
 											}
 											inline function hxNullForType(t:Type):OcamlExpr {
-												return nullablePrimitiveKind(t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-													"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-													[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+												return missingOptionalArgValue(t);
 											}
 											final builtArgs:Array<OcamlExpr> = [];
 											if (expectedArgs != null) {
@@ -2125,7 +2149,17 @@ class OcamlBuilder {
 															#end
 															builtArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
 														} else {
-															builtArgs.push(hxNullForType(ea.t));
+															final isTypedArrayFromArrayPosDefault = cf.name == "fromArray"
+																&& i == 1
+																&& (cls.module == "haxe.io.Float32Array"
+																	|| cls.module == "haxe.io.Float64Array"
+																	|| cls.module == "haxe.io.Int32Array"
+																	|| cls.module == "haxe.io.UInt16Array");
+															if (isTypedArrayFromArrayPosDefault) {
+																builtArgs.push(OcamlExpr.EConst(OcamlConst.CInt(0)));
+															} else {
+																builtArgs.push(hxNullForType(ea.t));
+															}
 														}
 													}
 												}
@@ -2513,9 +2547,7 @@ class OcamlBuilder {
 														case _: null;
 													}
 													inline function hxNullForType(t:Type):OcamlExpr {
-														return nullablePrimitiveKind(t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-															"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-															[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+														return missingOptionalArgValue(t);
 													}
 													final coercedArgs:Array<OcamlExpr> = [];
 													if (expectedArgs != null) {
@@ -2624,9 +2656,7 @@ class OcamlBuilder {
 													case _: null;
 												}
 												inline function hxNullForType(t:Type):OcamlExpr {
-													return nullablePrimitiveKind(t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-														"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-														[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+													return missingOptionalArgValue(t);
 												}
 												final builtArgs:Array<OcamlExpr> = [];
 												if (expectedArgs != null) {
@@ -2793,9 +2823,7 @@ class OcamlBuilder {
 												case _: null;
 											}
 											inline function hxNullForType(t:Type):OcamlExpr {
-												return nullablePrimitiveKind(t) != null ? OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"),
-													"hx_null") : OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"),
-													[OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
+												return missingOptionalArgValue(t);
 											}
 											final builtArgs:Array<OcamlExpr> = [];
 											if (expectedArgs != null) {
@@ -3162,8 +3190,6 @@ class OcamlBuilder {
 				out;
 			case TArray(arr, idx):
 				final arrValue = buildExpr(arr);
-				final arrExpr = coerceArrayReceiver(arrValue, arr.t);
-				final arrObjExpr = coerceArrayReceiverToObj(arrValue, arr.t);
 				final idxUnwrapped = unwrap(idx);
 				final idxString = switch (idxUnwrapped.expr) {
 					case TConst(TString(name)):
@@ -3179,11 +3205,17 @@ class OcamlBuilder {
 					case _:
 						null;
 				}
-				switch (idxUnwrapped.expr) {
-					case _ if (idxString != null):
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [arrObjExpr, OcamlExpr.EConst(OcamlConst.CString(idxString))]);
-					case _:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [arrExpr, buildExpr(idx)]);
+				if (isStdBytesType(arr.t)) {
+					OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"), [arrValue, buildExpr(idx)]);
+				} else {
+					final arrExpr = coerceArrayReceiver(arrValue, arr.t);
+					final arrObjExpr = coerceArrayReceiverToObj(arrValue, arr.t);
+					switch (idxUnwrapped.expr) {
+						case _ if (idxString != null):
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"), [arrObjExpr, OcamlExpr.EConst(OcamlConst.CString(idxString))]);
+						case _:
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [arrExpr, buildExpr(idx)]);
+					}
 				}
 			case TArrayDecl(items):
 				// Haxe array literal: build runtime array and push all values.
@@ -4051,10 +4083,19 @@ class OcamlBuilder {
 					case TArray(arr, idx):
 						final tmp = freshTmp("assign");
 						final rhs = coerceForAssignment(e1.t, e2);
-						final arrExpr = coerceArrayReceiver(buildExpr(arr), arr.t);
-						OcamlExpr.ELet(tmp, rhs, // `HxArray.set` already returns the assigned value, matching Haxe's
-							// assignment-expression semantics (`a[i] = v` evaluates to `v`).
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [arrExpr, buildExpr(idx), OcamlExpr.EIdent(tmp)]), false);
+						final arrExpr = buildExpr(arr);
+						final idxExpr = buildExpr(idx);
+						if (isStdBytesType(arr.t)) {
+							OcamlExpr.ELet(tmp, rhs, OcamlExpr.ESeq([
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"), [arrExpr, idxExpr, OcamlExpr.EIdent(tmp)]),
+								OcamlExpr.EIdent(tmp)
+							]), false);
+						} else {
+							final coercedArrExpr = coerceArrayReceiver(arrExpr, arr.t);
+							OcamlExpr.ELet(tmp, rhs, // `HxArray.set` already returns the assigned value, matching Haxe's
+								// assignment-expression semantics (`a[i] = v` evaluates to `v`).
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [coercedArrExpr, idxExpr, OcamlExpr.EIdent(tmp)]), false);
+						}
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
@@ -4236,11 +4277,14 @@ class OcamlBuilder {
 						}
 					case TArray(arr, idx):
 						// a[i] += v  ->  set a i ((get a i) + v)
-						final arrExpr = coerceArrayReceiver(buildExpr(arr), arr.t);
+						final arrExpr = buildExpr(arr);
 						final idxExpr = buildExpr(idx);
 						final tmpArr = freshTmp("arr");
 						final tmpIdx = freshTmp("idx");
-						final lhs = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx)]);
+						final useBytesOps = isStdBytesType(arr.t);
+						final lhs = useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
+							[OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
+								[OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx)]);
 						final floatMode = isFloatType(e1.t) || nullablePrimitiveKind(e1.t) == "float";
 						final rhs = switch (inner) {
 							case OpAdd:
@@ -4278,9 +4322,12 @@ class OcamlBuilder {
 							case _:
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
-						final setExpr = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
-							[OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]);
-						OcamlExpr.ELet(tmpArr, arrExpr, OcamlExpr.ELet(tmpIdx, idxExpr, setExpr, false), false);
+						final setExpr = useBytesOps ? OcamlExpr.ESeq([
+							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]),
+							rhs
+						]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"), [OcamlExpr.EIdent(tmpArr), OcamlExpr.EIdent(tmpIdx), rhs]);
+						OcamlExpr.ELet(tmpArr, useBytesOps ? arrExpr : coerceArrayReceiver(arrExpr, arr.t), OcamlExpr.ELet(tmpIdx, idxExpr, setExpr, false),
+							false);
 					case _:
 						OcamlExpr.EConst(OcamlConst.CUnit);
 				}
@@ -5291,14 +5338,18 @@ class OcamlBuilder {
 						case TArray(arr, idx):
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
-							OcamlExpr.ELet(arrName, coerceArrayReceiver(buildExpr(arr), arr.t),
+							final useBytesOps = isStdBytesType(arr.t);
+							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr.t),
 								OcamlExpr.ELet(idxName, buildExpr(idx),
-									incDecDynamic(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
-										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
-										(newVal) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
-											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])),
-									false),
-								false);
+									incDecDynamic(useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
+										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"),
+											"get"), [OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
+										(newVal) -> useBytesOps ? OcamlExpr.ESeq([
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
+												[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal]),
+											newVal
+										]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])), false), false);
 						case _:
 							OcamlExpr.EConst(OcamlConst.CUnit);
 					}
@@ -5395,14 +5446,18 @@ class OcamlBuilder {
 						case TArray(arr, idx):
 							final arrName = freshTmp("arr");
 							final idxName = freshTmp("idx");
-							OcamlExpr.ELet(arrName, coerceArrayReceiver(buildExpr(arr), arr.t),
+							final useBytesOps = isStdBytesType(arr.t);
+							OcamlExpr.ELet(arrName, useBytesOps ? buildExpr(arr) : coerceArrayReceiver(buildExpr(arr), arr.t),
 								OcamlExpr.ELet(idxName, buildExpr(idx),
-									incDec(OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "get"),
-										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
-										(newVal) -> OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
-											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])),
-									false),
-								false);
+									incDec(useBytesOps ? OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "get"),
+										[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"),
+											"get"), [OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName)]),
+										(newVal) -> useBytesOps ? OcamlExpr.ESeq([
+											OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "set"),
+												[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal]),
+											newVal
+										]) : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxArray"), "set"),
+											[OcamlExpr.EIdent(arrName), OcamlExpr.EIdent(idxName), newVal])), false), false);
 						case _:
 							OcamlExpr.EConst(OcamlConst.CUnit);
 					}
