@@ -3812,7 +3812,19 @@ class EmitterStage {
 				(v == null || v.length == 0) ? "ocamldep" : v;
 			}
 
-			final p = new sys.io.Process(ocamldep, ["-I", "runtime", "-I", "+unix", "-I", "+str", "-sort"].concat(mlFiles));
+			final p = new sys.io.Process(ocamldep, [
+				"-I",
+				"runtime",
+				"-I",
+				"+unix",
+				"-I",
+				"+str",
+				"-I",
+				"+threads",
+				"-I",
+				"+dynlink",
+				"-sort"
+			].concat(mlFiles));
 			final chunks = new Array<String>();
 			try {
 				while (true) {
@@ -6186,14 +6198,21 @@ class EmitterStage {
 		args.push("+unix");
 		args.push("-I");
 		args.push("+str");
+		args.push("-I");
+		args.push("+threads");
+		args.push("-I");
+		args.push("+dynlink");
 		// Allow emitted units in `outAbs/` to see providers compiled under `outAbs/runtime/`.
 		args.push("-I");
 		args.push("runtime");
 		args.push("-o");
 		args.push("out.exe");
 		// Link the OCaml stdlib packages used by our runtime and shims.
+		args.push("-thread");
+		args.push("threads.cmxa");
 		args.push("unix.cmxa");
 		args.push("str.cmxa");
+		args.push("dynlink.cmxa");
 		for (p in orderedNoRootUniq)
 			args.push(p);
 		final code = try {

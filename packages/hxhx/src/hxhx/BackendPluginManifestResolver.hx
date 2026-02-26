@@ -33,7 +33,7 @@ class BackendPluginManifestResolver {
 			case BackendPluginManifestKind.HaxeProvider:
 				return [manifest.backend.entry];
 			case BackendPluginManifestKind.OcamlCmxs:
-				fail(sourceLabel, "native `.cmxs` loading is not available yet");
+				return NativeBackendPluginLoader.providerTypeNamesForNativeManifest(manifest, sourceLabel);
 			case _:
 				fail(sourceLabel, "unsupported backend kind `" + manifest.backend.kind + "`");
 		}

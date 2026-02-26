@@ -116,7 +116,7 @@ class M14BackendPluginManifestIntegrationTest {
 
 		writeManifest(nativeManifestPath, manifestJson("ocaml-cmxs", "plugin/backend.cmxs"));
 		assertFailsContains(function() BackendPluginManifestResolver.providerTypeNamesForManifestPath(nativeManifestPath),
-			"native `.cmxs` loading is not available yet");
+			"native `.cmxs` loading requires an OCaml runtime build of hxhx");
 
 		deleteIfExists(haxeManifestPath);
 		deleteIfExists(nativeManifestPath);

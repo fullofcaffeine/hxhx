@@ -145,7 +145,24 @@ Dynamic registration notes:
   - `docs/02-user-guide/compat/hxhx-backend-plugin-manifest-v1.schema.json`
   - supported runtime kinds:
     - `haxe-provider` (current Stage3 load path)
-    - `ocaml-cmxs` (validated now; native loading lands in Phase C5 loader task)
+    - `ocaml-cmxs` (native load path now goes through Dynlink in OCaml runtime builds)
+- Native plugin host registration ABI (C5R1):
+  - runtime bridge module:
+    - `packages/reflaxe.ocaml/std/runtime/HxHxBackendPluginHost.ml`
+  - Haxe boundary seam:
+    - `packages/hxhx/src/hxhx/NativeBackendPluginHost.hx`
+    - `packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx`
+  - side-effect registration contract:
+    - plugin entrypoints call `register_provider_type(pluginId, providerType)` during load.
+    - host clears capture state before load and reads `snapshot()` after load.
+    - snapshot wire format is deterministic:
+      - header line `v1`
+      - one row per registration: `<pluginId>\t<providerType>`
+  - fail-fast validation in host ABI:
+    - empty/malformed rows fail with source-labeled diagnostics,
+    - pluginId mismatch fails,
+    - duplicate providerType rows fail,
+    - duplicate descriptor `implId`/target conflicts fail before registry registration.
 - Provider type requirement:
   - each declared provider must resolve to a class implementing
     `ITargetBackendProvider` with `new()` and
@@ -194,6 +211,23 @@ Outputs:
 
 - `.tmp/plugin-out/backend-plugin.json` (manifest, schema v1)
 - `.tmp/plugin-out/plugins/hxhx_backend_plugin_fixture.cmxs` (native plugin artifact)
+
+Runtime load smoke (build + load + emit + run + negative checks):
+
+```bash
+npm run test:hxhx:native-plugin-runtime-smoke
+```
+
+Note: this smoke defaults to source-lane `hxhx` build (`HXHX_FORCE_STAGE0=1`) so runtime
+bridge changes are exercised even when bootstrap snapshots lag. Set
+`HXHX_NATIVE_PLUGIN_RUNTIME_STAGE0_BUILD=0` to use the bootstrap lane.
+
+This smoke validates:
+
+- relative and absolute manifest entry path loading,
+- backend selection override (`provider/js-native-wrapper`),
+- runtime output equivalence (`sum=6`),
+- negative diagnostics for missing plugin artifact and ABI mismatch.
 
 Manifest-only flow for Haxe providers (no `.cmxs` build step):
 
