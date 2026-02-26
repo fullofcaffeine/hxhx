@@ -56,6 +56,24 @@
       "notes": "OCaml-target Xml override. We keep parse/print logic in Xml.hx so generated Xml.ml does not mutually depend on generated haxe_xml_Parser.ml / haxe_xml_Printer.ml (dune rejects that module cycle). Portable fixtures cover creation/printing and parse roundtrip behavior."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/atomic/AtomicBool.hx",
+      "notes": "Portable override preserving AtomicBool API on top of local AtomicInt implementation."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/atomic/AtomicInt.hx",
+      "notes": "Portable override providing AtomicInt API behavior for OCaml stdlib parity lanes."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/atomic/AtomicObject.hx",
+      "notes": "Portable override preserving AtomicObject API behavior for object load/store/exchange operations."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/Bytes.hx",

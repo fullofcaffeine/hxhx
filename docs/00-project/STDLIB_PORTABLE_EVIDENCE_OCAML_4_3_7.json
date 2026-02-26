@@ -187,6 +187,24 @@
     ],
     "override": [
       {
+        "module": "haxe.atomic.AtomicBool",
+        "evidence": [
+          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.atomic.AtomicInt",
+        "evidence": [
+          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.atomic.AtomicObject",
+        "evidence": [
+          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "Xml",
         "evidence": [
           "test/portable/fixtures/xml_basic/src/Main.hx",

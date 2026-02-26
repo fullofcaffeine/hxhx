@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-intrinsic, `22` passthrough-verified, `156` passthrough-unverified.
+Summary: `204` modules total, `22` overrides, `2` runtime-backed, `5` lowering-intrinsic, `22` passthrough-verified, `153` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -59,9 +59,9 @@ Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.Unserializer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.Utf8` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.ValueException` | `passthrough_verified` | test/portable/fixtures/haxe_value_exception_basic/src/Main.hx |
-| `haxe.atomic.AtomicBool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.atomic.AtomicInt` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.atomic.AtomicObject` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.atomic.AtomicBool` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
+| `haxe.atomic.AtomicInt` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
+| `haxe.atomic.AtomicObject` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
 | `haxe.crypto.Adler32` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.crypto.Base64` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.crypto.BaseCode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

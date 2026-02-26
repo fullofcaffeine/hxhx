@@ -1,0 +1,16 @@
+int.add.old=3
+int.load=5
+int.compare.old=5
+int.load2=9
+int.store=4
+int.exchange.old=4
+int.final=6
+bool.load=false
+bool.store=true
+bool.exchange.old=true
+bool.final=false
+obj.load.isFirst=true
+obj.compare.old.isFirst=true
+obj.after.compare.isFirst=true
+obj.exchange.old.isFirst=true
+obj.final.isSecond=true

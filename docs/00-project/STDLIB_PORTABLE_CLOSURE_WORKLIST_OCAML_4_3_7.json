@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 156,
-    "bucketCount": 24
+    "missingModules": 153,
+    "bucketCount": 23
   },
   "missingModules": [
     "haxe.CallStack",
@@ -40,9 +40,6 @@
     "haxe.Ucs2",
     "haxe.Unserializer",
     "haxe.Utf8",
-    "haxe.atomic.AtomicBool",
-    "haxe.atomic.AtomicInt",
-    "haxe.atomic.AtomicObject",
     "haxe.crypto.Adler32",
     "haxe.crypto.Base64",
     "haxe.crypto.BaseCode",
@@ -174,15 +171,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.atomic-01",
-      "group": "haxe.atomic",
-      "modules": [
-        "haxe.atomic.AtomicBool",
-        "haxe.atomic.AtomicInt",
-        "haxe.atomic.AtomicObject"
-      ]
-    },
     {
       "bucketKey": "haxe.core-01",
       "group": "haxe.core",
