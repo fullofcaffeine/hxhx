@@ -434,9 +434,10 @@ class Xml {
 			if (matchString(state, "</")) {
 				final closeName = parseName(state);
 				skipWhitespace(state);
+				final closeTagPosition = state.index;
 				expectChar(state, ">");
 				if (closeName != name) {
-					failParse(state, "Mismatched closing tag, expected `" + name + "` but got `" + closeName + "`");
+					failParse(state, "Expected </" + name + ">", closeTagPosition);
 				}
 				return element;
 			}
@@ -466,7 +467,7 @@ class Xml {
 			}
 		}
 
-		failParse(state, "Unexpected end of input while reading element `" + name + "`");
+		failParse(state, "Unexpected end");
 		return element;
 	}
 
@@ -651,8 +652,44 @@ class Xml {
 		return isNameStart(code) || (code >= 48 && code <= 57) || code == 45 || code == 46;
 	}
 
-	private static function failParse(state:XmlParseState, message:String):Void {
-		throw message + " at position " + state.index;
+	private static function failParse(state:XmlParseState, message:String, ?position:Int):Void {
+		final errorPosition = normalizeErrorPosition(state, position == null ? state.index : position);
+		final lineAndChar = computeLineAndChar(state.source, errorPosition);
+		throw "haxe.xml.XmlParserException: " + message + " at line " + lineAndChar.line + " char " + lineAndChar.character;
+	}
+
+	private static function normalizeErrorPosition(state:XmlParseState, position:Int):Int {
+		if (position < 0) {
+			return 0;
+		}
+		if (position > state.length) {
+			return state.length;
+		}
+		return position;
+	}
+
+	private static function computeLineAndChar(source:String, position:Int):{line:Int, character:Int} {
+		var line = 1;
+		var lineStart = 0;
+		var index = 0;
+		while (index < position) {
+			final code = source.charCodeAt(index);
+			if (code == 10) {
+				line++;
+				lineStart = index + 1;
+			} else if (code == 13) {
+				line++;
+				if (index + 1 < position && source.charCodeAt(index + 1) == 10) {
+					index++;
+				}
+				lineStart = index + 1;
+			}
+			index++;
+		}
+		return {
+			line: line,
+			character: position - lineStart
+		};
 	}
 
 	function new(nodeType:XmlType) {

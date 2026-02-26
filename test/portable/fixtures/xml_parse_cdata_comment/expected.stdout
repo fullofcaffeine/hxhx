@@ -1,0 +1,4 @@
+comment= note 
+cdata=x<y>
+element=child,text=z
+rt=<root><!-- note --><![CDATA[x<y>]]><child>z</child></root>

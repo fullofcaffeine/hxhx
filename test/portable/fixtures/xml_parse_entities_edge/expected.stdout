@@ -1,0 +1,8 @@
+named=& < >
+named_rt=<root>&amp; &lt; &gt;</root>
+numeric=AB
+numeric_rt=<root>AB</root>
+unknown=&nope;
+unknown_rt=<root>&amp;nope;</root>
+unterminated=&nope
+unterminated_rt=<root>&amp;nope</root>

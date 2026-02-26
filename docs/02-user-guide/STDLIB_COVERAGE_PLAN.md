@@ -77,6 +77,23 @@ Implemented via:
 - extern: `packages/reflaxe.ocaml/std/_std/Math.hx`
 - runtime: `packages/reflaxe.ocaml/std/runtime/Math.ml`
 
+### Xml.parse edge coverage (M16)
+
+Portable fixtures now cover:
+
+- `xml_parse_basic` (document/element/pcdata baseline)
+- `xml_parse_entities_edge` (named/numeric/unknown/unterminated entity handling)
+- `xml_parse_cdata_comment` (comment + CDATA + mixed children)
+- `xml_parse_mismatched_close` (mismatched/stray close diagnostics + EOF diagnostics)
+
+Known remaining divergences (documented, not hidden):
+
+- `<!DOCTYPE ...>` handling is shallow: parser reads to the first `>` and does not
+  parse internal subsets.
+- Entity handling remains local (named + numeric decode); there is no DTD-backed
+  custom entity expansion.
+- XML declaration / PI validation is permissive and not a full spec validator.
+
 ## How we validate
 
 We use layered tests (mirrors the repo-wide strategy in `docs/01-getting-started/TESTING.md`):

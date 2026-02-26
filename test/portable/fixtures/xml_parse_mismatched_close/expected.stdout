@@ -1,0 +1,3 @@
+mismatch=haxe.xml.XmlParserException: Expected </a> at line 1 char 15
+stray=haxe.xml.XmlParserException: Expected </root> at line 1 char 9
+eof=haxe.xml.XmlParserException: Unexpected end at line 1 char 9
