@@ -1,0 +1,8 @@
+-cp src
+-main Main
+-lib reflaxe.ocaml
+--macro Main.SysThreadBucket01MacroProbe.run()
+-D no-traces
+-D no_traces
+-D ocaml_output=out
+-D ocaml_dune_exes=out:Main

@@ -200,16 +200,16 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.ssl.DigestAlgorithm` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.Key` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.Socket` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
-| `sys.thread.Condition` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.Deque` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.ElasticThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.EventLoop` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.FixedThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.IThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.Lock` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.Mutex` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.NoEventLoopException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.Semaphore` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.Thread` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.thread.ThreadPoolException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.thread.Condition` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.Deque` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.ElasticThreadPool` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.EventLoop` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.FixedThreadPool` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.IThreadPool` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.Lock` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.Mutex` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.NoEventLoopException` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.Semaphore` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.Thread` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.thread.ThreadPoolException` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
 | `sys.thread.Tls` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

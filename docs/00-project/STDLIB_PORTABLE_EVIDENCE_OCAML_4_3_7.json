@@ -1011,6 +1011,78 @@
         "evidence": [
           "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "sys.thread.Condition",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.Deque",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.ElasticThreadPool",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.EventLoop",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.FixedThreadPool",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.IThreadPool",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.Lock",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.Mutex",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.NoEventLoopException",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.Semaphore",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.Thread",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.thread.ThreadPoolException",
+        "evidence": [
+          "test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [
