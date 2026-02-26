@@ -55,6 +55,8 @@ Notes:
   - `npm run test:stdlib:semantic-diff:comparator`
 - Minimizer + exporter smoke:
   - `npm run test:stdlib:semantic-diff:minimizer`
+- CI lane driver (profile via env: `SEMANTIC_DIFF_PROFILE=pr|nightly`):
+  - `npm run test:stdlib:semantic-diff:lane`
 
 ## Cleanup after heavy runs
 

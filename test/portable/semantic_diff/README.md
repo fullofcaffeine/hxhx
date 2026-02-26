@@ -76,3 +76,14 @@ This validates:
 1. two-phase minimization (`program-level` then `expression-level`),
 2. deterministic export directories under `semantic_diff/generated` (temp smoke output),
 3. before/after size stats and replay metadata recording.
+
+## CI lane runner (profiled)
+
+Run lane orchestration locally:
+
+```bash
+SEMANTIC_DIFF_PROFILE=pr npm run test:stdlib:semantic-diff:lane
+SEMANTIC_DIFF_PROFILE=nightly npm run test:stdlib:semantic-diff:lane
+```
+
+Lane artifacts are written under `.artifacts/semantic-diff/<profile>`.

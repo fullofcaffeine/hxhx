@@ -1,0 +1,188 @@
+name: Semantic Diff
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: "0 7 * * 3"
+  workflow_dispatch:
+
+concurrency:
+  group: semantic-diff-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  semantic_diff_pr:
+    name: Semantic diff (PR smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Run semantic-diff PR smoke lane
+        env:
+          SEMANTIC_DIFF_PROFILE: pr
+          SEMANTIC_DIFF_SEED: "1337"
+          SEMANTIC_DIFF_MAX_PROGRAMS: "50"
+          SEMANTIC_DIFF_TIMEOUT_MS: "10000"
+          SEMANTIC_DIFF_COMPARATOR_REPEATS: "1"
+          SEMANTIC_DIFF_ARTIFACT_DIR: .artifacts/semantic-diff/pr
+        run: |
+          set -euo pipefail
+          bash scripts/test-stdlib-semantic-diff-lane.sh
+
+      - name: Upload semantic-diff PR artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-diff-pr-artifacts
+          path: .artifacts/semantic-diff/pr
+          if-no-files-found: ignore
+
+  semantic_diff_nightly:
+    name: Semantic diff (nightly expanded)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Run semantic-diff nightly expanded lane
+        env:
+          SEMANTIC_DIFF_PROFILE: nightly
+          SEMANTIC_DIFF_SEED: "7331"
+          SEMANTIC_DIFF_MAX_PROGRAMS: "1000"
+          SEMANTIC_DIFF_TIMEOUT_MS: "15000"
+          SEMANTIC_DIFF_COMPARATOR_REPEATS: "2"
+          SEMANTIC_DIFF_ARTIFACT_DIR: .artifacts/semantic-diff/nightly
+        run: |
+          set -euo pipefail
+          bash scripts/test-stdlib-semantic-diff-lane.sh
+
+      - name: Upload semantic-diff nightly artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-diff-nightly-artifacts
+          path: .artifacts/semantic-diff/nightly
+          if-no-files-found: ignore

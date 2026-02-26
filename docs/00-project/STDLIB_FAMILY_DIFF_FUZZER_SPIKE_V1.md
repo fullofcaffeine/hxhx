@@ -52,6 +52,9 @@ Current skeleton implementation:
 - two-phase minimizer + deterministic repro exporter:
   - `scripts/stdlib/minimize-semantic-diff-divergences.js`
   - `npm run test:stdlib:semantic-diff:minimizer`
+- CI lane runner with deterministic caps + stability classification:
+  - `scripts/test-stdlib-semantic-diff-lane.sh`
+  - `.github/workflows/semantic-diff.yml`
 
 ## Generator constraints (typed + portable-safe)
 
@@ -138,6 +141,20 @@ Reproducibility requirements:
 - generator + minimizer are seed-deterministic
 - timeouts are explicit and reported
 - flaky outcomes are marked `unstable` and not auto-promoted
+
+Current lane policy implementation:
+
+- PR lane defaults:
+  - `SEMANTIC_DIFF_MAX_PROGRAMS=50`
+  - `SEMANTIC_DIFF_TIMEOUT_MS=10000`
+  - `SEMANTIC_DIFF_COMPARATOR_REPEATS=1`
+- Nightly lane defaults:
+  - `SEMANTIC_DIFF_MAX_PROGRAMS=1000`
+  - `SEMANTIC_DIFF_TIMEOUT_MS=15000`
+  - `SEMANTIC_DIFF_COMPARATOR_REPEATS=2`
+- Stability classification:
+  - nightly compares divergence report hashes across repeated runs
+  - if hashes differ, classification is `unstable` and lane fails (no auto-promotion)
 
 Resource caps (initial recommendations):
 
