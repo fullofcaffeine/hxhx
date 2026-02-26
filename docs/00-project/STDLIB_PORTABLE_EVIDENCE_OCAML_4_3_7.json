@@ -155,6 +155,24 @@
         ]
       },
       {
+        "module": "haxe.extern.AsVar",
+        "evidence": [
+          "test/portable/fixtures/haxe_extern_core_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.extern.EitherType",
+        "evidence": [
+          "test/portable/fixtures/haxe_extern_core_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.extern.Rest",
+        "evidence": [
+          "test/portable/fixtures/haxe_extern_core_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.io.Path",
         "evidence": [
           "test/portable/fixtures/path_basic/src/Main.hx"

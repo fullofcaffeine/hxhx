@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `22` passthrough-verified, `151` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `25` passthrough-verified, `148` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -97,9 +97,9 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.exceptions.ArgumentException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
 | `haxe.exceptions.NotImplementedException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
 | `haxe.exceptions.PosException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
-| `haxe.extern.AsVar` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.extern.EitherType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.extern.Rest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.extern.AsVar` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
+| `haxe.extern.EitherType` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
+| `haxe.extern.Rest` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
 | `haxe.format.JsonParser` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonParser.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
 | `haxe.format.JsonPrinter` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonPrinter.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
 | `haxe.http.HttpBase` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
