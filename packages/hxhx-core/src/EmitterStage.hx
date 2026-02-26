@@ -2161,7 +2161,13 @@ class EmitterStage {
 						final aIsI = isIntExpr(a);
 						final bIsI = isIntExpr(b);
 						final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
-						final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+						// Portable lane parity: when one side is confidently numeric and the other side
+						// is an expression the current heuristic cannot classify, prefer numeric lowering
+						// over bring-up poison.
+						//
+						// This keeps hot-path arithmetic (`Int + call()`, `Int * call()`, `Int % call()`)
+						// executable in portable mode while still rejecting obvious string concatenations.
+						final allowNumericFallback = hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
 						final canFloat = (op == "+" || op == "-" || op == "*" || op == "/");
 						if (op == "%") {
 							if (aIsF || bIsF) {
@@ -2172,7 +2178,7 @@ class EmitterStage {
 								"((" + la + ") mod (" + rb + "))";
 							} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
 								"((" + la + ") mod (" + rb + "))";
-							} else if (allowMetalFallback) {
+							} else if (allowNumericFallback) {
 								"((" + la + ") mod (" + rb + "))";
 							} else {
 								"(Obj.magic 0)";
@@ -2192,7 +2198,7 @@ class EmitterStage {
 							"((" + la + ") " + op + " (" + rb + "))";
 						} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
 							"((" + la + ") " + op + " (" + rb + "))";
-						} else if (allowMetalFallback) {
+						} else if (allowNumericFallback) {
 							"((" + la + ") " + op + " (" + rb + "))";
 						} else {
 							"(Obj.magic 0)";
