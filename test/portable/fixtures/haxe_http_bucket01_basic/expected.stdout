@@ -1,0 +1,6 @@
+http.url=http://example.invalid/path
+http.response.null=true
+method.post=POST
+status.ok=200
+httpjs.class=false
+httpnode.class=false

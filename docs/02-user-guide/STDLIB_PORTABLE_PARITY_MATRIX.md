@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `78` passthrough-verified, `95` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `83` passthrough-verified, `90` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -102,11 +102,11 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.extern.Rest` | `passthrough_verified` | test/portable/fixtures/haxe_extern_core_basic/src/Main.hx |
 | `haxe.format.JsonParser` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonParser.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
 | `haxe.format.JsonPrinter` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonPrinter.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
-| `haxe.http.HttpBase` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.http.HttpJs` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.http.HttpMethod` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.http.HttpNodeJs` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.http.HttpStatus` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.http.HttpBase` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
+| `haxe.http.HttpJs` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
+| `haxe.http.HttpMethod` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
+| `haxe.http.HttpNodeJs` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
+| `haxe.http.HttpStatus` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
 | `haxe.io.ArrayBufferView` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.BufferInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.Bytes` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx |

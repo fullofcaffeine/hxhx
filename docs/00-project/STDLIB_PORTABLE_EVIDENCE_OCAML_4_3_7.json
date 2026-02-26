@@ -131,9 +131,15 @@
         ]
       },
       {
-        "module": "haxe.Int32",
+        "module": "UInt",
         "evidence": [
-          "test/portable/fixtures/int32_semantics/src/Main.hx"
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
+        ]
+      },
+      {
+        "module": "UnicodeString",
+        "evidence": [
+          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
         ]
       },
       {
@@ -182,6 +188,12 @@
         "module": "haxe.Http",
         "evidence": [
           "test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Int32",
+        "evidence": [
+          "test/portable/fixtures/int32_semantics/src/Main.hx"
         ]
       },
       {
@@ -281,6 +293,66 @@
         ]
       },
       {
+        "module": "haxe.ValueException",
+        "evidence": [
+          "test/portable/fixtures/haxe_value_exception_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Adler32",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Base64",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.BaseCode",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Crc32",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Hmac",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_hmac_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Md5",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Sha1",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Sha224",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Sha256",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.display.Diagnostic",
         "evidence": [
           "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
@@ -356,6 +428,36 @@
         "module": "haxe.extern.Rest",
         "evidence": [
           "test/portable/fixtures/haxe_extern_core_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.http.HttpBase",
+        "evidence": [
+          "test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.http.HttpJs",
+        "evidence": [
+          "test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.http.HttpMethod",
+        "evidence": [
+          "test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.http.HttpNodeJs",
+        "evidence": [
+          "test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.http.HttpStatus",
+        "evidence": [
+          "test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx"
         ]
       },
       {
@@ -437,66 +539,6 @@
         ]
       },
       {
-        "module": "haxe.crypto.Adler32",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Base64",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.BaseCode",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Crc32",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Hmac",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_hmac_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Md5",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Sha1",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Sha224",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.crypto.Sha256",
-        "evidence": [
-          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.ValueException",
-        "evidence": [
-          "test/portable/fixtures/haxe_value_exception_basic/src/Main.hx"
-        ]
-      },
-      {
         "module": "sys.FileStat",
         "evidence": [
           "test/portable/fixtures/file_stat_basic/src/Main.hx"
@@ -506,18 +548,6 @@
         "module": "sys.io.FileSeek",
         "evidence": [
           "test/portable/fixtures/sys_file_seek_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "UnicodeString",
-        "evidence": [
-          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
-        ]
-      },
-      {
-        "module": "UInt",
-        "evidence": [
-          "test/portable/fixtures/stdlib_core_01/src/Main.hx"
         ]
       }
     ],

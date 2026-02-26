@@ -12,29 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 114,
-    "bucketCount": 17
+    "missingModules": 90,
+    "bucketCount": 14
   },
   "missingModules": [
-    "haxe.MainLoop",
-    "haxe.NativeStackTrace",
-    "haxe.PosInfos",
-    "haxe.Resource",
-    "haxe.Rest",
-    "haxe.Serializer",
-    "haxe.SysTools",
-    "haxe.Template",
-    "haxe.Timer",
-    "haxe.Ucs2",
-    "haxe.Unserializer",
-    "haxe.Utf8",
-    "haxe.display.Diagnostic",
-    "haxe.display.Display",
-    "haxe.display.FsPath",
-    "haxe.display.JsonModuleTypes",
-    "haxe.display.Position",
-    "haxe.display.Protocol",
-    "haxe.display.Server",
     "haxe.ds.ArraySort",
     "haxe.ds.BalancedTree",
     "haxe.ds.Either",
@@ -47,11 +28,6 @@
     "haxe.ds.ReadOnlyArray",
     "haxe.ds.Vector",
     "haxe.ds.WeakMap",
-    "haxe.http.HttpBase",
-    "haxe.http.HttpJs",
-    "haxe.http.HttpMethod",
-    "haxe.http.HttpNodeJs",
-    "haxe.http.HttpStatus",
     "haxe.io.ArrayBufferView",
     "haxe.io.BufferInput",
     "haxe.io.BytesInput",
@@ -133,37 +109,6 @@
   ],
   "buckets": [
     {
-      "bucketKey": "haxe.core-01",
-      "group": "haxe.core",
-      "modules": [
-        "haxe.MainLoop",
-        "haxe.NativeStackTrace",
-        "haxe.PosInfos",
-        "haxe.Resource",
-        "haxe.Rest",
-        "haxe.Serializer",
-        "haxe.SysTools",
-        "haxe.Template",
-        "haxe.Timer",
-        "haxe.Ucs2",
-        "haxe.Unserializer",
-        "haxe.Utf8"
-      ]
-    },
-    {
-      "bucketKey": "haxe.display-01",
-      "group": "haxe.display",
-      "modules": [
-        "haxe.display.Diagnostic",
-        "haxe.display.Display",
-        "haxe.display.FsPath",
-        "haxe.display.JsonModuleTypes",
-        "haxe.display.Position",
-        "haxe.display.Protocol",
-        "haxe.display.Server"
-      ]
-    },
-    {
       "bucketKey": "haxe.ds-01",
       "group": "haxe.ds",
       "modules": [
@@ -179,17 +124,6 @@
         "haxe.ds.ReadOnlyArray",
         "haxe.ds.Vector",
         "haxe.ds.WeakMap"
-      ]
-    },
-    {
-      "bucketKey": "haxe.http-01",
-      "group": "haxe.http",
-      "modules": [
-        "haxe.http.HttpBase",
-        "haxe.http.HttpJs",
-        "haxe.http.HttpMethod",
-        "haxe.http.HttpNodeJs",
-        "haxe.http.HttpStatus"
       ]
     },
     {
