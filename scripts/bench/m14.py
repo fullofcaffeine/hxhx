@@ -134,31 +134,108 @@ def _bench_stringbuf(
     compile_reps: int,
     stringbuf_n: int,
     haxe_bin: str,
+    profile: str,
+    runtime_mode: str,
+) -> Dict[str, Any]:
+    return _bench_runtime_workload(
+        tmp_root=tmp_root,
+        reps=reps,
+        compile_reps=compile_reps,
+        haxe_bin=haxe_bin,
+        workload_id="stringbuf",
+        workload_param_name="n",
+        workload_param_value=stringbuf_n,
+        expected_output=str(stringbuf_n),
+        profile=profile,
+        runtime_mode=runtime_mode,
+    )
+
+
+def _bench_int_array_sum(
+    tmp_root: Path,
+    reps: int,
+    compile_reps: int,
+    int_array_n: int,
+    haxe_bin: str,
+    profile: str,
+    runtime_mode: str,
+) -> Dict[str, Any]:
+    expected = int_array_n * (int_array_n - 1) // 2
+    return _bench_runtime_workload(
+        tmp_root=tmp_root,
+        reps=reps,
+        compile_reps=compile_reps,
+        haxe_bin=haxe_bin,
+        workload_id="int_array_sum",
+        workload_param_name="n",
+        workload_param_value=int_array_n,
+        expected_output=str(expected),
+        profile=profile,
+        runtime_mode=runtime_mode,
+    )
+
+
+def _bench_anon_getset(
+    tmp_root: Path,
+    reps: int,
+    compile_reps: int,
+    anon_iterations: int,
+    haxe_bin: str,
+    profile: str,
+    runtime_mode: str,
+) -> Dict[str, Any]:
+    return _bench_runtime_workload(
+        tmp_root=tmp_root,
+        reps=reps,
+        compile_reps=compile_reps,
+        haxe_bin=haxe_bin,
+        workload_id="anon_getset",
+        workload_param_name="iterations",
+        workload_param_value=anon_iterations,
+        expected_output=str(anon_iterations),
+        profile=profile,
+        runtime_mode=runtime_mode,
+    )
+
+
+def _bench_runtime_workload(
+    tmp_root: Path,
+    reps: int,
+    compile_reps: int,
+    haxe_bin: str,
+    workload_id: str,
+    workload_param_name: str,
+    workload_param_value: int,
+    expected_output: str,
+    profile: str,
+    runtime_mode: str,
 ) -> Dict[str, Any]:
     """
-    Runtime + build microbench.
+    Generic runtime + build microbench runner.
 
     Measures:
     - compile+build time (hx -> ml -> dune build native exe)
-    - runtime of executing the produced binary with a fixed workload size
+    - runtime of executing the produced binary with a fixed workload input
     """
 
-    workload_src = ROOT / "bench" / "workloads" / "stringbuf"
+    workload_src = ROOT / "bench" / "workloads" / workload_id
     if not workload_src.exists():
         raise RuntimeError(f"Missing workload: {workload_src}")
 
+    profile_define = f"ocaml_profile={profile}"
+    runtime_mode_define = f"ocaml_runtime_mode={runtime_mode}"
+    label = f"{workload_id} [{profile}]"
+
     def compile_once(work_dir: Path) -> None:
         _copy_tree(workload_src, work_dir)
-        _run([haxe_bin, "build.hxml", "-D", "ocaml_build=native"], cwd=work_dir)
+        _run([haxe_bin, "build.hxml", "-D", "ocaml_build=native", "-D", profile_define, "-D", runtime_mode_define], cwd=work_dir)
 
-    # Compile+build timing (fresh workspace each rep).
     def compile_rep() -> None:
         with tempfile.TemporaryDirectory(dir=str(tmp_root)) as td:
             compile_once(Path(td))
 
-    compile_stats, compile_durations = _time_reps("stringbuf: build", compile_rep, compile_reps)
+    compile_stats, compile_durations = _time_reps(f"{label}: build", compile_rep, compile_reps)
 
-    # Runtime timing (compile once, then run many times).
     with tempfile.TemporaryDirectory(dir=str(tmp_root)) as td:
         work_dir = Path(td)
         compile_once(work_dir)
@@ -166,20 +243,20 @@ def _bench_stringbuf(
         if not exe.exists():
             raise RuntimeError(f"Missing built executable: {exe}")
 
-        # Sanity check (capture once).
-        out = _run([str(exe), str(stringbuf_n)], cwd=work_dir, capture=True).stdout.decode("utf-8", errors="replace").strip()
-        if out != str(stringbuf_n):
-            raise RuntimeError(f"Unexpected stringbuf output: got={out!r} expected={str(stringbuf_n)!r}")
+        output = _run([str(exe), str(workload_param_value)], cwd=work_dir, capture=True).stdout.decode("utf-8", errors="replace").strip()
+        if output != expected_output:
+            raise RuntimeError(f"Unexpected {workload_id} output (profile={profile}): got={output!r} expected={expected_output!r}")
 
         def run_rep() -> None:
-            _run([str(exe), str(stringbuf_n)], cwd=work_dir)
+            _run([str(exe), str(workload_param_value)], cwd=work_dir)
 
-        run_stats, run_durations = _time_reps("stringbuf: run", run_rep, reps)
+        run_stats, run_durations = _time_reps(f"{label}: run", run_rep, reps)
 
     return {
-        "id": "stringbuf",
+        "id": workload_id,
         "kind": "runtime_microbench",
-        "params": {"n": stringbuf_n},
+        "profile": profile,
+        "params": {workload_param_name: workload_param_value},
         "build_ms": compile_stats.__dict__,
         "build_durations_ms": compile_durations,
         "run_ms": run_stats.__dict__,
@@ -199,9 +276,9 @@ def _bench_hih_workload_compile(
     fresh temp workspace per rep to reduce "incremental build" effects.
     """
 
-    workload_src = ROOT / "examples" / "hih-workload"
+    workload_src = ROOT / "workloads" / "hih-workload"
     if not workload_src.exists():
-        raise RuntimeError(f"Missing example: {workload_src}")
+        raise RuntimeError(f"Missing workload: {workload_src}")
 
     def compile_rep() -> None:
         with tempfile.TemporaryDirectory(dir=str(tmp_root)) as td:
@@ -220,14 +297,97 @@ def _bench_hih_workload_compile(
     }
 
 
+def _parse_profiles(raw_profiles: str) -> List[str]:
+    tokens = [token.strip().lower() for token in raw_profiles.split(",") if token.strip()]
+    if not tokens:
+        raise ValueError("at least one profile must be provided")
+    allowed = {"portable", "metal"}
+    normalized: List[str] = []
+    seen = set()
+    for token in tokens:
+        if token not in allowed:
+            raise ValueError(f"invalid profile '{token}' (expected portable|metal)")
+        if token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
+
+
+def _parse_runtime_mode(raw_runtime_mode: str) -> str:
+    token = raw_runtime_mode.strip().lower()
+    if token in ("full", "selective", "none"):
+        return token
+    raise ValueError(f"invalid runtime mode '{raw_runtime_mode}' (expected full|selective|none)")
+
+
+def _safe_ratio(numerator: int, denominator: int) -> Optional[float]:
+    if denominator <= 0:
+        return None
+    return round(numerator / denominator, 6)
+
+
+def _build_runtime_profile_ratios(benchmarks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    rows_by_id: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for bench in benchmarks:
+        if bench.get("kind") != "runtime_microbench":
+            continue
+        bench_id = str(bench.get("id", ""))
+        profile = str(bench.get("profile", ""))
+        if bench_id == "" or profile == "":
+            continue
+        if profile not in ("portable", "metal"):
+            continue
+        if bench_id not in rows_by_id:
+            rows_by_id[bench_id] = {}
+        rows_by_id[bench_id][profile] = bench
+
+    ratios: List[Dict[str, Any]] = []
+    for bench_id in sorted(rows_by_id.keys()):
+        pair = rows_by_id[bench_id]
+        portable = pair.get("portable")
+        metal = pair.get("metal")
+        if portable is None or metal is None:
+            continue
+        ratios.append(
+            {
+                "id": bench_id,
+                "kind": "runtime_microbench",
+                "portable_over_metal": {
+                    "build_avg_ms": _safe_ratio(int(portable["build_ms"]["avg_ms"]), int(metal["build_ms"]["avg_ms"])),
+                    "run_avg_ms": _safe_ratio(int(portable["run_ms"]["avg_ms"]), int(metal["run_ms"]["avg_ms"])),
+                    "run_best_ms": _safe_ratio(int(portable["run_ms"]["best_ms"]), int(metal["run_ms"]["best_ms"])),
+                    "run_worst_ms": _safe_ratio(int(portable["run_ms"]["worst_ms"]), int(metal["run_ms"]["worst_ms"])),
+                },
+            }
+        )
+    return ratios
+
+
 def main(argv: Sequence[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--haxe-bin", default=os.environ.get("HAXE_BIN", "haxe"))
     parser.add_argument("--reps", type=int, default=10)
     parser.add_argument("--compile-reps", type=int, default=3)
+    parser.add_argument("--profiles", default="portable,metal")
+    parser.add_argument("--runtime-mode", default="full")
     parser.add_argument("--stringbuf-n", type=int, default=200000)
+    parser.add_argument("--int-array-n", type=int, default=50000)
+    parser.add_argument("--anon-iterations", type=int, default=300000)
     parser.add_argument("--out", required=True)
     args = parser.parse_args(list(argv[1:]))
+
+    try:
+        profiles = _parse_profiles(args.profiles)
+    except ValueError as error:
+        print(f"Invalid profile configuration: {error}", file=sys.stderr)
+        return 2
+
+    try:
+        runtime_mode = _parse_runtime_mode(args.runtime_mode)
+    except ValueError as error:
+        print(f"Invalid runtime mode configuration: {error}", file=sys.stderr)
+        return 2
 
     haxe_bin = args.haxe_bin
     if not shutil.which(haxe_bin):
@@ -248,21 +408,48 @@ def main(argv: Sequence[str]) -> int:
     print(f"Stage0 haxe: {_haxe_version(haxe_bin)}")
     print(f"OCaml: {_cmd_output(['ocamlc', '-version'])}")
     print(f"Dune: {_cmd_output(['dune', '--version'])}")
+    print(f"Profiles: {','.join(profiles)}")
+    print(f"Runtime mode: {runtime_mode}")
     print(f"Reps: {args.reps} (compile reps: {args.compile_reps})")
     print("")
 
     started = _dt.datetime.now(tz=_dt.timezone.utc)
 
     benches: List[Dict[str, Any]] = []
-    benches.append(
-        _bench_stringbuf(
-            tmp_root=tmp_root,
-            reps=args.reps,
-            compile_reps=args.compile_reps,
-            stringbuf_n=args.stringbuf_n,
-            haxe_bin=haxe_bin,
+    for profile in profiles:
+        benches.append(
+            _bench_stringbuf(
+                tmp_root=tmp_root,
+                reps=args.reps,
+                compile_reps=args.compile_reps,
+                stringbuf_n=args.stringbuf_n,
+                haxe_bin=haxe_bin,
+                profile=profile,
+                runtime_mode=runtime_mode,
+            )
         )
-    )
+        benches.append(
+            _bench_int_array_sum(
+                tmp_root=tmp_root,
+                reps=args.reps,
+                compile_reps=args.compile_reps,
+                int_array_n=args.int_array_n,
+                haxe_bin=haxe_bin,
+                profile=profile,
+                runtime_mode=runtime_mode,
+            )
+        )
+        benches.append(
+            _bench_anon_getset(
+                tmp_root=tmp_root,
+                reps=args.reps,
+                compile_reps=args.compile_reps,
+                anon_iterations=args.anon_iterations,
+                haxe_bin=haxe_bin,
+                profile=profile,
+                runtime_mode=runtime_mode,
+            )
+        )
     benches.append(
         _bench_hih_workload_compile(
             tmp_root=tmp_root,
@@ -270,6 +457,16 @@ def main(argv: Sequence[str]) -> int:
             haxe_bin=haxe_bin,
         )
     )
+    runtime_profile_ratios = _build_runtime_profile_ratios(benches)
+
+    if runtime_profile_ratios:
+        print("")
+        print("== portable/metal runtime ratios (avg portable over metal)")
+        for ratio in runtime_profile_ratios:
+            print(
+                f"{ratio['id']:28s} build={ratio['portable_over_metal']['build_avg_ms']} "
+                f"run={ratio['portable_over_metal']['run_avg_ms']}"
+            )
 
     ended = _dt.datetime.now(tz=_dt.timezone.utc)
 
@@ -288,9 +485,14 @@ def main(argv: Sequence[str]) -> int:
         "params": {
             "reps": args.reps,
             "compile_reps": args.compile_reps,
+            "profiles": profiles,
+            "runtime_mode": runtime_mode,
             "stringbuf_n": args.stringbuf_n,
+            "int_array_n": args.int_array_n,
+            "anon_iterations": args.anon_iterations,
         },
         "benchmarks": benches,
+        "runtime_profile_ratios": runtime_profile_ratios,
     }
 
     out_path = Path(args.out)

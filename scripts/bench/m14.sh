@@ -33,12 +33,20 @@ latest_file="$ROOT/bench/results/m14-latest.json"
 reps="${M14_BENCH_REPS:-10}"
 compile_reps="${M14_BENCH_COMPILE_REPS:-3}"
 stringbuf_n="${M14_STRINGBUF_N:-200000}"
+int_array_n="${M14_INT_ARRAY_N:-50000}"
+anon_iterations="${M14_ANON_ITERATIONS:-300000}"
+profiles="${M14_PROFILES:-portable,metal}"
+runtime_mode="${M14_RUNTIME_MODE:-full}"
 
 python3 "$ROOT/scripts/bench/m14.py" \
   --haxe-bin "$HAXE_BIN" \
   --reps "$reps" \
   --compile-reps "$compile_reps" \
+  --profiles "$profiles" \
+  --runtime-mode "$runtime_mode" \
   --stringbuf-n "$stringbuf_n" \
+  --int-array-n "$int_array_n" \
+  --anon-iterations "$anon_iterations" \
   --out "$out_file"
 
 cp "$out_file" "$latest_file"
