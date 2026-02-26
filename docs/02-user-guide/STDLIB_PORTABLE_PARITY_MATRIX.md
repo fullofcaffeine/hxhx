@@ -181,7 +181,7 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.zip.Writer` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
 | `sys.FileStat` | `passthrough_verified` | test/portable/fixtures/file_stat_basic/src/Main.hx |
 | `sys.FileSystem` | `override` | packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx |
-| `sys.Http` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.Http` | `passthrough_verified` | test/portable/fixtures/sys_core_bucket01_basic/src/Main.hx |
 | `sys.db.Connection` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.db.Mysql` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.db.ResultSet` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

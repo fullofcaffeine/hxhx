@@ -12,11 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 27,
-    "bucketCount": 6
+    "missingModules": 26,
+    "bucketCount": 5
   },
   "missingModules": [
-    "sys.Http",
     "sys.db.Connection",
     "sys.db.Mysql",
     "sys.db.ResultSet",
@@ -45,13 +44,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "sys.core-01",
-      "group": "sys.core",
-      "modules": [
-        "sys.Http"
-      ]
-    },
     {
       "bucketKey": "sys.db-01",
       "group": "sys.db",

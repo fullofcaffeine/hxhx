@@ -927,6 +927,12 @@
         "evidence": [
           "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "sys.Http",
+        "evidence": [
+          "test/portable/fixtures/sys_core_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [
