@@ -981,6 +981,36 @@
         "evidence": [
           "test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "sys.ssl.Certificate",
+        "evidence": [
+          "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.ssl.Digest",
+        "evidence": [
+          "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.ssl.DigestAlgorithm",
+        "evidence": [
+          "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.ssl.Key",
+        "evidence": [
+          "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.ssl.Socket",
+        "evidence": [
+          "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [

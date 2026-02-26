@@ -195,11 +195,11 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.net.Host` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
 | `sys.net.Socket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
 | `sys.net.UdpSocket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
-| `sys.ssl.Certificate` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.ssl.Digest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.ssl.DigestAlgorithm` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.ssl.Key` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.ssl.Socket` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.ssl.Certificate` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
+| `sys.ssl.Digest` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
+| `sys.ssl.DigestAlgorithm` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
+| `sys.ssl.Key` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
+| `sys.ssl.Socket` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.thread.Condition` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.thread.Deque` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.thread.ElasticThreadPool` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
