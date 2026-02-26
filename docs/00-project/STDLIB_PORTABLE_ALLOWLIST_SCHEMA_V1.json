@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json",
+  "schemaVersion": 1,
+  "contractName": "reflaxe.family.std.portable_allowlist",
+  "contractVersion": "1.0.0",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "familyContract",
+    "contractVersion",
+    "name",
+    "target",
+    "haxeVersion",
+    "baselineRef",
+    "schemaRef",
+    "tiers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "familyContract": {
+      "type": "string",
+      "const": "reflaxe.family.std.portable_allowlist"
+    },
+    "contractVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "haxeVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "baselineRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schemaRef": {
+      "type": "string",
+      "const": "docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json"
+    },
+    "tiers": {
+      "type": "object",
+      "required": [
+        "tier1",
+        "tier2"
+      ],
+      "patternProperties": {
+        "^tier[0-9]+$": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

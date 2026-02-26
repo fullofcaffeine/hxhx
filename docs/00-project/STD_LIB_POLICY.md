@@ -81,3 +81,6 @@ The following upstream paths are never allowed to be vendored or copied into thi
   - verifies the committed portable baseline contract matches deterministic generation from upstream std.
 - `scripts/ci/portable-stdlib-tier-allowlist-check.js`
   - verifies tiered allowlist contract integrity (`tier1`/`tier2`) against the baseline manifest.
+  - enforces the family allowlist schema + contract metadata:
+    - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json`
+    - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_FAMILY_V1.md`

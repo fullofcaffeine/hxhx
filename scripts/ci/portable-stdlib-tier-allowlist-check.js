@@ -89,21 +89,39 @@ function main() {
 	const repoRoot = path.resolve(__dirname, '..', '..')
 	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json')
 	const allowlistPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json')
+	const schemaPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json')
+	const schemaRef = 'docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json'
 
 	const baseline = readJson(baselinePath)
 	const allowlist = readJson(allowlistPath)
-	if (baseline == null || allowlist == null) {
+	const schema = readJson(schemaPath)
+	if (baseline == null || allowlist == null || schema == null) {
 		process.exit(process.exitCode || 1)
 	}
 
 	if (allowlist.schemaVersion !== 1) {
 		fail(`unexpected allowlist schemaVersion: ${allowlist.schemaVersion}`)
 	}
+	if (schema.schemaVersion !== 1) {
+		fail(`unexpected allowlist schema schemaVersion: ${schema.schemaVersion}`)
+	}
+	if (allowlist.familyContract !== 'reflaxe.family.std.portable_allowlist') {
+		fail(`allowlist familyContract must be reflaxe.family.std.portable_allowlist (received: ${allowlist.familyContract})`)
+	}
+	if (allowlist.contractVersion !== '1.0.0') {
+		fail(`allowlist contractVersion must be 1.0.0 (received: ${allowlist.contractVersion})`)
+	}
+	if (allowlist.target !== 'ocaml') {
+		fail(`allowlist target must be ocaml (received: ${allowlist.target})`)
+	}
 	if (allowlist.haxeVersion !== baseline.haxeVersion) {
 		fail(`allowlist haxeVersion (${allowlist.haxeVersion}) must match baseline (${baseline.haxeVersion})`)
 	}
 	if (allowlist.baselineRef !== 'docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json') {
 		fail(`allowlist baselineRef must point to docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`)
+	}
+	if (allowlist.schemaRef !== schemaRef) {
+		fail(`allowlist schemaRef must point to ${schemaRef}`)
 	}
 	if (allowlist.tiers == null || typeof allowlist.tiers !== 'object') {
 		fail('allowlist must include a tiers object')

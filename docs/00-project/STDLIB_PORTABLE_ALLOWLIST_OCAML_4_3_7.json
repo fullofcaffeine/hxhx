@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
+  "familyContract": "reflaxe.family.std.portable_allowlist",
+  "contractVersion": "1.0.0",
   "name": "ocaml_portable_stdlib_allowlist",
+  "target": "ocaml",
   "haxeVersion": "4.3.7",
   "baselineRef": "docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json",
+  "schemaRef": "docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json",
   "tiers": {
     "tier1": [
       "Array",
