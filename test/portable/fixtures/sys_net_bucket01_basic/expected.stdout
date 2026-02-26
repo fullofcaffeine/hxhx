@@ -3,3 +3,6 @@ sys.net.Host=ok
 sys.net.Socket=ok
 sys.net.UdpSocket=ok
 sys.net.bucket01=done
+sys.net.Host.runtime=ok
+sys.net.Socket.runtime=ok
+sys.net.UdpSocket.runtime=unavailable

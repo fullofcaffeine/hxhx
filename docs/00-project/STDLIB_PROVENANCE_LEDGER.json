@@ -134,6 +134,24 @@
       "notes": "Default methods rewritten for OCaml-safe BytesData semantics."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/net/Host.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/net/Host.hx",
+      "notes": "Repo-authored concrete Host fallback so OCaml portable fixtures can instantiate sys.net.Host without unresolved extern modules."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/net/Socket.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/net/Socket.hx",
+      "notes": "Repo-authored concrete Socket fallback for constructor/close surface; non-close operations throw platform-unavailable in OCaml portable lane."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/ssl/Socket.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/ssl/Socket.hx",
+      "notes": "Repo-authored SSL socket scaffold for cross lane: preserves API surface while avoiding eval.vm.NativeSocket dependency."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/FileSystem.hx",

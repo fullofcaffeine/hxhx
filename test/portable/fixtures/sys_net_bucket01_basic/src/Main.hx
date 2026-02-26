@@ -58,5 +58,28 @@ class Main {
 		#else
 		Sys.println("sys.net.bucket01=missing");
 		#end
+
+		try {
+			final host = new sys.net.Host("127.0.0.1");
+			Sys.println("sys.net.Host.runtime=" + (host != null ? "ok" : "missing"));
+		} catch (_:haxe.Exception) {
+			Sys.println("sys.net.Host.runtime=unavailable");
+		}
+
+		try {
+			final socket = new sys.net.Socket();
+			Sys.println("sys.net.Socket.runtime=" + (socket != null ? "ok" : "missing"));
+			socket.close();
+		} catch (_:haxe.Exception) {
+			Sys.println("sys.net.Socket.runtime=unavailable");
+		}
+
+		try {
+			final udpSocket = new sys.net.UdpSocket();
+			Sys.println("sys.net.UdpSocket.runtime=" + (udpSocket != null ? "ok" : "missing"));
+			udpSocket.close();
+		} catch (_:haxe.Exception) {
+			Sys.println("sys.net.UdpSocket.runtime=unavailable");
+		}
 	}
 }
