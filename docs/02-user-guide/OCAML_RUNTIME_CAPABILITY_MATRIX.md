@@ -70,6 +70,23 @@ This matrix documents runtime module status for:
   `-D ocaml_runtime_debug_lane`; it is debug-only and must not be enabled for release builds.
 - These constraints are intentional for predictable native performance and deterministic semantics.
 
+## `HxArray` adaptive storage strategy (portable runtime)
+
+`HxArray` now uses deterministic adaptive stores in portable mode:
+
+- `ObjStore` for fully dynamic / nullable slots.
+- `IntStore` for dense integer arrays.
+- `FloatStore` for dense float arrays.
+- `StringStore` for dense string arrays.
+
+Promotion/deopt rules:
+
+- `ObjStore` promotes to typed stores only when live slots are dense, non-null, and uniformly typed.
+- Typed stores deopt back to `ObjStore` when an operation requires nullable holes (for example sparse set or grow-resize) or mixed-type writes.
+- Deopt is explicit and local to `HxArray`; portable semantics remain unchanged.
+
+This keeps portable as the default compatibility lane while reducing boxing overhead for typed hot loops (for example `Array<Int>` accumulation workloads).
+
 ## Related docs
 
 - Profile contract and verifier error map: `docs/02-user-guide/OCAML_PROFILE_CONTRACT.md`

@@ -237,6 +237,17 @@ class M6RuntimeCopierIntegrationTest {
 		final runtimePath = portableOutDir + "/runtime/HxRuntime.ml";
 		if (!sys.FileSystem.exists(runtimePath))
 			throw "missing runtime: " + runtimePath;
+		final runtimeArrayPath = portableOutDir + "/runtime/HxArray.ml";
+		if (!sys.FileSystem.exists(runtimeArrayPath))
+			throw "missing runtime array module: " + runtimeArrayPath;
+		final runtimeArrayContent = sys.io.File.getContent(runtimeArrayPath);
+		assertContains(runtimeArrayContent, "type storage =", "HxArray runtime should define adaptive storage variants");
+		assertContains(runtimeArrayContent, "ObjStore", "HxArray runtime should include ObjStore variant");
+		assertContains(runtimeArrayContent, "IntStore", "HxArray runtime should include IntStore variant");
+		assertContains(runtimeArrayContent, "FloatStore", "HxArray runtime should include FloatStore variant");
+		assertContains(runtimeArrayContent, "StringStore", "HxArray runtime should include StringStore variant");
+		assertContains(runtimeArrayContent, "promote_obj_store_if_possible", "HxArray runtime should include typed-store promotion helper");
+		assertContains(runtimeArrayContent, "ensure_obj_store", "HxArray runtime should include deopt helper");
 
 		final dunePath = portableOutDir + "/dune";
 		if (!sys.FileSystem.exists(dunePath))
