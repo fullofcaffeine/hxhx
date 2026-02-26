@@ -1,0 +1,8 @@
+haxe.macro.PlatformConfig=ok
+haxe.macro.PositionTools=ok
+haxe.macro.Printer=ok
+haxe.macro.Tools=ok
+haxe.macro.Type=ok
+haxe.macro.TypeTools=ok
+haxe.macro.TypedExprTools=ok
+macro.bucket02=done

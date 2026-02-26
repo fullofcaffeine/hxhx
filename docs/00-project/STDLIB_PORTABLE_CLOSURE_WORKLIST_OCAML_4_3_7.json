@@ -12,17 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 52,
-    "bucketCount": 10
+    "missingModules": 45,
+    "bucketCount": 9
   },
   "missingModules": [
-    "haxe.macro.PlatformConfig",
-    "haxe.macro.PositionTools",
-    "haxe.macro.Printer",
-    "haxe.macro.Tools",
-    "haxe.macro.Type",
-    "haxe.macro.TypeTools",
-    "haxe.macro.TypedExprTools",
     "haxe.rtti.CType",
     "haxe.rtti.Meta",
     "haxe.rtti.Rtti",
@@ -70,19 +63,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.macro-01",
-      "group": "haxe.macro",
-      "modules": [
-        "haxe.macro.PlatformConfig",
-        "haxe.macro.PositionTools",
-        "haxe.macro.Printer",
-        "haxe.macro.Tools",
-        "haxe.macro.Type",
-        "haxe.macro.TypeTools",
-        "haxe.macro.TypedExprTools"
-      ]
-    },
     {
       "bucketKey": "haxe.rtti-01",
       "group": "haxe.rtti",

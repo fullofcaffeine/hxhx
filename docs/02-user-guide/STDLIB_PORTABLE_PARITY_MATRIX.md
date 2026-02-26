@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `121` passthrough-verified, `52` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `128` passthrough-verified, `45` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -154,13 +154,13 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.macro.JSGenApi` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
 | `haxe.macro.MacroStringTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
 | `haxe.macro.MacroType` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket01_basic/src/Main.hx |
-| `haxe.macro.PlatformConfig` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.PositionTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Printer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Tools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.Type` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.TypeTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.macro.TypedExprTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.macro.PlatformConfig` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
+| `haxe.macro.PositionTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
+| `haxe.macro.Printer` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
+| `haxe.macro.Tools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
+| `haxe.macro.Type` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
+| `haxe.macro.TypeTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
+| `haxe.macro.TypedExprTools` | `passthrough_verified` | test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx |
 | `haxe.rtti.CType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.rtti.Meta` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.rtti.Rtti` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
