@@ -1,0 +1,9 @@
+fs=/tmp/hxhx
+pos=2:3
+range.end=5
+method.initialize=initialize
+method.completion=display/completion
+method.contexts=server/contexts
+diag.severity=2
+importStatus=1
+typePath=demo.Mod.Type

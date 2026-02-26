@@ -281,6 +281,48 @@
         ]
       },
       {
+        "module": "haxe.display.Diagnostic",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.display.Display",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.display.FsPath",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.display.JsonModuleTypes",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.display.Position",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.display.Protocol",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.display.Server",
+        "evidence": [
+          "test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.exceptions.ArgumentException",
         "evidence": [
           "test/portable/fixtures/haxe_exceptions_basic/src/Main.hx"

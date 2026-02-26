@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `71` passthrough-verified, `102` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `78` passthrough-verified, `95` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -71,13 +71,13 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.crypto.Sha1` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
 | `haxe.crypto.Sha224` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
 | `haxe.crypto.Sha256` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
-| `haxe.display.Diagnostic` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.display.Display` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.display.FsPath` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.display.JsonModuleTypes` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.display.Position` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.display.Protocol` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.display.Server` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.display.Diagnostic` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
+| `haxe.display.Display` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
+| `haxe.display.FsPath` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
+| `haxe.display.JsonModuleTypes` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
+| `haxe.display.Position` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
+| `haxe.display.Protocol` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
+| `haxe.display.Server` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
 | `haxe.ds.ArraySort` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.ds.BalancedTree` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.ds.Either` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
