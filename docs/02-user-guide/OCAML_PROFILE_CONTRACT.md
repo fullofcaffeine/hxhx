@@ -60,6 +60,11 @@ Any other value is invalid and fails fast.
   - default: `warn`
   - `error`: fail fast on non-portable `ocaml.*` surface usage
   - CI portability lanes (stdlib tier1/full) intentionally run with `error` while local default remains `warn`
+- `-D ocaml_atomic_semantics=emulated`
+  - portable `haxe.atomic.*` contract selector (default: `emulated`)
+  - current implementation is API-compatible single-thread emulation, not hardware/thread-level atomics
+  - any non-`emulated` value fails fast (true atomic mode is not available yet)
+  - portable builds emit an explicit compile-time diagnostic when `haxe.atomic.*` is used, to avoid overclaiming thread-safety
 
 ## Scope
 
@@ -78,6 +83,7 @@ Any other value is invalid and fails fast.
 Invalid values fail with an actionable message:
 
 - `invalid -D ocaml_profile=<value> (expected portable|metal)`
+- `invalid -D ocaml_atomic_semantics=<value> (only emulated is currently supported; true thread-level atomic mode is not available yet)`
 - `invalid -D ocaml_runtime_mode=<value> (expected full|selective)`
 - `invalid -D ocaml_runtime_mode=none (none is not supported; use selective + ocaml_runtime_no_infer + optional ocaml_runtime_modules)`
 
@@ -113,6 +119,7 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `schemaVersion` (current: `2`)
   - `requestedProfile`
   - `normalizedProfile`
+  - `atomicSemantics`
   - `runtimeMode`
   - `portableNativeSurfacePolicy`
   - `strictUserBoundaries`

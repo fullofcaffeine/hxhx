@@ -12,6 +12,7 @@ private typedef ProfileReport = {
 	final schemaVersion:Int;
 	final requestedProfile:Null<String>;
 	final normalizedProfile:String;
+	final atomicSemantics:String;
 	final runtimeMode:String;
 	final portableNativeSurfacePolicy:String;
 	final strictUserBoundaries:Bool;
@@ -183,6 +184,7 @@ class M6RuntimeCopierIntegrationTest {
 		final metalTokenFallbackNoDebugOutDir = rootOutDir + "/metal_token_fallback_no_debug";
 		final metalTokenFallbackDebugOutDir = rootOutDir + "/metal_token_fallback_debug";
 		final invalidProfileOutDir = rootOutDir + "/invalid_profile";
+		final invalidAtomicSemanticsOutDir = rootOutDir + "/invalid_atomic_semantics";
 		final invalidRuntimeModeOutDir = rootOutDir + "/invalid_runtime_mode";
 		final noneRuntimeModeOutDir = rootOutDir + "/none_runtime_mode";
 		sys.FileSystem.createDirectory(rootOutDir);
@@ -216,6 +218,11 @@ class M6RuntimeCopierIntegrationTest {
 		assertContains(invalidCombinedOutput, "ocaml_profile", "invalid profile should mention ocaml_profile");
 		assertContains(invalidCombinedOutput, "portable|metal", "invalid profile should mention expected values");
 		assertTrue(!sys.FileSystem.exists(invalidProfileOutDir + "/ocaml_profile_report.json"), "invalid profile should fail before profile report generation");
+		final invalidAtomicSemanticsCompile = compileRuntimeFixture(invalidAtomicSemanticsOutDir, "portable", "test", "Main", ["ocaml_atomic_semantics=true"]);
+		assertTrue(invalidAtomicSemanticsCompile.exitCode != 0, "invalid atomic semantics should fail fast");
+		final invalidAtomicSemanticsOutput = invalidAtomicSemanticsCompile.stderr + "\n" + invalidAtomicSemanticsCompile.stdout;
+		assertContains(invalidAtomicSemanticsOutput, "ocaml_atomic_semantics", "invalid atomic semantics should mention define");
+		assertContains(invalidAtomicSemanticsOutput, "only emulated is currently supported", "invalid atomic semantics should use actionable error");
 		final invalidRuntimeModeCompile = compileRuntimeFixture(invalidRuntimeModeOutDir, "portable", "test", "Main", ["ocaml_runtime_mode=weird"]);
 		assertTrue(invalidRuntimeModeCompile.exitCode != 0, "invalid runtime mode should fail fast");
 		final invalidRuntimeModeOutput = invalidRuntimeModeCompile.stderr + "\n" + invalidRuntimeModeCompile.stdout;
@@ -288,6 +295,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(portableProfileReport.schemaVersion == 2, "portable profile report schema version");
 		assertTrue(portableProfileReport.requestedProfile == null, "portable report keeps null requested profile");
 		assertTrue(portableProfileReport.normalizedProfile == "portable", "portable report normalized profile");
+		assertTrue(portableProfileReport.atomicSemantics == "emulated", "portable report atomic semantics");
 		assertTrue(portableProfileReport.runtimeMode == "full", "portable profile report runtime mode");
 		assertTrue(portableProfileReport.portableNativeSurfacePolicy == "warn", "portable profile report native-surface policy");
 		assertTrue(portableProfileReport.verifier.enabled == true, "portable report verifier enabled");
@@ -298,6 +306,7 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(metalProfileReport.schemaVersion == 2, "metal profile report schema version");
 		assertTrue(metalProfileReport.requestedProfile == "MeTaL", "metal report should keep requested mixed-case profile");
 		assertTrue(metalProfileReport.normalizedProfile == "metal", "metal report normalized profile");
+		assertTrue(metalProfileReport.atomicSemantics == "emulated", "metal report atomic semantics");
 		assertTrue(metalProfileReport.verifier.mode == "reflaxe_stage0_macro", "metal report verifier mode label");
 		assertTrue(metalProfileReport.verifier.enabled == true, "metal report verifier enabled");
 		assertTrue(metalProfileReport.verifier.result == "pass", "metal report verifier pass");
@@ -309,7 +318,9 @@ class M6RuntimeCopierIntegrationTest {
 		assertTrue(emptyProfileReport.schemaVersion == 2, "empty profile report schema version");
 		assertTrue(emptyProfileReport.requestedProfile == "", "empty profile report keeps empty requested profile");
 		assertTrue(emptyProfileReport.normalizedProfile == "portable", "empty profile normalizes to portable");
+		assertTrue(emptyProfileReport.atomicSemantics == "emulated", "empty profile report atomic semantics");
 		assertTrue(portableManualProfileReport.normalizedProfile == "portable", "portable manual report keeps portable profile");
+		assertTrue(portableManualProfileReport.atomicSemantics == "emulated", "portable manual report atomic semantics");
 
 		assertTrue(portableRuntimeReport.schemaVersion == 2, "portable runtime report schema version");
 		assertTrue(portableRuntimeReport.profile == "portable", "portable runtime report profile");

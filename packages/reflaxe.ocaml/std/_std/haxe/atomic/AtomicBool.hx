@@ -4,6 +4,10 @@ package haxe.atomic;
 	Portable OCaml override for `haxe.atomic.AtomicBool`.
 
 	This mirrors upstream bool/int conversion behavior on top of local `AtomicInt`.
+
+	Contract note:
+	- follows `AtomicInt` emulated semantics (`-D ocaml_atomic_semantics=emulated`).
+	- preserves API behavior, not hardware/thread-level atomic guarantees.
 **/
 class AtomicBool {
 	final inner:AtomicInt;

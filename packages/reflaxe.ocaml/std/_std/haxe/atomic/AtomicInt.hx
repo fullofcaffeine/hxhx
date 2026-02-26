@@ -5,6 +5,10 @@ package haxe.atomic;
 
 	This preserves the public API and single-thread behavior for stdlib parity,
 	but it is not a hardware-atomic implementation yet.
+
+	Contract note:
+	- controlled by `-D ocaml_atomic_semantics=emulated` (default/only mode today).
+	- this class must not be treated as a thread-level atomic primitive.
 **/
 class AtomicInt {
 	var value:Int;

@@ -17,6 +17,7 @@ import haxe.macro.Context;
 **/
 class OcamlBuildContext {
 	public static inline final PROFILE_DEFINE = "ocaml_profile";
+	public static inline final ATOMIC_SEMANTICS_DEFINE = "ocaml_atomic_semantics";
 	public static inline final METAL_ALLOW_FALLBACK_DEFINE = "ocaml_metal_allow_fallback";
 	public static inline final STRICT_DEFINE = "ocaml_strict";
 	public static inline final PORTABLE_NATIVE_SURFACE_DEFINE = "ocaml_portable_native_surface";
@@ -27,6 +28,7 @@ class OcamlBuildContext {
 	public static inline final RUNTIME_DEBUG_LANE_DEFINE = "ocaml_runtime_debug_lane";
 
 	public final profile:OcamlProfileContract;
+	public final atomicSemantics:OcamlAtomicSemantics;
 	public final metalFallbackAllowed:Bool;
 	public final metalContractHardError:Bool;
 	public final strictUserBoundaries:Bool;
@@ -37,10 +39,11 @@ class OcamlBuildContext {
 	public final runtimeDebugLaneEnabled:Bool;
 	public final runtimeTokenScanFallbackEnabled:Bool;
 
-	public function new(profile:OcamlProfileContract, metalFallbackAllowed:Bool, strictUserBoundaries:Bool,
+	public function new(profile:OcamlProfileContract, atomicSemantics:OcamlAtomicSemantics, metalFallbackAllowed:Bool, strictUserBoundaries:Bool,
 			portableNativeSurfacePolicy:OcamlPortableNativeSurfacePolicy, runtimeMode:OcamlRuntimeMode, runtimeManualModules:Array<String>,
 			runtimeInferenceDisabled:Bool, runtimeDebugLaneEnabled:Bool, runtimeTokenScanFallbackEnabled:Bool) {
 		this.profile = profile;
+		this.atomicSemantics = atomicSemantics;
 		this.metalFallbackAllowed = metalFallbackAllowed;
 		this.metalContractHardError = profile == OcamlProfileContract.Metal && !metalFallbackAllowed;
 		this.strictUserBoundaries = strictUserBoundaries;
@@ -85,6 +88,12 @@ class OcamlBuildContext {
 	public static function resolve():OcamlBuildContext {
 		final rawProfile = Context.definedValue(PROFILE_DEFINE);
 		final profile = resolveProfile(rawProfile);
+		final atomicSemantics = try {
+			OcamlAtomicSemantics.fromDefineValue(Context.definedValue(ATOMIC_SEMANTICS_DEFINE));
+		} catch (e:String) {
+			Context.error(e, Context.currentPos());
+			OcamlAtomicSemantics.Emulated;
+		}
 
 		final metalFallbackAllowed = Context.defined(METAL_ALLOW_FALLBACK_DEFINE);
 		final strictUserBoundaries = Context.defined(STRICT_DEFINE) || (profile == OcamlProfileContract.Metal && !metalFallbackAllowed);
@@ -118,13 +127,13 @@ class OcamlBuildContext {
 			Context.warning("ocaml_runtime_token_scan_fallback ignored unless runtime mode is selective and inference is enabled.", Context.currentPos());
 		}
 
-		return new OcamlBuildContext(profile, metalFallbackAllowed, strictUserBoundaries, portableNativeSurfacePolicy, runtimeMode, runtimeManualModules,
-			runtimeInferenceDisabled, runtimeDebugLaneEnabled, runtimeTokenScanFallbackEnabled);
+		return new OcamlBuildContext(profile, atomicSemantics, metalFallbackAllowed, strictUserBoundaries, portableNativeSurfacePolicy, runtimeMode,
+			runtimeManualModules, runtimeInferenceDisabled, runtimeDebugLaneEnabled, runtimeTokenScanFallbackEnabled);
 	}
 	#else
 	public static function resolve():OcamlBuildContext {
-		return new OcamlBuildContext(OcamlProfileContract.Portable, false, false, OcamlPortableNativeSurfacePolicy.Warn, OcamlRuntimeMode.Full, [], false,
-			false, false);
+		return new OcamlBuildContext(OcamlProfileContract.Portable, OcamlAtomicSemantics.Emulated, false, false, OcamlPortableNativeSurfacePolicy.Warn,
+			OcamlRuntimeMode.Full, [], false, false, false);
 	}
 	#end
 }

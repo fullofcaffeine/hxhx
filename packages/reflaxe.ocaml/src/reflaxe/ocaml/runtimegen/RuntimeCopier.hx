@@ -4,6 +4,7 @@ package reflaxe.ocaml.runtimegen;
 import haxe.io.Path;
 import reflaxe.output.OutputManager;
 import reflaxe.ocaml.OcamlBuildContext;
+import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
 import reflaxe.ocaml.OcamlRuntimeMode;
@@ -25,6 +26,7 @@ private typedef ProfileReport = {
 	final schemaVersion:Int;
 	final requestedProfile:Null<String>;
 	final normalizedProfile:String;
+	final atomicSemantics:String;
 	final runtimeMode:String;
 	final portableNativeSurfacePolicy:String;
 	final strictUserBoundaries:Bool;
@@ -304,6 +306,7 @@ class RuntimeCopier {
 			schemaVersion: 2,
 			requestedProfile: requested,
 			normalizedProfile: OcamlProfileContract.toDefineValue(context.profile),
+			atomicSemantics: OcamlAtomicSemantics.toDefineValue(context.atomicSemantics),
 			runtimeMode: OcamlRuntimeMode.toDefineValue(context.runtimeMode),
 			portableNativeSurfacePolicy: OcamlPortableNativeSurfacePolicy.toDefineValue(context.portableNativeSurfacePolicy),
 			strictUserBoundaries: context.strictUserBoundaries,

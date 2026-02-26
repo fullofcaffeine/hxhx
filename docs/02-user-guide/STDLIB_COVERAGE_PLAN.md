@@ -66,6 +66,21 @@ Implemented via:
 - codegen lowering for constructors + methods:
   `packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx` (`StringMap`/`IntMap`/`ObjectMap`/`IMap`)
 
+### Atomics (`haxe.atomic.*`) — contract status
+
+- overrides:
+  - `packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx`
+  - `packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx`
+  - `packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx`
+- current portable contract:
+  - API parity for load/store/exchange/compareExchange/add/sub/etc.
+  - semantics are **emulated single-thread wrappers** (not hardware/thread-level atomicity)
+- explicit define contract:
+  - `-D ocaml_atomic_semantics=emulated` (default and currently only supported value)
+  - non-`emulated` values fail fast with an actionable compile-time error
+- diagnostics:
+  - portable compiles emit a warning when `haxe.atomic.*` is used so thread-safety is not overclaimed implicitly
+
 ### Regex (`EReg`)
 
 - extern: `packages/reflaxe.ocaml/std/_std/EReg.hx`

@@ -5,6 +5,10 @@ package haxe.atomic;
 
 	This preserves load/store/exchange/compareExchange API behavior for object
 	values in portable lanes.
+
+	Contract note:
+	- follows emulated `haxe.atomic.*` semantics (`-D ocaml_atomic_semantics=emulated`).
+	- provides API parity only; no hardware/thread-level atomic guarantees.
 **/
 class AtomicObject<T:{}> {
 	var value:T;

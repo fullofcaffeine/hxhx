@@ -5,6 +5,7 @@ import haxe.io.Path;
 import haxe.macro.Context;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
+import reflaxe.ocaml.OcamlAtomicSemantics;
 import reflaxe.ocaml.OcamlBuildContext;
 import reflaxe.ocaml.OcamlProfileContract;
 import reflaxe.ocaml.OcamlPortableNativeSurfacePolicy;
@@ -84,6 +85,8 @@ class StrictModeEnforcer {
 		final strictEnabled = strictGlobal || laneModules.length > 0;
 		final portablePolicyEnabled = buildContext.profile == OcamlProfileContract.Portable
 			&& buildContext.portableNativeSurfacePolicy != OcamlPortableNativeSurfacePolicy.Allow;
+		final atomicEmulationDiagnosticsEnabled = buildContext.profile == OcamlProfileContract.Portable
+			&& buildContext.atomicSemantics == OcamlAtomicSemantics.Emulated;
 		final strictScope = if (strictGlobal) "global_metal" else if (laneModules.length > 0) "portable_haxeMetal_lanes" else "disabled";
 
 		final reported:Map<String, Bool> = [];
@@ -96,7 +99,7 @@ class StrictModeEnforcer {
 						continue;
 					final moduleName = normalizeModuleLabel(classType.module);
 					final strictForModule = strictGlobal || laneModuleSet.exists(moduleName);
-					if (!strictForModule && !portablePolicyEnabled)
+					if (!strictForModule && !portablePolicyEnabled && !atomicEmulationDiagnosticsEnabled)
 						continue;
 					final strictHardError = strictForModule && !fallbackAllowed;
 					final fields = classType.fields.get().concat(classType.statics.get());
@@ -104,7 +107,8 @@ class StrictModeEnforcer {
 						final expr = field.expr();
 						if (expr == null)
 							continue;
-						scanExpr(expr, strictForModule, strictHardError, buildContext.portableNativeSurfacePolicy, reported, violationIds);
+						scanExpr(expr, strictForModule, strictHardError, buildContext.portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled,
+							reported, violationIds);
 					}
 				case _:
 			}
@@ -123,12 +127,15 @@ class StrictModeEnforcer {
 	}
 
 	static function scanExpr(expr:TypedExpr, strictForModule:Bool, strictHardError:Bool, portableNativeSurfacePolicy:OcamlPortableNativeSurfacePolicy,
-			reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
+			atomicEmulationDiagnosticsEnabled:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
 		if (strictForModule)
 			scanExprStrict(expr, strictHardError, reported, violationIds);
 		if (portableNativeSurfacePolicy != OcamlPortableNativeSurfacePolicy.Allow)
 			scanExprPortableNativeSurface(expr, portableNativeSurfacePolicy, reported, violationIds);
-		TypedExprTools.iter(expr, e -> scanExpr(e, strictForModule, strictHardError, portableNativeSurfacePolicy, reported, violationIds));
+		if (atomicEmulationDiagnosticsEnabled)
+			scanExprAtomicSemantics(expr, reported, violationIds);
+		TypedExprTools.iter(expr,
+			e -> scanExpr(e, strictForModule, strictHardError, portableNativeSurfacePolicy, atomicEmulationDiagnosticsEnabled, reported, violationIds));
 	}
 
 	static function scanExprStrict(expr:TypedExpr, strictHardError:Bool, reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
@@ -181,6 +188,14 @@ class StrictModeEnforcer {
 		emitPortableNativeSurfaceViolation("portable_native_surface", msg, expr.pos, policy, reported, violationIds);
 	}
 
+	static function scanExprAtomicSemantics(expr:TypedExpr, reported:Map<String, Bool>, violationIds:Map<String, Bool>):Void {
+		if (!containsHaxeAtomicSurface(expr))
+			return;
+		emitAtomicSemanticsDiagnostic("portable_atomic_emulated",
+			"portable profile uses emulated `haxe.atomic.*` semantics (single-thread API parity only; not hardware/thread-level atomicity).", expr.pos,
+			reported, violationIds);
+	}
+
 	static function containsOcamlNativeSurface(expr:TypedExpr):Bool {
 		if (hasOcamlNativeType(expr.t, 16))
 			return true;
@@ -203,12 +218,43 @@ class StrictModeEnforcer {
 		}
 	}
 
+	static function containsHaxeAtomicSurface(expr:TypedExpr):Bool {
+		if (hasHaxeAtomicType(expr.t, 16))
+			return true;
+		return switch (expr.expr) {
+			case TTypeExpr(moduleType):
+				moduleTypeStartsWithHaxeAtomic(moduleType);
+			case TVar(variable, _):
+				hasHaxeAtomicType(variable.t, 16);
+			case TFunction(fn):
+				var hasAtomic = false;
+				for (arg in fn.args) {
+					if (hasHaxeAtomicType(arg.v.t, 16)) {
+						hasAtomic = true;
+						break;
+					}
+				}
+				hasAtomic;
+			case _:
+				false;
+		}
+	}
+
 	static function moduleTypeStartsWithOcaml(moduleType:ModuleType):Bool {
 		return switch (moduleType) {
 			case TClassDecl(classRef): final cls = classRef.get(); cls.pack.length > 0 && cls.pack[0] == "ocaml";
 			case TEnumDecl(enumRef): final en = enumRef.get(); en.pack.length > 0 && en.pack[0] == "ocaml";
 			case TTypeDecl(typeRef): final td = typeRef.get(); td.pack.length > 0 && td.pack[0] == "ocaml";
 			case TAbstract(abstractRef): final ab = abstractRef.get(); ab.pack.length > 0 && ab.pack[0] == "ocaml";
+		}
+	}
+
+	static function moduleTypeStartsWithHaxeAtomic(moduleType:ModuleType):Bool {
+		return switch (moduleType) {
+			case TClassDecl(classRef): final cls = classRef.get(); cls.pack.length > 1 && cls.pack[0] == "haxe" && cls.pack[1] == "atomic";
+			case TEnumDecl(enumRef): final en = enumRef.get(); en.pack.length > 1 && en.pack[0] == "haxe" && en.pack[1] == "atomic";
+			case TTypeDecl(typeRef): final td = typeRef.get(); td.pack.length > 1 && td.pack[0] == "haxe" && td.pack[1] == "atomic";
+			case TAbstract(abstractRef): final ab = abstractRef.get(); ab.pack.length > 1 && ab.pack[0] == "haxe" && ab.pack[1] == "atomic";
 		}
 	}
 
@@ -247,9 +293,55 @@ class StrictModeEnforcer {
 		}
 	}
 
+	static function hasHaxeAtomicType(type:Type, maxDepth:Int):Bool {
+		if (maxDepth <= 0)
+			return false;
+		return switch (type) {
+			case TInst(classRef, params): final cls = classRef.get(); (cls.pack.length > 1 && cls.pack[0] == "haxe" && cls.pack[1] == "atomic") || typeParamsContainAtomic(params,
+					maxDepth
+					- 1);
+			case TEnum(enumRef, params): final en = enumRef.get(); (en.pack.length > 1 && en.pack[0] == "haxe" && en.pack[1] == "atomic") || typeParamsContainAtomic(params,
+					maxDepth
+					- 1);
+			case TType(typeRef, params): final td = typeRef.get(); (td.pack.length > 1 && td.pack[0] == "haxe" && td.pack[1] == "atomic") || typeParamsContainAtomic(params,
+					maxDepth
+					- 1) || hasHaxeAtomicType(td.type, maxDepth - 1);
+			case TAbstract(abstractRef, params): final ab = abstractRef.get(); (ab.pack.length > 1 && ab.pack[0] == "haxe" && ab.pack[1] == "atomic") || typeParamsContainAtomic(params,
+					maxDepth
+					- 1) || hasHaxeAtomicType(ab.type, maxDepth - 1);
+			case TFun(args, ret): var hasAtomic = false; for (arg in args) {
+					if (hasHaxeAtomicType(arg.t, maxDepth - 1)) {
+						hasAtomic = true;
+						break;
+					}
+				} hasAtomic || hasHaxeAtomicType(ret, maxDepth - 1);
+			case TAnonymous(anonRef):
+				var hasAtomic = false;
+				for (field in anonRef.get().fields) {
+					if (hasHaxeAtomicType(field.type, maxDepth - 1)) {
+						hasAtomic = true;
+						break;
+					}
+				}
+				hasAtomic;
+			case TDynamic(inner): inner != null && hasHaxeAtomicType(inner, maxDepth - 1);
+			case TLazy(thunk):
+				hasHaxeAtomicType(thunk(), maxDepth - 1);
+			case TMono(ref): final resolved = ref.get(); resolved != null && hasHaxeAtomicType(resolved, maxDepth - 1);
+		}
+	}
+
 	static function typeParamsContainOcaml(params:Array<Type>, maxDepth:Int):Bool {
 		for (param in params) {
 			if (hasOcamlNativeType(param, maxDepth))
+				return true;
+		}
+		return false;
+	}
+
+	static function typeParamsContainAtomic(params:Array<Type>, maxDepth:Int):Bool {
+		for (param in params) {
+			if (hasHaxeAtomicType(param, maxDepth))
 				return true;
 		}
 		return false;
@@ -336,6 +428,17 @@ class StrictModeEnforcer {
 				Context.warning(message, pos);
 			case Allow:
 		}
+	}
+
+	static function emitAtomicSemanticsDiagnostic(id:String, message:String, pos:haxe.macro.Expr.Position, reported:Map<String, Bool>,
+			violationIds:Map<String, Bool>):Void {
+		final posInfo = Context.getPosInfos(pos);
+		final key = id + ":" + posInfo.file;
+		if (reported.exists(key))
+			return;
+		reported.set(key, true);
+		violationIds.set(id, true);
+		Context.warning(message + " Configure via -D ocaml_atomic_semantics=emulated.", pos);
 	}
 
 	static function isStrictProjectSource(pos:haxe.macro.Expr.Position, projectRoot:String):Bool {

@@ -103,6 +103,11 @@ class M6MetalStrictModeEnforcerIntegrationTest {
 		assertTrue(portableNativeSurfaceAllow.exitCode == 0, "portable native-surface allow policy should compile");
 		assertNotContains(combinedOutput(portableNativeSurfaceAllow), "ocaml_portable_native_surface", "allow policy should not warn");
 
+		final portableAtomicUsage = compileFixture("atomic_usage", ["ocaml_profile=portable"]);
+		assertTrue(portableAtomicUsage.exitCode == 0, "portable atomic usage should compile");
+		assertContains(combinedOutput(portableAtomicUsage), "haxe.atomic.*", "portable atomic usage should emit atomic semantics diagnostic");
+		assertContains(combinedOutput(portableAtomicUsage), "ocaml_atomic_semantics", "portable atomic usage should mention define contract");
+
 		final metalInjection = compileFixture("injection", ["ocaml_profile=metal"]);
 		assertTrue(metalInjection.exitCode != 0, "metal profile should reject __ocaml__ injection");
 		assertContains(combinedOutput(metalInjection), "__ocaml__", "metal injection failure should mention __ocaml__");
