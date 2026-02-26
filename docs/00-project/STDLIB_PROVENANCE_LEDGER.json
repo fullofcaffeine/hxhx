@@ -53,7 +53,7 @@
       "path": "packages/reflaxe.ocaml/std/_std/Xml.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Xml.hx",
-      "notes": "OCaml-target Xml override; embeds parser/printer behavior to avoid generated OCaml module cycles, with portable fixtures for creation/printing and parse roundtrip."
+      "notes": "OCaml-target Xml override. We keep parse/print logic in Xml.hx so generated Xml.ml does not mutually depend on generated haxe_xml_Parser.ml / haxe_xml_Printer.ml (dune rejects that module cycle). Portable fixtures cover creation/printing and parse roundtrip behavior."
     },
     {
       "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx",

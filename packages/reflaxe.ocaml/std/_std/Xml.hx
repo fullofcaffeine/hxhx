@@ -2,9 +2,14 @@
 	OCaml target override for `Xml`.
 
 	Why this exists
-	- Upstream `Xml` calls `haxe.xml.Parser` and `haxe.xml.Printer` directly.
-	- Those modules also depend on `Xml`, which creates an OCaml module cycle when
-	  compiled as separate units.
+	- Upstream `Xml` delegates parsing/printing to `haxe.xml.Parser` and
+	  `haxe.xml.Printer`.
+	- In the OCaml backend we emit one OCaml module per Haxe module. If `Xml.ml`
+	  depends on `haxe_xml_Parser.ml` / `haxe_xml_Printer.ml` and those modules
+	  also depend back on `Xml.ml`, dune sees a circular dependency graph and
+	  stops with a compile-time module-cycle error.
+	- This override keeps the needed Xml parse/print behavior in one module so the
+	  generated OCaml module graph is acyclic.
 
 	Current scope
 	- Preserve the core `Xml` node API and string rendering behavior.
