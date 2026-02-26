@@ -161,6 +161,41 @@ When Rust-side implementation lands in the Rust repository, wire these lanes:
   - upload report artifacts
   - run comparator lane against pinned oracle snapshots once adapter is non-placeholder
 
+### Go placeholder adapter mapping (tracked in this repo)
+
+This repository also ships a deterministic Go placeholder adapter command with the same v1 contract inputs:
+
+```bash
+node scripts/stdlib/run-conformance-adapter-go-placeholder.js \
+  --target-id go \
+  --tier tier1 \
+  --allowlist-path docs/00-project/STDLIB_PORTABLE_ALLOWLIST_FAMILY_V1.md \
+  --fixture-root test/portable/fixtures \
+  --report-path .tmp/go-conformance-report.json \
+  --strict-native-surface true \
+  --corpus-manifest-path test/portable/semantic_diff/corpus_v1.json \
+  --slice-id core_seed_v1
+```
+
+Current behavior is deterministic `skip` (`reason=placeholder_not_implemented_in_this_repo`) while preserving:
+
+- input mapping shape (`targetId/tier/allowlistPath/fixtureRoot/reportPath/strictNativeSurface`)
+- marker contract (`START` + `SKIP`)
+- report contract fields (`schemaVersion`, `contractId`, `status`, `summary`, `fixtures`)
+
+### Go CI wiring plan (PR lane + nightly lane)
+
+When Go-side implementation lands in the Go repository, wire these lanes:
+
+- PR lane (`report-only` initially):
+  - run Go adapter with `tier1` + strict native surface
+  - publish JSON report artifact
+  - add summary markers and report path to workflow summary
+- Nightly lane (`wider coverage`):
+  - run same adapter over `core_seed_v1` slice (and later expanded slices)
+  - upload report artifacts
+  - run comparator lane against pinned oracle snapshots once adapter is non-placeholder
+
 ## Contract evolution policy
 
 - Patch: wording/non-breaking clarifications.

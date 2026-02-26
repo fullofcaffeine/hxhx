@@ -98,6 +98,7 @@
     "test:stdlib:portable:tier1": "bash scripts/test-stdlib-portable-tier1.sh",
     "test:stdlib:portable:full": "bash scripts/test-stdlib-portable-full.sh",
     "test:stdlib:conformance:rust-placeholder": "bash scripts/test-stdlib-conformance-rust-placeholder.sh",
+    "test:stdlib:conformance:go-placeholder": "bash scripts/test-stdlib-conformance-go-placeholder.sh",
     "test:stdlib:semantic-diff:lane": "bash scripts/test-stdlib-semantic-diff-lane.sh",
     "test:stdlib:semantic-diff:comparator": "bash scripts/test-stdlib-semantic-diff-comparator.sh",
     "test:stdlib:semantic-diff:generator": "bash scripts/test-stdlib-semantic-diff-generator.sh",
