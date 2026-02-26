@@ -14,7 +14,8 @@
 	Current scope
 	- Preserve the core `Xml` node API and string rendering behavior.
 	- Keep `toString()` self-contained in this module.
-	- `parse()` is intentionally not wired yet in this override (tracked follow-up).
+	- Provide a self-contained `parse()` for core document/element/pcdata behavior.
+	- Full parity edge cases are tracked separately (see stdlib parity follow-ups).
 **/
 enum abstract XmlType(Int) {
 	var Element = 0;
