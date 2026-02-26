@@ -103,13 +103,17 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 			"  static function metalSafeMap(words:Array<String>):Array<String> {",
 			"    return words.map(trimWord);",
 			"  }",
+			"  static function metalSafeJoin(words:Array<String>):String {",
+			"    return words.join(\",\");",
+			"  }",
 			"  static function blocked(value:Dynamic):Int {",
 			"    return Std.int(Reflect.field({payload: value}, \"payload\"));",
 			"  }",
 			"  static function main() {",
 			"    var normalized = metalSafeMap([\" a \", \"b \"]);",
+			"    var joined = metalSafeJoin(normalized);",
 			"    var blockedValue = blocked(2);",
-			"    Sys.println(normalized.join(\",\") + \":\" + Std.string(blockedValue));",
+			"    Sys.println(joined + \":\" + Std.string(blockedValue));",
 			"  }",
 			"}"
 		].join("\n");
@@ -125,7 +129,9 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 			final mainMlPath = findMainModulePath(outDir);
 			final mainMl = File.getContent(mainMlPath);
 			assertContains(mainMl, "HxBootArray.map (", "portable auto-metalization should use typed map lowering for metal-safe function");
+			assertContains(mainMl, "HxBootArray.join_strict (", "portable auto-metalization should use typed join lowering for metal-safe function");
 			assertTrue(mainMl.indexOf("map_dyn") < 0, "portable auto-metalization test fixture should not emit map_dyn fallback");
+			assertTrue(mainMl.indexOf("join_dyn") < 0, "portable auto-metalization test fixture should not emit join_dyn fallback");
 
 			final report = readReport(outDir);
 			assertTrue(report.schemaVersion == 1, "portable metalization report schemaVersion mismatch");
@@ -137,6 +143,11 @@ class M14PortableAutoMetalizationPlannerIntegrationTest {
 			assertTrue(metalSafeRegion.status == "auto_metalized", "metal-safe region should be auto-metalized");
 			assertContains("\n" + metalSafeRegion.usedMetalStyleLowerings.join("\n") + "\n", "\narray_map_typed\n",
 				"metal-safe region should report typed map lowering usage");
+
+			final metalSafeJoinRegion = findRegion(report, "Main.metalSafeJoin");
+			assertTrue(metalSafeJoinRegion.status == "auto_metalized", "metal-safe join region should be auto-metalized");
+			assertContains("\n" + metalSafeJoinRegion.usedMetalStyleLowerings.join("\n") + "\n", "\narray_join_typed\n",
+				"metal-safe join region should report typed join lowering usage");
 
 			final blockedRegion = findRegion(report, "Main.blocked");
 			assertTrue(blockedRegion.status == "excluded", "reflection/dynamic region should be excluded");

@@ -1811,10 +1811,15 @@ class EmitterStage {
 								callSigByCallee);
 							final separator = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
+							final usePortableAutoMetalTypedJoin = isPortableAutoMetalizedRegionActive() && isLikelyStringArrayExpr(obj);
 							if (isMetalProfileActive()) {
 								if (!isLikelyStringArrayExpr(obj)) {
 									throw "stage3 emitter: metal profile unsupported semantics: Array.join requires Array<String> receiver";
 								}
+								return "HxBootArray.join_strict (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
+							}
+							if (usePortableAutoMetalTypedJoin) {
+								markPortableAutoMetalizedLoweringUse("array_join_typed");
 								return "HxBootArray.join_strict (" + receiver + ") (" + separator + ") (fun (s : string) -> s)";
 							}
 							if (isLikelyStringArrayExpr(obj)) {

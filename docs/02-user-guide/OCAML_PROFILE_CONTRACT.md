@@ -14,6 +14,7 @@ Make profile selection explicit and deterministic while we evolve portable/metal
 - Convergence budgets and ratio lanes are tracked by the KPI harness (`scripts/hxhx/bench-kpi.sh`) and documented in:
   - `docs/benchmarks/HXHX_KPI_BASELINE.md`
   - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
+  - `docs/benchmarks/PORTABLE_BOUNDARY_BOXING_HOTSPOTS.md`
 
 ## Accepted values
 
@@ -35,7 +36,7 @@ Any other value is invalid and fails fast.
   - intended to preserve existing Haxe-oriented portability expectations.
   - Stage3 runs a portable auto-metalization planner that classifies function regions,
     applies selected metal-style lowerings in metal-safe regions, and emits a deterministic
-    planner report.
+    planner report (current lowered hotspots include typed `Array.map` and typed `Array<String>.join`).
 - `metal`:
   - native-oriented runtime layering mode.
   - links only runtime modules required by the emitted program + runtime transitive dependencies.
