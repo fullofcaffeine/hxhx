@@ -47,3 +47,18 @@ node scripts/stdlib/generate-semantic-diff-typed-seed-plan.js \
   --replay-config test/portable/semantic_diff/generated/typed_seed_plan_core_seed_v1_1337.json \
   --no-print-json
 ```
+
+## Comparator smoke (normalized observable outputs)
+
+Run adapter reports + comparator end-to-end:
+
+```bash
+npm run test:stdlib:semantic-diff:comparator
+```
+
+This command:
+
+1. runs the OCaml adapter observable runner twice,
+2. compares normalized `stdout`/`stderr`/exit outputs,
+3. emits a deterministic divergence report, and
+4. fails if `divergenceCount != 0`.

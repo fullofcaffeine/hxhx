@@ -51,6 +51,8 @@ Notes:
 - Fixture contribution rules: `test/portable/semantic_diff/CONTRIBUTING.md`
 - Deterministic typed generator smoke:
   - `npm run test:stdlib:semantic-diff:generator`
+- Comparator + normalized-output smoke:
+  - `npm run test:stdlib:semantic-diff:comparator`
 
 ## Cleanup after heavy runs
 

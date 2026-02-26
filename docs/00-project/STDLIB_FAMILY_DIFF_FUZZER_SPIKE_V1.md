@@ -45,6 +45,10 @@ Current skeleton implementation:
   - `scripts/stdlib/generate-semantic-diff-typed-seed-plan.js`
 - deterministic replay smoke wrapper:
   - `npm run test:stdlib:semantic-diff:generator`
+- observable adapter runner + normalized comparator:
+  - `scripts/stdlib/run-semantic-diff-adapter-ocaml.js`
+  - `scripts/stdlib/compare-semantic-diff-adapter-reports.js`
+  - `npm run test:stdlib:semantic-diff:comparator`
 
 ## Generator constraints (typed + portable-safe)
 

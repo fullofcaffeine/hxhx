@@ -43,6 +43,26 @@ Runner markers (stdout):
 - `PORTABLE_CONFORMANCE_RUNNER_FAIL target=<id> tier=<tier> failed=<n>`
 - `PORTABLE_CONFORMANCE_RUNNER_SKIP target=<id> tier=<tier> reason=<reason>`
 
+## Comparator normalization rules (v1)
+
+When adapter reports are compared, normalization must apply before field equality checks:
+
+- normalize line endings to `\n`
+- trim trailing whitespace per line
+- trim trailing blank lines
+
+Compared fields:
+
+- `status`
+- `compileExitCode`
+- `runExitCode`
+- normalized `stdout`
+- normalized `stderr`
+
+Comparator output contract id:
+
+- `reflaxe.family.std.semantic_diff_divergence_report`
+
 ## Report contract (normative)
 
 The runner writes a deterministic JSON report to `reportPath`:
