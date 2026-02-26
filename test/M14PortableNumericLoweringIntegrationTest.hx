@@ -64,7 +64,8 @@ class M14PortableNumericLoweringIntegrationTest {
 			"    var sum:Int = base + id(2);",
 			"    var prod:Int = base * id(3);",
 			"    var rem:Int = base % id(5);",
-			"    Sys.println(\"num=\" + Std.string(sum) + \",\" + Std.string(prod) + \",\" + Std.string(rem));",
+			"    var wrapped:Int = 2000000000 + id(2000000000);",
+			"    Sys.println(\"num=\" + Std.string(sum) + \",\" + Std.string(prod) + \",\" + Std.string(rem) + \",wrap=\" + Std.string(wrapped));",
 			"  }",
 			"}"
 		].join("\n");
@@ -84,9 +85,10 @@ class M14PortableNumericLoweringIntegrationTest {
 			assertTrue(mainMl.indexOf("let sum = (Obj.magic 0)") < 0, "portable numeric lowering should avoid poison fallback for Int + call result");
 			assertTrue(mainMl.indexOf("let prod = (Obj.magic 0)") < 0, "portable numeric lowering should avoid poison fallback for Int * call result");
 			assertTrue(mainMl.indexOf("let rem = (Obj.magic 0)") < 0, "portable numeric lowering should avoid poison fallback for Int % call result");
-			assertContains(mainMl, " + ", "portable numeric lowering should emit integer addition for Int + call");
-			assertContains(mainMl, " * ", "portable numeric lowering should emit integer multiplication for Int * call");
-			assertContains(mainMl, " mod ", "portable numeric lowering should emit integer modulo for Int % call");
+			assertTrue(mainMl.indexOf("let wrapped = (Obj.magic 0)") < 0, "portable numeric lowering should avoid poison fallback for Int overflow case");
+			assertContains(mainMl, "HxInt.add", "portable numeric lowering should emit HxInt.add for Int addition");
+			assertContains(mainMl, "HxInt.mul", "portable numeric lowering should emit HxInt.mul for Int multiplication");
+			assertContains(mainMl, "HxInt.rem", "portable numeric lowering should emit HxInt.rem for Int modulo");
 
 			final process = new sys.io.Process(exePath, []);
 			final stdout = process.stdout.readAll().toString();
@@ -94,7 +96,7 @@ class M14PortableNumericLoweringIntegrationTest {
 			final exitCode = process.exitCode();
 			process.close();
 			assertTrue(exitCode == 0, "portable numeric lowering executable failed with exit code " + exitCode + ". stderr=\n" + stderr);
-			assertContains(stdout, "num=9,21,2", "portable numeric lowering runtime output should preserve int numeric behavior");
+			assertContains(stdout, "num=9,21,2,wrap=-294967296", "portable numeric lowering runtime output should preserve Int32 wrap behavior");
 		} catch (e:haxe.Exception) {
 			failure = e.message;
 		} catch (msg:String) {

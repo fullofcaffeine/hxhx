@@ -695,6 +695,21 @@ class EmitterStage {
 			}
 		}
 
+		inline function intBinopCall(op:String, left:String, right:String):String {
+			return switch (op) {
+				case "+":
+					"(HxInt.add (" + left + ") (" + right + "))";
+				case "-":
+					"(HxInt.sub (" + left + ") (" + right + "))";
+				case "*":
+					"(HxInt.mul (" + left + ") (" + right + "))";
+				case "%":
+					"(HxInt.rem (" + left + ") (" + right + "))";
+				case _:
+					"(Obj.magic 0)";
+			}
+		}
+
 		function isLikelyArrayExpr(expr:HxExpr):Bool {
 			return switch (expr) {
 				case EArrayDecl(_):
@@ -2070,9 +2085,15 @@ class EmitterStage {
 								//
 								// Defaulting unknown expressions to float (`-.`) can break integer call sites
 								// (e.g. `addSuccesses(-x)` where `x` is currently lowered through Obj.magic).
-								((forceFloatUnop || isFloatExpr(expr)) ? "(-.(" : "(-(")
-									+ exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
-									+ "))";
+								final renderedExpr = exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+									moduleNameByPkgAndClass);
+								if (forceFloatUnop || isFloatExpr(expr)) {
+									"(-.(" + renderedExpr + "))";
+								} else if (isIntExpr(expr)) {
+									"(HxInt.neg (" + renderedExpr + "))";
+								} else {
+									"(-(" + renderedExpr + "))";
+								}
 						}
 					case _:
 						"(Obj.magic 0)";
@@ -2175,11 +2196,11 @@ class EmitterStage {
 								final fb = exprToOcamlAsFloat(b);
 								"(mod_float (" + fa + ") (" + fb + "))";
 							} else if (aIsI && bIsI) {
-								"((" + la + ") mod (" + rb + "))";
+								intBinopCall("%", la, rb);
 							} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
-								"((" + la + ") mod (" + rb + "))";
+								intBinopCall("%", la, rb);
 							} else if (allowNumericFallback) {
-								"((" + la + ") mod (" + rb + "))";
+								intBinopCall("%", la, rb);
 							} else {
 								"(Obj.magic 0)";
 							}
@@ -2195,11 +2216,11 @@ class EmitterStage {
 							final fb = exprToOcamlAsFloat(b);
 							"((" + fa + ") " + fop + " (" + fb + "))";
 						} else if (aIsI && bIsI) {
-							"((" + la + ") " + op + " (" + rb + "))";
+							intBinopCall(op, la, rb);
 						} else if ((aIsI && isUnknownNumericIdent(b)) || (bIsI && isUnknownNumericIdent(a))) {
-							"((" + la + ") " + op + " (" + rb + "))";
+							intBinopCall(op, la, rb);
 						} else if (allowNumericFallback) {
-							"((" + la + ") " + op + " (" + rb + "))";
+							intBinopCall(op, la, rb);
 						} else {
 							"(Obj.magic 0)";
 						}

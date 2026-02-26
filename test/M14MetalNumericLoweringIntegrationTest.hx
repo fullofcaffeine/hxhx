@@ -83,7 +83,7 @@ class M14MetalNumericLoweringIntegrationTest {
 			assertTrue(mainMl.indexOf("let r = (Obj.magic 0)") < 0, "metal numeric lowering should avoid poison fallback for modulo result");
 			assertTrue(mainMl.indexOf("let mixed = (Obj.magic 0)") < 0, "metal numeric lowering should avoid poison fallback for mixed arithmetic result");
 			assertContains(mainMl, "/.", "metal numeric lowering should emit float division for Int/length combinations");
-			assertContains(mainMl, " mod ", "metal numeric lowering should emit int modulo for Int/length combinations");
+			assertContains(mainMl, "HxInt.rem", "metal numeric lowering should emit HxInt.rem for Int modulo");
 			assertContains(mainMl, "+.", "metal numeric lowering should emit float addition for mixed Int/Float combinations");
 
 			final process = new sys.io.Process(exePath, []);
