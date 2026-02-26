@@ -213,6 +213,23 @@ class OcamlBuilder {
 		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "io" && cls.name == "Bytes";
 	}
 
+	static inline function isSupportedBytesEncodingExpr(expr:TypedExpr):Bool {
+		return switch (unwrap(expr).expr) {
+			case TConst(TNull):
+				true;
+			case TField(_, FEnum(eRef, ef)):
+				final en = eRef.get();
+				en.pack != null
+				&& en.pack.length == 2
+				&& en.pack[0] == "haxe"
+				&& en.pack[1] == "io"
+				&& en.name == "Encoding"
+				&& (ef.name == "UTF8" || ef.name == "RawNative");
+			case _:
+				false;
+		}
+	}
+
 	static inline function isHaxeDsStringMapClass(cls:ClassType):Bool {
 		return cls.pack != null && cls.pack.length == 2 && cls.pack[0] == "haxe" && cls.pack[1] == "ds" && cls.name == "StringMap";
 	}
@@ -1929,17 +1946,13 @@ class OcamlBuilder {
 												case "alloc" if (args.length == 1):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "alloc"), [buildExpr(args[0])]);
 												case "ofString":
-													final encodingExpr = args.length > 1 ? unwrap(args[1]) : null;
-													final okDefaultEncoding = encodingExpr == null || switch (encodingExpr.expr) {
-														case TConst(TNull): true;
-														case _: false;
-													};
-													if (args.length == 1 || (args.length == 2 && okDefaultEncoding)) {
+													final hasSupportedEncoding = args.length == 2 && isSupportedBytesEncodingExpr(args[1]);
+													if (args.length == 1 || hasSupportedEncoding) {
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "ofString"),
 															[buildExpr(args[0]), OcamlExpr.EConst(OcamlConst.CUnit)]);
 													} else {
 														#if macro
-														guardrailError("reflaxe.ocaml (M6): Bytes.ofString only supports default encoding for now (pass no encoding or null). (bd: haxe.ocaml-28t.7.5)",
+														guardrailError("reflaxe.ocaml (M6): Bytes.ofString only supports UTF8/RawNative/default encoding for now. (bd: haxe.ocaml-28t.7.5)",
 															e.pos);
 														#end
 														OcamlExpr.EConst(OcamlConst.CUnit);
@@ -2414,17 +2427,13 @@ class OcamlBuilder {
 															OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "compare"),
 																[self, buildExpr(args[0])]);
 														case "getString":
-															final encodingExpr = args.length > 2 ? unwrap(args[2]) : null;
-															final okDefaultEncoding = encodingExpr == null || switch (encodingExpr.expr) {
-																case TConst(TNull): true;
-																case _: false;
-															};
-															if (args.length == 2 || (args.length == 3 && okDefaultEncoding)) {
+															final hasSupportedEncoding = args.length == 3 && isSupportedBytesEncodingExpr(args[2]);
+															if (args.length == 2 || hasSupportedEncoding) {
 																OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxBytes"), "getString"),
 																	[self, buildExpr(args[0]), buildExpr(args[1]), OcamlExpr.EConst(OcamlConst.CUnit)]);
 															} else {
 																#if macro
-																guardrailError("reflaxe.ocaml (M6): Bytes.getString only supports default encoding for now (pass no encoding or null). (bd: haxe.ocaml-28t.7.5)",
+																guardrailError("reflaxe.ocaml (M6): Bytes.getString only supports UTF8/RawNative/default encoding for now. (bd: haxe.ocaml-28t.7.5)",
 																	e.pos);
 																#end
 																OcamlExpr.EConst(OcamlConst.CUnit);
@@ -2581,7 +2590,15 @@ class OcamlBuilder {
 															case _: freshTmp("obj");
 														}
 														final recvVar = tmpName == null ? recvExpr : OcamlExpr.EIdent(tmpName);
-														final methodField = OcamlExpr.EField(recvVar, ctx.ocamlRecordLabel(cf.name));
+														final methodOwnerModName = moduleIdToOcamlModuleName(cls.module);
+														final methodOwnerSelfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+														final methodOwnerScopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
+														final methodOwnerType = (methodOwnerSelfMod != null
+															&& methodOwnerSelfMod == methodOwnerModName) ? methodOwnerScopedType : (methodOwnerModName + "."
+																+ methodOwnerScopedType);
+														final typedRecvVar = OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar]),
+															OcamlTypeExpr.TIdent(methodOwnerType));
+														final methodField = OcamlExpr.EField(typedRecvVar, ctx.ocamlRecordLabel(cf.name));
 														final callArgs = [OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [recvVar])].concat(coercedArgs);
 														// Haxe `foo()` always supplies "unit" at the callsite in OCaml.
 														if (expectsNoArgs)
