@@ -22,6 +22,7 @@ import reflaxe.ocaml.ast.OcamlBuilder;
 import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlModuleItem;
 import reflaxe.ocaml.ast.OcamlLetBinding;
+import reflaxe.ocaml.ast.OcamlAssignOp;
 import reflaxe.ocaml.ast.OcamlConst;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlRecordField;
@@ -1443,20 +1444,47 @@ class OcamlCompiler extends DirectToStringCompiler {
 			// Static var initializers are stored on the field itself (not in the constructor pre-assignments
 			// that `ClassVarData.findDefaultExpr()` uses for instance vars).
 			final init = v.field.expr();
-			final compiledInit = init != null ? builder.buildExpr(init) : defaultValueForType(v.field.type);
+			final initT = ocamlTypeExprFromHaxeType(v.field.type);
+			final compiledInitFromFieldType = init != null ? builder.buildExprForAssignment(v.field.type, init) : defaultValueForType(v.field.type);
+			final compiledInit = switch (initT) {
+				case OcamlTypeExpr.TIdent("Obj.t"):
+					OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [compiledInitFromFieldType]);
+				case _:
+					compiledInitFromFieldType;
+			}
 			final compiled = if (isMutableStatic) {
-				// OCaml value restriction: `ref (HxArray.create ())` yields a weak type variable
-				// unless we pin the element type. We do that by annotating the initializer with
-				// the field's (translated) OCaml type, so the `ref` cell becomes monomorphic.
-				// This is especially important for `Array<T>` statics used heavily in macro
-				// state. (bd: haxe.ocaml-xgv.2)
-				final initT = ocamlTypeExprFromHaxeType(v.field.type);
-				OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EAnnot(compiledInit, initT)]);
+				if (ctx.hasForwardMutableStatic(classType.module, classType.name, v.field.name)) {
+					OcamlExpr.EAssign(OcamlAssignOp.RefSet, OcamlExpr.EIdent(name), compiledInit);
+				} else {
+					// OCaml value restriction: `ref (HxArray.create ())` yields a weak type variable
+					// unless we pin the element type. We do that by annotating the initializer with
+					// the field's (translated) OCaml type, so the `ref` cell becomes monomorphic.
+					// This is especially important for `Array<T>` statics used heavily in macro
+					// state. (bd: haxe.ocaml-xgv.2)
+					final initExpr = OcamlExpr.EAnnot(compiledInit, initT);
+					OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [initExpr]);
+				}
 			} else {
 				compiledInit;
 			}
-			lets.push({name: name, expr: compiled});
+			final bindingName = (isMutableStatic
+				&& ctx.hasForwardMutableStatic(classType.module, classType.name,
+					v.field.name)) ? OcamlNameTools.normalizeValueIdentifier("__init_" + name) : name;
+			lets.push({name: bindingName, expr: compiled});
 		}
+		final forwardStatics = ctx.forwardMutableStaticDeclsForModule(classType.module);
+		for (decl in forwardStatics) {
+			final initT = ocamlTypeExprFromHaxeType(decl.fieldType);
+			final predeclInit = OcamlExpr.EAnnot(defaultValueForType(decl.fieldType), initT);
+			items.push(OcamlModuleItem.ILet([
+				{
+					name: decl.ocamlName,
+					expr: OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [predeclInit])
+				}
+			], false));
+			ctx.emittedForwardMutableStaticDeclByKey.set(decl.key, true);
+		}
+
 		if (lets.length > 0) {
 			for (g in orderLetBindingsForOcaml(lets)) {
 				items.push(OcamlModuleItem.ILet(g.bindings, g.isRec));
@@ -2651,7 +2679,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 
 	function defaultValueForType(t:Type):OcamlExpr {
-		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]);
+		final anyNull:OcamlExpr = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null")]);
 
 		return switch (t) {
 			case TAbstract(aRef, params):

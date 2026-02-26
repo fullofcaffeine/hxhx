@@ -209,6 +209,78 @@
         ]
       },
       {
+        "module": "haxe.MainLoop",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.NativeStackTrace",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.PosInfos",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Resource",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Rest",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Serializer",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.SysTools",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Template",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Timer",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Ucs2",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Unserializer",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.Utf8",
+        "evidence": [
+          "test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.exceptions.ArgumentException",
         "evidence": [
           "test/portable/fixtures/haxe_exceptions_basic/src/Main.hx"

@@ -1,0 +1,14 @@
+mainloop.hasEvents=false
+mainloop.fired=false
+nativeStack.nonneg=true
+pos.line=42
+resource.count=0
+rest.len=4
+serializer.int=7
+systools.quote='a b'
+template.created=true
+timer.nonneg=true
+utf8.len=4
+utf8.valid=true
+utf8.sub=xh
+ucs2.supported=false

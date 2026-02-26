@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `59` passthrough-verified, `114` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `71` passthrough-verified, `102` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -46,18 +46,18 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.Int64Helper` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.Json` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
 | `haxe.Log` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx |
-| `haxe.MainLoop` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.NativeStackTrace` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.PosInfos` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Resource` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Rest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Serializer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.SysTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Template` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Timer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Ucs2` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Unserializer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.Utf8` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.MainLoop` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.NativeStackTrace` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.PosInfos` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Resource` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Rest` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Serializer` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.SysTools` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Template` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Timer` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Ucs2` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Unserializer` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
+| `haxe.Utf8` | `passthrough_verified` | test/portable/fixtures/haxe_core_bucket02_basic/src/Main.hx |
 | `haxe.ValueException` | `passthrough_verified` | test/portable/fixtures/haxe_value_exception_basic/src/Main.hx |
 | `haxe.atomic.AtomicBool` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
 | `haxe.atomic.AtomicInt` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |

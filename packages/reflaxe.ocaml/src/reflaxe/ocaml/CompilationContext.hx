@@ -3,6 +3,15 @@ package reflaxe.ocaml;
 import haxe.macro.Type;
 import reflaxe.ocaml.OcamlNameTools;
 
+typedef ForwardMutableStaticDecl = {
+	final moduleId:String;
+	final typeName:String;
+	final fieldName:String;
+	final key:String;
+	final ocamlName:String;
+	final fieldType:Type;
+}
+
 /**
  * Per-compilation, instance-based state for reflaxe.ocaml.
  *
@@ -43,6 +52,24 @@ class CompilationContext {
 	 * - Computed once after typing (see `OcamlCompiler`’s `onAfterTyping` prepass).
 	 */
 	public final mutableStaticFields:Map<String, Bool> = [];
+
+	/**
+		Mutable static refs that must be forward-declared before class chunks in the same module.
+
+		Why:
+		- OCaml does not allow unresolved value references at definition sites.
+		- Haxe modules can contain multiple classes that reference each other's mutable statics.
+		- We keep class emission chunked per-type, so a cross-type static reference can otherwise
+		  become an "Unbound value" when the owner class chunk is printed later.
+
+		How:
+		- The builder records same-module cross-type mutable static references as forward declarations.
+		- `OcamlCompiler.compileClassImpl` emits the declaration once per module before class lets.
+		- The owner static field then emits an initialization assignment instead of re-declaring.
+	**/
+	public final forwardMutableStaticDeclByKey:Map<String, ForwardMutableStaticDecl> = [];
+
+	public final emittedForwardMutableStaticDeclByKey:Map<String, Bool> = [];
 
 	/** Current module id (as seen by Reflaxe/Haxe), for debug and naming decisions. */
 	public var currentModuleId:Null<String> = null;
@@ -220,6 +247,39 @@ class CompilationContext {
 		final first = fileId.charCodeAt(0);
 		final isLower = first >= 97 && first <= 122;
 		return isLower ? (String.fromCharCode(first - 32) + fileId.substr(1)) : fileId;
+	}
+
+	public function staticFieldKey(moduleId:String, typeName:String, fieldName:String):String {
+		return moduleId + "::" + typeName + "::" + fieldName;
+	}
+
+	public function requestForwardMutableStatic(moduleId:String, typeName:String, fieldName:String, fieldType:Type):Void {
+		final key = staticFieldKey(moduleId, typeName, fieldName);
+		if (forwardMutableStaticDeclByKey.exists(key))
+			return;
+		final ocamlName = scopedValueName(moduleId, typeName, fieldName);
+		forwardMutableStaticDeclByKey.set(key, {
+			moduleId: moduleId,
+			typeName: typeName,
+			fieldName: fieldName,
+			key: key,
+			ocamlName: ocamlName,
+			fieldType: fieldType
+		});
+	}
+
+	public function hasForwardMutableStatic(moduleId:String, typeName:String, fieldName:String):Bool {
+		return forwardMutableStaticDeclByKey.exists(staticFieldKey(moduleId, typeName, fieldName));
+	}
+
+	public function forwardMutableStaticDeclsForModule(moduleId:String):Array<ForwardMutableStaticDecl> {
+		final out:Array<ForwardMutableStaticDecl> = [];
+		for (_ => decl in forwardMutableStaticDeclByKey) {
+			if (decl.moduleId == moduleId && !emittedForwardMutableStaticDeclByKey.exists(decl.key))
+				out.push(decl);
+		}
+		out.sort((a, b) -> a.ocamlName < b.ocamlName ? -1 : (a.ocamlName > b.ocamlName ? 1 : 0));
+		return out;
 	}
 
 	/**
