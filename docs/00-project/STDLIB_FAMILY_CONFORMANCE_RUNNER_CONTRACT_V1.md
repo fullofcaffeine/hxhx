@@ -126,6 +126,41 @@ Rust and Go adapters are tracked as explicit placeholder tasks. They must implem
 - Rust placeholder: `haxe.ocaml-z7f.3.1`
 - Go placeholder: `haxe.ocaml-z7f.3.2`
 
+### Rust placeholder adapter mapping (tracked in this repo)
+
+This repository now ships a deterministic Rust placeholder adapter command that maps the v1 contract inputs:
+
+```bash
+node scripts/stdlib/run-conformance-adapter-rust-placeholder.js \
+  --target-id rust \
+  --tier tier1 \
+  --allowlist-path docs/00-project/STDLIB_PORTABLE_ALLOWLIST_FAMILY_V1.md \
+  --fixture-root test/portable/fixtures \
+  --report-path .tmp/rust-conformance-report.json \
+  --strict-native-surface true \
+  --corpus-manifest-path test/portable/semantic_diff/corpus_v1.json \
+  --slice-id core_seed_v1
+```
+
+Current behavior is deterministic `skip` (`reason=placeholder_not_implemented_in_this_repo`) while preserving:
+
+- input mapping shape (`targetId/tier/allowlistPath/fixtureRoot/reportPath/strictNativeSurface`)
+- marker contract (`START` + `SKIP`)
+- report contract fields (`schemaVersion`, `contractId`, `status`, `summary`, `fixtures`)
+
+### Rust CI wiring plan (PR lane + nightly lane)
+
+When Rust-side implementation lands in the Rust repository, wire these lanes:
+
+- PR lane (`report-only` initially):
+  - run Rust adapter with `tier1` + strict native surface
+  - publish JSON report artifact
+  - add summary markers and report path to workflow summary
+- Nightly lane (`wider coverage`):
+  - run same adapter over `core_seed_v1` slice (and later expanded slices)
+  - upload report artifacts
+  - run comparator lane against pinned oracle snapshots once adapter is non-placeholder
+
 ## Contract evolution policy
 
 - Patch: wording/non-breaking clarifications.
