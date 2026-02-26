@@ -1155,16 +1155,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 						if (args == null || args.length == 0) {
 							// `foo()` call convention: include `unit`.
 							params.push(OcamlPat.PConst(OcamlConst.CUnit));
-							callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+							callArgs.push(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]));
 						} else {
 							for (i in 0...args.length) {
 								final n = "a" + Std.string(i);
 								params.push(OcamlPat.PVar(n));
-								callArgs.push(OcamlExpr.EIdent(n));
+								callArgs.push(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(n)]));
 							}
 						}
 
-						return OcamlExpr.EFun(params, OcamlExpr.EApp(ownerExpr, callArgs));
+						return OcamlExpr.EFun(params, OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EApp(ownerExpr, callArgs)]));
 					}
 
 					for (entry in dispatchLayoutFields) {
@@ -1205,16 +1205,16 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 							if (args == null || args.length == 0) {
 								params.push(OcamlPat.PConst(OcamlConst.CUnit));
-								callArgs.push(OcamlExpr.EConst(OcamlConst.CUnit));
+								callArgs.push(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EConst(OcamlConst.CUnit)]));
 							} else {
 								for (i in 0...args.length) {
 									final n = "a" + Std.string(i);
 									params.push(OcamlPat.PVar(n));
-									callArgs.push(OcamlExpr.EIdent(n));
+									callArgs.push(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(n)]));
 								}
 							}
 
-							return OcamlExpr.EFun(params, OcamlExpr.EApp(ownerExpr, callArgs));
+							return OcamlExpr.EFun(params, OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EApp(ownerExpr, callArgs)]));
 						}
 
 						for (name in dispatchMethodOrder) {
