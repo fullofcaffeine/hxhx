@@ -8,6 +8,7 @@ This document defines the shared contract for portable stdlib allowlists used by
 - OCaml manifest (current implementation mapping): `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
 - OCaml baseline source set: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
 - CI validator: `scripts/ci/portable-stdlib-tier-allowlist-check.js`
+- Guard extraction plan: `docs/00-project/STDLIB_FAMILY_GUARD_EXTRACTION_PLAN_V1.md`
 
 ## v1 rules
 

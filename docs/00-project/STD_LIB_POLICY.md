@@ -84,3 +84,8 @@ The following upstream paths are never allowed to be vendored or copied into thi
   - enforces the family allowlist schema + contract metadata:
     - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json`
     - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_FAMILY_V1.md`
+
+Family extraction roadmap:
+
+- `docs/00-project/STDLIB_FAMILY_GUARD_EXTRACTION_PLAN_V1.md`
+  - defines the guard extraction/migration plan from OCaml-local scripts to shared family tooling.
