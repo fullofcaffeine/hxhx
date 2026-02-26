@@ -2,6 +2,14 @@ package backend.ocaml;
 
 import backend.GenIrProgram;
 
+typedef MetalViolationSummary = {
+	final filePath:String;
+	final context:String;
+	final code:String;
+	final construct:String;
+	final reason:String;
+}
+
 private typedef MetalViolation = {
 	final filePath:String;
 	final line:Int;
@@ -48,13 +56,32 @@ class MetalProfileVerifier {
 	static inline final CODE_DYNAMIC_TYPE_HINT = "dynamic_type_hint";
 
 	public static function verifyProgram(program:GenIrProgram):Void {
+		final violations = collectViolations(program);
+		if (violations.length > 0)
+			throw formatViolations(violations);
+	}
+
+	public static function collectViolationSummaries(program:GenIrProgram):Array<MetalViolationSummary> {
+		final summaries = new Array<MetalViolationSummary>();
+		for (violation in collectViolations(program)) {
+			summaries.push({
+				filePath: violation.filePath,
+				context: violation.context,
+				code: violation.code,
+				construct: violation.construct,
+				reason: violation.reason
+			});
+		}
+		return summaries;
+	}
+
+	static function collectViolations(program:GenIrProgram):Array<MetalViolation> {
 		final typedModules = program.getTypedModules();
-		final violations:Array<MetalViolation> = [];
+		final violations = new Array<MetalViolation>();
 		for (typedModule in typedModules) {
 			verifyTypedModule(typedModule, violations);
 		}
-		if (violations.length > 0)
-			throw formatViolations(violations);
+		return violations;
 	}
 
 	static function verifyTypedModule(typedModule:TypedModule, violations:Array<MetalViolation>):Void {

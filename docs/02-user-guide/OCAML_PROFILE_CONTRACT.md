@@ -33,6 +33,9 @@ Any other value is invalid and fails fast.
 - `portable`:
   - current default behavior for OCaml emission.
   - intended to preserve existing Haxe-oriented portability expectations.
+  - Stage3 runs a portable auto-metalization planner that classifies function regions,
+    applies selected metal-style lowerings in metal-safe regions, and emits a deterministic
+    planner report.
 - `metal`:
   - native-oriented runtime layering mode.
   - links only runtime modules required by the emitted program + runtime transitive dependencies.
@@ -154,6 +157,19 @@ Metal verifier failures (`-D ocaml_profile=metal`) are formatted with:
   - `selectedModules`
   - `selectedFeatures`
   - `inclusionReasons` (deterministic per-module reason list)
+
+`hxhx` Stage3 OCaml emission also emits:
+
+- `ocaml_portable_metalization_plan_report.json`
+  - `schemaVersion` (current: `1`)
+  - `profile` (`portable`/`metal`)
+  - `plannerMode` (`portable_auto_metalization` or `disabled_non_portable_profile`)
+  - `summary` (`totalRegions`, `autoMetalizedRegions`, `excludedRegions`, `usedMetalStyleRegions`)
+  - `excludedByCode` (deterministic exclusion counts by verifier code)
+  - `regions` (deterministic per-function classification with:
+    - `status` (`auto_metalized` / `excluded`)
+    - `reasonCodes` + `exclusionReasons`
+    - `usedMetalStyleLowerings`)
 
 Debug fallback define (non-default, diagnostics only):
 

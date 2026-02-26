@@ -43,9 +43,13 @@ class OcamlTargetCore implements ITargetCore {
 		if (profile == OcamlProfile.Metal) {
 			MetalProfileVerifier.verifyProgram(typedProgram);
 		}
-		final entryPath = EmitterStage.emitToDir(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable, profile);
+		final portableMetalizationPlan = PortableMetalizationPlanner.buildPlan(typedProgram, profile);
+		final entryPath = EmitterStage.emitToDirWithPortableMetalizationPlan(typedProgram, context.outputDir, context.emitFullBodies, context.buildExecutable,
+			profile, portableMetalizationPlan);
+		final portableMetalizationReportPath = PortableMetalizationPlanner.writeReport(context.outputDir, portableMetalizationPlan);
 		return new EmitResult(entryPath, [
-			new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath)
+			new EmitArtifact(context.buildExecutable ? "entry_executable" : "entry_planned_executable", entryPath),
+			new EmitArtifact("portable_metalization_report", portableMetalizationReportPath)
 		], context.buildExecutable);
 	}
 }

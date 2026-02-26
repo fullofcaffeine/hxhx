@@ -199,8 +199,79 @@ class EmitterStage {
 	**/
 	static var currentOcamlProfile:String = backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable);
 
+	/**
+		Portable auto-metalization plan for the active emit invocation.
+
+		Why
+		- Stage3 expression lowering is implemented as static helpers for bootstrap simplicity.
+		- Portable auto-metalization decisions must therefore be available through static
+		  context while each function body is emitted.
+
+		What
+		- `currentPortableMetalizationPlan`: per-run plan built by `PortableMetalizationPlanner`.
+		- `currentPortableMetalizationRegionKey`: current function region being lowered.
+
+		How
+		- `emitToDirWithPortableMetalizationPlan(...)` installs/restores plan state.
+		- `emitMainClass` sets the region key before lowering each function body.
+	**/
+	static var currentPortableMetalizationPlan:Null<backend.ocaml.PortableMetalizationPlan> = null;
+
+	static var currentPortableMetalizationRegionKey:Null<String> = null;
+
 	static inline function isMetalProfileActive():Bool {
 		return currentOcamlProfile == backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Metal);
+	}
+
+	static inline function isPortableAutoMetalizedRegionActive():Bool {
+		return currentOcamlProfile == backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable)
+			&& currentPortableMetalizationPlan != null
+			&& currentPortableMetalizationRegionKey != null
+			&& currentPortableMetalizationPlan.isAutoMetalized(currentPortableMetalizationRegionKey);
+	}
+
+	static inline function markPortableAutoMetalizedLoweringUse(lowering:String):Void {
+		if (!isPortableAutoMetalizedRegionActive())
+			return;
+		currentPortableMetalizationPlan.markLoweringUsed(currentPortableMetalizationRegionKey, lowering);
+	}
+
+	/**
+		Emit wrapper that installs portable auto-metalization state for one emit pass.
+
+		Why
+		- `emitToDir(...)` is called from multiple test/runtime entrypoints; adding planner state
+		  directly to all call chains would be high-risk churn.
+		- This wrapper keeps default callers unchanged while allowing `OcamlTargetCore` to enable
+		  planner-aware lowerings.
+
+		How
+		- Captures previous static planner state.
+		- Installs requested plan for the call.
+		- Restores previous state on success and failure.
+
+		Exception boundary note
+		- The `catch (error:Dynamic)` is intentionally confined to this boundary to guarantee
+		  state restoration for all thrown values (`String`, object, `haxe.Exception`, etc.).
+	**/
+	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false,
+			buildExecutable:Bool = true, ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable,
+			?portableMetalizationPlan:backend.ocaml.PortableMetalizationPlan):String {
+		final previousPlan = currentPortableMetalizationPlan;
+		final previousRegionKey = currentPortableMetalizationRegionKey;
+		currentPortableMetalizationPlan = portableMetalizationPlan;
+		currentPortableMetalizationRegionKey = null;
+		var entryPath = "";
+		try {
+			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
+		} catch (error:Dynamic) {
+			currentPortableMetalizationPlan = previousPlan;
+			currentPortableMetalizationRegionKey = previousRegionKey;
+			throw error;
+		}
+		currentPortableMetalizationPlan = previousPlan;
+		currentPortableMetalizationRegionKey = previousRegionKey;
+		return entryPath;
 	}
 
 	public static function emit(_:MacroExpandedModule):Void {
@@ -1726,7 +1797,10 @@ class EmitterStage {
 								callSigByCallee);
 							final mapper = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee);
-							if (isMetalProfileActive()) {
+							final usePortableAutoMetalTypedMap = isPortableAutoMetalizedRegionActive() && isLikelyStringArrayExpr(obj);
+							if (isMetalProfileActive() || usePortableAutoMetalTypedMap) {
+								if (usePortableAutoMetalTypedMap)
+									markPortableAutoMetalizedLoweringUse("array_map_typed");
 								return "HxBootArray.map (" + receiver + ") (" + mapper + ")";
 							}
 							return "HxBootArray.map_dyn (Obj.magic (" + receiver + ")) (Obj.repr (" + mapper + "))";
@@ -2138,7 +2212,8 @@ class EmitterStage {
 					}
 				}
 
-				final metalNumeric = isMetalProfileActive();
+				final portableAutoMetalizedRegion = isPortableAutoMetalizedRegionActive();
+				final metalNumeric = isMetalProfileActive() || portableAutoMetalizedRegion;
 				switch (op) {
 					case "=":
 						switch (a) {
@@ -2170,6 +2245,8 @@ class EmitterStage {
 						final bIsI = isIntExpr(b);
 						final hasKnownNumericSide = aIsF || bIsF || aIsI || bIsI;
 						final allowMetalFallback = metalNumeric && hasKnownNumericSide && !isStringExpr(a) && !isStringExpr(b);
+						if (allowMetalFallback && portableAutoMetalizedRegion && !isMetalProfileActive())
+							markPortableAutoMetalizedLoweringUse("numeric_division_fallback");
 						final allowNumericDivision = (aIsF || bIsF) || (aIsI && bIsI) || allowMetalFallback;
 						allowNumericDivision ? "((" + exprToOcamlAsFloat(a) + ") /. (" + exprToOcamlAsFloat(b) + "))" : "(Obj.magic 0)";
 					case "+" | "-" | "*" | "%":
@@ -4576,6 +4653,8 @@ class EmitterStage {
 				final prevInt64 = currentImportInt64;
 				final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
 				final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
+				final moduleFilePath = tm.getParsed().getFilePath();
+				final mainClassName = HxClassDecl.getName(mainClass);
 				currentOcamlModuleName = mainModuleName;
 				currentImportInt64 = importInt64;
 				try {
@@ -4995,6 +5074,9 @@ class EmitterStage {
 							final tf = group[i];
 							final nameRaw = tf.getName();
 							final name = ocamlValueIdent(nameRaw);
+							final previousRegionKey = currentPortableMetalizationRegionKey;
+							currentPortableMetalizationRegionKey = backend.ocaml.PortableMetalizationPlanner.functionRegionKey(moduleFilePath, mainClassName,
+								nameRaw);
 							if (name == "main")
 								sawMain = true;
 
@@ -5070,6 +5152,7 @@ class EmitterStage {
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
 							out.push("");
+							currentPortableMetalizationRegionKey = previousRegionKey;
 						}
 					}
 
