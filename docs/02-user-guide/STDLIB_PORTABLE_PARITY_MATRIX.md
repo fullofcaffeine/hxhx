@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `137` passthrough-verified, `36` passthrough-unverified.
+Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-intrinsic, `155` passthrough-verified, `0` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -27,7 +27,7 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `StdTypes` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `String` | `override` | packages/reflaxe.ocaml/std/_std/String.hx |
 | `StringBuf` | `override` | packages/reflaxe.ocaml/std/_std/StringBuf.hx |
-| `StringTools` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
+| `StringTools` | `override` | packages/reflaxe.ocaml/std/_std/StringTools.hx |
 | `Sys` | `override` | packages/reflaxe.ocaml/std/_std/Sys.hx |
 | `Type` | `passthrough_verified` | test/portable/fixtures/type_getclass_basic/src/Main.hx; test/portable/fixtures/type_reflection_basic/src/Main.hx |
 | `UInt` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
@@ -112,7 +112,7 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.io.Bytes` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx |
 | `haxe.io.BytesBuffer` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesBuffer.hx |
 | `haxe.io.BytesData` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesData.hx |
-| `haxe.io.BytesInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.BytesInput` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesInput.hx |
 | `haxe.io.BytesOutput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Encoding` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Eof` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
@@ -192,24 +192,25 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.io.FileSeek` | `passthrough_verified` | test/portable/fixtures/sys_file_seek_basic/src/Main.hx |
 | `sys.io.Process` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/Process.hx |
 | `sys.net.Address` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
-| `sys.net.Host` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
-| `sys.net.Socket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
+| `sys.net.Host` | `override` | packages/reflaxe.ocaml/std/_std/sys/net/Host.hx |
+| `sys.net.Socket` | `override` | packages/reflaxe.ocaml/std/_std/sys/net/Socket.hx |
 | `sys.net.UdpSocket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
 | `sys.ssl.Certificate` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.Digest` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.DigestAlgorithm` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
 | `sys.ssl.Key` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
-| `sys.ssl.Socket` | `passthrough_verified` | test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx |
-| `sys.thread.Condition` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Deque` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.ElasticThreadPool` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.EventLoop` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.FixedThreadPool` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.IThreadPool` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Lock` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Mutex` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.NoEventLoopException` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Semaphore` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Thread` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.ThreadPoolException` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx (target.threaded=false on OCaml lane) |
-| `sys.thread.Tls` | `passthrough_verified` | test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx (target.threaded=false on OCaml lane) |
+| `sys.ssl.Socket` | `override` | packages/reflaxe.ocaml/std/_std/sys/ssl/Socket.hx |
+| `sys.thread.Condition` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Condition.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Deque` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Deque.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.ElasticThreadPool` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/ElasticThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.EventLoop` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/EventLoop.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.FixedThreadPool` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/FixedThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.IThreadPool` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/IThreadPool.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Lock` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Lock.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Mutex` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Mutex.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.NoEventLoopException` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/NoEventLoopException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Semaphore` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Semaphore.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Thread` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Thread.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.ThreadPoolException` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/ThreadPoolException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
+| `sys.thread.Tls` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Tls.hx; test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx |
+

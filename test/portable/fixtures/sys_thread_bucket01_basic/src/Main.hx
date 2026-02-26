@@ -45,6 +45,79 @@ class Main {
 		Sys.println(name + "=" + (ok ? "ok" : "missing"));
 	}
 
+	static function runRuntimeChecks():Void {
+		final mainThread = sys.thread.Thread.current();
+		final messageLock = new sys.thread.Lock();
+		sys.thread.Thread.create(() -> {
+			mainThread.sendMessage("ping");
+			messageLock.release();
+		});
+		final messageReceived = sys.thread.Thread.readMessage(true) == "ping";
+		final messageReleased = messageLock.wait(2.0);
+		Sys.println("runtime.thread_message=" + ((messageReceived && messageReleased) ? "ok" : "missing"));
+
+		final deque = new sys.thread.Deque<Int>();
+		final dequeLock = new sys.thread.Lock();
+		sys.thread.Thread.create(() -> {
+			deque.add(41);
+			dequeLock.release();
+		});
+		final dequeWait = dequeLock.wait(2.0);
+		final dequeValue = deque.pop(false);
+		Sys.println("runtime.lock_wait=" + (dequeWait ? "ok" : "missing"));
+		Sys.println("runtime.deque_pop=" + (dequeValue == 41 ? "ok" : "missing"));
+
+		final mutex = new sys.thread.Mutex();
+		final mutexAcquired = mutex.tryAcquire();
+		if (mutexAcquired) {
+			mutex.release();
+		}
+		Sys.println("runtime.mutex=" + (mutexAcquired ? "ok" : "missing"));
+
+		final semaphore = new sys.thread.Semaphore(0);
+		sys.thread.Thread.create(() -> semaphore.release());
+		final semaphoreAcquired = semaphore.tryAcquire(2.0);
+		Sys.println("runtime.semaphore=" + (semaphoreAcquired ? "ok" : "missing"));
+
+		final condition = new sys.thread.Condition();
+		final conditionSignalLock = new sys.thread.Lock();
+		var conditionDone = false;
+		condition.acquire();
+		sys.thread.Thread.create(() -> {
+			condition.acquire();
+			conditionDone = true;
+			condition.signal();
+			condition.release();
+			conditionSignalLock.release();
+		});
+		while (!conditionDone) {
+			condition.wait();
+		}
+		condition.release();
+		final conditionReleased = conditionSignalLock.wait(2.0);
+		Sys.println("runtime.condition=" + (conditionReleased ? "ok" : "missing"));
+
+		final eventLoop = new sys.thread.EventLoop();
+		var eventLoopRan = false;
+		eventLoop.run(() -> eventLoopRan = true);
+		eventLoop.loop();
+		Sys.println("runtime.event_loop=" + (eventLoopRan ? "ok" : "missing"));
+
+		final fixedLock = new sys.thread.Lock();
+		final fixed = new sys.thread.FixedThreadPool(1);
+		fixed.run(() -> fixedLock.release());
+		final fixedOk = fixedLock.wait(2.0);
+		fixed.shutdown();
+		Sys.println("runtime.thread_pool_fixed=" + (fixedOk ? "ok" : "missing"));
+
+		final elasticLock = new sys.thread.Lock();
+		final elastic = new sys.thread.ElasticThreadPool(2, 0.5);
+		elastic.run(() -> elasticLock.release());
+		final elasticOk = elasticLock.wait(2.0);
+		elastic.shutdown();
+		Sys.println("runtime.thread_pool_elastic=" + (elasticOk ? "ok" : "missing"));
+	}
+
 	static function main() {
 		#if HX_SYS_THREAD_BUCKET01_SYS_THREAD_CONDITION_AVAILABLE
 		printStatus("sys.thread.Condition", true);
@@ -140,6 +213,10 @@ class Main {
 		printStatus("sys.thread.ThreadPoolException", false);
 		#else
 		printStatus("sys.thread.ThreadPoolException", false);
+		#end
+
+		#if target.threaded
+		runRuntimeChecks();
 		#end
 
 		#if HX_SYS_THREAD_BUCKET01_DONE

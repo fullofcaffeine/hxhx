@@ -152,6 +152,90 @@
       "notes": "Repo-authored SSL socket scaffold for cross lane: preserves API surface while avoiding eval.vm.NativeSocket dependency."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Condition.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Condition.hx",
+      "notes": "Repo-authored Condition implementation wired to HxThread runtime primitives for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Deque.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Deque.hx",
+      "notes": "Repo-authored Deque implementation wired to HxThread runtime primitives for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/ElasticThreadPool.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/ElasticThreadPool.hx",
+      "notes": "Repo-authored ElasticThreadPool compatibility implementation for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/EventLoop.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/EventLoop.hx",
+      "notes": "Repo-authored EventLoop compatibility implementation for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/FixedThreadPool.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/FixedThreadPool.hx",
+      "notes": "Repo-authored FixedThreadPool compatibility implementation for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/IThreadPool.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/IThreadPool.hx",
+      "notes": "Repo-authored thread-pool interface override used by OCaml thread pool implementations."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Lock.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Lock.hx",
+      "notes": "Repo-authored Lock implementation wired to HxThread runtime primitives for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Mutex.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Mutex.hx",
+      "notes": "Repo-authored Mutex implementation wired to HxThread runtime primitives for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/NativeHxThread.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Thread.hx",
+      "notes": "Repo-authored native bridge extern for OCaml runtime-backed sys.thread primitives."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/NoEventLoopException.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/NoEventLoopException.hx",
+      "notes": "Repo-authored NoEventLoopException override for OCaml thread event-loop compatibility."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Semaphore.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Semaphore.hx",
+      "notes": "Repo-authored Semaphore implementation wired to HxThread runtime primitives for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Thread.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Thread.hx",
+      "notes": "Repo-authored Thread implementation with native message queue + event loop attachment for OCaml target.threaded support."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/ThreadPoolException.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/ThreadPoolException.hx",
+      "notes": "Repo-authored ThreadPoolException override for OCaml thread-pool compatibility surfaces."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/sys/thread/Tls.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/sys/thread/Tls.hx",
+      "notes": "Repo-authored Tls implementation wired to HxThread runtime primitives for OCaml target.threaded support."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/sys/FileSystem.hx",

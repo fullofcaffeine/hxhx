@@ -2228,7 +2228,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
 		if (!noDune) {
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
-			final duneLibs = duneLibsValue == null ? ["unix", "str"] : duneLibsValue.split(",").map(s -> StringTools.trim(s)).filter(s -> s.length > 0);
+			final duneLibs = duneLibsValue == null ? ["unix", "str", "threads"] : duneLibsValue.split(",")
+				.map(s -> StringTools.trim(s))
+				.filter(s -> s.length > 0);
 
 			final duneLayoutValue = haxe.macro.Context.definedValue("ocaml_dune_layout");
 

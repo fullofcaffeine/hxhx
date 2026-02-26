@@ -41,6 +41,7 @@ This matrix documents runtime module status for:
 | `HxStdio` | yes | `metal-supported` | stdio helpers (`stdin/stdout/stderr`) when referenced. |
 | `HxString` | yes | `metal-supported` | String helpers. |
 | `HxSys` | yes | `metal-supported` | `Sys.*` host interaction helpers. |
+| `HxThread` | yes | `metal-supported` | Thread primitives for `sys.thread.*` (locks, mutexes, conditions, semaphores, deque, TLS, thread messaging). |
 | `HxType` | yes | `metal-forbidden (current)` | Reflection-style `Type.*` flows are blocked by verifier today. |
 | `Math` | yes | `metal-supported` | Math helpers/constants. |
 | `Std` | yes | `metal-supported` | Standard helper module; keep typed usages. |

@@ -1011,6 +1011,38 @@
         "evidence": [
           "test/portable/fixtures/sys_ssl_bucket01_basic/src/Main.hx"
         ]
+      }
+    ],
+    "override": [
+      {
+        "module": "haxe.atomic.AtomicBool",
+        "evidence": [
+          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.atomic.AtomicInt",
+        "evidence": [
+          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.atomic.AtomicObject",
+        "evidence": [
+          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.format.JsonPrinter",
+        "evidence": [
+          "test/portable/fixtures/haxe_format_json_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.format.JsonParser",
+        "evidence": [
+          "test/portable/fixtures/haxe_format_json_basic/src/Main.hx"
+        ]
       },
       {
         "module": "sys.thread.Condition",
@@ -1088,38 +1120,6 @@
         "module": "sys.thread.Tls",
         "evidence": [
           "test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx"
-        ]
-      }
-    ],
-    "override": [
-      {
-        "module": "haxe.atomic.AtomicBool",
-        "evidence": [
-          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.atomic.AtomicInt",
-        "evidence": [
-          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.atomic.AtomicObject",
-        "evidence": [
-          "test/portable/fixtures/haxe_atomic_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.format.JsonPrinter",
-        "evidence": [
-          "test/portable/fixtures/haxe_format_json_basic/src/Main.hx"
-        ]
-      },
-      {
-        "module": "haxe.format.JsonParser",
-        "evidence": [
-          "test/portable/fixtures/haxe_format_json_basic/src/Main.hx"
         ]
       },
       {

@@ -98,6 +98,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 - `-D ocaml_dune_exes=name:MainModule[,name2:Main2]`: multi-executable dune stanza.
 - `-D ocaml_mli` or `-D ocaml_mli=infer|all`: generate `.mli` via `ocamlc -i`.
 - `-D ocaml_sourcemap=directives`: add line directives for error mapping.
+- `target.threaded` is auto-defined on OCaml target builds (`sys.thread.*` is runtime-backed via `HxThread`).
 
 ## Relationship to hxhx
 

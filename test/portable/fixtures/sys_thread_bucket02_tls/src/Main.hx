@@ -21,6 +21,25 @@ class Main {
 		Sys.println(name + "=" + (ok ? "ok" : "missing"));
 	}
 
+	static function runTlsRuntimeChecks():Void {
+		final tls = new sys.thread.Tls<Int>();
+		tls.value = 7;
+
+		final done = new sys.thread.Lock();
+		var workerValue:Int = -1;
+		sys.thread.Thread.create(() -> {
+			tls.value = 42;
+			workerValue = tls.value;
+			done.release();
+		});
+
+		final workerDone = done.wait(2.0);
+		final mainValue = tls.value;
+
+		printStatus("sys.thread.Tls.runtime.worker", workerDone && workerValue == 42);
+		printStatus("sys.thread.Tls.runtime.main", mainValue == 7);
+	}
+
 	static function main() {
 		#if HX_SYS_THREAD_BUCKET02_SYS_THREAD_TLS_AVAILABLE
 		printStatus("sys.thread.Tls", true);
@@ -28,6 +47,10 @@ class Main {
 		printStatus("sys.thread.Tls", false);
 		#else
 		printStatus("sys.thread.Tls", false);
+		#end
+
+		#if target.threaded
+		runTlsRuntimeChecks();
 		#end
 
 		#if HX_SYS_THREAD_BUCKET02_DONE

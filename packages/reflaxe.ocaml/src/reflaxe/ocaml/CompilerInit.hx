@@ -39,6 +39,11 @@ class CompilerInit {
 			|| haxe.macro.Context.definedValue("target.name") == "ocaml"
 			|| haxe.macro.Context.definedValue("reflaxe-target") == "ocaml";
 		if (isOcamlTarget) {
+			// OCaml lane now ships runtime-backed `sys.thread.*` support.
+			// Keep this define in-target so upstream stdlib thread modules are available.
+			if (!haxe.macro.Context.defined("target.threaded")) {
+				haxe.macro.Compiler.define("target.threaded", "1");
+			}
 			final buildContext = OcamlBuildContext.resolve();
 			StrictModeEnforcer.init(buildContext);
 			// Force-link OCaml-only std overrides that are reached via backend intrinsics
