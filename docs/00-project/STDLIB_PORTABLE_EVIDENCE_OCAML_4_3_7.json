@@ -323,6 +323,54 @@
         ]
       },
       {
+        "module": "haxe.crypto.Adler32",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Base64",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.BaseCode",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Crc32",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Md5",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Sha1",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Sha224",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.crypto.Sha256",
+        "evidence": [
+          "test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.ValueException",
         "evidence": [
           "test/portable/fixtures/haxe_value_exception_basic/src/Main.hx"

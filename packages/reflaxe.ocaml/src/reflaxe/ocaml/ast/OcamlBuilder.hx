@@ -3509,27 +3509,12 @@ class OcamlBuilder {
 			return "_hx";
 		}
 
-		// Reflaxe has some reserved-name handling, but we still need to ensure we never emit
-		// OCaml keywords as identifiers (e.g. `end`), otherwise dune builds will fail with
-		// syntax errors for perfectly valid Haxe code (and even for Haxe stdlib helpers like
-		// StringTools.endsWith(s, end)).
-		final renamed = isOcamlReservedValueName(name) ? ("hx_" + name) : name;
+		// Keep locals valid as OCaml value identifiers:
+		// - prefix reserved keywords (`match` -> `hx_match`)
+		// - prefix constructor-like uppercase names (`K` -> `hx_K`)
+		final renamed = OcamlNameTools.normalizeValueIdentifier(name);
 		ctx.variableRenameMap.set(name, renamed);
 		return renamed;
-	}
-
-	static function isOcamlReservedValueName(name:String):Bool {
-		return switch (name) {
-			// Keywords (OCaml 4.x)
-			case "and", "as", "assert", "begin", "class", "constraint", "do", "done", "downto", "else", "end", "exception", "external", "false", "for", "fun",
-				"function", "functor", "if", "in", "include", "inherit", "initializer", "lazy", "let", "match", "method", "module", "mutable", "new",
-				"nonrec", "object", "of", "open", "or", "private", "rec", "sig", "struct", "then", "to", "true", "try", "type", "val", "virtual", "when",
-				"while", "with":
-				true;
-			// Commonly-problematic identifiers
-			case _:
-				false;
-		}
 	}
 
 	function buildVarDecl(v:TVar, init:Null<TypedExpr>):OcamlExpr {

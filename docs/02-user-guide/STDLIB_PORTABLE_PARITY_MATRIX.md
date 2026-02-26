@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `50` passthrough-verified, `123` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `58` passthrough-verified, `115` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -62,15 +62,15 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.atomic.AtomicBool` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicBool.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
 | `haxe.atomic.AtomicInt` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicInt.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
 | `haxe.atomic.AtomicObject` | `override` | packages/reflaxe.ocaml/std/_std/haxe/atomic/AtomicObject.hx; test/portable/fixtures/haxe_atomic_basic/src/Main.hx |
-| `haxe.crypto.Adler32` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.Base64` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.BaseCode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.Crc32` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Adler32` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
+| `haxe.crypto.Base64` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
+| `haxe.crypto.BaseCode` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
+| `haxe.crypto.Crc32` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
 | `haxe.crypto.Hmac` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.Md5` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.Sha1` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.Sha224` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.crypto.Sha256` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.crypto.Md5` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
+| `haxe.crypto.Sha1` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
+| `haxe.crypto.Sha224` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
+| `haxe.crypto.Sha256` | `passthrough_verified` | test/portable/fixtures/haxe_crypto_bucket01_basic/src/Main.hx |
 | `haxe.display.Diagnostic` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.display.Display` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.display.FsPath` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

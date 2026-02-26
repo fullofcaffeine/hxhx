@@ -43,6 +43,39 @@ class OcamlNameTools {
 	}
 
 	/**
+		True when `name` starts with a valid OCaml value-identifier prefix:
+		- lowercase ASCII letter, or
+		- `_`
+
+		Why:
+		- OCaml parses uppercase-leading identifiers as constructors/modules, not values.
+		- Emitted `let CHARS = ...` therefore fails with `Unbound constructor CHARS`.
+	**/
+	public static function hasValidOcamlValueStart(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final first = name.charCodeAt(0);
+		final isLower = first >= 97 && first <= 122;
+		final isUnderscore = first == "_".code;
+		return isLower || isUnderscore;
+	}
+
+	/**
+		Normalizes a Haxe member/local name into a syntactically-valid OCaml value identifier.
+
+		Policy:
+		- Keep original spelling when already valid.
+		- Prefix `hx_` when name is reserved or starts with an invalid value prefix.
+
+		This is intentionally minimal and stable (no lossy lowercasing), so we preserve
+		debuggability while avoiding constructor/keyword parse failures.
+	**/
+	public static function normalizeValueIdentifier(name:String):String {
+		final base = (name == null || name.length == 0) ? "value" : name;
+		return (isOcamlReservedValueName(base) || !hasValidOcamlValueStart(base)) ? ("hx_" + base) : base;
+	}
+
+	/**
 	 * Returns the last segment of a Haxe module id.
 	 *
 	 * Example:

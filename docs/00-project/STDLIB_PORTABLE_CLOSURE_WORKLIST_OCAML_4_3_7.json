@@ -12,7 +12,7 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 123,
+    "missingModules": 115,
     "bucketCount": 18
   },
   "missingModules": [
@@ -28,15 +28,7 @@
     "haxe.Ucs2",
     "haxe.Unserializer",
     "haxe.Utf8",
-    "haxe.crypto.Adler32",
-    "haxe.crypto.Base64",
-    "haxe.crypto.BaseCode",
-    "haxe.crypto.Crc32",
     "haxe.crypto.Hmac",
-    "haxe.crypto.Md5",
-    "haxe.crypto.Sha1",
-    "haxe.crypto.Sha224",
-    "haxe.crypto.Sha256",
     "haxe.display.Diagnostic",
     "haxe.display.Display",
     "haxe.display.FsPath",
@@ -163,15 +155,7 @@
       "bucketKey": "haxe.crypto-01",
       "group": "haxe.crypto",
       "modules": [
-        "haxe.crypto.Adler32",
-        "haxe.crypto.Base64",
-        "haxe.crypto.BaseCode",
-        "haxe.crypto.Crc32",
-        "haxe.crypto.Hmac",
-        "haxe.crypto.Md5",
-        "haxe.crypto.Sha1",
-        "haxe.crypto.Sha224",
-        "haxe.crypto.Sha256"
+        "haxe.crypto.Hmac"
       ]
     },
     {

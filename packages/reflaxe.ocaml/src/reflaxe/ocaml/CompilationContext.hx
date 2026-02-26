@@ -347,10 +347,7 @@ class CompilationContext {
 
 	public function scopedValueName(moduleId:String, typeName:String, memberName:String):String {
 		final base = isPrimaryTypeInModule(moduleId, typeName) ? memberName : (OcamlNameTools.typePrefix(typeName) + "_" + memberName);
-		// OCaml reserves many identifiers (keywords) which are perfectly valid Haxe member names
-		// (e.g. `EReg.match`). If we emit them verbatim as `let match = ...`, dune builds fail with
-		// syntax errors. Keep emission deterministic by prefixing those cases with `hx_`.
-		return OcamlNameTools.isOcamlReservedValueName(base) ? ("hx_" + base) : base;
+		return OcamlNameTools.normalizeValueIdentifier(base);
 	}
 
 	public function new() {}
