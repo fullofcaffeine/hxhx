@@ -96,6 +96,7 @@
     "test:m14:hxhx-display-exproft-completion": "haxe test/m14_hxhx_display_exproft_completion_integration_test.hxml",
     "test:stdlib:portable:tier1": "bash scripts/test-stdlib-portable-tier1.sh",
     "test:stdlib:portable:full": "bash scripts/test-stdlib-portable-full.sh",
+    "test:stdlib:semantic-diff:seed": "bash scripts/test-stdlib-semantic-diff-seed.sh",
     "test:portable": "bash scripts/test-portable.sh",
     "test:snapshot": "bash scripts/test-snapshots.sh",
     "test:examples": "bash scripts/test-examples.sh",

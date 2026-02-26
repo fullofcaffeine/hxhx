@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "contractId": "reflaxe.family.std.semantic_diff_corpus",
+  "contractVersion": "1.0.0",
+  "fixtureRoot": "test/portable/fixtures",
+  "slices": [
+    {
+      "id": "core_seed_v1",
+      "description": "First portable semantic-diff seed slice for cross-target contract bring-up.",
+      "fixtures": [
+        "dynamic_equality",
+        "float_ops",
+        "int32_semantics",
+        "null_primitives",
+        "reflect_dynamic_fields",
+        "typed_catches_dynamic"
+      ],
+      "focusAreas": [
+        "dynamic equality and comparison",
+        "numeric edge behavior (int32/float)",
+        "null propagation and guards",
+        "reflection and dynamic fields",
+        "typed/dynamic catch semantics"
+      ]
+    }
+  ]
+}

@@ -37,6 +37,19 @@ Use the full profile when you need full compiler-shaped coverage:
 npm run test:acceptance:full
 ```
 
+## Portable semantic-diff seed lane
+
+Run the first shared family semantic-diff slice (repo-authored fixtures only):
+
+```bash
+npm run test:stdlib:semantic-diff:seed
+```
+
+Notes:
+
+- Slice source: `test/portable/semantic_diff/corpus_v1.json` (`core_seed_v1`)
+- Fixture contribution rules: `test/portable/semantic_diff/CONTRIBUTING.md`
+
 ## Cleanup after heavy runs
 
 Long upstream/gate/bootstrap runs can leave sizeable temp/build artifacts.

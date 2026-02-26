@@ -23,6 +23,8 @@ Each target adapter must expose a runner command that accepts equivalent inputs:
 - `fixtureRoot` (path containing portable fixtures)
 - `reportPath` (json output path)
 - `strictNativeSurface` (`true|false`)
+- `corpusManifestPath` (path to semantic-diff corpus manifest)
+- `sliceId` (corpus slice id, for example `core_seed_v1`)
 
 The adapter may map these as CLI args or env vars, but behavior must be equivalent.
 
@@ -85,6 +87,17 @@ Adapter requirements for OCaml under this contract:
 3. Keep compile-run behavior based on fixture `expected.stdout` / optional `expected.stderr`.
 4. Emit contract markers and JSON report in deterministic order.
 5. Report skip as deterministic status (missing toolchain), not as hidden silent success.
+6. Support corpus slicing by reading `test/portable/semantic_diff/corpus_v1.json` and selecting fixtures from `core_seed_v1`.
+
+## First wired corpus slice (v1)
+
+- Corpus manifest: `test/portable/semantic_diff/corpus_v1.json`
+- Seed slice id: `core_seed_v1`
+- Seed runner command:
+
+```bash
+npm run test:stdlib:semantic-diff:seed
+```
 
 ## Placeholder adapters (tracked work)
 

@@ -3,9 +3,20 @@ set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 PORTABLE_NATIVE_SURFACE_STRICT="${PORTABLE_NATIVE_SURFACE_STRICT:-0}"
+PORTABLE_FIXTURE_ALLOWLIST="${PORTABLE_FIXTURE_ALLOWLIST:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIXTURE_ROOT="$ROOT/test/portable/fixtures"
+PORTABLE_FIXTURE_ALLOWLIST_NORM=""
+
+if [ -n "$PORTABLE_FIXTURE_ALLOWLIST" ]; then
+  PORTABLE_FIXTURE_ALLOWLIST_NORM=","
+  while IFS= read -r fixture_name; do
+    fixture_name="${fixture_name//[[:space:]]/}"
+    [ -n "$fixture_name" ] || continue
+    PORTABLE_FIXTURE_ALLOWLIST_NORM="${PORTABLE_FIXTURE_ALLOWLIST_NORM}${fixture_name},"
+  done < <(printf '%s' "$PORTABLE_FIXTURE_ALLOWLIST" | tr ',' '\n')
+fi
 
 if [ ! -d "$FIXTURE_ROOT" ]; then
   echo "No portable fixtures directory found at $FIXTURE_ROOT" >&2
@@ -22,8 +33,14 @@ if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; the
   exit 0
 fi
 
+run_count=0
 for dir in "$FIXTURE_ROOT"/*/; do
   [ -f "${dir}build.hxml" ] || continue
+  fixture_name="$(basename "$dir")"
+  if [ -n "$PORTABLE_FIXTURE_ALLOWLIST_NORM" ] && [[ "$PORTABLE_FIXTURE_ALLOWLIST_NORM" != *",$fixture_name,"* ]]; then
+    continue
+  fi
+  run_count=$((run_count + 1))
   echo "== Portable: ${dir#"$ROOT/"}"
 
   (
@@ -65,5 +82,10 @@ for dir in "$FIXTURE_ROOT"/*/; do
 
   rm -f "$out_tmp" "$err_tmp"
 done
+
+if [ -n "$PORTABLE_FIXTURE_ALLOWLIST_NORM" ] && [ "$run_count" -eq 0 ]; then
+  echo "No matching fixtures for PORTABLE_FIXTURE_ALLOWLIST=$PORTABLE_FIXTURE_ALLOWLIST" >&2
+  exit 2
+fi
 
 echo "✓ Portable conformance OK"
