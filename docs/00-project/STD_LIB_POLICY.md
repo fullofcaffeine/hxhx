@@ -91,3 +91,5 @@ Family extraction roadmap:
   - defines the guard extraction/migration plan from OCaml-local scripts to shared family tooling.
 - `docs/00-project/STDLIB_FAMILY_CONFORMANCE_RUNNER_CONTRACT_V1.md`
   - defines the shared compile-run conformance runner contract (adapter interface + report format).
+- `docs/00-project/STDLIB_FAMILY_DIFF_FUZZER_SPIKE_V1.md`
+  - defines the seed-based typed differential fuzzer/minimizer spike plan + follow-up tasks.

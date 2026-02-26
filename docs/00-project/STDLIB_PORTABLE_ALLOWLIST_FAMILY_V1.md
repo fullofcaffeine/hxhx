@@ -9,6 +9,7 @@ This document defines the shared contract for portable stdlib allowlists used by
 - OCaml baseline source set: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
 - Family conformance runner contract: `docs/00-project/STDLIB_FAMILY_CONFORMANCE_RUNNER_CONTRACT_V1.md`
 - Semantic-diff seed corpus: `test/portable/semantic_diff/corpus_v1.json`
+- Differential fuzzer spike plan: `docs/00-project/STDLIB_FAMILY_DIFF_FUZZER_SPIKE_V1.md`
 - CI validator: `scripts/ci/portable-stdlib-tier-allowlist-check.js`
 - Guard extraction plan: `docs/00-project/STDLIB_FAMILY_GUARD_EXTRACTION_PLAN_V1.md`
 
