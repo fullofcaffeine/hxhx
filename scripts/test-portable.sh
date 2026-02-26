@@ -26,16 +26,15 @@ for dir in "$FIXTURE_ROOT"/*/; do
   [ -f "${dir}build.hxml" ] || continue
   echo "== Portable: ${dir#"$ROOT/"}"
 
-  extra_defines=()
-  if [ "$PORTABLE_NATIVE_SURFACE_STRICT" = "1" ]; then
-    extra_defines+=("-D" "ocaml_portable_native_surface=error")
-  fi
-
   (
     cd "$dir"
     rm -rf out
     mkdir -p out
-    "$HAXE_BIN" build.hxml -D ocaml_build=native "${extra_defines[@]}"
+    if [ "$PORTABLE_NATIVE_SURFACE_STRICT" = "1" ]; then
+      "$HAXE_BIN" build.hxml -D ocaml_build=native -D ocaml_portable_native_surface=error
+    else
+      "$HAXE_BIN" build.hxml -D ocaml_build=native
+    fi
   )
 
   exe="${dir}out/_build/default/out.exe"
