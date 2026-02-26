@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `107` passthrough-verified, `66` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `109` passthrough-verified, `64` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -128,8 +128,8 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.io.Scheme` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.StringInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.UInt16Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
-| `haxe.io.UInt32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.UInt8Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.UInt32Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket02_basic/src/Main.hx |
+| `haxe.io.UInt8Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket02_basic/src/Main.hx |
 | `haxe.iterators.ArrayIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
 | `haxe.iterators.ArrayKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
 | `haxe.iterators.DynamicAccessIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |

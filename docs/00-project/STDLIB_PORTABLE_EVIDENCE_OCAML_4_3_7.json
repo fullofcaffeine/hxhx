@@ -693,6 +693,18 @@
         "evidence": [
           "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "haxe.io.UInt32Array",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket02_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.UInt8Array",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket02_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [

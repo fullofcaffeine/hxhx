@@ -12,12 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 66,
-    "bucketCount": 12
+    "missingModules": 64,
+    "bucketCount": 11
   },
   "missingModules": [
-    "haxe.io.UInt32Array",
-    "haxe.io.UInt8Array",
     "haxe.macro.CompilationServer",
     "haxe.macro.Compiler",
     "haxe.macro.ComplexTypeTools",
@@ -84,14 +82,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.io-01",
-      "group": "haxe.io",
-      "modules": [
-        "haxe.io.UInt32Array",
-        "haxe.io.UInt8Array"
-      ]
-    },
     {
       "bucketKey": "haxe.macro-01",
       "group": "haxe.macro",
