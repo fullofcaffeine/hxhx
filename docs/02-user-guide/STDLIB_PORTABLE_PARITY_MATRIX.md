@@ -170,15 +170,15 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.xml.Fast` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
 | `haxe.xml.Parser` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
 | `haxe.xml.Printer` | `passthrough_verified` | test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx |
-| `haxe.zip.Compress` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.Entry` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.FlushMode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.Huffman` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.InflateImpl` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.Reader` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.Tools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.Uncompress` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.zip.Writer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.zip.Compress` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.Entry` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.FlushMode` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.Huffman` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.InflateImpl` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.Reader` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.Tools` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.Uncompress` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
+| `haxe.zip.Writer` | `passthrough_verified` | test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx |
 | `sys.FileStat` | `passthrough_verified` | test/portable/fixtures/file_stat_basic/src/Main.hx |
 | `sys.FileSystem` | `override` | packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx |
 | `sys.Http` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
@@ -213,4 +213,3 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.thread.Thread` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.thread.ThreadPoolException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.thread.Tls` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-

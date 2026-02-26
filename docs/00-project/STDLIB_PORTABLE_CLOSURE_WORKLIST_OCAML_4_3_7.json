@@ -12,19 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 36,
-    "bucketCount": 7
+    "missingModules": 27,
+    "bucketCount": 6
   },
   "missingModules": [
-    "haxe.zip.Compress",
-    "haxe.zip.Entry",
-    "haxe.zip.FlushMode",
-    "haxe.zip.Huffman",
-    "haxe.zip.InflateImpl",
-    "haxe.zip.Reader",
-    "haxe.zip.Tools",
-    "haxe.zip.Uncompress",
-    "haxe.zip.Writer",
     "sys.Http",
     "sys.db.Connection",
     "sys.db.Mysql",
@@ -54,21 +45,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.zip-01",
-      "group": "haxe.zip",
-      "modules": [
-        "haxe.zip.Compress",
-        "haxe.zip.Entry",
-        "haxe.zip.FlushMode",
-        "haxe.zip.Huffman",
-        "haxe.zip.InflateImpl",
-        "haxe.zip.Reader",
-        "haxe.zip.Tools",
-        "haxe.zip.Uncompress",
-        "haxe.zip.Writer"
-      ]
-    },
     {
       "bucketKey": "sys.core-01",
       "group": "sys.core",

@@ -1,0 +1,10 @@
+haxe.zip.Compress=ok
+haxe.zip.Entry=ok
+haxe.zip.FlushMode=ok
+haxe.zip.Huffman=ok
+haxe.zip.InflateImpl=ok
+haxe.zip.Reader=ok
+haxe.zip.Tools=ok
+haxe.zip.Uncompress=ok
+haxe.zip.Writer=ok
+haxe.zip.bucket01=done

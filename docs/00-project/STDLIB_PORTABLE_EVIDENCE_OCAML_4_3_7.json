@@ -873,6 +873,60 @@
         "evidence": [
           "test/portable/fixtures/haxe_xml_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "haxe.zip.Compress",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.Entry",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.FlushMode",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.Huffman",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.InflateImpl",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.Reader",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.Tools",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.Uncompress",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.zip.Writer",
+        "evidence": [
+          "test/portable/fixtures/haxe_zip_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [
