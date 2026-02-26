@@ -933,6 +933,30 @@
         "evidence": [
           "test/portable/fixtures/sys_core_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "sys.db.Connection",
+        "evidence": [
+          "test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.db.Mysql",
+        "evidence": [
+          "test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.db.ResultSet",
+        "evidence": [
+          "test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.db.Sqlite",
+        "evidence": [
+          "test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [

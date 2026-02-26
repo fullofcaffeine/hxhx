@@ -12,14 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 26,
-    "bucketCount": 5
+    "missingModules": 22,
+    "bucketCount": 4
   },
   "missingModules": [
-    "sys.db.Connection",
-    "sys.db.Mysql",
-    "sys.db.ResultSet",
-    "sys.db.Sqlite",
     "sys.net.Address",
     "sys.net.Host",
     "sys.net.Socket",
@@ -44,16 +40,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "sys.db-01",
-      "group": "sys.db",
-      "modules": [
-        "sys.db.Connection",
-        "sys.db.Mysql",
-        "sys.db.ResultSet",
-        "sys.db.Sqlite"
-      ]
-    },
     {
       "bucketKey": "sys.net-01",
       "group": "sys.net",

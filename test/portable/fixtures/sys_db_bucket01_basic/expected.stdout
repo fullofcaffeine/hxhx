@@ -1,0 +1,7 @@
+sys.db.Connection=ok
+sys.db.Mysql=ok
+sys.db.ResultSet=ok
+sys.db.Sqlite=ok
+sys.db.Mysql.class=sys.db.Mysql
+sys.db.Sqlite.class=sys.db.Sqlite
+sys.db.bucket01=done

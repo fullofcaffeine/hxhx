@@ -182,10 +182,10 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.FileStat` | `passthrough_verified` | test/portable/fixtures/file_stat_basic/src/Main.hx |
 | `sys.FileSystem` | `override` | packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx |
 | `sys.Http` | `passthrough_verified` | test/portable/fixtures/sys_core_bucket01_basic/src/Main.hx |
-| `sys.db.Connection` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.db.Mysql` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.db.ResultSet` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.db.Sqlite` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.db.Connection` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
+| `sys.db.Mysql` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
+| `sys.db.ResultSet` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
+| `sys.db.Sqlite` | `passthrough_verified` | test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx |
 | `sys.io.File` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/File.hx |
 | `sys.io.FileInput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileInput.hx |
 | `sys.io.FileOutput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx |
