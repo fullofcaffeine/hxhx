@@ -799,6 +799,84 @@ class OcamlCompiler extends DirectToStringCompiler {
 			}
 		}
 
+		// Interface dispatch surface (M10 strict portable):
+		//
+		// We do not emit constructors/implementations for interfaces, but we do emit a
+		// record type carrying method fields so interface-typed callsites can annotate
+		// receivers with a concrete OCaml type (`ifoo_t`) instead of failing with
+		// "unbound type constructor".
+		if (classType.isInterface && !isOcamlNativeSurface) {
+			function buildDispatchMethodType(haxeMethodType:Type):OcamlTypeExpr {
+				final selfT = OcamlTypeExpr.TIdent("Obj.t");
+				return switch (haxeMethodType) {
+					case TFun(args, ret):
+						var outT = ocamlTypeExprFromHaxeType(ret);
+						if (args.length == 0) {
+							outT = OcamlTypeExpr.TArrow(OcamlTypeExpr.TIdent("unit"), outT);
+						} else {
+							for (i in 0...args.length) {
+								final a = args[args.length - 1 - i];
+								outT = OcamlTypeExpr.TArrow(ocamlTypeExprFromHaxeType(a.t), outT);
+							}
+						}
+						OcamlTypeExpr.TArrow(selfT, outT);
+					case _:
+						OcamlTypeExpr.TIdent("Obj.t");
+				}
+			}
+
+			function collectInterfaceMethodFields(iface:ClassType, order:Array<String>, byName:Map<String, ClassField>, seen:Map<String, Bool>):Void {
+				for (edge in iface.interfaces) {
+					collectInterfaceMethodFields(edge.t.get(), order, byName, seen);
+				}
+				for (field in iface.fields.get()) {
+					if (field == null)
+						continue;
+					switch (field.kind) {
+						case FMethod(_):
+							if (!seen.exists(field.name)) {
+								seen.set(field.name, true);
+								order.push(field.name);
+							}
+							byName.set(field.name, field);
+						case _:
+					}
+				}
+			}
+
+			final interfaceMethodOrder:Array<String> = [];
+			final interfaceMethodByName:Map<String, ClassField> = [];
+			final interfaceSeen:Map<String, Bool> = [];
+			collectInterfaceMethodFields(classType, interfaceMethodOrder, interfaceMethodByName, interfaceSeen);
+
+			if (interfaceMethodOrder.length > 0) {
+				final interfaceTypeFields:Array<OcamlTypeRecordField> = [];
+				interfaceTypeFields.push({
+					name: "__hx_type",
+					isMutable: false,
+					typ: OcamlTypeExpr.TIdent("Obj.t")
+				});
+				for (methodName in interfaceMethodOrder) {
+					final methodField = interfaceMethodByName.get(methodName);
+					if (methodField == null)
+						continue;
+					interfaceTypeFields.push({
+						name: ctx.ocamlRecordLabel(methodName),
+						isMutable: false,
+						typ: buildDispatchMethodType(methodField.type)
+					});
+				}
+				final instanceTypeName = ctx.scopedInstanceTypeName(classType.module, classType.name);
+				items.push(OcamlModuleItem.IType([
+					{
+						name: instanceTypeName,
+						params: [],
+						kind: OcamlTypeDeclKind.Record(interfaceTypeFields)
+					}
+				], false));
+			}
+		}
+
 		// Any concrete (non-interface) Haxe class is instantiable, even if it only
 		// contains static members. The Haxe typer still provides a constructor
 		// signature (`classType.constructor`) for the implicit default ctor.
