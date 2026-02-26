@@ -251,6 +251,78 @@
         ]
       },
       {
+        "module": "haxe.iterators.ArrayIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.ArrayKeyValueIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.DynamicAccessIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.DynamicAccessKeyValueIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.HashMapKeyValueIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.MapKeyValueIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.RestIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.RestKeyValueIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.StringIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.StringIteratorUnicode",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.StringKeyValueIterator",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.iterators.StringKeyValueIteratorUnicode",
+        "evidence": [
+          "test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.ValueException",
         "evidence": [
           "test/portable/fixtures/haxe_value_exception_basic/src/Main.hx"

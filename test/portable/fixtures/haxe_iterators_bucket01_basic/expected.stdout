@@ -1,0 +1,12 @@
+array.sum=12
+array.kv=1:2
+dynamic.sum=7
+dynamic.kv=2:7
+hashmap.count=2
+map.kv=5:3
+rest.sum=60
+rest.kv=3:60
+string.iter=155
+string.iterU=155
+string.kv=1:155
+string.kvU=1:155

@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `38` passthrough-verified, `135` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `50` passthrough-verified, `123` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -130,18 +130,18 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.io.UInt16Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.UInt32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.UInt8Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.ArrayIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.ArrayKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.DynamicAccessIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.DynamicAccessKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.HashMapKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.MapKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.RestIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.RestKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.StringIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.StringIteratorUnicode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.StringKeyValueIterator` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.iterators.StringKeyValueIteratorUnicode` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.iterators.ArrayIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.ArrayKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.DynamicAccessIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.DynamicAccessKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.HashMapKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.MapKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.RestIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.RestKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.StringIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.StringIteratorUnicode` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.StringKeyValueIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
+| `haxe.iterators.StringKeyValueIteratorUnicode` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
 | `haxe.macro.CompilationServer` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.macro.Compiler` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.macro.ComplexTypeTools` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 135,
-    "bucketCount": 19
+    "missingModules": 123,
+    "bucketCount": 18
   },
   "missingModules": [
     "haxe.MainLoop",
@@ -75,18 +75,6 @@
     "haxe.io.UInt16Array",
     "haxe.io.UInt32Array",
     "haxe.io.UInt8Array",
-    "haxe.iterators.ArrayIterator",
-    "haxe.iterators.ArrayKeyValueIterator",
-    "haxe.iterators.DynamicAccessIterator",
-    "haxe.iterators.DynamicAccessKeyValueIterator",
-    "haxe.iterators.HashMapKeyValueIterator",
-    "haxe.iterators.MapKeyValueIterator",
-    "haxe.iterators.RestIterator",
-    "haxe.iterators.RestKeyValueIterator",
-    "haxe.iterators.StringIterator",
-    "haxe.iterators.StringIteratorUnicode",
-    "haxe.iterators.StringKeyValueIterator",
-    "haxe.iterators.StringKeyValueIteratorUnicode",
     "haxe.macro.CompilationServer",
     "haxe.macro.Compiler",
     "haxe.macro.ComplexTypeTools",
@@ -252,24 +240,6 @@
       "modules": [
         "haxe.io.UInt32Array",
         "haxe.io.UInt8Array"
-      ]
-    },
-    {
-      "bucketKey": "haxe.iterators-01",
-      "group": "haxe.iterators",
-      "modules": [
-        "haxe.iterators.ArrayIterator",
-        "haxe.iterators.ArrayKeyValueIterator",
-        "haxe.iterators.DynamicAccessIterator",
-        "haxe.iterators.DynamicAccessKeyValueIterator",
-        "haxe.iterators.HashMapKeyValueIterator",
-        "haxe.iterators.MapKeyValueIterator",
-        "haxe.iterators.RestIterator",
-        "haxe.iterators.RestKeyValueIterator",
-        "haxe.iterators.StringIterator",
-        "haxe.iterators.StringIteratorUnicode",
-        "haxe.iterators.StringKeyValueIterator",
-        "haxe.iterators.StringKeyValueIteratorUnicode"
       ]
     },
     {
