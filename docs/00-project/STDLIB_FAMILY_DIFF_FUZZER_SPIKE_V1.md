@@ -49,6 +49,9 @@ Current skeleton implementation:
   - `scripts/stdlib/run-semantic-diff-adapter-ocaml.js`
   - `scripts/stdlib/compare-semantic-diff-adapter-reports.js`
   - `npm run test:stdlib:semantic-diff:comparator`
+- two-phase minimizer + deterministic repro exporter:
+  - `scripts/stdlib/minimize-semantic-diff-divergences.js`
+  - `npm run test:stdlib:semantic-diff:minimizer`
 
 ## Generator constraints (typed + portable-safe)
 

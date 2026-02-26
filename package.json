@@ -98,6 +98,7 @@
     "test:stdlib:portable:full": "bash scripts/test-stdlib-portable-full.sh",
     "test:stdlib:semantic-diff:comparator": "bash scripts/test-stdlib-semantic-diff-comparator.sh",
     "test:stdlib:semantic-diff:generator": "bash scripts/test-stdlib-semantic-diff-generator.sh",
+    "test:stdlib:semantic-diff:minimizer": "bash scripts/test-stdlib-semantic-diff-minimizer.sh",
     "test:stdlib:semantic-diff:seed": "bash scripts/test-stdlib-semantic-diff-seed.sh",
     "test:portable": "bash scripts/test-portable.sh",
     "test:snapshot": "bash scripts/test-snapshots.sh",

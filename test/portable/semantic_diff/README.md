@@ -62,3 +62,17 @@ This command:
 2. compares normalized `stdout`/`stderr`/exit outputs,
 3. emits a deterministic divergence report, and
 4. fails if `divergenceCount != 0`.
+
+## Minimizer smoke (two-phase reduction + exporter)
+
+Run synthetic divergence minimization smoke:
+
+```bash
+npm run test:stdlib:semantic-diff:minimizer
+```
+
+This validates:
+
+1. two-phase minimization (`program-level` then `expression-level`),
+2. deterministic export directories under `semantic_diff/generated` (temp smoke output),
+3. before/after size stats and replay metadata recording.

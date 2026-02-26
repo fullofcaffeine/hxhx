@@ -53,6 +53,8 @@ Notes:
   - `npm run test:stdlib:semantic-diff:generator`
 - Comparator + normalized-output smoke:
   - `npm run test:stdlib:semantic-diff:comparator`
+- Minimizer + exporter smoke:
+  - `npm run test:stdlib:semantic-diff:minimizer`
 
 ## Cleanup after heavy runs
 
