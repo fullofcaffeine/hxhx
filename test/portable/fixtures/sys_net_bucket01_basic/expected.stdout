@@ -1,0 +1,5 @@
+sys.net.Address=ok
+sys.net.Host=ok
+sys.net.Socket=ok
+sys.net.UdpSocket=ok
+sys.net.bucket01=done

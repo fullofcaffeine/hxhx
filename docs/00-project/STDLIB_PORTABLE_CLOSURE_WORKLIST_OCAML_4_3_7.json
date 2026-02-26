@@ -12,14 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 22,
-    "bucketCount": 4
+    "missingModules": 18,
+    "bucketCount": 3
   },
   "missingModules": [
-    "sys.net.Address",
-    "sys.net.Host",
-    "sys.net.Socket",
-    "sys.net.UdpSocket",
     "sys.ssl.Certificate",
     "sys.ssl.Digest",
     "sys.ssl.DigestAlgorithm",
@@ -40,16 +36,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "sys.net-01",
-      "group": "sys.net",
-      "modules": [
-        "sys.net.Address",
-        "sys.net.Host",
-        "sys.net.Socket",
-        "sys.net.UdpSocket"
-      ]
-    },
     {
       "bucketKey": "sys.ssl-01",
       "group": "sys.ssl",

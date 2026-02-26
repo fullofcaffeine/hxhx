@@ -191,10 +191,10 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.io.FileOutput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx |
 | `sys.io.FileSeek` | `passthrough_verified` | test/portable/fixtures/sys_file_seek_basic/src/Main.hx |
 | `sys.io.Process` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/Process.hx |
-| `sys.net.Address` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.net.Host` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.net.Socket` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `sys.net.UdpSocket` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.net.Address` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
+| `sys.net.Host` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
+| `sys.net.Socket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
+| `sys.net.UdpSocket` | `passthrough_verified` | test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx |
 | `sys.ssl.Certificate` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.ssl.Digest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.ssl.DigestAlgorithm` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

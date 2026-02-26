@@ -957,6 +957,30 @@
         "evidence": [
           "test/portable/fixtures/sys_db_bucket01_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "sys.net.Address",
+        "evidence": [
+          "test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.net.Host",
+        "evidence": [
+          "test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.net.Socket",
+        "evidence": [
+          "test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "sys.net.UdpSocket",
+        "evidence": [
+          "test/portable/fixtures/sys_net_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [
