@@ -56,6 +56,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 	final ctx:CompilationContext = new CompilationContext();
 	final printer:OcamlASTPrinter = new OcamlASTPrinter();
 	var mainModuleId:Null<String> = null;
+	final staticMainCandidateModules:Array<String> = [];
+	final staticMainCandidateFileIdByModule = new haxe.ds.StringMap<String>();
+	final staticMainCandidateClassNameByModule = new haxe.ds.StringMap<String>();
 	var checkedOutputCollisions:Bool = false;
 
 	#if macro
@@ -603,6 +606,72 @@ class OcamlCompiler extends DirectToStringCompiler {
 	}
 	#end
 
+	function hasStaticMainMethod(funcFields:Array<ClassFuncData>):Bool {
+		for (funcField in funcFields) {
+			if (funcField.isStatic && funcField.field.name == "main")
+				return true;
+		}
+		return false;
+	}
+
+	function recordStaticMainCandidate(moduleId:String, moduleFileId:String, className:String):Void {
+		if (staticMainCandidateFileIdByModule.exists(moduleId))
+			return;
+		staticMainCandidateModules.push(moduleId);
+		staticMainCandidateFileIdByModule.set(moduleId, moduleFileId);
+		staticMainCandidateClassNameByModule.set(moduleId, className);
+	}
+
+	function resolveMainModuleFromMainExpr():Null<String> {
+		final mainModule = getMainModule();
+		return switch (mainModule) {
+			case TClassDecl(classRef):
+				final classType = classRef.get();
+				ctx.fileIdForModuleId(classType.module);
+			case _:
+				null;
+		}
+	}
+
+	function inferMainModuleIdFromStaticMainCandidates():Null<String> {
+		if (staticMainCandidateModules.length == 0)
+			return null;
+		if (staticMainCandidateModules.length == 1) {
+			final moduleId = staticMainCandidateModules[0];
+			return staticMainCandidateFileIdByModule.get(moduleId);
+		}
+		for (moduleId in staticMainCandidateModules) {
+			final className = staticMainCandidateClassNameByModule.get(moduleId);
+			if (className == "Main") {
+				return staticMainCandidateFileIdByModule.get(moduleId);
+			}
+		}
+		#if macro
+		Context.warning("reflaxe.ocaml: unable to infer a unique entrypoint module from static main candidates; set"
+			+ " -D ocaml_dune_exes=<exe>:<module> to disambiguate.",
+			Context.currentPos());
+		#end
+		return null;
+	}
+
+	function resolveMainModuleIdForDune():Null<String> {
+		if (mainModuleId != null)
+			return mainModuleId;
+
+		final fromMainExpr = resolveMainModuleFromMainExpr();
+		if (fromMainExpr != null) {
+			mainModuleId = fromMainExpr;
+			return fromMainExpr;
+		}
+
+		final fromStaticMainCandidates = inferMainModuleIdFromStaticMainCandidates();
+		if (fromStaticMainCandidates != null) {
+			mainModuleId = fromStaticMainCandidates;
+			return fromStaticMainCandidates;
+		}
+		return null;
+	}
+
 	public function compileClassImpl(classType:ClassType, varFields:Array<ClassVarData>, funcFields:Array<ClassFuncData>):Null<String> {
 		#if macro
 		final profClassStartS = profileEnabled ? profileNowS() : 0.0;
@@ -633,6 +702,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		final isMain = switch (mainModule) {
 			case TClassDecl(clsRef): final m = clsRef.get(); (m.module == classType.module) && (m.name == classType.name);
 			case _: false;
+		}
+		if (hasStaticMainMethod(funcFields)) {
+			recordStaticMainCandidate(classType.module, moduleFileId, classType.name);
 		}
 		if (isMain) {
 			mainModuleId = moduleFileId;
@@ -2227,6 +2299,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 
 		final noDune = haxe.macro.Context.defined("ocaml_no_dune");
 		if (!noDune) {
+			final resolvedMainModuleId = resolveMainModuleIdForDune();
 			final duneLibsValue = haxe.macro.Context.definedValue("ocaml_dune_libraries");
 			final duneLibs = duneLibsValue == null ? ["unix", "str", "threads"] : duneLibsValue.split(",")
 				.map(s -> StringTools.trim(s))
@@ -2246,13 +2319,13 @@ class OcamlCompiler extends DirectToStringCompiler {
 					final colon = e.indexOf(":");
 					if (colon < 0) {
 						// Name only; use the compilation main module if available.
-						out.push({name: e, mainModuleId: mainModuleId});
+						out.push({name: e, mainModuleId: resolvedMainModuleId});
 					} else {
 						final exe = StringTools.trim(e.substr(0, colon));
 						final mod = StringTools.trim(e.substr(colon + 1));
 						if (exe.length == 0)
 							continue;
-						final modId = mod.length == 0 ? mainModuleId : StringTools.replace(mod, ".", "_");
+						final modId = mod.length == 0 ? resolvedMainModuleId : StringTools.replace(mod, ".", "_");
 						out.push({name: exe, mainModuleId: modId});
 					}
 				}
@@ -2262,7 +2335,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 			DuneProjectEmitter.emit(output, {
 				projectName: DuneProjectEmitter.defaultProjectName(outDir),
 				exeName: DuneProjectEmitter.defaultExeName(outDir),
-				mainModuleId: mainModuleId,
+				mainModuleId: resolvedMainModuleId,
 				duneLibraries: duneLibs,
 				duneLayout: duneLayoutValue,
 				executables: executables
