@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 148,
-    "bucketCount": 21
+    "missingModules": 147,
+    "bucketCount": 20
   },
   "missingModules": [
     "haxe.CallStack",
@@ -141,7 +141,6 @@
     "sys.db.Mysql",
     "sys.db.ResultSet",
     "sys.db.Sqlite",
-    "sys.io.FileSeek",
     "sys.net.Address",
     "sys.net.Host",
     "sys.net.Socket",
@@ -385,13 +384,6 @@
         "sys.db.Mysql",
         "sys.db.ResultSet",
         "sys.db.Sqlite"
-      ]
-    },
-    {
-      "bucketKey": "sys.io-01",
-      "group": "sys.io",
-      "modules": [
-        "sys.io.FileSeek"
       ]
     },
     {

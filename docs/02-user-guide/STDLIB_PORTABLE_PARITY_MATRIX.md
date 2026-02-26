@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `25` passthrough-verified, `148` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `26` passthrough-verified, `147` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -189,7 +189,7 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.io.File` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/File.hx |
 | `sys.io.FileInput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileInput.hx |
 | `sys.io.FileOutput` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/FileOutput.hx |
-| `sys.io.FileSeek` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `sys.io.FileSeek` | `passthrough_verified` | test/portable/fixtures/sys_file_seek_basic/src/Main.hx |
 | `sys.io.Process` | `override` | packages/reflaxe.ocaml/std/_std/sys/io/Process.hx |
 | `sys.net.Address` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `sys.net.Host` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

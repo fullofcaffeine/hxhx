@@ -191,6 +191,12 @@
         ]
       },
       {
+        "module": "sys.io.FileSeek",
+        "evidence": [
+          "test/portable/fixtures/sys_file_seek_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "UnicodeString",
         "evidence": [
           "test/portable/fixtures/stdlib_core_01/src/Main.hx"
