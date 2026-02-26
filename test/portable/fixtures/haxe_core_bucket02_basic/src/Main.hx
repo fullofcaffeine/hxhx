@@ -32,6 +32,9 @@ class Main {
 		Sys.println("systools.quote=" + haxe.SysTools.quoteUnixArg("a b"));
 		final template = new haxe.Template("hxhx-template");
 		Sys.println("template.created=" + (template != null));
+		Sys.println("template.literal=" + template.execute({}));
+		final templateSubst = new haxe.Template("hello ::name::");
+		Sys.println("template.subst=" + templateSubst.execute({name: "hxhx"}));
 
 		Sys.println("timer.nonneg=" + (haxe.Timer.stamp() >= 0));
 		Sys.println("utf8.len=" + haxe.Utf8.length("hxhx"));

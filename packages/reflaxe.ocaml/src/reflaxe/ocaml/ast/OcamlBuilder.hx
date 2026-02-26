@@ -1842,6 +1842,11 @@ class OcamlBuilder {
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
 															[toObjArg(args[0]), buildStdString(args[1])])
 													]);
+												case "getProperty" if (args.length == 2):
+													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
+														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxAnon"), "get"),
+															[toObjArg(args[0]), buildStdString(args[1])])
+													]);
 												case "callMethod" if (args.length == 3):
 													OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [
 														OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxReflect"), "callMethod"),
@@ -3528,9 +3533,22 @@ class OcamlBuilder {
 					} else {
 						// Still evaluate the value (important under `-warn-error` where unused
 						// parameters become hard errors in the OCaml build).
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [
-							OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(e)])
-						]);
+						final built = buildExpr(e);
+						final mappedType = typeExprFromHaxeType(e.t);
+						final asObj:OcamlExpr = switch (mappedType) {
+							case TIdent(name):
+								name == "Obj.t" ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+							case TApp(name, params):
+								(name == "Obj" && params.length == 1 && switch (params[0]) {
+									case TIdent(paramName):
+										paramName == "t";
+									case _:
+										false;
+								}) ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+							case _:
+								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+						};
+						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [asObj]);
 					}
 				}
 			case _:
@@ -3543,11 +3561,24 @@ class OcamlBuilder {
 				// the key invariants: the value is used (avoids unused-var under -warn-error),
 				// and the output is stable enough for debugging and early bootstrap workloads.
 				final built = buildExpr(e);
+				final mappedType = typeExprFromHaxeType(e.t);
+				final isObjMappedType = switch (mappedType) {
+					case TIdent(name):
+						name == "Obj.t";
+					case TApp(name, params): name == "Obj" && params.length == 1 && switch (params[0]) {
+							case TIdent(paramName):
+								paramName == "t";
+							case _:
+								false;
+						};
+					case _:
+						false;
+				};
 				final asObj:OcamlExpr = (nullablePrimitiveKind(e.t) != null) ? built : switch (unwrapNullType(e.t)) {
 					case TDynamic(_), TAnonymous(_):
 						built;
 					case _:
-						OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
+						isObjMappedType ? built : OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [built]);
 				};
 				OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "dynamic_toStdString"), [asObj]);
 		}
@@ -4569,6 +4600,9 @@ class OcamlBuilder {
 				if (rhsKind != null) {
 					return buildExpr(rhs);
 				}
+				if (isTypeParameterType(rhs.t)) {
+					return buildExpr(rhs);
+				}
 				// Enums stored as `Obj.t` must be boxed to preserve enum identity at runtime.
 				final rhsNullableEnumName = isNullableEnumType(rhs.t);
 				if (rhsNullableEnumName != null) {
@@ -4614,16 +4648,8 @@ class OcamlBuilder {
 				if (rhsKind != null) {
 					return buildExpr(rhs);
 				}
-				final rhsNullableEnumName = isNullableEnumType(rhs.t);
-				if (rhsNullableEnumName != null) {
-					return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-						[OcamlExpr.EConst(OcamlConst.CString(rhsNullableEnumName)), buildExpr(rhs)]);
-				}
-				final rhsEnumName = fullNameOfTypeEnum(rhs.t);
-				if (rhsEnumName != null) {
-					final asObj = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "repr"), [buildExpr(rhs)]);
-					return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "box_if_needed"),
-						[OcamlExpr.EConst(OcamlConst.CString(rhsEnumName)), asObj]);
+				if (isTypeParameterType(rhs.t)) {
+					return buildExpr(rhs);
 				}
 				if (isBoolType(rhs.t)) {
 					return OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "box_bool"), [buildExpr(rhs)]);
@@ -4648,6 +4674,9 @@ class OcamlBuilder {
 					return OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "hx_null");
 				}
 				if (rhsKind != null) {
+					return buildExpr(rhs);
+				}
+				if (isTypeParameterType(rhs.t)) {
 					return buildExpr(rhs);
 				}
 				final rhsNullableEnumName = isNullableEnumType(rhs.t);
