@@ -38,6 +38,12 @@
       "notes": "String API surface kept compatible with upstream std."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/StringTools.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/StringTools.hx",
+      "notes": "OCaml-target StringTools override: adds urlEncode/urlDecode branches and local quote helpers so serializer parity works without SysTools module cycles."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/StringBuf.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/StringBuf.hx",

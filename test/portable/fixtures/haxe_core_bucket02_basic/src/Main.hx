@@ -28,6 +28,14 @@ class Main {
 		final serializedInt = haxe.Serializer.run(7);
 		final decodedInt = haxe.Unserializer.run(serializedInt);
 		Sys.println("serializer.int=" + Std.string(decodedInt));
+		final serializedString = haxe.Serializer.run("hxhx");
+		final decodedString:String = cast haxe.Unserializer.run(serializedString);
+		Sys.println("serializer.string=" + decodedString);
+		final serializedObject = haxe.Serializer.run({name: "hxhx", count: 3, enabled: true});
+		final decodedObject:Dynamic = haxe.Unserializer.run(serializedObject);
+		Sys.println("serializer.object.name=" + Std.string(Reflect.field(decodedObject, "name")));
+		Sys.println("serializer.object.count=" + Std.string(Reflect.field(decodedObject, "count")));
+		Sys.println("serializer.object.enabled=" + Std.string(Reflect.field(decodedObject, "enabled")));
 
 		Sys.println("systools.quote=" + haxe.SysTools.quoteUnixArg("a b"));
 		final template = new haxe.Template("hxhx-template");
