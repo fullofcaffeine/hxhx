@@ -12,14 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 45,
-    "bucketCount": 9
+    "missingModules": 41,
+    "bucketCount": 8
   },
   "missingModules": [
-    "haxe.rtti.CType",
-    "haxe.rtti.Meta",
-    "haxe.rtti.Rtti",
-    "haxe.rtti.XmlParser",
     "haxe.xml.Access",
     "haxe.xml.Check",
     "haxe.xml.Fast",
@@ -63,16 +59,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.rtti-01",
-      "group": "haxe.rtti",
-      "modules": [
-        "haxe.rtti.CType",
-        "haxe.rtti.Meta",
-        "haxe.rtti.Rtti",
-        "haxe.rtti.XmlParser"
-      ]
-    },
     {
       "bucketKey": "haxe.xml-01",
       "group": "haxe.xml",

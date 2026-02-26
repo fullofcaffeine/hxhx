@@ -819,6 +819,30 @@
         "evidence": [
           "test/portable/fixtures/haxe_macro_bucket02_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "haxe.rtti.CType",
+        "evidence": [
+          "test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.rtti.Meta",
+        "evidence": [
+          "test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.rtti.Rtti",
+        "evidence": [
+          "test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.rtti.XmlParser",
+        "evidence": [
+          "test/portable/fixtures/haxe_rtti_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [
