@@ -20,3 +20,30 @@ npm run test:stdlib:semantic-diff:seed
 ```
 
 This resolves `core_seed_v1` from `corpus_v1.json` and runs those fixtures through the portable runner lane.
+
+## Typed generator skeleton (deterministic)
+
+Run deterministic typed mutation-plan generation + replay verification:
+
+```bash
+npm run test:stdlib:semantic-diff:generator
+```
+
+Direct generator usage:
+
+```bash
+node scripts/stdlib/generate-semantic-diff-typed-seed-plan.js \
+  --seed 1337 \
+  --count 24 \
+  --slice core_seed_v1 \
+  --out test/portable/semantic_diff/generated/typed_seed_plan_core_seed_v1_1337.json \
+  --no-print-json
+```
+
+Replay from saved plan:
+
+```bash
+node scripts/stdlib/generate-semantic-diff-typed-seed-plan.js \
+  --replay-config test/portable/semantic_diff/generated/typed_seed_plan_core_seed_v1_1337.json \
+  --no-print-json
+```

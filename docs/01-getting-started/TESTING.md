@@ -49,6 +49,8 @@ Notes:
 
 - Slice source: `test/portable/semantic_diff/corpus_v1.json` (`core_seed_v1`)
 - Fixture contribution rules: `test/portable/semantic_diff/CONTRIBUTING.md`
+- Deterministic typed generator smoke:
+  - `npm run test:stdlib:semantic-diff:generator`
 
 ## Cleanup after heavy runs
 

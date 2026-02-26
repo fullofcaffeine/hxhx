@@ -39,6 +39,13 @@ Pipeline stages:
 6. **Repro exporter**
    - Write minimized fixture under `test/portable/semantic_diff/generated/<id>/`.
 
+Current skeleton implementation:
+
+- deterministic typed mutation-plan generator script:
+  - `scripts/stdlib/generate-semantic-diff-typed-seed-plan.js`
+- deterministic replay smoke wrapper:
+  - `npm run test:stdlib:semantic-diff:generator`
+
 ## Generator constraints (typed + portable-safe)
 
 Mutations must keep compilation constraints valid and remain inside portable contract modules:
