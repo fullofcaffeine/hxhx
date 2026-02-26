@@ -12,11 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 160,
-    "bucketCount": 26
+    "missingModules": 159,
+    "bucketCount": 25
   },
   "missingModules": [
-    "Xml",
     "haxe.CallStack",
     "haxe.Constraints",
     "haxe.DynamicAccess",
@@ -178,13 +177,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "core-01",
-      "group": "core",
-      "modules": [
-        "Xml"
-      ]
-    },
     {
       "bucketKey": "haxe.atomic-01",
       "group": "haxe.atomic",

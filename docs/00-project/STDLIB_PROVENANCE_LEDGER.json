@@ -50,6 +50,12 @@
       "notes": "Extern surface aligned with upstream Sys API."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/Xml.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/Xml.hx",
+      "notes": "OCaml-target Xml override; embeds parser/printer behavior to avoid generated OCaml module cycles."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/Bytes.hx",

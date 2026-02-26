@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `18` overrides, `2` runtime-backed, `5` lowering-intrinsic, `19` passthrough-verified, `160` passthrough-unverified.
+Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-intrinsic, `19` passthrough-verified, `159` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -32,7 +32,7 @@ Summary: `204` modules total, `18` overrides, `2` runtime-backed, `5` lowering-i
 | `Type` | `passthrough_verified` | test/portable/fixtures/type_getclass_basic/src/Main.hx; test/portable/fixtures/type_reflection_basic/src/Main.hx |
 | `UInt` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
 | `UnicodeString` | `passthrough_verified` | test/portable/fixtures/stdlib_core_01/src/Main.hx |
-| `Xml` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `Xml` | `override` | packages/reflaxe.ocaml/std/_std/Xml.hx |
 | `haxe.CallStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.Constraints` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.DynamicAccess` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
