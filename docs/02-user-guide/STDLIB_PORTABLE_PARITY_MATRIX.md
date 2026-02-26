@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-intrinsic, `19` passthrough-verified, `159` passthrough-unverified.
+Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-intrinsic, `22` passthrough-verified, `156` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -94,9 +94,9 @@ Summary: `204` modules total, `19` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.ds.StringMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
 | `haxe.ds.Vector` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.ds.WeakMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.exceptions.ArgumentException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.exceptions.NotImplementedException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.exceptions.PosException` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.exceptions.ArgumentException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
+| `haxe.exceptions.NotImplementedException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
+| `haxe.exceptions.PosException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
 | `haxe.extern.AsVar` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.extern.EitherType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.extern.Rest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

@@ -137,6 +137,24 @@
         ]
       },
       {
+        "module": "haxe.exceptions.ArgumentException",
+        "evidence": [
+          "test/portable/fixtures/haxe_exceptions_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.exceptions.NotImplementedException",
+        "evidence": [
+          "test/portable/fixtures/haxe_exceptions_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.exceptions.PosException",
+        "evidence": [
+          "test/portable/fixtures/haxe_exceptions_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.io.Path",
         "evidence": [
           "test/portable/fixtures/path_basic/src/Main.hx"

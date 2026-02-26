@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 159,
-    "bucketCount": 25
+    "missingModules": 156,
+    "bucketCount": 24
   },
   "missingModules": [
     "haxe.CallStack",
@@ -71,9 +71,6 @@
     "haxe.ds.ReadOnlyArray",
     "haxe.ds.Vector",
     "haxe.ds.WeakMap",
-    "haxe.exceptions.ArgumentException",
-    "haxe.exceptions.NotImplementedException",
-    "haxe.exceptions.PosException",
     "haxe.extern.AsVar",
     "haxe.extern.EitherType",
     "haxe.extern.Rest",
@@ -266,15 +263,6 @@
         "haxe.ds.ReadOnlyArray",
         "haxe.ds.Vector",
         "haxe.ds.WeakMap"
-      ]
-    },
-    {
-      "bucketKey": "haxe.exceptions-01",
-      "group": "haxe.exceptions",
-      "modules": [
-        "haxe.exceptions.ArgumentException",
-        "haxe.exceptions.NotImplementedException",
-        "haxe.exceptions.PosException"
       ]
     },
     {
