@@ -29,6 +29,7 @@ Current thresholds are intentionally conservative while we harden lanes across h
 | --- | --- | --- |
 | `compile_wall_ms` | `ocaml_portable_builtin` | `140ms` |
 | `compile_wall_ms` | `ocaml_metal_builtin` | `140ms` |
+| `compile_wall_ms` | `upstream_haxe` | `140ms` |
 | `compile_wall_ms` | `js_builtin` | `140ms` |
 | `compile_wall_ms` | `js_provider` | `150ms` |
 | `incremental_rebuild_ms` | `ocaml_portable_builtin` | `140ms` |
@@ -37,9 +38,29 @@ Current thresholds are intentionally conservative while we harden lanes across h
 | `macro_overhead_ms` | `ocaml_portable_builtin` | `60ms` |
 | `peak_rss_kb` | `ocaml_portable_builtin` | `70000kb` |
 | `peak_rss_kb` | `ocaml_metal_builtin` | `70000kb` |
+| `peak_rss_kb` | `upstream_haxe` | `70000kb` |
 | `peak_rss_kb` | `js_builtin` | `70000kb` |
 | `peak_rss_kb` | `js_provider` | `70000kb` |
 | `macro_peak_rss_kb` | `ocaml_portable_builtin` | `75000kb` |
+
+## Convergence budgets (report-only for now)
+
+Portable remains the default OCaml contract. Performance work targets convergence to metal (and competitive upstream behavior) without changing portable semantics.
+
+Median ratio targets emitted by `lane_ratios` in `report.json`:
+
+| Ratio | Metric | Budget |
+| --- | --- | --- |
+| `portable_over_metal` | `compile_wall_ms` | `<= 1.15x` |
+| `portable_over_metal` | `macro_enabled_compile_ms` | `<= 1.20x` |
+| `portable_over_metal` | `peak_rss_kb` | `<= 1.25x` |
+| `portable_over_upstream` | `compile_wall_ms` | `<= 1.30x` |
+| `portable_over_upstream` | `macro_enabled_compile_ms` | `<= 1.40x` |
+| `portable_over_upstream` | `peak_rss_kb` | `<= 1.50x` |
+| `metal_over_upstream` | `compile_wall_ms` | `<= 1.20x` |
+| `metal_over_upstream` | `peak_rss_kb` | `<= 1.40x` |
+
+These are convergence targets, not merge-blocking thresholds yet.
 
 ## Next step
 

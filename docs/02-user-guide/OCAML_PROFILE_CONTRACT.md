@@ -6,6 +6,15 @@ This document defines the canonical OCaml profile switch used by OCaml backends 
 
 Make profile selection explicit and deterministic while we evolve portable/metal behavior.
 
+## Product policy (performance)
+
+- `portable` stays the default because `hxhx` must remain cross-target viable.
+- `metal` stays the strict performance lane (no implicit fallback).
+- Performance work prioritizes profile-agnostic optimizations so portable converges toward metal on compiler workloads.
+- Convergence budgets and ratio lanes are tracked by the KPI harness (`scripts/hxhx/bench-kpi.sh`) and documented in:
+  - `docs/benchmarks/HXHX_KPI_BASELINE.md`
+  - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
+
 ## Accepted values
 
 - `portable` (default)

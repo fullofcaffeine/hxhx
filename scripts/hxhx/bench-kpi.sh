@@ -27,7 +27,7 @@ Environment knobs:
 
 Outputs:
   samples.tsv  (machine-readable samples)
-  report.json  (stable summary schema: hxhx.kpi.v1)
+  report.json  (stable summary schema: hxhx.kpi.v1 + lane ratio deltas)
 USAGE
 }
 
@@ -127,6 +127,20 @@ class Main {
 }
 HX
 
+cat >"$WORK_DIR/src/KpiBenchMacros.hx" <<'HX'
+#if macro
+import haxe.macro.Context;
+import haxe.macro.Expr;
+#end
+
+class KpiBenchMacros {
+	public static macro function init():Expr {
+		Context.onAfterTyping(function(_) {});
+		return macro null;
+	}
+}
+HX
+
 mkdir -p "$REPORT_DIR"
 printf 'metric\tlane\trep\tvalue\n' >"$SAMPLES_TSV"
 
@@ -210,6 +224,7 @@ portable_cmd="\"$HXHX_BIN\" --target ocaml-stage3 --hxhx-no-emit -cp \"$WORK_DIR
 metal_cmd="\"$HXHX_BIN\" --target ocaml-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_ocaml_metal\" -D ocaml_profile=metal"
 builtin_js_cmd="\"$HXHX_BIN\" --target js-native --js \"$WORK_DIR/out_js_builtin/main.js\" --hxhx-no-run -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_js_builtin\""
 plugin_js_cmd="\"$HXHX_BIN\" --target js-native --js \"$WORK_DIR/out_js_plugin/main.js\" --hxhx-no-run -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_js_plugin\" -D hxhx_backend_provider=backend.js.JsBackend"
+upstream_cmd="\"$HAXE_BIN\" --no-output -cp \"$WORK_DIR/src\" -main Main"
 
 echo "== hxhx KPI harness"
 echo "HAXE_BIN: $HAXE_BIN"
@@ -221,15 +236,24 @@ echo ""
 
 run_compile_lane "ocaml_portable_builtin" "$portable_cmd"
 run_compile_lane "ocaml_metal_builtin" "$metal_cmd"
+run_compile_lane "upstream_haxe" "$upstream_cmd"
 run_compile_lane "js_builtin" "$builtin_js_cmd"
 run_compile_lane "js_provider" "$plugin_js_cmd"
 
 run_incremental_lane "ocaml_portable_builtin" "$portable_cmd"
 
 if [ "$RUN_MACRO_LANE" = "1" ]; then
-	macro_base_cmd="\"$HXHX_BIN\" --hxhx-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" -cp \"$ROOT/test/fixtures/hxhx-macros/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_base\""
-	macro_enabled_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --hxhx-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" -cp \"$ROOT/test/fixtures/hxhx-macros/src\" --macro 'hxhxmacros.HaxelibInitMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_enabled\""
-	run_macro_overhead_lane "ocaml_portable_builtin" "$macro_base_cmd" "$macro_enabled_cmd"
+	upstream_macro_base_cmd="\"$HAXE_BIN\" --no-output -cp \"$WORK_DIR/src\" -main Main"
+	upstream_macro_enabled_cmd="\"$HAXE_BIN\" --no-output -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main"
+	run_macro_overhead_lane "upstream_haxe" "$upstream_macro_base_cmd" "$upstream_macro_enabled_cmd"
+
+	macro_base_portable_cmd="\"$HXHX_BIN\" --target ocaml-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_portable_base\" -D ocaml_profile=portable"
+	macro_enabled_portable_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --target ocaml-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_portable_enabled\" -D ocaml_profile=portable"
+	run_macro_overhead_lane "ocaml_portable_builtin" "$macro_base_portable_cmd" "$macro_enabled_portable_cmd"
+
+	macro_base_metal_cmd="\"$HXHX_BIN\" --target ocaml-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_metal_base\" -D ocaml_profile=metal"
+	macro_enabled_metal_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --target ocaml-stage3 --hxhx-no-emit -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_metal_enabled\" -D ocaml_profile=metal"
+	run_macro_overhead_lane "ocaml_metal_builtin" "$macro_base_metal_cmd" "$macro_enabled_metal_cmd"
 fi
 
 python3 - "$SAMPLES_TSV" "$REPORT_JSON" "$REPS" "$HAXE_BIN" "$HXHX_BIN" "$RUN_MACRO_LANE" "$ROOT" <<'PY'
@@ -277,6 +301,59 @@ def unit_for(metric):
         return "kb"
     return "ms"
 
+def ratio(numerator, denominator):
+    if denominator == 0:
+        return None
+    return round(float(numerator) / float(denominator), 4)
+
+def metric_median(metric, lane):
+    values = groups.get((metric, lane))
+    if not values:
+        return None
+    return int(statistics.median(values))
+
+ratio_specs = [
+    ("portable_over_metal", "ocaml_portable_builtin", "ocaml_metal_builtin"),
+    ("portable_over_upstream", "ocaml_portable_builtin", "upstream_haxe"),
+    ("metal_over_upstream", "ocaml_metal_builtin", "upstream_haxe"),
+]
+
+tracked_metrics = [
+    "compile_wall_ms",
+    "peak_rss_kb",
+    "incremental_rebuild_ms",
+]
+if run_macro_lane == "1":
+    tracked_metrics.extend(
+        [
+            "macro_baseline_compile_ms",
+            "macro_enabled_compile_ms",
+            "macro_overhead_ms",
+            "macro_peak_rss_kb",
+        ]
+    )
+
+lane_ratios = []
+for ratio_name, numerator_lane, denominator_lane in ratio_specs:
+    metric_ratios = {}
+    has_any_ratio = False
+    for metric in tracked_metrics:
+        numerator = metric_median(metric, numerator_lane)
+        denominator = metric_median(metric, denominator_lane)
+        value = None if numerator is None or denominator is None else ratio(numerator, denominator)
+        metric_ratios[metric] = value
+        if value is not None:
+            has_any_ratio = True
+    if has_any_ratio:
+        lane_ratios.append(
+            {
+                "name": ratio_name,
+                "numerator_lane": numerator_lane,
+                "denominator_lane": denominator_lane,
+                "metrics": metric_ratios,
+            }
+        )
+
 haxe_version = "unknown"
 try:
     proc = subprocess.run([haxe_bin, "--version"], check=False, capture_output=True, text=True)
@@ -308,6 +385,7 @@ report = {
         "hxhx_bin": normalize_path(hxhx_bin),
     },
     "metrics": [],
+    "lane_ratios": lane_ratios,
 }
 
 for (metric, lane) in sorted(groups.keys()):
@@ -334,6 +412,21 @@ for entry in report["metrics"]:
         f"p95={summary['p95']:6d}{entry['unit']} "
         f"mean={summary['mean']}"
     )
+
+if lane_ratios:
+    print("== KPI lane ratios (median-based)")
+    for ratio_entry in lane_ratios:
+        ratio_values = []
+        for metric in tracked_metrics:
+            metric_ratio = ratio_entry["metrics"].get(metric)
+            if metric_ratio is None:
+                continue
+            ratio_values.append(f"{metric}={metric_ratio}")
+        if ratio_values:
+            print(
+                f"{ratio_entry['name']}: "
+                + ", ".join(ratio_values)
+            )
 PY
 
 echo ""

@@ -15,6 +15,12 @@
       "unit": "ms"
     },
     {
+      "lane": "upstream_haxe",
+      "max_median": 140,
+      "metric": "compile_wall_ms",
+      "unit": "ms"
+    },
+    {
       "lane": "js_builtin",
       "max_median": 140,
       "metric": "compile_wall_ms",
@@ -63,6 +69,12 @@
       "unit": "kb"
     },
     {
+      "lane": "upstream_haxe",
+      "max_median": 70000,
+      "metric": "peak_rss_kb",
+      "unit": "kb"
+    },
+    {
       "lane": "js_builtin",
       "max_median": 70000,
       "metric": "peak_rss_kb",
@@ -79,6 +91,48 @@
       "max_median": 75000,
       "metric": "macro_peak_rss_kb",
       "unit": "kb"
+    }
+  ],
+  "ratio_rules": [
+    {
+      "max_ratio": 1.15,
+      "metric": "compile_wall_ms",
+      "name": "portable_over_metal"
+    },
+    {
+      "max_ratio": 1.2,
+      "metric": "macro_enabled_compile_ms",
+      "name": "portable_over_metal"
+    },
+    {
+      "max_ratio": 1.25,
+      "metric": "peak_rss_kb",
+      "name": "portable_over_metal"
+    },
+    {
+      "max_ratio": 1.3,
+      "metric": "compile_wall_ms",
+      "name": "portable_over_upstream"
+    },
+    {
+      "max_ratio": 1.4,
+      "metric": "macro_enabled_compile_ms",
+      "name": "portable_over_upstream"
+    },
+    {
+      "max_ratio": 1.5,
+      "metric": "peak_rss_kb",
+      "name": "portable_over_upstream"
+    },
+    {
+      "max_ratio": 1.2,
+      "metric": "compile_wall_ms",
+      "name": "metal_over_upstream"
+    },
+    {
+      "max_ratio": 1.4,
+      "metric": "peak_rss_kb",
+      "name": "metal_over_upstream"
     }
   ]
 }

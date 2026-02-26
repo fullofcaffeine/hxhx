@@ -1,0 +1,159 @@
+name: HXHX KPI (report-only)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+concurrency:
+  group: hxhx-kpi-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+  HXHX_KPI_REPS: "2"
+  HXHX_KPI_RUN_MACRO_LANE: "1"
+
+jobs:
+  kpi-report:
+    name: HXHX KPI upstream/portable/metal (report-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup OCaml toolchain (OCaml 5.2.1)
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+
+      - name: Install OCaml packages
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          opam install -y dune ocamlfind
+          eval "$(opam env)"
+          dune --version
+          ocamlc -version
+
+      - name: Export OCaml switch binaries to PATH
+        run: |
+          set -euo pipefail
+          eval "$(opam env)"
+          echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Run HXHX KPI benchmark (report-only)
+        id: bench
+        run: |
+          set +e
+          REPORT_DIR="$RUNNER_TEMP/hxhx_kpi_report"
+          echo "report_dir=$REPORT_DIR" >> "$GITHUB_OUTPUT"
+          HXHX_KPI_REPORT_DIR="$REPORT_DIR" npm run hxhx:bench:kpi
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -ne 0 ]; then
+            echo "HXHX KPI benchmark failed (report-only)." >&2
+          fi
+          exit 0
+
+      - name: Add benchmark summary
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          report_dir = Path(os.environ["KPI_REPORT_DIR"])
+          report_path = report_dir / "report.json"
+          exit_code = os.environ.get("KPI_EXIT_CODE", "")
+
+          lines = []
+          lines.append("### HXHX KPI upstream/portable/metal (report-only)")
+          lines.append("")
+          lines.append(f"- Exit code: `{exit_code}`")
+          lines.append("- Mode: `report-only` (non-blocking)")
+          lines.append("")
+
+          if not report_path.exists():
+            lines.append("No KPI report generated.")
+            summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            raise SystemExit(0)
+
+          payload = json.loads(report_path.read_text(encoding="utf-8"))
+          config = payload.get("config", {})
+          lines.append(f"- Reps: `{config.get('reps')}` | Macro lane: `{config.get('run_macro_lane')}`")
+          lines.append("")
+
+          ratios = payload.get("lane_ratios", [])
+          if ratios:
+            lines.append("| Ratio | Metric | Value |")
+            lines.append("|---|---|---:|")
+            for ratio in ratios:
+              ratio_name = ratio.get("name", "?")
+              metrics = ratio.get("metrics", {})
+              for metric, value in sorted(metrics.items()):
+                if value is None:
+                  continue
+                lines.append(f"| `{ratio_name}` | `{metric}` | `{value}` |")
+          else:
+            lines.append("No lane ratio rows were emitted.")
+
+          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+        env:
+          KPI_REPORT_DIR: ${{ steps.bench.outputs.report_dir }}
+          KPI_EXIT_CODE: ${{ steps.bench.outputs.exit_code }}
+
+      - name: Upload KPI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hxhx-kpi-report-${{ github.run_id }}
+          path: ${{ steps.bench.outputs.report_dir }}
+          if-no-files-found: warn
+          retention-days: 14

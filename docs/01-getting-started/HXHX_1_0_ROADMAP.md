@@ -214,3 +214,4 @@ Performance references:
 
 - KPI baseline: `docs/benchmarks/HXHX_KPI_BASELINE.md`
 - KPI thresholds: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
+- Post-1.0 convergence policy: keep OCaml `portable` as default and track `upstream/portable/metal` deltas until portable performance converges to target budgets.
