@@ -1,0 +1,12 @@
+abv=1:4:2:2:3:2
+bufferinput.created=true
+bytesinput.len=3
+bytesoutput=3:ABC
+encoding=0:1
+f32.len=2
+f64.len=2
+i32.len=2
+mime=<unsupported>
+scheme=<unsupported>
+stringinput.created=true
+u16.len=2

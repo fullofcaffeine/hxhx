@@ -3926,7 +3926,17 @@ class OcamlBuilder {
 									]), false), false);
 								} else {
 									final tmp = freshTmp("assign");
-									final rhs = coerceForAssignment(e1.t, e2);
+									var rhs = coerceForAssignment(e1.t, e2);
+									final slotType = typeExprFromHaxeType(cf.type);
+									final isObjSlot = switch (slotType) {
+										case TIdent(name):
+											name == "Obj.t";
+										case _:
+											false;
+									}
+									if (isObjSlot) {
+										rhs = OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [rhs]);
+									}
 									final fieldName = ctx.ocamlRecordLabel(cf.name);
 									final modName = moduleIdToOcamlModuleName(cls.module);
 									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);

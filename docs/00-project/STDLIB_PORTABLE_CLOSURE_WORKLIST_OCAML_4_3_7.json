@@ -12,22 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 78,
-    "bucketCount": 13
+    "missingModules": 66,
+    "bucketCount": 12
   },
   "missingModules": [
-    "haxe.io.ArrayBufferView",
-    "haxe.io.BufferInput",
-    "haxe.io.BytesInput",
-    "haxe.io.BytesOutput",
-    "haxe.io.Encoding",
-    "haxe.io.Float32Array",
-    "haxe.io.Float64Array",
-    "haxe.io.Int32Array",
-    "haxe.io.Mime",
-    "haxe.io.Scheme",
-    "haxe.io.StringInput",
-    "haxe.io.UInt16Array",
     "haxe.io.UInt32Array",
     "haxe.io.UInt8Array",
     "haxe.macro.CompilationServer",
@@ -98,24 +86,6 @@
   "buckets": [
     {
       "bucketKey": "haxe.io-01",
-      "group": "haxe.io",
-      "modules": [
-        "haxe.io.ArrayBufferView",
-        "haxe.io.BufferInput",
-        "haxe.io.BytesInput",
-        "haxe.io.BytesOutput",
-        "haxe.io.Encoding",
-        "haxe.io.Float32Array",
-        "haxe.io.Float64Array",
-        "haxe.io.Int32Array",
-        "haxe.io.Mime",
-        "haxe.io.Scheme",
-        "haxe.io.StringInput",
-        "haxe.io.UInt16Array"
-      ]
-    },
-    {
-      "bucketKey": "haxe.io-02",
       "group": "haxe.io",
       "modules": [
         "haxe.io.UInt32Array",

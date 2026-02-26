@@ -1596,8 +1596,44 @@ class OcamlCompiler extends DirectToStringCompiler {
 				return null;
 			}
 
+			function parseSegmentValueBindingNames(seg:String):Array<String> {
+				final names:Array<String> = [];
+				final seen:Map<String, Bool> = [];
+				final re = ~/^[ \t]*let[ \t]+([a-z_][A-Za-z0-9_']*)[ \t]*=/;
+				for (line in seg.split("\n")) {
+					if (!re.match(line))
+						continue;
+					final name = re.matched(1);
+					if (name != null && !seen.exists(name)) {
+						seen.set(name, true);
+						names.push(name);
+					}
+				}
+				return names;
+			}
+
+			function segmentMentionsIdentifier(seg:String, ident:String):Bool {
+				if (ident == null || ident.length == 0)
+					return false;
+				final escapedBuf = new StringBuf();
+				for (i in 0...ident.length) {
+					final ch = ident.charAt(i);
+					switch (ch) {
+						case "\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|":
+							escapedBuf.add("\\");
+							escapedBuf.add(ch);
+						case _:
+							escapedBuf.add(ch);
+					}
+				}
+				final escaped = escapedBuf.toString();
+				final pattern = "(^|[^A-Za-z0-9_'])" + escaped + "([^A-Za-z0-9_']|$)";
+				return new EReg(pattern, "m").match(seg);
+			}
+
 			final segByFullName:Map<String, String> = [];
 			final originalIndex:Map<String, Int> = [];
+			final segmentFullNamesInOrder:Array<String> = [];
 			final passthrough = new Array<String>();
 			for (i in 0...segments.length) {
 				final seg = segments[i];
@@ -1608,6 +1644,7 @@ class OcamlCompiler extends DirectToStringCompiler {
 				}
 				segByFullName.set(fullName, seg);
 				originalIndex.set(fullName, i);
+				segmentFullNamesInOrder.push(fullName);
 			}
 
 			if (segByFullName.keys().hasNext() == false)
@@ -1726,8 +1763,64 @@ class OcamlCompiler extends DirectToStringCompiler {
 				return;
 			}
 
+			final nodeSet:Map<String, Bool> = [];
+			for (n in nodes)
+				nodeSet.set(n, true);
+
+			// Keep generated helper segments (not exposed by Context.getModule) in the graph so they are
+			// preserved and can participate in dependency ordering.
+			for (fullName in segmentFullNamesInOrder) {
+				if (!nodeSet.exists(fullName)) {
+					nodes.push(fullName);
+					nodeSet.set(fullName, true);
+				}
+			}
+
 			if (nodes.length == 0)
 				return;
+
+			for (n in nodes) {
+				if (depsByFullName.get(n) == null)
+					depsByFullName.set(n, []);
+			}
+
+			// Add conservative value-level dependencies between segment-local top-level `let` bindings.
+			// This catches cross-type forward references within a single `.ml` unit (e.g. helper segment
+			// calling a value defined in another segment).
+			final ownerByValueName:Map<String, String> = [];
+			final ambiguousValueName:Map<String, Bool> = [];
+			for (fullName in segmentFullNamesInOrder) {
+				final seg = segByFullName.get(fullName);
+				if (seg == null)
+					continue;
+				for (name in parseSegmentValueBindingNames(seg)) {
+					if (ambiguousValueName.exists(name))
+						continue;
+					if (ownerByValueName.exists(name)) {
+						final owner = ownerByValueName.get(name);
+						if (owner != fullName) {
+							ownerByValueName.remove(name);
+							ambiguousValueName.set(name, true);
+						}
+					} else {
+						ownerByValueName.set(name, fullName);
+					}
+				}
+			}
+			for (fullName in segmentFullNamesInOrder) {
+				final seg = segByFullName.get(fullName);
+				final deps = depsByFullName.get(fullName);
+				if (seg == null || deps == null)
+					continue;
+				for (valueName in ownerByValueName.keys()) {
+					final owner = ownerByValueName.get(valueName);
+					if (owner == null || owner == fullName)
+						continue;
+					if (segmentMentionsIdentifier(seg, valueName))
+						deps.set(owner, true);
+				}
+				deps.remove(fullName);
+			}
 
 			// Stable Kahn topological sort (ties broken by original segment order).
 			final indegree:Map<String, Int> = [];
@@ -1791,6 +1884,9 @@ class OcamlCompiler extends DirectToStringCompiler {
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Expr");
 		// Stage4 macro-host bring-up also requires compiling `haxe.macro.Type` (many mutually-referencing enums).
 		reorderMlSegmentsByLocalTypeDeps("haxe.macro.Type");
+		// Portable stdlib closure: `haxe.io.ArrayBufferView` mixes helper/value segments that can
+		// reference class values emitted later in the same unit (`create`), so reorder by local deps.
+		reorderMlSegmentsByLocalTypeDeps("haxe.io.ArrayBufferView");
 
 		#if macro
 		if (profileEnabled) {

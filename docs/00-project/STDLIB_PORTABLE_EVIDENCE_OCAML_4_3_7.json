@@ -621,6 +621,78 @@
         "evidence": [
           "test/portable/fixtures/sys_file_seek_basic/src/Main.hx"
         ]
+      },
+      {
+        "module": "haxe.io.ArrayBufferView",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.BufferInput",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.BytesInput",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.BytesOutput",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Encoding",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Float32Array",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Float64Array",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Int32Array",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Mime",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.Scheme",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.StringInput",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.io.UInt16Array",
+        "evidence": [
+          "test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx"
+        ]
       }
     ],
     "override": [

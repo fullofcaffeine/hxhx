@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `95` passthrough-verified, `78` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `107` passthrough-verified, `66` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -107,27 +107,27 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.http.HttpMethod` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
 | `haxe.http.HttpNodeJs` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
 | `haxe.http.HttpStatus` | `passthrough_verified` | test/portable/fixtures/haxe_http_bucket01_basic/src/Main.hx |
-| `haxe.io.ArrayBufferView` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.BufferInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.ArrayBufferView` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.BufferInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Bytes` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx |
 | `haxe.io.BytesBuffer` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesBuffer.hx |
 | `haxe.io.BytesData` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/BytesData.hx |
-| `haxe.io.BytesInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.BytesOutput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.Encoding` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.BytesInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.BytesOutput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.Encoding` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Eof` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
 | `haxe.io.Error` | `runtime_backed` | packages/reflaxe.ocaml/std/runtime/HxInput.ml |
 | `haxe.io.FPHelper` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/FPHelper.hx |
-| `haxe.io.Float32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.Float64Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Float32Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.Float64Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Input` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Input.hx |
-| `haxe.io.Int32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.Mime` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Int32Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.Mime` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.Output` | `override` | packages/reflaxe.ocaml/std/_std/haxe/io/Output.hx |
 | `haxe.io.Path` | `passthrough_verified` | test/portable/fixtures/path_basic/src/Main.hx |
-| `haxe.io.Scheme` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.StringInput` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.io.UInt16Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.io.Scheme` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.StringInput` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
+| `haxe.io.UInt16Array` | `passthrough_verified` | test/portable/fixtures/haxe_io_bucket01_basic/src/Main.hx |
 | `haxe.io.UInt32Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.io.UInt8Array` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.iterators.ArrayIterator` | `passthrough_verified` | test/portable/fixtures/haxe_iterators_bucket01_basic/src/Main.hx |
