@@ -4,3 +4,4 @@ notimpl.msg=TODO
 notimpl.prev=Invalid argument "age"
 pos.msg=Boom
 pos.loc=Demo.run@Demo.hx:42
+pos.str=Boom in Demo.run at Demo.hx:42

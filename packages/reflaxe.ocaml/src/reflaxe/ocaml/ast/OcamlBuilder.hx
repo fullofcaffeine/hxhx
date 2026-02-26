@@ -2596,8 +2596,7 @@ class OcamlBuilder {
 														&& (ctx.dispatchTypes.exists(recvFullName)
 															|| ctx.interfaceTypes.exists(recvFullName));
 
-													final allowSuperCall = !ctx.currentIsHaxeStd
-														&& ctx.currentTypeFullName != null
+													final allowSuperCall = ctx.currentTypeFullName != null
 														&& ctx.dispatchTypes.exists(ctx.currentTypeFullName);
 
 													if (isSuperReceiver && allowSuperCall) {
@@ -6978,9 +6977,7 @@ class OcamlBuilder {
 
 		final recvFullName = classFullNameFromType(objExpr.t);
 		final isDispatchRecv = recvFullName != null && (ctx.dispatchTypes.exists(recvFullName) || ctx.interfaceTypes.exists(recvFullName));
-		final allowSuperCall = !ctx.currentIsHaxeStd
-			&& ctx.currentTypeFullName != null
-			&& ctx.dispatchTypes.exists(ctx.currentTypeFullName);
+		final allowSuperCall = ctx.currentTypeFullName != null && ctx.dispatchTypes.exists(ctx.currentTypeFullName);
 
 		final call:OcamlExpr = if (isSuperReceiver && allowSuperCall) {
 			// `super.foo` as a value: bind to the base implementation (no virtual dispatch).

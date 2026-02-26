@@ -22,5 +22,6 @@ class Main {
 		Sys.println("pos.msg=" + posException.message);
 		Sys.println("pos.loc=" + posException.posInfos.className + "." + posException.posInfos.methodName + "@" + posException.posInfos.fileName + ":"
 			+ posException.posInfos.lineNumber);
+		Sys.println("pos.str=" + posException.toString());
 	}
 }
