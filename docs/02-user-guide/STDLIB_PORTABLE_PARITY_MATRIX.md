@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `83` passthrough-verified, `90` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `95` passthrough-verified, `78` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -78,22 +78,22 @@ Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.display.Position` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
 | `haxe.display.Protocol` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
 | `haxe.display.Server` | `passthrough_verified` | test/portable/fixtures/haxe_display_bucket01_basic/src/Main.hx |
-| `haxe.ds.ArraySort` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.BalancedTree` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.Either` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.EnumValueMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.GenericStack` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.HashMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.ArraySort` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.BalancedTree` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.Either` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.EnumValueMap` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.GenericStack` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.HashMap` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.IntMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
-| `haxe.ds.List` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.ListSort` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.List` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.ListSort` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.Map` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
 | `haxe.ds.ObjectMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
-| `haxe.ds.Option` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.ReadOnlyArray` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.Option` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.ReadOnlyArray` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.ds.StringMap` | `lowering_intrinsic` | packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlBuilder.hx |
-| `haxe.ds.Vector` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.ds.WeakMap` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.ds.Vector` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
+| `haxe.ds.WeakMap` | `passthrough_verified` | test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx |
 | `haxe.exceptions.ArgumentException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
 | `haxe.exceptions.NotImplementedException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |
 | `haxe.exceptions.PosException` | `passthrough_verified` | test/portable/fixtures/haxe_exceptions_basic/src/Main.hx |

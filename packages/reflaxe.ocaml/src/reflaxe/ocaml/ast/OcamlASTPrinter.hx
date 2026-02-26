@@ -608,7 +608,14 @@ class OcamlASTPrinter {
 		for (i in 0...decls.length) {
 			final d = decls[i];
 			final headKw = (i == 0) ? ("type" + recStr) : "and";
-			final params = d.params.length > 0 ? (d.params.map(p -> "'" + p).join(" ") + " ") : "";
+			final params = switch (d.params.length) {
+				case 0:
+					"";
+				case 1:
+					"'" + d.params[0] + " ";
+				case _:
+					"(" + d.params.map(p -> "'" + p).join(", ") + ") ";
+			}
 			final rhs = switch (d.kind) {
 				case Alias(t):
 					printType(t);

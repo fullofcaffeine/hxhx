@@ -12,22 +12,10 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 90,
-    "bucketCount": 14
+    "missingModules": 78,
+    "bucketCount": 13
   },
   "missingModules": [
-    "haxe.ds.ArraySort",
-    "haxe.ds.BalancedTree",
-    "haxe.ds.Either",
-    "haxe.ds.EnumValueMap",
-    "haxe.ds.GenericStack",
-    "haxe.ds.HashMap",
-    "haxe.ds.List",
-    "haxe.ds.ListSort",
-    "haxe.ds.Option",
-    "haxe.ds.ReadOnlyArray",
-    "haxe.ds.Vector",
-    "haxe.ds.WeakMap",
     "haxe.io.ArrayBufferView",
     "haxe.io.BufferInput",
     "haxe.io.BytesInput",
@@ -108,24 +96,6 @@
     "sys.thread.Tls"
   ],
   "buckets": [
-    {
-      "bucketKey": "haxe.ds-01",
-      "group": "haxe.ds",
-      "modules": [
-        "haxe.ds.ArraySort",
-        "haxe.ds.BalancedTree",
-        "haxe.ds.Either",
-        "haxe.ds.EnumValueMap",
-        "haxe.ds.GenericStack",
-        "haxe.ds.HashMap",
-        "haxe.ds.List",
-        "haxe.ds.ListSort",
-        "haxe.ds.Option",
-        "haxe.ds.ReadOnlyArray",
-        "haxe.ds.Vector",
-        "haxe.ds.WeakMap"
-      ]
-    },
     {
       "bucketKey": "haxe.io-01",
       "group": "haxe.io",

@@ -155,6 +155,78 @@
         ]
       },
       {
+        "module": "haxe.ds.ArraySort",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.BalancedTree",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.Either",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.EnumValueMap",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.GenericStack",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.HashMap",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.List",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.ListSort",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.Option",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.ReadOnlyArray",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.Vector",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.ds.WeakMap",
+        "evidence": [
+          "test/portable/fixtures/haxe_ds_bucket01_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "haxe.DynamicAccess",
         "evidence": [
           "test/portable/fixtures/haxe_core_bucket01_basic/src/Main.hx"

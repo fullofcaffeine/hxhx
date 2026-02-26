@@ -3928,8 +3928,14 @@ class OcamlBuilder {
 									final tmp = freshTmp("assign");
 									final rhs = coerceForAssignment(e1.t, e2);
 									final fieldName = ctx.ocamlRecordLabel(cf.name);
+									final modName = moduleIdToOcamlModuleName(cls.module);
+									final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+									final scopedType = ctx.scopedInstanceTypeName(cls.module, cls.name);
+									final fullType = (selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
+									final recvExpr = OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [buildExpr(obj)]),
+										OcamlTypeExpr.TIdent(fullType));
 									OcamlExpr.ELet(tmp, rhs, OcamlExpr.ESeq([
-										OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(buildExpr(obj), fieldName), OcamlExpr.EIdent(tmp)),
+										OcamlExpr.EAssign(OcamlAssignOp.FieldSet, OcamlExpr.EField(recvExpr, fieldName), OcamlExpr.EIdent(tmp)),
 										OcamlExpr.EIdent(tmp)
 									]), false);
 								}
@@ -4122,8 +4128,25 @@ class OcamlBuilder {
 								//
 								// We avoid re-evaluating the receiver expression by binding it once.
 								final recvTmp = freshTmp("recv");
+								final recvTypedTmp = freshTmp("recv_typed");
 								final recvExpr = buildExpr(obj);
-								final lhsField = OcamlExpr.EField(OcamlExpr.EIdent(recvTmp), ctx.ocamlRecordLabel(cf.name));
+								final recvClassType = switch (classTypeFromType(obj.t)) {
+									case null:
+										null;
+									case recvClass:
+										final modName = moduleIdToOcamlModuleName(recvClass.module);
+										final selfMod = ctx.currentModuleId == null ? null : moduleIdToOcamlModuleName(ctx.currentModuleId);
+										final scopedType = ctx.scopedInstanceTypeName(recvClass.module, recvClass.name);
+										(selfMod != null && selfMod == modName) ? scopedType : (modName + "." + scopedType);
+								}
+								final typedRecvExpr = switch (recvClassType) {
+									case null:
+										OcamlExpr.EIdent(recvTmp);
+									case fullType:
+										OcamlExpr.EAnnot(OcamlExpr.EApp(OcamlExpr.EIdent("Obj.magic"), [OcamlExpr.EIdent(recvTmp)]),
+											OcamlTypeExpr.TIdent(fullType));
+								}
+								final lhsField = OcamlExpr.EField(OcamlExpr.EIdent(recvTypedTmp), ctx.ocamlRecordLabel(cf.name));
 								final floatMode = isFloatType(e1.t) || nullablePrimitiveKind(e1.t) == "float";
 								final rhs = switch (inner) {
 									case OpAdd:
@@ -4162,7 +4185,8 @@ class OcamlBuilder {
 									case _:
 										OcamlExpr.EConst(OcamlConst.CUnit);
 								}
-								OcamlExpr.ELet(recvTmp, recvExpr, OcamlExpr.EAssign(OcamlAssignOp.FieldSet, lhsField, rhs), false);
+								OcamlExpr.ELet(recvTmp, recvExpr,
+									OcamlExpr.ELet(recvTypedTmp, typedRecvExpr, OcamlExpr.EAssign(OcamlAssignOp.FieldSet, lhsField, rhs), false), false);
 							case _:
 								OcamlExpr.EConst(OcamlConst.CUnit);
 						}
@@ -5600,6 +5624,116 @@ class OcamlBuilder {
 		return found;
 	}
 
+	static function paramNameFromPattern(p:OcamlPat):Null<String> {
+		return switch (p) {
+			case PVar(name):
+				name;
+			case PAnnot(inner, _):
+				paramNameFromPattern(inner);
+			case _:
+				null;
+		}
+	}
+
+	static function exprMentionsIdent(expr:OcamlExpr, target:String):Bool {
+		function any(list:Array<OcamlExpr>):Bool {
+			for (item in list) {
+				if (exprMentionsIdent(item, target))
+					return true;
+			}
+			return false;
+		}
+
+		return switch (expr) {
+			case EPos(_, inner):
+				exprMentionsIdent(inner, target);
+			case EConst(_), ERaw(_):
+				false;
+			case EIdent(name):
+				name == target;
+			case ELet(name, value, body, _): exprMentionsIdent(value, target) || (name != target && exprMentionsIdent(body, target));
+			case EFun(params, body):
+				var shadowed = false;
+				for (param in params) {
+					final paramName = paramNameFromPattern(param);
+					if (paramName != null && paramName == target) {
+						shadowed = true;
+						break;
+					}
+				}
+				shadowed ? false : exprMentionsIdent(body, target);
+			case EApp(fn, args): exprMentionsIdent(fn, target) || any(args);
+			case EAppArgs(fn, args): exprMentionsIdent(fn, target) || any(args.map(a -> a.expr));
+			case EBinop(_, left, right): exprMentionsIdent(left, target) || exprMentionsIdent(right, target);
+			case EUnop(_, inner):
+				exprMentionsIdent(inner, target);
+			case EIf(cond, thenExpr, elseExpr): exprMentionsIdent(cond, target) || exprMentionsIdent(thenExpr, target) || exprMentionsIdent(elseExpr, target);
+			case EMatch(scrutinee, cases):
+				if (exprMentionsIdent(scrutinee, target)) {
+					true;
+				} else {
+					var found = false;
+					for (c in cases) {
+						if (exprMentionsIdent(c.expr, target)) {
+							found = true;
+							break;
+						}
+						if (c.guard != null && exprMentionsIdent(c.guard, target)) {
+							found = true;
+							break;
+						}
+					}
+					found;
+				}
+			case ETry(body, cases):
+				if (exprMentionsIdent(body, target)) {
+					true;
+				} else {
+					var found = false;
+					for (c in cases) {
+						if (exprMentionsIdent(c.expr, target)) {
+							found = true;
+							break;
+						}
+						if (c.guard != null && exprMentionsIdent(c.guard, target)) {
+							found = true;
+							break;
+						}
+					}
+					found;
+				}
+			case ESeq(exprs):
+				any(exprs);
+			case EWhile(cond, body): exprMentionsIdent(cond, target) || exprMentionsIdent(body, target);
+			case EList(items):
+				any(items);
+			case ERecord(fields):
+				any(fields.map(f -> f.value));
+			case EField(owner, _):
+				exprMentionsIdent(owner, target);
+			case EAssign(_, lhs, rhs): exprMentionsIdent(lhs, target) || exprMentionsIdent(rhs, target);
+			case ETuple(items):
+				any(items);
+			case EAnnot(inner, _):
+				exprMentionsIdent(inner, target);
+			case ERaise(exn):
+				exprMentionsIdent(exn, target);
+		}
+	}
+
+	static function ensureParamUsage(body:OcamlExpr, params:Array<OcamlPat>):OcamlExpr {
+		var out = body;
+		var index = params.length - 1;
+		while (index >= 0) {
+			final name = paramNameFromPattern(params[index]);
+			if (name != null && name != "_" && !exprMentionsIdent(out, name)) {
+				out = OcamlExpr.ESeq([OcamlExpr.EApp(OcamlExpr.EIdent("ignore"), [OcamlExpr.EIdent(name)]), out]);
+			}
+			index -= 1;
+		}
+		return out;
+	}
+
 	public function buildFunctionFromArgsAndExpr(args:Array<{id:Int, name:String}>, bodyExpr:TypedExpr, ?expectedReturnType:Null<Type>):OcamlExpr {
 		#if macro
 		final log = ctx.profileLogLine;
@@ -5681,6 +5815,7 @@ class OcamlBuilder {
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
 		}
+		body = ensureParamUsage(body, params);
 
 		currentMutatedLocalIds = prev;
 		#if macro
@@ -5747,6 +5882,7 @@ class OcamlBuilder {
 				body = OcamlExpr.ELet(n, OcamlExpr.EApp(OcamlExpr.EIdent("ref"), [OcamlExpr.EIdent(n)]), body, false);
 			}
 		}
+		body = ensureParamUsage(body, params);
 
 		currentMutatedLocalIds = prev;
 		return OcamlExpr.EFun(params, body);

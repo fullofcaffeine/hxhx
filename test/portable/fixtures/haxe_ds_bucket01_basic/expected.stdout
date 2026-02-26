@@ -1,0 +1,13 @@
+arraysort=1,1,2,3
+either=<object>
+option.none=true
+readonly.len=2
+readonly.concat=4,5,6
+vector.join=9,8,7
+balancedTree.created=true
+enumValueMap.created=true
+genericStack.created=true
+hashMap.created=true
+list.created=true
+weakMap.created=false
+listsort.ref=true
