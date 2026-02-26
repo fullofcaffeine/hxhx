@@ -12,8 +12,8 @@
   "bucketChunkSize": 12,
   "totals": {
     "baselineModules": 204,
-    "missingModules": 153,
-    "bucketCount": 23
+    "missingModules": 151,
+    "bucketCount": 22
   },
   "missingModules": [
     "haxe.CallStack",
@@ -71,8 +71,6 @@
     "haxe.extern.AsVar",
     "haxe.extern.EitherType",
     "haxe.extern.Rest",
-    "haxe.format.JsonParser",
-    "haxe.format.JsonPrinter",
     "haxe.http.HttpBase",
     "haxe.http.HttpJs",
     "haxe.http.HttpMethod",
@@ -260,14 +258,6 @@
         "haxe.extern.AsVar",
         "haxe.extern.EitherType",
         "haxe.extern.Rest"
-      ]
-    },
-    {
-      "bucketKey": "haxe.format-01",
-      "group": "haxe.format",
-      "modules": [
-        "haxe.format.JsonParser",
-        "haxe.format.JsonPrinter"
       ]
     },
     {

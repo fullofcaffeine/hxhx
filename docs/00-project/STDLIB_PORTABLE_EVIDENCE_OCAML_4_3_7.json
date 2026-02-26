@@ -205,6 +205,18 @@
         ]
       },
       {
+        "module": "haxe.format.JsonPrinter",
+        "evidence": [
+          "test/portable/fixtures/haxe_format_json_basic/src/Main.hx"
+        ]
+      },
+      {
+        "module": "haxe.format.JsonParser",
+        "evidence": [
+          "test/portable/fixtures/haxe_format_json_basic/src/Main.hx"
+        ]
+      },
+      {
         "module": "Xml",
         "evidence": [
           "test/portable/fixtures/xml_basic/src/Main.hx",

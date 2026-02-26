@@ -5,7 +5,7 @@ Generated from:
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
 - tracked overrides under `packages/reflaxe.ocaml/std/_std/`
 
-Summary: `204` modules total, `22` overrides, `2` runtime-backed, `5` lowering-intrinsic, `22` passthrough-verified, `153` passthrough-unverified.
+Summary: `204` modules total, `24` overrides, `2` runtime-backed, `5` lowering-intrinsic, `22` passthrough-verified, `151` passthrough-unverified.
 
 | Module | Status | Evidence |
 |---|---|---|
@@ -100,8 +100,8 @@ Summary: `204` modules total, `22` overrides, `2` runtime-backed, `5` lowering-i
 | `haxe.extern.AsVar` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.extern.EitherType` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.extern.Rest` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.format.JsonParser` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
-| `haxe.format.JsonPrinter` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
+| `haxe.format.JsonParser` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonParser.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
+| `haxe.format.JsonPrinter` | `override` | packages/reflaxe.ocaml/std/_std/haxe/format/JsonPrinter.hx; test/portable/fixtures/haxe_format_json_basic/src/Main.hx |
 | `haxe.http.HttpBase` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.http.HttpJs` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |
 | `haxe.http.HttpMethod` | `passthrough_unverified` | upstream std module, no explicit portable evidence yet |

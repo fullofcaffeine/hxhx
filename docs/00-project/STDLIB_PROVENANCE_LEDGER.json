@@ -74,6 +74,18 @@
       "notes": "Portable override preserving AtomicObject API behavior for object load/store/exchange operations."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/format/JsonParser.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/format/JsonParser.hx",
+      "notes": "Repo-authored parser override for OCaml target to avoid EOF/escape handling divergence in generated OCaml runtime while preserving JSON parse contract."
+    },
+    {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/format/JsonPrinter.hx",
+      "provenanceKind": "upstream_std_sync",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/format/JsonPrinter.hx",
+      "notes": "OCaml-target JsonPrinter override with explicit typed branch conversions to avoid dynamic float typing mismatches in generated OCaml."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/haxe/io/Bytes.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/haxe/io/Bytes.hx",
