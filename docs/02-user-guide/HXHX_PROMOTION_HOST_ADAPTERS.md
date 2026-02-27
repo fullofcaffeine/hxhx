@@ -21,6 +21,16 @@ bash scripts/hxhx/plugin-init.sh \
   --target-id js-native
 ```
 
+Backend promotion entrypoint:
+
+```bash
+bash scripts/hxhx/promote-backend-plugin.sh \
+  --out-dir .tmp/promotion-demo \
+  --plugin-id demo.native.plugin \
+  --provider-type backend.js.JsBackend \
+  --target-id js-native
+```
+
 ## Hard-cutover naming contract
 
 Generated promotion scaffolds should use this layout and names:

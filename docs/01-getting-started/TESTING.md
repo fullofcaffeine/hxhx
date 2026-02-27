@@ -249,6 +249,7 @@ Notes:
     on every push/PR:
     - native backend plugin build smoke (`npm run test:hxhx:native-plugin-build-smoke`) producing native plugin artifact (`.cmxs`/`.cma`) + manifest
     - plugin init scaffold smoke (`npm run test:hxhx:plugin-init-scaffold-smoke`) proving one-command generated scaffolds are buildable via `build-backend-plugin.sh`
+    - promotion backend smoke (`npm run test:hxhx:promotion-backend-smoke`) proving promoted provider flow emits a native plugin artifact and compiles/runs through Stage3 backend selection
     - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
       (required in strict plugin matrix; runs `.cma` artifact when `HXHX_BIN` is bytecode and `.cmxs` when native)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)

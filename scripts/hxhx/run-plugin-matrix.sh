@@ -135,6 +135,11 @@ run_check \
   "cd '$ROOT' && npm run -s test:hxhx:plugin-init-scaffold-smoke"
 
 run_check \
+  "promotion backend smoke (generated native plugin + stage3 selection)" \
+  "PLUGIN_PROMOTION_BACKEND" \
+  "cd '$ROOT' && npm run -s test:hxhx:promotion-backend-smoke"
+
+run_check \
   "eval.vm plugin API smoke" \
   "PLUGIN_EVAL_VM" \
   "out=\"\$(haxe -cp '$tmpdir' -main EvalVmMain --interp 2>&1)\" && printf '%s\n' \"\$out\" && printf '%s\n' \"\$out\" | grep -q '^evalvm_api_available$'"
