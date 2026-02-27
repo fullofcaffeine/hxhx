@@ -1500,6 +1500,21 @@ class Stage3Compiler {
 			if (hxhx.macro.MacroState.hasGeneratedHxModules()) {
 				out.push(hxhx.macro.MacroState.getGeneratedHxDir());
 			}
+			// Defensive fallback: ensure std root is present even when Stage1 parse paths are
+			// provided in permissive mode via target presets and env std vars are unset.
+			final inferredStd = Stage1Args.inferStdRootForCwd(cwd);
+			if (inferredStd.length > 0) {
+				final inferredNorm = Path.normalize(inferredStd);
+				var hasStd = false;
+				for (cp in out) {
+					if (Path.normalize(cp) == inferredNorm) {
+						hasStd = true;
+						break;
+					}
+				}
+				if (!hasStd)
+					out.push(inferredStd);
+			}
 			out;
 		}
 

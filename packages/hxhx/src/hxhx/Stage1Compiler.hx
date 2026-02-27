@@ -474,6 +474,14 @@ class Stage1Args {
 		return "";
 	}
 
+	/**
+		Expose Stage1 std-root inference so Stage3 can apply a defensive fallback when
+		command-line parsing does not carry inferred std paths through as expected.
+	**/
+	public static function inferStdRootForCwd(cwd:String):String {
+		return inferStdRoot(cwd);
+	}
+
 	static function inferStdRootFromHaxerc(cwd:String):String {
 		final home = resolveHomeDir();
 		if (home.length == 0)

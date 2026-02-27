@@ -685,6 +685,20 @@ echo "$out" | grep -q "^stage1=ok$"
 echo "$out" | grep -vq "stage1=warn import_missing haxe.io.Path"
 echo "$out" | grep -vq "stage1=warn import_missing StringTools"
 
+echo "== Stage3 bring-up: infer std when env std vars are unset"
+cat >"$tmpdir/src/StdRootInferenceMain.hx" <<'HX'
+package;
+import haxe.io.Path;
+class StdRootInferenceMain {
+  static function main() {
+    Sys.println(Path.withoutDirectory("foo/bar.txt"));
+  }
+}
+HX
+out="$(env -u HAXE_STD_PATH -u HAXEPATH HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main StdRootInferenceMain --hxhx-out "$tmpdir/out_stage3_stdroot")"
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -vq "import_missing haxe.io.Path"
+
 if command -v ocamlopt >/dev/null 2>&1; then
   echo "== Stage3 regression: module-local helper types (multi-class modules)"
   cat >"$tmpdir/src/MultiStage3.hx" <<'HX'

@@ -91,5 +91,17 @@ class ArrayMain {
 		final filtered = b.filter(v -> v % 2 == 0);
 		if (filtered.length != 2 || filtered[0] != 2 || filtered[1] != 4)
 			throw "filter";
+
+		final mixed:Array<Dynamic> = [];
+		mixed.push(1);
+		mixed.push(2);
+		mixed.push("x");
+		if (mixed.length != 3)
+			throw "mixed_len";
+		if (mixed[2] != "x")
+			throw "mixed_val";
+		mixed.push(null);
+		if (mixed[3] != null)
+			throw "mixed_null";
 	}
 }
