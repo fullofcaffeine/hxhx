@@ -94,7 +94,7 @@ Without `ocaml_output`, OCaml target output is not selected.
 - `-D ocaml_build=native|byte`: run dune build after emit.
 - `-D ocaml_run`: run emitted executable via dune after emit.
 - `-D ocaml_no_dune`: disable dune scaffolding emission.
-- `-D ocaml_dune_layout=exe|lib`: choose dune layout.
+- `-D ocaml_dune_layout=exe|lib|plugin`: choose dune layout.
 - `-D ocaml_dune_exes=name:MainModule[,name2:Main2]`: multi-executable dune stanza.
 - `-D ocaml_mli` or `-D ocaml_mli=infer|all`: generate `.mli` via `ocamlc -i`.
 - `-D ocaml_sourcemap=directives`: add line directives for error mapping.
