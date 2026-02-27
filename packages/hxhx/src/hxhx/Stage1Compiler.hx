@@ -448,13 +448,13 @@ class Stage1Args {
 		if (classPaths.length == 0)
 			classPaths.push(".");
 		if (stdRoot == null || stdRoot.length == 0)
-			stdRoot = inferStdRoot();
+			stdRoot = inferStdRoot(cwd);
 		if (stdRoot != null && stdRoot.length > 0 && classPaths.indexOf(stdRoot) == -1)
 			classPaths.push(stdRoot);
 		return new Stage1Args(classPaths, main, noOutput, roots, defines, libs, macros, displayRequest, cwd, hadCmd);
 	}
 
-	static function inferStdRoot():String {
+	static function inferStdRoot(cwd:String):String {
 		try {
 			final direct = Sys.getEnv("HAXE_STD_PATH");
 			if (direct != null && direct.length > 0 && sys.FileSystem.exists(direct) && sys.FileSystem.isDirectory(direct)) {
@@ -467,7 +467,58 @@ class Stage1Args {
 				if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate))
 					return candidate;
 			}
+			final lixCandidate = inferStdRootFromHaxerc(cwd);
+			if (lixCandidate.length > 0)
+				return lixCandidate;
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
+		return "";
+	}
+
+	static function inferStdRootFromHaxerc(cwd:String):String {
+		final home = resolveHomeDir();
+		if (home.length == 0)
+			return "";
+
+		final startDir = if (cwd == null || cwd.length == 0) "." else cwd;
+		var dir = haxe.io.Path.normalize(startDir);
+		var previous = "";
+
+		while (dir != previous) {
+			final haxercPath = haxe.io.Path.join([dir, ".haxerc"]);
+			if (sys.FileSystem.exists(haxercPath) && !sys.FileSystem.isDirectory(haxercPath)) {
+				final version = readHaxercVersion(haxercPath);
+				if (version.length > 0) {
+					final candidate = haxe.io.Path.normalize(haxe.io.Path.join([home, "haxe", "versions", version, "std"]));
+					if (sys.FileSystem.exists(candidate) && sys.FileSystem.isDirectory(candidate))
+						return candidate;
+					final hiddenCandidate = haxe.io.Path.normalize(haxe.io.Path.join([home, ".haxe", "versions", version, "std"]));
+					if (sys.FileSystem.exists(hiddenCandidate) && sys.FileSystem.isDirectory(hiddenCandidate))
+						return hiddenCandidate;
+				}
+			}
+			previous = dir;
+			dir = haxe.io.Path.normalize(haxe.io.Path.join([dir, ".."]));
+		}
+		return "";
+	}
+
+	static function readHaxercVersion(path:String):String {
+		try {
+			final content = sys.io.File.getContent(path);
+			final versionPattern = ~/"version"\s*:\s*"([^"]+)"/;
+			if (versionPattern.match(content))
+				return StringTools.trim(versionPattern.matched(1));
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
+		return "";
+	}
+
+	static function resolveHomeDir():String {
+		final home = Sys.getEnv("HOME");
+		if (home != null && home.length > 0)
+			return home;
+		final userProfile = Sys.getEnv("USERPROFILE");
+		if (userProfile != null && userProfile.length > 0)
+			return userProfile;
 		return "";
 	}
 

@@ -1,0 +1,6 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+
+-main M14Stage1StdRootInferenceIntegrationTest
+--interp

@@ -561,7 +561,11 @@ class EmitterStage {
 			// When an expression is demanded as a string (e.g. trace/println), treat `+` as
 			// string concatenation and lower it to OCaml's `^`.
 			case EBinop("+", a, b):
-				"(" + exprToOcamlString(a, tyByIdent) + " ^ " + exprToOcamlString(b, tyByIdent) + ")";
+				"("
+				+ exprToOcamlString(a, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ " ^ "
+				+ exprToOcamlString(b, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+				+ ")";
 			case ECall(EField(EIdent("Std"), "string"), [arg]):
 				// String interpolation lowering uses `Std.string(...)` to force stringification.
 				//
@@ -579,9 +583,9 @@ class EmitterStage {
 				"(if "
 				+ condToOcamlBoolForString(cond)
 				+ " then "
-				+ exprToOcamlString(thenExpr, tyByIdent)
+				+ exprToOcamlString(thenExpr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 				+ " else "
-				+ exprToOcamlString(elseExpr, tyByIdent)
+				+ exprToOcamlString(elseExpr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 				+ ")";
 			case EInt(v): "string_of_int " + Std.string(v);
 			case EBool(v): "string_of_bool " + (v ? "true" : "false");
@@ -875,7 +879,7 @@ class EmitterStage {
 			// For complex expressions we assume the caller is already producing a string.
 			return switch (expr) {
 				case EInt(_), EFloat(_), EBool(_), EIdent(_):
-					exprToOcamlString(expr, tyByIdent);
+					exprToOcamlString(expr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 				case _:
 					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
 			}
