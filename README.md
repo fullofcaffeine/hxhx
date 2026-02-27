@@ -150,6 +150,12 @@ bash scripts/hxhx/promote-backend-plugin.sh \
   --plugin-id demo.native.plugin \
   --provider-type backend.js.JsBackend \
   --target-id js-native
+
+# Generate upstream eval adapter artifact (Level-1 workflow compatibility):
+bash scripts/hxhx/promote-eval-adapter.sh \
+  --out-dir .tmp/promotion-demo \
+  --plugin-id demo.native.plugin \
+  --target-id js-native
 ```
 
 ## Environment setup
@@ -203,7 +209,7 @@ For full usage and mainstream Haxe integration, see
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
 - **Gate M7**: curated replacement-ready bundle (`fast|full`), with weekly strict/full CI.
 - **Plugin matrix (strict)**: macro-library compatibility + eval.vm plugin API smoke + Stage3 plugin fixture checks.
-- **Plugin matrix (strict)** also validates generated promotion scaffold buildability and backend promotion smoke.
+- **Plugin matrix (strict)** also validates generated promotion scaffold buildability, backend promotion smoke, and eval-adapter promotion smoke.
 - Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
   [Testing command catalog](docs/01-getting-started/TESTING.md).
 

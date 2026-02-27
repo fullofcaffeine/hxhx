@@ -11,6 +11,7 @@ Compatibility target:
 
 - workflow/contract compatibility (Level 1)
 - **not** shared cross-host binary compatibility (a single `.cmxs` is not expected to run in both hosts)
+- generated eval adapter manifests must keep `crossHostBinaryCompatibility=false`
 
 Scaffold entrypoint:
 
@@ -31,6 +32,15 @@ bash scripts/hxhx/promote-backend-plugin.sh \
   --target-id js-native
 ```
 
+Eval-adapter promotion entrypoint:
+
+```bash
+bash scripts/hxhx/promote-eval-adapter.sh \
+  --out-dir .tmp/promotion-demo \
+  --plugin-id demo.native.plugin \
+  --target-id js-native
+```
+
 ## Hard-cutover naming contract
 
 Generated promotion scaffolds should use this layout and names:
@@ -47,6 +57,10 @@ Generated promotion scaffolds should use this layout and names:
   - native load entrypoint for `hxhx` host
 - `plugin/haxe/entry.ml`
   - native load entrypoint for upstream eval host
+- `plugin/haxe_eval/<module>.ml`
+  - generated eval-adapter native entry module
+- `eval-plugin.json`
+  - Level-1 eval host manifest (`kind=haxe-eval`, `loadApi=eval.vm.Context.loadPlugin`)
 
 Rule: generated files own host glue only. Target logic stays in `core/`.
 
@@ -86,6 +100,7 @@ Loader entrypoint contract:
 
 - upstream macro/eval side uses `eval.vm.Context.loadPlugin(pluginPath)`
 - adapter exposes host-callable plugin functions after load
+- if local `haxe` and local OCaml toolchain ABI do not match, loading may fail with Dynlink errors; this is a host-toolchain constraint, not a promotion-schema issue
 
 Adapter responsibilities:
 
