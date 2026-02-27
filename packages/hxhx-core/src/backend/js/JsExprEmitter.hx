@@ -8,8 +8,9 @@ package backend.js;
 	- Unsupported shapes fail fast so bring-up diffs are explicit and actionable.
 **/
 class JsExprEmitter {
-	static function unsupported(kind:String):String {
-		throw "js-native MVP does not support expression kind: " + kind;
+	static function unsupported(kind:String, ?detail:String):String {
+		final hasDetail = detail != null && detail.length > 0;
+		throw "[js-native:unsupported_expr] kind=" + kind + (hasDetail ? " detail=" + detail : "");
 	}
 
 	static function nestedScope(parent:JsEmitScope, locals:haxe.ds.StringMap<String>):JsEmitScope {
@@ -87,7 +88,7 @@ class JsExprEmitter {
 			case ENew(typePath, args):
 				emitNew(typePath, args, scope);
 			case EUnsupported(raw):
-				unsupported("EUnsupported(" + raw + ")");
+				unsupported("EUnsupported", raw);
 		}
 	}
 
@@ -129,7 +130,7 @@ class JsExprEmitter {
 			case _:
 		}
 
-		unsupported("ENew(" + typePath + ")");
+		unsupported("ENew", typePath);
 		return "";
 	}
 

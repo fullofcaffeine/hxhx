@@ -20,7 +20,7 @@ If this matrix and another doc disagree, this matrix wins.
 | Range expression lowering | In scope | `npm run test:m14:js-expr-range`, `scripts/test-hxhx-targets.sh` |
 | `new Array(...)` expression lowering | In scope | `npm run test:m14:js-expr-new-array`, `scripts/test-hxhx-targets.sh` |
 | Enum-tag switch + basic Type reflection helpers (`resolveClass`, `getClassName`, `enumConstructor`, `enumIndex`, `enumParameters`) | In scope (best-effort for enum index/params) | `scripts/test-hxhx-targets.sh`, `npm run test:upstream:js-oracle-smoke` |
-| Class construction via `new SomeClass(...)` (non-Array constructors) | Out of scope (fail-fast) | `scripts/test-hxhx-targets.sh` expects `ENew(JsNativeCounter)` unsupported marker |
+| Class construction via `new SomeClass(...)` (non-Array constructors) | Out of scope (fail-fast) | `scripts/test-hxhx-targets.sh` expects deterministic marker `[js-native:unsupported_expr] kind=ENew detail=JsNativeCounter` |
 | Full class/interface typed-catch runtime parity | Out of scope (known gap) | Documented boundary; tracked under JS 1.0 semantic-gap epic/tasks |
 | Full enum runtime/model parity | Out of scope (known gap) | Documented boundary; tracked under JS 1.0 semantic-gap epic/tasks |
 | Full `Type` API parity | Out of scope (known gap) | Documented boundary; tracked under JS 1.0 semantic-gap epic/tasks |
@@ -34,6 +34,7 @@ npm run test:m14:js-target-core-wiring
 npm run test:m14:js-stmt-try-throw
 npm run test:m14:js-stmt-multi-catch
 npm run test:m14:js-expr-new-array
+npm run test:m14:js-unsupported-diagnostics
 npm run test:m14:js-expr-range
 npm run test:m14:js-expr-array-comprehension
 npm run test:m14:js-expr-switch

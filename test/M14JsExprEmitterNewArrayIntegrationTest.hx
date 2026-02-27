@@ -31,6 +31,8 @@ class M14JsExprEmitterNewArrayIntegrationTest {
 		} catch (e:Dynamic) {
 			unsupportedError = Std.string(e);
 		}
-		assertContains(unsupportedError, "ENew(MissingType)", "unsupported constructor should be explicit");
+		assertContains(unsupportedError, "[js-native:unsupported_expr]", "unsupported constructor prefix");
+		assertContains(unsupportedError, "kind=ENew", "unsupported constructor kind");
+		assertContains(unsupportedError, "detail=MissingType", "unsupported constructor detail");
 	}
 }
