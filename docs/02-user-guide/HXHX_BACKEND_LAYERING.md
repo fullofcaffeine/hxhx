@@ -196,6 +196,10 @@ Promotion pilot proof point:
   (builtin wrapper + provider wrapper) and asserts byte-identical artifacts, equivalent runtime
   output, and deterministic registry precedence/restore behavior.
 
+Generated host-adapter conventions for this promotion pipeline are defined in:
+
+- `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
+
 ## Why this helps immediately
 
 - Makes OCaml coupling visible and reviewable.

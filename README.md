@@ -48,6 +48,7 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
   - [Use `reflaxe.ocaml` with upstream Haxe](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
 - **Contribute to compiler/backend work**
   - [Backend layering and contracts](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
+  - [Promotion host adapter conventions](docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md)
   - [Builtin backend behavior](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md)
   - [Macro host protocol](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
   - [Stdlib sync boundary](docs/00-project/STD_LIB_POLICY.md)
