@@ -42,6 +42,7 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
 - **Evaluate `hxhx`**
   - [Roadmap and milestones](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
   - [Acceptance criteria and gate definitions](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
+  - [JS-native scoped 1.0 matrix](docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md)
   - [Testing and gate workflows](docs/01-getting-started/TESTING.md)
 - **Use `reflaxe.ocaml` now**
   - [`reflaxe.ocaml` README](packages/reflaxe.ocaml/README.md)

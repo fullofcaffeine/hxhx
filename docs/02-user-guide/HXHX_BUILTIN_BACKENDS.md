@@ -344,25 +344,15 @@ Current `hxhx` target presets:
 
 ### `js-native` semantics snapshot (MVP)
 
-Supported today (covered by `scripts/test-hxhx-targets.sh`):
+Canonical 1.0 scope lives in:
 
-- statement-level `switch` lowering over enum-like tags (`Build`, `Run`, etc.) via Stage3 `HxSwitchPattern`
-- statement-level `try/catch` + `throw` (including nested rethrow flow in smoke fixture)
-- ordered multi-catch dispatch for common typed hints (`Int`, `Float`, `Bool`, `String`, `Array`, `Dynamic`) with fallback rethrow when no catch matches
-- basic reflection helpers through a lightweight JS prelude:
-  - `Type.resolveClass(name)`
-  - `Type.getClassName(cls)`
-  - `Type.enumConstructor(value)`
-  - `Type.enumIndex(value)` (best-effort)
-  - `Type.enumParameters(value)` (best-effort)
-- single-file emit artifact + Stage3 run markers (`stage3=ok`, `artifact=...`, `run=ok`)
+- `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
 
-Known unsupported semantics (explicit fail-fast behavior):
+This matrix is the single source of truth for:
 
-- full Haxe class/interface typed-catch semantics (`catch (e:SomeType)` with exact runtime type matching beyond primitive/common builtins)
-- class construction via `new SomeClass(...)` (non-Array constructors currently fail fast with explicit `ENew(Type)` MVP error)
-- full Haxe enum runtime/model parity (constructors with parameters, exact enum index semantics)
-- full Haxe `Type` API parity beyond the helpers above
+- in-scope semantics,
+- out-of-scope boundaries,
+- and required regression evidence (fixtures/gates).
 
 Why this matters:
 

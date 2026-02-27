@@ -121,8 +121,7 @@ Current presets:
     - any other value fails fast
 - `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
 - `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
-  - currently covered: enum-tag switch lowering, statement-level `try/catch` + `throw`, and basic `Type` reflection helpers (`resolveClass`, `getClassName`, `enumConstructor`, `enumIndex`, `enumParameters`)
-  - currently explicit unsupported: non-Array `new` class construction, full enum/runtime parity beyond MVP helpers, and class/interface typed-catch parity beyond common builtins (fails fast with clear unsupported markers)
+  - canonical scoped support matrix (in-scope + out-of-scope semantics): `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
 - Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
 Delegation guard:
