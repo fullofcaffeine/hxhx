@@ -197,17 +197,37 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      - name: Build hxhx once (shared for smoke + oracle subset)
+        run: |
+          set -euo pipefail
+          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+          if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+            echo "Failed to build hxhx binary for JS smoke lanes." >&2
+            exit 1
+          fi
+          echo "HXHX_BIN=$HXHX_BIN" >> "$GITHUB_ENV"
       - name: Run js-native emit+run smoke
         env:
+          HXHX_BIN: ${{ env.HXHX_BIN }}
           HXHX_BUILTIN_SMOKE_OCAML: "0"
           HXHX_BUILTIN_SMOKE_JS_NATIVE: "1"
           HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE: "1"
         run: |
           set -euo pipefail
+          echo "HXHX_BIN=${HXHX_BIN}"
           echo "HXHX_BUILTIN_SMOKE_OCAML=${HXHX_BUILTIN_SMOKE_OCAML}"
           echo "HXHX_BUILTIN_SMOKE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_JS_NATIVE}"
           echo "HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE}"
           npm run test:hxhx:builtin-target-smoke
+      - name: Run JS oracle smoke (CI subset)
+        env:
+          HXHX_BIN: ${{ env.HXHX_BIN }}
+          HXHX_JS_ORACLE_FIXTURES: "JsOracleLoopMain,JsOracleSwitchExprMain,JsOracleTryCatchMain,JsOracleRangeExprMain,JsOracleNewArrayMain,JsOracleMultiCatchMain"
+        run: |
+          set -euo pipefail
+          echo "HXHX_BIN=${HXHX_BIN}"
+          echo "HXHX_JS_ORACLE_FIXTURES=${HXHX_JS_ORACLE_FIXTURES}"
+          npm run test:upstream:js-oracle-smoke
 
   plugin-matrix:
     name: Plugin matrix (strict)

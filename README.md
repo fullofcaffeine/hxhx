@@ -218,7 +218,7 @@ For full usage and mainstream Haxe integration, see
 - **CI**: fast safety checks on normal changes.
 - **Gate 1 Lite**: quick upstream macro smoke.
 - **Gate 2 Lite**: quick workload smoke.
-- **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3`; optional `js-native` lane on manual runs).
+- **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3` + `js-native`) plus full JS oracle parity lane.
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
 - **Gate M7**: curated replacement-ready bundle (`fast|full`), with weekly strict/full CI.
 - **Plugin matrix (strict)**: macro-library compatibility + native macro-module dynlink smoke + eval.vm plugin API smoke + Stage3 plugin fixture checks.

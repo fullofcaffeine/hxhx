@@ -12,11 +12,6 @@ on:
         type: string
         required: false
         default: "1"
-      run_js_native:
-        description: "Include js-native emit+run smoke lane"
-        type: boolean
-        required: false
-        default: false
   schedule:
     # Weekly Linux smoke for linked builtin target path.
     - cron: "0 12 * * 3"
@@ -34,7 +29,7 @@ env:
 
 jobs:
   builtin_target_smoke:
-    name: Builtin target smoke (ocaml-stage3 + optional js-native)
+    name: Builtin target smoke (ocaml-stage3 + js-native + JS oracle)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -94,15 +89,34 @@ jobs:
 
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      - name: Build hxhx once (shared smoke/oracle binary)
+        run: |
+          set -euo pipefail
+          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+          if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+            echo "Failed to build hxhx binary for Gate3 builtin lane." >&2
+            exit 1
+          fi
+          echo "HXHX_BIN=$HXHX_BIN" >> "$GITHUB_ENV"
 
       - name: Run builtin target smoke
         env:
+          HXHX_BIN: ${{ env.HXHX_BIN }}
           HXHX_BUILTIN_SMOKE_REPS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reps || '1' }}
-          HXHX_BUILTIN_SMOKE_JS_NATIVE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_js_native == 'true' && '1' || '0' }}
-          HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_js_native == 'true' && '1' || '0' }}
+          HXHX_BUILTIN_SMOKE_JS_NATIVE: "1"
+          HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE: "1"
         run: |
           set -euo pipefail
+          echo "HXHX_BIN=${HXHX_BIN}"
           echo "HXHX_BUILTIN_SMOKE_REPS=${HXHX_BUILTIN_SMOKE_REPS}"
           echo "HXHX_BUILTIN_SMOKE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_JS_NATIVE}"
           echo "HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=${HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE}"
           npm run test:hxhx:builtin-target-smoke
+
+      - name: Run JS oracle smoke (full scoped fixtures)
+        env:
+          HXHX_BIN: ${{ env.HXHX_BIN }}
+        run: |
+          set -euo pipefail
+          echo "HXHX_BIN=${HXHX_BIN}"
+          npm run test:upstream:js-oracle-smoke

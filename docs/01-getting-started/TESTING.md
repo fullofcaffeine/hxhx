@@ -353,11 +353,18 @@ npm run test:upstream:js-oracle-smoke
 Notes:
 
 - This uses repo-local fixtures and compares runtime behavior (stdout + exit code) by compiling each fixture with both compilers.
-- Default fixture set covers loop arithmetic, switch expressions, enum reflection helpers, try/catch rethrow, and array comprehensions.
+- Default fixture set covers loop arithmetic, switch expressions, enum reflection helpers, try/catch rethrow, array comprehensions, range expressions, `new Array(...)`, and multi-catch dispatch.
 - Optional controls:
   - `HXHX_JS_ORACLE_FIXTURES=JsOracleLoopMain,JsOracleTryCatchMain` to run a subset.
   - `HXHX_JS_ORACLE_REQUIRE_HAXE_437=0` to bypass strict `haxe --version` enforcement.
   - `HXHX_FORBID_STAGE0=1` (default in this runner) to block delegation while compiling with `hxhx`.
+
+CI subset reproduction (matches `.github/workflows/ci.yml` `js-native-smoke` job):
+
+```bash
+HXHX_JS_ORACLE_FIXTURES=JsOracleLoopMain,JsOracleSwitchExprMain,JsOracleTryCatchMain,JsOracleRangeExprMain,JsOracleNewArrayMain,JsOracleMultiCatchMain \
+  npm run test:upstream:js-oracle-smoke
+```
 
 Run the linked builtin target smoke (delegated `--target ocaml` vs builtin `--target ocaml-stage3`):
 
@@ -376,9 +383,9 @@ Notes:
 - Full delegated-vs-builtin OCaml timing smoke is **not** part of PR/push CI by default (toolchain/runtime cost).
 - Gate 3 CI workflow (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
   It is also manually triggerable with `workflow_dispatch` inputs for `targets`, `allow_skip`, and `macro_mode`.
-- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR (main/master), and remains scheduled weekly plus manually triggerable with `workflow_dispatch` (`reps`, `run_js_native`).
-- PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job (`HXHX_BUILTIN_SMOKE_OCAML=0`, `HXHX_BUILTIN_SMOKE_JS_NATIVE=1`).
-- PR/push CI also includes `JS oracle smoke (upstream vs hxhx)` via `.github/workflows/js-oracle-smoke.yml`, which runs `npm run test:upstream:js-oracle-smoke`.
+- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR, weekly schedule, and manual trigger (`reps` only). It now always runs `js-native` smoke plus full JS oracle fixtures.
+- PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job (`HXHX_BUILTIN_SMOKE_OCAML=0`, `HXHX_BUILTIN_SMOKE_JS_NATIVE=1`) and a JS-oracle subset in the same job.
+- PR/push CI also includes dedicated `JS oracle smoke (upstream vs hxhx)` via `.github/workflows/js-oracle-smoke.yml`, which runs the full fixture set.
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
 - Long-run observability/guardrails: `HXHX_GATE3_TARGET_HEARTBEAT_SEC=20` prints periodic progress (set `0` to disable) and `HXHX_GATE3_TARGET_TIMEOUT_SEC=0` controls per-target timeout (set a non-zero value to fail hard hangs). The weekly CI baseline sets `HXHX_GATE3_TARGET_TIMEOUT_SEC=3600`.
