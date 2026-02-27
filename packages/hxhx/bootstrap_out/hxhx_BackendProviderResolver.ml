@@ -20,18 +20,18 @@ let requireProvider = fun providerContract typePath -> (
   providerContract
 )
 
-let knownProviderRegistrations = fun typePath -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxString.equals typePath "backend.js.JsBackend" then let __assign_1 = Backend_js_JsBackend.providerRegistrations () in (
+let knownProviderRegistrations = fun typePath -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+  ignore (if HxString.equals typePath "backend.js.JsBackend" then let __assign_1 = Obj.magic (Obj.magic (Backend_js_JsBackend.providerRegistrations ())) in (
     tempResult := __assign_1;
     __assign_1
-  ) else let __assign_2 = Obj.magic (HxRuntime.hx_null) in (
+  ) else let __assign_2 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_2;
     __assign_2
   ));
   !tempResult
 )
 
-let registrationsForType = fun typePath -> try let __fallback_result_12 = let tempString = ref "" in (
+let registrationsForType = fun typePath -> try let __fallback_result_12 = let tempString = ref ("" : string) in (
   ignore (if typePath == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
     tempString := __assign_3;
     __assign_3
@@ -41,12 +41,12 @@ let registrationsForType = fun typePath -> try let __fallback_result_12 = let te
   ));
   let normalized = (StringTools.trim (!tempString : string) : string) in (
     ignore (if HxString.length normalized = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "backend provider type path is required") ["Dynamic"; "String"]) else ());
-    let known = knownProviderRegistrations (normalized : string) in (
-      ignore (if known != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr known)) else ());
-      let cls = HxType.resolveClass normalized in (
+    let known = Obj.magic (knownProviderRegistrations (normalized : string)) in (
+      ignore (if known != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic known))) else ());
+      let cls = Obj.repr (HxType.resolveClass normalized) in (
         ignore (if cls == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("backend provider type not found: " ^ HxString.toStdString normalized)) ["Dynamic"; "String"]) else ());
-        let tempStruct = ref (Obj.magic (HxRuntime.hx_null)) in (
-          ignore (try let __assign_5 = Obj.obj (HxType.createInstance cls (let __arr_6 = HxArray.create () in __arr_6)) in (
+        let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+          ignore (try let __assign_5 = Obj.magic (Obj.obj (HxType.createInstance cls (let __arr_6 = HxArray.create () in __arr_6))) in (
             tempStruct := __assign_5;
             __assign_5
           ) with
@@ -55,13 +55,13 @@ let registrationsForType = fun typePath -> try let __fallback_result_12 = let te
             | HxRuntime.Hx_return __ret_7 -> raise (HxRuntime.Hx_return __ret_7)
             | HxRuntime.Hx_exception (__exn_v_8, __exn_tags_9) -> if true then let error = (if HxRuntime.tags_has __exn_tags_9 "haxe.Exception" then Obj.obj __exn_v_8 else Obj.magic (Haxe_ValueException.create __exn_v_8 (Obj.magic (HxRuntime.hx_null)) __exn_v_8) : Haxe_Exception.t) in (
               ignore error;
-              HxType.hx_throw_typed_rtti (Obj.repr ((("backend provider construction failed for " ^ HxString.toStdString normalized) ^ ": ") ^ HxString.toStdString (error.get_message (Obj.magic error) ()))) ["Dynamic"; "String"]
+              HxType.hx_throw_typed_rtti (Obj.repr ((("backend provider construction failed for " ^ HxString.toStdString normalized) ^ ": ") ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()))) ["Dynamic"; "String"]
             ) else HxRuntime.hx_throw_typed __exn_v_8 __exn_tags_9
             | __exn_10 -> if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_10) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_10) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_10)) : Haxe_Exception.t) in (
               ignore error;
-              HxType.hx_throw_typed_rtti (Obj.repr ((("backend provider construction failed for " ^ HxString.toStdString normalized) ^ ": ") ^ HxString.toStdString (error.get_message (Obj.magic error) ()))) ["Dynamic"; "String"]
+              HxType.hx_throw_typed_rtti (Obj.repr ((("backend provider construction failed for " ^ HxString.toStdString normalized) ^ ": ") ^ HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()))) ["Dynamic"; "String"]
             ) else raise (__exn_10));
-          let providerContract = Std.downcast (!tempStruct) (HxType.class_ "backend.ITargetBackendProvider") in let provider = requireProvider providerContract (normalized : string) in Obj.obj (HxAnon.get provider "registrations") ()
+          let providerContract = Obj.magic (Std.downcast (Obj.magic (!tempStruct)) (HxType.class_ "backend.ITargetBackendProvider")) in let provider = requireProvider (Obj.magic providerContract) (normalized : string) in Obj.obj (HxAnon.get provider "registrations") ()
         )
       )
     )

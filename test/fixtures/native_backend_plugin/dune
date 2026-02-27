@@ -1,4 +1,4 @@
 (library
  (name hxhx_backend_plugin_fixture)
  (modules hxhx_backend_plugin_fixture)
- (modes native))
+ (modes native byte))

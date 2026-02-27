@@ -217,8 +217,8 @@ else
       DUNE_TARGET="backend_plugin.cmxs"
     fi
   fi
-  if [[ ! "$DUNE_TARGET" =~ \.cmxs$ ]]; then
-    fail "--dune-target must end with .cmxs"
+  if [[ ! "$DUNE_TARGET" =~ \.(cmxs|cma)$ ]]; then
+    fail "--dune-target must end with .cmxs or .cma"
   fi
 
   dune_build_dir="$OUT_DIR/.dune-build"
@@ -234,8 +234,8 @@ else
   if [ -z "$manifest_entry" ]; then
     manifest_entry="$DUNE_TARGET"
   fi
-  if [[ ! "$manifest_entry" =~ \.cmxs$ ]]; then
-    fail "--entry must end with .cmxs for --kind ocaml-cmxs"
+  if [[ ! "$manifest_entry" =~ \.(cmxs|cma)$ ]]; then
+    fail "--entry must end with .cmxs or .cma for --kind ocaml-cmxs"
   fi
 
   artifact_output="$OUT_DIR/$manifest_entry"

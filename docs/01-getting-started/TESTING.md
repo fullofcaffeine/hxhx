@@ -247,9 +247,9 @@ Notes:
   - `Gate 2 Lite` workflow (`.github/workflows/gate2-lite.yml`) runs fast workloads on every push/PR.
   - `Plugin matrix (strict)` job in `.github/workflows/ci.yml` runs `npm run test:plugins:strict-matrix`
     on every push/PR:
-    - native backend plugin build smoke (`npm run test:hxhx:native-plugin-build-smoke`) producing `.cmxs` + manifest
+    - native backend plugin build smoke (`npm run test:hxhx:native-plugin-build-smoke`) producing native plugin artifact (`.cmxs`/`.cma`) + manifest
     - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
-      (currently soft-gated as `PLUGIN_NATIVE_RUNTIME:SKIP` when bootstrap snapshot parser/runtime is behind source lane)
+      (required in strict plugin matrix; runs `.cma` artifact when `HXHX_BIN` is bytecode and `.cmxs` when native)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)
     - eval.vm plugin API smoke (`eval.vm.Context.loadPlugin`)
     - Stage3 plugin fixture (`hxhxmacros.PluginFixtureMacros.init()`) with hook/classpath/module emission checks.

@@ -7,3 +7,4 @@
 -D no_traces
 -D ocaml_output=out
 -D hih_native_parser
+-D reflaxe_ocaml

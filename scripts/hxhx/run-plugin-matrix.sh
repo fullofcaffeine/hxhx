@@ -167,13 +167,10 @@ run_check \
   "PLUGIN_HXHX_STAGE3" \
   "cd '$ROOT' && HXHX_BIN_STAGE3=\"\${HXHX_BIN_RESOLVED:-}\" && if [ -z \"\$HXHX_BIN_STAGE3\" ] || [ ! -x \"\$HXHX_BIN_STAGE3\" ]; then HXHX_BIN_STAGE3=\"\$(bash '$ROOT/scripts/hxhx/build-hxhx.sh' | tail -n 1)\"; fi && HXHX_MACRO_HOST_STAGE3=\"\${HXHX_MACRO_HOST_BIN:-}\" && if [ -z \"\$HXHX_MACRO_HOST_STAGE3\" ] || [ ! -x \"\$HXHX_MACRO_HOST_STAGE3\" ]; then HXHX_MACRO_HOST_STAGE3=\"\$(bash '$ROOT/scripts/hxhx/build-hxhx-macro-host.sh' | tail -n 1)\"; fi && test -x \"\$HXHX_BIN_STAGE3\" && test -x \"\$HXHX_MACRO_HOST_STAGE3\" && out=\"\$(OCAMLOPT='$ROOT/scripts/hxhx/ocamlopt-with-threads.sh' HXHX_PLUGIN_FIXTURE_CP='$plugin_tmp/plugin_cp' HXHX_MACRO_HOST_EXE=\"\$HXHX_MACRO_HOST_STAGE3\" \"\$HXHX_BIN_STAGE3\" --hxhx-stage3 --hxhx-emit-full-bodies -cp '$plugin_tmp/src' -cp '$ROOT/test/fixtures/hxhx-macros/src' --library reflaxe.ocaml -main Main --macro 'hxhxmacros.PluginFixtureMacros.init()' --hxhx-out '$plugin_tmp/out' 2>&1)\" && printf '%s\n' \"\$out\" && printf '%s\n' \"\$out\" | grep -q '^macro_run\\[0\\]=ok$' && printf '%s\n' \"\$out\" | grep -q '^macro_define\\[HXHX_PLUGIN_FIXTURE\\]=1$' && printf '%s\n' \"\$out\" | grep -q '^hook_afterTyping\\[0\\]=ok$' && printf '%s\n' \"\$out\" | grep -q '^hook_onGenerate\\[0\\]=ok$' && printf '%s\n' \"\$out\" | grep -q '^stage3=ok$' && test -f '$plugin_tmp/out/HxHxPluginFixtureGen.ml' && printf '%s\n' \"\$out\" | grep -q '^plugin_cp=ok$' && printf '%s\n' \"\$out\" | grep -q '^plugin_main=ok$' && printf '%s\n' \"\$out\" | grep -q '^run=ok$'"
 
-# NOTE: runtime smoke remains soft-gated until bootstrap snapshot parser lane catches up;
-# keep this running for signal and promote back to required once strict matrix is green.
 run_check \
-  "hxhx native backend plugin runtime load smoke (.cmxs manifest + negatives)" \
+  "hxhx native backend plugin runtime load smoke (ocaml dynlink manifest + negatives)" \
   "PLUGIN_NATIVE_RUNTIME" \
-  "cd '$ROOT' && HXHX_BIN_STAGE3=\"\${HXHX_BIN_RESOLVED:-}\" && if [ -z \"\$HXHX_BIN_STAGE3\" ] || [ ! -x \"\$HXHX_BIN_STAGE3\" ]; then HXHX_BIN_STAGE3=\"\$(bash '$ROOT/scripts/hxhx/build-hxhx.sh' | tail -n 1)\"; fi && test -x \"\$HXHX_BIN_STAGE3\" && HXHX_BIN=\"\$HXHX_BIN_STAGE3\" HXHX_NATIVE_PLUGIN_RUNTIME_STAGE0_BUILD=0 OCAMLOPT='$ROOT/scripts/hxhx/ocamlopt-with-threads.sh' npm run -s test:hxhx:native-plugin-runtime-smoke" \
-  "0"
+  "cd '$ROOT' && HXHX_BIN_STAGE3=\"\${HXHX_BIN_RESOLVED:-}\" && if [ -z \"\$HXHX_BIN_STAGE3\" ] || [ ! -x \"\$HXHX_BIN_STAGE3\" ]; then HXHX_BIN_STAGE3=\"\$(bash '$ROOT/scripts/hxhx/build-hxhx.sh' | tail -n 1)\"; fi && test -x \"\$HXHX_BIN_STAGE3\" && HXHX_BIN=\"\$HXHX_BIN_STAGE3\" HXHX_NATIVE_PLUGIN_RUNTIME_STAGE0_BUILD=0 OCAMLOPT='$ROOT/scripts/hxhx/ocamlopt-with-threads.sh' npm run -s test:hxhx:native-plugin-runtime-smoke"
 
 if [ -n "$CORO_DIR" ]; then
   run_check \

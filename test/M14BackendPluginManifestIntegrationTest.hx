@@ -62,6 +62,11 @@ class M14BackendPluginManifestIntegrationTest {
 
 		final parsedNative = BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cmxs"), "fixture://valid-native");
 		assertTrue(parsedNative.backend.kind == BackendPluginManifestKind.OcamlCmxs, "unexpected native backend kind");
+		final parsedNativeBytecode = BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cma"), "fixture://valid-native-bytecode");
+		assertTrue(parsedNativeBytecode.backend.kind == BackendPluginManifestKind.OcamlCmxs, "unexpected native bytecode backend kind");
+		final parsedWithTrailingWhitespace = BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider") + "\n \t\r",
+			"fixture://valid-trailing-whitespace");
+		assertTrue(parsedWithTrailingWhitespace.pluginId == "fixture.backend.plugin", "unexpected pluginId with trailing whitespace");
 
 		assertFailsContains(function() BackendPluginManifestParser.parse("{}", "fixture://missing-fields"), "missing required field `backend`");
 		assertFailsContains(function() BackendPluginManifestParser.parse(haxe.Json.stringify({

@@ -134,7 +134,7 @@ npm run test:stage0-policy
 # Strict replacement-ready bundle (delegation blocked):
 npm run test:upstream:replacement-ready:strict
 
-# Strict plugin matrix (macro libs + eval.vm API smoke + Stage3 plugin fixture + native runtime smoke signal):
+# Strict plugin matrix (macro libs + eval.vm API smoke + Stage3 plugin fixture + native runtime smoke):
 HXHX_PLUGIN_MATRIX_STRICT=1 npm run test:plugins:strict-matrix
 ```
 

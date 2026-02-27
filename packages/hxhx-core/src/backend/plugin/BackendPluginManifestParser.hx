@@ -1,6 +1,7 @@
 package backend.plugin;
 
 import backend.BackendAbi;
+import backend.plugin.ManifestJsonArray;
 
 private typedef JsonObject = haxe.DynamicAccess<Dynamic>;
 
@@ -38,7 +39,8 @@ class BackendPluginManifestParser {
 	static function requireObject(value:Dynamic, fieldPath:String, sourceLabel:String):JsonObject {
 		if (value == null)
 			fail(sourceLabel, "missing required object `" + fieldPath + "`");
-		if (Std.isOfType(value, String) || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float) || Std.isOfType(value, Array)) {
+		if (Std.isOfType(value, String) || Std.isOfType(value, Bool) || Std.isOfType(value, Int) || Std.isOfType(value, Float)
+			|| Std.isOfType(value, Array) || Std.isOfType(value, ManifestJsonArray)) {
 			fail(sourceLabel, "field `" + fieldPath + "` must be an object");
 		}
 		return cast value;
@@ -75,9 +77,15 @@ class BackendPluginManifestParser {
 	}
 
 	static function requireStringArray(value:Dynamic, fieldPath:String, sourceLabel:String):Array<String> {
-		if (!Std.isOfType(value, Array))
+		var raw:Array<Dynamic>;
+		if (Std.isOfType(value, ManifestJsonArray)) {
+			raw = (cast value : ManifestJsonArray).values;
+		} else if (Std.isOfType(value, Array)) {
+			raw = cast value;
+		} else {
 			fail(sourceLabel, "field `" + fieldPath + "` must be an array of strings");
-		final raw:Array<Dynamic> = cast value;
+			raw = [];
+		}
 		final out = new Array<String>();
 		var index = 0;
 		for (entry in raw) {
@@ -163,8 +171,8 @@ class BackendPluginManifestParser {
 			case BackendPluginManifestKind.HaxeProvider:
 				return null;
 			case BackendPluginManifestKind.OcamlCmxs:
-				if (!StringTools.endsWith(entry, ".cmxs"))
-					return "backend.entry must end with `.cmxs` for kind `ocaml-cmxs`";
+				if (!StringTools.endsWith(entry, ".cmxs") && !StringTools.endsWith(entry, ".cma"))
+					return "backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-cmxs`";
 				return null;
 			case _:
 				return "unsupported backend kind `" + manifest.backend.kind + "`";
@@ -177,7 +185,7 @@ class BackendPluginManifestParser {
 			fail(source, "content is empty");
 
 		final raw:Dynamic = try {
-			haxe.Json.parse(content);
+			ManifestJsonParser.parse(content);
 		} catch (error:Dynamic) {
 			fail(source, "invalid JSON: " + Std.string(error));
 		}

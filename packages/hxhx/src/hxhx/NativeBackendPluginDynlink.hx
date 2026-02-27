@@ -22,7 +22,7 @@ package hxhx;
 #if reflaxe_ocaml
 @:native("HxHxBackendPluginDynlink")
 private extern class NativeBackendPluginDynlinkRuntime {
-	@:native("load_and_capture")
+	@:native("load_and_capture_safe")
 	public static function loadAndCapture(manifestPath:String, entryPath:String, pluginId:String):String;
 }
 #end
@@ -30,7 +30,14 @@ private extern class NativeBackendPluginDynlinkRuntime {
 class NativeBackendPluginDynlink {
 	#if reflaxe_ocaml
 	public static inline function loadAndCapture(manifestPath:String, entryPath:String, pluginId:String):String {
-		return NativeBackendPluginDynlinkRuntime.loadAndCapture(manifestPath, entryPath, pluginId);
+		final response = NativeBackendPluginDynlinkRuntime.loadAndCapture(manifestPath, entryPath, pluginId);
+		if (response == null)
+			throw "native plugin loader returned no response";
+		if (StringTools.startsWith(response, "ok\n"))
+			return response.substr(3);
+		if (StringTools.startsWith(response, "err\n"))
+			throw response.substr(4);
+		throw "native plugin loader returned malformed response";
 	}
 	#else
 	public static function loadAndCapture(manifestPath:String, entryPath:String, pluginId:String):String {

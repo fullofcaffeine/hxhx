@@ -191,7 +191,7 @@ Dynamic registration notes:
   - Stage3 emit fallback uses typed `IBackend.emit` (no `Reflect.callMethod` path),
   - not allowed inside target-core emitters (`OcamlTargetCore`, `JsTargetCore`).
 
-### Native backend plugin build workflow (`.cmxs`)
+### Native backend plugin build workflow (`.cmxs` / `.cma`)
 
 Use the native plugin build helper to produce a deterministic artifact bundle:
 
@@ -210,7 +210,21 @@ bash scripts/hxhx/build-backend-plugin.sh \
 Outputs:
 
 - `.tmp/plugin-out/backend-plugin.json` (manifest, schema v1)
-- `.tmp/plugin-out/plugins/hxhx_backend_plugin_fixture.cmxs` (native plugin artifact)
+- `.tmp/plugin-out/plugins/hxhx_backend_plugin_fixture.cmxs` (native plugin artifact for native host)
+
+For bytecode hosts (`hxhx` `.bc`), build with `.cma` instead:
+
+```bash
+bash scripts/hxhx/build-backend-plugin.sh \
+  --plugin-id fixture.native.backend.plugin \
+  --plugin-version 0.1.0 \
+  --kind ocaml-cmxs \
+  --source-dir test/fixtures/native_backend_plugin \
+  --dune-target hxhx_backend_plugin_fixture.cma \
+  --entry plugins/hxhx_backend_plugin_fixture.cma \
+  --target-id js-native \
+  --out-dir .tmp/plugin-out
+```
 
 Runtime load smoke (build + load + emit + run + negative checks):
 
@@ -228,6 +242,11 @@ This smoke validates:
 - backend selection override (`provider/js-native-wrapper`),
 - runtime output equivalence (`sum=6`),
 - negative diagnostics for missing plugin artifact and ABI mismatch.
+
+Common runtime load failures:
+
+- `native plugin artifact not found`: manifest `backend.entry` path is wrong relative to manifest location.
+- `backend ABI mismatch`: plugin manifest `abiVersion` does not match host ABI (`1`).
 
 Manifest-only flow for Haxe providers (no `.cmxs` build step):
 

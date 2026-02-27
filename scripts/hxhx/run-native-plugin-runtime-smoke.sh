@@ -56,18 +56,25 @@ trap cleanup EXIT
 plugin_out="$tmp_root/plugin_out"
 mkdir -p "$plugin_out"
 
+plugin_artifact_ext="cmxs"
+case "$HXHX_BIN_RESOLVED" in
+  *.bc)
+    plugin_artifact_ext="cma"
+    ;;
+esac
+
 bash "$BUILD_SCRIPT" \
   --plugin-id fixture.native.backend.plugin \
   --plugin-version 0.1.0 \
   --kind ocaml-cmxs \
   --source-dir "$FIXTURE_DIR" \
-  --dune-target hxhx_backend_plugin_fixture.cmxs \
-  --entry plugins/hxhx_backend_plugin_fixture.cmxs \
+  --dune-target "hxhx_backend_plugin_fixture.${plugin_artifact_ext}" \
+  --entry "plugins/hxhx_backend_plugin_fixture.${plugin_artifact_ext}" \
   --target-id js-native \
   --out-dir "$plugin_out"
 
 manifest_rel="$plugin_out/backend-plugin.json"
-artifact_rel="$plugin_out/plugins/hxhx_backend_plugin_fixture.cmxs"
+artifact_rel="$plugin_out/plugins/hxhx_backend_plugin_fixture.${plugin_artifact_ext}"
 
 if [ ! -f "$manifest_rel" ] || [ ! -f "$artifact_rel" ]; then
   echo "Native plugin build did not produce expected artifacts." >&2
