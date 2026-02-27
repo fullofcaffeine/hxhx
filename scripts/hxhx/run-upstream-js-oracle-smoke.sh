@@ -167,12 +167,81 @@ class JsOracleArrayComprehensionMain {
 }
 HX
 
+cat >"$tmpdir/src/JsOracleRangeExprMain.hx" <<'HX'
+class JsOracleRangeExprMain {
+  static function main() {
+    var span = 2...6;
+    var sum = 0;
+    for (value in span) {
+      sum += value;
+    }
+    trace("JS_ORACLE|range-expr:" + sum);
+  }
+}
+HX
+
+cat >"$tmpdir/src/JsOracleNewArrayMain.hx" <<'HX'
+class JsOracleNewArrayMain {
+  static function main() {
+    var values = new Array<Int>();
+    values.push(7);
+    values.push(8);
+    values.push(9);
+    trace("JS_ORACLE|new-array:" + values.length + ":" + values[0] + ":" + values[2]);
+  }
+}
+HX
+
+cat >"$tmpdir/src/JsOracleMultiCatchMain.hx" <<'HX'
+class JsOracleMultiCatchMain {
+  static function main() {
+    var first = "";
+    try {
+      throw "boom";
+    } catch (e:String) {
+      first = "string:" + e;
+    } catch (e:Int) {
+      first = "int:" + e;
+    } catch (e:Dynamic) {
+      first = "dynamic:" + e;
+    }
+
+    var second = "";
+    try {
+      throw 7;
+    } catch (e:String) {
+      second = "string:" + e;
+    } catch (e:Int) {
+      second = "int:" + e;
+    } catch (e:Dynamic) {
+      second = "dynamic:" + e;
+    }
+
+    var third = "";
+    try {
+      throw true;
+    } catch (e:String) {
+      third = "string:" + e;
+    } catch (e:Int) {
+      third = "int:" + e;
+    } catch (e:Dynamic) {
+      third = "dynamic:" + e;
+    }
+
+    trace("JS_ORACLE|multi-catch:" + first + "|" + second + "|" + third);
+  }
+}
+HX
+
 all_fixtures=(
   "JsOracleLoopMain"
   "JsOracleSwitchExprMain"
   "JsOracleEnumReflectionMain"
   "JsOracleTryCatchMain"
   "JsOracleArrayComprehensionMain"
+  "JsOracleRangeExprMain"
+  "JsOracleNewArrayMain"
+  "JsOracleMultiCatchMain"
 )
 
 selected_fixtures=()
