@@ -5,4 +5,5 @@
 -lib reflaxe.ocaml
 -D no-traces
 -D no_traces
+-D hxhx_macro_host
 -D ocaml_output=out

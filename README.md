@@ -135,8 +135,11 @@ npm run test:stage0-policy
 # Strict replacement-ready bundle (delegation blocked):
 npm run test:upstream:replacement-ready:strict
 
-# Strict plugin matrix (macro libs + eval.vm API smoke + Stage3 plugin fixture + native runtime smoke):
+# Strict plugin matrix (macro libs + native macro-module dynlink smoke + eval.vm API smoke + Stage3 plugin fixture + native runtime smoke):
 HXHX_PLUGIN_MATRIX_STRICT=1 npm run test:plugins:strict-matrix
+
+# Focused Stage4 native macro-module dynlink smoke:
+npm run test:hxhx:macro-module-dynlink-smoke
 
 # Generate a promotion-ready plugin scaffold:
 bash scripts/hxhx/plugin-init.sh \
@@ -208,8 +211,8 @@ For full usage and mainstream Haxe integration, see
 - **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3`; optional `js-native` lane on manual runs).
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
 - **Gate M7**: curated replacement-ready bundle (`fast|full`), with weekly strict/full CI.
-- **Plugin matrix (strict)**: macro-library compatibility + eval.vm plugin API smoke + Stage3 plugin fixture checks.
-- **Plugin matrix (strict)** also validates generated promotion scaffold buildability, backend promotion smoke, and eval-adapter promotion smoke.
+- **Plugin matrix (strict)**: macro-library compatibility + native macro-module dynlink smoke + eval.vm plugin API smoke + Stage3 plugin fixture checks.
+- **Plugin matrix (strict)** also validates generated promotion scaffold buildability, backend promotion smoke, eval-adapter promotion smoke, and native backend runtime smoke.
 - Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
   [Testing command catalog](docs/01-getting-started/TESTING.md).
 

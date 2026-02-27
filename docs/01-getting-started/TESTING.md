@@ -252,6 +252,8 @@ Notes:
     - promotion backend smoke (`npm run test:hxhx:promotion-backend-smoke`) proving promoted provider flow emits a native plugin artifact and compiles/runs through Stage3 backend selection
     - promotion eval smoke (`npm run test:hxhx:promotion-eval-smoke`) proving generated eval adapter artifacts load through `eval.vm.Context.loadPlugin`
       (if local `haxe` and local OCaml toolchain ABI differ, the smoke emits `PROMOTION_EVAL_SMOKE:SKIP_HOST_ABI` and keeps the lane non-blocking)
+    - macro-module dynlink smoke (`npm run test:hxhx:macro-module-dynlink-smoke`) proving promoted native macro module load/run via Stage4 RPC
+      (`macro.loadNativeModule` + `macro.runNativeExpr`) with negative diagnostics for plugin-ID mismatch and missing entrypoint
     - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
       (required in strict plugin matrix; runs `.cma` artifact when `HXHX_BIN` is bytecode and `.cmxs` when native)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)

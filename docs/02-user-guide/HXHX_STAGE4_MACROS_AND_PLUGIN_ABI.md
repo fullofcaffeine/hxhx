@@ -270,6 +270,8 @@ Stage 4 is considered “meaningfully implemented” when:
 
 - Gate 1 passes (upstream `tests/unit/compile-macro.hxml`)
 - Gate 2 passes (upstream `tests/runci` Macro target, including display fixtures)
+- native macro-module promotion smoke is green (`npm run test:hxhx:macro-module-dynlink-smoke`)
+  with deterministic failures for ABI mismatch and missing entrypoints
 
 See:
 

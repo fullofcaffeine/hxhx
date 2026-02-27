@@ -92,6 +92,19 @@ class MacroHostClient {
 		});
 	}
 
+	public static function loadNativeModule(modulePath:String, pluginId:String):Array<String> {
+		return withSession(function(session) {
+			return session.loadNativeModule(modulePath, pluginId);
+		});
+	}
+
+	public static function runNativeModuleExpr(modulePath:String, pluginId:String, expr:String):String {
+		return withSession(function(session) {
+			session.loadNativeModule(modulePath, pluginId);
+			return session.runNativeExpr(expr);
+		});
+	}
+
 	/**
 		Open a macro host session for a full compilation.
 
@@ -135,6 +148,22 @@ class MacroHostClient {
 		return withClient(function(client) {
 			return client.call("context.getType", MacroProtocol.encodeLen("n", name));
 		});
+	}
+
+	public static function decodeNativeExprListPayload(payload:String):Array<String> {
+		final parts = MacroProtocol.kvParse(payload == null ? "" : payload);
+		final countStr = parts.exists("c") ? parts.get("c") : "0";
+		final count = Std.parseInt(countStr);
+		if (count == null || count < 0)
+			throw "macro host: invalid native module expr count payload: " + countStr;
+		final out = new Array<String>();
+		for (i in 0...count) {
+			final key = "e" + i;
+			if (!parts.exists(key))
+				throw "macro host: missing native module expr payload key: " + key;
+			out.push(parts.get(key));
+		}
+		return out;
 	}
 
 	static function resolveMacroHostExe():String {
@@ -486,6 +515,15 @@ class MacroHostSession {
 
 	public function run(expr:String):String {
 		return client.call("macro.run", MacroProtocol.encodeLen("e", expr));
+	}
+
+	public function loadNativeModule(modulePath:String, pluginId:String):Array<String> {
+		final payload = client.call("macro.loadNativeModule", MacroProtocol.encodeLen("p", modulePath) + " " + MacroProtocol.encodeLen("i", pluginId));
+		return MacroHostClient.decodeNativeExprListPayload(payload);
+	}
+
+	public function runNativeExpr(expr:String):String {
+		return client.call("macro.runNativeExpr", MacroProtocol.encodeLen("e", expr));
 	}
 
 	/**

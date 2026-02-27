@@ -6,6 +6,7 @@ Scope:
 
 - lane A: `hxhx` Stage3 native backend plugin host (`ocaml-cmxs`)
 - lane B: upstream Haxe eval plugin host (`eval.vm.Context.loadPlugin`)
+- lane C: Stage4 native macro-module host (`macro.loadNativeModule` + `macro.runNativeExpr`)
 
 Compatibility target:
 
@@ -39,6 +40,12 @@ bash scripts/hxhx/promote-eval-adapter.sh \
   --out-dir .tmp/promotion-demo \
   --plugin-id demo.native.plugin \
   --target-id js-native
+```
+
+Native macro-module dynlink smoke entrypoint:
+
+```bash
+npm run test:hxhx:macro-module-dynlink-smoke
 ```
 
 ## Hard-cutover naming contract

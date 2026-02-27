@@ -336,6 +336,37 @@ Bring-up limitation (important):
 - request: `req <id> macro.run e=<len>:<expr>`
 - response: `res <id> ok v=<len>:<result>`
 
+### `macro.loadNativeModule` (native module promotion rung)
+
+Load a promoted native macro module artifact and validate its registration ABI before activation.
+
+- request: `req <id> macro.loadNativeModule p=<len>:<modulePath> i=<len>:<pluginId>`
+- response: `res <id> ok v=<len>:<payload>`
+
+`<payload>` is a list of length-prefixed fragments:
+
+- `c=<len>:<count>`
+- then `e0=<...> e1=<...> ...` (registered expression entrypoints)
+
+Validation semantics:
+
+- The macro host dynlinks the artifact and captures registration snapshot rows.
+- Snapshot format is versioned (`v1`) and decoded by `NativeMacroModuleHostAbi`.
+- All rows must match request plugin ID (`i=`); mismatches are hard errors.
+- Duplicate expression registrations are hard errors.
+
+### `macro.runNativeExpr` (native module promotion rung)
+
+Run one expression entrypoint previously registered via `macro.loadNativeModule`.
+
+- request: `req <id> macro.runNativeExpr e=<len>:<expr>`
+- response: `res <id> ok v=<len>:<result>`
+
+Failure semantics:
+
+- If `expr` was not registered by a loaded native module in the current host session,
+  the host returns a deterministic error (`native macro expr not registered: <expr>`).
+
 ### `macro.runHook` (bring-up rung)
 
 Invoke a previously registered hook callback inside the macro host.
@@ -371,6 +402,16 @@ The macro RPC section specifically runs:
 - `bash scripts/hxhx/build-hxhx.sh`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-selftest`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-run "BuiltinMacros.smoke()"`
+
+Native macro-module dynlink smoke (C7R lane):
+
+```bash
+npm run test:hxhx:macro-module-dynlink-smoke
+```
+
+This smoke builds a promoted native macro module artifact, loads it through `macro.loadNativeModule`,
+runs it via `macro.runNativeExpr`, and asserts negative diagnostics for plugin-ID mismatch and
+missing entrypoint.
 
 ### Macro host build modes (bootstrap vs stage0 vs Stage3)
 

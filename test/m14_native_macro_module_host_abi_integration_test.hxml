@@ -1,0 +1,5 @@
+-cp test
+-cp packages/hxhx-macro-host/src
+
+-main M14NativeMacroModuleHostAbiIntegrationTest
+--interp

@@ -29,6 +29,8 @@ import hxhxmacrohost.api.Context;
 	  by `hxhx` during `--hxhx-macro-selftest` and later macro stages.
 **/
 class Main {
+	static final nativeExprToPlugin:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
+
 	static function main() {
 		// Handshake banner: printed first so the client can verify protocol version.
 		Sys.println(Protocol.SERVER_BANNER);
@@ -122,6 +124,27 @@ class Main {
 						return;
 					}
 					replyOk(id, Protocol.encodeLen("v", runMacroExpr(expr)));
+				case "macro.loadNativeModule":
+					final parsed = parseKV(tail);
+					final modulePath = parsed.exists("p") ? parsed.get("p") : "";
+					final pluginId = parsed.exists("i") ? parsed.get("i") : "";
+					if (modulePath.length == 0) {
+						replyErr(id, method + ": missing module path");
+						return;
+					}
+					if (pluginId.length == 0) {
+						replyErr(id, method + ": missing plugin id");
+						return;
+					}
+					replyOk(id, Protocol.encodeLen("v", loadNativeModule(modulePath, pluginId)));
+				case "macro.runNativeExpr":
+					final parsed = parseKV(tail);
+					final expr = parsed.exists("e") ? parsed.get("e") : "";
+					if (expr.length == 0) {
+						replyErr(id, method + ": missing expr");
+						return;
+					}
+					replyOk(id, Protocol.encodeLen("v", runNativeExpr(expr)));
 				case "macro.expandExpr":
 					// Stage 4 bring-up rung: expression-macro expansion.
 					//
@@ -228,6 +251,41 @@ class Main {
 			return ext;
 
 		return "ran:" + e;
+	}
+
+	static function loadNativeModule(modulePath:String, pluginId:String):String {
+		final path = StringTools.trim(modulePath == null ? "" : modulePath);
+		final pid = StringTools.trim(pluginId == null ? "" : pluginId);
+		if (path.length == 0)
+			throw "macro.loadNativeModule: module path is required";
+		if (pid.length == 0)
+			throw "macro.loadNativeModule: plugin id is required";
+
+		final snapshot = NativeMacroModuleDynlink.loadAndCapture(path, pid);
+		final exprs = NativeMacroModuleHostAbi.exprsForPlugin(snapshot, pid, path);
+		for (expr in exprs) {
+			final existingPlugin = nativeExprToPlugin.get(expr);
+			if (existingPlugin == null) {
+				nativeExprToPlugin.set(expr, pid);
+			} else if (existingPlugin != pid) {
+				throw "macro.loadNativeModule: expr `" + expr + "` already registered by plugin `" + existingPlugin + "`";
+			}
+		}
+		final payloadParts = new Array<String>();
+		payloadParts.push(Protocol.encodeLen("c", Std.string(exprs.length)));
+		for (i in 0...exprs.length) {
+			payloadParts.push(Protocol.encodeLen("e" + i, exprs[i]));
+		}
+		return payloadParts.join(" ");
+	}
+
+	static function runNativeExpr(expr:String):String {
+		final key = StringTools.trim(expr == null ? "" : expr);
+		if (key.length == 0)
+			throw "macro.runNativeExpr: expr is required";
+		if (!nativeExprToPlugin.exists(key))
+			throw "native macro expr not registered: " + key;
+		return NativeMacroModuleHost.runExpr(key);
 	}
 
 	static function expandExprMacro(expr:String):String {

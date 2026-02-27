@@ -356,7 +356,8 @@ class RuntimeCopier {
 		#if macro
 		final allowHxHxRuntime = haxe.macro.Context.defined("hih_native_parser")
 			|| haxe.macro.Context.defined("hxhx_native_frontend")
-			|| haxe.macro.Context.defined("hxhx");
+			|| haxe.macro.Context.defined("hxhx")
+			|| haxe.macro.Context.defined("hxhx_macro_host");
 		#else
 		final allowHxHxRuntime = false;
 		#end
