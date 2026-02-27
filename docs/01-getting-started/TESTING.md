@@ -87,6 +87,15 @@ Plain-English gate map:
 - **Gate 2**: “bigger macro workflow” — upstream `runci` Macro target.
 - **Gate 3**: “target matrix” — staged target workflows (`Macro`, `Js`, `Neko`, opt-in extras).
 
+Mainstream compatibility quick command set:
+
+```bash
+npm run test:upstream:unit-macro-stage3-no-emit
+npm run test:upstream:runci-macro-stage3-direct
+npm run test:upstream:display-stage3-no-emit
+npm run test:upstream:replacement-ready:strict
+```
+
 Gate 1 (unit macro suite) uses the upstream file:
 
 - `tests/unit/compile-macro.hxml`
@@ -416,6 +425,7 @@ npm run test:upstream:replacement-ready:strict
 CI cadence:
 
 - `.github/workflows/gate-m7.yml` runs weekly on Linux in strict/full mode (`HXHX_M7_PROFILE=full`, `HXHX_M7_STRICT=1`).
+- The same workflow also runs on published releases in strict/full mode.
 - The same workflow remains manually triggerable (`workflow_dispatch`) with `profile` and `strict` inputs.
 
 ## Layers

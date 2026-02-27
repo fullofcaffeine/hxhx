@@ -3,6 +3,8 @@ name: Gate M7 (HXHX Replacement Bundle)
 on:
   schedule:
     - cron: "0 9 * * 0"
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       profile:
@@ -32,7 +34,7 @@ env:
 
 jobs:
   replacement_bundle:
-    name: Replacement bundle (${{ github.event_name == 'schedule' && 'full-strict' || (inputs.profile || 'fast') }})
+    name: Replacement bundle (${{ (github.event_name == 'schedule' || github.event_name == 'release') && 'full-strict' || (inputs.profile || 'fast') }})
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -117,13 +119,22 @@ jobs:
           HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS: "1800"
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "release" ]; then
             HXHX_M7_PROFILE="full"
             HXHX_M7_STRICT="1"
           fi
           export HXHX_M7_PROFILE
           export HXHX_M7_STRICT
+          mkdir -p .artifacts
           echo "event=${GITHUB_EVENT_NAME}"
           echo "HXHX_M7_PROFILE=${HXHX_M7_PROFILE}"
           echo "HXHX_M7_STRICT=${HXHX_M7_STRICT}"
-          npm run -s test:upstream:replacement-ready
+          npm run -s test:upstream:replacement-ready 2>&1 | tee .artifacts/gate-m7.log
+
+      - name: Upload Gate M7 logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-m7-logs-${{ github.run_id }}
+          path: .artifacts/gate-m7.log
+          if-no-files-found: error

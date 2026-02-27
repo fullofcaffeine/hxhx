@@ -32,7 +32,7 @@ It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and
 - Per-commit checks also run **Stdlib Portable Lite** (baseline contract + portable fixture suite).
 - Per-commit CI also runs a **JS oracle smoke** lane (upstream `haxe` vs `hxhx js-native` runtime output on repo-local fixtures).
 - Full upstream compatibility gates (**Gate 1/2/3**) run weekly and on manual trigger.
-- **Gate M7 (replacement bundle)** runs weekly in strict/full mode and remains manually triggerable.
+- **Gate M7 (replacement bundle)** runs weekly in strict/full mode, on published releases, and remains manually triggerable.
 - **Stdlib Portable Full** runs nightly/manual for broader Stage0 runtime/stdlib coverage.
 - Legacy Flash/AS3 targets are intentionally unsupported.
 - `hxhx` and `reflaxe.ocaml` are usable now; parity/performance work continues.
@@ -114,6 +114,15 @@ Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior
 
 ```bash
 npm run test:upstream:js-oracle-smoke
+```
+
+Mainstream upstream compatibility command set (local):
+
+```bash
+npm run test:upstream:unit-macro-stage3-no-emit
+npm run test:upstream:runci-macro-stage3-direct
+npm run test:upstream:display-stage3-no-emit
+npm run test:upstream:replacement-ready:strict
 ```
 
 Portable stdlib parity gates:

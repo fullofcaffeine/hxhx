@@ -85,4 +85,15 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Run Gate1 lite macro smoke
-        run: npm run test:upstream:unit-macro-stage3-no-emit
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts
+          npm run test:upstream:unit-macro-stage3-no-emit 2>&1 | tee .artifacts/gate1-lite.log
+
+      - name: Upload Gate1 Lite logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate1-lite-logs-${{ github.run_id }}
+          path: .artifacts/gate1-lite.log
+          if-no-files-found: error
