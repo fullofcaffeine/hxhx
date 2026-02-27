@@ -43,40 +43,43 @@ class ManifestJsonParser {
 		skipWhitespace();
 		if (!isEof())
 			fail("unexpected trailing token");
-		return value;
+		return value.value;
 	}
 
-	function parseValue():Dynamic {
+	function parseValue():ManifestJsonValueBox {
 		if (isEof())
 			fail("unexpected EOF");
 		final code = peekCode();
-		return switch (code) {
-			case "{".code: parseObject();
-			case "[".code: parseArray();
-			case "\"".code: parseString();
-			case "t".code:
-				expectKeyword("true");
-				true;
-			case "f".code:
-				expectKeyword("false");
-				false;
-			case "n".code:
-				expectKeyword("null");
-				null;
-			case "-".code, "0".code, "1".code, "2".code, "3".code, "4".code, "5".code, "6".code, "7".code, "8".code, "9".code:
-				parseNumber();
-			case _:
-				fail("invalid token");
-				null;
+		var value = new ManifestJsonValueBox(null);
+		if (code == "{".code) {
+			value = new ManifestJsonValueBox(parseObject());
+		} else if (code == "[".code) {
+			value = new ManifestJsonValueBox(parseArray());
+		} else if (code == "\"".code) {
+			value = new ManifestJsonValueBox(parseString());
+		} else if (code == "t".code) {
+			expectKeyword("true");
+			value = new ManifestJsonValueBox(true);
+		} else if (code == "f".code) {
+			expectKeyword("false");
+			value = new ManifestJsonValueBox(false);
+		} else if (code == "n".code) {
+			expectKeyword("null");
+			value = new ManifestJsonValueBox(null);
+		} else if (code == "-".code || (code >= "0".code && code <= "9".code)) {
+			value = new ManifestJsonValueBox(parseNumber());
+		} else {
+			fail("invalid token");
 		}
+		return value;
 	}
 
 	function parseObject():Dynamic {
 		expectCode("{".code);
 		skipWhitespace();
-		final object:haxe.DynamicAccess<Dynamic> = {};
+		final object:Dynamic = {};
 		if (consumeIf("}".code))
-			return cast object;
+			return object;
 
 		while (true) {
 			skipWhitespace();
@@ -84,14 +87,14 @@ class ManifestJsonParser {
 			skipWhitespace();
 			expectCode(":".code);
 			skipWhitespace();
-			object.set(key, parseValue());
+			Reflect.setField(object, key, parseValue().value);
 			skipWhitespace();
 			if (consumeIf("}".code))
-				return cast object;
+				return object;
 			expectCode(",".code);
 		}
 
-		return cast object;
+		return object;
 	}
 
 	function parseArray():ManifestJsonArray {
@@ -103,7 +106,8 @@ class ManifestJsonParser {
 
 		while (true) {
 			skipWhitespace();
-			values.push(parseValue());
+			final value:Dynamic = parseValue().value;
+			values.push(value);
 			skipWhitespace();
 			if (consumeIf("]".code))
 				return new ManifestJsonArray(values);
@@ -262,5 +266,13 @@ class ManifestJsonParser {
 
 	function fail(message:String):Void {
 		throw message + " at position " + index;
+	}
+}
+
+private class ManifestJsonValueBox {
+	public final value:Dynamic;
+
+	public function new(value:Dynamic) {
+		this.value = value;
 	}
 }

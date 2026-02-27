@@ -534,8 +534,61 @@ class EmitterStage {
 		}
 	}
 
+	/**
+		Read a value from a map-like object (`Map` or lowered `Obj.t`) at emission boundaries.
+
+		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
+	**/
+	static inline function mapGetRaw(mapLike:Dynamic, key:String):Dynamic {
+		if (mapLike == null || key == null)
+			return null;
+		final getFn = Reflect.field(mapLike, "get");
+		if (getFn == null)
+			return null;
+		return Reflect.callMethod(mapLike, getFn, [key]);
+	}
+
+	/**
+		Check whether a map-like object has a key, with a fallback to `get(...) != null`.
+	**/
+	static inline function mapHasRaw(mapLike:Dynamic, key:String):Bool {
+		if (mapLike == null || key == null)
+			return false;
+		final existsFn = Reflect.field(mapLike, "exists");
+		if (existsFn != null) {
+			final existsValue = Reflect.callMethod(mapLike, existsFn, [key]);
+			return existsValue == true;
+		}
+		return mapGetRaw(mapLike, key) != null;
+	}
+
+	/**
+		Get a string-key iterator from a map-like object, if available.
+	**/
+	static inline function mapKeysRaw(mapLike:Dynamic):Null<Iterator<String>> {
+		if (mapLike == null)
+			return null;
+		final keysFn = Reflect.field(mapLike, "keys");
+		if (keysFn == null)
+			return null;
+		final iteratorValue = Reflect.callMethod(mapLike, keysFn, []);
+		return iteratorValue == null ? null : cast iteratorValue;
+	}
+
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		final tyByIdentRaw:Dynamic = tyByIdent;
+
+		inline function tyForIdent(name:String):String {
+			final resolved = mapGetRaw(tyByIdentRaw, name);
+			if (resolved == null)
+				return "";
+			final t:TyType = cast resolved;
+			if (t == null)
+				return "";
+			return t.toString();
+		}
+
 		inline function condToOcamlBoolForString(cond:HxExpr):String {
 			// Keep the Stage3 “full bodies” rung resilient: a string expression can contain a ternary
 			// like `colorSupported ? "..." + msg : msg`, but we do not yet type/emit arbitrary bool
@@ -548,96 +601,139 @@ class EmitterStage {
 					v ? "true" : "false";
 				case EUnop("!", _), EBinop("==", _, _), EBinop("!=", _, _), EBinop("<", _, _), EBinop(">", _, _), EBinop("<=", _, _), EBinop(">=", _, _),
 					EBinop("&&", _, _), EBinop("||", _, _):
-					final s = exprToOcaml(cond, null, tyByIdent, null);
+					final s = exprToOcaml(cond, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					s == "(Obj.magic 0)" ? "true" : s;
 				case _:
 					"true";
 			};
 		}
 
-		return switch (e) {
-			case EString(v): escapeOcamlString(v);
-			case EEnumValue(name): escapeOcamlString(name);
-			// When an expression is demanded as a string (e.g. trace/println), treat `+` as
-			// string concatenation and lower it to OCaml's `^`.
-			case EBinop("+", a, b):
-				"("
-				+ exprToOcamlString(a, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ " ^ "
-				+ exprToOcamlString(b, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ ")";
-			case ECall(EField(EIdent("Std"), "string"), [arg]):
-				// String interpolation lowering uses `Std.string(...)` to force stringification.
-				//
-				// Important
-				// - Do not inline this as `exprToOcamlString(arg)`:
-				//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
-				//   - and it would diverge from the target runtime’s own stringification behavior.
-				"HxRuntime.dynamic_toStdString (Obj.repr (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-					moduleNameByPkgAndClass, callSigByCallee) + "))";
-			case ECall(EField(_obj, "join"), [_sep]):
-				// Bring-up: join returns a string; delegate to normal expression lowering when available.
-				exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
-			// Bootstrap: allow string-y ternaries in upstream-ish code (runci/System.hx).
-			case ETernary(cond, thenExpr, elseExpr):
-				"(if "
-				+ condToOcamlBoolForString(cond)
-				+ " then "
-				+ exprToOcamlString(thenExpr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ " else "
-				+ exprToOcamlString(elseExpr, tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
-				+ ")";
-			case EInt(v): "string_of_int " + Std.string(v);
-			case EBool(v): "string_of_bool " + (v ? "true" : "false");
-			case EFloat(v): "string_of_float " + Std.string(v);
-			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
-				"string_of_int " + ocamlReadValueIdent(name);
-			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Float"):
-				"string_of_float " + ocamlReadValueIdent(name);
-			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Bool"):
-				// Keep stringification resilient when best-effort inference mislabels a non-bool
-				// value as `Bool` (for example, some stage0-fed static-final shapes during bring-up).
-				//
-				// `string_of_bool` would hard-fail OCaml typechecking in that case, while
-				// `Std.string`-style runtime stringification stays safe for both true bools and
-				// inference slips.
-				"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
-			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "String"):
-				ocamlReadValueIdent(name);
-			case EIdent(name) if (tyByIdent != null
-				&& tyByIdent.get(name) != null
-				&& StringTools.startsWith(tyByIdent.get(name).toString(), "Array<")):
-				// Haxe string interpolation uses `Std.string(...)` for non-strings.
-				// For `Array<String>`, upstream RunCi relies on `Array.toString()` semantics,
-				// which are equivalent to `join(",")`.
-				//
-				// Using `Std.string` on our array representation would currently degrade to
-				// "<object>" (because `dynamic_toStdString` can't reliably detect records).
-				final t = tyByIdent.get(name).toString();
-				final compact = StringTools.replace(t, " ", "");
-				(compact.indexOf("Array<String>") == 0) ? ("HxBootArray.join (" + ocamlReadValueIdent(name) +
-					") (\",\") (fun (s : string) -> s)") : ("HxRuntime.dynamic_toStdString (Obj.repr ("
-					+ ocamlReadValueIdent(name) + "))");
-			case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Array"):
-				"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
-			case _:
-				// Bring-up default: prefer *some* stringification over `<unsupported>` so
-				// upstream harness logs remain readable (and don't change meaning).
-				//
-				// Note: this uses the backend's `Std.string` implementation (Haxe semantics),
-				// not OCaml's `Stdlib.string_of_*`.
-				"HxRuntime.dynamic_toStdString (Obj.repr (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
-					moduleNameByPkgAndClass, callSigByCallee) + "))";
-		}
+		var emitStringExpr:HxExpr->String = null;
+		emitStringExpr = function(expr:HxExpr):String {
+			return switch (expr) {
+				case EString(v): escapeOcamlString(v);
+				case EEnumValue(name): escapeOcamlString(name);
+				// When an expression is demanded as a string (e.g. trace/println), treat `+` as
+				// string concatenation and lower it to OCaml's `^`.
+				case EBinop("+", a, b):
+					"(" + emitStringExpr(a) + " ^ " + emitStringExpr(b) + ")";
+				case ECall(EField(EIdent("Std"), "string"), [arg]):
+					// String interpolation lowering uses `Std.string(...)` to force stringification.
+					//
+					// Important
+					// - Do not inline this as `emitStringExpr(arg)`:
+					//   - it would degrade complex values (arrays, tagged values) to `<unsupported>`,
+					//   - and it would diverge from the target runtime’s own stringification behavior.
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + exprToOcaml(arg, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee) + "))";
+				case ECall(EField(_obj, "join"), [_sep]):
+					// Bring-up: join returns a string; delegate to normal expression lowering when available.
+					exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
+				// Bootstrap: allow string-y ternaries in upstream-ish code (runci/System.hx).
+				case ETernary(cond, thenExpr, elseExpr):
+					"(if "
+					+ condToOcamlBoolForString(cond)
+					+ " then "
+					+ emitStringExpr(thenExpr)
+					+ " else "
+					+ emitStringExpr(elseExpr)
+					+ ")";
+				case EInt(v): "string_of_int " + Std.string(v);
+				case EBool(v): "string_of_bool " + (v ? "true" : "false");
+				case EFloat(v): "string_of_float " + Std.string(v);
+				case EIdent(name) if (tyForIdent(name) == "Int"):
+					"string_of_int " + ocamlReadValueIdent(name);
+				case EIdent(name) if (tyForIdent(name) == "Float"):
+					"string_of_float " + ocamlReadValueIdent(name);
+				case EIdent(name) if (tyForIdent(name) == "Bool"):
+					// Keep stringification resilient when best-effort inference mislabels a non-bool
+					// value as `Bool` (for example, some stage0-fed static-final shapes during bring-up).
+					//
+					// `string_of_bool` would hard-fail OCaml typechecking in that case, while
+					// `Std.string`-style runtime stringification stays safe for both true bools and
+					// inference slips.
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+				case EIdent(name) if (tyForIdent(name) == "String"):
+					ocamlReadValueIdent(name);
+				case EIdent(name) if (StringTools.startsWith(tyForIdent(name), "Array<")):
+					// Haxe string interpolation uses `Std.string(...)` for non-strings.
+					// For `Array<String>`, upstream RunCi relies on `Array.toString()` semantics,
+					// which are equivalent to `join(",")`.
+					//
+					// Using `Std.string` on our array representation would currently degrade to
+					// "<object>" (because `dynamic_toStdString` can't reliably detect records).
+					final t = tyForIdent(name);
+					final compact = StringTools.replace(t, " ", "");
+					(compact.indexOf("Array<String>") == 0) ? ("HxBootArray.join (" + ocamlReadValueIdent(name) +
+						") (\",\") (fun (s : string) -> s)") : ("HxRuntime.dynamic_toStdString (Obj.repr ("
+						+ ocamlReadValueIdent(name) + "))");
+				case EIdent(name) if (tyForIdent(name) == "Array"):
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + ocamlReadValueIdent(name) + "))";
+				case _:
+					// Bring-up default: prefer *some* stringification over `<unsupported>` so
+					// upstream harness logs remain readable (and don't change meaning).
+					//
+					// Note: this uses the backend's `Std.string` implementation (Haxe semantics),
+					// not OCaml's `Stdlib.string_of_*`.
+					"HxRuntime.dynamic_toStdString (Obj.repr (" + exprToOcaml(expr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath,
+						moduleNameByPkgAndClass, callSigByCallee) + "))";
+			}
+		};
+
+		return emitStringExpr(e);
 	}
 
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		inline function tyForIdent(name:String):String {
-			if (tyByIdent == null)
+		final tyByIdentRaw:Dynamic = tyByIdent;
+		final arityByIdentRaw:Dynamic = arityByIdent;
+		final staticImportByIdentRaw:Dynamic = staticImportByIdent;
+		final moduleNameByPkgAndClassRaw:Dynamic = moduleNameByPkgAndClass;
+		final callSigByCalleeRaw:Dynamic = callSigByCallee;
+
+		inline function hasTyIdent(name:String):Bool {
+			return mapGetRaw(tyByIdentRaw, name) != null;
+		}
+
+		inline function hasThisBinding():Bool {
+			return hasTyIdent("this");
+		}
+
+		inline function hasArity(name:String):Bool {
+			return mapHasRaw(arityByIdentRaw, name);
+		}
+
+		inline function arityFor(name:String):Int {
+			final resolved = mapGetRaw(arityByIdentRaw, name);
+			if (resolved == null)
+				return 0;
+			final arity:Int = cast resolved;
+			return arity;
+		}
+
+		inline function staticImportModule(name:String):String {
+			final resolved = mapGetRaw(staticImportByIdentRaw, name);
+			return resolved == null ? null : cast resolved;
+		}
+
+		inline function moduleNameForKey(key:String):String {
+			final resolved = mapGetRaw(moduleNameByPkgAndClassRaw, key);
+			return resolved == null ? null : cast resolved;
+		}
+
+		inline function callSigFor(callee:String):Null<EmitterCallSig> {
+			final resolved = mapGetRaw(callSigByCalleeRaw, callee);
+			return resolved == null ? null : cast resolved;
+		}
+
+		function tyForIdent(name:String):String {
+			final resolved = mapGetRaw(tyByIdentRaw, name);
+			if (resolved == null)
 				return "";
-			final t = tyByIdent.get(name);
-			return t == null ? "" : t.toString();
+			final t:TyType = cast resolved;
+			if (t == null)
+				return "";
+			return t.toString();
 		}
 
 		inline function readIdent(name:String):String {
@@ -852,21 +948,29 @@ class EmitterStage {
 			return "";
 		}
 
-		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
+		function extendTyByIdent(ty:Dynamic, name:String, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
-			if (ty != null) {
-				for (k in ty.keys())
-					out.set(k, ty.get(k));
+			final keys = mapKeysRaw(ty);
+			if (keys != null) {
+				for (k in keys) {
+					final existing = mapGetRaw(ty, k);
+					if (existing != null)
+						out.set(k, cast existing);
+				}
 			}
 			out.set(name, t);
 			return out;
 		}
 
-		function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
+		function extendTyByIdentMany(ty:Dynamic, names:Array<String>, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
-			if (ty != null) {
-				for (k in ty.keys())
-					out.set(k, ty.get(k));
+			final keys = mapKeysRaw(ty);
+			if (keys != null) {
+				for (k in keys) {
+					final existing = mapGetRaw(ty, k);
+					if (existing != null)
+						out.set(k, cast existing);
+				}
 			}
 			if (names != null)
 				for (n in names)
@@ -1130,22 +1234,22 @@ class EmitterStage {
 			case EFloat(v): Std.string(v);
 			case EString(v): escapeOcamlString(v);
 			case EIdent(name):
-				if (hasCurrentInstanceMethod(name) && tyByIdent != null && tyByIdent.get("this") != null) {
+				if (hasCurrentInstanceMethod(name) && hasThisBinding()) {
 					// Instance-method value reference (e.g. `fields.map(printField)` inside an
 					// instance method) must capture `this`.
 					//
 					// Emit a partially-applied function (`printField this_`) so OCaml sees the same
 					// callback arity as Haxe's bound-method semantics.
 					ocamlValueIdent(name) + " (this_)";
-				} else if (tyByIdent != null && tyByIdent.get(name) != null) {
+				} else if (hasTyIdent(name)) {
 					// Bound identifier (parameter / local / bring-up-allowed static field).
 					readIdent(name);
-				} else if (arityByIdent != null && arityByIdent.exists(name)) {
+				} else if (hasArity(name)) {
 					// Static method call within the same generated module becomes a top-level OCaml binding.
 					ocamlValueIdent(name);
-				} else if (staticImportByIdent != null && staticImportByIdent.get(name) != null) {
+				} else if (staticImportModule(name) != null) {
 					// Stage 3 bring-up: approximate `import Foo.Bar.*` (static wildcard imports).
-					final moduleName = staticImportByIdent.get(name);
+					final moduleName = staticImportModule(name);
 					moduleName + "." + ocamlValueIdent(name);
 				} else if (isUpperStart(name)) {
 					// Stage 3 bring-up: a bare uppercase identifier is almost always an enum constructor
@@ -1164,7 +1268,7 @@ class EmitterStage {
 			case EThis:
 				// Stage 3 full-body bring-up: instance methods bind an explicit `this` parameter.
 				// If we are outside that context, conservatively collapse to poison.
-				(tyByIdent != null && tyByIdent.get("this") != null) ? "this_" : "(Obj.magic 0)";
+				hasThisBinding() ? "this_" : "(Obj.magic 0)";
 			case ESuper:
 				// Stage 3 bring-up: no class hierarchy semantics yet.
 				"(Obj.magic 0)";
@@ -1329,12 +1433,12 @@ class EmitterStage {
 					// Example:
 					// - `package runci.targets; ... Linux.requireAptPackages(...)` resolves to `runci.Linux`
 					//   even without an explicit import.
-					if (moduleNameByPkgAndClass != null) {
+					if (moduleNameByPkgAndClassRaw != null) {
 						final raw = parts.join(".");
 						var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
 						while (true) {
 							final key = cur + ":" + raw;
-							final local = moduleNameByPkgAndClass.get(key);
+							final local = moduleNameForKey(key);
 							if (local != null && local.length > 0) {
 								modName = local;
 								break;
@@ -1409,15 +1513,15 @@ class EmitterStage {
 				// append `(Obj.magic 0)` for any missing arguments when the callee is a known in-module
 				// identifier and the call provides fewer args than the declaration.
 				final missing = switch (callee) {
-					case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
-						final expectedRaw = arityByIdent.get(name);
+					case EIdent(name) if (hasArity(name)):
+						final expectedRaw = arityFor(name);
 						final isInstance = hasCurrentInstanceMethod(name);
-						final callerHasThis = (tyByIdent != null && tyByIdent.get("this") != null);
+						final callerHasThis = hasThisBinding();
 						final receiverIsForwarded = isInstance && args.length >= expectedRaw;
 						final expected = (isInstance && callerHasThis && !receiverIsForwarded) ? (expectedRaw - 1) : expectedRaw;
 						expected > args.length ? (expected - args.length) : 0;
-					case EField(EThis, name) if (arityByIdent != null && arityByIdent.exists(name)):
-						final expectedRaw = arityByIdent.get(name);
+					case EField(EThis, name) if (hasArity(name)):
+						final expectedRaw = arityFor(name);
 						final receiverIsForwarded = args.length >= expectedRaw;
 						final expected = receiverIsForwarded ? expectedRaw : (expectedRaw - 1);
 						expected > args.length ? (expected - args.length) : 0;
@@ -1845,7 +1949,7 @@ class EmitterStage {
 				// - the member is known as an instance method in the current module, and
 				// - the receiver is not a type-path/static reference.
 				switch (callee) {
-					case EField(obj, field) if (arityByIdent != null && arityByIdent.exists(field) && hasCurrentInstanceMethod(field) && !isTypePathExpr(obj)):
+					case EField(obj, field) if (hasArity(field) && hasCurrentInstanceMethod(field) && !isTypePathExpr(obj)):
 						final forwarded = new Array<HxExpr>();
 						forwarded.push(obj);
 						for (a in args)
@@ -1864,8 +1968,8 @@ class EmitterStage {
 				};
 
 				final receiverAlreadyForwarded = if (instanceCallName != null && args.length > 0) {
-					if (arityByIdent != null && arityByIdent.exists(instanceCallName)) {
-						args.length >= arityByIdent.get(instanceCallName);
+					if (hasArity(instanceCallName)) {
+						args.length >= arityFor(instanceCallName);
 					} else {
 						// Fallback for bring-up paths where typed arity is unavailable:
 						// if the first argument looks like an object receiver and at least one
@@ -1886,7 +1990,7 @@ class EmitterStage {
 				final c = if (instanceCallName != null) {
 					if (receiverAlreadyForwarded) {
 						ocamlValueIdent(instanceCallName);
-					} else if (tyByIdent != null && tyByIdent.get("this") != null) {
+					} else if (hasThisBinding()) {
 						ocamlValueIdent(instanceCallName) + " (this_)";
 					} else {
 						ocamlValueIdent(instanceCallName);
@@ -1917,7 +2021,7 @@ class EmitterStage {
 				if (c == "(Obj.magic 0)") {
 					"(Obj.magic 0)";
 				} else {
-					final sig = (callSigByCallee == null) ? null : callSigByCallee.get(c);
+					final sig = callSigFor(c);
 
 					// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
 					//
@@ -1947,7 +2051,7 @@ class EmitterStage {
 					// Rule
 					// - When the callee is an unqualified in-module identifier and we have a recorded arity,
 					//   collapse over-applications to bring-up poison (unless we know it is a rest-arg call).
-					if (arityByIdent != null && arityByIdent.exists(c) && args.length > arityByIdent.get(c)) {
+					if (hasArity(c) && args.length > arityFor(c)) {
 						if (sig == null || !sig.hasRest)
 							return "(Obj.magic 0)";
 					}
@@ -2120,12 +2224,12 @@ class EmitterStage {
 						} else if (renderedArgs.length == 0) {
 							var appendUnit = true;
 							switch (callee) {
-								case EIdent(name) if (arityByIdent != null && arityByIdent.exists(name)):
-									if (hasCurrentInstanceMethod(name) && tyByIdent != null && tyByIdent.get("this") != null && arityByIdent.get(name) <= 1) {
+								case EIdent(name) if (hasArity(name)):
+									if (hasCurrentInstanceMethod(name) && hasThisBinding() && arityFor(name) <= 1) {
 										appendUnit = false;
 									}
-								case EField(EThis, name) if (arityByIdent != null && arityByIdent.exists(name)):
-									if (arityByIdent.get(name) <= 1) appendUnit = false;
+								case EField(EThis, name) if (hasArity(name)):
+									if (arityFor(name) <= 1) appendUnit = false;
 								case _:
 							}
 							final renderedCall = appendUnit ? (c + " ()") : c;
@@ -2198,7 +2302,7 @@ class EmitterStage {
 						case EUnop("-", inner):
 							// Promote negative int literals/expressions to float too.
 							"(-.(" + exprToOcamlAsFloat(inner) + "))";
-						case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
+						case EIdent(name) if (tyForIdent(name) == "Int"):
 							"float_of_int " + readIdent(name);
 						case EField(_obj, "length"):
 							"float_of_int (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass) + ")";
@@ -2385,7 +2489,7 @@ class EmitterStage {
 							case PBind(name):
 								extendTyByIdent(tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case _:
-								tyByIdent;
+								extendTyByIdentMany(tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
 						final body = exprToOcaml(c.expr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
@@ -2485,6 +2589,29 @@ class EmitterStage {
 	static function returnExprToOcaml(expr:HxExpr, allowedValueIdents:Map<String, Bool>, ?expectedReturnType:TyType, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
+		final tyByIdentRaw:Dynamic = tyByIdent;
+		final staticImportByIdentRaw:Dynamic = staticImportByIdent;
+
+		inline function hasTyIdent(name:String):Bool {
+			return mapGetRaw(tyByIdentRaw, name) != null;
+		}
+
+		inline function hasThisBinding():Bool {
+			return hasTyIdent("this");
+		}
+
+		inline function hasStaticImport(name:String):Bool {
+			return mapGetRaw(staticImportByIdentRaw, name) != null;
+		}
+
+		inline function tyForIdent(name:String):String {
+			final resolved = mapGetRaw(tyByIdentRaw, name);
+			if (resolved == null)
+				return "";
+			final t:TyType = cast resolved;
+			return t == null ? "" : t.toString();
+		}
+
 		// Stage 3 bring-up: if we couldn't parse/type an expression, keep compilation moving.
 		//
 		// `Obj.magic` is a deliberate bootstrap escape hatch:
@@ -2502,7 +2629,7 @@ class EmitterStage {
 					false;
 				case EThis:
 					// Instance context only: static functions still collapse `this` to poison.
-					(tyByIdent == null || tyByIdent.get("this") == null);
+					!hasThisBinding();
 				case ESuper:
 					true;
 				case ENew(typePath, args):
@@ -2570,12 +2697,12 @@ class EmitterStage {
 						// Bootstrap convenience: allow emitting `trace(...)` in full-body mode so we can
 						// observe that generated OCaml actually executes.
 						false;
-					} else if (tyByIdent != null && tyByIdent.get(name) != null) {
+					} else if (hasTyIdent(name)) {
 						// Parameters and bound locals are safe to reference.
 						false;
 					} else if (allowedValueIdents != null && allowedValueIdents.get(name) == true) {
 						false;
-					} else if (staticImportByIdent != null && staticImportByIdent.get(name) != null) {
+					} else if (hasStaticImport(name)) {
 						// Stage 3 bring-up: support `import Foo.Bar.*` (static wildcard imports) by allowing
 						// the identifier to survive poison detection. The actual qualification happens in
 						// `exprToOcaml`.
@@ -2684,7 +2811,7 @@ class EmitterStage {
 				return switch (e) {
 					case EInt(v):
 						"float_of_int " + Std.string(v);
-					case EIdent(name) if (tyByIdent != null && tyByIdent.get(name) != null && tyByIdent.get(name).toString() == "Int"):
+					case EIdent(name) if (tyForIdent(name) == "Int"):
 						"float_of_int " + ocamlReadValueIdent(name);
 					case EField(_, field) if (field == "iNF" || field == "INF" || field == "inf" || field == "nAN" || field == "NAN" || field == "NaN"):
 						"(Obj.magic (" + exprToOcaml(e, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -2956,16 +3083,18 @@ class EmitterStage {
 		}
 	}
 
-	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Map<String, Int>,
-			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
-			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>, ?localTypeHints:Map<String, TyType>,
-			?fnReturnTypes:Map<String, TyType>):String {
+	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Dynamic, ?tyByIdent:Dynamic,
+			?staticImportByIdent:Dynamic, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Dynamic, ?callSigByCallee:Dynamic, ?localTypeHints:Dynamic,
+			?fnReturnTypes:Dynamic):String {
 		if (stmts == null || stmts.length == 0)
 			return "()";
 
+		final localTypeHintsMap:Dynamic = localTypeHints;
+		final fnReturnTypesMap:Dynamic = fnReturnTypes;
+
 		final prevMutableLocalRefNames = currentMutableLocalRefNames == null ? [] : currentMutableLocalRefNames.copy();
 
-		function mergeMutableLocalRefNames(base:Array<String>, local:Null<Map<String, Bool>>):Array<String> {
+		function mergeMutableLocalRefNames(base:Array<String>, local:Dynamic):Array<String> {
 			final out:Array<String> = base == null ? [] : base.copy();
 			function hasName(name:String):Bool {
 				for (n in out)
@@ -2973,9 +3102,10 @@ class EmitterStage {
 						return true;
 				return false;
 			}
-			if (local != null)
-				for (k in local.keys())
-					if (local.get(k) == true && !hasName(k))
+			final localKeys = mapKeysRaw(local);
+			if (localKeys != null)
+				for (k in localKeys)
+					if (mapGetRaw(local, k) == true && !hasName(k))
 						out.push(k);
 			return out;
 		}
@@ -3014,9 +3144,13 @@ class EmitterStage {
 		// - Even if the typer can't infer `a` from the call site, we can approximate it
 		//   from the known return type of `foo` in the same module.
 		final localHints:Map<String, TyType> = new Map();
-		if (localTypeHints != null)
-			for (k in localTypeHints.keys())
-				localHints.set(k, localTypeHints.get(k));
+		final localHintKeys = mapKeysRaw(localTypeHintsMap);
+		if (localHintKeys != null)
+			for (k in localHintKeys) {
+				final hint = mapGetRaw(localTypeHintsMap, k);
+				if (hint != null)
+					localHints.set(k, cast hint);
+			}
 
 		inline function isTyNamed(t:Null<TyType>, expected:String):Bool {
 			if (t == null)
@@ -3108,8 +3242,8 @@ class EmitterStage {
 					final yielded = inferInitType(yieldExpr, name, iterElemTy);
 					final elemTy = yielded.isUnknown() ? iterElemTy : yielded;
 					elemTy.isUnknown() ? TyType.fromHintText("Array") : TyType.fromHintText("Array<" + elemTy.toString() + ">");
-				case ECall(EIdent(fn), _args) if (fnReturnTypes != null && fnReturnTypes.get(fn) != null):
-					fnReturnTypes.get(fn);
+				case ECall(EIdent(fn), _args) if (mapGetRaw(fnReturnTypesMap, fn) != null):
+					cast mapGetRaw(fnReturnTypesMap, fn);
 				case _:
 					TyType.unknown();
 			}
@@ -3182,22 +3316,26 @@ class EmitterStage {
 			return before;
 		}
 
-		function extendTyWithLocals(base:Null<Map<String, TyType>>, locals:Null<Map<String, Bool>>):Map<String, TyType> {
-			if (locals == null)
-				return base == null ? new Map() : base;
-			var any = false;
-			for (_k in locals.keys()) {
-				any = true;
-				break;
-			}
-			if (!any)
-				return base == null ? new Map() : base;
-
+		function extendTyWithLocals(base:Dynamic, locals:Dynamic):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			if (base != null)
-				for (k in base.keys())
-					out.set(k, base.get(k));
-			for (name in locals.keys()) {
+			final baseKeys = mapKeysRaw(base);
+			if (baseKeys != null)
+				for (k in baseKeys) {
+					final existingBase = mapGetRaw(base, k);
+					if (existingBase != null)
+						out.set(k, cast existingBase);
+				}
+
+			final localNames = new Array<String>();
+			final localKeys = mapKeysRaw(locals);
+			if (localKeys != null)
+				for (name in localKeys)
+					localNames.push(name);
+
+			if (localNames.length == 0)
+				return out;
+
+			for (name in localNames) {
 				final hinted = localHints.get(name);
 				final existing = out.get(name);
 				if (existing == null) {
@@ -3212,12 +3350,28 @@ class EmitterStage {
 			return out;
 		}
 
-		function extendTyByIdentLocal(ty:Null<Map<String, TyType>>, name:String, t:TyType):Dynamic {
+		function extendTyByIdentLocal(ty:Dynamic, name:String, t:TyType):Dynamic {
 			final out:Map<String, TyType> = new Map();
-			if (ty != null)
-				for (k in ty.keys())
-					out.set(k, ty.get(k));
+			final keys = mapKeysRaw(ty);
+			if (keys != null)
+				for (k in keys) {
+					final existing = mapGetRaw(ty, k);
+					if (existing != null)
+						out.set(k, cast existing);
+				}
 			out.set(name, t);
+			return cast out;
+		}
+
+		function cloneTyCtxLocal(ty:Dynamic):Dynamic {
+			final out:Map<String, TyType> = new Map();
+			final keys = mapKeysRaw(ty);
+			if (keys != null)
+				for (k in keys) {
+					final existing = mapGetRaw(ty, k);
+					if (existing != null)
+						out.set(k, cast existing);
+				}
 			return cast out;
 		}
 
@@ -3269,6 +3423,11 @@ class EmitterStage {
 				return null;
 			final typed:Map<String, TyType> = cast value;
 			return typed;
+		}
+
+		inline function tyCtxGet(value:Dynamic, name:String):Null<TyType> {
+			final resolved = mapGetRaw(value, name);
+			return resolved == null ? null : cast resolved;
 		}
 
 		function condToOcamlBool(e:HxExpr, tyCtxRaw:Dynamic):String {
@@ -3541,7 +3700,7 @@ class EmitterStage {
 								case PBind(name):
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case _:
-									tyCtx;
+									cloneTyCtxLocal(tyCtx);
 							};
 							final bodyUnit = stmtToUnit(c.body, cast caseTy);
 							final thenUnit = switch (c.pattern) {
@@ -3595,12 +3754,13 @@ class EmitterStage {
 					"()";
 				case SForIn(name, iterable, body, _pos):
 					final ident = ocamlValueIdent(name);
-					final defaultLoopTy = (tyCtx != null && tyCtx.get(name) != null) ? tyCtx.get(name) : ((localHints.get(name) != null) ? localHints.get(name) : TyType.fromHintText("Dynamic"));
+					final defaultLoopTy = (tyCtxGet(tyCtx,
+						name) != null) ? tyCtxGet(tyCtx, name) : ((localHints.get(name) != null) ? localHints.get(name) : TyType.fromHintText("Dynamic"));
 					final loopVarTy = switch (iterable) {
 						case ERange(_, _):
 							TyType.fromHintText("Int");
 						case EIdent(iterName):
-							final iterTy = (tyCtx != null && tyCtx.get(iterName) != null) ? tyCtx.get(iterName) : localHints.get(iterName);
+							final iterTy = (tyCtxGet(tyCtx, iterName) != null) ? tyCtxGet(tyCtx, iterName) : localHints.get(iterName);
 							final inferredElem = arrayElemTypeFromTy(iterTy);
 							if (!inferredElem.isUnknown()) {
 								inferredElem;
@@ -4507,7 +4667,7 @@ class EmitterStage {
 			/**
 				Best-effort expression type inference for static-field initializers.
 			**/
-			function inferExprTypeForStaticInit(expr:Null<HxExpr>, knownByIdent:Null<Map<String, TyType>>):TyType {
+			function inferExprTypeForStaticInit(expr:Null<HxExpr>, knownByIdent:Map<String, TyType>):TyType {
 				inline function inferStaticAtom(e:Null<HxExpr>):TyType {
 					if (e == null)
 						return TyType.unknown();
@@ -4521,7 +4681,7 @@ class EmitterStage {
 						case EBool(_):
 							TyType.fromHintText("Bool");
 						case EIdent(name):
-							final t = knownByIdent == null ? null : knownByIdent.get(name);
+							final t = knownByIdent.get(name);
 							t == null ? TyType.unknown() : t;
 						case EArrayDecl(_), EArrayComprehension(_, _, _):
 							TyType.fromHintText("Array");
@@ -4541,7 +4701,7 @@ class EmitterStage {
 					case EBool(_):
 						TyType.fromHintText("Bool");
 					case EIdent(name):
-						final t = knownByIdent == null ? null : knownByIdent.get(name);
+						final t = knownByIdent.get(name);
 						t == null ? TyType.unknown() : t;
 					case ETernary(_cond, thenExpr, elseExpr):
 						final tt = inferStaticAtom(thenExpr);
@@ -4788,10 +4948,13 @@ class EmitterStage {
 						if (importModName.length == 0)
 							continue;
 
-						final members = staticMembersByModule.get(importModName);
-						if (members == null)
+						final membersRaw:Dynamic = cast staticMembersByModule.get(importModName);
+						if (membersRaw == null)
 							continue;
-						for (name in members.keys()) {
+						final memberKeys = mapKeysRaw(membersRaw);
+						if (memberKeys == null)
+							continue;
+						for (name in memberKeys) {
 							if (!staticImportByIdent.exists(name))
 								staticImportByIdent.set(name, importModName);
 						}
@@ -5003,10 +5166,13 @@ class EmitterStage {
 						final keys = [for (k in preludeFnNames.keys()) k];
 						for (nameRaw in keys) {
 							analyzeFn(nameRaw);
-							final calls = fnCallsByName.get(nameRaw);
-							if (calls == null)
+							final callsRaw:Dynamic = cast fnCallsByName.get(nameRaw);
+							if (callsRaw == null)
 								continue;
-							for (callee in calls.keys()) {
+							final callKeys = mapKeysRaw(callsRaw);
+							if (callKeys == null)
+								continue;
+							for (callee in callKeys) {
 								if (!fnNames.exists(callee))
 									continue;
 								if (callee == "load")

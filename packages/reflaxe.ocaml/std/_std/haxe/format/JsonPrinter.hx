@@ -65,8 +65,7 @@ class JsonPrinter {
 			case TObject:
 				writeObject(resolved, Reflect.fields(resolved));
 			case TInt:
-				final intValue = Std.parseInt(Std.string(resolved));
-				buffer.add(Std.string(intValue == null ? 0 : intValue));
+				buffer.add(Std.string(resolved));
 			case TFloat:
 				final floatValue = Std.parseFloat(Std.string(resolved));
 				buffer.add(Math.isFinite(floatValue) ? Std.string(floatValue) : "null");
