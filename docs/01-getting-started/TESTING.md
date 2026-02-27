@@ -248,6 +248,7 @@ Notes:
   - `Plugin matrix (strict)` job in `.github/workflows/ci.yml` runs `npm run test:plugins:strict-matrix`
     on every push/PR:
     - native backend plugin build smoke (`npm run test:hxhx:native-plugin-build-smoke`) producing native plugin artifact (`.cmxs`/`.cma`) + manifest
+    - plugin init scaffold smoke (`npm run test:hxhx:plugin-init-scaffold-smoke`) proving one-command generated scaffolds are buildable via `build-backend-plugin.sh`
     - native backend plugin runtime smoke (`npm run test:hxhx:native-plugin-runtime-smoke`) for load + emit + run + negative diagnostics
       (required in strict plugin matrix; runs `.cma` artifact when `HXHX_BIN` is bytecode and `.cmxs` when native)
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)

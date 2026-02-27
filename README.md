@@ -137,6 +137,12 @@ npm run test:upstream:replacement-ready:strict
 
 # Strict plugin matrix (macro libs + eval.vm API smoke + Stage3 plugin fixture + native runtime smoke):
 HXHX_PLUGIN_MATRIX_STRICT=1 npm run test:plugins:strict-matrix
+
+# Generate a promotion-ready plugin scaffold:
+bash scripts/hxhx/plugin-init.sh \
+  --out-dir .tmp/promotion-demo \
+  --plugin-id demo.native.plugin \
+  --target-id js-native
 ```
 
 ## Environment setup
@@ -190,6 +196,7 @@ For full usage and mainstream Haxe integration, see
 - **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
 - **Gate M7**: curated replacement-ready bundle (`fast|full`), with weekly strict/full CI.
 - **Plugin matrix (strict)**: macro-library compatibility + eval.vm plugin API smoke + Stage3 plugin fixture checks.
+- **Plugin matrix (strict)** also validates generated promotion scaffold buildability.
 - Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
   [Testing command catalog](docs/01-getting-started/TESTING.md).
 

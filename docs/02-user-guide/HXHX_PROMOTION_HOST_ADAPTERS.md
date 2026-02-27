@@ -12,6 +12,15 @@ Compatibility target:
 - workflow/contract compatibility (Level 1)
 - **not** shared cross-host binary compatibility (a single `.cmxs` is not expected to run in both hosts)
 
+Scaffold entrypoint:
+
+```bash
+bash scripts/hxhx/plugin-init.sh \
+  --out-dir .tmp/promotion-demo \
+  --plugin-id demo.native.plugin \
+  --target-id js-native
+```
+
 ## Hard-cutover naming contract
 
 Generated promotion scaffolds should use this layout and names:
