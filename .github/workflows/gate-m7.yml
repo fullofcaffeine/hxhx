@@ -114,6 +114,7 @@ jobs:
         env:
           HXHX_M7_PROFILE: ${{ inputs.profile || 'fast' }}
           HXHX_M7_STRICT: ${{ inputs.strict && '1' || '0' }}
+          HXHX_FORBID_STAGE0: "0"
           HXHX_M7_REQUIRE_PLUGIN_MATRIX: "1"
           HXHX_GATE3_TARGET_TIMEOUT_SEC: "3600"
           HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS: "1800"
@@ -125,10 +126,16 @@ jobs:
           fi
           export HXHX_M7_PROFILE
           export HXHX_M7_STRICT
+          if [ "${HXHX_M7_STRICT}" = "1" ]; then
+            export HXHX_FORBID_STAGE0="1"
+          else
+            unset HXHX_FORBID_STAGE0
+          fi
           mkdir -p .artifacts
           echo "event=${GITHUB_EVENT_NAME}"
           echo "HXHX_M7_PROFILE=${HXHX_M7_PROFILE}"
           echo "HXHX_M7_STRICT=${HXHX_M7_STRICT}"
+          echo "HXHX_FORBID_STAGE0=${HXHX_FORBID_STAGE0:-0}"
           npm run -s test:upstream:replacement-ready 2>&1 | tee .artifacts/gate-m7.log
 
       - name: Upload Gate M7 logs
