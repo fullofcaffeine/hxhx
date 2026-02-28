@@ -15,8 +15,8 @@ This plan defines how we extract OCaml’s stdlib provenance/boundary guardrails
 - Boundary guard: `scripts/ci/upstream-stdlib-boundary-check.js`
 - Ledger guard: `scripts/ci/stdlib-provenance-ledger-check.js`
 - Tier allowlist guard: `scripts/ci/portable-stdlib-tier-allowlist-check.js`
-- Baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
-- Tier allowlist manifest: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
+- Baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
+- Tier allowlist manifest: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_HAXE_4_3_7.json`
 
 ## Target reusable artifacts (`reflaxe.family.std`)
 

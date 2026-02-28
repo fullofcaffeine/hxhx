@@ -87,8 +87,8 @@ function main() {
 	}
 
 	const repoRoot = path.resolve(__dirname, '..', '..')
-	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json')
-	const allowlistPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json')
+	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json')
+	const allowlistPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_ALLOWLIST_HAXE_4_3_7.json')
 	const schemaPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json')
 	const schemaRef = 'docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json'
 
@@ -117,8 +117,8 @@ function main() {
 	if (allowlist.haxeVersion !== baseline.haxeVersion) {
 		fail(`allowlist haxeVersion (${allowlist.haxeVersion}) must match baseline (${baseline.haxeVersion})`)
 	}
-	if (allowlist.baselineRef !== 'docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json') {
-		fail(`allowlist baselineRef must point to docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`)
+	if (allowlist.baselineRef !== 'docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json') {
+		fail(`allowlist baselineRef must point to docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`)
 	}
 	if (allowlist.schemaRef !== schemaRef) {
 		fail(`allowlist schemaRef must point to ${schemaRef}`)

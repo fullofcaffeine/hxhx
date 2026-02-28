@@ -57,8 +57,8 @@ function moduleFromStdOverridePath(stdRoot, absolutePath) {
 
 function main() {
 	const repoRoot = path.resolve(__dirname, '..', '..')
-	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json')
-	const evidencePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json')
+	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json')
+	const evidencePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json')
 	const stdOverrideRoot = path.join(repoRoot, 'packages', 'reflaxe.ocaml', 'std', '_std')
 	const outputPath = path.join(repoRoot, 'docs', '02-user-guide', 'STDLIB_PORTABLE_PARITY_MATRIX.md')
 
@@ -178,8 +178,8 @@ function main() {
 		'# Portable Stdlib Parity Matrix (OCaml, Haxe 4.3.7 baseline)',
 		'',
 		'Generated from:',
-		`- \`docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json\``,
-		`- \`docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json\``,
+		`- \`docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json\``,
+		`- \`docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json\``,
 		`- tracked overrides under \`packages/reflaxe.ocaml/std/_std/\``,
 		'',
 		`Summary: \`${modules.length}\` modules total, \`${counts.override}\` overrides, \`${counts.runtime_backed}\` runtime-backed, \`${counts.lowering_intrinsic}\` lowering-intrinsic, \`${counts.passthrough_verified}\` passthrough-verified, \`${counts.passthrough_unverified}\` passthrough-unverified.`,

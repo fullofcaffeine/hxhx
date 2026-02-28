@@ -13,12 +13,12 @@ needing OCaml knowledge, while still producing idiomatic OCaml output.
 
 Portable stdlib parity is tracked against the OCaml portable baseline for Haxe `4.3.7`:
 
-- baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+- baseline manifest: `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
 - family allowlist contract schema: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_SCHEMA_V1.json`
 - family allowlist contract guide + mapping: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_FAMILY_V1.md`
-- tiered allowlist contract: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json`
+- tiered allowlist contract: `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_HAXE_4_3_7.json`
 - generated parity matrix: `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
-- generated closure worklist: `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json`
+- generated closure worklist: `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_HAXE_4_3_7.json`
 
 Closure-tracker workflow (M16.9):
 
@@ -45,7 +45,7 @@ Parity matrix taxonomy (explicit, machine-comparable):
 
 Evidence source for non-override statuses:
 
-- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json`
+- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json`
 
 ## Current priority modules
 

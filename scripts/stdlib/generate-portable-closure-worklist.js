@@ -100,9 +100,9 @@ function buildBuckets(missingModules, chunkSize) {
 
 function main() {
 	const repoRoot = path.resolve(__dirname, '..', '..')
-	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json')
+	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json')
 	const matrixPath = path.join(repoRoot, 'docs', '02-user-guide', 'STDLIB_PORTABLE_PARITY_MATRIX.md')
-	const outputPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json')
+	const outputPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_CLOSURE_WORKLIST_HAXE_4_3_7.json')
 
 	if (!fs.existsSync(baselinePath)) {
 		fail(`missing baseline file: ${baselinePath}`)
@@ -138,7 +138,7 @@ function main() {
 		schemaVersion: 1,
 		name: 'ocaml_portable_closure_worklist',
 		haxeVersion: baseline.haxeVersion,
-		baselineRef: 'docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json',
+		baselineRef: 'docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json',
 		matrixRef: 'docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md',
 		parentIssueId: 'haxe.ocaml-yfh.5',
 		statusFilter: ['passthrough_or_unverified', 'passthrough_unverified'],

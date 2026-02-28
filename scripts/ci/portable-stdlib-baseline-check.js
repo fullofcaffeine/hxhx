@@ -43,7 +43,7 @@ function stableSorted(values) {
 
 function main() {
 	const repoRoot = path.resolve(__dirname, '..', '..')
-	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json')
+	const baselinePath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json')
 	const tempPath = path.join(repoRoot, '.tmp', 'stdlib-baseline-generated.json')
 	const generatorPath = path.join(repoRoot, 'scripts', 'stdlib', 'generate-portable-baseline-ocaml.js')
 

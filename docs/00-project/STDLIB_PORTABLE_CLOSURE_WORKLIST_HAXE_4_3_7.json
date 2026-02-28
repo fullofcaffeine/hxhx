@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "ocaml_portable_closure_worklist",
   "haxeVersion": "4.3.7",
-  "baselineRef": "docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json",
+  "baselineRef": "docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json",
   "matrixRef": "docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md",
   "parentIssueId": "haxe.ocaml-yfh.5",
   "statusFilter": [

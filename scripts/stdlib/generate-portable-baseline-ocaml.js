@@ -79,7 +79,7 @@ function main() {
 	]
 
 	const modules = buildPortableModuleList(stdDir, excludedNamespaces)
-	const outputPath = path.join(root, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json')
+	const outputPath = path.join(root, 'docs', '00-project', 'STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json')
 	const payload = {
 		schemaVersion: 1,
 		name: 'ocaml_portable_stdlib_baseline',

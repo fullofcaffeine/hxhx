@@ -45,7 +45,7 @@ function buildDescription(bucket) {
 function main() {
 	const applyChanges = process.argv.includes('--apply')
 	const repoRoot = path.resolve(__dirname, '..', '..')
-	const worklistPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json')
+	const worklistPath = path.join(repoRoot, 'docs', '00-project', 'STDLIB_PORTABLE_CLOSURE_WORKLIST_HAXE_4_3_7.json')
 	const parentIssueId = 'haxe.ocaml-yfh.5'
 
 	if (!fs.existsSync(worklistPath)) {

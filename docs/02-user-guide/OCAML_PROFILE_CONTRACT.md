@@ -218,5 +218,5 @@ Debug fallback define (non-default, diagnostics only):
 - Runtime capability matrix (`portable` vs `metal`): `docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md`
 - Portable/OCaml-native compatibility map: `docs/02-user-guide/COMPATIBILITY_MATRIX.md`
 - Portable stdlib parity baseline and matrix:
-  - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
+  - `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`

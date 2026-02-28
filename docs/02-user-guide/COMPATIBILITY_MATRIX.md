@@ -60,9 +60,9 @@ Legend:
 This table is “what we validate continuously” for the current portable surface.
 Full portable stdlib parity is tracked against:
 
-- `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
-- `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json` (tiered gate scope)
-- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json` (runtime/lowering/passthrough evidence)
+- `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
+- `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_HAXE_4_3_7.json` (tiered gate scope)
+- `docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json` (runtime/lowering/passthrough evidence)
 - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
 Matrix status taxonomy:

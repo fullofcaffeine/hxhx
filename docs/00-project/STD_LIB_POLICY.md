@@ -8,8 +8,8 @@ This document defines how `hxhx`/`reflaxe.ocaml` use upstream Haxe stdlib code w
 - **Use case:** stdlib compatibility for supported targets.
 - **Non-goal:** importing upstream compiler implementation details.
 - **Portable parity baseline contract:**
-  - `docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json`
-  - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_OCAML_4_3_7.json` (tiered PR/nightly scope)
+  - `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
+  - `docs/00-project/STDLIB_PORTABLE_ALLOWLIST_HAXE_4_3_7.json` (tiered PR/nightly scope)
   - generated from upstream `vendor/haxe/std/**` using platform-agnostic + `sys` policy.
 
 ## Allowed upstream reuse
