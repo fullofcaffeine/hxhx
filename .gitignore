@@ -62,6 +62,8 @@ npm-debug.log*
 # Optional vendored upstream checkout (see scripts/vendor/fetch-haxe-upstream.sh)
 vendor/haxe
 vendor/haxe/
+vendor/reflaxe-elixir
+vendor/reflaxe-elixir/
 
 # OS/editor
 .DS_Store

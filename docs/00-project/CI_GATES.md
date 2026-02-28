@@ -52,5 +52,6 @@ Expected strict markers in logs:
 | --- | --- | --- | --- |
 | `Perf / HXHX KPI (Report Only)` | `.github/workflows/hxhx-kpi-report.yml` | KPI telemetry/report lane (non-blocking). | **Manual + PR visibility** | `push`, `pull_request`, manual |
 | `Perf / M14 Portable vs Metal (Report Only)` | `.github/workflows/m14-perf-report.yml` | Portable vs metal benchmark reports (non-blocking). | **Manual + PR visibility** | `push`, `pull_request`, manual |
+| `Pilot / Reflaxe.Elixir Todo Promotion` | `.github/workflows/reflaxe-elixir-pilot.yml` | Manual promotion pilot against external todo-app source checkout. | **Manual utility** | manual |
 | `Utility / Bootstrap Regen Benchmark` | `.github/workflows/bootstrap-regen-bench.yml` | Harness benchmark runs for bootstrap regeneration speed. | **Manual utility** | manual |
 | `Release / Semantic Publish` | `.github/workflows/release.yml` | Automated semantic release publication after CI success. | **Release automation** | workflow-run from CI, manual |

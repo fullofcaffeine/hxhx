@@ -68,6 +68,7 @@ bash scripts/hxhx/promote-backend-plugin.sh \
 ```
 
 Read:
+- `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
 - `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md`

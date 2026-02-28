@@ -273,6 +273,10 @@ Notes:
     - macro-library smoke (`reflaxe.ocaml` build fixture + Stage3 `--library` activation from `haxe_libraries/*.hxml`)
     - eval.vm plugin API smoke (`eval.vm.Context.loadPlugin`)
     - Stage3 plugin fixture (`hxhxmacros.PluginFixtureMacros.init()`) with hook/classpath/module emission checks.
+  - external promotion pilot (manual/non-required):
+    - `npm run test:hxhx:reflaxe-elixir-todo-pilot`
+    - fetches external todo-app Haxe sources, promotes a native plugin artifact, and compiles/runs a deterministic marker sample through Stage3 backend selection.
+    - detailed guide: `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
   - `Stage0 Source Smoke` workflow (`.github/workflows/stage0-source-smoke.yml`) separately validates
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=byte`, `HXHX_STAGE0_DISABLE_PREPASSES=1`, and `HXHX_STAGE0_NO_INLINE=1`; the lane enforces `>=8GB` swapfile capacity on ubuntu runners to reduce OOM kills).
