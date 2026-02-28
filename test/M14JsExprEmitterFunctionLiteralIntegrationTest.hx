@@ -33,5 +33,10 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		assertContains(blockBodyJs, "return ", "block-body function literal emits return");
 		assertContains(blockBodyJs, "function(y)", "block-body function literal lowers var binding");
 		assertContains(blockBodyJs, "(x + 1)", "block-body function literal keeps initializer expression");
+
+		final jsLibCtor = HxParser.parseExprText("new js.lib.DataView(new js.lib.ArrayBuffer(8))");
+		final jsLibCtorJs = JsExprEmitter.emit(jsLibCtor, exprScope);
+		assertContains(jsLibCtorJs, "new DataView(", "js.lib.DataView constructor lowers to native DataView");
+		assertContains(jsLibCtorJs, "new ArrayBuffer(8)", "nested js.lib.ArrayBuffer constructor lowers to native ArrayBuffer");
 	}
 }

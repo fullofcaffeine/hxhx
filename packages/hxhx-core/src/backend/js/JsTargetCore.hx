@@ -155,6 +155,8 @@ class JsTargetCore implements ITargetCore {
 			} else {
 				try {
 					JsExprEmitter.emit(init, staticScope.exprScope());
+				} catch (e:String) {
+					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
 				} catch (error:haxe.Exception) {
 					throw error.message + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
 				}
@@ -177,6 +179,8 @@ class JsTargetCore implements ITargetCore {
 			writer.pushIndent();
 			try {
 				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
+			} catch (e:String) {
+				throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
 			} catch (error:haxe.Exception) {
 				throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
 			}

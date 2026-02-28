@@ -310,6 +310,8 @@ and emitNew = fun typePath args scope -> try let __fallback_result_65 = let _g =
       ))
       | "Bytes" | "haxe.io.Bytes" -> ignore (let ctor = (resolveIdent (typePath : string) scope : string) in raise (HxRuntime.Hx_return (Obj.repr (((("new " ^ HxString.toStdString ctor) ^ "(") ^ HxString.toStdString argsJs) ^ ")"))))
       | _ -> ignore ());
+    ignore (if scope != Obj.magic (HxRuntime.hx_null) then ignore (let classCtor = (Obj.obj (HxAnon.get scope "resolveClassRef") (typePath : string) : string) in if classCtor != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (((("new " ^ HxString.toStdString classCtor) ^ "(") ^ HxString.toStdString argsJs) ^ ")" : string))) else ()) else ());
+    ignore (if StringTools.startsWith (typePath : string) ("js.lib." : string) then ignore (let nativeCtor = (HxString.substr typePath (HxString.length "js.lib.") (-1) : string) in if nativeCtor != Obj.magic (HxRuntime.hx_null) && HxString.length nativeCtor > 0 then raise (HxRuntime.Hx_return (Obj.repr (((("new " ^ HxString.toStdString nativeCtor) ^ "(") ^ HxString.toStdString argsJs) ^ ")" : string))) else ()) else ());
     ignore (unsupported ("ENew" : string) (typePath : string));
     ""
   )

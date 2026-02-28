@@ -538,28 +538,41 @@ class EmitterStage {
 
 		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
 	**/
-	static inline function mapGetRaw<T>(mapLike:Null<Map<String, T>>, key:String):Null<T> {
+	static inline function mapGetRaw<T>(mapLike:Any, key:String):Null<T> {
 		if (mapLike == null || key == null)
 			return null;
-		return mapLike.get(key);
+		final getFn = Reflect.field(mapLike, "get");
+		if (getFn == null)
+			return null;
+		final resolved:Any = Reflect.callMethod(mapLike, getFn, [key]);
+		return resolved == null ? null : cast resolved;
 	}
 
 	/**
 		Check whether a map-like object has a key, with a fallback to `get(...) != null`.
 	**/
-	static inline function mapHasRaw<T>(mapLike:Null<Map<String, T>>, key:String):Bool {
+	static inline function mapHasRaw<T>(mapLike:Any, key:String):Bool {
 		if (mapLike == null || key == null)
 			return false;
-		return mapLike.exists(key);
+		final existsFn = Reflect.field(mapLike, "exists");
+		if (existsFn != null) {
+			final existsValue:Any = Reflect.callMethod(mapLike, existsFn, [key]);
+			return existsValue == true;
+		}
+		return mapGetRaw(mapLike, key) != null;
 	}
 
 	/**
 		Get a string-key iterator from a map-like object, if available.
 	**/
-	static inline function mapKeysRaw<T>(mapLike:Null<Map<String, T>>):Null<Iterator<String>> {
+	static inline function mapKeysRaw<T>(mapLike:Any):Null<Iterator<String>> {
 		if (mapLike == null)
 			return null;
-		return mapLike.keys();
+		final keysFn = Reflect.field(mapLike, "keys");
+		if (keysFn == null)
+			return null;
+		final iteratorValue:Any = Reflect.callMethod(mapLike, keysFn, []);
+		return iteratorValue == null ? null : cast iteratorValue;
 	}
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,

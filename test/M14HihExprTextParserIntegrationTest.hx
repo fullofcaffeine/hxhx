@@ -38,5 +38,53 @@ class M14HihExprTextParserIntegrationTest {
 			case _:
 				fail("dense block payload should parse as opaque block expression");
 		}
+
+		// Constructor expressions with dotted type paths should stay as ENew nodes.
+		final newExprRaw = "new js.lib.DataView(new js.lib.ArrayBuffer(8))";
+		final newExpr = HxParser.parseExprText(newExprRaw);
+		switch (newExpr) {
+			case ENew(typePath, args):
+				assertTrue(typePath == "js.lib.DataView", "expected outer constructor type path");
+				assertTrue(args.length == 1, "expected one constructor argument");
+				switch (args[0]) {
+					case ENew(innerTypePath, innerArgs):
+						assertTrue(innerTypePath == "js.lib.ArrayBuffer", "expected nested constructor type path");
+						assertTrue(innerArgs.length == 1, "expected nested constructor argument");
+						switch (innerArgs[0]) {
+							case EInt(v):
+								assertTrue(v == 8, "expected nested constructor literal argument");
+							case _:
+								fail("expected nested constructor argument to parse as EInt");
+						}
+					case _:
+						fail("expected nested constructor argument to parse as ENew");
+				}
+			case _:
+				fail("constructor expression should parse as ENew");
+		}
+
+		// Native payloads may compact `new` spacing (`newFoo(...)`); keep constructor parsing resilient.
+		final compactNewExprRaw = "newjs.lib.DataView(newjs.lib.ArrayBuffer(8))";
+		final compactNewExpr = HxParser.parseExprText(compactNewExprRaw);
+		switch (compactNewExpr) {
+			case ENew(typePath, args):
+				assertTrue(typePath == "js.lib.DataView", "expected compact outer constructor type path");
+				assertTrue(args.length == 1, "expected compact constructor argument");
+				switch (args[0]) {
+					case ENew(innerTypePath, innerArgs):
+						assertTrue(innerTypePath == "js.lib.ArrayBuffer", "expected compact nested constructor type path");
+						assertTrue(innerArgs.length == 1, "expected compact nested constructor argument");
+						switch (innerArgs[0]) {
+							case EInt(v):
+								assertTrue(v == 8, "expected compact nested constructor literal argument");
+							case _:
+								fail("expected compact nested constructor argument to parse as EInt");
+						}
+					case _:
+						fail("expected compact nested constructor argument to parse as ENew");
+				}
+			case _:
+				fail("compact constructor expression should parse as ENew");
+		}
 	}
 }

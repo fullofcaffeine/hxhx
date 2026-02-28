@@ -136,12 +136,34 @@ class HxParser {
 		// string and then fails with an unterminated literal on the third quote.
 		if (source == null || source.length == 0)
 			return source;
-		if (source.indexOf('"""') == -1)
+		var normalized = source;
+		if (normalized.indexOf('"""') != -1) {
+			final q = '"';
+			final triple = q + q + q;
+			final escapedQuoteString = q + "\\" + q + q;
+			normalized = StringTools.replace(normalized, triple, escapedQuoteString);
+		}
+		normalized = normalizeDenseKeywordSpacing(normalized);
+		return normalized;
+	}
+
+	/**
+		Repair compacted keyword spacing in native payload expression slices.
+
+		Why
+		- Native payload emitters can compact spaces in expression snippets.
+		- Constructor forms like `new js.lib.DataView(...)` can arrive as
+		  `newjs.lib.DataView(...)`.
+		- Without spacing repair, the lexer reads `newjs` as an identifier and we lose
+		  constructor semantics (`ENew`), which later emits invalid JS (`newjs.*`).
+	**/
+	static function normalizeDenseKeywordSpacing(source:String):String {
+		if (source == null || source.length == 0)
 			return source;
-		final q = '"';
-		final triple = q + q + q;
-		final escapedQuoteString = q + "\\" + q + q;
-		return StringTools.replace(source, triple, escapedQuoteString);
+		final compactNewExpr = ~/(^|[^A-Za-z0-9_])new([A-Za-z_])/g;
+		return compactNewExpr.map(source, function(re:EReg):String {
+			return re.matched(1) + "new " + re.matched(2);
+		});
 	}
 
 	/**

@@ -133,6 +133,18 @@ class JsExprEmitter {
 			case _:
 		}
 
+		if (scope != null) {
+			final classCtor = scope.resolveClassRef(typePath);
+			if (classCtor != null)
+				return "new " + classCtor + "(" + argsJs + ")";
+		}
+
+		if (StringTools.startsWith(typePath, "js.lib.")) {
+			final nativeCtor = typePath.substr("js.lib.".length);
+			if (nativeCtor != null && nativeCtor.length > 0)
+				return "new " + nativeCtor + "(" + argsJs + ")";
+		}
+
 		unsupported("ENew", typePath);
 		return "";
 	}

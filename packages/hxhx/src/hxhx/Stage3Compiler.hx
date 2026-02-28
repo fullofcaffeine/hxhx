@@ -708,13 +708,14 @@ class Stage3Compiler {
 
 	static function collectUnsupportedExprRawInModule(pm:ParsedModule, max:Int):Array<String> {
 		final decl = pm.getDecl();
-		final cls = HxModuleDecl.getMainClass(decl);
 		final out = new Array<String>();
-		for (f in HxClassDecl.getFields(cls))
-			collectUnsupportedExprRawInExpr(HxFieldDecl.getInit(f), out, max);
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			for (s in HxFunctionDecl.getBody(fn))
-				collectUnsupportedExprRawInStmt(s, out, max);
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			for (f in HxClassDecl.getFields(cls))
+				collectUnsupportedExprRawInExpr(HxFieldDecl.getInit(f), out, max);
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				for (s in HxFunctionDecl.getBody(fn))
+					collectUnsupportedExprRawInStmt(s, out, max);
+			}
 		}
 		return out;
 	}
@@ -764,13 +765,14 @@ class Stage3Compiler {
 
 	static function countUnsupportedExprsInModule(pm:ParsedModule):Int {
 		final decl = pm.getDecl();
-		final cls = HxModuleDecl.getMainClass(decl);
 		var c = 0;
-		for (f in HxClassDecl.getFields(cls))
-			c += countUnsupportedExprsInExpr(HxFieldDecl.getInit(f));
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			for (s in HxFunctionDecl.getBody(fn))
-				c += countUnsupportedExprsInStmt(s);
+		for (cls in HxModuleDecl.getClasses(decl)) {
+			for (f in HxClassDecl.getFields(cls))
+				c += countUnsupportedExprsInExpr(HxFieldDecl.getInit(f));
+			for (fn in HxClassDecl.getFunctions(cls)) {
+				for (s in HxFunctionDecl.getBody(fn))
+					c += countUnsupportedExprsInStmt(s);
+			}
 		}
 		return c;
 	}
