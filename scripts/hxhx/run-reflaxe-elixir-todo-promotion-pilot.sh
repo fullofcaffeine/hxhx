@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FETCH_SCRIPT="$ROOT/scripts/vendor/fetch-reflaxe-elixir-upstream.sh"
 PROMOTE_SCRIPT="$ROOT/scripts/hxhx/promote-backend-plugin.sh"
 OCAMLOPT_WRAPPER="$ROOT/scripts/hxhx/ocamlopt-with-threads.sh"
-PILOT_STRICT="${HXHX_PILOT_STRICT:-0}"
+PILOT_STRICT="${HXHX_PILOT_STRICT:-1}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -132,6 +132,7 @@ if [ "$compile_code" -ne 0 ]; then
     echo "pilot_blocker=js-native function-expression lowering is not yet available in this Stage3 lane"
     echo "PILOT_REFLAXE_ELIXIR_TODO:BLOCKED"
     if [ "$PILOT_STRICT" = "1" ]; then
+      echo "pilot_mode=strict (default). Set HXHX_PILOT_STRICT=0 for report-only blocker mode." >&2
       exit 4
     fi
     exit 0

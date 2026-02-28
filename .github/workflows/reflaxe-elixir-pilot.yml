@@ -82,6 +82,7 @@ jobs:
       - name: Run reflaxe.elixir todo-app promotion pilot
         env:
           REFLAXE_ELIXIR_REF: ${{ github.event.inputs.reflaxe_ref || 'main' }}
+          HXHX_PILOT_STRICT: "1"
         run: |
           set -euo pipefail
           echo "REFLAXE_ELIXIR_REF=${REFLAXE_ELIXIR_REF}"

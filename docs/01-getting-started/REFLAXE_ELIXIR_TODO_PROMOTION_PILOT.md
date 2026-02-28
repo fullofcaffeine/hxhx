@@ -27,13 +27,11 @@ Expected terminal markers:
 
 - backend selection marker:
   - `backend_selected_impl=provider/js-native-wrapper`
-- then either:
-  - success markers:
-    - `TODO_PILOT:sum=6`
-    - `pilot_sample_hash=<hash>`
-    - `PILOT_REFLAXE_ELIXIR_TODO:PASS`
-  - or known-blocker marker:
-    - `PILOT_REFLAXE_ELIXIR_TODO:BLOCKED`
+- success markers:
+  - `TODO_PILOT:sum=6`
+  - `pilot_sample_hash=<hash>`
+  - `PILOT_REFLAXE_ELIXIR_TODO:PASS`
+- compile regressions fail by default (`HXHX_PILOT_STRICT=1` default).
 
 ## What the pilot proves
 
@@ -42,7 +40,7 @@ Expected terminal markers:
 - Promotion scaffolding/build/load are stable with a deterministic output check.
 - Stage3 backend selection can be driven by promoted plugin manifest input.
 
-## Known blocker behavior
+## Legacy report-only blocker mode
 
 If Stage3 emits:
 
@@ -53,12 +51,12 @@ the script reports:
 - `pilot_blocker=...`
 - `PILOT_REFLAXE_ELIXIR_TODO:BLOCKED`
 
-and exits successfully by default (manual/report lane behavior).
+and fails by default (`HXHX_PILOT_STRICT=1`).
 
-To enforce hard failure instead:
+To keep report-only behavior for investigation:
 
 ```bash
-HXHX_PILOT_STRICT=1 npm run test:hxhx:reflaxe-elixir-todo-pilot
+HXHX_PILOT_STRICT=0 npm run test:hxhx:reflaxe-elixir-todo-pilot
 ```
 
 ## What the pilot does not prove
