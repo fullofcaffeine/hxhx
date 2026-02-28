@@ -1,4 +1,4 @@
-name: Gate 1 (HXHX)
+name: Gate 1 / Upstream Macro Unit Compatibility
 
 on:
   workflow_dispatch:

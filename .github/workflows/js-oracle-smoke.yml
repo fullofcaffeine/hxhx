@@ -1,4 +1,4 @@
-name: JS Oracle Smoke
+name: Oracle / JS Smoke (Upstream vs HXHX)
 
 on:
   push:

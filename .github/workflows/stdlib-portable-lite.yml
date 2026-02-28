@@ -1,4 +1,4 @@
-name: Stdlib Portable Lite
+name: Stdlib Portable / Tier1
 
 on:
   push:

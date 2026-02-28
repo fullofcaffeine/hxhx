@@ -1,4 +1,4 @@
-name: Gate 2 Lite (HXHX)
+name: Gate 2 Lite / Workloads Smoke
 
 on:
   push:

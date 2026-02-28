@@ -1,4 +1,4 @@
-name: Stage0 Source Smoke
+name: Smoke / Stage0 Source Build
 
 on:
   workflow_dispatch:

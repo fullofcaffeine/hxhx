@@ -1,4 +1,4 @@
-name: M14 Perf (report-only)
+name: Perf / M14 Portable vs Metal (Report Only)
 
 on:
   push:

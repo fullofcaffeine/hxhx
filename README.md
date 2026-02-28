@@ -23,6 +23,7 @@ This repo also contains `reflaxe.ocaml` and native promotion tooling so Reflaxe 
 If you are new, read:
 - `docs/01-getting-started/START_HERE.md`
 - `docs/00-project/GLOSSARY.md`
+- `docs/00-project/CI_GATES.md`
 
 That guide gives a beginner path for:
 1. building/running `hxhx`,
@@ -79,7 +80,7 @@ Current direction: keep target-core logic reusable so promotion is packaging/loa
 - Scoped replacement bundle and stage0-forbidden policy checks are wired and tracked.
 - Native JS preset (`--target js`) exists as a scoped MVP lane with explicit in/out-of-scope matrix:
   - `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
-- Full upstream gates (Gate 1/2/3) run on weekly/manual cadence.
+- Full upstream compatibility gates (Gate 1/2/3) run on weekly/manual cadence (see `docs/00-project/CI_GATES.md`).
 
 ## Command catalog
 

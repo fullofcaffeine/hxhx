@@ -1,4 +1,4 @@
-name: Bootstrap Regen Bench
+name: Utility / Bootstrap Regen Benchmark
 
 on:
   workflow_dispatch:

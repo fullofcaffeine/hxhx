@@ -1,4 +1,4 @@
-name: Gate 1 Lite (HXHX)
+name: Gate 1 Lite / Upstream Macro Unit Smoke
 
 on:
   push:

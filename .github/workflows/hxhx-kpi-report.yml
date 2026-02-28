@@ -1,4 +1,4 @@
-name: HXHX KPI (report-only)
+name: Perf / HXHX KPI (Report Only)
 
 on:
   push:

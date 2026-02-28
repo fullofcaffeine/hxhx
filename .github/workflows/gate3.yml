@@ -1,4 +1,4 @@
-name: Gate 3 (HXHX)
+name: Gate 3 / Upstream Target Matrix
 
 on:
   workflow_dispatch:

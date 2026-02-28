@@ -1,8 +1,8 @@
-name: Release
+name: Release / Semantic Publish
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI / Core PR Checks"]
     types: [completed]
     branches: [master, main]
   workflow_dispatch: {}
@@ -57,4 +57,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
         run: npx semantic-release
-

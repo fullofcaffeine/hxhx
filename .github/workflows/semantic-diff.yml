@@ -1,4 +1,4 @@
-name: Semantic Diff
+name: Stdlib / Semantic Diff
 
 on:
   push:

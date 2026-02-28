@@ -1,4 +1,4 @@
-name: Gate 3 Builtin Target Smoke
+name: Gate 3 Builtin / Native Target Smoke
 
 on:
   push:
@@ -29,7 +29,7 @@ env:
 
 jobs:
   builtin_target_smoke:
-    name: Builtin target smoke (ocaml-stage3 + js-native + JS oracle)
+    name: Builtin target smoke (ocaml + js + JS oracle)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

@@ -1,4 +1,4 @@
-name: CI
+name: CI / Core PR Checks
 
 on:
   push:

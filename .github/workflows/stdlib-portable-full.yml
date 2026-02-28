@@ -1,4 +1,4 @@
-name: Stdlib Portable Full
+name: Stdlib Portable / Full
 
 on:
   workflow_dispatch:
