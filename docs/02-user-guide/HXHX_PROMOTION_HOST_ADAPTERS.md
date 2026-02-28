@@ -99,10 +99,9 @@ Validation and failure semantics are enforced by:
   - duplicate provider type rows: fail fast
   - duplicate `implId` / descriptor conflicts: fail fast
 
-Migration note:
+Manifest kind policy:
 
-- legacy manifest kind `ocaml-cmxs` is accepted temporarily with a deprecation warning.
-- planned hard cutover: remove the `ocaml-cmxs` alias after `v0.16.0`.
+- supported native manifest kind is `ocaml-dynlink` only.
 
 ## Upstream eval host adapter contract
 

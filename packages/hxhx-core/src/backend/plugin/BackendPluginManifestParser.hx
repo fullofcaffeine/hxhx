@@ -26,7 +26,6 @@ private typedef JsonObject = haxe.DynamicAccess<Dynamic>;
 **/
 class BackendPluginManifestParser {
 	public static inline var SCHEMA_VERSION:Int = 1;
-	static var warnedDeprecatedOcamlCmxsKind:Bool = false;
 
 	static inline function normalizeSourceLabel(sourceLabel:String):String {
 		final s = sourceLabel == null ? "" : StringTools.trim(sourceLabel);
@@ -35,13 +34,6 @@ class BackendPluginManifestParser {
 
 	static inline function fail(sourceLabel:String, message:String):Dynamic {
 		throw "invalid backend plugin manifest (" + normalizeSourceLabel(sourceLabel) + "): " + message;
-	}
-
-	static function warnDeprecatedKind(kindValue:String):Void {
-		if (warnedDeprecatedOcamlCmxsKind)
-			return;
-		warnedDeprecatedOcamlCmxsKind = true;
-		Sys.println("warning: backend plugin manifest kind `" + kindValue + "` is deprecated; use `ocaml-dynlink`.");
 	}
 
 	static function requireObject(value:Dynamic, fieldPath:String, sourceLabel:String):JsonObject {
@@ -113,9 +105,6 @@ class BackendPluginManifestParser {
 		return switch (value) {
 			case BackendPluginManifestKind.HaxeProvider: BackendPluginManifestKind.HaxeProvider;
 			case BackendPluginManifestKind.OcamlDynlink: BackendPluginManifestKind.OcamlDynlink;
-			case "ocaml-cmxs":
-				warnDeprecatedKind("ocaml-cmxs");
-				BackendPluginManifestKind.OcamlDynlink;
 			case _:
 				fail(sourceLabel, "unsupported backend kind `" + value + "` (supported: haxe-provider, ocaml-dynlink)");
 		}

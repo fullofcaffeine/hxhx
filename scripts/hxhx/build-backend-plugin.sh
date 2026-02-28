@@ -180,16 +180,11 @@ done
 [ -f "$ABI_FILE" ] || fail "missing ABI constants file: $ABI_FILE"
 
 case "$KIND" in
-  haxe-provider|ocaml-dynlink|ocaml-cmxs) ;;
+  haxe-provider|ocaml-dynlink) ;;
   *)
     fail "--kind must be one of: haxe-provider, ocaml-dynlink"
     ;;
 esac
-
-if [ "$KIND" = "ocaml-cmxs" ]; then
-  echo "build-backend-plugin: warning: --kind ocaml-cmxs is deprecated; use ocaml-dynlink." >&2
-  KIND="ocaml-dynlink"
-fi
 
 safe_token_or_fail "$PLUGIN_ID" "plugin id"
 safe_token_or_fail "$PLUGIN_VERSION" "plugin version"

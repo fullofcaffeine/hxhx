@@ -64,8 +64,8 @@ class M14BackendPluginManifestIntegrationTest {
 		assertTrue(parsedNative.backend.kind == BackendPluginManifestKind.OcamlDynlink, "unexpected native backend kind");
 		final parsedNativeBytecode = BackendPluginManifestParser.parse(manifestJson("ocaml-dynlink", "plugin/backend.cma"), "fixture://valid-native-bytecode");
 		assertTrue(parsedNativeBytecode.backend.kind == BackendPluginManifestKind.OcamlDynlink, "unexpected native bytecode backend kind");
-		final parsedDeprecatedKind = BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cmxs"), "fixture://deprecated-native-kind");
-		assertTrue(parsedDeprecatedKind.backend.kind == BackendPluginManifestKind.OcamlDynlink, "deprecated native kind should normalize to ocaml-dynlink");
+		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cmxs"), "fixture://deprecated-native-kind"),
+			"unsupported backend kind");
 		final parsedWithTrailingWhitespace = BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider") + "\n \t\r",
 			"fixture://valid-trailing-whitespace");
 		assertTrue(parsedWithTrailingWhitespace.pluginId == "fixture.backend.plugin", "unexpected pluginId with trailing whitespace");
