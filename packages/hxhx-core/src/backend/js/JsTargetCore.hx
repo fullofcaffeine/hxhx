@@ -150,7 +150,15 @@ class JsTargetCore implements ITargetCore {
 				continue;
 			final suffix = JsNameMangler.propertySuffix(HxFieldDecl.getName(field));
 			final init = HxFieldDecl.getInit(field);
-			final value = init == null ? "null" : JsExprEmitter.emit(init, staticScope.exprScope());
+			final value = if (init == null) {
+				"null";
+			} else {
+				try {
+					JsExprEmitter.emit(init, staticScope.exprScope());
+				} catch (e:String) {
+					throw e + " in " + unit.fullName + "." + HxFieldDecl.getName(field) + " (static field init)";
+				}
+			};
 			writer.writeln(unit.jsRef + suffix + " = " + value + ";");
 		}
 
@@ -167,7 +175,11 @@ class JsTargetCore implements ITargetCore {
 			final suffix = JsNameMangler.propertySuffix(HxFunctionDecl.getName(fn));
 			writer.writeln(unit.jsRef + suffix + " = function(" + params.join(", ") + ") {");
 			writer.pushIndent();
-			JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
+			try {
+				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
+			} catch (e:String) {
+				throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+			}
 			writer.popIndent();
 			writer.writeln("};");
 		}

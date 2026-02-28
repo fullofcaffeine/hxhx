@@ -499,6 +499,8 @@ class HxParser {
 				} else if (k == KSuper) {
 					bump();
 					ESuper;
+				} else if (k == KFunction) {
+					parseFunctionExpr();
 				} else if (k == KNew) {
 					bump();
 					final typePath = readDottedPath();
@@ -604,6 +606,97 @@ class HxParser {
 				final raw = Std.string(cur.kind);
 				bump();
 				EUnsupported(raw);
+		}
+	}
+
+	function parseFunctionExpr():HxExpr {
+		// Anonymous function expression:
+		//   function(arg0, arg1) return expr
+		//   function(arg0, arg1) { return expr; }
+		//
+		// Bring-up scope
+		// - Parse arg names plus optional type/default syntax (ignored for Stage3 expression lowering).
+		// - Lower to `ELambda(args, bodyExpr)` because JS emitter already supports this shape.
+		// - Block bodies are accepted when they can be reduced to a single expression/return.
+		if (!acceptKeyword(KFunction))
+			fail("Expected 'function'");
+		expect(TLParen, "'('");
+
+		final args = new Array<String>();
+		if (!cur.kind.match(TRParen)) {
+			while (true) {
+				final isRest = cur.kind.match(TDot) && peekKind().match(TDot) && peekKind2().match(TDot);
+				if (isRest) {
+					bump();
+					bump();
+					bump();
+				}
+
+				acceptOtherChar("?");
+				final argName = readIdent("argument name");
+				args.push(argName);
+
+				if (cur.kind.match(TColon)) {
+					bump();
+					readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof) || isOtherChar("="));
+				}
+
+				if (acceptOtherChar("=")) {
+					parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof));
+				}
+
+				if (cur.kind.match(TComma)) {
+					bump();
+					continue;
+				}
+				break;
+			}
+		}
+		expect(TRParen, "')'");
+
+		if (cur.kind.match(TColon)) {
+			bump();
+			readTypeHintText(() -> cur.kind.match(TLBrace) || cur.kind.match(TKeyword(KReturn)) || cur.kind.match(TSemicolon) || cur.kind.match(TEof));
+		}
+
+		final bodyExpr = if (acceptKeyword(KReturn)) {
+			parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+		} else if (cur.kind.match(TLBrace)) {
+			bump();
+			lambdaBodyExprFromStmts(parseFunctionBodyStatements());
+		} else {
+			parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TEof));
+		}
+
+		return ELambda(args, bodyExpr);
+	}
+
+	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {
+		if (stmts == null || stmts.length == 0)
+			return ENull;
+		if (stmts.length == 1) {
+			return switch (stmts[0]) {
+				case SReturn(expr, _):
+					expr;
+				case SReturnVoid(_):
+					ENull;
+				case SExpr(expr, _):
+					expr;
+				case _:
+					EUnsupported("function");
+			}
+		}
+
+		final last = stmts[stmts.length - 1];
+		return switch (last) {
+			case SReturn(expr, _):
+				expr;
+			case SReturnVoid(_):
+				ENull;
+			case SExpr(expr, _):
+				expr;
+			case _:
+				EUnsupported("function");
 		}
 	}
 
