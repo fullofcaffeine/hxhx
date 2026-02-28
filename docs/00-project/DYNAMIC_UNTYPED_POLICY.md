@@ -34,11 +34,8 @@ That guard scans scoped compiler lanes and fails if restricted constructs appear
 
 ### Temporary migration allowlist
 
-- `packages/hxhx-core/src/EmitterStage.hx`
-
-This file is explicitly temporary and tracked for cleanup in:
-
-- `haxe.ocaml-qc08.10` (reduce Dynamic usage in EmitterStage via typed wrappers)
+There is currently no temporary migration allowlist entry in `scripts/ci/no-dynamic-check.js`.
+Previously-allowlisted emitter seams were moved to typed map/context helpers.
 
 ## Contributor guidance
 

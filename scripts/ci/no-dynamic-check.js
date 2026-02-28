@@ -7,7 +7,7 @@
  * Policy
  * - Dynamic/Any/untyped are forbidden by default.
  * - Allow only explicit runtime boundary files (JSON/protocol/dispatch seams).
- * - Keep EmitterStage in a temporary migration allowlist until typed refactor lands.
+ * - Keep allowlists narrowly scoped to true runtime boundaries.
  */
 
 const fs = require('fs')
@@ -37,9 +37,7 @@ const boundaryFileAllowlist = new Set([
   'packages/hxhx/src/hxhx/BackendPluginManifestResolver.hx',
 ])
 
-const temporaryAllowlist = new Set([
-  'packages/hxhx-core/src/EmitterStage.hx',
-])
+const temporaryAllowlist = new Set([])
 
 const patterns = [
   { label: 'typed_dynamic', re: /:\s*Dynamic\b/ },

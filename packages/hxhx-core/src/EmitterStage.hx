@@ -251,8 +251,7 @@ class EmitterStage {
 		- Restores previous state on success and failure.
 
 		Exception boundary note
-		- The `catch (error:Dynamic)` is intentionally confined to this boundary to guarantee
-		  state restoration for all thrown values (`String`, object, `haxe.Exception`, etc.).
+		- The catch is intentionally confined to this boundary to guarantee state restoration.
 	**/
 	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false,
 			buildExecutable:Bool = true, ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable,
@@ -264,7 +263,7 @@ class EmitterStage {
 		var entryPath = "";
 		try {
 			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
-		} catch (error:Dynamic) {
+		} catch (error:haxe.Exception) {
 			currentPortableMetalizationPlan = previousPlan;
 			currentPortableMetalizationRegionKey = previousRegionKey;
 			throw error;
@@ -504,7 +503,7 @@ class EmitterStage {
 
 		Why
 		- Stage 3 bring-up wants a tiny “escape hatch” for embedding raw OCaml expressions
-		  via `untyped __ocaml__("<ocaml expr>")`.
+		  via direct OCaml injection call-sites.
 		- To keep Haxe sources readable, we often build these strings by concatenating
 		  multiple string literals (e.g. `"(let\\n" + " ...\\n" + ")"`).
 		- The bootstrap emitter does not implement general constant folding; this helper
@@ -539,45 +538,33 @@ class EmitterStage {
 
 		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
 	**/
-	static inline function mapGetRaw(mapLike:Dynamic, key:String):Dynamic {
+	static inline function mapGetRaw<T>(mapLike:Null<Map<String, T>>, key:String):Null<T> {
 		if (mapLike == null || key == null)
 			return null;
-		final getFn = Reflect.field(mapLike, "get");
-		if (getFn == null)
-			return null;
-		return Reflect.callMethod(mapLike, getFn, [key]);
+		return mapLike.get(key);
 	}
 
 	/**
 		Check whether a map-like object has a key, with a fallback to `get(...) != null`.
 	**/
-	static inline function mapHasRaw(mapLike:Dynamic, key:String):Bool {
+	static inline function mapHasRaw<T>(mapLike:Null<Map<String, T>>, key:String):Bool {
 		if (mapLike == null || key == null)
 			return false;
-		final existsFn = Reflect.field(mapLike, "exists");
-		if (existsFn != null) {
-			final existsValue = Reflect.callMethod(mapLike, existsFn, [key]);
-			return existsValue == true;
-		}
-		return mapGetRaw(mapLike, key) != null;
+		return mapLike.exists(key);
 	}
 
 	/**
 		Get a string-key iterator from a map-like object, if available.
 	**/
-	static inline function mapKeysRaw(mapLike:Dynamic):Null<Iterator<String>> {
+	static inline function mapKeysRaw<T>(mapLike:Null<Map<String, T>>):Null<Iterator<String>> {
 		if (mapLike == null)
 			return null;
-		final keysFn = Reflect.field(mapLike, "keys");
-		if (keysFn == null)
-			return null;
-		final iteratorValue = Reflect.callMethod(mapLike, keysFn, []);
-		return iteratorValue == null ? null : cast iteratorValue;
+		return mapLike.keys();
 	}
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		final tyByIdentRaw:Dynamic = tyByIdent;
+		final tyByIdentRaw = tyByIdent;
 
 		inline function tyForIdent(name:String):String {
 			final resolved = mapGetRaw(tyByIdentRaw, name);
@@ -685,11 +672,11 @@ class EmitterStage {
 
 	static function exprToOcaml(e:HxExpr, ?arityByIdent:Map<String, Int>, ?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		final tyByIdentRaw:Dynamic = tyByIdent;
-		final arityByIdentRaw:Dynamic = arityByIdent;
-		final staticImportByIdentRaw:Dynamic = staticImportByIdent;
-		final moduleNameByPkgAndClassRaw:Dynamic = moduleNameByPkgAndClass;
-		final callSigByCalleeRaw:Dynamic = callSigByCallee;
+		final tyByIdentRaw = tyByIdent;
+		final arityByIdentRaw = arityByIdent;
+		final staticImportByIdentRaw = staticImportByIdent;
+		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
+		final callSigByCalleeRaw = callSigByCallee;
 
 		inline function hasTyIdent(name:String):Bool {
 			return mapGetRaw(tyByIdentRaw, name) != null;
@@ -948,7 +935,7 @@ class EmitterStage {
 			return "";
 		}
 
-		function extendTyByIdent(ty:Dynamic, name:String, t:TyType):Map<String, TyType> {
+		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
 			final keys = mapKeysRaw(ty);
 			if (keys != null) {
@@ -962,7 +949,7 @@ class EmitterStage {
 			return out;
 		}
 
-		function extendTyByIdentMany(ty:Dynamic, names:Array<String>, t:TyType):Map<String, TyType> {
+		function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
 			final keys = mapKeysRaw(ty);
 			if (keys != null) {
@@ -2592,8 +2579,8 @@ class EmitterStage {
 	static function returnExprToOcaml(expr:HxExpr, allowedValueIdents:Map<String, Bool>, ?expectedReturnType:TyType, ?arityByIdent:Map<String, Int>,
 			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
 			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
-		final tyByIdentRaw:Dynamic = tyByIdent;
-		final staticImportByIdentRaw:Dynamic = staticImportByIdent;
+		final tyByIdentRaw = tyByIdent;
+		final staticImportByIdentRaw = staticImportByIdent;
 
 		inline function hasTyIdent(name:String):Bool {
 			return mapGetRaw(tyByIdentRaw, name) != null;
@@ -3086,18 +3073,19 @@ class EmitterStage {
 		}
 	}
 
-	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Dynamic, ?tyByIdent:Dynamic,
-			?staticImportByIdent:Dynamic, ?currentPackagePath:String, ?moduleNameByPkgAndClass:Dynamic, ?callSigByCallee:Dynamic, ?localTypeHints:Dynamic,
-			?fnReturnTypes:Dynamic):String {
+	static function stmtListToOcaml(stmts:Array<HxStmt>, allowedValueIdents:Map<String, Bool>, returnExc:String, ?arityByIdent:Map<String, Int>,
+			?tyByIdent:Map<String, TyType>, ?staticImportByIdent:Map<String, String>, ?currentPackagePath:String,
+			?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>, ?localTypeHints:Map<String, TyType>,
+			?fnReturnTypes:Map<String, TyType>):String {
 		if (stmts == null || stmts.length == 0)
 			return "()";
 
-		final localTypeHintsMap:Dynamic = localTypeHints;
-		final fnReturnTypesMap:Dynamic = fnReturnTypes;
+		final localTypeHintsMap = localTypeHints;
+		final fnReturnTypesMap = fnReturnTypes;
 
 		final prevMutableLocalRefNames = currentMutableLocalRefNames == null ? [] : currentMutableLocalRefNames.copy();
 
-		function mergeMutableLocalRefNames(base:Array<String>, local:Dynamic):Array<String> {
+		function mergeMutableLocalRefNames(base:Array<String>, local:Map<String, Bool>):Array<String> {
 			final out:Array<String> = base == null ? [] : base.copy();
 			function hasName(name:String):Bool {
 				for (n in out)
@@ -3319,7 +3307,7 @@ class EmitterStage {
 			return before;
 		}
 
-		function extendTyWithLocals(base:Dynamic, locals:Dynamic):Map<String, TyType> {
+		function extendTyWithLocals(base:Map<String, TyType>, locals:Map<String, Bool>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
 			final baseKeys = mapKeysRaw(base);
 			if (baseKeys != null)
@@ -3353,7 +3341,7 @@ class EmitterStage {
 			return out;
 		}
 
-		function extendTyByIdentLocal(ty:Dynamic, name:String, t:TyType):Dynamic {
+		function extendTyByIdentLocal(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
 			final keys = mapKeysRaw(ty);
 			if (keys != null)
@@ -3363,10 +3351,10 @@ class EmitterStage {
 						out.set(k, cast existing);
 				}
 			out.set(name, t);
-			return cast out;
+			return out;
 		}
 
-		function cloneTyCtxLocal(ty:Dynamic):Dynamic {
+		function cloneTyCtxLocal(ty:Map<String, TyType>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
 			final keys = mapKeysRaw(ty);
 			if (keys != null)
@@ -3375,7 +3363,7 @@ class EmitterStage {
 					if (existing != null)
 						out.set(k, cast existing);
 				}
-			return cast out;
+			return out;
 		}
 
 		final localsBefore = localsInScopeBefore(stmts);
@@ -3414,27 +3402,12 @@ class EmitterStage {
 			}
 		}
 
-		/**
-			Recovers a typed local type-context map at recursion boundaries.
-
-			This is one of the few justified `Dynamic` seams in the emitter. Generated OCaml
-			for local-recursive functions can surface `Obj.t` here; we recover immediately and
-			keep internal logic fully typed.
-		**/
-		function recoverTyCtxMap(value:Dynamic):Null<Map<String, TyType>> {
-			if (value == null)
-				return null;
-			final typed:Map<String, TyType> = cast value;
-			return typed;
-		}
-
-		inline function tyCtxGet(value:Dynamic, name:String):Null<TyType> {
+		inline function tyCtxGet(value:Map<String, TyType>, name:String):Null<TyType> {
 			final resolved = mapGetRaw(value, name);
 			return resolved == null ? null : cast resolved;
 		}
 
-		function condToOcamlBool(e:HxExpr, tyCtxRaw:Dynamic):String {
-			final tyCtx = recoverTyCtxMap(tyCtxRaw);
+		function condToOcamlBool(e:HxExpr, tyCtx:Map<String, TyType>):String {
 			inline function boolOrTrue(s:String):String {
 				// `returnExprToOcaml` collapses unsupported/unknown subtrees to `(Obj.magic 0)`.
 				// In a condition position we prefer "always true" over emitting an unbound identifier
@@ -3657,8 +3630,7 @@ class EmitterStage {
 			}
 		}
 
-		function stmtToUnit(s:HxStmt, tyCtxRaw:Dynamic):String {
-			final tyCtx = recoverTyCtxMap(tyCtxRaw);
+		function stmtToUnit(s:HxStmt, tyCtx:Map<String, TyType>):String {
 			return switch (s) {
 				case SBlock(ss, _pos):
 					stmtListToOcaml(ss, allowedValueIdents, returnExc, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
@@ -3667,7 +3639,7 @@ class EmitterStage {
 					// Handled at the list level because it needs to wrap the remainder with `let ... in`.
 					"()";
 				case STry(tryBody, _catches, _pos):
-					stmtToUnit(tryBody, tyCtxRaw);
+					stmtToUnit(tryBody, tyCtx);
 				case SThrow(_expr, _pos):
 					"()";
 				case SSwitch(scrutinee, patterns, bodies, _pos):
@@ -3721,9 +3693,9 @@ class EmitterStage {
 					}
 					"(let __sw = (" + sw + ") in " + chain + ")";
 				case SIf(cond, thenBranch, elseBranch, _pos):
-					final thenUnit = stmtToUnit(thenBranch, tyCtxRaw);
-					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtxRaw);
-					final condS = condToOcamlBool(cond, tyCtxRaw);
+					final thenUnit = stmtToUnit(thenBranch, tyCtx);
+					final elseUnit = elseBranch == null ? "()" : stmtToUnit(elseBranch, tyCtx);
+					final condS = condToOcamlBool(cond, tyCtx);
 					// Avoid typechecking dead branches in bring-up:
 					// - Unknown conditions are lowered as `true` by default.
 					// - Keeping the unused branch can still constrain types and break compilation
@@ -3736,16 +3708,16 @@ class EmitterStage {
 						"if " + condS + " then (" + thenUnit + ") else (" + elseUnit + ")";
 					}
 				case SWhile(cond, body, _pos):
-					final condS = condToOcamlBool(cond, tyCtxRaw);
-					final bodyUnit = stmtToUnit(body, tyCtxRaw);
+					final condS = condToOcamlBool(cond, tyCtx);
+					final bodyUnit = stmtToUnit(body, tyCtx);
 					if (condS == "false") {
 						"()";
 					} else {
 						"(while " + condS + " do " + bodyUnit + " done)";
 					}
 				case SDoWhile(body, cond, _pos):
-					final bodyUnit = stmtToUnit(body, tyCtxRaw);
-					final condS = condToOcamlBool(cond, tyCtxRaw);
+					final bodyUnit = stmtToUnit(body, tyCtx);
+					final condS = condToOcamlBool(cond, tyCtx);
 					"(let __hx_do_continue = ref true in "
 					+ "while !__hx_do_continue do "
 					+ "__hx_do_continue := false; "
@@ -4954,7 +4926,7 @@ class EmitterStage {
 						if (importModName.length == 0)
 							continue;
 
-						final membersRaw:Dynamic = cast staticMembersByModule.get(importModName);
+						final membersRaw:Map<String, Bool> = staticMembersByModule.get(importModName);
 						if (membersRaw == null)
 							continue;
 						final memberKeys = mapKeysRaw(membersRaw);
@@ -5172,7 +5144,7 @@ class EmitterStage {
 						final keys = [for (k in preludeFnNames.keys()) k];
 						for (nameRaw in keys) {
 							analyzeFn(nameRaw);
-							final callsRaw:Dynamic = cast fnCallsByName.get(nameRaw);
+							final callsRaw:Map<String, Bool> = fnCallsByName.get(nameRaw);
 							if (callsRaw == null)
 								continue;
 							final callKeys = mapKeysRaw(callsRaw);
