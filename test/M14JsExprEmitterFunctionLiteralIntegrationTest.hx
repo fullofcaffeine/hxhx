@@ -26,5 +26,12 @@ class M14JsExprEmitterFunctionLiteralIntegrationTest {
 		final noArgsJs = JsExprEmitter.emit(noArgs, exprScope);
 		assertContains(noArgsJs, "function()", "no-arg function literal keeps empty parameter list");
 		assertContains(noArgsJs, "return 7", "no-arg function literal body preserved");
+
+		final blockBody = HxParser.parseExprText("function(x) { var y = x + 1; return y; }");
+		final blockBodyJs = JsExprEmitter.emit(blockBody, exprScope);
+		assertContains(blockBodyJs, "function(", "block-body function literal parses");
+		assertContains(blockBodyJs, "return ", "block-body function literal emits return");
+		assertContains(blockBodyJs, "function(y)", "block-body function literal lowers var binding");
+		assertContains(blockBodyJs, "(x + 1)", "block-body function literal keeps initializer expression");
 	}
 }

@@ -674,30 +674,78 @@ class HxParser {
 	function lambdaBodyExprFromStmts(stmts:Array<HxStmt>):HxExpr {
 		if (stmts == null || stmts.length == 0)
 			return ENull;
-		if (stmts.length == 1) {
-			return switch (stmts[0]) {
+
+		var seqTempIndex = 0;
+		var unsupportedStmtKind = "function";
+
+		inline function stmtKindText(stmt:HxStmt):String {
+			return switch (stmt) {
+				case SBlock(_, _): "block";
+				case SVar(_, _, _, _): "var";
+				case SIf(_, _, _, _): "if";
+				case SForIn(_, _, _, _): "for_in";
+				case SWhile(_, _, _): "while";
+				case SDoWhile(_, _, _): "do_while";
+				case SSwitch(_, _, _, _): "switch";
+				case STry(_, _, _): "try";
+				case SBreak(_): "break";
+				case SContinue(_): "continue";
+				case SThrow(_, _): "throw";
+				case SReturnVoid(_): "return_void";
+				case SReturn(_, _): "return";
+				case SExpr(_, _): "expr";
+			};
+		}
+		inline function nextSeqTemp():String {
+			final name = "__hxhx_lambda_seq_" + Std.string(seqTempIndex);
+			seqTempIndex++;
+			return name;
+		}
+
+		function lowerStmtWithContinuation(stmt:HxStmt, continuation:HxExpr):Null<HxExpr> {
+			return switch (stmt) {
 				case SReturn(expr, _):
 					expr;
 				case SReturnVoid(_):
 					ENull;
 				case SExpr(expr, _):
-					expr;
+					final temp = nextSeqTemp();
+					ECall(ELambda([temp], continuation), [expr]);
+				case SVar(name, _, init, _):
+					final initExpr:HxExpr = switch (init) {
+						case null:
+							ENull;
+						case value:
+							value;
+					};
+					ECall(ELambda([name], continuation), [initExpr]);
+				case SBlock(inner, _):
+					var acc = continuation;
+					var index = inner.length - 1;
+					while (index >= 0) {
+						final lowered = lowerStmtWithContinuation(inner[index], acc);
+						if (lowered == null)
+							return null;
+						acc = lowered;
+						index--;
+					}
+					acc;
 				case _:
-					EUnsupported("function");
+					unsupportedStmtKind = stmtKindText(stmt);
+					null;
 			}
 		}
 
-		final last = stmts[stmts.length - 1];
-		return switch (last) {
-			case SReturn(expr, _):
-				expr;
-			case SReturnVoid(_):
-				ENull;
-			case SExpr(expr, _):
-				expr;
-			case _:
-				EUnsupported("function");
+		var result:HxExpr = ENull;
+		var index = stmts.length - 1;
+		while (index >= 0) {
+			final lowered = lowerStmtWithContinuation(stmts[index], result);
+			if (lowered == null)
+				return EUnsupported("function:" + unsupportedStmtKind);
+			result = lowered;
+			index--;
 		}
+		return result;
 	}
 
 	function parseInterpolatedStringExpr(s:String):HxExpr {
