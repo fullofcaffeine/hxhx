@@ -3,3 +3,5 @@
 (* Haxe type: HihBackendDialect *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t; runtimeIsNull : Obj.t -> string -> string; runtimeDynamicEquals : Obj.t -> string -> string -> string; dynamicNullValue : Obj.t -> unit -> string }

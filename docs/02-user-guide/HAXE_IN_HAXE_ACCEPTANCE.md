@@ -268,11 +268,11 @@ Passes when:
 Run a selectable subset locally via:
 
 - `HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets`
-- `npm run test:hxhx:builtin-target-smoke` (linked fast-path sentinel: compares delegated `--target ocaml` vs builtin `--target ocaml-stage3` on the same tiny workload)
-- `HXHX_BUILTIN_SMOKE_OCAML=0 HXHX_BUILTIN_SMOKE_JS_NATIVE=1 npm run test:hxhx:builtin-target-smoke` (linked `js-native` emit+run smoke lane only)
+- `npm run test:hxhx:builtin-target-smoke` (linked fast-path sentinel: compares delegated `--target ocaml-compat` vs builtin `--target ocaml` on the same tiny workload)
+- `HXHX_BUILTIN_SMOKE_OCAML=0 HXHX_BUILTIN_SMOKE_JS_NATIVE=1 npm run test:hxhx:builtin-target-smoke` (linked native JS emit+run smoke lane only)
 - CI cadence: weekly Linux baseline via `.github/workflows/gate3.yml` with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
 - Builtin target smoke cadence: weekly Linux baseline via `.github/workflows/gate3-builtin.yml` (manual dispatch supports `reps`, `run_js_native`).
-- PR/push CI includes `JS-native smoke` (`.github/workflows/ci.yml`) so non-delegating `--target js-native` emit+run stays continuously checked.
+- PR/push CI includes native JS smoke (`.github/workflows/ci.yml`) so non-delegating `--target js` emit+run stays continuously checked.
 - Optional CI dispatch: same workflow with manual overrides (`targets`, `allow_skip`, `macro_mode=direct|stage0_shim`).
 - `HXHX_GATE3_MACRO_MODE=direct` (default) routes only the `Macro` target through the non-delegating Gate 2 direct runner while leaving other targets on the stage0-shim path.
 - `HXHX_GATE3_MACRO_MODE=stage0_shim` keeps the historical stage0 RunCi harness path for `Macro` when needed for debugging/comparison.
@@ -301,28 +301,45 @@ Passes when:
 
 See `docs/02-user-guide/HXHX_DISTRIBUTION.md:1`.
 
-## What “can replace the original compiler” means (strict version)
+## Replacement claims: two explicit scopes
 
-For Haxe **4.3.7**, we can credibly claim replacement when:
+For Haxe **4.3.7**, this repo tracks two distinct acceptance scopes:
 
-1) Gate 2 is solid (Macro runci passes), and
-2) Gate 3 passes for the set of targets we claim, and
-3) IDE/display workflows are supported to a practical degree, and
-4) Macro-heavy real projects build successfully (use a curated set of external projects as an acceptance suite).
+1) **Oracle replacement-ready scope** (behavioral parity signal)
+2) **Native stage0-forbidden scope** (non-delegating runtime signal)
 
-In other words: passing upstream CI (or an equivalent subset) is the strongest objective signal we can use.
+These scopes are related, but not identical.
 
-Strict delegation-blocked replacement check:
+### 1) Oracle replacement-ready scope
+
+This is the broad compatibility claim used by replacement bundle runs.
+
+- Manifest: `docs/02-user-guide/compat/scoped-1.0-targets.json`
+- Command:
+
+```bash
+HXHX_M7_PROFILE=full npm run test:upstream:replacement-ready
+```
+
+### 2) Native stage0-forbidden scope
+
+This is the strict non-delegating runtime claim.
+
+- Manifest: `docs/02-user-guide/compat/native-scope-targets.json`
+- Command:
 
 ```bash
 HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full
 ```
 
+When strict mode is enabled, `scripts/hxhx/run-replacement-ready.sh` uses
+`native-scope-targets.json` by default unless `HXHX_M7_SCOPE_FILE` overrides it.
+
 Expected strict marker:
 
 - `M7_STRICT_STAGE0:PASS`
-- scoped target manifest (used by replacement runner defaults):
-  - `docs/02-user-guide/compat/scoped-1.0-targets.json`
+
+Use this strict scope for statements about stage0-forbidden/native readiness.
 
 ## Bootstrapping model (Stage0 → Stage1 → Stage2)
 

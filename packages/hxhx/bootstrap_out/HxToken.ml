@@ -6,22 +6,22 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable kind : HxTokenKind.hxtokenkind; mutable pos : HxPos.t }
 
-let create = fun kind2 pos2 -> let self = ({ __hx_type = HxType.class_ "HxToken"; kind = Obj.magic (); pos = Obj.magic () } : t) in (
-  ignore ((
-    ignore (let __assign_1 = kind2 in (
-      self.kind <- __assign_1;
+let create = fun kind2 pos2 -> let self = ({ __hx_type = HxType.class_ "HxToken"; kind = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
+    ignore (let __assign_1 = Obj.magic kind2 in (
+      (Obj.magic self : t).kind <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = pos2 in (
-      self.pos <- __assign_2;
+    let __assign_2 = Obj.magic pos2 in (
+      (Obj.magic self : t).pos <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxToken"; kind = Obj.magic (); pos = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxToken"; kind = Obj.magic (HxRuntime.hx_null); pos = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getKind = fun self () -> self.kind
+let getKind = fun self () -> (Obj.magic self : t).kind
 
-let getPos = fun self () -> self.pos
+let getPos = fun self () -> (Obj.magic self : t).pos

@@ -8,7 +8,7 @@ type t = { __hx_type : Obj.t; runtimeIsNull : Obj.t -> string -> string; runtime
 
 let __ctor = fun (self : t) () -> ignore ((
   ignore self;
-  ()
+  ignore ()
 ))
 
 let runtimeIsNull__impl = fun (self : t) (scrutineeExpr : string) -> (
@@ -26,12 +26,12 @@ let dynamicNullValue__impl = fun (self : t) () -> (
   "(Obj.magic HxRuntime.hx_null)"
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "HihOcamlBackendDialect"; runtimeIsNull = (fun o a0 -> runtimeIsNull__impl (Obj.magic o) a0); runtimeDynamicEquals = (fun o a0 a1 -> runtimeDynamicEquals__impl (Obj.magic o) a0 a1); dynamicNullValue = (fun o () -> dynamicNullValue__impl (Obj.magic o) ()) } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "HihOcamlBackendDialect"; runtimeIsNull = (fun o a0 -> Obj.magic (runtimeIsNull__impl (Obj.magic o) (Obj.magic a0))); runtimeDynamicEquals = (fun o a0 a1 -> Obj.magic (runtimeDynamicEquals__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); dynamicNullValue = (fun o () -> Obj.magic (dynamicNullValue__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
   ignore ((
     ignore self;
-    ()
+    ignore ()
   ));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HihOcamlBackendDialect"; runtimeIsNull = (fun o a0 -> runtimeIsNull__impl (Obj.magic o) a0); runtimeDynamicEquals = (fun o a0 a1 -> runtimeDynamicEquals__impl (Obj.magic o) a0 a1); dynamicNullValue = (fun o () -> dynamicNullValue__impl (Obj.magic o) ()) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HihOcamlBackendDialect"; runtimeIsNull = (fun o a0 -> Obj.magic (runtimeIsNull__impl (Obj.magic o) (Obj.magic a0))); runtimeDynamicEquals = (fun o a0 a1 -> Obj.magic (runtimeDynamicEquals__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); dynamicNullValue = (fun o () -> Obj.magic (dynamicNullValue__impl (Obj.magic o) (Obj.magic ()))) } : t)

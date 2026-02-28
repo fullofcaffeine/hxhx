@@ -42,20 +42,20 @@ target_available() {
 }
 
 js_native_available=1
-if ! target_available "js-native"; then
+if ! target_available "js"; then
   if [ "$force_js_rebuild" = "1" ]; then
-    echo "WARN: current hxhx binary does not expose js-native; attempting source rebuild (HXHX_FORCE_STAGE0=1)." >&2
+    echo "WARN: current hxhx binary does not expose native --target js; attempting source rebuild (HXHX_FORCE_STAGE0=1)." >&2
     HXHX_BIN="$(HAXE_BIN="$HAXE_BIN" HXHX_FORCE_STAGE0=1 "$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
     if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
-      echo "WARN: source rebuild failed; js-native benchmark row will be reported as skipped." >&2
+      echo "WARN: source rebuild failed; native JS benchmark row will be reported as skipped." >&2
       js_native_available=0
-    elif ! target_available "js-native"; then
-      echo "WARN: rebuilt hxhx binary still does not expose js-native; js-native benchmark row will be reported as skipped." >&2
+    elif ! target_available "js"; then
+      echo "WARN: rebuilt hxhx binary still does not expose native --target js; native JS benchmark row will be reported as skipped." >&2
       js_native_available=0
     fi
   else
-    echo "WARN: current hxhx binary does not expose js-native; benchmark row will be reported as skipped." >&2
-    echo "      Set HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1 to rebuild from source and measure js-native." >&2
+    echo "WARN: current hxhx binary does not expose native --target js; benchmark row will be reported as skipped." >&2
+    echo "      Set HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1 to rebuild from source and measure native JS." >&2
     js_native_available=0
   fi
 fi
@@ -126,15 +126,15 @@ bench_one "stage0: no-output compile" \
 bench_one "stage1: no-output compile" \
   "$HXHX_BIN" -cp "$tmp_root/src" -main Main --no-output
 
-bench_one "stage1: --target ocaml-stage3" \
-  "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_stage3_builtin"
+bench_one "stage1: --target ocaml (native)" \
+  "$HXHX_BIN" --target ocaml --hxhx-no-emit -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_stage3_builtin"
 
 if [ "$js_native_available" = "1" ]; then
-  bench_one "stage1: --target js-native emit" \
-    "$HXHX_BIN" --target js-native --js "$tmp_root/out_js_native/main.js" --hxhx-no-run -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_js_native"
+  bench_one "stage1: --target js (native) emit" \
+    "$HXHX_BIN" --target js --js "$tmp_root/out_js_native/main.js" --hxhx-no-run -cp "$tmp_root/src" -main Main --hxhx-out "$tmp_root/out_js_native"
 else
-  bench_skip "stage1: --target js-native emit" "target_unavailable"
+  bench_skip "stage1: --target js (native) emit" "target_unavailable"
 fi
 
 echo ""
-echo "NOTE: --target ocaml still delegates to stage0, while --target ocaml-stage3 and --target js-native exercise linked Stage3 backend paths."
+echo "NOTE: --target ocaml-compat delegates to stage0, while --target ocaml and --target js exercise linked Stage3 backend paths."

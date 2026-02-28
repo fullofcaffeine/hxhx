@@ -49,7 +49,7 @@ stage3_out="$(
   HXHX_FORBID_STAGE0=1 \
   HAXE_BIN=/definitely-not-used \
   "$HXHX_BIN" \
-    --target ocaml-stage3 \
+    --target ocaml \
     --hxhx-no-emit \
     -cp "$ROOT/workloads/hih-compiler/fixtures/src" \
     -main demo.A \

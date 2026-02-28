@@ -12,8 +12,8 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 ## Quick glossary (beginner-friendly)
 
 - **stage0**: your existing upstream Haxe compiler binary.
-- **`--target ocaml`**: compatibility/delegation-friendly preset path.
-- **`--target ocaml-stage3`**: linked Stage3 backend path (native, non-delegating direction).
+- **`--target ocaml-compat`**: compatibility/delegation-friendly preset path.
+- **`--target ocaml`**: linked Stage3 backend path (native, non-delegating direction).
 
 Today `hxhx` is still a **stage0 shim** delegating to a stage0 `haxe` binary, so the only meaningful metric is *shim overhead*.
 As `hxhx` becomes a real compiler, this suite must be expanded (macro-heavy projects, upstream `tests/runci`, curated real repos).
@@ -41,16 +41,16 @@ stage1: no-output compile        avg=   139ms  best=   108ms  worst=   201ms  re
 
 The benchmark harness now always includes:
 
-- `stage1: --target ocaml-stage3`
-- `stage1: --target js-native emit`
+- `stage1: --target ocaml`
+- `stage1: --target js emit`
 
-When a selected `hxhx` binary does not expose `js-native`, the JS row is still recorded as a sample result in skipped form:
+When a selected `hxhx` binary does not expose native `--target js`, the JS row is still recorded as a sample result in skipped form:
 
 ```
-stage1: --target js-native emit  skipped  reason=target_unavailable
+stage1: --target js emit  skipped  reason=target_unavailable
 ```
 
-Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and capture numeric js-native results on hosts where the current binary lacks that target.
+Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and capture numeric native-JS results on hosts where the current binary lacks that target.
 
 ## Native reflaxe bench gate
 
@@ -63,12 +63,12 @@ npm run hxhx:bench:native-reflaxe
 This benchmark checks the same workload across:
 
 1. `haxe --interp` (eval baseline)
-2. `hxhx --target ocaml`
-3. `hxhx --target ocaml-stage3`
+2. `hxhx --target ocaml-compat`
+3. `hxhx --target ocaml`
 
 Default pass rule:
 
-- `ocaml-stage3` median runtime must be at least `30%` faster than `--interp`.
+- `ocaml` native median runtime must be at least `30%` faster than `--interp`.
 
 Controls:
 

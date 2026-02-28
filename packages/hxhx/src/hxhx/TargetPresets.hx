@@ -42,7 +42,7 @@ class TargetPresets {
 
 	public static function listTargets():Array<String> {
 		// Keep this stable: scripts/docs can rely on it.
-		return ["ocaml", "ocaml-stage3", "js", "js-native"];
+		return ["ocaml", "ocaml-compat", "js", "js-compat"];
 	}
 
 	/**
@@ -64,14 +64,14 @@ class TargetPresets {
 	public static function resolve(targetId:String, forwarded:Array<String>):ResolvedTarget {
 		final normalizedId = targetId == null ? "" : targetId.toLowerCase();
 		return switch (normalizedId) {
-			case "ocaml": {
-					id: "ocaml",
+			case "ocaml-compat": {
+					id: "ocaml-compat",
 					kind: "both",
 					runMode: RUN_MODE_DELEGATE_STAGE0,
 					describe: "Reflaxe OCaml backend via stage0 delegation",
 					forwarded: applyOcaml(forwarded)
 				};
-			case "ocaml-stage3":
+			case "ocaml":
 				ensureBuiltinBackendRegistered("ocaml-stage3");
 				{
 					id: "ocaml-stage3",
@@ -80,14 +80,14 @@ class TargetPresets {
 					describe: "Linked Stage3 OCaml emitter fast-path (no --library required)",
 					forwarded: applyOcamlStage3(forwarded)
 				};
-			case "js": {
-					id: "js",
+			case "js-compat": {
+					id: "js-compat",
 					kind: "bundled",
 					runMode: RUN_MODE_DELEGATE_STAGE0,
 					describe: "JavaScript target via stage0 delegation",
 					forwarded: applyJs(forwarded)
 				};
-			case "js-native":
+			case "js":
 				ensureBuiltinBackendRegistered("js-native");
 				{
 					id: "js-native",
@@ -124,7 +124,7 @@ class TargetPresets {
 		// refuse to guess.
 		final reflaxeTarget = ArgScan.getDefineValue(out, "reflaxe-target");
 		if (reflaxeTarget != null && reflaxeTarget != "ocaml") {
-			throw "Contradiction: --target ocaml but -D reflaxe-target=" + reflaxeTarget;
+			throw "Contradiction: --target ocaml-compat but -D reflaxe-target=" + reflaxeTarget;
 		}
 
 		// Ensure the backend is enabled (one of):
@@ -176,7 +176,7 @@ class TargetPresets {
 		Normalize args for the linked Stage3 OCaml backend.
 
 		Why
-		- `ocaml-stage3` is the first builtin fast-path: we run `Stage3Compiler` directly,
+		- `ocaml` is the builtin fast-path preset: we run `Stage3Compiler` directly,
 		  so a classpath `--library reflaxe.ocaml` lookup is unnecessary and can fail on hosts
 		  without the library installed.
 
@@ -191,7 +191,7 @@ class TargetPresets {
 
 		final reflaxeTarget = ArgScan.getDefineValue(out, "reflaxe-target");
 		if (reflaxeTarget != null && reflaxeTarget != "ocaml") {
-			throw "Contradiction: --target ocaml-stage3 but -D reflaxe-target=" + reflaxeTarget;
+			throw "Contradiction: --target ocaml but -D reflaxe-target=" + reflaxeTarget;
 		}
 
 		ArgScan.stripLib(out, "reflaxe.ocaml");
@@ -206,7 +206,7 @@ class TargetPresets {
 		Normalize args for delegated JS target selection.
 
 		Why
-		- `--target js` should be a convenient preset, but must not silently conflict with
+		- `--target js-compat` should be a convenient preset, but must not silently conflict with
 		  explicit non-JS target flags.
 		- For compilation runs without an explicit target output, upstream `haxe` requires a
 		  concrete target flag, so we provide a deterministic default output path.
@@ -222,7 +222,7 @@ class TargetPresets {
 		final explicitTargets = ArgScan.listExplicitTargets(out);
 		for (target in explicitTargets) {
 			if (target != "js") {
-				throw "Contradiction: --target js but explicit target flag selects " + target;
+				throw "Contradiction: --target js-compat but explicit target flag selects " + target;
 			}
 		}
 		if (explicitTargets.length == 0 && !ArgScan.hasNoOutputLike(out)) {
@@ -236,8 +236,8 @@ class TargetPresets {
 		Normalize args for the linked Stage3 JS backend.
 
 		Why
-		- `js-native` is a builtin Stage3 target path. We still enforce the same contradiction
-		  checks and deterministic default output behavior as delegated `--target js`.
+		- `js` is a builtin Stage3 target preset. We still enforce the same contradiction
+		  checks and deterministic default output behavior as delegated `--target js-compat`.
 		- We seed `-D js-es=5` as the default compatibility baseline unless the user already
 		  provided an explicit `js-es` define.
 

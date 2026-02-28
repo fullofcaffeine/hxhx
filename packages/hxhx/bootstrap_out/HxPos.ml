@@ -7,31 +7,31 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable index : int; mutable line : int; mutable column : int }
 
 let create = fun index2 line2 column2 -> let self = ({ __hx_type = HxType.class_ "HxPos"; index = 0; line = 0; column = 0 } : t) in (
-  ignore ((
+  ignore (ignore ((
     ignore (let __assign_1 = index2 in (
-      self.index <- __assign_1;
+      (Obj.magic self : t).index <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = line2 in (
-      self.line <- __assign_2;
+      (Obj.magic self : t).line <- __assign_2;
       __assign_2
     ));
     let __assign_3 = column2 in (
-      self.column <- __assign_3;
+      (Obj.magic self : t).column <- __assign_3;
       __assign_3
     )
-  ));
+  )));
   self
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxPos"; index = 0; line = 0; column = 0 } : t)
 
-let toString = fun self () -> (("line " ^ string_of_int (self.line)) ^ ", col ") ^ string_of_int (self.column)
+let toString = fun self () -> (("line " ^ string_of_int ((Obj.magic self : t).line)) ^ ", col ") ^ string_of_int ((Obj.magic self : t).column)
 
-let getIndex = fun self () -> self.index
+let getIndex = fun self () -> (Obj.magic self : t).index
 
-let getLine = fun self () -> self.line
+let getLine = fun self () -> (Obj.magic self : t).line
 
-let getColumn = fun self () -> self.column
+let getColumn = fun self () -> (Obj.magic self : t).column
 
 let unknown = fun () -> create 0 0 0

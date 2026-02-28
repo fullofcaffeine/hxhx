@@ -27,7 +27,7 @@ fi
 echo "== Checking runtime path blocks delegation and keeps builtin stage3 path"
 stage3_out="$(
   HXHX_FORBID_STAGE0=1 HAXE_BIN="$HAXE_SENTINEL" \
-  "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit \
+  "$HXHX_BIN" --target ocaml --hxhx-no-emit \
     -cp "$ROOT/workloads/hih-compiler/fixtures/src" \
     -main demo.A \
     --hxhx-out "$tmpdir/stage3_out"

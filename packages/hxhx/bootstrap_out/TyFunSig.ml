@@ -6,52 +6,52 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable isStatic : bool; mutable args : TyType.t HxArray.t; mutable returnType : TyType.t }
 
-let create = fun name2 isStatic2 args2 returnType2 -> let self = ({ __hx_type = HxType.class_ "TyFunSig"; name = ""; isStatic = false; args = Obj.magic (); returnType = Obj.magic () } : t) in (
-  ignore ((
+let create = fun name2 isStatic2 args2 returnType2 -> let self = ({ __hx_type = HxType.class_ "TyFunSig"; name = ""; isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
-      self.name <- __assign_1;
+      (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = isStatic2 in (
-      self.isStatic <- __assign_2;
+      (Obj.magic self : t).isStatic <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = let __arr_4 = HxArray.create () in __arr_4 in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in (
+      ignore (if args2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
         tempRight := __assign_3;
         __assign_3
-      ) else let __assign_5 = args2 in (
+      ) else let __assign_5 = Obj.magic args2 in (
         tempRight := __assign_5;
         __assign_5
       ));
-      ignore (let __assign_6 = !tempRight in (
-        self.args <- __assign_6;
+      ignore (let __assign_6 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).args <- __assign_6;
         __assign_6
       ));
-      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
-        ignore (if returnType2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = TyType.unknown () in (
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+        ignore (if returnType2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (TyType.unknown ()) in (
           tempRight1 := __assign_7;
           __assign_7
-        ) else let __assign_8 = returnType2 in (
+        ) else let __assign_8 = Obj.magic returnType2 in (
           tempRight1 := __assign_8;
           __assign_8
         ));
-        let __assign_9 = !tempRight1 in (
-          self.returnType <- __assign_9;
+        let __assign_9 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).returnType <- __assign_9;
           __assign_9
         )
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunSig"; name = ""; isStatic = false; args = Obj.magic (); returnType = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunSig"; name = ""; isStatic = false; args = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getName = fun self () -> self.name
+let getName = fun self () -> (Obj.magic self : t).name
 
-let getIsStatic = fun self () -> self.isStatic
+let getIsStatic = fun self () -> (Obj.magic self : t).isStatic
 
-let getArgs = fun self () -> self.args
+let getArgs = fun self () -> (Obj.magic self : t).args
 
-let getReturnType = fun self () -> self.returnType
+let getReturnType = fun self () -> (Obj.magic self : t).returnType

@@ -610,21 +610,21 @@ class Main {
 		//
 		// Why
 		// - Preserve upstream CLI ergonomics for JS output without requiring hxhx-only flags
-		//   like `--target js-native`.
+		//   like `--target js`.
 		// - Keep strict CLI mode usable in non-delegating flows.
 		//
 		// Guardrails
 		// - Explicit shim target presets still win (`--target ...`).
 		// - We only auto-route when JS is the only explicit standard target family in the request.
-		// - If builtin `js-native` is unavailable:
+		// - If builtin JS backend is unavailable:
 		//   - with stage0 allowed: fall back to normal stage0 delegation,
 		//   - with `HXHX_FORBID_STAGE0=1`: fail fast with a clear error.
 		if (selectedShimTargetPreset == null && shouldRouteStandardJsToNative(forwarded)) {
 			final resolvedJsNative = try {
-				TargetPresets.resolve("js-native", forwarded);
+				TargetPresets.resolve("js", forwarded);
 			} catch (e:String) {
 				if (forbidStage0Delegation) {
-					fatal("hxhx: --js requested native routing, but builtin js-native backend is unavailable: " + e);
+					fatal("hxhx: --js requested native routing, but builtin js backend is unavailable: " + e);
 				}
 				null;
 			}
@@ -636,7 +636,7 @@ class Main {
 		}
 
 		if (forbidStage0Delegation) {
-			fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids stage0 delegation for this invocation. Use --hxhx-stage3 or a builtin target preset (for example: --target ocaml-stage3 / --target js-native).");
+			fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids stage0 delegation for this invocation. Use --hxhx-stage3 or a builtin target preset (for example: --target ocaml / --target js).");
 		}
 
 		final code = Sys.command(haxeBin, forwarded);

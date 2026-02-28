@@ -60,10 +60,12 @@ class M14BackendPluginManifestIntegrationTest {
 		assertTrue(parsed.backend.entry == "M14ResolverFixtureProvider", "unexpected backend entry");
 		assertTrue(parsed.requires.abiVersion == BackendAbi.VERSION, "unexpected abiVersion");
 
-		final parsedNative = BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cmxs"), "fixture://valid-native");
-		assertTrue(parsedNative.backend.kind == BackendPluginManifestKind.OcamlCmxs, "unexpected native backend kind");
-		final parsedNativeBytecode = BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cma"), "fixture://valid-native-bytecode");
-		assertTrue(parsedNativeBytecode.backend.kind == BackendPluginManifestKind.OcamlCmxs, "unexpected native bytecode backend kind");
+		final parsedNative = BackendPluginManifestParser.parse(manifestJson("ocaml-dynlink", "plugin/backend.cmxs"), "fixture://valid-native");
+		assertTrue(parsedNative.backend.kind == BackendPluginManifestKind.OcamlDynlink, "unexpected native backend kind");
+		final parsedNativeBytecode = BackendPluginManifestParser.parse(manifestJson("ocaml-dynlink", "plugin/backend.cma"), "fixture://valid-native-bytecode");
+		assertTrue(parsedNativeBytecode.backend.kind == BackendPluginManifestKind.OcamlDynlink, "unexpected native bytecode backend kind");
+		final parsedDeprecatedKind = BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cmxs"), "fixture://deprecated-native-kind");
+		assertTrue(parsedDeprecatedKind.backend.kind == BackendPluginManifestKind.OcamlDynlink, "deprecated native kind should normalize to ocaml-dynlink");
 		final parsedWithTrailingWhitespace = BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider") + "\n \t\r",
 			"fixture://valid-trailing-whitespace");
 		assertTrue(parsedWithTrailingWhitespace.pluginId == "fixture.backend.plugin", "unexpected pluginId with trailing whitespace");
@@ -119,9 +121,25 @@ class M14BackendPluginManifestIntegrationTest {
 		assertTrue(providerTypes.length == 1, "expected one provider type from haxe-provider manifest");
 		assertTrue(providerTypes[0] == "M14ResolverFixtureProvider", "unexpected provider type resolved from manifest");
 
-		writeManifest(nativeManifestPath, manifestJson("ocaml-cmxs", "plugin/backend.cmxs"));
+		writeManifest(nativeManifestPath, manifestJson("ocaml-dynlink", "plugin/backend.cmxs"));
 		assertFailsContains(function() BackendPluginManifestResolver.providerTypeNamesForManifestPath(nativeManifestPath),
 			"native `.cmxs` loading requires an OCaml runtime build of hxhx");
+
+		assertFailsContains(function() BackendPluginManifestResolver.providerTypeNamesForManifest({
+			schemaVersion: BackendPluginManifestParser.SCHEMA_VERSION,
+			pluginId: "fixture.bad-abi.plugin",
+			pluginVersion: "0.1.0",
+			backend: {
+				kind: BackendPluginManifestKind.OcamlDynlink,
+				entry: "plugin/backend.cmxs",
+				targetIds: ["js-native"]
+			},
+			requires: {
+				abiVersion: BackendAbi.VERSION + 1,
+				genIrVersion: BackendAbi.GEN_IR_VERSION,
+				macroApiVersion: BackendAbi.MACRO_API_VERSION
+			}
+		}, "fixture://native-preflight-abi"), "backend ABI mismatch");
 
 		deleteIfExists(haxeManifestPath);
 		deleteIfExists(nativeManifestPath);

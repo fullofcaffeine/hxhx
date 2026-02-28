@@ -220,3 +220,82 @@ let fromCharCode (code : int) : string =
     ""
   else
     String.make 1 (Char.chr code)
+
+(* URL encoding/decoding used by Haxe Serializer/Unserializer.
+
+   Semantics target
+   - `urlEncode`: encode bytes using `%HH` and keep RFC3986 unreserved bytes.
+   - `urlDecode`: mirror Haxe std behavior by treating `+` as space first, then
+     decoding `%HH` sequences.
+
+   This is intentionally byte-based (OCaml strings), which is compatible with
+   Haxe String UTF-8 storage model used by serializer payloads. *)
+
+let is_unreserved (code : int) : bool =
+  (code >= 0x41 && code <= 0x5A) (* A-Z *)
+  || (code >= 0x61 && code <= 0x7A) (* a-z *)
+  || (code >= 0x30 && code <= 0x39) (* 0-9 *)
+  || code = 0x2D (* - *)
+  || code = 0x5F (* _ *)
+  || code = 0x2E (* . *)
+  || code = 0x7E (* ~ *)
+
+let hex_upper (n : int) : char =
+  if n < 10 then
+    Char.chr (Char.code '0' + n)
+  else
+    Char.chr (Char.code 'A' + (n - 10))
+
+let urlEncode (s : string) : string =
+  let len = String.length s in
+  let b = Buffer.create (len * 3) in
+  for i = 0 to len - 1 do
+    let code = Char.code s.[i] in
+    if is_unreserved code then
+      Buffer.add_char b s.[i]
+    else (
+      Buffer.add_char b '%';
+      Buffer.add_char b (hex_upper ((code lsr 4) land 0xF));
+      Buffer.add_char b (hex_upper (code land 0xF))
+    )
+  done;
+  Buffer.contents b
+
+let hex_value (c : char) : int =
+  let code = Char.code c in
+  if code >= Char.code '0' && code <= Char.code '9' then
+    code - Char.code '0'
+  else if code >= Char.code 'A' && code <= Char.code 'F' then
+    10 + (code - Char.code 'A')
+  else if code >= Char.code 'a' && code <= Char.code 'f' then
+    10 + (code - Char.code 'a')
+  else
+    -1
+
+let urlDecode (s : string) : string =
+  let len = String.length s in
+  let b = Buffer.create len in
+  let rec loop i =
+    if i >= len then
+      ()
+    else
+      match s.[i] with
+      | '+' ->
+          Buffer.add_char b ' ';
+          loop (i + 1)
+      | '%' when i + 2 < len ->
+          let hi = hex_value s.[i + 1] in
+          let lo = hex_value s.[i + 2] in
+          if hi >= 0 && lo >= 0 then (
+            Buffer.add_char b (Char.chr ((hi lsl 4) lor lo));
+            loop (i + 3)
+          ) else (
+            Buffer.add_char b '%';
+            loop (i + 1)
+          )
+      | c ->
+          Buffer.add_char b c;
+          loop (i + 1)
+  in
+  loop 0;
+  Buffer.contents b

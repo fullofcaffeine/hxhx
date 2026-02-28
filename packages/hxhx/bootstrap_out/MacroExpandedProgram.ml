@@ -6,42 +6,42 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable macroMode : bool; mutable typedModules : TypedModule.t HxArray.t; mutable generatedOcamlModules : Obj.t HxArray.t }
 
-let create = fun typedModules2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic (); generatedOcamlModules = Obj.magic () } : t) in (
-  ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (if typedModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = let __arr_2 = HxArray.create () in __arr_2 in (
+let create = fun typedModules2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic (HxRuntime.hx_null); generatedOcamlModules = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore (let tempRight = ref (Obj.magic (HxRuntime.hx_null) : TypedModule.t HxArray.t) in (
+    ignore (if typedModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
       tempRight := __assign_1;
       __assign_1
-    ) else let __assign_3 = typedModules2 in (
+    ) else let __assign_3 = Obj.magic typedModules2 in (
       tempRight := __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = !tempRight in (
-      self.typedModules <- __assign_4;
+    ignore (let __assign_4 = Obj.magic (!tempRight) in (
+      (Obj.magic self : t).typedModules <- __assign_4;
       __assign_4
     ));
     ignore (let __assign_5 = macroMode2 in (
-      self.macroMode <- __assign_5;
+      (Obj.magic self : t).macroMode <- __assign_5;
       __assign_5
     ));
-    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = let __arr_7 = HxArray.create () in __arr_7 in (
+    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+      ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = Obj.magic (let __arr_7 = HxArray.create () in __arr_7) in (
         tempRight1 := __assign_6;
         __assign_6
-      ) else let __assign_8 = generatedOcamlModules2 in (
+      ) else let __assign_8 = Obj.magic generatedOcamlModules2 in (
         tempRight1 := __assign_8;
         __assign_8
       ));
-      let __assign_9 = !tempRight1 in (
-        self.generatedOcamlModules <- __assign_9;
+      let __assign_9 = Obj.magic (!tempRight1) in (
+        (Obj.magic self : t).generatedOcamlModules <- __assign_9;
         __assign_9
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic (); generatedOcamlModules = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedProgram"; macroMode = false; typedModules = Obj.magic (HxRuntime.hx_null); generatedOcamlModules = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getTypedModules = fun self () -> self.typedModules
+let getTypedModules = fun self () -> (Obj.magic self : t).typedModules
 
-let getGeneratedOcamlModules = fun self () -> self.generatedOcamlModules
+let getGeneratedOcamlModules = fun self () -> (Obj.magic self : t).generatedOcamlModules

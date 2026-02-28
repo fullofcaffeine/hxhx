@@ -6,26 +6,26 @@ let __reflaxe_ocaml__ = ()
 
 type macroclient_t = { __hx_type : Obj.t; mutable proc : Sys_io_Process.t; mutable nextId : int }
 
-let macroclient_create = fun proc2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic (); nextId = 1 } : macroclient_t) in (
-  ignore ((
+let macroclient_create = fun proc2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic (HxRuntime.hx_null); nextId = 1 } : macroclient_t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = 1 in (
-      self.nextId <- __assign_1;
+      (Obj.magic self : macroclient_t).nextId <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = proc2 in (
-      self.proc <- __assign_2;
+    let __assign_2 = Obj.magic proc2 in (
+      (Obj.magic self : macroclient_t).proc <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let macroclient___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic (); nextId = 1 } : macroclient_t)
+let macroclient___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._MacroHostClient.MacroClient"; proc = Obj.magic (HxRuntime.hx_null); nextId = 1 } : macroclient_t)
 
 let macroclient_drainStderr = fun self (maxLines : int) -> try let __fallback_result_54 = (
-  ignore (if maxLines <= 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let lines = HxArray.create () in (
-    ignore (try while HxArray.length lines < maxLines do ignore (HxArray.push lines (let __obj_48 = self.proc.stderr in __obj_48.readLine (Obj.magic __obj_48) ())) done with
+  ignore (if maxLines <= 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let lines = Obj.magic (HxArray.create ()) in (
+    ignore (try while HxArray.length lines < maxLines do ignore (HxArray.push lines (let __obj_48 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stderr in (Obj.magic __obj_48 : Haxe_io_Input.t).readLine (Obj.magic __obj_48) ())) done with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
       | HxRuntime.Hx_return __ret_49 -> raise (HxRuntime.Hx_return __ret_49)
@@ -54,36 +54,36 @@ let macroclient_drainStderr = fun self (maxLines : int) -> try let __fallback_re
 ) in Obj.magic __fallback_result_54 with
   | HxRuntime.Hx_return __ret_53 -> Obj.obj __ret_53
 
-let macroclient_replyOk = fun self (id : int) (tail : string) -> ignore ((
-  ignore (let __obj_154 = self.proc.stdin in __obj_154.writeString (Obj.magic __obj_154) (((("res " ^ string_of_int id) ^ " ok ") ^ HxString.toStdString tail) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-  let __obj_155 = self.proc.stdin in __obj_155.flush (Obj.magic __obj_155) ()
-))
+let macroclient_replyOk = fun self (id : int) (tail : string) -> ignore (ignore ((
+  ignore (let __obj_154 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_154 : Haxe_io_Output.t).writeString (Obj.magic __obj_154) (((("res " ^ string_of_int id) ^ " ok ") ^ HxString.toStdString tail) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+  let __obj_155 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_155 : Haxe_io_Output.t).flush (Obj.magic __obj_155) ()
+)))
 
-let macroclient_replyErr = fun self (id : int) (msg : string) -> ignore ((
-  ignore (let __obj_156 = self.proc.stdin in __obj_156.writeString (Obj.magic __obj_156) (((((("res " ^ string_of_int id) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-  let __obj_157 = self.proc.stdin in __obj_157.flush (Obj.magic __obj_157) ()
-))
+let macroclient_replyErr = fun self (id : int) (msg : string) -> ignore (ignore ((
+  ignore (let __obj_156 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_156 : Haxe_io_Output.t).writeString (Obj.magic __obj_156) (((((("res " ^ string_of_int id) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+  let __obj_157 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_157 : Haxe_io_Output.t).flush (Obj.magic __obj_157) ()
+)))
 
-let macroclient_connect = fun exe -> let p = Sys_io_Process.create (exe : string) (let __arr_170 = HxArray.create () in __arr_170) (HxRuntime.hx_null) in let banner = (let __obj_171 = p.stdout in __obj_171.readLine (Obj.magic __obj_171) () : string) in (
+let macroclient_connect = fun exe -> let p = Obj.magic (Sys_io_Process.create (exe : string) (Obj.magic (let __arr_170 = HxArray.create () in __arr_170)) (HxRuntime.hx_null)) in let banner = (let __obj_171 = (Obj.magic p : Sys_io_Process.t).stdout in (Obj.magic __obj_171 : Haxe_io_Input.t).readLine (Obj.magic __obj_171) () : string) in (
   ignore (if not (HxString.equals banner "hxhx_macro_rpc_v=1") then ignore ((
-    ignore (Sys_io_Process.close p ());
+    ignore (Sys_io_Process.close (Obj.magic p) ());
     HxType.hx_throw_typed_rtti (Obj.repr ("macro host: unsupported banner: " ^ HxString.toStdString banner)) ["Dynamic"; "String"]
   )) else ());
-  ignore (let __obj_172 = p.stdin in __obj_172.writeString (Obj.magic __obj_172) ("hello proto=1\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-  ignore (let __obj_173 = p.stdin in __obj_173.flush (Obj.magic __obj_173) ());
-  let ok = (let __obj_174 = p.stdout in __obj_174.readLine (Obj.magic __obj_174) () : string) in (
+  ignore (let __obj_172 = (Obj.magic p : Sys_io_Process.t).stdin in (Obj.magic __obj_172 : Haxe_io_Output.t).writeString (Obj.magic __obj_172) ("hello proto=1\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+  ignore (let __obj_173 = (Obj.magic p : Sys_io_Process.t).stdin in (Obj.magic __obj_173 : Haxe_io_Output.t).flush (Obj.magic __obj_173) ());
+  let ok = (let __obj_174 = (Obj.magic p : Sys_io_Process.t).stdout in (Obj.magic __obj_174 : Haxe_io_Input.t).readLine (Obj.magic __obj_174) () : string) in (
     ignore (if not (HxString.equals ok "ok") then ignore ((
-      ignore (Sys_io_Process.close p ());
+      ignore (Sys_io_Process.close (Obj.magic p) ());
       HxType.hx_throw_typed_rtti (Obj.repr ("macro host: handshake failed: " ^ HxString.toStdString ok)) ["Dynamic"; "String"]
     )) else ());
-    macroclient_create p
+    macroclient_create (Obj.magic p)
   )
 )
 
 let macroclient_TRACE = let v = (HxSys.getEnv "HXHX_MACRO_TRACE" : string) in HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes"
 
-let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let parts = Hxhx_macro_MacroProtocol.splitN (line : string) 3 in let id = Std.parseInt (HxArray.get parts 1 : string) in let hx_method = (HxArray.get parts 2 : string) in let tail = (HxArray.get parts 3 : string) in (
-  ignore (if macroclient_TRACE then ignore (try let __obj_55 = Sys_io_Stdio.stderr () in __obj_55.writeString (Obj.magic __obj_55) (("[hxhx macro rpc] <- " ^ HxString.toStdString hx_method) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)) with
+let macroclient_handleInboundReq = fun self (line : string) -> ignore (ignore (try let parts = Obj.magic (Hxhx_macro_MacroProtocol.splitN (line : string) 3) in let id = Std.parseInt (HxArray.get (Obj.magic parts) 1 : string) in let hx_method = (HxArray.get (Obj.magic parts) 2 : string) in let tail = (HxArray.get (Obj.magic parts) 3 : string) in (
+  ignore (if macroclient_TRACE then ignore (try let __obj_55 = Sys_io_Stdio.stderr () in (Obj.magic __obj_55 : Haxe_io_Output.t).writeString (Obj.magic __obj_55) (("[hxhx macro rpc] <- " ^ HxString.toStdString hx_method) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
     | HxRuntime.Hx_return __ret_56 -> raise (HxRuntime.Hx_return __ret_56)
@@ -102,90 +102,90 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let p
       ()
     ) else raise (__exn_59)) else ());
   ignore (if id == HxRuntime.hx_null then ignore ((
-    ignore (let __obj_60 = self.proc.stdin in __obj_60.writeString (Obj.magic __obj_60) (((((("res " ^ string_of_int 0) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ("missing id" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-    ignore (let __obj_61 = self.proc.stdin in __obj_61.flush (Obj.magic __obj_61) ());
+    ignore (let __obj_60 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_60 : Haxe_io_Output.t).writeString (Obj.magic __obj_60) (((((("res " ^ string_of_int 0) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ("missing id" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+    ignore (let __obj_61 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_61 : Haxe_io_Output.t).flush (Obj.magic __obj_61) ());
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
   try match hx_method with
     | "compiler.addClassPath" -> ignore (let cp = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("cp" : string) : string) in (
       ignore (if cp == Obj.magic (HxRuntime.hx_null) || HxString.length cp = 0 then ignore ((
         ignore (let id2 = let __nullable_int_65 = id in if __nullable_int_65 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_65 in (
-          ignore (let __obj_66 = self.proc.stdin in __obj_66.writeString (Obj.magic __obj_66) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing classpath" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_67 = self.proc.stdin in __obj_67.flush (Obj.magic __obj_67) ()
+          ignore (let __obj_66 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_66 : Haxe_io_Output.t).writeString (Obj.magic __obj_66) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing classpath" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_67 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_67 : Haxe_io_Output.t).flush (Obj.magic __obj_67) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.addClassPath (cp : string));
       let id2 = let __nullable_int_68 = id in if __nullable_int_68 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_68 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_69 = self.proc.stdin in __obj_69.writeString (Obj.magic __obj_69) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_70 = self.proc.stdin in __obj_70.flush (Obj.magic __obj_70) ()
+        ignore (let __obj_69 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_69 : Haxe_io_Output.t).writeString (Obj.magic __obj_69) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_70 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_70 : Haxe_io_Output.t).flush (Obj.magic __obj_70) ()
       )
     ))
     | "compiler.define" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in let value = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("v" : string) : string) in (
       ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then ignore ((
         ignore (let id2 = let __nullable_int_71 = id in if __nullable_int_71 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_71 in (
-          ignore (let __obj_72 = self.proc.stdin in __obj_72.writeString (Obj.magic __obj_72) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_73 = self.proc.stdin in __obj_73.flush (Obj.magic __obj_73) ()
+          ignore (let __obj_72 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_72 : Haxe_io_Output.t).writeString (Obj.magic __obj_72) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_73 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_73 : Haxe_io_Output.t).flush (Obj.magic __obj_73) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.setDefine (name : string) (value : string));
       let id2 = let __nullable_int_74 = id in if __nullable_int_74 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_74 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_75 = self.proc.stdin in __obj_75.writeString (Obj.magic __obj_75) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_76 = self.proc.stdin in __obj_76.flush (Obj.magic __obj_76) ()
+        ignore (let __obj_75 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_75 : Haxe_io_Output.t).writeString (Obj.magic __obj_75) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_76 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_76 : Haxe_io_Output.t).flush (Obj.magic __obj_76) ()
       )
     ))
     | "compiler.emitBuildFields" -> ignore (let modulePath = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("m" : string) : string) in let source = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("s" : string) : string) in (
       ignore (if modulePath == Obj.magic (HxRuntime.hx_null) || HxString.length modulePath = 0 then ignore ((
         ignore (let id2 = let __nullable_int_77 = id in if __nullable_int_77 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_77 in (
-          ignore (let __obj_78 = self.proc.stdin in __obj_78.writeString (Obj.magic __obj_78) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module path" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_79 = self.proc.stdin in __obj_79.flush (Obj.magic __obj_79) ()
+          ignore (let __obj_78 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_78 : Haxe_io_Output.t).writeString (Obj.magic __obj_78) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module path" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_79 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_79 : Haxe_io_Output.t).flush (Obj.magic __obj_79) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.emitBuildFields (modulePath : string) (source : string));
       let id2 = let __nullable_int_80 = id in if __nullable_int_80 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_80 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_81 = self.proc.stdin in __obj_81.writeString (Obj.magic __obj_81) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_82 = self.proc.stdin in __obj_82.flush (Obj.magic __obj_82) ()
+        ignore (let __obj_81 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_81 : Haxe_io_Output.t).writeString (Obj.magic __obj_81) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_82 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_82 : Haxe_io_Output.t).flush (Obj.magic __obj_82) ()
       )
     ))
     | "compiler.emitHxModule" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in let source = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("s" : string) : string) in (
       ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then ignore ((
         ignore (let id2 = let __nullable_int_83 = id in if __nullable_int_83 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_83 in (
-          ignore (let __obj_84 = self.proc.stdin in __obj_84.writeString (Obj.magic __obj_84) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_85 = self.proc.stdin in __obj_85.flush (Obj.magic __obj_85) ()
+          ignore (let __obj_84 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_84 : Haxe_io_Output.t).writeString (Obj.magic __obj_84) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_85 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_85 : Haxe_io_Output.t).flush (Obj.magic __obj_85) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.emitHxModule (name : string) (source : string));
       let id2 = let __nullable_int_86 = id in if __nullable_int_86 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_86 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_87 = self.proc.stdin in __obj_87.writeString (Obj.magic __obj_87) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_88 = self.proc.stdin in __obj_88.flush (Obj.magic __obj_88) ()
+        ignore (let __obj_87 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_87 : Haxe_io_Output.t).writeString (Obj.magic __obj_87) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_88 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_88 : Haxe_io_Output.t).flush (Obj.magic __obj_88) ()
       )
     ))
     | "compiler.emitOcamlModule" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in let source = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("s" : string) : string) in (
       ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then ignore ((
         ignore (let id2 = let __nullable_int_89 = id in if __nullable_int_89 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_89 in (
-          ignore (let __obj_90 = self.proc.stdin in __obj_90.writeString (Obj.magic __obj_90) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_91 = self.proc.stdin in __obj_91.flush (Obj.magic __obj_91) ()
+          ignore (let __obj_90 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_90 : Haxe_io_Output.t).writeString (Obj.magic __obj_90) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_91 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_91 : Haxe_io_Output.t).flush (Obj.magic __obj_91) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.emitOcamlModule (name : string) (source : string));
       let id2 = let __nullable_int_92 = id in if __nullable_int_92 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_92 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_93 = self.proc.stdin in __obj_93.writeString (Obj.magic __obj_93) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_94 = self.proc.stdin in __obj_94.flush (Obj.magic __obj_94) ()
+        ignore (let __obj_93 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_93 : Haxe_io_Output.t).writeString (Obj.magic __obj_93) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_94 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_94 : Haxe_io_Output.t).flush (Obj.magic __obj_94) ()
       )
     ))
     | "compiler.getDefine" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in (
       ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then ignore ((
         ignore (let id2 = let __nullable_int_95 = id in if __nullable_int_95 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_95 in (
-          ignore (let __obj_96 = self.proc.stdin in __obj_96.writeString (Obj.magic __obj_96) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_97 = self.proc.stdin in __obj_97.flush (Obj.magic __obj_97) ()
+          ignore (let __obj_96 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_96 : Haxe_io_Output.t).writeString (Obj.magic __obj_96) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing name" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_97 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_97 : Haxe_io_Output.t).flush (Obj.magic __obj_97) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
-      let tempString = ref "" in (
+      let tempString = ref ("" : string) in (
         ignore (if Hxhx_macro_MacroState.defined (name : string) then let __assign_98 = ("1" : string) in (
           tempString := __assign_98;
           __assign_98
@@ -194,47 +194,47 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let p
           __assign_99
         ));
         let payload = ((HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("d" : string) (!tempString : string)) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) (Hxhx_macro_MacroState.definedValue (name : string) : string)) : string) in let id2 = let __nullable_int_100 = id in if __nullable_int_100 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_100 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) (payload : string) : string) in (
-          ignore (let __obj_101 = self.proc.stdin in __obj_101.writeString (Obj.magic __obj_101) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_102 = self.proc.stdin in __obj_102.flush (Obj.magic __obj_102) ()
+          ignore (let __obj_101 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_101 : Haxe_io_Output.t).writeString (Obj.magic __obj_101) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_102 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_102 : Haxe_io_Output.t).flush (Obj.magic __obj_102) ()
         )
       )
     ))
     | "compiler.includeModule" -> ignore (let modulePath = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("m" : string) : string) in (
       ignore (if modulePath == Obj.magic (HxRuntime.hx_null) || HxString.length modulePath = 0 then ignore ((
         ignore (let id2 = let __nullable_int_103 = id in if __nullable_int_103 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_103 in (
-          ignore (let __obj_104 = self.proc.stdin in __obj_104.writeString (Obj.magic __obj_104) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module path" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_105 = self.proc.stdin in __obj_105.flush (Obj.magic __obj_105) ()
+          ignore (let __obj_104 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_104 : Haxe_io_Output.t).writeString (Obj.magic __obj_104) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing module path" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_105 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_105 : Haxe_io_Output.t).flush (Obj.magic __obj_105) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.includeModule (modulePath : string));
       let id2 = let __nullable_int_106 = id in if __nullable_int_106 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_106 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_107 = self.proc.stdin in __obj_107.writeString (Obj.magic __obj_107) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_108 = self.proc.stdin in __obj_108.flush (Obj.magic __obj_108) ()
+        ignore (let __obj_107 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_107 : Haxe_io_Output.t).writeString (Obj.magic __obj_107) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_108 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_108 : Haxe_io_Output.t).flush (Obj.magic __obj_108) ()
       )
     ))
     | "compiler.registerHook" -> ignore (let kind = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("k" : string) : string) in let idStr = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("i" : string) : string) in let hid = Std.parseInt (idStr : string) in (
       ignore (if kind == Obj.magic (HxRuntime.hx_null) || HxString.length kind = 0 then ignore ((
         ignore (let id2 = let __nullable_int_109 = id in if __nullable_int_109 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_109 in (
-          ignore (let __obj_110 = self.proc.stdin in __obj_110.writeString (Obj.magic __obj_110) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing kind" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_111 = self.proc.stdin in __obj_111.flush (Obj.magic __obj_111) ()
+          ignore (let __obj_110 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_110 : Haxe_io_Output.t).writeString (Obj.magic __obj_110) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": missing kind" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_111 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_111 : Haxe_io_Output.t).flush (Obj.magic __obj_111) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (if hid == HxRuntime.hx_null then ignore ((
         ignore (let id2 = let __nullable_int_112 = id in if __nullable_int_112 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_112 in (
-          ignore (let __obj_113 = self.proc.stdin in __obj_113.writeString (Obj.magic __obj_113) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": invalid hook id" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_114 = self.proc.stdin in __obj_114.flush (Obj.magic __obj_114) ()
+          ignore (let __obj_113 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_113 : Haxe_io_Output.t).writeString (Obj.magic __obj_113) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (HxString.toStdString hx_method ^ ": invalid hook id" : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_114 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_114 : Haxe_io_Output.t).flush (Obj.magic __obj_114) ()
         ));
         raise (HxRuntime.Hx_return (Obj.repr ()))
       )) else ());
       ignore (Hxhx_macro_MacroState.registerHook (kind : string) (let __nullable_int_115 = hid in if __nullable_int_115 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_115));
       let id2 = let __nullable_int_116 = id in if __nullable_int_116 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_116 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("ok" : string) : string) in (
-        ignore (let __obj_117 = self.proc.stdin in __obj_117.writeString (Obj.magic __obj_117) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_118 = self.proc.stdin in __obj_118.flush (Obj.magic __obj_118) ()
+        ignore (let __obj_117 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_117 : Haxe_io_Output.t).writeString (Obj.magic __obj_117) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_118 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_118 : Haxe_io_Output.t).flush (Obj.magic __obj_118) ()
       )
     ))
-    | "context.defined" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in let id2 = let __nullable_int_119 = id in if __nullable_int_119 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_119 in let tempString1 = ref "" in (
+    | "context.defined" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in let id2 = let __nullable_int_119 = id in if __nullable_int_119 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_119 in let tempString1 = ref ("" : string) in (
       ignore (if Hxhx_macro_MacroState.defined (name : string) then let __assign_120 = ("1" : string) in (
         tempString1 := __assign_120;
         __assign_120
@@ -243,15 +243,15 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let p
         __assign_121
       ));
       let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) (!tempString1 : string) : string) in (
-        ignore (let __obj_122 = self.proc.stdin in __obj_122.writeString (Obj.magic __obj_122) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_123 = self.proc.stdin in __obj_123.flush (Obj.magic __obj_123) ()
+        ignore (let __obj_122 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_122 : Haxe_io_Output.t).writeString (Obj.magic __obj_122) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_123 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_123 : Haxe_io_Output.t).flush (Obj.magic __obj_123) ()
       )
     ))
     | "context.definedValue" -> ignore (let name = (Hxhx_macro_MacroProtocol.kvGet (tail : string) ("n" : string) : string) in let id2 = let __nullable_int_124 = id in if __nullable_int_124 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_124 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) (Hxhx_macro_MacroState.definedValue (name : string) : string) : string) in (
-      ignore (let __obj_125 = self.proc.stdin in __obj_125.writeString (Obj.magic __obj_125) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-      let __obj_126 = self.proc.stdin in __obj_126.flush (Obj.magic __obj_126) ()
+      ignore (let __obj_125 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_125 : Haxe_io_Output.t).writeString (Obj.magic __obj_125) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+      let __obj_126 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_126 : Haxe_io_Output.t).flush (Obj.magic __obj_126) ()
     ))
-    | "context.getBuildFields" -> ignore (let payload = (Hxhx_macro_MacroState.getBuildFieldsPayload () : string) in let id2 = let __nullable_int_127 = id in if __nullable_int_127 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_127 in let tempString2 = ref "" in (
+    | "context.getBuildFields" -> ignore (let payload = (Hxhx_macro_MacroState.getBuildFieldsPayload () : string) in let id2 = let __nullable_int_127 = id in if __nullable_int_127 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_127 in let tempString2 = ref ("" : string) in (
       ignore (if payload == Obj.magic (HxRuntime.hx_null) then let __assign_128 = ("" : string) in (
         tempString2 := __assign_128;
         __assign_128
@@ -260,29 +260,29 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let p
         __assign_129
       ));
       let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) (!tempString2 : string) : string) in (
-        ignore (let __obj_130 = self.proc.stdin in __obj_130.writeString (Obj.magic __obj_130) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_131 = self.proc.stdin in __obj_131.flush (Obj.magic __obj_131) ()
+        ignore (let __obj_130 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_130 : Haxe_io_Output.t).writeString (Obj.magic __obj_130) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_131 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_131 : Haxe_io_Output.t).flush (Obj.magic __obj_131) ()
       )
     ))
-    | "context.getDefines" -> ignore (let pairs = Hxhx_macro_MacroState.listDefinesPairsSorted () in let parts2 = HxArray.create () in (
+    | "context.getDefines" -> ignore (let pairs = Obj.magic (Hxhx_macro_MacroState.listDefinesPairsSorted ()) in let parts2 = Obj.magic (HxArray.create ()) in (
       ignore (HxArray.push parts2 (Hxhx_macro_MacroProtocol.encodeLen ("c" : string) (string_of_int (HxArray.length pairs) : string)));
       let _g = ref 0 in let _g1 = HxArray.length pairs in (
         ignore (while !_g < _g1 do ignore (let i = let __old_132 = !_g in let __new_133 = HxInt.add __old_132 1 in (
           ignore (_g := __new_133);
           __old_132
-        ) in let kv = HxArray.get pairs i in (
-          ignore (HxArray.push parts2 (Hxhx_macro_MacroProtocol.encodeLen ("k" ^ string_of_int i : string) (HxArray.get kv 0 : string)));
-          HxArray.push parts2 (Hxhx_macro_MacroProtocol.encodeLen ("v" ^ string_of_int i : string) (HxArray.get kv 1 : string))
+        ) in let kv = Obj.magic (HxArray.get (Obj.magic pairs) i) in (
+          ignore (HxArray.push parts2 (Hxhx_macro_MacroProtocol.encodeLen ("k" ^ string_of_int i : string) (HxArray.get (Obj.magic kv) 0 : string)));
+          HxArray.push parts2 (Hxhx_macro_MacroProtocol.encodeLen ("v" ^ string_of_int i : string) (HxArray.get (Obj.magic kv) 1 : string))
         )) done);
         let id2 = let __nullable_int_134 = id in if __nullable_int_134 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_134 in let tail2 = (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) (HxArray.join parts2 " " (fun x -> x) : string) : string) in (
-          ignore (let __obj_135 = self.proc.stdin in __obj_135.writeString (Obj.magic __obj_135) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-          let __obj_136 = self.proc.stdin in __obj_136.flush (Obj.magic __obj_136) ()
+          ignore (let __obj_135 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_135 : Haxe_io_Output.t).writeString (Obj.magic __obj_135) (((("res " ^ string_of_int id2) ^ " ok ") ^ HxString.toStdString tail2) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+          let __obj_136 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_136 : Haxe_io_Output.t).flush (Obj.magic __obj_136) ()
         )
       )
     ))
     | _ -> ignore (let id2 = let __nullable_int_62 = id in if __nullable_int_62 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_62 in (
-      ignore (let __obj_63 = self.proc.stdin in __obj_63.writeString (Obj.magic __obj_63) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ("unknown method: " ^ HxString.toStdString hx_method : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-      let __obj_64 = self.proc.stdin in __obj_64.flush (Obj.magic __obj_64) ()
+      ignore (let __obj_63 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_63 : Haxe_io_Output.t).writeString (Obj.magic __obj_63) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ("unknown method: " ^ HxString.toStdString hx_method : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+      let __obj_64 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_64 : Haxe_io_Output.t).flush (Obj.magic __obj_64) ()
     )) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -290,37 +290,37 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (try let p
     | HxRuntime.Hx_exception (__exn_v_138, __exn_tags_139) -> if HxRuntime.tags_has __exn_tags_139 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_138) : Haxe_io_Error.error) in (
       ignore e;
       let id2 = let __nullable_int_143 = id in if __nullable_int_143 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_143 in let msg = ((HxString.toStdString hx_method ^ ": exception: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr e)) : string) in (
-        ignore (let __obj_144 = self.proc.stdin in __obj_144.writeString (Obj.magic __obj_144) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_145 = self.proc.stdin in __obj_145.flush (Obj.magic __obj_145) ()
+        ignore (let __obj_144 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_144 : Haxe_io_Output.t).writeString (Obj.magic __obj_144) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_145 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_145 : Haxe_io_Output.t).flush (Obj.magic __obj_145) ()
       )
     ) else if HxRuntime.tags_has __exn_tags_139 "String" then let e = (Obj.obj __exn_v_138 : string) in (
       ignore e;
       let id2 = let __nullable_int_140 = id in if __nullable_int_140 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_140 in (
-        ignore (let __obj_141 = self.proc.stdin in __obj_141.writeString (Obj.magic __obj_141) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ((HxString.toStdString hx_method ^ ": exception: ") ^ HxString.toStdString e : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_142 = self.proc.stdin in __obj_142.flush (Obj.magic __obj_142) ()
+        ignore (let __obj_141 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_141 : Haxe_io_Output.t).writeString (Obj.magic __obj_141) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ((HxString.toStdString hx_method ^ ": exception: ") ^ HxString.toStdString e : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_142 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_142 : Haxe_io_Output.t).flush (Obj.magic __obj_142) ()
       )
     ) else HxRuntime.hx_throw_typed __exn_v_138 __exn_tags_139
     | __exn_146 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_146)) : Haxe_io_Error.error) in (
       ignore e;
       let id2 = let __nullable_int_150 = id in if __nullable_int_150 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_150 in let msg = ((HxString.toStdString hx_method ^ ": exception: ") ^ HxString.toStdString (HxRuntime.dynamic_toStdString (Obj.repr e)) : string) in (
-        ignore (let __obj_151 = self.proc.stdin in __obj_151.writeString (Obj.magic __obj_151) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_152 = self.proc.stdin in __obj_152.flush (Obj.magic __obj_152) ()
+        ignore (let __obj_151 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_151 : Haxe_io_Output.t).writeString (Obj.magic __obj_151) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) (msg : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_152 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_152 : Haxe_io_Output.t).flush (Obj.magic __obj_152) ()
       )
     ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_146) : string) in (
       ignore e;
       let id2 = let __nullable_int_147 = id in if __nullable_int_147 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_147 in (
-        ignore (let __obj_148 = self.proc.stdin in __obj_148.writeString (Obj.magic __obj_148) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ((HxString.toStdString hx_method ^ ": exception: ") ^ HxString.toStdString e : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-        let __obj_149 = self.proc.stdin in __obj_149.flush (Obj.magic __obj_149) ()
+        ignore (let __obj_148 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_148 : Haxe_io_Output.t).writeString (Obj.magic __obj_148) (((((("res " ^ string_of_int id2) ^ " err ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("m" : string) ((HxString.toStdString hx_method ^ ": exception: ") ^ HxString.toStdString e : string))) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) ("" : string))) ^ "\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+        let __obj_149 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_149 : Haxe_io_Output.t).flush (Obj.magic __obj_149) ()
       )
     ) else raise (__exn_146)
 ) with
-  | HxRuntime.Hx_return __ret_153 -> Obj.obj __ret_153)
+  | HxRuntime.Hx_return __ret_153 -> Obj.obj __ret_153))
 
-let macroclient_call = fun self (hx_method : string) (tail : string) -> try let __fallback_result_47 = let id = let __obj_3 = self in let __old_4 = __obj_3.nextId in let __new_5 = HxInt.add __old_4 1 in (
-  ignore (__obj_3.nextId <- __new_5);
+let macroclient_call = fun self (hx_method : string) (tail : string) -> try let __fallback_result_47 = let id = let __obj_3 = self in let __old_4 = (Obj.magic __obj_3 : macroclient_t).nextId in let __new_5 = HxInt.add __old_4 1 in (
+  ignore ((Obj.magic __obj_3 : macroclient_t).nextId <- __new_5);
   __old_4
 ) in (
-  ignore (if macroclient_TRACE then ignore (try let __obj_6 = Sys_io_Stdio.stderr () in __obj_6.writeString (Obj.magic __obj_6) (("[hxhx macro rpc] -> " ^ HxString.toStdString hx_method) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)) with
+  ignore (if macroclient_TRACE then ignore (try let __obj_6 = Sys_io_Stdio.stderr () in (Obj.magic __obj_6 : Haxe_io_Output.t).writeString (Obj.magic __obj_6) (("[hxhx macro rpc] -> " ^ HxString.toStdString hx_method) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null)) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
     | HxRuntime.Hx_return __ret_7 -> raise (HxRuntime.Hx_return __ret_7)
@@ -338,7 +338,7 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
       ignore _hx;
       ()
     ) else raise (__exn_10)) else ());
-  let tempString = ref "" in (
+  let tempString = ref ("" : string) in (
     ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then let __assign_11 = (((("req " ^ string_of_int id) ^ " ") ^ HxString.toStdString hx_method) ^ "\n" : string) in (
       tempString := __assign_11;
       __assign_11
@@ -347,8 +347,8 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
       __assign_12
     ));
     ignore (try (
-      ignore (let __obj_13 = self.proc.stdin in __obj_13.writeString (Obj.magic __obj_13) (!tempString : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-      let __obj_14 = self.proc.stdin in __obj_14.flush (Obj.magic __obj_14) ()
+      ignore (let __obj_13 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_13 : Haxe_io_Output.t).writeString (Obj.magic __obj_13) (!tempString : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+      let __obj_14 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_14 : Haxe_io_Output.t).flush (Obj.magic __obj_14) ()
     ) with
       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -367,8 +367,8 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
         ignore e;
         HxType.hx_throw_typed_rtti (Obj.repr ("macro host: failed to write request: " ^ HxString.toStdString e)) ["Dynamic"; "String"]
       ) else raise (__exn_18));
-    ignore (try while true do try ignore (let tempString1 = ref "" in (
-      ignore (try let __assign_19 = (let __obj_20 = self.proc.stdout in __obj_20.readLine (Obj.magic __obj_20) () : string) in (
+    ignore (try while true do try ignore (let tempString1 = ref ("" : string) in (
+      ignore (try let __assign_19 = (let __obj_20 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdout in (Obj.magic __obj_20 : Haxe_io_Input.t).readLine (Obj.magic __obj_20) () : string) in (
         tempString1 := __assign_19;
         __assign_19
       ) with
@@ -377,8 +377,8 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
         | HxRuntime.Hx_return __ret_21 -> raise (HxRuntime.Hx_return __ret_21)
         | HxRuntime.Hx_exception (__exn_v_22, __exn_tags_23) -> if HxRuntime.tags_has __exn_tags_23 "haxe.io.Eof" then let _hx = (Obj.obj __exn_v_22 : Haxe_io_Eof.t) in (
           ignore _hx;
-          let hostStderr = (macroclient_drainStderr self 60 : string) in let tempNumber = ref 0 in (
-            ignore (try let __assign_24 = Sys_io_Process.exitCode (self.proc) () in (
+          let hostStderr = (macroclient_drainStderr (Obj.magic self) 60 : string) in let tempNumber = ref (0 : int) in (
+            ignore (try let __assign_24 = Sys_io_Process.exitCode (Obj.magic ((Obj.magic self : macroclient_t).proc)) () in (
               tempNumber := __assign_24;
               __assign_24
             ) with
@@ -399,7 +399,7 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
                   __assign_30
                 )
               ) else raise (__exn_29));
-            let exitCode = !tempNumber in let tempString2 = ref "" in (
+            let exitCode = !tempNumber in let tempString2 = ref ("" : string) in (
               ignore (if HxString.length hostStderr = 0 then let __assign_31 = ("" : string) in (
                 tempString2 := __assign_31;
                 __assign_31
@@ -419,8 +419,8 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
         ) else HxRuntime.hx_throw_typed __exn_v_22 __exn_tags_23
         | __exn_33 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Eof" then let _hx = (Obj.obj (Obj.repr __exn_33) : Haxe_io_Eof.t) in (
           ignore _hx;
-          let hostStderr = (macroclient_drainStderr self 60 : string) in let tempNumber = ref 0 in (
-            ignore (try let __assign_34 = Sys_io_Process.exitCode (self.proc) () in (
+          let hostStderr = (macroclient_drainStderr (Obj.magic self) 60 : string) in let tempNumber = ref (0 : int) in (
+            ignore (try let __assign_34 = Sys_io_Process.exitCode (Obj.magic ((Obj.magic self : macroclient_t).proc)) () in (
               tempNumber := __assign_34;
               __assign_34
             ) with
@@ -441,7 +441,7 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
                   __assign_40
                 )
               ) else raise (__exn_39));
-            let exitCode = !tempNumber in let tempString2 = ref "" in (
+            let exitCode = !tempNumber in let tempString2 = ref ("" : string) in (
               ignore (if HxString.length hostStderr = 0 then let __assign_41 = ("" : string) in (
                 tempString2 := __assign_41;
                 __assign_41
@@ -462,14 +462,14 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
       let line = (!tempString1 : string) in let trimmed = (StringTools.trim (line : string) : string) in (
         ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_continue) else ());
         ignore (if StringTools.startsWith (trimmed : string) ("req " : string) then ignore ((
-          ignore (macroclient_handleInboundReq self (trimmed : string));
+          ignore (macroclient_handleInboundReq (Obj.magic self) (trimmed : string));
           raise (HxRuntime.Hx_continue)
         )) else ());
-        let parts = Hxhx_macro_MacroProtocol.splitN (trimmed : string) 3 in let rid = Std.parseInt (HxArray.get parts 1 : string) in (
+        let parts = Obj.magic (Hxhx_macro_MacroProtocol.splitN (trimmed : string) 3) in let rid = Std.parseInt (HxArray.get (Obj.magic parts) 1 : string) in (
           ignore (if rid == HxRuntime.hx_null || not (let __nullable_43 = rid in if __nullable_43 == HxRuntime.hx_null then false else Obj.obj __nullable_43 = id) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: response id mismatch: " ^ HxString.toStdString trimmed)) ["Dynamic"; "String"]) else ());
-          let status = (HxArray.get parts 2 : string) in let respTail = (HxArray.get parts 3 : string) in (
-            ignore (if HxString.equals status "ok" then raise (HxRuntime.Hx_return (Obj.repr (Hxhx_macro_MacroProtocol.kvGet (respTail : string) ("v" : string)))) else ());
-            let msg2 = (Hxhx_macro_MacroProtocol.kvGet (respTail : string) ("m" : string) : string) in let pos = (Hxhx_macro_MacroProtocol.kvGet (respTail : string) ("p" : string) : string) in let tempError = ref "" in (
+          let status = (HxArray.get (Obj.magic parts) 2 : string) in let respTail = (HxArray.get (Obj.magic parts) 3 : string) in (
+            ignore (if HxString.equals status "ok" then raise (HxRuntime.Hx_return (Obj.repr (Hxhx_macro_MacroProtocol.kvGet (respTail : string) ("v" : string) : string))) else ());
+            let msg2 = (Hxhx_macro_MacroProtocol.kvGet (respTail : string) ("m" : string) : string) in let pos = (Hxhx_macro_MacroProtocol.kvGet (respTail : string) ("p" : string) : string) in let tempError = ref ("" : string) in (
               ignore (if pos != Obj.magic (HxRuntime.hx_null) && HxString.length pos > 0 then let __assign_44 = (((("macro host: " ^ HxString.toStdString msg2) ^ " (") ^ HxString.toStdString pos) ^ ")" : string) in (
                 tempError := __assign_44;
                 __assign_44
@@ -492,10 +492,10 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> try let 
 
 let macroclient_TRACE_HOST = let v = (HxSys.getEnv "HXHX_MACRO_HOST_TRACE" : string) in HxString.equals v "1" || HxString.equals v "true" || HxString.equals v "yes"
 
-let macroclient_close = fun self () -> ignore ((
+let macroclient_close = fun self () -> ignore (ignore ((
   ignore (try (
-    ignore (let __obj_158 = self.proc.stdin in __obj_158.writeString (Obj.magic __obj_158) ("quit\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
-    let __obj_159 = self.proc.stdin in __obj_159.flush (Obj.magic __obj_159) ()
+    ignore (let __obj_158 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_158 : Haxe_io_Output.t).writeString (Obj.magic __obj_158) ("quit\n" : string) (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Encoding" (Obj.magic (HxRuntime.hx_null)))));
+    let __obj_159 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_159 : Haxe_io_Output.t).flush (Obj.magic __obj_159) ()
   ) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -514,7 +514,7 @@ let macroclient_close = fun self () -> ignore ((
       ignore _hx;
       ()
     ) else raise (__exn_163));
-  ignore (if macroclient_TRACE_HOST then ignore (try while true do ignore (let line = (let __obj_164 = self.proc.stderr in __obj_164.readLine (Obj.magic __obj_164) () : string) in let __obj_165 = Sys_io_Stdio.stderr () in __obj_165.writeString (Obj.magic __obj_165) (HxString.toStdString line ^ "\n" : string) (Obj.magic (HxRuntime.hx_null))) done with
+  ignore (if macroclient_TRACE_HOST then ignore (try while true do ignore (let line = (let __obj_164 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stderr in (Obj.magic __obj_164 : Haxe_io_Input.t).readLine (Obj.magic __obj_164) () : string) in let __obj_165 = Sys_io_Stdio.stderr () in (Obj.magic __obj_165 : Haxe_io_Output.t).writeString (Obj.magic __obj_165) (HxString.toStdString line ^ "\n" : string) (Obj.magic (HxRuntime.hx_null))) done with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
     | HxRuntime.Hx_return __ret_166 -> raise (HxRuntime.Hx_return __ret_166)
@@ -538,8 +538,8 @@ let macroclient_close = fun self () -> ignore ((
       ignore _hx;
       ()
     ) else raise (__exn_169)) else ());
-  Sys_io_Process.close (self.proc) ()
-))
+  Sys_io_Process.close (Obj.magic ((Obj.magic self : macroclient_t).proc)) ()
+)))
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: hxhx.macro.MacroHostSession *)
@@ -548,32 +548,66 @@ let __reflaxe_ocaml__ = ()
 
 type macrohostsession_t = { __hx_type : Obj.t; mutable client : macroclient_t }
 
-let macrohostsession_create = fun client2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostSession"; client = Obj.magic () } : macrohostsession_t) in (
-  ignore (let __assign_1 = client2 in (
-    self.client <- __assign_1;
+let macrohostsession_create = fun client2 -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostSession"; client = Obj.magic (HxRuntime.hx_null) } : macrohostsession_t) in (
+  ignore (ignore (let __assign_1 = Obj.magic client2 in (
+    (Obj.magic self : macrohostsession_t).client <- __assign_1;
     __assign_1
-  ));
+  )));
   self
 )
 
-let macrohostsession___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostSession"; client = Obj.magic () } : macrohostsession_t)
+let macrohostsession___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostSession"; client = Obj.magic (HxRuntime.hx_null) } : macrohostsession_t)
 
-let macrohostsession_run = fun self (expr : string) -> macroclient_call (self.client) ("macro.run" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string)
+let macrohostsession_run = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.run" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string)
 
-let macrohostsession_expandExpr = fun self (expr : string) -> macroclient_call (self.client) ("macro.expandExpr" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string)
-
-let macrohostsession_runHook = fun self (kind : string) (id : int) -> ignore (let tempString = ref "" in (
-  ignore (if kind == Obj.magic (HxRuntime.hx_null) then let __assign_2 = ("" : string) in (
+let macrohostsession_loadNativeModule = fun self (modulePath : string) (pluginId : string) -> let payload = (macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.loadNativeModule" : string) ((HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("p" : string) (modulePath : string)) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("i" : string) (pluginId : string)) : string) : string) in let tempString = ref ("" : string) in (
+  ignore (if payload == Obj.magic (HxRuntime.hx_null) then let __assign_2 = ("" : string) in (
     tempString := __assign_2;
     __assign_2
-  ) else let __assign_3 = (kind : string) in (
+  ) else let __assign_3 = (payload : string) in (
     tempString := __assign_3;
     __assign_3
   ));
-  let tail = ((HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("k" : string) (!tempString : string)) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("i" : string) (string_of_int id : string)) : string) in macroclient_call (self.client) ("macro.runHook" : string) (tail : string)
-))
+  let parts = Hxhx_macro_MacroProtocol.kvParse (!tempString : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if HxMap.exists_string parts "c" then let __assign_4 = Obj.magic (HxMap.get_string parts "c" : string) in (
+      tempMaybeString := __assign_4;
+      __assign_4
+    ) else let __assign_5 = Obj.magic ("0" : string) in (
+      tempMaybeString := __assign_5;
+      __assign_5
+    ));
+    let count = Std.parseInt (!tempMaybeString : string) in (
+      ignore (if count == HxRuntime.hx_null || (let __nullable_6 = count in let __nullable_7 = 0 in if __nullable_6 == HxRuntime.hx_null then false else Obj.obj __nullable_6 < __nullable_7) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: invalid native module expr count payload: " ^ HxString.toStdString (!tempMaybeString))) ["Dynamic"; "String"]) else ());
+      let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = count in (
+        ignore (while let __nullable_8 = !_g in let __nullable_9 = _g1 in if __nullable_9 == HxRuntime.hx_null then false else __nullable_8 < Obj.obj __nullable_9 do ignore (let i = let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+          ignore (_g := __new_11);
+          __old_10
+        ) in let key = ("e" ^ string_of_int i : string) in (
+          ignore (if not (HxMap.exists_string parts key) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: missing native module expr payload key: " ^ HxString.toStdString key)) ["Dynamic"; "String"]) else ());
+          HxArray.push out (HxMap.get_string parts key)
+        )) done);
+        out
+      )
+    )
+  )
+)
 
-let macrohostsession_close = fun self () -> ignore (macroclient_close (self.client) ())
+let macrohostsession_runNativeExpr = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runNativeExpr" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string)
+
+let macrohostsession_expandExpr = fun self (expr : string) -> macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.expandExpr" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string)
+
+let macrohostsession_runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempString = ref ("" : string) in (
+  ignore (if kind == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
+    tempString := __assign_12;
+    __assign_12
+  ) else let __assign_13 = (kind : string) in (
+    tempString := __assign_13;
+    __assign_13
+  ));
+  let tail = ((HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("k" : string) (!tempString : string)) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("i" : string) (string_of_int id : string)) : string) in macroclient_call (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ("macro.runHook" : string) (tail : string)
+)))
+
+let macrohostsession_close = fun self () -> ignore (ignore (macroclient_close (Obj.magic ((Obj.magic self : macrohostsession_t).client)) ()))
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: hxhx.macro.MacroHostClient *)
@@ -589,91 +623,123 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroHostClient" } : t)
 
-let resolveMacroHostExe = fun () -> try let __fallback_result_40 = let env = (HxSys.getEnv "HXHX_MACRO_HOST_EXE" : string) in (
-  ignore (if env != Obj.magic (HxRuntime.hx_null) && HxString.length env > 0 then raise (HxRuntime.Hx_return (Obj.repr env)) else ());
+let decodeNativeExprListPayload = fun payload -> let tempString = ref ("" : string) in (
+  ignore (if payload == Obj.magic (HxRuntime.hx_null) then let __assign_17 = ("" : string) in (
+    tempString := __assign_17;
+    __assign_17
+  ) else let __assign_18 = (payload : string) in (
+    tempString := __assign_18;
+    __assign_18
+  ));
+  let parts = Hxhx_macro_MacroProtocol.kvParse (!tempString : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if HxMap.exists_string parts "c" then let __assign_19 = Obj.magic (HxMap.get_string parts "c" : string) in (
+      tempMaybeString := __assign_19;
+      __assign_19
+    ) else let __assign_20 = Obj.magic ("0" : string) in (
+      tempMaybeString := __assign_20;
+      __assign_20
+    ));
+    let count = Std.parseInt (!tempMaybeString : string) in (
+      ignore (if count == HxRuntime.hx_null || (let __nullable_21 = count in let __nullable_22 = 0 in if __nullable_21 == HxRuntime.hx_null then false else Obj.obj __nullable_21 < __nullable_22) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: invalid native module expr count payload: " ^ HxString.toStdString (!tempMaybeString))) ["Dynamic"; "String"]) else ());
+      let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = count in (
+        ignore (while let __nullable_23 = !_g in let __nullable_24 = _g1 in if __nullable_24 == HxRuntime.hx_null then false else __nullable_23 < Obj.obj __nullable_24 do ignore (let i = let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
+          ignore (_g := __new_26);
+          __old_25
+        ) in let key = ("e" ^ string_of_int i : string) in (
+          ignore (if not (HxMap.exists_string parts key) then ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro host: missing native module expr payload key: " ^ HxString.toStdString key)) ["Dynamic"; "String"]) else ());
+          HxArray.push out (HxMap.get_string parts key)
+        )) done);
+        out
+      )
+    )
+  )
+)
+
+let resolveMacroHostExe = fun () -> try let __fallback_result_50 = let env = (HxSys.getEnv "HXHX_MACRO_HOST_EXE" : string) in (
+  ignore (if env != Obj.magic (HxRuntime.hx_null) && HxString.length env > 0 then raise (HxRuntime.Hx_return (Obj.repr (env : string))) else ());
   let prog = (HxSys.programPath () : string) in (
-    ignore (if prog == Obj.magic (HxRuntime.hx_null) || HxString.length prog = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-    let tempString = ref "" in (
-      ignore (try let __assign_17 = (HxFileSystem.fullPath prog : string) in (
-        tempString := __assign_17;
-        __assign_17
+    ignore (if prog == Obj.magic (HxRuntime.hx_null) || HxString.length prog = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+    let tempString = ref ("" : string) in (
+      ignore (try let __assign_27 = (HxFileSystem.fullPath prog : string) in (
+        tempString := __assign_27;
+        __assign_27
       ) with
         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-        | HxRuntime.Hx_return __ret_18 -> raise (HxRuntime.Hx_return __ret_18)
-        | HxRuntime.Hx_exception (__exn_v_19, __exn_tags_20) -> if HxRuntime.tags_has __exn_tags_20 "String" then let _hx = (Obj.obj __exn_v_19 : string) in (
+        | HxRuntime.Hx_return __ret_28 -> raise (HxRuntime.Hx_return __ret_28)
+        | HxRuntime.Hx_exception (__exn_v_29, __exn_tags_30) -> if HxRuntime.tags_has __exn_tags_30 "String" then let _hx = (Obj.obj __exn_v_29 : string) in (
           ignore _hx;
-          let __assign_21 = (prog : string) in (
-            tempString := __assign_21;
-            __assign_21
+          let __assign_31 = (prog : string) in (
+            tempString := __assign_31;
+            __assign_31
           )
-        ) else HxRuntime.hx_throw_typed __exn_v_19 __exn_tags_20
-        | __exn_22 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_22) : string) in (
+        ) else HxRuntime.hx_throw_typed __exn_v_29 __exn_tags_30
+        | __exn_32 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_32) : string) in (
           ignore _hx;
-          let __assign_23 = (prog : string) in (
-            tempString := __assign_23;
-            __assign_23
+          let __assign_33 = (prog : string) in (
+            tempString := __assign_33;
+            __assign_33
           )
-        ) else raise (__exn_22));
-      let tempString1 = ref "" in (
-        ignore (try let __assign_24 = (Haxe_io_Path.directory (!tempString : string) : string) in (
-          tempString1 := __assign_24;
-          __assign_24
+        ) else raise (__exn_32));
+      let tempString1 = ref ("" : string) in (
+        ignore (try let __assign_34 = (Haxe_io_Path.directory (!tempString : string) : string) in (
+          tempString1 := __assign_34;
+          __assign_34
         ) with
           | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
           | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-          | HxRuntime.Hx_return __ret_25 -> raise (HxRuntime.Hx_return __ret_25)
-          | HxRuntime.Hx_exception (__exn_v_26, __exn_tags_27) -> if HxRuntime.tags_has __exn_tags_27 "String" then let _hx = (Obj.obj __exn_v_26 : string) in (
+          | HxRuntime.Hx_return __ret_35 -> raise (HxRuntime.Hx_return __ret_35)
+          | HxRuntime.Hx_exception (__exn_v_36, __exn_tags_37) -> if HxRuntime.tags_has __exn_tags_37 "String" then let _hx = (Obj.obj __exn_v_36 : string) in (
             ignore _hx;
-            let __assign_28 = ("" : string) in (
-              tempString1 := __assign_28;
-              __assign_28
+            let __assign_38 = ("" : string) in (
+              tempString1 := __assign_38;
+              __assign_38
             )
-          ) else HxRuntime.hx_throw_typed __exn_v_26 __exn_tags_27
-          | __exn_29 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_29) : string) in (
+          ) else HxRuntime.hx_throw_typed __exn_v_36 __exn_tags_37
+          | __exn_39 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_39) : string) in (
             ignore _hx;
-            let __assign_30 = ("" : string) in (
-              tempString1 := __assign_30;
-              __assign_30
+            let __assign_40 = ("" : string) in (
+              tempString1 := __assign_40;
+              __assign_40
             )
-          ) else raise (__exn_29));
-        ignore (if !tempString1 == Obj.magic (HxRuntime.hx_null) || HxString.length (!tempString1) = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-        let candidates = let __arr_31 = HxArray.create () in (
-          ignore (HxArray.push __arr_31 "hxhx-macro-host");
-          ignore (HxArray.push __arr_31 "hxhx-macro-host.exe");
-          ignore (HxArray.push __arr_31 "hxhx-macro");
-          ignore (HxArray.push __arr_31 "hxhx-macro.exe");
-          __arr_31
-        ) in let _g = ref 0 in (
-          ignore (while !_g < HxArray.length candidates do ignore (let name = (HxArray.get candidates (!_g) : string) in (
-            ignore (let __old_32 = !_g in let __new_33 = HxInt.add __old_32 1 in (
-              ignore (_g := __new_33);
-              __new_33
+          ) else raise (__exn_39));
+        ignore (if !tempString1 == Obj.magic (HxRuntime.hx_null) || HxString.length (!tempString1) = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+        let candidates = Obj.magic (let __arr_41 = HxArray.create () in (
+          ignore (HxArray.push __arr_41 "hxhx-macro-host");
+          ignore (HxArray.push __arr_41 "hxhx-macro-host.exe");
+          ignore (HxArray.push __arr_41 "hxhx-macro");
+          ignore (HxArray.push __arr_41 "hxhx-macro.exe");
+          __arr_41
+        )) in let _g = ref 0 in (
+          ignore (while !_g < HxArray.length candidates do ignore (let name = (HxArray.get (Obj.magic candidates) (!_g) : string) in (
+            ignore (let __old_42 = !_g in let __new_43 = HxInt.add __old_42 1 in (
+              ignore (_g := __new_43);
+              __new_43
             ));
-            let p = (Haxe_io_Path.join (let __arr_34 = HxArray.create () in (
-              ignore (HxArray.push __arr_34 (!tempString1));
-              ignore (HxArray.push __arr_34 name);
-              __arr_34
-            )) : string) in try if HxFileSystem.exists p && not (HxFileSystem.isDirectory p) then raise (HxRuntime.Hx_return (Obj.repr p)) else () with
+            let p = (Haxe_io_Path.join (Obj.magic (let __arr_44 = HxArray.create () in (
+              ignore (HxArray.push __arr_44 (!tempString1));
+              ignore (HxArray.push __arr_44 name);
+              __arr_44
+            ))) : string) in try if HxFileSystem.exists p && not (HxFileSystem.isDirectory p) then raise (HxRuntime.Hx_return (Obj.repr (p : string))) else () with
               | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
               | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
-              | HxRuntime.Hx_return __ret_35 -> raise (HxRuntime.Hx_return __ret_35)
-              | HxRuntime.Hx_exception (__exn_v_36, __exn_tags_37) -> if HxRuntime.tags_has __exn_tags_37 "String" then let _hx = (Obj.obj __exn_v_36 : string) in (
+              | HxRuntime.Hx_return __ret_45 -> raise (HxRuntime.Hx_return __ret_45)
+              | HxRuntime.Hx_exception (__exn_v_46, __exn_tags_47) -> if HxRuntime.tags_has __exn_tags_47 "String" then let _hx = (Obj.obj __exn_v_46 : string) in (
                 ignore _hx;
                 ()
-              ) else HxRuntime.hx_throw_typed __exn_v_36 __exn_tags_37
-              | __exn_38 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_38) : string) in (
+              ) else HxRuntime.hx_throw_typed __exn_v_46 __exn_tags_47
+              | __exn_48 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_48) : string) in (
                 ignore _hx;
                 ()
-              ) else raise (__exn_38)
+              ) else raise (__exn_48)
           )) done);
           ""
         )
       )
     )
   )
-) in Obj.magic __fallback_result_40 with
-  | HxRuntime.Hx_return __ret_39 -> Obj.obj __ret_39
+) in Obj.magic __fallback_result_50 with
+  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
 
 let resolveMacroHostExePath = fun () -> resolveMacroHostExe ()
 
@@ -682,8 +748,8 @@ let connect = fun () -> let exe = (resolveMacroHostExe () : string) in (
   macroclient_connect (exe : string)
 )
 
-let withClient = fun run -> try let __fallback_result_6 = let client = connect () in try let out = Obj.repr (run client) in (
-  ignore (macroclient_close client ());
+let withClient = fun run -> try let __fallback_result_6 = let client = Obj.magic (connect ()) in try let out = run (Obj.magic client) in (
+  ignore (macroclient_close (Obj.magic client) ());
   raise (HxRuntime.Hx_return (Obj.repr out))
 ) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
@@ -692,25 +758,25 @@ let withClient = fun run -> try let __fallback_result_6 = let client = connect (
   | HxRuntime.Hx_exception (__exn_v_2, __exn_tags_3) -> if HxRuntime.tags_has __exn_tags_3 "String" then let e = (Obj.obj __exn_v_2 : string) in (
     ignore e;
     (
-      ignore (macroclient_close client ());
+      ignore (macroclient_close (Obj.magic client) ());
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "String"]
     )
   ) else HxRuntime.hx_throw_typed __exn_v_2 __exn_tags_3
   | __exn_4 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_4) : string) in (
     ignore e;
     (
-      ignore (macroclient_close client ());
+      ignore (macroclient_close (Obj.magic client) ());
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "String"]
     )
   ) else raise (__exn_4) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+  | HxRuntime.Hx_return __ret_5 -> Obj.magic __ret_5
 
-let selftest = fun () -> withClient (fun client -> let lines = HxArray.create () in (
+let selftest = fun () -> withClient (fun client -> let lines = Obj.magic (HxArray.create ()) in (
   ignore (HxArray.push lines "macro_host=ok");
-  ignore (HxArray.push lines ("macro_ping=" ^ HxString.toStdString (macroclient_call client ("ping" : string) ("" : string))));
-  ignore (HxArray.push lines ("macro_define=" ^ HxString.toStdString (macroclient_call client ("compiler.define" : string) ((HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) ("foo" : string)) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("bar" : string)) : string))));
-  let tempString = ref "" in (
-    ignore (if HxString.equals (macroclient_call client ("context.defined" : string) (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) ("foo" : string) : string)) "1" then let __assign_13 = ("yes" : string) in (
+  ignore (HxArray.push lines ("macro_ping=" ^ HxString.toStdString (macroclient_call (Obj.magic client) ("ping" : string) ("" : string))));
+  ignore (HxArray.push lines ("macro_define=" ^ HxString.toStdString (macroclient_call (Obj.magic client) ("compiler.define" : string) ((HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) ("foo" : string)) ^ " ") ^ HxString.toStdString (Hxhx_macro_MacroProtocol.encodeLen ("v" : string) ("bar" : string)) : string))));
+  let tempString = ref ("" : string) in (
+    ignore (if HxString.equals (macroclient_call (Obj.magic client) ("context.defined" : string) (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) ("foo" : string) : string)) "1" then let __assign_13 = ("yes" : string) in (
       tempString := __assign_13;
       __assign_13
     ) else let __assign_14 = ("no" : string) in (
@@ -718,17 +784,17 @@ let selftest = fun () -> withClient (fun client -> let lines = HxArray.create ()
       __assign_14
     ));
     ignore (HxArray.push lines ("macro_defined=" ^ HxString.toStdString (!tempString)));
-    ignore (HxArray.push lines ("macro_definedValue=" ^ HxString.toStdString (macroclient_call client ("context.definedValue" : string) (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) ("foo" : string) : string))));
+    ignore (HxArray.push lines ("macro_definedValue=" ^ HxString.toStdString (macroclient_call (Obj.magic client) ("context.definedValue" : string) (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) ("foo" : string) : string))));
     HxArray.join lines "\n" (fun x -> x)
   )
 ))
 
-let run = fun expr -> withClient (fun client -> macroclient_call client ("macro.run" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string))
+let run = fun expr -> withClient (fun client -> macroclient_call (Obj.magic client) ("macro.run" : string) (Hxhx_macro_MacroProtocol.encodeLen ("e" : string) (expr : string) : string))
 
-let openSession = fun () -> macrohostsession_create (connect ())
+let openSession = fun () -> macrohostsession_create (Obj.magic (connect ()))
 
-let withSession = fun run -> try let __fallback_result_12 = let session = openSession () in try let out = Obj.repr (run session) in (
-  ignore (macrohostsession_close session ());
+let withSession = fun run -> try let __fallback_result_12 = let session = Obj.magic (openSession ()) in try let out = run (Obj.magic session) in (
+  ignore (macrohostsession_close (Obj.magic session) ());
   raise (HxRuntime.Hx_return (Obj.repr out))
 ) with
   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
@@ -737,28 +803,35 @@ let withSession = fun run -> try let __fallback_result_12 = let session = openSe
   | HxRuntime.Hx_exception (__exn_v_8, __exn_tags_9) -> if HxRuntime.tags_has __exn_tags_9 "String" then let e = (Obj.obj __exn_v_8 : string) in (
     ignore e;
     (
-      ignore (macrohostsession_close session ());
+      ignore (macrohostsession_close (Obj.magic session) ());
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "String"]
     )
   ) else HxRuntime.hx_throw_typed __exn_v_8 __exn_tags_9
   | __exn_10 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_10) : string) in (
     ignore e;
     (
-      ignore (macrohostsession_close session ());
+      ignore (macrohostsession_close (Obj.magic session) ());
       HxType.hx_throw_typed_rtti (Obj.repr e) ["Dynamic"; "String"]
     )
   ) else raise (__exn_10) in Obj.magic __fallback_result_12 with
-  | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11
+  | HxRuntime.Hx_return __ret_11 -> Obj.magic __ret_11
 
-let runAll = fun exprs -> withSession (fun session -> let out = HxArray.create () in let _g = ref 0 in (
-  ignore (while !_g < HxArray.length exprs do ignore (let expr = (HxArray.get exprs (!_g) : string) in (
+let loadNativeModule = fun modulePath pluginId -> withSession (fun session -> macrohostsession_loadNativeModule (Obj.magic session) (modulePath : string) (pluginId : string))
+
+let runNativeModuleExpr = fun modulePath pluginId expr -> withSession (fun session -> (
+  ignore (macrohostsession_loadNativeModule (Obj.magic session) (modulePath : string) (pluginId : string));
+  macrohostsession_runNativeExpr (Obj.magic session) (expr : string)
+))
+
+let runAll = fun exprs -> withSession (fun session -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length exprs do ignore (let expr = (HxArray.get (Obj.magic exprs) (!_g) : string) in (
     ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
       ignore (_g := __new_16);
       __new_16
     ));
-    HxArray.push out (macrohostsession_run session (expr : string))
+    HxArray.push out (macrohostsession_run (Obj.magic session) (expr : string))
   )) done);
   out
 ))
 
-let getType = fun name -> withClient (fun client -> macroclient_call client ("context.getType" : string) (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) (name : string) : string))
+let getType = fun name -> withClient (fun client -> macroclient_call (Obj.magic client) ("context.getType" : string) (Hxhx_macro_MacroProtocol.encodeLen ("n" : string) (name : string) : string))

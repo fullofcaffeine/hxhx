@@ -17,7 +17,7 @@ type hxexpr =
 | ELambda of string HxArray.t * hxexpr
 | ETryCatchRaw of string
 | ESwitchRaw of string
-| ESwitch of hxexpr * Obj.t HxArray.t
+| ESwitch of hxexpr * HxSwitchPattern.hxswitchpattern HxArray.t * hxexpr HxArray.t
 | ENew of string * hxexpr HxArray.t
 | EUnop of string * hxexpr
 | EBinop of string * hxexpr * hxexpr

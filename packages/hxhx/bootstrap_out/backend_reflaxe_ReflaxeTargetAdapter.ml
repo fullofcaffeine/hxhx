@@ -16,7 +16,7 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.reflaxe.ReflaxeTar
 let backend = fun descriptor coreEmitFactory -> Backend_TargetCoreBackend.create descriptor (coreEmitFactory ())
 
 let registration = fun descriptor coreEmitFactory -> let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "descriptor" (Obj.repr descriptor));
+  ignore (HxAnon.set __anon_1 "descriptor" descriptor);
   ignore (HxAnon.set __anon_1 "create" (Obj.repr (fun () -> backend descriptor coreEmitFactory)));
   __anon_1
 )

@@ -6,20 +6,20 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable pos : HxPos.t; mutable message : string }
 
-let create = fun message2 pos2 -> let self = ({ __hx_type = HxType.class_ "HxParseError"; pos = Obj.magic (); message = "" } : t) in (
-  ignore ((
+let create = fun message2 pos2 -> let self = ({ __hx_type = HxType.class_ "HxParseError"; pos = Obj.magic (HxRuntime.hx_null); message = "" } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (message2 : string) in (
-      self.message <- __assign_1;
+      (Obj.magic self : t).message <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = pos2 in (
-      self.pos <- __assign_2;
+    let __assign_2 = Obj.magic pos2 in (
+      (Obj.magic self : t).pos <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxParseError"; pos = Obj.magic (); message = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxParseError"; pos = Obj.magic (HxRuntime.hx_null); message = "" } : t)
 
-let toString = fun self () -> ((HxString.toStdString (self.message) ^ " (") ^ HxString.toStdString (HxPos.toString (self.pos) ())) ^ ")"
+let toString = fun self () -> ((HxString.toStdString ((Obj.magic self : t).message) ^ " (") ^ HxString.toStdString (HxPos.toString (Obj.magic ((Obj.magic self : t).pos)) ())) ^ ")"

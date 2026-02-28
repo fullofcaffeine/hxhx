@@ -9,7 +9,7 @@ type hxstmt =
 | SForIn of string * HxExpr.hxexpr * hxstmt * HxPos.t
 | SWhile of HxExpr.hxexpr * hxstmt * HxPos.t
 | SDoWhile of hxstmt * HxExpr.hxexpr * HxPos.t
-| SSwitch of HxExpr.hxexpr * Obj.t HxArray.t * HxPos.t
+| SSwitch of HxExpr.hxexpr * HxSwitchPattern.hxswitchpattern HxArray.t * hxstmt HxArray.t * HxPos.t
 | STry of hxstmt * Obj.t HxArray.t * HxPos.t
 | SBreak of HxPos.t
 | SContinue of HxPos.t

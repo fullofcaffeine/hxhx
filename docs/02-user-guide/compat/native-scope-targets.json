@@ -1,0 +1,21 @@
+{
+  "scopeId": "m7-native-stage0-forbidden",
+  "haxeCompatibilityBaseline": "4.3.7",
+  "description": "Strict non-delegating runtime scope used with HXHX_FORBID_STAGE0=1.",
+  "gate3Targets": [
+    "Macro",
+    "Js",
+    "Neko"
+  ],
+  "nativeCompileLanes": [
+    "ocaml",
+    "js"
+  ],
+  "strictCommands": [
+    "HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full"
+  ],
+  "notes": [
+    "This scope is narrower than broad oracle replacement-ready coverage.",
+    "Use this manifest for native stage0-forbidden claim statements."
+  ]
+}

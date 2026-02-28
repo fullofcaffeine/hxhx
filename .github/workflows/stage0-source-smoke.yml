@@ -134,8 +134,8 @@ jobs:
 
           targets="$("$HXHX_BIN" --hxhx-list-targets)"
           echo "$targets"
-          echo "$targets" | grep -qx "ocaml-stage3"
-          echo "$targets" | grep -qx "js-native"
+          echo "$targets" | grep -qx "ocaml"
+          echo "$targets" | grep -qx "js"
 
           guard_log="$RUNNER_TEMP/stage0_source_guard.log"
           if HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --version >"$guard_log" 2>&1; then

@@ -1,4 +1,4 @@
-# HXHX Stage 3: Typing Architecture (No Macros)
+# HXHX Stage 3: Typing Architecture (Macro-Execution-Free Component)
 
 Stage 3 is the point where `hxhx` stops being “a parser + module resolver” and becomes **a real compiler frontend**:
 it can *type* Haxe code.
@@ -9,8 +9,9 @@ This document is a design guide for implementing that typer in a way that:
 - remains incrementally bootstrappable (CI-friendly subsets first)
 - keeps the “escape hatches” we need to ship continuously (native OCaml hooks where justified)
 
-> Terminology note: In this repo’s bootstrap plan, “Stage 3” means “typing bring-up”.
-> Macro execution and plugin ABI are Stage 4 (see `docs/02-user-guide/COMPILER_PLUGIN_SYSTEM.md:1`).
+> Terminology note: this document is about the **Stage3 typer component** only.
+> User-facing **native mode** can still include Stage4 macro slices in the overall pipeline.
+> See `docs/02-user-guide/concepts/native_mode_pipeline.md`.
 
 ## Goals
 
@@ -31,6 +32,8 @@ Stage 3 is “done enough” when:
 - **Display server parity** (`--display`) is later (Gate 2+ work).
 - Full upstream type system parity (abstracts, overload resolution corner cases, complex generic constraints) is not required
   immediately, but the architecture must leave room for it.
+
+This means: Stage3 does not *own* macro execution logic; it does not mean native-mode runs can never route macro work through Stage4.
 
 ## Source of truth: upstream Haxe’s typer
 

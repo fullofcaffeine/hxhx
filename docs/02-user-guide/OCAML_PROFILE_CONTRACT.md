@@ -82,14 +82,14 @@ Any other value is invalid and fails fast.
 ## Scope
 
 - The value contract (`portable|metal`, defaulting, normalization, invalid-value failures) is enforced on:
-  - Stage3 OCaml backend paths (`ocaml-stage3` and compatible OCaml wrappers)
+  - Stage3 OCaml backend paths (`--target ocaml` and compatible OCaml wrappers)
   - Stage0 `reflaxe.ocaml` runtime planning/report generation path
 - Stage3 currently runs the metal verifier before emit.
 - Stage0 runs strict boundary enforcement in macro-time for:
   - global metal profile (`ocaml_profile=metal`)
   - portable metal-islands (`@:haxeMetal` modules)
   - optional portable native-surface policy (`ocaml_portable_native_surface`)
-- JS-native paths do not enforce this define.
+- Native JS paths do not enforce this define.
 
 ## Failure behavior
 
@@ -204,13 +204,13 @@ Debug fallback define (non-default, diagnostics only):
 
 ```bash
 # default (portable)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main
 
 # explicit portable
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=portable
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main -D ocaml_profile=portable
 
 # explicit metal (runtime-layered mode)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
 ```
 
 ## Related docs

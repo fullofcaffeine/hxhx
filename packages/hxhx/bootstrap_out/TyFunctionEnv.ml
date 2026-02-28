@@ -6,73 +6,73 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable params : TySymbol.t HxArray.t; mutable locals : TySymbol.t HxArray.t; mutable returnType : TyType.t; mutable returnExprType : TyType.t }
 
-let create = fun name2 params2 locals2 returnType2 returnExprType2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; params = Obj.magic (); locals = Obj.magic (); returnType = Obj.magic (); returnExprType = Obj.magic () } : t) in (
-  ignore ((
+let create = fun name2 params2 locals2 returnType2 returnExprType2 -> let self = ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; params = Obj.magic (HxRuntime.hx_null); locals = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); returnExprType = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
-      self.name <- __assign_1;
+      (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = params2 in (
-      self.params <- __assign_2;
+    ignore (let __assign_2 = Obj.magic params2 in (
+      (Obj.magic self : t).params <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = locals2 in (
-      self.locals <- __assign_3;
+    ignore (let __assign_3 = Obj.magic locals2 in (
+      (Obj.magic self : t).locals <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = returnType2 in (
-      self.returnType <- __assign_4;
+    ignore (let __assign_4 = Obj.magic returnType2 in (
+      (Obj.magic self : t).returnType <- __assign_4;
       __assign_4
     ));
-    let __assign_5 = returnExprType2 in (
-      self.returnExprType <- __assign_5;
+    let __assign_5 = Obj.magic returnExprType2 in (
+      (Obj.magic self : t).returnExprType <- __assign_5;
       __assign_5
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; params = Obj.magic (); locals = Obj.magic (); returnType = Obj.magic (); returnExprType = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyFunctionEnv"; name = ""; params = Obj.magic (HxRuntime.hx_null); locals = Obj.magic (HxRuntime.hx_null); returnType = Obj.magic (HxRuntime.hx_null); returnExprType = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getName = fun self () -> self.name
+let getName = fun self () -> (Obj.magic self : t).name
 
-let getParams = fun self () -> self.params
+let getParams = fun self () -> (Obj.magic self : t).params
 
-let getLocals = fun self () -> self.locals
+let getLocals = fun self () -> (Obj.magic self : t).locals
 
-let getReturnType = fun self () -> self.returnType
+let getReturnType = fun self () -> (Obj.magic self : t).returnType
 
-let getReturnExprType = fun self () -> self.returnExprType
+let getReturnExprType = fun self () -> (Obj.magic self : t).returnExprType
 
-let declareLocal = fun self (name2 : string) (ty : TyType.t) -> let sym = TySymbol.create (name2 : string) ty in (
-  ignore (HxArray.push (self.locals) sym);
+let declareLocal = fun self (name2 : string) (ty : TyType.t) -> let sym = Obj.magic (TySymbol.create (name2 : string) (Obj.magic ty)) in (
+  ignore (HxArray.push ((Obj.magic self : t).locals) sym);
   sym
 )
 
 let resolveSymbol = fun self (name2 : string) -> try let __fallback_result_11 = (
-  ignore (let _g = ref 0 in let _g1 = self.params in while !_g < HxArray.length _g1 do ignore (let p = HxArray.get _g1 (!_g) in (
+  ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).params) in while !_g < HxArray.length _g1 do ignore (let p = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
     ignore (let __old_6 = !_g in let __new_7 = HxInt.add __old_6 1 in (
       ignore (_g := __new_7);
       __new_7
     ));
-    if HxString.equals (TySymbol.getName p ()) name2 then raise (HxRuntime.Hx_return (Obj.repr p)) else ()
+    if HxString.equals (TySymbol.getName (Obj.magic p) ()) name2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic p))) else ()
   )) done);
-  ignore (let _g = ref 0 in let _g1 = self.locals in while !_g < HxArray.length _g1 do ignore (let l = HxArray.get _g1 (!_g) in (
+  ignore (let _g = ref 0 in let _g1 = Obj.magic ((Obj.magic self : t).locals) in while !_g < HxArray.length _g1 do ignore (let l = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
     ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
       ignore (_g := __new_9);
       __new_9
     ));
-    if HxString.equals (TySymbol.getName l ()) name2 then raise (HxRuntime.Hx_return (Obj.repr l)) else ()
+    if HxString.equals (TySymbol.getName (Obj.magic l) ()) name2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic l))) else ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
 ) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let resolveLocal = fun self (name2 : string) -> let sym = resolveSymbol self (name2 : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if sym == Obj.magic (HxRuntime.hx_null) then let __assign_12 = TyType.unknown () in (
+let resolveLocal = fun self (name2 : string) -> let sym = Obj.magic (resolveSymbol (Obj.magic self) (name2 : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+  ignore (if sym == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (TyType.unknown ()) in (
     tempResult := __assign_12;
     __assign_12
-  ) else let __assign_13 = TySymbol.getType sym () in (
+  ) else let __assign_13 = Obj.magic (TySymbol.getType (Obj.magic sym) ()) in (
     tempResult := __assign_13;
     __assign_13
   ));

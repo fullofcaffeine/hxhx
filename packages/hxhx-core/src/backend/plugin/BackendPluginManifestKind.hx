@@ -10,10 +10,10 @@ package backend.plugin;
 	Current kinds
 	- `haxe-provider`: loads a Haxe provider class implementing
 	  `backend.ITargetBackendProvider`.
-	- `ocaml-cmxs`: points to a native OCaml plugin artifact; loading is validated at
+	- `ocaml-dynlink`: points to a native OCaml plugin artifact; loading is validated at
 	  manifest parse time and activated later by the native plugin loader.
 **/
 enum abstract BackendPluginManifestKind(String) to String {
 	var HaxeProvider = "haxe-provider";
-	var OcamlCmxs = "ocaml-cmxs";
+	var OcamlDynlink = "ocaml-dynlink";
 }

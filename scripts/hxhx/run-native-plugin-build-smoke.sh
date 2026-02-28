@@ -39,7 +39,7 @@ artifact_path="$out_dir/$artifact_rel"
 bash "$BUILD_SCRIPT" \
   --plugin-id fixture.native.backend.plugin \
   --plugin-version 0.1.0 \
-  --kind ocaml-cmxs \
+  --kind ocaml-dynlink \
   --source-dir "$FIXTURE_DIR" \
   --dune-target hxhx_backend_plugin_fixture.cmxs \
   --entry "$artifact_rel" \
@@ -60,7 +60,7 @@ if (manifest.schemaVersion !== 1) {
 if (manifest.pluginId !== 'fixture.native.backend.plugin') {
   throw new Error(`unexpected pluginId: ${manifest.pluginId}`)
 }
-if (manifest.backend?.kind !== 'ocaml-cmxs') {
+if (manifest.backend?.kind !== 'ocaml-dynlink') {
   throw new Error(`unexpected backend.kind: ${manifest.backend?.kind}`)
 }
 if (manifest.backend?.entry !== expectedEntry) {

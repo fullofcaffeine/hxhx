@@ -24,8 +24,8 @@ This repo uses a few short labels a lot. Here is what they mean in plain languag
 - **stage1**: the first native `hxhx` binary built using stage0.
 - **stage2**: `hxhx` rebuilt by stage1. Matching stage1/stage2 behavior is a bootstrap health check.
 - **stage3**: the linked/native `hxhx` pipeline path (the long-term non-delegating direction).
-- **`--target ocaml`**: compatibility lane; today this may still delegate parts of work to stage0.
-- **`--target ocaml-stage3`**: linked Stage3 OCaml lane inside `hxhx`; used to validate native path behavior.
+- **`--target ocaml-compat`**: compatibility lane; today this may still delegate parts of work to stage0.
+- **`--target ocaml`**: linked Stage3 OCaml lane inside `hxhx`; used to validate native path behavior.
 - **"native reflaxe"**: running Reflaxe backend behavior through native `hxhx` paths instead of relying on stage0 delegation.
 
 Package manager/resolver terms:
@@ -41,10 +41,10 @@ Quick examples:
 
 ```bash
 # Delegated/compatibility lane
-hxhx --target ocaml -main Main -cp src
+hxhx --target ocaml-compat -main Main -cp src
 
 # Native linked lane
-hxhx --target ocaml-stage3 -main Main -cp src --hxhx-no-emit
+hxhx --target ocaml -main Main -cp src --hxhx-no-emit
 ```
 
 ## Landing the Plane (Session Completion)

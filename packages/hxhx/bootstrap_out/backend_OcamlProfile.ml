@@ -14,16 +14,16 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend._OcamlPr
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend._OcamlProfile.OcamlProfile_Impl_" } : t)
 
 let fromDefineValue = fun raw -> try let __fallback_result_4 = (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("portable" : string))) else ());
   let trimmed = (StringTools.trim (raw : string) : string) in (
-    ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr "portable")) else ());
-    let normalized = (HxString.toLowerCase trimmed () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
+    ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr ("portable" : string))) else ());
+    let normalized = (HxString.toLowerCase trimmed () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (match normalized with
-        | "metal" -> let __assign_1 = "metal" in (
+        | "metal" -> let __assign_1 = ("metal" : string) in (
           tempResult := __assign_1;
           __assign_1
         )
-        | "portable" -> let __assign_2 = "portable" in (
+        | "portable" -> let __assign_2 = ("portable" : string) in (
           tempResult := __assign_2;
           __assign_2
         )

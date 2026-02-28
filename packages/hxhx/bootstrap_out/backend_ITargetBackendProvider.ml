@@ -3,3 +3,5 @@
 (* Haxe type: backend.ITargetBackendProvider *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t; registrations : Obj.t -> unit -> Obj.t HxArray.t }

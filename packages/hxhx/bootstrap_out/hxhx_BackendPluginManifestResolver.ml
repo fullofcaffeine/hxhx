@@ -50,7 +50,7 @@ let providerTypeNamesForManifest = fun manifest sourceLabel -> try let __fallbac
       ignore (HxArray.push __arr_11 (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry")));
       __arr_11
     )))))
-    | "ocaml-cmxs" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Hxhx_NativeBackendPluginLoader.providerTypeNamesForNativeManifest manifest (sourceLabel : string)))))
+    | "ocaml-dynlink" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Hxhx_NativeBackendPluginLoader.providerTypeNamesForNativeManifest manifest (sourceLabel : string)))))
     | _ -> ignore (let message = (("unsupported backend kind `" ^ "<unsupported>") ^ "`" : string) in let tempString = ref ("" : string) in (
       ignore (if sourceLabel == Obj.magic (HxRuntime.hx_null) then let __assign_7 = ("" : string) in (
         tempString := __assign_7;

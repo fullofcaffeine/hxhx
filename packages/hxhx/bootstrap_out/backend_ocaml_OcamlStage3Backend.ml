@@ -4,22 +4,22 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable delegate : Backend_TargetCoreBackend.t; id : Obj.t -> unit -> string; describe : Obj.t -> unit -> string; capabilities : Obj.t -> unit -> Obj.t; emit : Obj.t -> Obj.t -> Backend_BackendContext.t -> Backend_EmitResult.t }
+type t = { __hx_type : Obj.t; mutable delegate : Backend_TargetCoreBackend.t; id : Obj.t -> unit -> string; describe : Obj.t -> unit -> string; capabilities : Obj.t -> unit -> Obj.t; emit : Obj.t -> MacroExpandedProgram.t -> Backend_BackendContext.t -> Backend_EmitResult.t }
 
-let id__impl = fun (self : t) () -> let __obj_2 = self.delegate in __obj_2.id (Obj.magic __obj_2) ()
+let id__impl = fun (self : t) () -> let __obj_2 = (Obj.magic self : t).delegate in (Obj.magic __obj_2 : Backend_TargetCoreBackend.t).id (Obj.magic __obj_2) ()
 
-let describe__impl = fun (self : t) () -> let __obj_3 = self.delegate in __obj_3.describe (Obj.magic __obj_3) ()
+let describe__impl = fun (self : t) () -> let __obj_3 = (Obj.magic self : t).delegate in (Obj.magic __obj_3 : Backend_TargetCoreBackend.t).describe (Obj.magic __obj_3) ()
 
-let capabilities__impl = fun (self : t) () -> let __obj_4 = self.delegate in __obj_4.capabilities (Obj.magic __obj_4) ()
+let capabilities__impl = fun (self : t) () -> let __obj_4 = (Obj.magic self : t).delegate in (Obj.magic __obj_4 : Backend_TargetCoreBackend.t).capabilities (Obj.magic __obj_4) ()
 
-let emit__impl = fun (self : t) (program : Obj.t) (context : Backend_BackendContext.t) -> let __obj_5 = self.delegate in __obj_5.emit (Obj.magic __obj_5) program context
+let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> let __obj_5 = (Obj.magic self : t).delegate in (Obj.magic __obj_5 : Backend_TargetCoreBackend.t).emit (Obj.magic __obj_5) (Obj.magic program) (Obj.magic context)
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlStage3Backend"; delegate = Obj.magic (); id = (fun o () -> id__impl (Obj.magic o) ()); describe = (fun o () -> describe__impl (Obj.magic o) ()); capabilities = (fun o () -> capabilities__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlStage3Backend"; delegate = Obj.magic (HxRuntime.hx_null); id = (fun o () -> Obj.magic (id__impl (Obj.magic o) (Obj.magic ()))); describe = (fun o () -> Obj.magic (describe__impl (Obj.magic o) (Obj.magic ()))); capabilities = (fun o () -> Obj.magic (capabilities__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
 
 let capabilitiesStatic = fun () -> let __anon_9 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_9 "supportsNoEmit" (Obj.repr true));
-  ignore (HxAnon.set __anon_9 "supportsBuildExecutable" (Obj.repr true));
-  ignore (HxAnon.set __anon_9 "supportsCustomOutputFile" (Obj.repr false));
+  ignore (HxAnon.set __anon_9 "supportsNoEmit" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_9 "supportsBuildExecutable" (HxRuntime.box_bool true));
+  ignore (HxAnon.set __anon_9 "supportsCustomOutputFile" (HxRuntime.box_bool false));
   __anon_9
 )
 
@@ -29,8 +29,8 @@ let descriptor = fun () -> let __anon_6 = HxAnon.create () in (
   ignore (HxAnon.set __anon_6 "abiVersion" (Obj.repr 1));
   ignore (HxAnon.set __anon_6 "priority" (Obj.repr 100));
   ignore (HxAnon.set __anon_6 "description" (Obj.repr "Linked Stage3 OCaml emitter"));
-  ignore (HxAnon.set __anon_6 "capabilities" (Obj.repr (capabilitiesStatic ())));
-  ignore (HxAnon.set __anon_6 "requires" (Obj.repr (let __anon_7 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_6 "capabilities" (capabilitiesStatic ()));
+  ignore (HxAnon.set __anon_6 "requires" (let __anon_7 = HxAnon.create () in (
     ignore (HxAnon.set __anon_7 "genIrVersion" (Obj.repr 1));
     ignore (HxAnon.set __anon_7 "macroApiVersion" (Obj.repr 1));
     ignore (HxAnon.set __anon_7 "hostCaps" (Obj.repr (let __arr_8 = HxArray.create () in (
@@ -41,25 +41,25 @@ let descriptor = fun () -> let __anon_6 = HxAnon.create () in (
       __arr_8
     ))));
     __anon_7
-  ))));
+  )));
   __anon_6
 )
 
 let targetCore = fun () -> Backend_ocaml_OcamlTargetCore.create ()
 
-let targetCoreEmit = fun () -> let core = targetCore () in fun program context -> Backend_ocaml_OcamlTargetCore.emitBridge core program context
+let targetCoreEmit = fun () -> let core = Obj.magic (targetCore ()) in fun program context -> Backend_ocaml_OcamlTargetCore.emitBridge (Obj.magic core) (Obj.magic program) (Obj.magic context)
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlStage3Backend"; delegate = Obj.magic (); id = (fun o () -> id__impl (Obj.magic o) ()); describe = (fun o () -> describe__impl (Obj.magic o) ()); capabilities = (fun o () -> capabilities__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1) } : t) in (
-  ignore (let __assign_1 = Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit in (
-    self.delegate <- __assign_1;
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlStage3Backend"; delegate = Obj.magic (HxRuntime.hx_null); id = (fun o () -> Obj.magic (id__impl (Obj.magic o) (Obj.magic ()))); describe = (fun o () -> Obj.magic (describe__impl (Obj.magic o) (Obj.magic ()))); capabilities = (fun o () -> Obj.magic (capabilities__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t) in (
+  ignore (ignore (let __assign_1 = Obj.magic (Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit) in (
+    (Obj.magic self : t).delegate <- __assign_1;
     __assign_1
-  ));
+  )));
   self
 )
 
-let __ctor = fun (self : t) () -> ignore (let __assign_1 = Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit in (
-  self.delegate <- __assign_1;
+let __ctor = fun (self : t) () -> ignore (ignore (let __assign_1 = Obj.magic (Backend_reflaxe_ReflaxeTargetAdapter.backend (descriptor ()) targetCoreEmit) in (
+  (Obj.magic self : t).delegate <- __assign_1;
   __assign_1
-))
+)))
 
-let emitBridge = fun backend program context -> backend.emit (Obj.magic backend) program context
+let emitBridge = fun backend program context -> (Obj.magic backend : t).emit (Obj.magic backend) (Obj.magic program) (Obj.magic context)

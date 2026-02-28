@@ -6,40 +6,40 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue; mutable isOptional : bool; mutable isRest : bool }
 
-let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (); isOptional = false; isRest = false } : t) in (
-  ignore ((
+let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
-      self.name <- __assign_1;
+      (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = (typeHint2 : string) in (
-      self.typeHint <- __assign_2;
+      (Obj.magic self : t).typeHint <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = defaultValue2 in (
-      self.defaultValue <- __assign_3;
+    ignore (let __assign_3 = Obj.magic defaultValue2 in (
+      (Obj.magic self : t).defaultValue <- __assign_3;
       __assign_3
     ));
     ignore (let __assign_4 = isOptional2 in (
-      self.isOptional <- __assign_4;
+      (Obj.magic self : t).isOptional <- __assign_4;
       __assign_4
     ));
     let __assign_5 = isRest2 in (
-      self.isRest <- __assign_5;
+      (Obj.magic self : t).isRest <- __assign_5;
       __assign_5
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (); isOptional = false; isRest = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false } : t)
 
-let getName = fun a -> a.name
+let getName = fun a -> (Obj.magic a : t).name
 
-let getTypeHint = fun a -> a.typeHint
+let getTypeHint = fun a -> (Obj.magic a : t).typeHint
 
-let getDefaultValue = fun a -> a.defaultValue
+let getDefaultValue = fun a -> (Obj.magic a : t).defaultValue
 
-let getIsOptional = fun a -> a.isOptional
+let getIsOptional = fun a -> (Obj.magic a : t).isOptional
 
-let getIsRest = fun a -> a.isRest
+let getIsRest = fun a -> (Obj.magic a : t).isRest

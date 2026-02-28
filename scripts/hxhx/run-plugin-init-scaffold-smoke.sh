@@ -55,7 +55,7 @@ build_out="$tmp_dir/build_out"
 bash "$BUILD_SCRIPT" \
   --plugin-id "$plugin_id" \
   --plugin-version "0.1.0" \
-  --kind ocaml-cmxs \
+  --kind ocaml-dynlink \
   --source-dir "$scaffold_dir/plugin/hxhx" \
   --dune-target "${module_name}.cmxs" \
   --entry "plugins/${module_name}.cmxs" \

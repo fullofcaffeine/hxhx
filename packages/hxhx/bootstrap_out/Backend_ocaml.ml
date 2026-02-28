@@ -3,3 +3,5 @@
 module MetalProfileVerifier = Backend_ocaml_MetalProfileVerifier
 module OcamlStage3Backend = Backend_ocaml_OcamlStage3Backend
 module OcamlTargetCore = Backend_ocaml_OcamlTargetCore
+module PortableMetalizationPlan = Backend_ocaml_PortableMetalizationPlan
+module PortableMetalizationPlanner = Backend_ocaml_PortableMetalizationPlanner

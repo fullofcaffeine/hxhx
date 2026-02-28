@@ -6,22 +6,22 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable parsed : ParsedModule.t; mutable env : TyModuleEnv.t }
 
-let create = fun parsed2 env2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (); env = Obj.magic () } : t) in (
-  ignore ((
-    ignore (let __assign_1 = parsed2 in (
-      self.parsed <- __assign_1;
+let create = fun parsed2 env2 -> let self = ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
+    ignore (let __assign_1 = Obj.magic parsed2 in (
+      (Obj.magic self : t).parsed <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = env2 in (
-      self.env <- __assign_2;
+    let __assign_2 = Obj.magic env2 in (
+      (Obj.magic self : t).env <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (); env = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TypedModule"; parsed = Obj.magic (HxRuntime.hx_null); env = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getParsed = fun self () -> self.parsed
+let getParsed = fun self () -> (Obj.magic self : t).parsed
 
-let getEnv = fun self () -> self.env
+let getEnv = fun self () -> (Obj.magic self : t).env

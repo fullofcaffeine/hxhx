@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "HxDefineMap" } :
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "HxDefineMap" } : t)
 
-let addRawDefine = fun dst raw -> try (
+let addRawDefine = fun dst raw -> ignore (try (
   ignore (if dst == Obj.magic (HxRuntime.hx_null) || raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   let s = (StringTools.trim (raw : string) : string) in (
     ignore (if HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
@@ -29,25 +29,25 @@ let addRawDefine = fun dst raw -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
+  | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1)
 
-let fromRawDefines = fun rawDefines -> try let __fallback_result_5 = let out = HxMap.create_string () in (
-  ignore (if rawDefines == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
+let fromRawDefines = fun rawDefines -> try let __fallback_result_5 = let out = Obj.magic (HxMap.create_string ()) in (
+  ignore (if rawDefines == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic out))) else ());
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length rawDefines do ignore (let raw = (HxArray.get rawDefines (!_g) : string) in (
+    ignore (while !_g < HxArray.length rawDefines do ignore (let raw = (HxArray.get (Obj.magic rawDefines) (!_g) : string) in (
       ignore (let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
         ignore (_g := __new_3);
         __new_3
       ));
-      addRawDefine out (raw : string)
+      addRawDefine (Obj.magic out) (raw : string)
     )) done);
     out
   )
 ) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
-let mergeInto = fun dst src -> try (
+let mergeInto = fun dst src -> ignore (try (
   ignore (if dst == Obj.magic (HxRuntime.hx_null) || src == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  let k = HxIterator.of_array (HxMap.keys_string src) in while (let __iter_6 = k in fun () -> HxIterator.hasNext __iter_6) () do ignore (let k2 = ((let __iter_7 = k in fun () -> HxIterator.next __iter_7) () : string) in HxMap.set_string dst k2 (HxMap.get_string src k2)) done
+  let k = HxIterator.of_array (HxMap.keys_string src) in while (let __iter_6 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_6)) () do ignore (let k2 = ((let __iter_7 = k in fun () -> HxIterator.next (Obj.magic __iter_7)) () : string) in HxMap.set_string dst k2 (HxMap.get_string src k2)) done
 ) with
-  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
+  | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8)

@@ -6,52 +6,52 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable hasStaticMain : bool; mutable functions : HxFunctionDecl.t HxArray.t; mutable fields : HxFieldDecl.t HxArray.t }
 
-let create = fun name2 hasStaticMain2 functions2 fields2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (); fields = Obj.magic () } : t) in (
-  ignore ((
+let create = fun name2 hasStaticMain2 functions2 fields2 -> let self = ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
-      self.name <- __assign_1;
+      (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = hasStaticMain2 in (
-      self.hasStaticMain <- __assign_2;
+      (Obj.magic self : t).hasStaticMain <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = let __arr_4 = HxArray.create () in __arr_4 in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t HxArray.t) in (
+      ignore (if functions2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
         tempRight := __assign_3;
         __assign_3
-      ) else let __assign_5 = functions2 in (
+      ) else let __assign_5 = Obj.magic functions2 in (
         tempRight := __assign_5;
         __assign_5
       ));
-      ignore (let __assign_6 = !tempRight in (
-        self.functions <- __assign_6;
+      ignore (let __assign_6 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).functions <- __assign_6;
         __assign_6
       ));
-      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
-        ignore (if fields2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = let __arr_8 = HxArray.create () in __arr_8 in (
+      let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : HxFieldDecl.t HxArray.t) in (
+        ignore (if fields2 == Obj.magic (HxRuntime.hx_null) then let __assign_7 = Obj.magic (let __arr_8 = HxArray.create () in __arr_8) in (
           tempRight1 := __assign_7;
           __assign_7
-        ) else let __assign_9 = fields2 in (
+        ) else let __assign_9 = Obj.magic fields2 in (
           tempRight1 := __assign_9;
           __assign_9
         ));
-        let __assign_10 = !tempRight1 in (
-          self.fields <- __assign_10;
+        let __assign_10 = Obj.magic (!tempRight1) in (
+          (Obj.magic self : t).fields <- __assign_10;
           __assign_10
         )
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (); fields = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxClassDecl"; name = ""; hasStaticMain = false; functions = Obj.magic (HxRuntime.hx_null); fields = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getName = fun c -> c.name
+let getName = fun c -> (Obj.magic c : t).name
 
-let getHasStaticMain = fun c -> c.hasStaticMain
+let getHasStaticMain = fun c -> (Obj.magic c : t).hasStaticMain
 
-let getFunctions = fun c -> c.functions
+let getFunctions = fun c -> (Obj.magic c : t).functions
 
-let getFields = fun c -> c.fields
+let getFields = fun c -> (Obj.magic c : t).fields

@@ -6,14 +6,14 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; readByte : Obj.t -> unit -> int; readBytes : Obj.t -> HxBytes.t -> int -> int -> int; close : Obj.t -> unit -> unit; readAll : Obj.t -> Obj.t -> HxBytes.t; readFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; read : Obj.t -> int -> HxBytes.t; readUntil : Obj.t -> int -> string; readLine : Obj.t -> unit -> string; readFloat : Obj.t -> unit -> float; readDouble : Obj.t -> unit -> float; readInt8 : Obj.t -> unit -> int; readInt16 : Obj.t -> unit -> int; readUInt16 : Obj.t -> unit -> int; readInt24 : Obj.t -> unit -> int; readUInt24 : Obj.t -> unit -> int; readInt32 : Obj.t -> unit -> int; readString : Obj.t -> int -> Obj.t -> string; mutable h : Obj.t; seek : Obj.t -> int -> Sys_io_FileSeek.fileseek -> unit; tell : Obj.t -> unit -> int; eof : Obj.t -> unit -> bool }
 
-let __ctor = fun (self : t) h2 -> ignore (let __assign_1 = h2 in (
-  self.h <- __assign_1;
+let __ctor = fun (self : t) h2 -> ignore (ignore (let __assign_1 = Obj.magic h2 in (
+  (Obj.magic self : t).h <- __assign_1;
   __assign_1
-))
+)))
 
-let close__impl = fun (self : t) () -> ignore (HxFileStream.close_in (self.h))
+let close__impl = fun (self : t) () -> ignore (ignore (HxFileStream.close_in ((Obj.magic self : t).h)))
 
-let readByte__impl = fun (self : t) () -> let b = HxFileStream.read_byte (self.h) in (
+let readByte__impl = fun (self : t) () -> let b = HxFileStream.read_byte ((Obj.magic self : t).h) in (
   ignore (if b < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ());
   b
 )
@@ -22,7 +22,7 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
-      ignore (HxBytes.set buf (HxInt.add pos (!i)) (self.readByte (Obj.magic self) ()));
+      ignore (HxBytes.set buf (HxInt.add pos (!i)) ((Obj.magic self : t).readByte (Obj.magic self) ()));
       let __old_2 = !i in let __new_3 = HxInt.add __old_2 1 in (
         ignore (i := __new_3);
         __old_2
@@ -44,7 +44,7 @@ let readBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -
 ) in Obj.magic __fallback_result_9 with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
-let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (let tempNumber = ref 0 in (
+let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (ignore (let tempNumber = ref (0 : int) in (
   ignore (match pos with
     | Sys_io_FileSeek.SeekBegin -> let __assign_10 = 0 in (
       tempNumber := __assign_10;
@@ -58,24 +58,24 @@ let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ig
       tempNumber := __assign_12;
       __assign_12
     ));
-  HxFileStream.seek_in (self.h) p (!tempNumber)
-))
+  HxFileStream.seek_in ((Obj.magic self : t).h) p (!tempNumber)
+)))
 
-let tell__impl = fun (self : t) () -> HxFileStream.tell_in (self.h)
+let tell__impl = fun (self : t) () -> HxFileStream.tell_in ((Obj.magic self : t).h)
 
-let eof__impl = fun (self : t) () -> HxFileStream.eof_in (self.h)
+let eof__impl = fun (self : t) () -> HxFileStream.eof_in ((Obj.magic self : t).h)
 
-let create = fun h2 -> let self = ({ __hx_type = HxType.class_ "sys.io.FileInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Input.set_bigEndian__impl (Obj.magic o) a0); readByte = (fun o () -> readByte__impl (Obj.magic o) ()); readBytes = (fun o a0 a1 a2 -> readBytes__impl (Obj.magic o) a0 a1 a2); close = (fun o () -> close__impl (Obj.magic o) ()); readAll = (fun o a0 -> Haxe_io_Input.readAll__impl (Obj.magic o) a0); readFullBytes = (fun o a0 a1 a2 -> Haxe_io_Input.readFullBytes__impl (Obj.magic o) a0 a1 a2); read = (fun o a0 -> Haxe_io_Input.read__impl (Obj.magic o) a0); readUntil = (fun o a0 -> Haxe_io_Input.readUntil__impl (Obj.magic o) a0); readLine = (fun o () -> Haxe_io_Input.readLine__impl (Obj.magic o) ()); readFloat = (fun o () -> Haxe_io_Input.readFloat__impl (Obj.magic o) ()); readDouble = (fun o () -> Haxe_io_Input.readDouble__impl (Obj.magic o) ()); readInt8 = (fun o () -> Haxe_io_Input.readInt8__impl (Obj.magic o) ()); readInt16 = (fun o () -> Haxe_io_Input.readInt16__impl (Obj.magic o) ()); readUInt16 = (fun o () -> Haxe_io_Input.readUInt16__impl (Obj.magic o) ()); readInt24 = (fun o () -> Haxe_io_Input.readInt24__impl (Obj.magic o) ()); readUInt24 = (fun o () -> Haxe_io_Input.readUInt24__impl (Obj.magic o) ()); readInt32 = (fun o () -> Haxe_io_Input.readInt32__impl (Obj.magic o) ()); readString = (fun o a0 a1 -> Haxe_io_Input.readString__impl (Obj.magic o) a0 a1); h = Obj.magic (); seek = (fun o a0 a1 -> seek__impl (Obj.magic o) a0 a1); tell = (fun o () -> tell__impl (Obj.magic o) ()); eof = (fun o () -> eof__impl (Obj.magic o) ()) } : t) in (
-  ignore (let __assign_1 = h2 in (
-    self.h <- __assign_1;
+let create = fun h2 -> let self = ({ __hx_type = HxType.class_ "sys.io.FileInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (Haxe_io_Input.readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); h = Obj.magic (HxRuntime.hx_null); seek = (fun o a0 a1 -> Obj.magic (seek__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); tell = (fun o () -> Obj.magic (tell__impl (Obj.magic o) (Obj.magic ()))); eof = (fun o () -> Obj.magic (eof__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+  ignore (ignore (let __assign_1 = Obj.magic h2 in (
+    (Obj.magic self : t).h <- __assign_1;
     __assign_1
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Input.set_bigEndian__impl (Obj.magic o) a0); readByte = (fun o () -> readByte__impl (Obj.magic o) ()); readBytes = (fun o a0 a1 a2 -> readBytes__impl (Obj.magic o) a0 a1 a2); close = (fun o () -> close__impl (Obj.magic o) ()); readAll = (fun o a0 -> Haxe_io_Input.readAll__impl (Obj.magic o) a0); readFullBytes = (fun o a0 a1 a2 -> Haxe_io_Input.readFullBytes__impl (Obj.magic o) a0 a1 a2); read = (fun o a0 -> Haxe_io_Input.read__impl (Obj.magic o) a0); readUntil = (fun o a0 -> Haxe_io_Input.readUntil__impl (Obj.magic o) a0); readLine = (fun o () -> Haxe_io_Input.readLine__impl (Obj.magic o) ()); readFloat = (fun o () -> Haxe_io_Input.readFloat__impl (Obj.magic o) ()); readDouble = (fun o () -> Haxe_io_Input.readDouble__impl (Obj.magic o) ()); readInt8 = (fun o () -> Haxe_io_Input.readInt8__impl (Obj.magic o) ()); readInt16 = (fun o () -> Haxe_io_Input.readInt16__impl (Obj.magic o) ()); readUInt16 = (fun o () -> Haxe_io_Input.readUInt16__impl (Obj.magic o) ()); readInt24 = (fun o () -> Haxe_io_Input.readInt24__impl (Obj.magic o) ()); readUInt24 = (fun o () -> Haxe_io_Input.readUInt24__impl (Obj.magic o) ()); readInt32 = (fun o () -> Haxe_io_Input.readInt32__impl (Obj.magic o) ()); readString = (fun o a0 a1 -> Haxe_io_Input.readString__impl (Obj.magic o) a0 a1); h = Obj.magic (); seek = (fun o a0 a1 -> seek__impl (Obj.magic o) a0 a1); tell = (fun o () -> tell__impl (Obj.magic o) ()); eof = (fun o () -> eof__impl (Obj.magic o) ()) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (Haxe_io_Input.readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); h = Obj.magic (HxRuntime.hx_null); seek = (fun o a0 a1 -> Obj.magic (seek__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); tell = (fun o () -> Obj.magic (tell__impl (Obj.magic o) (Obj.magic ()))); eof = (fun o () -> Obj.magic (eof__impl (Obj.magic o) (Obj.magic ()))) } : t)
 
-let seekKind = fun pos -> let tempResult = ref 0 in (
+let seekKind = fun pos -> let tempResult = ref (0 : int) in (
   ignore (match pos with
     | Sys_io_FileSeek.SeekBegin -> let __assign_13 = 0 in (
       tempResult := __assign_13;

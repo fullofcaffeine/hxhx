@@ -12,7 +12,5 @@ module Exception = Haxe_Exception
 module Int32 = Haxe_Int32
 module Int64 = Haxe_Int64
 module Int64Helper = Haxe_Int64Helper
-module Json = Haxe_Json
 module NativeStackTrace = Haxe_NativeStackTrace
-module SysTools = Haxe_SysTools
 module ValueException = Haxe_ValueException

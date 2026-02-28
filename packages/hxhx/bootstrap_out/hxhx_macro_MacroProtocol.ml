@@ -14,26 +14,26 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroProtocol" } : t)
 
 let escapePayload = fun s -> try let __fallback_result_2 = (
-  ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   HxArray.join (HxString.split (HxArray.join (HxString.split (HxArray.join (HxString.split (HxArray.join (HxString.split s "\\") "\\\\" (fun x -> x)) "\n") "\\n" (fun x -> x)) "\r") "\\r" (fun x -> x)) "\t") "\\t" (fun x -> x)
 ) in Obj.magic __fallback_result_2 with
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
 let unescapePayload = fun s -> try let __fallback_result_11 = (
-  ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  let out = StringBuf.create () in let i = ref 0 in (
+  ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  let out = Obj.magic (StringBuf.create ()) in let i = ref 0 in (
     ignore (try while !i < HxString.length s do try ignore (let c = HxString.charCodeAt s (!i) in (
       ignore (if (let __nullable_3 = c in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 = 92) && HxInt.add (!i) 1 < HxString.length s then ignore (let n = HxString.charCodeAt s (HxInt.add (!i) 1) in (
-        ignore (if n == HxRuntime.hx_null then ignore (StringBuf.addChar out (let __nullable_int_4 = n in if __nullable_int_4 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4)) else ignore (let __switch_6 = n in if __switch_6 == HxRuntime.hx_null then ignore (StringBuf.addChar out (let __nullable_int_5 = n in if __nullable_int_5 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_5)) else match Obj.obj __switch_6 with
-          | 92 -> ignore (StringBuf.addChar out 92)
-          | 110 -> ignore (StringBuf.addChar out 10)
-          | 114 -> ignore (StringBuf.addChar out 13)
-          | 116 -> ignore (StringBuf.addChar out 9)
-          | _ -> ignore (StringBuf.addChar out (let __nullable_int_5 = n in if __nullable_int_5 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_5))));
+        ignore (if n == HxRuntime.hx_null then ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_4 = n in if __nullable_int_4 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_4)) else ignore (let __switch_6 = n in if __switch_6 == HxRuntime.hx_null then ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_5 = n in if __nullable_int_5 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_5)) else match Obj.obj __switch_6 with
+          | 92 -> ignore (StringBuf.addChar (Obj.magic out) 92)
+          | 110 -> ignore (StringBuf.addChar (Obj.magic out) 10)
+          | 114 -> ignore (StringBuf.addChar (Obj.magic out) 13)
+          | 116 -> ignore (StringBuf.addChar (Obj.magic out) 9)
+          | _ -> ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_5 = n in if __nullable_int_5 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_5))));
         ignore (i := HxInt.add (!i) 2);
         raise (HxRuntime.Hx_continue)
       )) else ());
-      ignore (StringBuf.addChar out (let __nullable_int_7 = c in if __nullable_int_7 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_7));
+      ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_7 = c in if __nullable_int_7 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_7));
       let __old_8 = !i in let __new_9 = HxInt.add __old_8 1 in (
         ignore (i := __new_9);
         __old_8
@@ -41,7 +41,7 @@ let unescapePayload = fun s -> try let __fallback_result_11 = (
     )) with
       | HxRuntime.Hx_continue -> () done with
       | HxRuntime.Hx_break -> ());
-    StringBuf.toString out ()
+    StringBuf.toString (Obj.magic out) ()
   )
 ) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
@@ -49,13 +49,13 @@ let unescapePayload = fun s -> try let __fallback_result_11 = (
 let encodeLen = fun label value -> let enc = (escapePayload (value : string) : string) in (((HxString.toStdString label ^ "=") ^ string_of_int (HxString.length enc)) ^ ":") ^ HxString.toStdString enc
 
 let decodeLenValue = fun part -> try let __fallback_result_18 = let eq = HxString.indexOf part "=" 0 in (
-  ignore (if eq <= 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+  ignore (if eq <= 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
   let rest = (HxString.substr part (HxInt.add eq 1) (-1) : string) in let colon = HxString.indexOf rest ":" 0 in (
-    ignore (if colon <= 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+    ignore (if colon <= 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
     let len = Std.parseInt (HxString.substr rest 0 colon : string) in (
-      ignore (if len == HxRuntime.hx_null || (let __nullable_12 = len in let __nullable_13 = 0 in if __nullable_12 == HxRuntime.hx_null then false else Obj.obj __nullable_12 < __nullable_13) then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+      ignore (if len == HxRuntime.hx_null || (let __nullable_12 = len in let __nullable_13 = 0 in if __nullable_12 == HxRuntime.hx_null then false else Obj.obj __nullable_12 < __nullable_13) then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
       let payload = (HxString.substr rest (HxInt.add colon 1) (-1) : string) in (
-        ignore (if let __nullable_14 = HxString.length payload in let __nullable_15 = len in if __nullable_15 == HxRuntime.hx_null then false else __nullable_14 < Obj.obj __nullable_15 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
+        ignore (if let __nullable_14 = HxString.length payload in let __nullable_15 = len in if __nullable_15 == HxRuntime.hx_null then false else __nullable_14 < Obj.obj __nullable_15 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
         unescapePayload (HxString.substr payload 0 (let __nullable_int_16 = len in if __nullable_int_16 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_16) : string)
       )
     )
@@ -67,12 +67,12 @@ let kvParse = fun tail -> try let __fallback_result_51 = let out = HxMap.create_
   ignore (if tail == Obj.magic (HxRuntime.hx_null) || HxString.length tail = 0 then raise (HxRuntime.Hx_return (Obj.repr out)) else ());
   let i = ref 0 in (
     ignore (try while !i < HxString.length tail do try ignore ((
-      ignore (try while true do try ignore (let tempRight = ref false in (
+      ignore (try while true do try ignore (let tempRight = ref (false : bool) in (
         ignore (let c = let __nullable_int_19 = HxString.charCodeAt tail (!i) in if __nullable_int_19 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_19 in let __assign_20 = c = 32 || c = 9 || c = 10 || c = 13 in (
           tempRight := __assign_20;
           __assign_20
         ));
-        ignore (if not (!i < HxString.length tail && !tempRight) then raise (HxRuntime.Hx_break) else ());
+        ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!i < HxString.length tail && !tempRight))) then raise (HxRuntime.Hx_break) else ());
         let __old_21 = !i in let __new_22 = HxInt.add __old_21 1 in (
           ignore (i := __new_22);
           __old_21
@@ -92,12 +92,12 @@ let kvParse = fun tail -> try let __fallback_result_51 = let out = HxMap.create_
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
         ignore (if !i >= HxString.length tail || not (let __nullable_27 = HxString.charCodeAt tail (!i) in if __nullable_27 == HxRuntime.hx_null then false else Obj.obj __nullable_27 = 61) then ignore ((
-          ignore (try while true do try ignore (let tempBool = ref false in (
+          ignore (try while true do try ignore (let tempBool = ref (false : bool) in (
             ignore (let c = let __nullable_int_28 = HxString.charCodeAt tail (!i) in if __nullable_int_28 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_28 in let __assign_29 = c = 32 || c = 9 || c = 10 || c = 13 in (
               tempBool := __assign_29;
               __assign_29
             ));
-            ignore (if not (!i < HxString.length tail && not (!tempBool)) then raise (HxRuntime.Hx_break) else ());
+            ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!i < HxString.length tail && not (!tempBool)))) then raise (HxRuntime.Hx_break) else ());
             let __old_30 = !i in let __new_31 = HxInt.add __old_30 1 in (
               ignore (i := __new_31);
               __old_30
@@ -113,12 +113,12 @@ let kvParse = fun tail -> try let __fallback_result_51 = let out = HxMap.create_
             __old_32
           ));
           let lenStart = !i in (
-            ignore (try while true do try ignore (let tempRight2 = ref false in (
+            ignore (try while true do try ignore (let tempRight2 = ref (false : bool) in (
               ignore (let c = let __nullable_int_34 = HxString.charCodeAt tail (!i) in if __nullable_int_34 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_34 in let __assign_35 = c >= 48 && c <= 57 in (
                 tempRight2 := __assign_35;
                 __assign_35
               ));
-              ignore (if not (!i < HxString.length tail && !tempRight2) then raise (HxRuntime.Hx_break) else ());
+              ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!i < HxString.length tail && !tempRight2))) then raise (HxRuntime.Hx_break) else ());
               let __old_36 = !i in let __new_37 = HxInt.add __old_36 1 in (
                 ignore (i := __new_37);
                 __old_36
@@ -127,12 +127,12 @@ let kvParse = fun tail -> try let __fallback_result_51 = let out = HxMap.create_
               | HxRuntime.Hx_continue -> () done with
               | HxRuntime.Hx_break -> ());
             ignore (if !i >= HxString.length tail || not (let __nullable_38 = HxString.charCodeAt tail (!i) in if __nullable_38 == HxRuntime.hx_null then false else Obj.obj __nullable_38 = 58) then ignore ((
-              ignore (try while true do try ignore (let tempBool1 = ref false in (
+              ignore (try while true do try ignore (let tempBool1 = ref (false : bool) in (
                 ignore (let c = let __nullable_int_39 = HxString.charCodeAt tail (!i) in if __nullable_int_39 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_39 in let __assign_40 = c = 32 || c = 9 || c = 10 || c = 13 in (
                   tempBool1 := __assign_40;
                   __assign_40
                 ));
-                ignore (if not (!i < HxString.length tail && not (!tempBool1)) then raise (HxRuntime.Hx_break) else ());
+                ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not (!i < HxString.length tail && not (!tempBool1)))) then raise (HxRuntime.Hx_break) else ());
                 let __old_41 = !i in let __new_42 = HxInt.add __old_41 1 in (
                   ignore (i := __new_42);
                   __old_41
@@ -164,7 +164,7 @@ let kvParse = fun tail -> try let __fallback_result_51 = let out = HxMap.create_
 ) in Obj.magic __fallback_result_51 with
   | HxRuntime.Hx_return __ret_50 -> Obj.obj __ret_50
 
-let splitN = fun s n -> let head = HxArray.create () in let i = ref 0 in let start = ref 0 in (
+let splitN = fun s n -> let head = Obj.magic (HxArray.create ()) in let i = ref 0 in let start = ref 0 in (
   ignore (try while HxArray.length head < n && !i <= HxString.length s do try ignore ((
     ignore (if !i = HxString.length s || (let __nullable_52 = HxString.charCodeAt s (!i) in if __nullable_52 == HxRuntime.hx_null then false else Obj.obj __nullable_52 = 32) then ignore ((
       ignore (if !i > !start then ignore (HxArray.push head (HxString.substr s (!start) (HxInt.sub (!i) (!start)))) else ());
@@ -186,7 +186,7 @@ let splitN = fun s n -> let head = HxArray.create () in let i = ref 0 in let sta
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
   ignore (while HxArray.length head < n do ignore (HxArray.push head "") done);
-  let tempString = ref "" in (
+  let tempString = ref ("" : string) in (
     ignore (if !start <= HxString.length s then let __assign_59 = (HxString.substr s (!start) (-1) : string) in (
       tempString := __assign_59;
       __assign_59
@@ -199,7 +199,7 @@ let splitN = fun s n -> let head = HxArray.create () in let i = ref 0 in let sta
   )
 )
 
-let kvGet = fun tail key -> let m = kvParse (tail : string) in let tempResult = ref "" in (
+let kvGet = fun tail key -> let m = kvParse (tail : string) in let tempResult = ref ("" : string) in (
   ignore (if HxMap.exists_string m key then let __assign_61 = (HxMap.get_string m key : string) in (
     tempResult := __assign_61;
     __assign_61

@@ -6,27 +6,27 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable ty : TyType.t }
 
-let create = fun name2 ty2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic () } : t) in (
-  ignore ((
+let create = fun name2 ty2 -> let self = ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
-      self.name <- __assign_1;
+      (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = ty2 in (
-      self.ty <- __assign_2;
+    let __assign_2 = Obj.magic ty2 in (
+      (Obj.magic self : t).ty <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TySymbol"; name = ""; ty = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getName = fun self () -> self.name
+let getName = fun self () -> (Obj.magic self : t).name
 
-let getType = fun self () -> self.ty
+let getType = fun self () -> (Obj.magic self : t).ty
 
-let setType = fun self (t : TyType.t) -> ignore (let __assign_3 = t in (
-  self.ty <- __assign_3;
+let setType = fun self (t : TyType.t) -> ignore (ignore (let __assign_3 = Obj.magic t in (
+  (Obj.magic self : t).ty <- __assign_3;
   __assign_3
-))
+)))

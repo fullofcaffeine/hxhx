@@ -26,6 +26,7 @@ private typedef JsonObject = haxe.DynamicAccess<Dynamic>;
 **/
 class BackendPluginManifestParser {
 	public static inline var SCHEMA_VERSION:Int = 1;
+	static var warnedDeprecatedOcamlCmxsKind:Bool = false;
 
 	static inline function normalizeSourceLabel(sourceLabel:String):String {
 		final s = sourceLabel == null ? "" : StringTools.trim(sourceLabel);
@@ -34,6 +35,13 @@ class BackendPluginManifestParser {
 
 	static inline function fail(sourceLabel:String, message:String):Dynamic {
 		throw "invalid backend plugin manifest (" + normalizeSourceLabel(sourceLabel) + "): " + message;
+	}
+
+	static function warnDeprecatedKind(kindValue:String):Void {
+		if (warnedDeprecatedOcamlCmxsKind)
+			return;
+		warnedDeprecatedOcamlCmxsKind = true;
+		Sys.println("warning: backend plugin manifest kind `" + kindValue + "` is deprecated; use `ocaml-dynlink`.");
 	}
 
 	static function requireObject(value:Dynamic, fieldPath:String, sourceLabel:String):JsonObject {
@@ -104,9 +112,12 @@ class BackendPluginManifestParser {
 	static function parseKind(value:String, sourceLabel:String):BackendPluginManifestKind {
 		return switch (value) {
 			case BackendPluginManifestKind.HaxeProvider: BackendPluginManifestKind.HaxeProvider;
-			case BackendPluginManifestKind.OcamlCmxs: BackendPluginManifestKind.OcamlCmxs;
+			case BackendPluginManifestKind.OcamlDynlink: BackendPluginManifestKind.OcamlDynlink;
+			case "ocaml-cmxs":
+				warnDeprecatedKind("ocaml-cmxs");
+				BackendPluginManifestKind.OcamlDynlink;
 			case _:
-				fail(sourceLabel, "unsupported backend kind `" + value + "` (supported: haxe-provider, ocaml-cmxs)");
+				fail(sourceLabel, "unsupported backend kind `" + value + "` (supported: haxe-provider, ocaml-dynlink)");
 		}
 	}
 
@@ -150,29 +161,17 @@ class BackendPluginManifestParser {
 		if (manifest.requires == null)
 			return "requires section is required";
 
-		if (manifest.requires.abiVersion != BackendAbi.VERSION) {
-			return "backend ABI mismatch for plugin "
-				+ pluginId
-				+ ": expected abiVersion="
-				+ BackendAbi.VERSION
-				+ ", got "
-				+ manifest.requires.abiVersion;
-		}
-		if (manifest.requires.genIrVersion != BackendAbi.GEN_IR_VERSION) {
-			return "backend GenIR mismatch for plugin " + pluginId + ": expected genIrVersion=" + BackendAbi.GEN_IR_VERSION + ", got "
-				+ manifest.requires.genIrVersion;
-		}
-		if (manifest.requires.macroApiVersion != BackendAbi.MACRO_API_VERSION) {
-			return "backend macro API mismatch for plugin " + pluginId + ": expected macroApiVersion=" + BackendAbi.MACRO_API_VERSION + ", got "
-				+ manifest.requires.macroApiVersion;
-		}
+		final requiresError = BackendAbi.validateManifestRequires(pluginId, manifest.requires.abiVersion, manifest.requires.genIrVersion,
+			manifest.requires.macroApiVersion);
+		if (requiresError != null)
+			return requiresError;
 
 		switch (manifest.backend.kind) {
 			case BackendPluginManifestKind.HaxeProvider:
 				return null;
-			case BackendPluginManifestKind.OcamlCmxs:
+			case BackendPluginManifestKind.OcamlDynlink:
 				if (!StringTools.endsWith(entry, ".cmxs") && !StringTools.endsWith(entry, ".cma"))
-					return "backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-cmxs`";
+					return "backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-dynlink`";
 				return null;
 			case _:
 				return "unsupported backend kind `" + manifest.backend.kind + "`";

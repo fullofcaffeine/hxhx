@@ -6,17 +6,17 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable index : TyperIndex.t; mutable loader : LazyTypeLoader.t; mutable filePath : string; mutable modulePath : string; mutable packagePath : string; mutable imports : string HxArray.t; mutable classFullName : string }
 
-let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullName2 loader2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (); loader = Obj.magic (); filePath = ""; modulePath = ""; packagePath = ""; imports = Obj.magic (); classFullName = "" } : t) in (
-  ignore ((
-    ignore (let __assign_1 = index2 in (
-      self.index <- __assign_1;
+let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullName2 loader2 -> let self = ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t) in (
+  ignore (ignore ((
+    ignore (let __assign_1 = Obj.magic index2 in (
+      (Obj.magic self : t).index <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = loader2 in (
-      self.loader <- __assign_2;
+    ignore (let __assign_2 = Obj.magic loader2 in (
+      (Obj.magic self : t).loader <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref "" in (
+    let tempRight = ref ("" : string) in (
       ignore (if filePath2 == Obj.magic (HxRuntime.hx_null) || HxString.length filePath2 = 0 then let __assign_3 = ("<unknown>" : string) in (
         tempRight := __assign_3;
         __assign_3
@@ -25,10 +25,10 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
         __assign_4
       ));
       ignore (let __assign_5 = (!tempRight : string) in (
-        self.filePath <- __assign_5;
+        (Obj.magic self : t).filePath <- __assign_5;
         __assign_5
       ));
-      let tempRight1 = ref "" in (
+      let tempRight1 = ref ("" : string) in (
         ignore (if modulePath2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("" : string) in (
           tempRight1 := __assign_6;
           __assign_6
@@ -37,10 +37,10 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
           __assign_7
         ));
         ignore (let __assign_8 = (!tempRight1 : string) in (
-          self.modulePath <- __assign_8;
+          (Obj.magic self : t).modulePath <- __assign_8;
           __assign_8
         ));
-        let tempRight2 = ref "" in (
+        let tempRight2 = ref ("" : string) in (
           ignore (if packagePath2 == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
             tempRight2 := __assign_9;
             __assign_9
@@ -49,22 +49,22 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
             __assign_10
           ));
           ignore (let __assign_11 = (!tempRight2 : string) in (
-            self.packagePath <- __assign_11;
+            (Obj.magic self : t).packagePath <- __assign_11;
             __assign_11
           ));
-          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null)) in (
-            ignore (if imports2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = let __arr_13 = HxArray.create () in __arr_13 in (
+          let tempRight3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+            ignore (if imports2 == Obj.magic (HxRuntime.hx_null) then let __assign_12 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in (
               tempRight3 := __assign_12;
               __assign_12
-            ) else let __assign_14 = imports2 in (
+            ) else let __assign_14 = Obj.magic imports2 in (
               tempRight3 := __assign_14;
               __assign_14
             ));
-            ignore (let __assign_15 = !tempRight3 in (
-              self.imports <- __assign_15;
+            ignore (let __assign_15 = Obj.magic (!tempRight3) in (
+              (Obj.magic self : t).imports <- __assign_15;
               __assign_15
             ));
-            let tempRight4 = ref "" in (
+            let tempRight4 = ref ("" : string) in (
               ignore (if classFullName2 == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("" : string) in (
                 tempRight4 := __assign_16;
                 __assign_16
@@ -73,7 +73,7 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
                 __assign_17
               ));
               let __assign_18 = (!tempRight4 : string) in (
-                self.classFullName <- __assign_18;
+                (Obj.magic self : t).classFullName <- __assign_18;
                 __assign_18
               )
             )
@@ -81,33 +81,33 @@ let create = fun index2 filePath2 modulePath2 packagePath2 imports2 classFullNam
         )
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (); loader = Obj.magic (); filePath = ""; modulePath = ""; packagePath = ""; imports = Obj.magic (); classFullName = "" } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyperContext"; index = Obj.magic (HxRuntime.hx_null); loader = Obj.magic (HxRuntime.hx_null); filePath = ""; modulePath = ""; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); classFullName = "" } : t)
 
-let getIndex = fun self () -> self.index
+let getIndex = fun self () -> (Obj.magic self : t).index
 
-let getFilePath = fun self () -> self.filePath
+let getFilePath = fun self () -> (Obj.magic self : t).filePath
 
-let getModulePath = fun self () -> self.modulePath
+let getModulePath = fun self () -> (Obj.magic self : t).modulePath
 
-let getPackagePath = fun self () -> self.packagePath
+let getPackagePath = fun self () -> (Obj.magic self : t).packagePath
 
-let getImports = fun self () -> self.imports
+let getImports = fun self () -> (Obj.magic self : t).imports
 
-let getClassFullName = fun self () -> self.classFullName
+let getClassFullName = fun self () -> (Obj.magic self : t).classFullName
 
 let resolveType = fun self (typePath : string) -> try let __fallback_result_23 = (
-  ignore (if self.index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let hit = TyperIndex.resolveTypePath (self.index) (typePath : string) (self.packagePath : string) (self.imports) in (
-    ignore (if hit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr hit)) else ());
-    let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if self.loader == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (HxRuntime.hx_null) in (
+  ignore (if (Obj.magic self : t).index == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Obj.magic (HxRuntime.hx_null))))) else ());
+  let hit = Obj.magic (TyperIndex.resolveTypePath (Obj.magic ((Obj.magic self : t).index)) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).imports))) in (
+    ignore (if hit != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic hit))) else ());
+    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+      ignore (if (Obj.magic self : t).loader == Obj.magic (HxRuntime.hx_null) then let __assign_19 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
         tempResult := __assign_19;
         __assign_19
-      ) else let __assign_20 = let __obj_21 = self.loader in __obj_21.ensureTypeAvailable (Obj.magic __obj_21) (typePath : string) (self.packagePath : string) (self.imports) in (
+      ) else let __assign_20 = Obj.magic (Obj.magic (let __obj_21 = (Obj.magic self : t).loader in (Obj.magic __obj_21 : LazyTypeLoader.t).ensureTypeAvailable (Obj.magic __obj_21) (typePath : string) ((Obj.magic self : t).packagePath : string) (Obj.magic ((Obj.magic self : t).imports)))) in (
         tempResult := __assign_20;
         __assign_20
       ));
@@ -117,11 +117,11 @@ let resolveType = fun self (typePath : string) -> try let __fallback_result_23 =
 ) in Obj.magic __fallback_result_23 with
   | HxRuntime.Hx_return __ret_22 -> Obj.obj __ret_22
 
-let currentClass = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxString.length (self.classFullName) = 0 then let __assign_24 = Obj.magic (HxRuntime.hx_null) in (
+let currentClass = fun self () -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyClassInfo.t) in (
+  ignore (if HxString.length ((Obj.magic self : t).classFullName) = 0 then let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_24;
     __assign_24
-  ) else let __assign_25 = resolveType self (self.classFullName : string) in (
+  ) else let __assign_25 = Obj.magic (Obj.magic (resolveType (Obj.magic self) ((Obj.magic self : t).classFullName : string))) in (
     tempResult := __assign_25;
     __assign_25
   ));

@@ -13,25 +13,25 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.BackendR
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.BackendRegistry" } : t)
 
-let builtinRegistrations = let __arr_31 = HxArray.create () in (
+let builtinRegistrations = Obj.magic (let __arr_31 = HxArray.create () in (
   ignore (HxArray.push __arr_31 (let __anon_32 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_32 "descriptor" (Obj.repr (Backend_ocaml_OcamlStage3Backend.descriptor ())));
+    ignore (HxAnon.set __anon_32 "descriptor" (Backend_ocaml_OcamlStage3Backend.descriptor ()));
     ignore (HxAnon.set __anon_32 "create" (Obj.repr (fun () -> Backend_ocaml_OcamlStage3Backend.create ())));
     __anon_32
   )));
   ignore (HxArray.push __arr_31 (let __anon_33 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_33 "descriptor" (Obj.repr (Backend_js_JsBackend.descriptor ())));
+    ignore (HxAnon.set __anon_33 "descriptor" (Backend_js_JsBackend.descriptor ()));
     ignore (HxAnon.set __anon_33 "create" (Obj.repr (fun () -> Backend_js_JsBackend.create ())));
     __anon_33
   )));
   __arr_31
-)
+))
 
-let dynamicRegistrations = let __arr_34 = HxArray.create () in __arr_34
+let dynamicRegistrations = Obj.magic (let __arr_34 = HxArray.create () in __arr_34)
 
 let allRegistrations = fun () -> HxArray.concat builtinRegistrations dynamicRegistrations
 
-let sortedForTarget = fun targetId -> let tempString = ref "" in (
+let sortedForTarget = fun targetId -> let tempString = ref ("" : string) in (
   ignore (if targetId == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
     tempString := __assign_1;
     __assign_1
@@ -39,8 +39,8 @@ let sortedForTarget = fun targetId -> let tempString = ref "" in (
     tempString := __assign_2;
     __assign_2
   ));
-  let _this = allRegistrations () in let _g = let __arr_3 = HxArray.create () in __arr_3 in let _g1 = ref 0 in (
-    ignore (while !_g1 < HxArray.length _this do ignore (let v = HxArray.get _this (!_g1) in (
+  let _this = Obj.magic (allRegistrations ()) in let _g = Obj.magic (let __arr_3 = HxArray.create () in __arr_3) in let _g1 = ref 0 in (
+    ignore (while !_g1 < HxArray.length _this do ignore (let v = HxArray.get (Obj.magic _this) (!_g1) in (
       ignore (let __old_4 = !_g1 in let __new_5 = HxInt.add __old_4 1 in (
         ignore (_g1 := __new_5);
         __new_5
@@ -49,7 +49,7 @@ let sortedForTarget = fun targetId -> let tempString = ref "" in (
     )) done);
     ignore (HxArray.sort _g (fun a b -> try let __fallback_result_10 = (
       ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority") <> Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority") then raise (HxRuntime.Hx_return (Obj.repr (HxInt.sub (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "priority")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "priority"))))) else ());
-      let tempResult = ref 0 in (
+      let tempResult = ref (0 : int) in (
         ignore (if Obj.obj (HxAnon.get (Obj.obj (HxAnon.get a "descriptor")) "implId") < Obj.obj (HxAnon.get (Obj.obj (HxAnon.get b "descriptor")) "implId") then let __assign_6 = -1 in (
           tempResult := __assign_6;
           __assign_6
@@ -68,8 +68,8 @@ let sortedForTarget = fun targetId -> let tempString = ref "" in (
   )
 )
 
-let listDescriptors = fun () -> let _this = allRegistrations () in let _g = let __arr_11 = HxArray.create () in __arr_11 in let _g1 = ref 0 in (
-  ignore (while !_g1 < HxArray.length _this do ignore (let v = HxArray.get _this (!_g1) in (
+let listDescriptors = fun () -> let _this = Obj.magic (allRegistrations ()) in let _g = Obj.magic (let __arr_11 = HxArray.create () in __arr_11) in let _g1 = ref 0 in (
+  ignore (while !_g1 < HxArray.length _this do ignore (let v = HxArray.get (Obj.magic _this) (!_g1) in (
     ignore (let __old_12 = !_g1 in let __new_13 = HxInt.add __old_12 1 in (
       ignore (_g1 := __new_13);
       __new_13
@@ -79,8 +79,8 @@ let listDescriptors = fun () -> let _this = allRegistrations () in let _g = let 
   _g
 )
 
-let supportedTargetIds = fun () -> let seen = HxMap.create_string () in let ids = HxArray.create () in let _g = ref 0 in let _g1 = allRegistrations () in (
-  ignore (try while !_g < HxArray.length _g1 do try ignore (let r = HxArray.get _g1 (!_g) in (
+let supportedTargetIds = fun () -> let seen = Obj.magic (HxMap.create_string ()) in let ids = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
+  ignore (try while !_g < HxArray.length _g1 do try ignore (let r = HxArray.get (Obj.magic _g1) (!_g) in (
     ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
       ignore (_g := __new_15);
       __new_15
@@ -96,15 +96,15 @@ let supportedTargetIds = fun () -> let seen = HxMap.create_string () in let ids 
   ids
 )
 
-let register = fun spec -> (
+let register = fun spec -> ignore ((
   ignore (if spec == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "descriptor") == Obj.magic (HxRuntime.hx_null) || Obj.obj (HxAnon.get spec "create") == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration (descriptor/create required)") ["Dynamic"; "String"]) else ());
   let d = Obj.obj (HxAnon.get spec "descriptor") in (
     ignore (if Obj.obj (HxAnon.get d "id") == Obj.magic (HxRuntime.hx_null) || HxString.length (Obj.obj (HxAnon.get d "id")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.id is required") ["Dynamic"; "String"]) else ());
     ignore (if Obj.obj (HxAnon.get d "implId") == Obj.magic (HxRuntime.hx_null) || HxString.length (Obj.obj (HxAnon.get d "implId")) = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "invalid backend registration: descriptor.implId is required") ["Dynamic"; "String"]) else ());
     let compatibilityError = (Backend_BackendAbi.validateDescriptor d : string) in (
       ignore (if compatibilityError != Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr compatibilityError) ["Dynamic"; "String"]) else ());
-      let _g = ref 0 in let _g1 = allRegistrations () in (
-        ignore (while !_g < HxArray.length _g1 do ignore (let existing = HxArray.get _g1 (!_g) in (
+      let _g = ref 0 in let _g1 = Obj.magic (allRegistrations ()) in (
+        ignore (while !_g < HxArray.length _g1 do ignore (let existing = HxArray.get (Obj.magic _g1) (!_g) in (
           ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
             ignore (_g := __new_17);
             __new_17
@@ -115,12 +115,12 @@ let register = fun spec -> (
       )
     )
   )
-)
+))
 
 let registerProvider = fun regs -> try let __fallback_result_21 = (
   ignore (if regs == Obj.magic (HxRuntime.hx_null) || HxArray.length regs = 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in (
-    ignore (while !_g < HxArray.length regs do ignore (let reg = HxArray.get regs (!_g) in (
+    ignore (while !_g < HxArray.length regs do ignore (let reg = HxArray.get (Obj.magic regs) (!_g) in (
       ignore (let __old_18 = !_g in let __new_19 = HxInt.add __old_18 1 in (
         ignore (_g := __new_19);
         __new_19
@@ -132,34 +132,34 @@ let registerProvider = fun regs -> try let __fallback_result_21 = (
 ) in Obj.magic __fallback_result_21 with
   | HxRuntime.Hx_return __ret_20 -> Obj.obj __ret_20
 
-let clearDynamicRegistrations = fun () -> HxArray.splice dynamicRegistrations 0 (HxArray.length dynamicRegistrations)
+let clearDynamicRegistrations = fun () -> ignore (HxArray.splice dynamicRegistrations 0 (HxArray.length dynamicRegistrations))
 
-let descriptorForTarget = fun targetId -> let candidates = sortedForTarget (targetId : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxArray.length candidates = 0 then let __assign_22 = HxRuntime.hx_null in (
+let descriptorForTarget = fun targetId -> let candidates = Obj.magic (sortedForTarget (targetId : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if HxArray.length candidates = 0 then let __assign_22 = Obj.magic (HxRuntime.hx_null) in (
     tempResult := __assign_22;
     __assign_22
-  ) else let __assign_23 = Obj.obj (HxAnon.get (HxArray.get candidates 0) "descriptor") in (
+  ) else let __assign_23 = Obj.magic (Obj.obj (HxAnon.get (HxArray.get (Obj.magic candidates) 0) "descriptor")) in (
     tempResult := __assign_23;
     __assign_23
   ));
-  !tempResult
+  Obj.magic (!tempResult)
 )
 
-let createForTarget = fun targetId -> let candidates = sortedForTarget (targetId : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxArray.length candidates = 0 then let __assign_24 = Obj.magic (HxRuntime.hx_null) in (
+let createForTarget = fun targetId -> let candidates = Obj.magic (sortedForTarget (targetId : string)) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Backend_IBackend.t) in (
+  ignore (if HxArray.length candidates = 0 then let __assign_24 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_24;
     __assign_24
-  ) else let __assign_25 = Obj.obj (HxAnon.get (HxArray.get candidates 0) "create") () in (
+  ) else let __assign_25 = Obj.magic (Obj.magic (Obj.obj (HxAnon.get (HxArray.get (Obj.magic candidates) 0) "create") ())) in (
     tempResult := __assign_25;
     __assign_25
   ));
   !tempResult
 )
 
-let requireForTarget = fun targetId -> try let __fallback_result_30 = let backend = createForTarget (targetId : string) in (
-  ignore (if backend != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr backend)) else ());
-  let supported = supportedTargetIds () in (
-    ignore (HxArray.sort supported (fun a b -> let tempResult = ref 0 in (
+let requireForTarget = fun targetId -> try let __fallback_result_30 = let backend = Obj.magic (createForTarget (targetId : string)) in (
+  ignore (if backend != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic backend))) else ());
+  let supported = Obj.magic (supportedTargetIds ()) in (
+    ignore (HxArray.sort supported (fun a b -> let tempResult = ref (0 : int) in (
       ignore (if a < b then let __assign_26 = -1 in (
         tempResult := __assign_26;
         __assign_26

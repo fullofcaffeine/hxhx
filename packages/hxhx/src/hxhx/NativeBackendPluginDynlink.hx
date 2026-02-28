@@ -4,7 +4,7 @@ package hxhx;
 	OCaml Dynlink bridge for Stage3 native backend plugin loading.
 
 	Why
-	- Stage3 manifest support includes `backend.kind = "ocaml-cmxs"`.
+	- Stage3 manifest support includes `backend.kind = "ocaml-dynlink"`.
 	- Activating that kind requires OCaml runtime loading (`Dynlink.loadfile`) and
 	  deterministic registration capture.
 

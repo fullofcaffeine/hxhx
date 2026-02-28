@@ -15,47 +15,22 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.14.0-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
-`hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility.  
-It is developed together with `reflaxe.ocaml` so the toolchain can bootstrap and ship native binaries under MIT.
+`hxhx` is a Haxe-in-Haxe compiler stack targeting Haxe `4.3.7` compatibility.
+This repo also contains `reflaxe.ocaml` and native promotion tooling so Reflaxe targets can be compiled to native plugin artifacts.
 
-## Why this exists
+## Start here
 
-- Make compiler internals easier to understand and modify.
-- Track upstream Haxe `4.3.7` behavior using oracle-driven gates.
-- Keep a permissive, embeddable distribution path.
-- Compile Reflaxe targets to native binaries for better performance.
+If you are new, read:
+- `docs/01-getting-started/START_HERE.md`
+- `docs/00-project/GLOSSARY.md`
 
-## Current status
+That guide gives a beginner path for:
+1. building/running `hxhx`,
+2. using upstream `haxe` with `reflaxe.ocaml`,
+3. promoting a Reflaxe target/compiler to native plugin artifacts,
+4. understanding plugin vs builtin target modes.
 
-- Compatibility target is **Haxe `4.3.7`**.
-- Per-commit checks run **Gate 1 Lite**, **Gate 2 Lite**, **Gate 3 Builtin**, and a **strict plugin matrix** lane.
-- Per-commit checks also run **Stdlib Portable Lite** (baseline contract + portable fixture suite).
-- Per-commit CI also runs a **JS oracle smoke** lane (upstream `haxe` vs `hxhx js-native` runtime output on repo-local fixtures).
-- Full upstream compatibility gates (**Gate 1/2/3**) run weekly and on manual trigger.
-- **Gate M7 (replacement bundle)** runs weekly in strict/full mode, on published releases, and remains manually triggerable.
-- **Stdlib Portable Full** runs nightly/manual for broader Stage0 runtime/stdlib coverage.
-- Legacy Flash/AS3 targets are intentionally unsupported.
-- `hxhx` and `reflaxe.ocaml` are usable now; parity/performance work continues.
-
-## Choose your path
-
-- **Evaluate `hxhx`**
-  - [Roadmap and milestones](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
-  - [Acceptance criteria and gate definitions](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
-  - [JS-native scoped 1.0 matrix](docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md)
-  - [Testing and gate workflows](docs/01-getting-started/TESTING.md)
-- **Use `reflaxe.ocaml` now**
-  - [`reflaxe.ocaml` README](packages/reflaxe.ocaml/README.md)
-  - [Use `reflaxe.ocaml` with upstream Haxe](docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md)
-- **Contribute to compiler/backend work**
-  - [Backend layering and contracts](docs/02-user-guide/HXHX_BACKEND_LAYERING.md)
-  - [Promotion host adapter conventions](docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md)
-  - [Builtin backend behavior](docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md)
-  - [Macro host protocol](docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md)
-  - [Stdlib sync boundary](docs/00-project/STD_LIB_POLICY.md)
-  - [Provenance policy (MIT shipping path)](docs/00-project/PROVENANCE_POLICY.md)
-
-## Quick start (contributors)
+## Quick setup
 
 ```bash
 npm install
@@ -70,114 +45,52 @@ Build `hxhx` from committed bootstrap snapshots:
 bash scripts/hxhx/build-hxhx.sh
 ```
 
-Refresh committed bootstrap snapshots (`packages/hxhx/bootstrap_out`):
+## Pick your workflow
 
-```bash
-# Full deterministic refresh (clean + verify)
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh
+- **`hxhx` compiler workflow**
+  - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
+  - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
+  - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`
+- **`reflaxe.ocaml` with mainstream Haxe**
+  - `packages/reflaxe.ocaml/README.md`
+  - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
+- **Native promotion workflow (Reflaxe -> native plugin/builtin host adapters)**
+  - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
+  - `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
+  - `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md`
 
-# Faster local loop (incremental emit + skip verify)
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+## Core concepts (recommended before deep docs)
 
-# Reuse a repo-owned haxe --wait server:
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --use-repo-server --keep-repo-server --incremental --no-verify
+- `docs/02-user-guide/concepts/execution_modes.md`
+- `docs/02-user-guide/concepts/native_mode_pipeline.md`
+- `docs/02-user-guide/concepts/targets_backends_plugins.md`
+- `docs/02-user-guide/concepts/what_delegates_today.md`
 
-# Skip stage0 emit entirely when inputs are unchanged:
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --skip-if-unchanged --incremental --no-verify
+## Plugin vs builtin target (high level)
 
-# Server cleanup choices:
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server          # safe, repo-owned only
-bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers     # unsafe, global kill
+- **Plugin target** (OCaml dynlink artifact: `.cmxs` / `.cma`): native artifact loaded at runtime through manifest.
+- **Builtin target**: target linked and shipped inside `hxhx` binaries.
 
-# Repo-owned haxe server helper:
-bash scripts/hxhx/haxe-server.sh start
-bash scripts/hxhx/haxe-server.sh status
-bash scripts/hxhx/haxe-server.sh stop
+Current direction: keep target-core logic reusable so promotion is packaging/load choice, not backend rewrite.
 
-# If heartbeat is disabled but you still want periodic diagnostics:
-HXHX_STAGE0_HEARTBEAT=0 HXHX_STAGE0_DIAG_EVERY=30 \
-  bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
-```
+## Current status (concise)
 
-Benchmark the regen harness (cold/warm/skip scenarios):
+- Compatibility baseline: **Haxe `4.3.7`**.
+- Scoped replacement bundle and stage0-forbidden policy checks are wired and tracked.
+- Native JS preset (`--target js`) exists as a scoped MVP lane with explicit in/out-of-scope matrix:
+  - `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
+- Full upstream gates (Gate 1/2/3) run on weekly/manual cadence.
 
-```bash
-npm run hxhx:bench:bootstrap-regen
-```
+## Command catalog
 
-Benchmark profile/plugin KPIs (portable vs metal, builtin vs provider, macro overhead):
+For full command reference (tests, gates, promotion, plugin matrix):
+- `docs/01-getting-started/TESTING.md`
 
-```bash
-npm run hxhx:bench:kpi
-```
-
-Optional JS parity smoke (upstream compiler vs `hxhx js-native` runtime behavior):
-
-```bash
-npm run test:upstream:js-oracle-smoke
-```
-
-Mainstream upstream compatibility command set (local):
-
-```bash
-npm run test:upstream:unit-macro-stage3-no-emit
-npm run test:upstream:runci-macro-stage3-direct
-npm run test:upstream:display-stage3-no-emit
-npm run test:upstream:replacement-ready:strict
-```
-
-Portable stdlib parity gates:
-
-```bash
-npm run test:stdlib:portable:tier1
-npm run test:stdlib:portable:full
-npm run stdlib:closure:generate
-npm run stdlib:closure:sync
-```
-
-Self-hosting status/smoke:
-
-```bash
-npm run status:self-hosting
-npm run test:self-hosting-smoke
-npm run test:stage0-policy
-
-# Strict replacement-ready bundle (delegation blocked):
-npm run test:upstream:replacement-ready:strict
-
-# Strict plugin matrix (macro libs + native macro-module dynlink smoke + eval.vm API smoke + Stage3 plugin fixture + native runtime smoke):
-HXHX_PLUGIN_MATRIX_STRICT=1 npm run test:plugins:strict-matrix
-
-# Focused Stage4 native macro-module dynlink smoke:
-npm run test:hxhx:macro-module-dynlink-smoke
-
-# Generate a promotion-ready plugin scaffold:
-bash scripts/hxhx/plugin-init.sh \
-  --out-dir .tmp/promotion-demo \
-  --plugin-id demo.native.plugin \
-  --target-id js-native
-
-# Promote an existing provider type to a native plugin artifact:
-bash scripts/hxhx/promote-backend-plugin.sh \
-  --out-dir .tmp/promotion-demo \
-  --plugin-id demo.native.plugin \
-  --provider-type backend.js.JsBackend \
-  --target-id js-native
-
-# Generate upstream eval adapter artifact (Level-1 workflow compatibility):
-bash scripts/hxhx/promote-eval-adapter.sh \
-  --out-dir .tmp/promotion-demo \
-  --plugin-id demo.native.plugin \
-  --target-id js-native
-```
-
-## Environment setup
-
-Required tools:
+## Environment prerequisites
 
 - Node.js + npm
 - Haxe `4.3.7`
-- OCaml `5.2+`, `dune`, `ocaml-findlib` (for native lanes)
+- OCaml `5.2+`, `dune`, `ocaml-findlib`
 
 macOS:
 
@@ -196,69 +109,11 @@ eval "$(opam env)"
 opam install -y dune ocamlfind
 ```
 
-## Reflaxe OCaml quick usage
+## Additional docs
 
-Emit OCaml from Haxe:
-
-```bash
-npx haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out --no-output
-```
-
-Emit + native build:
-
-```bash
-npx haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=native --no-output
-```
-
-For full usage and mainstream Haxe integration, see
-[`packages/reflaxe.ocaml/README.md`](packages/reflaxe.ocaml/README.md).
-
-## CI glossary (plain English)
-
-- **CI**: fast safety checks on normal changes.
-- **Gate 1 Lite**: quick upstream macro smoke.
-- **Gate 2 Lite**: quick workload smoke.
-- **Gate 3 Builtin**: linked backend smoke (`ocaml-stage3` + `js-native`) plus full JS oracle parity lane.
-- **Gate 1/2/3**: heavier upstream compatibility gates (weekly/manual).
-- **Gate M7**: curated replacement-ready bundle (`fast|full`), with weekly strict/full CI.
-- **Plugin matrix (strict)**: macro-library compatibility + native macro-module dynlink smoke + eval.vm plugin API smoke + Stage3 plugin fixture checks.
-- **Plugin matrix (strict)** also validates generated promotion scaffold buildability, backend promotion smoke, eval-adapter promotion smoke, and native backend runtime smoke.
-- Focused Gate2 display runs on macOS use deterministic retry/skip knobs; see
-  [Testing command catalog](docs/01-getting-started/TESTING.md).
-
-## Project layout (monorepo)
-
-- `packages/hxhx`: CLI/product entrypoint.
-- `packages/hxhx-core`: compiler core and backend contracts.
-- `packages/hxhx-macro-host`: Stage4 macro host process.
-- `packages/reflaxe.ocaml`: OCaml backend/runtime package.
-- `examples/`: `hxhx`-oriented examples (preset/plugin/compiler wiring).
-- `packages/reflaxe.ocaml/examples/`: `reflaxe.ocaml`-oriented examples (still exercised through `hxhx` in this repo).
-- `workloads/`: acceptance workloads.
-
-`hxhx` and `reflaxe.ocaml` stay together for now because they still share bootstrap/runtime iteration loops.
-
-## More docs
-
-- [Testing command catalog](docs/01-getting-started/TESTING.md)
-- [Self-hosting checklist (beginner-friendly)](docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md)
-- [1.0 roadmap (non-expert)](docs/01-getting-started/HXHX_1_0_ROADMAP.md)
-- [Acceptance model](docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md)
-- [OCaml profile contract (`portable|metal`)](docs/02-user-guide/OCAML_PROFILE_CONTRACT.md)
-- [OCaml runtime capability matrix (`portable` vs `metal`)](docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md)
-- [Portable stdlib baseline contract (`4.3.7`)](docs/00-project/STDLIB_PORTABLE_BASELINE_OCAML_4_3_7.json)
-- [Portable stdlib evidence map (`4.3.7`)](docs/00-project/STDLIB_PORTABLE_EVIDENCE_OCAML_4_3_7.json)
-- [Portable stdlib parity matrix](docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md)
-- [Portable stdlib closure worklist](docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_OCAML_4_3_7.json)
-- [KPI benchmark baseline](docs/benchmarks/HXHX_KPI_BASELINE.md)
-- [KPI benchmark thresholds](docs/benchmarks/HXHX_KPI_THRESHOLDS.md)
-- [Stage0 policy (`runtime/build/maintenance`)](docs/00-project/STAGE0_POLICY.md)
-- [Stdlib provenance policy + ledger](docs/00-project/STD_LIB_POLICY.md)
-- [Cleanup and cache policy](docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md)
-- [Boundaries and long-term repo strategy](docs/00-project/BOUNDARIES.md)
-- [Provenance policy (ML2HX non-shipping)](docs/00-project/PROVENANCE_POLICY.md)
-- [Public release checklist](docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md)
-
-## License
-
-MIT (see [`LICENSE`](LICENSE)).
+- `docs/00-project/BOUNDARIES.md`
+- `docs/00-project/DYNAMIC_UNTYPED_POLICY.md`
+- `docs/00-project/STAGE0_POLICY.md`
+- `docs/00-project/STD_LIB_POLICY.md`
+- `docs/01-getting-started/CLEANUP_AND_CACHE_POLICY.md`
+- `docs/00-project/PUBLIC_RELEASE_PREFLIGHT.md`

@@ -6,73 +6,73 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable fullName : string; mutable shortName : string; mutable modulePath : string; mutable fields : TyType.t HxMap.string_map; mutable staticMethods : TyFunSig.t HxMap.string_map; mutable instanceMethods : TyFunSig.t HxMap.string_map }
 
-let create = fun fullName2 shortName2 modulePath2 fields2 staticMethods2 instanceMethods2 -> let self = ({ __hx_type = HxType.class_ "TyClassInfo"; fullName = ""; shortName = ""; modulePath = ""; fields = Obj.magic (); staticMethods = Obj.magic (); instanceMethods = Obj.magic () } : t) in (
-  ignore ((
+let create = fun fullName2 shortName2 modulePath2 fields2 staticMethods2 instanceMethods2 -> let self = ({ __hx_type = HxType.class_ "TyClassInfo"; fullName = ""; shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (fullName2 : string) in (
-      self.fullName <- __assign_1;
+      (Obj.magic self : t).fullName <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = (shortName2 : string) in (
-      self.shortName <- __assign_2;
+      (Obj.magic self : t).shortName <- __assign_2;
       __assign_2
     ));
     ignore (let __assign_3 = (modulePath2 : string) in (
-      self.modulePath <- __assign_3;
+      (Obj.magic self : t).modulePath <- __assign_3;
       __assign_3
     ));
-    ignore (let __assign_4 = fields2 in (
-      self.fields <- __assign_4;
+    ignore (let __assign_4 = Obj.magic fields2 in (
+      (Obj.magic self : t).fields <- __assign_4;
       __assign_4
     ));
-    ignore (let __assign_5 = staticMethods2 in (
-      self.staticMethods <- __assign_5;
+    ignore (let __assign_5 = Obj.magic staticMethods2 in (
+      (Obj.magic self : t).staticMethods <- __assign_5;
       __assign_5
     ));
-    let __assign_6 = instanceMethods2 in (
-      self.instanceMethods <- __assign_6;
+    let __assign_6 = Obj.magic instanceMethods2 in (
+      (Obj.magic self : t).instanceMethods <- __assign_6;
       __assign_6
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassInfo"; fullName = ""; shortName = ""; modulePath = ""; fields = Obj.magic (); staticMethods = Obj.magic (); instanceMethods = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassInfo"; fullName = ""; shortName = ""; modulePath = ""; fields = Obj.magic (HxRuntime.hx_null); staticMethods = Obj.magic (HxRuntime.hx_null); instanceMethods = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getFullName = fun self () -> self.fullName
+let getFullName = fun self () -> (Obj.magic self : t).fullName
 
-let getShortName = fun self () -> self.shortName
+let getShortName = fun self () -> (Obj.magic self : t).shortName
 
-let getModulePath = fun self () -> self.modulePath
+let getModulePath = fun self () -> (Obj.magic self : t).modulePath
 
-let hasField = fun self (name : string) -> HxMap.exists_string (self.fields) name
+let hasField = fun self (name : string) -> HxMap.exists_string ((Obj.magic self : t).fields) name
 
-let fieldType = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxMap.exists_string (self.fields) name then let __assign_7 = HxMap.get_string (self.fields) name in (
+let fieldType = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).fields) name then let __assign_7 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).fields) name)) in (
     tempResult := __assign_7;
     __assign_7
-  ) else let __assign_8 = Obj.magic (HxRuntime.hx_null) in (
+  ) else let __assign_8 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_8;
     __assign_8
   ));
   !tempResult
 )
 
-let staticMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxMap.exists_string (self.staticMethods) name then let __assign_9 = HxMap.get_string (self.staticMethods) name in (
+let staticMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).staticMethods) name then let __assign_9 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).staticMethods) name)) in (
     tempResult := __assign_9;
     __assign_9
-  ) else let __assign_10 = Obj.magic (HxRuntime.hx_null) in (
+  ) else let __assign_10 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_10;
     __assign_10
   ));
   !tempResult
 )
 
-let instanceMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if HxMap.exists_string (self.instanceMethods) name then let __assign_11 = HxMap.get_string (self.instanceMethods) name in (
+let instanceMethod = fun self (name : string) -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyFunSig.t) in (
+  ignore (if HxMap.exists_string ((Obj.magic self : t).instanceMethods) name then let __assign_11 = Obj.magic (Obj.magic (HxMap.get_string ((Obj.magic self : t).instanceMethods) name)) in (
     tempResult := __assign_11;
     __assign_11
-  ) else let __assign_12 = Obj.magic (HxRuntime.hx_null) in (
+  ) else let __assign_12 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempResult := __assign_12;
     __assign_12
   ));

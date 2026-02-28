@@ -84,7 +84,7 @@ compile_output="$(
     HXHX_TRACE_BACKEND_SELECTION=1 \
     HXHX_TRACE_BACKEND_PROVIDERS=1 \
     "$HXHX_BIN_RESOLVED" \
-      --target js-native \
+      --target js \
       --js "$out_dir/main.js" \
       --hxhx-no-run \
       -cp "$fixture_src" \

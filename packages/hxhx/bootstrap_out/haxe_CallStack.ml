@@ -23,7 +23,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe._CallStack.
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe._CallStack.CallStack_Impl_" } : t)
 
-let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
+let rec equalItems = fun item1 item2 -> let tempResult = ref (false : bool) in (
   ignore (if item1 == Obj.magic (HxRuntime.hx_null) then if item2 == Obj.magic (HxRuntime.hx_null) then let __assign_13 = true in (
     tempResult := __assign_13;
     __assign_13
@@ -149,15 +149,15 @@ let rec equalItems = fun item1 item2 -> let tempResult = ref false in (
 
 let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) in (
   ignore (try while true do try ignore ((
-    ignore (if not ((let __old_3 = !i in let __new_4 = HxInt.add __old_3 1 in (
+    ignore (if HxRuntime.unbox_bool_or_obj (Obj.magic (not ((let __old_3 = !i in let __new_4 = HxInt.add __old_3 1 in (
       ignore (i := __new_4);
       __new_4
-    )) < HxArray.length this1) then raise (HxRuntime.Hx_break) else ());
+    )) < HxArray.length this1))) then raise (HxRuntime.Hx_break) else ());
     let _g = ref 0 in let _g1 = HxArray.length stack in (
       ignore (try while !_g < _g1 do try ignore (let j = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
         ignore (_g := __new_6);
         __old_5
-      ) in if equalItems (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get this1 (!i)))) (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get stack j))) then ignore ((
+      ) in if equalItems (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get (Obj.magic this1) (!i)))) (HxEnum.box_if_needed "haxe.StackItem" (Obj.repr (HxArray.get (Obj.magic stack) j))) then ignore ((
         ignore (if !startIndex < 0 then ignore (let __assign_7 = !i in (
           startIndex := __assign_7;
           __assign_7
@@ -178,7 +178,7 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());
-  let tempResult = ref (Obj.magic (HxRuntime.hx_null)) in (
+  let tempResult = ref (Obj.magic (HxRuntime.hx_null) : stackitem HxArray.t) in (
     ignore (if !startIndex >= 0 then let __assign_11 = HxArray.slice this1 0 (!startIndex) in (
       tempResult := __assign_11;
       __assign_11
@@ -190,51 +190,51 @@ let subtract = fun this1 stack -> let startIndex = ref (-1) in let i = ref (-1) 
   )
 )
 
-let rec itemToString = fun b s -> match s with
-  | CFunction -> ignore (StringBuf.add b (Obj.repr "a C function"))
+let rec itemToString = fun b s -> ignore (match s with
+  | CFunction -> ignore (StringBuf.add (Obj.magic b) (Obj.repr "a C function"))
   | Module _p0 -> ignore (let _g = (_p0 : string) in let m = (_g : string) in (
-    ignore (StringBuf.add b (Obj.repr "module "));
-    StringBuf.add b (Obj.repr m)
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr "module "));
+    StringBuf.add (Obj.magic b) (Obj.repr m)
   ))
   | FilePos (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _p0) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = _p3 in let s2 = Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" _g) in let file = (_g1 : string) in let line = _g2 in let col = _g3 in (
     ignore (if s2 != Obj.magic (HxRuntime.hx_null) then ignore ((
-      ignore (itemToString b (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" s2)));
-      StringBuf.add b (Obj.repr " (")
+      ignore (itemToString (Obj.magic b) (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" s2)));
+      StringBuf.add (Obj.magic b) (Obj.repr " (")
     )) else ());
-    ignore (StringBuf.add b (Obj.repr file));
-    ignore (StringBuf.add b (Obj.repr " line "));
-    ignore (StringBuf.add b (Obj.repr line));
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr file));
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr " line "));
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr line));
     ignore (if col != HxRuntime.hx_null then ignore ((
-      ignore (StringBuf.add b (Obj.repr " column "));
-      StringBuf.add b col
+      ignore (StringBuf.add (Obj.magic b) (Obj.repr " column "));
+      StringBuf.add (Obj.magic b) col
     )) else ());
-    if s2 != Obj.magic (HxRuntime.hx_null) then ignore (StringBuf.add b (Obj.repr ")")) else ()
+    if s2 != Obj.magic (HxRuntime.hx_null) then ignore (StringBuf.add (Obj.magic b) (Obj.repr ")")) else ()
   ))
-  | Method (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let cname = (_g : string) in let meth = (_g1 : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (if cname == Obj.magic (HxRuntime.hx_null) then let __assign_72 = ("<unknown>" : string) in (
+  | Method (_p0, _p1) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let cname = (_g : string) in let meth = (_g1 : string) in let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+    ignore (if cname == Obj.magic (HxRuntime.hx_null) then let __assign_72 = Obj.magic ("<unknown>" : string) in (
       tempMaybeString := __assign_72;
       __assign_72
-    ) else let __assign_73 = (cname : string) in (
+    ) else let __assign_73 = Obj.magic (cname : string) in (
       tempMaybeString := __assign_73;
       __assign_73
     ));
-    ignore (StringBuf.add b (Obj.repr (!tempMaybeString)));
-    ignore (StringBuf.add b (Obj.repr "."));
-    StringBuf.add b (Obj.repr meth)
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr (!tempMaybeString)));
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr "."));
+    StringBuf.add (Obj.magic b) (Obj.repr meth)
   ))
   | LocalFunction _p0 -> ignore (let _g = _p0 in let n = _g in (
-    ignore (StringBuf.add b (Obj.repr "local function #"));
-    StringBuf.add b n
-  ))
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr "local function #"));
+    StringBuf.add (Obj.magic b) n
+  )))
 
-let toString = fun stack -> let b = StringBuf.create () in let _g = ref 0 in let _g1 = stack in (
-  ignore (while !_g < HxArray.length _g1 do ignore (let s = HxArray.get _g1 (!_g) in (
+let toString = fun stack -> let b = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = Obj.magic stack in (
+  ignore (while !_g < HxArray.length _g1 do ignore (let s = Obj.magic (HxArray.get (Obj.magic _g1) (!_g)) in (
     ignore (let __old_1 = !_g in let __new_2 = HxInt.add __old_1 1 in (
       ignore (_g := __new_2);
       __new_2
     ));
-    ignore (StringBuf.add b (Obj.repr "\nCalled from "));
-    itemToString b s
+    ignore (StringBuf.add (Obj.magic b) (Obj.repr "\nCalled from "));
+    itemToString (Obj.magic b) (Obj.magic s)
   )) done);
-  StringBuf.toString b ()
+  StringBuf.toString (Obj.magic b) ()
 )

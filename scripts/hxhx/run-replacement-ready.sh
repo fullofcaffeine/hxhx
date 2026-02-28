@@ -18,7 +18,7 @@ case "$PROFILE" in
     echo "  HXHX_M7_STRICT=0|1                  (default: full=1, fast=0)" >&2
     echo "  HXHX_M7_KEEP_LOGS=0|1               (default 0)" >&2
     echo "  HXHX_M7_DRY_RUN=0|1                 (default 0)" >&2
-    echo "  HXHX_M7_SCOPE_FILE=<json>           (default: docs/02-user-guide/compat/scoped-1.0-targets.json)" >&2
+    echo "  HXHX_M7_SCOPE_FILE=<json>           (default: strict=docs/02-user-guide/compat/native-scope-targets.json, otherwise docs/02-user-guide/compat/scoped-1.0-targets.json)" >&2
     echo "  HXHX_M7_REQUIRE_PLUGIN_MATRIX=0|1   (default: strict full=1, otherwise 0)" >&2
     echo "  HAXE_UPSTREAM_DIR=/path/to/haxe     (default: $ROOT/vendor/haxe)" >&2
     exit 2
@@ -52,6 +52,13 @@ case "$STRICT" in
   *) echo "Invalid HXHX_M7_STRICT=$STRICT (expected 0 or 1)." >&2; exit 2 ;;
 esac
 
+if [ "$STRICT" = "1" ]; then
+  DEFAULT_SCOPE_FILE="$ROOT/docs/02-user-guide/compat/native-scope-targets.json"
+else
+  DEFAULT_SCOPE_FILE="$ROOT/docs/02-user-guide/compat/scoped-1.0-targets.json"
+fi
+SCOPE_FILE="${HXHX_M7_SCOPE_FILE:-$DEFAULT_SCOPE_FILE}"
+
 if [ -n "$REQUIRE_PLUGIN_MATRIX_RAW" ]; then
   REQUIRE_PLUGIN_MATRIX="$REQUIRE_PLUGIN_MATRIX_RAW"
 elif [ "$PROFILE" = "full" ] && [ "$STRICT" = "1" ]; then
@@ -63,7 +70,6 @@ case "$REQUIRE_PLUGIN_MATRIX" in
 esac
 
 UPSTREAM_DIR="${HAXE_UPSTREAM_DIR:-$ROOT/vendor/haxe}"
-SCOPE_FILE="${HXHX_M7_SCOPE_FILE:-$ROOT/docs/02-user-guide/compat/scoped-1.0-targets.json}"
 HOST_OS="$(uname -s)"
 M7_GATE3_TARGETS_DEFAULT=""
 

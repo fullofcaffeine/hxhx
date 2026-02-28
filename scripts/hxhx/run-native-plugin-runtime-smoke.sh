@@ -66,7 +66,7 @@ esac
 bash "$BUILD_SCRIPT" \
   --plugin-id fixture.native.backend.plugin \
   --plugin-version 0.1.0 \
-  --kind ocaml-cmxs \
+  --kind ocaml-dynlink \
   --source-dir "$FIXTURE_DIR" \
   --dune-target "hxhx_backend_plugin_fixture.${plugin_artifact_ext}" \
   --entry "plugins/hxhx_backend_plugin_fixture.${plugin_artifact_ext}" \
@@ -102,7 +102,7 @@ run_compile_with_manifest() {
     HXHX_TRACE_BACKEND_SELECTION=1 \
     HXHX_TRACE_BACKEND_PROVIDERS=1 \
     "$HXHX_BIN_RESOLVED" \
-      --target js-native \
+      --target js \
       --js "$out_dir/main.js" \
       --hxhx-no-run \
       -cp "$fixture_src" \

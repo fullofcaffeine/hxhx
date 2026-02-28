@@ -16,6 +16,11 @@ From the repo root:
 npm test
 ```
 
+Before running deeper compatibility gates, read:
+
+- `docs/02-user-guide/concepts/execution_modes.md`
+- `docs/02-user-guide/concepts/what_delegates_today.md`
+
 If you have `ocamlc` + `dune` installed, this also runs:
 
 - portable conformance fixtures (`test/portable/**`)
@@ -284,8 +289,8 @@ Notes:
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.
-- If the current `hxhx` binary does not expose `js-native`, `npm run test:hxhx-targets` skips
-  js-native-only checks and prints explicit skip markers (dedicated js-native CI smoke still enforces the lane).
+- If the current `hxhx` binary does not expose native JS preset `--target js`, `npm run test:hxhx-targets` skips
+  native-JS-only checks and prints explicit skip markers (dedicated JS smoke CI still enforces the lane).
   (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
 Dedicated display full-emit warm-output stress rung:
@@ -344,7 +349,7 @@ Select targets via `HXHX_GATE3_TARGETS` (comma-separated) or pass them as args:
 HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
-Run a lightweight JS runtime oracle comparison (upstream `haxe` vs linked `hxhx js-native`):
+Run a lightweight JS runtime oracle comparison (upstream `haxe` vs linked `hxhx --target js`):
 
 ```bash
 npm run test:upstream:js-oracle-smoke
@@ -366,13 +371,13 @@ HXHX_JS_ORACLE_FIXTURES=JsOracleLoopMain,JsOracleSwitchExprMain,JsOracleTryCatch
   npm run test:upstream:js-oracle-smoke
 ```
 
-Run the linked builtin target smoke (delegated `--target ocaml` vs builtin `--target ocaml-stage3`):
+Run the linked builtin target smoke (delegated `--target ocaml-compat` vs builtin `--target ocaml`):
 
 ```bash
 npm run test:hxhx:builtin-target-smoke
 ```
 
-Run the JS-native emit+run lane only (no OCaml timing compare):
+Run the native JS emit+run lane only (no OCaml timing compare):
 
 ```bash
 HXHX_BUILTIN_SMOKE_OCAML=0 HXHX_BUILTIN_SMOKE_JS_NATIVE=1 npm run test:hxhx:builtin-target-smoke
@@ -383,8 +388,8 @@ Notes:
 - Full delegated-vs-builtin OCaml timing smoke is **not** part of PR/push CI by default (toolchain/runtime cost).
 - Gate 3 CI workflow (`.github/workflows/gate3.yml`) runs weekly on Linux with deterministic defaults (`targets=Macro,Js,Neko`, `macro_mode=direct`, `allow_skip=0`).
   It is also manually triggerable with `workflow_dispatch` inputs for `targets`, `allow_skip`, and `macro_mode`.
-- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR, weekly schedule, and manual trigger (`reps` only). It now always runs `js-native` smoke plus full JS oracle fixtures.
-- PR/push CI (`.github/workflows/ci.yml`) includes a dedicated `JS-native smoke` job (`HXHX_BUILTIN_SMOKE_OCAML=0`, `HXHX_BUILTIN_SMOKE_JS_NATIVE=1`) and a JS-oracle subset in the same job.
+- Builtin target smoke CI (`.github/workflows/gate3-builtin.yml`) runs on push/PR, weekly schedule, and manual trigger (`reps` only). It now always runs native JS smoke plus full JS oracle fixtures.
+- PR/push CI (`.github/workflows/ci.yml`) includes a dedicated native-JS smoke job (`HXHX_BUILTIN_SMOKE_OCAML=0`, `HXHX_BUILTIN_SMOKE_JS_NATIVE=1`) and a JS-oracle subset in the same job.
 - PR/push CI also includes dedicated `JS oracle smoke (upstream vs hxhx)` via `.github/workflows/js-oracle-smoke.yml`, which runs the full fixture set.
 - By default, missing target toolchains fail the run; set `HXHX_GATE3_ALLOW_SKIP=1` to skip missing deps.
 - Flaky-target retry policy defaults to one retry for `Js` (`HXHX_GATE3_RETRY_COUNT=1`, `HXHX_GATE3_RETRY_TARGETS=Js`, `HXHX_GATE3_RETRY_DELAY_SEC=3`); set `HXHX_GATE3_RETRY_COUNT=0` to disable.
@@ -408,6 +413,14 @@ Use one command to run a curated replacement-readiness bundle with a clear PASS/
 npm run test:upstream:replacement-ready
 ```
 
+Important: this bundle serves two different claim scopes:
+
+- Oracle replacement-ready scope (broad compatibility):
+  - `docs/02-user-guide/compat/scoped-1.0-targets.json`
+- Native stage0-forbidden scope (strict non-delegating runtime):
+  - `docs/02-user-guide/compat/native-scope-targets.json`
+  - selected by default when strict mode is enabled (`HXHX_M7_STRICT=1`)
+
 Profiles:
 
 - `fast` (default): `ci:guards`, `test:hxhx-targets`, focused Gate2 display rung, builtin target smoke.
@@ -428,6 +441,12 @@ HXHX_M7_PROFILE=full HXHX_M7_STRICT=1 npm run test:upstream:replacement-ready
 # Full bundle, strict + stage0-forbidden runtime guard
 npm run test:upstream:replacement-ready:strict
 ```
+
+Claim mapping:
+
+- Use `npm run test:upstream:replacement-ready` for oracle replacement-ready statements.
+- Use `npm run test:upstream:replacement-ready:strict` for stage0-forbidden native-scope statements.
+- Override scope manifest explicitly with `HXHX_M7_SCOPE_FILE=/path/to/scope.json` when needed.
 
 CI cadence:
 

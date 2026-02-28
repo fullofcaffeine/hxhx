@@ -16,7 +16,7 @@ import backend.reflaxe.ReflaxeTargetAdapter;
 	Stage3 JS backend MVP (`js-native`).
 
 	Why
-	- `hxhx` needs a first non-delegating JS emission rung so `--target js-native`
+	- `hxhx` needs a first non-delegating JS emission rung so `--target js`
 	  can run without stage0 delegation.
 	- We intentionally keep this as a constrained subset and fail fast on unsupported
 	  expression shapes.

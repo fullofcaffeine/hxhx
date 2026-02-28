@@ -19,9 +19,7 @@ let fatal = fun msg -> (
   Obj.magic (HxRuntime.hx_null)
 )
 
-let isVersionQuery = fun args -> HxArray.length args = 1 && (HxString.equals (HxArray.get args 0) "--version" || HxString.equals (HxArray.get args 0) "-version")
-
-let normalizeCliArgs = fun rawArgs -> HxArray.copy rawArgs
+let isVersionQuery = fun args -> HxArray.length args = 1 && (HxString.equals (HxArray.get (Obj.magic args) 0) "--version" || HxString.equals (HxArray.get (Obj.magic args) 0) "-version")
 
 let isTrueEnv = fun name -> try let __fallback_result_2 = let raw = (HxSys.getEnv name : string) in (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
@@ -32,10 +30,10 @@ let isTrueEnv = fun name -> try let __fallback_result_2 = let raw = (HxSys.getEn
   | HxRuntime.Hx_return __ret_1 -> Obj.obj __ret_1
 
 let getDefineValue = fun args name -> try let __fallback_result_6 = let i = ref 0 in (
-  ignore (try while !i < HxArray.length args do try ignore (let a = (HxArray.get args (!i) : string) in (
-    ignore (if HxString.equals a "-D" && HxInt.add (!i) 1 < HxArray.length args then ignore (let d = (HxArray.get args (HxInt.add (!i) 1) : string) in (
-      ignore (if HxString.equals d name then raise (HxRuntime.Hx_return (Obj.repr "1")) else ());
-      ignore (if StringTools.startsWith (d : string) (HxString.toStdString name ^ "=" : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr d (HxString.length (HxString.toStdString name ^ "=")) (-1)))) else ());
+  ignore (try while !i < HxArray.length args do try ignore (let a = (HxArray.get (Obj.magic args) (!i) : string) in (
+    ignore (if HxString.equals a "-D" && HxInt.add (!i) 1 < HxArray.length args then ignore (let d = (HxArray.get (Obj.magic args) (HxInt.add (!i) 1) : string) in (
+      ignore (if HxString.equals d name then raise (HxRuntime.Hx_return (Obj.repr ("1" : string))) else ());
+      ignore (if StringTools.startsWith (d : string) (HxString.toStdString name ^ "=" : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr d (HxString.length (HxString.toStdString name ^ "=")) (-1) : string))) else ());
       ignore (i := HxInt.add (!i) 2);
       raise (HxRuntime.Hx_continue)
     )) else ());
@@ -50,9 +48,9 @@ let getDefineValue = fun args name -> try let __fallback_result_6 = let i = ref 
 ) in Obj.magic __fallback_result_6 with
   | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
 
-let hasDefine = fun args name -> getDefineValue args (name : string) != Obj.magic (HxRuntime.hx_null)
+let hasDefine = fun args name -> getDefineValue (Obj.magic args) (name : string) != Obj.magic (HxRuntime.hx_null)
 
-let addDefineIfMissing = fun args define -> try let eq = HxString.indexOf define "=" 0 in let tempString = ref "" in (
+let addDefineIfMissing = fun args define -> ignore (try let eq = HxString.indexOf define "=" 0 in let tempString = ref ("" : string) in (
   ignore (if eq = -1 then let __assign_7 = (define : string) in (
     tempString := __assign_7;
     __assign_7
@@ -60,14 +58,14 @@ let addDefineIfMissing = fun args define -> try let eq = HxString.indexOf define
     tempString := __assign_8;
     __assign_8
   ));
-  ignore (if hasDefine args (!tempString : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
+  ignore (if hasDefine (Obj.magic args) (!tempString : string) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (HxArray.push args "-D");
   HxArray.push args define
 ) with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9)
 
-let stripAll = fun args flag -> let out = HxArray.create () in let _g = ref 0 in (
-  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
+let stripAll = fun args flag -> let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
     ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
       ignore (_g := __new_11);
       __new_11
@@ -77,7 +75,7 @@ let stripAll = fun args flag -> let out = HxArray.create () in let _g = ref 0 in
   out
 )
 
-let hasAnyTarget = fun args -> try let __fallback_result_16 = let targetFlags = let __arr_12 = HxArray.create () in (
+let hasAnyTarget = fun args -> try let __fallback_result_16 = let targetFlags = Obj.magic (let __arr_12 = HxArray.create () in (
   ignore (HxArray.push __arr_12 "-js");
   ignore (HxArray.push __arr_12 "--js");
   ignore (HxArray.push __arr_12 "-lua");
@@ -105,8 +103,8 @@ let hasAnyTarget = fun args -> try let __fallback_result_16 = let targetFlags = 
   ignore (HxArray.push __arr_12 "-xml");
   ignore (HxArray.push __arr_12 "--xml");
   __arr_12
-) in let _g = ref 0 in (
-  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
+)) in let _g = ref 0 in (
+  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
     ignore (let __old_13 = !_g in let __new_14 = HxInt.add __old_13 1 in (
       ignore (_g := __new_14);
       __new_14
@@ -118,14 +116,14 @@ let hasAnyTarget = fun args -> try let __fallback_result_16 = let targetFlags = 
   | HxRuntime.Hx_return __ret_15 -> Obj.obj __ret_15
 
 let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_20 = let _g = ref 0 in (
-  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
+  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
     ignore (let __old_17 = !_g in let __new_18 = HxInt.add __old_17 1 in (
       ignore (_g := __new_18);
       __new_18
     ));
     match a with
-      | "--as3" | "-as3" -> raise (HxRuntime.Hx_return (Obj.repr "as3"))
-      | "--swf" | "-swf" -> raise (HxRuntime.Hx_return (Obj.repr "flash"))
+      | "--as3" | "-as3" -> raise (HxRuntime.Hx_return (Obj.repr ("as3" : string)))
+      | "--swf" | "-swf" -> raise (HxRuntime.Hx_return (Obj.repr ("flash" : string)))
       | _ -> ignore ()
   )) done);
   Obj.magic (HxRuntime.hx_null)
@@ -133,7 +131,7 @@ let findUnsupportedLegacyTarget = fun args -> try let __fallback_result_20 = let
   | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
 
 let hasStandardJsTargetFlag = fun args -> try let __fallback_result_24 = let _g = ref 0 in (
-  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
+  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
     ignore (let __old_21 = !_g in let __new_22 = HxInt.add __old_21 1 in (
       ignore (_g := __new_22);
       __new_22
@@ -147,7 +145,7 @@ let hasStandardJsTargetFlag = fun args -> try let __fallback_result_24 = let _g 
   | HxRuntime.Hx_return __ret_23 -> Obj.obj __ret_23
 
 let hasStandardNonJsTargetFlag = fun args -> try let __fallback_result_28 = let _g = ref 0 in (
-  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get args (!_g) : string) in (
+  ignore (while !_g < HxArray.length args do ignore (let a = (HxArray.get (Obj.magic args) (!_g) : string) in (
     ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
       ignore (_g := __new_26);
       __new_26
@@ -160,16 +158,16 @@ let hasStandardNonJsTargetFlag = fun args -> try let __fallback_result_28 = let 
 ) in Obj.magic __fallback_result_28 with
   | HxRuntime.Hx_return __ret_27 -> Obj.obj __ret_27
 
-let shouldRouteStandardJsToNative = fun forwarded -> try let __fallback_result_32 = let expanded = Hxhx_Stage1Compiler.stage1args_expandHxmlArgs forwarded in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null)) in (
-  ignore (if expanded == Obj.magic (HxRuntime.hx_null) then let __assign_29 = forwarded in (
+let shouldRouteStandardJsToNative = fun forwarded -> try let __fallback_result_32 = let expanded = Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic forwarded)) in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+  ignore (if expanded == Obj.magic (HxRuntime.hx_null) then let __assign_29 = Obj.magic (Obj.magic forwarded) in (
     tempMaybeArray := __assign_29;
     __assign_29
-  ) else let __assign_30 = expanded in (
+  ) else let __assign_30 = Obj.magic (Obj.magic expanded) in (
     tempMaybeArray := __assign_30;
     __assign_30
   ));
-  ignore (if not (hasStandardJsTargetFlag (!tempMaybeArray)) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-  not (hasStandardNonJsTargetFlag (!tempMaybeArray))
+  ignore (if not (hasStandardJsTargetFlag (Obj.magic (!tempMaybeArray))) then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  not (hasStandardNonJsTargetFlag (Obj.magic (!tempMaybeArray)))
 ) in Obj.magic __fallback_result_32 with
   | HxRuntime.Hx_return __ret_31 -> Obj.obj __ret_31
 
@@ -181,15 +179,15 @@ let isStrictCliDisallowedFlag = fun flag -> try let __fallback_result_34 = (
 ) in Obj.magic __fallback_result_34 with
   | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
 
-let validateStrictCliShimArgs = fun shimArgs -> let _g = ref 0 in while !_g < HxArray.length shimArgs do ignore (let a = (HxArray.get shimArgs (!_g) : string) in (
+let validateStrictCliShimArgs = fun shimArgs -> ignore (let _g = ref 0 in while !_g < HxArray.length shimArgs do ignore (let a = (HxArray.get (Obj.magic shimArgs) (!_g) : string) in (
   ignore (let __old_35 = !_g in let __new_36 = HxInt.add __old_35 1 in (
     ignore (_g := __new_36);
     __new_36
   ));
   if isStrictCliDisallowedFlag (a : string) then ignore (fatal (("hxhx: strict CLI mode rejects non-upstream flag: " ^ HxString.toStdString a) ^ " (remove --hxhx-strict-cli to use hxhx extensions)" : string)) else ()
-)) done
+)) done)
 
-let sanitizeName = fun name -> let out = StringBuf.create () in let tempString = ref "" in (
+let sanitizeName = fun name -> let out = Obj.magic (StringBuf.create ()) in let tempString = ref ("" : string) in (
   ignore (if name == Obj.magic (HxRuntime.hx_null) then let __assign_37 = ("" : string) in (
     tempString := __assign_37;
     __assign_37
@@ -201,7 +199,7 @@ let sanitizeName = fun name -> let out = StringBuf.create () in let tempString =
     ignore (while !_g < _g1 do ignore (let i = let __old_39 = !_g in let __new_40 = HxInt.add __old_39 1 in (
       ignore (_g := __new_40);
       __old_39
-    ) in let c = HxString.charCodeAt (!tempString) i in let isAlphaNum = (let __nullable_41 = c in let __nullable_42 = 97 in if __nullable_41 == HxRuntime.hx_null then false else Obj.obj __nullable_41 >= __nullable_42) && (let __nullable_43 = c in let __nullable_44 = 122 in if __nullable_43 == HxRuntime.hx_null then false else Obj.obj __nullable_43 <= __nullable_44) || (let __nullable_45 = c in let __nullable_46 = 65 in if __nullable_45 == HxRuntime.hx_null then false else Obj.obj __nullable_45 >= __nullable_46) && (let __nullable_47 = c in let __nullable_48 = 90 in if __nullable_47 == HxRuntime.hx_null then false else Obj.obj __nullable_47 <= __nullable_48) || (let __nullable_49 = c in let __nullable_50 = 48 in if __nullable_49 == HxRuntime.hx_null then false else Obj.obj __nullable_49 >= __nullable_50) && (let __nullable_51 = c in let __nullable_52 = 57 in if __nullable_51 == HxRuntime.hx_null then false else Obj.obj __nullable_51 <= __nullable_52) in let tempString1 = ref "" in (
+    ) in let c = HxString.charCodeAt (!tempString) i in let isAlphaNum = (let __nullable_41 = c in let __nullable_42 = 97 in if __nullable_41 == HxRuntime.hx_null then false else Obj.obj __nullable_41 >= __nullable_42) && (let __nullable_43 = c in let __nullable_44 = 122 in if __nullable_43 == HxRuntime.hx_null then false else Obj.obj __nullable_43 <= __nullable_44) || (let __nullable_45 = c in let __nullable_46 = 65 in if __nullable_45 == HxRuntime.hx_null then false else Obj.obj __nullable_45 >= __nullable_46) && (let __nullable_47 = c in let __nullable_48 = 90 in if __nullable_47 == HxRuntime.hx_null then false else Obj.obj __nullable_47 <= __nullable_48) || (let __nullable_49 = c in let __nullable_50 = 48 in if __nullable_49 == HxRuntime.hx_null then false else Obj.obj __nullable_49 >= __nullable_50) && (let __nullable_51 = c in let __nullable_52 = 57 in if __nullable_51 == HxRuntime.hx_null then false else Obj.obj __nullable_51 <= __nullable_52) in let tempString1 = ref ("" : string) in (
       ignore (if isAlphaNum then let __assign_53 = (HxString.fromCharCode (let __nullable_int_54 = c in if __nullable_int_54 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_54) : string) in (
         tempString1 := __assign_53;
         __assign_53
@@ -209,9 +207,9 @@ let sanitizeName = fun name -> let out = StringBuf.create () in let tempString =
         tempString1 := __assign_55;
         __assign_55
       ));
-      StringBuf.add out (Obj.repr (!tempString1))
+      StringBuf.add (Obj.magic out) (Obj.repr (!tempString1))
     )) done);
-    let r = ref (StringBuf.toString out () : string) in (
+    let r = ref (StringBuf.toString (Obj.magic out) () : string) in (
       ignore (if HxString.length (!r) = 0 then ignore (let __assign_56 = ("ocaml_app" : string) in (
         r := __assign_56;
         __assign_56
@@ -225,7 +223,7 @@ let sanitizeName = fun name -> let out = StringBuf.create () in let tempString =
   )
 )
 
-let defaultExeName = fun outDir -> let base = (Haxe_io_Path.withoutDirectory (Haxe_io_Path.normalize (outDir : string) : string) : string) in let tempString = ref "" in (
+let defaultExeName = fun outDir -> let base = (Haxe_io_Path.withoutDirectory (Haxe_io_Path.normalize (outDir : string) : string) : string) in let tempString = ref ("" : string) in (
   ignore (if HxString.length base > 0 then let __assign_62 = (base : string) in (
     tempString := __assign_62;
     __assign_62
@@ -237,23 +235,23 @@ let defaultExeName = fun outDir -> let base = (Haxe_io_Path.withoutDirectory (Ha
 )
 
 let absPath = fun p -> try let __fallback_result_69 = (
-  ignore (if p == Obj.magic (HxRuntime.hx_null) || HxString.length p = 0 then raise (HxRuntime.Hx_return (Obj.repr "")) else ());
-  try raise (HxRuntime.Hx_return (Obj.repr (HxFileSystem.fullPath p))) with
+  ignore (if p == Obj.magic (HxRuntime.hx_null) || HxString.length p = 0 then raise (HxRuntime.Hx_return (Obj.repr ("" : string))) else ());
+  try raise (HxRuntime.Hx_return (Obj.repr (HxFileSystem.fullPath p : string))) with
     | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
     | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
     | HxRuntime.Hx_return __ret_64 -> raise (HxRuntime.Hx_return __ret_64)
     | HxRuntime.Hx_exception (__exn_v_65, __exn_tags_66) -> if HxRuntime.tags_has __exn_tags_66 "String" then let _hx = (Obj.obj __exn_v_65 : string) in (
       ignore _hx;
-      raise (HxRuntime.Hx_return (Obj.repr p))
+      raise (HxRuntime.Hx_return (Obj.repr (p : string)))
     ) else HxRuntime.hx_throw_typed __exn_v_65 __exn_tags_66
     | __exn_67 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_67) : string) in (
       ignore _hx;
-      raise (HxRuntime.Hx_return (Obj.repr p))
+      raise (HxRuntime.Hx_return (Obj.repr (p : string)))
     ) else raise (__exn_67)
 ) in Obj.magic __fallback_result_69 with
   | HxRuntime.Hx_return __ret_68 -> Obj.obj __ret_68
 
-let rec rmrf = fun path -> try (
+let rec rmrf = fun path -> ignore (try (
   ignore (if path == Obj.magic (HxRuntime.hx_null) || HxString.length path = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (if not (HxFileSystem.exists path) then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
   ignore (if not (HxFileSystem.isDirectory path) then ignore ((
@@ -271,8 +269,8 @@ let rec rmrf = fun path -> try (
       ) else raise (__exn_73));
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (try let __assign_74 = HxFileSystem.readDirectory path in (
+  let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+    ignore (try let __assign_74 = Obj.magic (HxFileSystem.readDirectory path) in (
       tempArray := __assign_74;
       __assign_74
     ) with
@@ -281,30 +279,30 @@ let rec rmrf = fun path -> try (
       | HxRuntime.Hx_return __ret_75 -> raise (HxRuntime.Hx_return __ret_75)
       | HxRuntime.Hx_exception (__exn_v_76, __exn_tags_77) -> if HxRuntime.tags_has __exn_tags_77 "String" then let _hx = (Obj.obj __exn_v_76 : string) in (
         ignore _hx;
-        let __assign_78 = let __arr_79 = HxArray.create () in __arr_79 in (
+        let __assign_78 = Obj.magic (let __arr_79 = HxArray.create () in __arr_79) in (
           tempArray := __assign_78;
           __assign_78
         )
       ) else HxRuntime.hx_throw_typed __exn_v_76 __exn_tags_77
       | __exn_80 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let _hx = (Obj.obj (Obj.repr __exn_80) : string) in (
         ignore _hx;
-        let __assign_81 = let __arr_82 = HxArray.create () in __arr_82 in (
+        let __assign_81 = Obj.magic (let __arr_82 = HxArray.create () in __arr_82) in (
           tempArray := __assign_81;
           __assign_81
         )
       ) else raise (__exn_80));
     let _g = ref 0 in (
-      ignore (try while !_g < HxArray.length (!tempArray) do try ignore (let name = (HxArray.get (!tempArray) (!_g) : string) in (
+      ignore (try while !_g < HxArray.length (!tempArray) do try ignore (let name = (HxArray.get (Obj.magic (!tempArray)) (!_g) : string) in (
         ignore (let __old_83 = !_g in let __new_84 = HxInt.add __old_83 1 in (
           ignore (_g := __new_84);
           __new_84
         ));
         ignore (if name == Obj.magic (HxRuntime.hx_null) || HxString.length name = 0 then raise (HxRuntime.Hx_continue) else ());
-        rmrf (Haxe_io_Path.join (let __arr_85 = HxArray.create () in (
+        rmrf (Haxe_io_Path.join (Obj.magic (let __arr_85 = HxArray.create () in (
           ignore (HxArray.push __arr_85 path);
           ignore (HxArray.push __arr_85 name);
           __arr_85
-        )) : string)
+        ))) : string)
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
@@ -323,33 +321,33 @@ let rec rmrf = fun path -> try (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_90 -> Obj.obj __ret_90
+  | HxRuntime.Hx_return __ret_90 -> Obj.obj __ret_90)
 
-let runOcamlInterpLike = fun haxeBin forwarded outOverride -> let expanded = ref (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs forwarded) in (
+let runOcamlInterpLike = fun haxeBin forwarded outOverride -> ignore (let expanded = ref (Obj.magic (Hxhx_Stage1Compiler.stage1args_expandHxmlArgs (Obj.magic forwarded))) in (
   ignore (if !expanded == Obj.magic (HxRuntime.hx_null) then ignore (fatal ("hxhx: failed to expand .hxml args for ocaml run mode" : string)) else ());
-  ignore (let __assign_91 = stripAll (!expanded) ("--interp" : string) in (
+  ignore (let __assign_91 = Obj.magic (Obj.magic (stripAll (Obj.magic (!expanded)) ("--interp" : string))) in (
     expanded := __assign_91;
     __assign_91
   ));
   ignore (if HxArray.indexOf (!expanded) "--no-output" 0 = -1 then ignore (HxArray.push (!expanded) "--no-output") else ());
-  ignore (addDefineIfMissing (!expanded) ("ocaml_build=native" : string));
+  ignore (addDefineIfMissing (Obj.magic (!expanded)) ("ocaml_build=native" : string));
   ignore (if outOverride != Obj.magic (HxRuntime.hx_null) && HxString.length outOverride > 0 then ignore ((
-    ignore (let __assign_92 = HxArray.copy (!expanded) in (
+    ignore (let __assign_92 = Obj.magic (Obj.magic (HxArray.copy (!expanded))) in (
       expanded := __assign_92;
       __assign_92
     ));
-    let out2 = HxArray.create () in let i = ref 0 in (
+    let out2 = Obj.magic (HxArray.create ()) in let i = ref 0 in (
       ignore (try while !i < HxArray.length (!expanded) do try ignore ((
-        ignore (if HxString.equals (HxArray.get (!expanded) (!i)) "-D" && HxInt.add (!i) 1 < HxArray.length (!expanded) && StringTools.startsWith (HxArray.get (!expanded) (HxInt.add (!i) 1) : string) ("ocaml_output=" : string) then ignore ((
+        ignore (if HxString.equals (HxArray.get (Obj.magic (!expanded)) (!i)) "-D" && HxInt.add (!i) 1 < HxArray.length (!expanded) && StringTools.startsWith (HxArray.get (Obj.magic (!expanded)) (HxInt.add (!i) 1) : string) ("ocaml_output=" : string) then ignore ((
           ignore (i := HxInt.add (!i) 2);
           raise (HxRuntime.Hx_continue)
         )) else ());
-        ignore (HxArray.push out2 (HxArray.get (!expanded) (!i)));
+        ignore (HxArray.push out2 (HxArray.get (Obj.magic (!expanded)) (!i)));
         i := HxInt.add (!i) 1
       )) with
         | HxRuntime.Hx_continue -> () done with
         | HxRuntime.Hx_break -> ());
-      ignore (let __assign_93 = out2 in (
+      ignore (let __assign_93 = Obj.magic (Obj.magic out2) in (
         expanded := __assign_93;
         __assign_93
       ));
@@ -357,19 +355,19 @@ let runOcamlInterpLike = fun haxeBin forwarded outOverride -> let expanded = ref
       HxArray.push (!expanded) ("ocaml_output=" ^ HxString.toStdString outOverride)
     )
   )) else ());
-  let outDir = (getDefineValue (!expanded) ("ocaml_output" : string) : string) in (
+  let outDir = (getDefineValue (Obj.magic (!expanded)) ("ocaml_output" : string) : string) in (
     ignore (if outDir == Obj.magic (HxRuntime.hx_null) || HxString.length outDir = 0 then ignore (fatal ("hxhx: ocaml run mode requires -D ocaml_output=<dir> (or use --target ocaml preset)" : string)) else ());
-    ignore (if not (hasAnyTarget (!expanded)) then ignore ((
-      ignore (let __assign_94 = HxArray.copy (!expanded) in (
+    ignore (if not (hasAnyTarget (Obj.magic (!expanded))) then ignore ((
+      ignore (let __assign_94 = Obj.magic (Obj.magic (HxArray.copy (!expanded))) in (
         expanded := __assign_94;
         __assign_94
       ));
       ignore (HxArray.push (!expanded) "--neko");
-      ignore (HxArray.push (!expanded) (Haxe_io_Path.join (let __arr_95 = HxArray.create () in (
+      ignore (HxArray.push (!expanded) (Haxe_io_Path.join (Obj.magic (let __arr_95 = HxArray.create () in (
         ignore (HxArray.push __arr_95 outDir);
         ignore (HxArray.push __arr_95 "_hxhx_dummy.n");
         __arr_95
-      ))));
+      )))));
       if HxArray.indexOf (!expanded) "--no-output" 0 = -1 then ignore (HxArray.push (!expanded) "--no-output") else ()
     )) else ());
     let outAbs = (absPath (outDir : string) : string) in (
@@ -387,51 +385,51 @@ let runOcamlInterpLike = fun haxeBin forwarded outOverride -> let expanded = ref
         ) else raise (__exn_99));
       let code = HxSys.command haxeBin (Some (!expanded)) in (
         ignore (if code <> 0 then ignore (HxSys.exit code) else ());
-        let exeName = (defaultExeName (outDir : string) : string) in let exe = (Haxe_io_Path.join (let __arr_100 = HxArray.create () in (
+        let exeName = (defaultExeName (outDir : string) : string) in let exe = (Haxe_io_Path.join (Obj.magic (let __arr_100 = HxArray.create () in (
           ignore (HxArray.push __arr_100 outDir);
           ignore (HxArray.push __arr_100 "_build");
           ignore (HxArray.push __arr_100 "default");
           ignore (HxArray.push __arr_100 (HxString.toStdString exeName ^ ".exe"));
           __arr_100
-        )) : string) in (
+        ))) : string) in (
           ignore (if not (HxFileSystem.exists exe) then ignore (fatal ("hxhx: ocaml run mode built successfully, but expected executable missing: " ^ HxString.toStdString exe : string)) else ());
           let runCode = HxSys.command exe (Some (let __arr_101 = HxArray.create () in __arr_101)) in HxSys.exit runCode
         )
       )
     )
   )
-)
+))
 
-let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
+let main = fun () -> ignore (try let args = Obj.magic (HxSys.args ()) in (
   ignore (if HxArray.length args = 0 then ignore ((
     ignore (print_endline "OK hxhx");
     raise (HxRuntime.Hx_return (Obj.repr ()))
   )) else ());
-  let sep = HxArray.indexOf args "--" 0 in let tempArray = ref (Obj.magic (HxRuntime.hx_null)) in (
-    ignore (if sep = -1 then let __assign_102 = args in (
+  let sep = HxArray.indexOf args "--" 0 in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+    ignore (if sep = -1 then let __assign_102 = Obj.magic args in (
       tempArray := __assign_102;
       __assign_102
-    ) else let __assign_103 = HxArray.slice args 0 sep in (
+    ) else let __assign_103 = Obj.magic (HxArray.slice args 0 sep) in (
       tempArray := __assign_103;
       __assign_103
     ));
-    let tempArray1 = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if sep = -1 then let __assign_104 = HxArray.copy args in (
+    let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
+      ignore (if sep = -1 then let __assign_104 = Obj.magic (HxArray.copy args) in (
         tempArray1 := __assign_104;
         __assign_104
-      ) else let __assign_105 = HxArray.slice args (HxInt.add sep 1) (HxArray.length args) in (
+      ) else let __assign_105 = Obj.magic (HxArray.slice args (HxInt.add sep 1) (HxArray.length args)) in (
         tempArray1 := __assign_105;
         __assign_105
       ));
       let strictCliMode = HxArray.indexOf (!tempArray) "--hxhx-strict-cli" 0 <> -1 in (
         ignore (if strictCliMode then ignore ((
-          ignore (validateStrictCliShimArgs (!tempArray));
-          if sep = -1 then ignore (let __assign_106 = stripAll (!tempArray1) ("--hxhx-strict-cli" : string) in (
+          ignore (validateStrictCliShimArgs (Obj.magic (!tempArray)));
+          if sep = -1 then ignore (let __assign_106 = Obj.magic (stripAll (Obj.magic (!tempArray1)) ("--hxhx-strict-cli" : string)) in (
             tempArray1 := __assign_106;
             __assign_106
           )) else ()
         )) else ());
-        ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get args 0) "--hxhx-macro-selftest" then ignore (try (
+        ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-macro-selftest" then ignore (try (
           ignore (Hxhx_macro_MacroState.reset ());
           ignore (print_endline (HxString.toStdString (Hxhx_macro_MacroHostClient.selftest ())));
           ignore (print_endline "OK hxhx macro rpc");
@@ -448,9 +446,9 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
             ignore e;
             fatal ("hxhx: macro selftest failed: " ^ HxString.toStdString e : string)
           ) else raise (__exn_110)) else ());
-        ignore (if HxArray.length args = 2 && HxString.equals (HxArray.get args 0) "--hxhx-macro-run" then ignore (try (
+        ignore (if HxArray.length args = 2 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-macro-run" then ignore (try (
           ignore (Hxhx_macro_MacroState.reset ());
-          ignore (print_endline ("macro_run=" ^ HxString.toStdString (Hxhx_macro_MacroHostClient.run (HxArray.get args 1 : string))));
+          ignore (print_endline ("macro_run=" ^ HxString.toStdString (Hxhx_macro_MacroHostClient.run (HxArray.get (Obj.magic args) 1 : string))));
           ignore (print_endline "OK hxhx macro run");
           raise (HxRuntime.Hx_return (Obj.repr ()))
         ) with
@@ -465,9 +463,9 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
             ignore e;
             fatal ("hxhx: macro run failed: " ^ HxString.toStdString e : string)
           ) else raise (__exn_114)) else ());
-        ignore (if HxArray.length args = 2 && HxString.equals (HxArray.get args 0) "--hxhx-macro-get-type" then ignore (try (
+        ignore (if HxArray.length args = 2 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-macro-get-type" then ignore (try (
           ignore (Hxhx_macro_MacroState.reset ());
-          ignore (print_endline ("macro_getType=" ^ HxString.toStdString (Hxhx_macro_MacroHostClient.getType (HxArray.get args 1 : string))));
+          ignore (print_endline ("macro_getType=" ^ HxString.toStdString (Hxhx_macro_MacroHostClient.getType (HxArray.get (Obj.magic args) 1 : string))));
           ignore (print_endline "OK hxhx macro getType");
           raise (HxRuntime.Hx_return (Obj.repr ()))
         ) with
@@ -482,10 +480,10 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
             ignore e;
             fatal ("hxhx: macro getType failed: " ^ HxString.toStdString e : string)
           ) else raise (__exn_118)) else ());
-        ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get args 0) "--hxhx-stage1" then ignore (let code = Hxhx_Stage1Compiler.run (HxArray.slice args 1 (HxArray.length args)) in HxSys.exit code) else ());
-        ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get args 0) "--hxhx-stage3" then ignore (let code = Hxhx_Stage3Compiler.run (HxArray.slice args 1 (HxArray.length args)) in HxSys.exit code) else ());
+        ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-stage1" then ignore (let code = Hxhx_Stage1Compiler.run (Obj.magic (HxArray.slice args 1 (HxArray.length args))) in HxSys.exit code) else ());
+        ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-stage3" then ignore (let code = Hxhx_Stage3Compiler.run (Obj.magic (HxArray.slice args 1 (HxArray.length args))) in HxSys.exit code) else ());
         let ocamlInterpLike = ref false in let ocamlInterpOutDir = ref ("" : string) in (
-          ignore (let i = ref 0 in while !i < HxArray.length (!tempArray) do ignore (let _g = (HxArray.get (!tempArray) (!i) : string) in match _g with
+          ignore (let i = ref 0 in while !i < HxArray.length (!tempArray) do ignore (let _g = (HxArray.get (Obj.magic (!tempArray)) (!i) : string) in match _g with
             | "--hxhx-ocaml-interp" -> ignore ((
               ignore (let __assign_119 = true in (
                 ocamlInterpLike := __assign_119;
@@ -496,7 +494,7 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
             ))
             | "--hxhx-ocaml-out" -> ignore ((
               ignore (if HxInt.add (!i) 1 >= HxArray.length (!tempArray) then ignore (fatal ("Usage: --hxhx-ocaml-out <dir>" : string)) else ());
-              ignore (let __assign_120 = (HxArray.get (!tempArray) (HxInt.add (!i) 1) : string) in (
+              ignore (let __assign_120 = (HxArray.get (Obj.magic (!tempArray)) (HxInt.add (!i) 1) : string) in (
                 ocamlInterpOutDir := __assign_120;
                 __assign_120
               ));
@@ -504,18 +502,18 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
               i := HxInt.add (!i) 2
             ))
             | _ -> ignore (i := HxInt.add (!i) 1)) done);
-          ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get args 0) "--hxhx-parse" then ignore ((
+          ignore (if HxArray.length args >= 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-parse" then ignore ((
             ignore (if HxArray.length args <> 2 then ignore ((
               ignore (print_endline "Usage: hxhx --hxhx-parse <path/to/File.hx>");
               HxSys.exit 1
             )) else ());
-            let path = (HxArray.get args 1 : string) in (
+            let path = (HxArray.get (Obj.magic args) 1 : string) in (
               ignore (if not (HxFileSystem.exists path) then ignore ((
                 ignore (print_endline ("Missing file: " ^ HxString.toStdString path));
                 HxSys.exit 1
               )) else ());
               let src = (HxFile.getContent (path : string) : string) in let parseDebug = (HxSys.getEnv "HXHX_PARSE_DEBUG" : string) in (
-                ignore (if HxString.equals parseDebug "1" || HxString.equals parseDebug "true" || HxString.equals parseDebug "yes" then ignore (try let tempString = ref "" in (
+                ignore (if HxString.equals parseDebug "1" || HxString.equals parseDebug "true" || HxString.equals parseDebug "yes" then ignore (try let tempString = ref ("" : string) in (
                   ignore (if HxString.length src > 80 then let __assign_121 = (HxString.substr src (HxInt.sub (HxString.length src) 80) (-1) : string) in (
                     tempString := __assign_121;
                     __assign_121
@@ -523,7 +521,7 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                     tempString := __assign_122;
                     __assign_122
                   ));
-                  let tail = (!tempString : string) in let __obj_123 = Sys_io_Stdio.stderr () in __obj_123.writeString (Obj.magic __obj_123) (((("[hxhx parse] len=" ^ string_of_int (HxString.length src)) ^ " tail=") ^ HxString.toStdString (HxArray.join (HxString.split tail "\n") "\\n" (fun x -> x))) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null))
+                  let tail = (!tempString : string) in let __obj_123 = Sys_io_Stdio.stderr () in (Obj.magic __obj_123 : Haxe_io_Output.t).writeString (Obj.magic __obj_123) (((("[hxhx parse] len=" ^ string_of_int (HxString.length src)) ^ " tail=") ^ HxString.toStdString (HxArray.join (HxString.split tail "\n") "\\n" (fun x -> x))) ^ "\n" : string) (Obj.magic (HxRuntime.hx_null))
                 ) with
                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -542,9 +540,9 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                     ignore _hx;
                     ()
                   ) else raise (__exn_127)) else ());
-                let decl = ParsedModule.getDecl (ParserStage.parse (src : string) (Obj.magic (HxRuntime.hx_null))) () in let pkg = (HxModuleDecl.getPackagePath decl : string) in let imports = HxModuleDecl.getImports decl in let cls = HxModuleDecl.getMainClass decl in let toplevelMain = HxModuleDecl.getHasToplevelMain decl in (
+                let decl = Obj.magic (ParsedModule.getDecl (Obj.magic (ParserStage.parse (src : string) (Obj.magic (HxRuntime.hx_null)))) ()) in let pkg = (HxModuleDecl.getPackagePath (Obj.magic decl) : string) in let imports = Obj.magic (HxModuleDecl.getImports (Obj.magic decl)) in let cls = Obj.magic (HxModuleDecl.getMainClass (Obj.magic decl)) in let toplevelMain = HxModuleDecl.getHasToplevelMain (Obj.magic decl) in (
                   ignore (print_endline "parse=ok");
-                  let tempString1 = ref "" in (
+                  let tempString1 = ref ("" : string) in (
                     ignore (if HxString.length pkg = 0 then let __assign_128 = ("<none>" : string) in (
                       tempString1 := __assign_128;
                       __assign_128
@@ -554,9 +552,9 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                     ));
                     ignore (print_endline ("package=" ^ HxString.toStdString (!tempString1)));
                     ignore (print_endline ("imports=" ^ string_of_int (HxArray.length imports)));
-                    ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName cls)));
-                    let tempString2 = ref "" in (
-                      ignore (if HxClassDecl.getHasStaticMain cls then let __assign_130 = ("yes" : string) in (
+                    ignore (print_endline ("class=" ^ HxString.toStdString (HxClassDecl.getName (Obj.magic cls))));
+                    let tempString2 = ref ("" : string) in (
+                      ignore (if HxClassDecl.getHasStaticMain (Obj.magic cls) then let __assign_130 = ("yes" : string) in (
                         tempString2 := __assign_130;
                         __assign_130
                       ) else let __assign_131 = ("no" : string) in (
@@ -564,7 +562,7 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                         __assign_131
                       ));
                       ignore (print_endline ("hasStaticMain=" ^ HxString.toStdString (!tempString2)));
-                      let tempString3 = ref "" in (
+                      let tempString3 = ref ("" : string) in (
                         ignore (if toplevelMain then let __assign_132 = ("yes" : string) in (
                           tempString3 := __assign_132;
                           __assign_132
@@ -581,13 +579,13 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
               )
             )
           )) else ());
-          ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get args 0) "--hxhx-selftest" then ignore ((
+          ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-selftest" then ignore ((
             ignore (CompilerDriver.run ());
             ignore (print_endline "OK hxhx selftest");
             raise (HxRuntime.Hx_return (Obj.repr ()))
           )) else ());
           let selectedShimTargetPreset = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-            ignore (let idx = HxArray.indexOf (!tempArray) "--target" 0 in let idx2 = HxArray.indexOf (!tempArray) "--hxhx-target" 0 in let tempNumber = ref 0 in (
+            ignore (let idx = HxArray.indexOf (!tempArray) "--target" 0 in let idx2 = HxArray.indexOf (!tempArray) "--hxhx-target" 0 in let tempNumber = ref (0 : int) in (
               ignore (if idx <> -1 then let __assign_134 = idx in (
                 tempNumber := __assign_134;
                 __assign_134
@@ -598,16 +596,16 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
               let i = !tempNumber in (
                 ignore (if i <> -1 then ignore ((
                   ignore (if HxInt.add i 1 >= HxArray.length (!tempArray) then ignore (fatal ("Usage: hxhx --target <id> [haxe args...]" : string)) else ());
-                  let targetId = (HxArray.get (!tempArray) (HxInt.add i 1) : string) in (
+                  let targetId = (HxArray.get (Obj.magic (!tempArray)) (HxInt.add i 1) : string) in (
                     ignore (if sep = -1 then ignore ((
-                      ignore (let __assign_136 = HxArray.copy (!tempArray1) in (
+                      ignore (let __assign_136 = Obj.magic (HxArray.copy (!tempArray1)) in (
                         tempArray1 := __assign_136;
                         __assign_136
                       ));
                       HxArray.splice (!tempArray1) i 2
                     )) else ());
-                    let tempResolvedTarget = ref (Obj.magic (HxRuntime.hx_null)) in (
-                      ignore (try let __assign_137 = Hxhx_TargetPresets.resolve (targetId : string) (!tempArray1) in (
+                    let tempResolvedTarget = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+                      ignore (try let __assign_137 = Obj.magic (Hxhx_TargetPresets.resolve (targetId : string) (Obj.magic (!tempArray1))) in (
                         tempResolvedTarget := __assign_137;
                         __assign_137
                       ) with
@@ -616,41 +614,41 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                         | HxRuntime.Hx_return __ret_138 -> raise (HxRuntime.Hx_return __ret_138)
                         | HxRuntime.Hx_exception (__exn_v_139, __exn_tags_140) -> if HxRuntime.tags_has __exn_tags_140 "String" then let e = (Obj.obj __exn_v_139 : string) in (
                           ignore e;
-                          let __assign_141 = fatal ("hxhx: " ^ HxString.toStdString e : string) in (
+                          let __assign_141 = Obj.magic (fatal ("hxhx: " ^ HxString.toStdString e : string)) in (
                             tempResolvedTarget := __assign_141;
                             __assign_141
                           )
                         ) else HxRuntime.hx_throw_typed __exn_v_139 __exn_tags_140
                         | __exn_142 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_142) : string) in (
                           ignore e;
-                          let __assign_143 = fatal ("hxhx: " ^ HxString.toStdString e : string) in (
+                          let __assign_143 = Obj.magic (fatal ("hxhx: " ^ HxString.toStdString e : string)) in (
                             tempResolvedTarget := __assign_143;
                             __assign_143
                           )
                         ) else raise (__exn_142));
-                      let resolved = !tempResolvedTarget in (
-                        ignore (let __assign_144 = (Obj.obj (HxAnon.get resolved "id") : string) in (
+                      let resolved = Obj.magic (!tempResolvedTarget) in (
+                        ignore (let __assign_144 = Obj.magic (Obj.obj (HxAnon.get resolved "id") : string) in (
                           selectedShimTargetPreset := __assign_144;
                           __assign_144
                         ));
-                        ignore (let __assign_145 = Obj.obj (HxAnon.get resolved "forwarded") in (
+                        ignore (let __assign_145 = Obj.magic (Obj.obj (HxAnon.get resolved "forwarded")) in (
                           tempArray1 := __assign_145;
                           __assign_145
                         ));
                         if HxString.equals (Obj.obj (HxAnon.get resolved "runMode")) "builtin_stage3" then ignore ((
                           ignore (if !ocamlInterpLike then ignore (fatal ("hxhx: --hxhx-ocaml-interp cannot be combined with --target " ^ HxString.toStdString (Obj.obj (HxAnon.get resolved "id")) : string)) else ());
-                          let stage3Args = HxArray.concat (let __arr_146 = HxArray.create () in (
+                          let stage3Args = Obj.magic (HxArray.concat (let __arr_146 = HxArray.create () in (
                             ignore (HxArray.push __arr_146 "--hxhx-backend");
                             ignore (HxArray.push __arr_146 (Obj.obj (HxAnon.get resolved "id")));
                             __arr_146
-                          )) (!tempArray1) in let code = Hxhx_Stage3Compiler.run stage3Args in HxSys.exit code
+                          )) (!tempArray1)) in let code = Hxhx_Stage3Compiler.run (Obj.magic stage3Args) in HxSys.exit code
                         )) else ()
                       )
                     )
                   )
                 )) else ());
-                if HxArray.length (!tempArray) = 1 && HxString.equals (HxArray.get (!tempArray) 0) "--hxhx-list-targets" then ignore ((
-                  ignore (let _g = ref 0 in let _g1 = Hxhx_TargetPresets.listTargets () in while !_g < HxArray.length _g1 do ignore (let t = (HxArray.get _g1 (!_g) : string) in (
+                if HxArray.length (!tempArray) = 1 && HxString.equals (HxArray.get (Obj.magic (!tempArray)) 0) "--hxhx-list-targets" then ignore ((
+                  ignore (let _g = ref 0 in let _g1 = Obj.magic (Hxhx_TargetPresets.listTargets ()) in while !_g < HxArray.length _g1 do ignore (let t = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
                     ignore (let __old_147 = !_g in let __new_148 = HxInt.add __old_147 1 in (
                       ignore (_g := __new_148);
                       __new_148
@@ -661,13 +659,13 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                 )) else ()
               )
             ));
-            let unsupportedLegacyTarget = (findUnsupportedLegacyTarget (!tempArray1) : string) in (
+            let unsupportedLegacyTarget = (findUnsupportedLegacyTarget (Obj.magic (!tempArray1)) : string) in (
               ignore (if unsupportedLegacyTarget != Obj.magic (HxRuntime.hx_null) then ignore (fatal (("hxhx: Target \"" ^ HxString.toStdString unsupportedLegacyTarget) ^ "\" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported." : string)) else ());
-              ignore (if isVersionQuery (!tempArray1) then ignore ((
+              ignore (if isVersionQuery (Obj.magic (!tempArray1)) then ignore ((
                 ignore (print_endline "4.3.7");
                 raise (HxRuntime.Hx_return (Obj.repr ()))
               )) else ());
-              ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get args 0) "--hxhx-help" then ignore ((
+              ignore (if HxArray.length args = 1 && HxString.equals (HxArray.get (Obj.magic args) 0) "--hxhx-help" then ignore ((
                 ignore (print_endline "hxhx (stage0 shim + stage1 bring-up)");
                 ignore (print_endline "");
                 ignore (print_endline "Usage:");
@@ -689,7 +687,7 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                 ignore (print_endline "  - Use `--hxhx-help` for this shim help.");
                 raise (HxRuntime.Hx_return (Obj.repr ()))
               )) else ());
-              let tempString4 = ref "" in let v = (HxSys.getEnv "HAXE_BIN" : string) in (
+              let tempString4 = ref ("" : string) in let v = (HxSys.getEnv "HAXE_BIN" : string) in (
                 ignore (if v == Obj.magic (HxRuntime.hx_null) || HxString.length v = 0 then let __assign_149 = ("haxe" : string) in (
                   tempString4 := __assign_149;
                   __assign_149
@@ -700,11 +698,11 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                 let forbidStage0Delegation = isTrueEnv ("HXHX_FORBID_STAGE0" : string) in (
                   ignore (if !ocamlInterpLike then ignore ((
                     ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: HXHX_FORBID_STAGE0=1 forbids --hxhx-ocaml-interp because this path delegates to stage0 `haxe`." : string)) else ());
-                    ignore (runOcamlInterpLike (!tempString4 : string) (!tempArray1) (!ocamlInterpOutDir : string));
+                    ignore (runOcamlInterpLike (!tempString4 : string) (Obj.magic (!tempArray1)) (!ocamlInterpOutDir : string));
                     raise (HxRuntime.Hx_return (Obj.repr ()))
                   )) else ());
-                  ignore (if !selectedShimTargetPreset == Obj.magic (HxRuntime.hx_null) && shouldRouteStandardJsToNative (!tempArray1) then ignore (let tempMaybeStruct = ref (Obj.magic (HxRuntime.hx_null)) in (
-                    ignore (try let __assign_151 = Hxhx_TargetPresets.resolve ("js-native" : string) (!tempArray1) in (
+                  ignore (if !selectedShimTargetPreset == Obj.magic (HxRuntime.hx_null) && shouldRouteStandardJsToNative (Obj.magic (!tempArray1)) then ignore (let tempMaybeStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+                    ignore (try let __assign_151 = Obj.magic (Hxhx_TargetPresets.resolve ("js" : string) (Obj.magic (!tempArray1))) in (
                       tempMaybeStruct := __assign_151;
                       __assign_151
                     ) with
@@ -714,8 +712,8 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                       | HxRuntime.Hx_exception (__exn_v_153, __exn_tags_154) -> if HxRuntime.tags_has __exn_tags_154 "String" then let e = (Obj.obj __exn_v_153 : string) in (
                         ignore e;
                         (
-                          ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: --js requested native routing, but builtin js-native backend is unavailable: " ^ HxString.toStdString e : string)) else ());
-                          let __assign_155 = HxRuntime.hx_null in (
+                          ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: --js requested native routing, but builtin js backend is unavailable: " ^ HxString.toStdString e : string)) else ());
+                          let __assign_155 = Obj.magic (HxRuntime.hx_null) in (
                             tempMaybeStruct := __assign_155;
                             __assign_155
                           )
@@ -724,20 +722,20 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
                       | __exn_156 -> if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_156) : string) in (
                         ignore e;
                         (
-                          ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: --js requested native routing, but builtin js-native backend is unavailable: " ^ HxString.toStdString e : string)) else ());
-                          let __assign_157 = HxRuntime.hx_null in (
+                          ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: --js requested native routing, but builtin js backend is unavailable: " ^ HxString.toStdString e : string)) else ());
+                          let __assign_157 = Obj.magic (HxRuntime.hx_null) in (
                             tempMaybeStruct := __assign_157;
                             __assign_157
                           )
                         )
                       ) else raise (__exn_156));
-                    let resolvedJsNative = !tempMaybeStruct in if resolvedJsNative != Obj.magic (HxRuntime.hx_null) then ignore (let stage3Args = HxArray.concat (let __arr_158 = HxArray.create () in (
+                    let resolvedJsNative = Obj.magic (!tempMaybeStruct) in if resolvedJsNative != Obj.magic (HxRuntime.hx_null) then ignore (let stage3Args = Obj.magic (HxArray.concat (let __arr_158 = HxArray.create () in (
                       ignore (HxArray.push __arr_158 "--hxhx-backend");
                       ignore (HxArray.push __arr_158 (Obj.obj (HxAnon.get resolvedJsNative "id")));
                       __arr_158
-                    )) (Obj.obj (HxAnon.get resolvedJsNative "forwarded")) in let code = Hxhx_Stage3Compiler.run stage3Args in HxSys.exit code) else ()
+                    )) (Obj.obj (HxAnon.get resolvedJsNative "forwarded"))) in let code = Hxhx_Stage3Compiler.run (Obj.magic stage3Args) in HxSys.exit code) else ()
                   )) else ());
-                  ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: HXHX_FORBID_STAGE0=1 forbids stage0 delegation for this invocation. Use --hxhx-stage3 or a builtin target preset (for example: --target ocaml-stage3 / --target js-native)." : string)) else ());
+                  ignore (if forbidStage0Delegation then ignore (fatal ("hxhx: HXHX_FORBID_STAGE0=1 forbids stage0 delegation for this invocation. Use --hxhx-stage3 or a builtin target preset (for example: --target ocaml / --target js)." : string)) else ());
                   let code = HxSys.command (!tempString4) (Some (!tempArray1)) in HxSys.exit code
                 )
               )
@@ -748,4 +746,4 @@ let main = fun () -> try let args = normalizeCliArgs (HxSys.args ()) in (
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_159 -> Obj.obj __ret_159
+  | HxRuntime.Hx_return __ret_159 -> Obj.obj __ret_159)

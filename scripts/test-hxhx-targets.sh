@@ -94,19 +94,19 @@ rm -rf "$tmpbin"
 echo "== Listing targets"
 targets="$("$HXHX_BIN" --hxhx-list-targets)"
 echo "$targets" | grep -qx "ocaml"
-echo "$targets" | grep -qx "ocaml-stage3"
+echo "$targets" | grep -qx "ocaml-compat"
 has_js_target=0
 has_js_native_target=0
 has_strict_cli=1
-if echo "$targets" | grep -qx "js"; then
+if echo "$targets" | grep -qx "js-compat"; then
   has_js_target=1
 else
   echo "WARN: current hxhx build does not expose delegated js preset; delegated js checks will be skipped."
 fi
-if echo "$targets" | grep -qx "js-native"; then
+if echo "$targets" | grep -qx "js"; then
   has_js_native_target=1
 else
-  echo "WARN: current hxhx build does not expose js-native preset; js-native checks will be skipped."
+  echo "WARN: current hxhx build does not expose native js preset; js-native checks will be skipped."
 fi
 strict_cli_probe_log="$(mktemp)"
 if "$HXHX_BIN" --hxhx-strict-cli --version >"$strict_cli_probe_log" 2>&1; then
@@ -466,7 +466,7 @@ HX
 (
   cd "$ROOT"
   rm -rf out
-  HAXE_BIN="${HAXE_BIN:-haxe}" "$HXHX_BIN" --target ocaml -cp "$tmpdir/src" -main Main --no-output -D ocaml_no_build
+  HAXE_BIN="${HAXE_BIN:-haxe}" "$HXHX_BIN" --target ocaml-compat -cp "$tmpdir/src" -main Main --no-output -D ocaml_no_build
 )
 
 test -f "$ROOT/out/dune"
@@ -478,11 +478,11 @@ class BuiltinMain {
   static function main() {}
 }
 HX
-out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_fast")"
+out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_fast")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 echo "== Stage0 delegation guard: builtin target path remains allowed"
-out="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_guard")"
+out="$(HXHX_FORBID_STAGE0=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml --hxhx-no-emit -cp "$tmpdir/src" -main BuiltinMain --hxhx-out "$tmpdir/out_builtin_guard")"
 echo "$out" | grep -q "^stage3=no_emit_ok$"
 
 if [ "$has_strict_cli" -eq 1 ]; then
@@ -543,17 +543,17 @@ if [ "$has_js_native_target" -eq 1 ]; then
   fi
 
   echo "== Builtin fast-path target: linked JS backend preset (no-emit)"
-  out="$(HXHX_TRACE_BACKEND_SELECTION=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_fast")"
+  out="$(HXHX_TRACE_BACKEND_SELECTION=1 HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_fast")"
   echo "$out" | grep -q "^backend_selected_impl=builtin/js-native$"
   echo "$out" | grep -q "^stage3=no_emit_ok$"
 
   echo "== Builtin fast-path target: dynamic provider entrypoint can override backend selection"
-  out="$(HXHX_TRACE_BACKEND_SELECTION=1 HXHX_BACKEND_PROVIDERS=backend.js.JsBackend HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_provider")"
+  out="$(HXHX_TRACE_BACKEND_SELECTION=1 HXHX_BACKEND_PROVIDERS=backend.js.JsBackend HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --hxhx-no-emit -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_provider")"
   echo "$out" | grep -q "^backend_selected_impl=provider/js-native-wrapper$"
   echo "$out" | grep -q "^stage3=no_emit_ok$"
 
   echo "== Builtin fast-path target: linked JS backend emits and runs"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_emit/main.js" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_emit")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_native_emit/main.js" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_emit")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_emit/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -561,7 +561,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_native_emit/main.js"
 
   echo "== Builtin fast-path target: js-native compound assignment expressions"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_compound/main.js" -cp "$tmpdir/src" -main JsNativeCompoundAssignMain --hxhx-out "$tmpdir/out_js_native_compound")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_native_compound/main.js" -cp "$tmpdir/src" -main JsNativeCompoundAssignMain --hxhx-out "$tmpdir/out_js_native_compound")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_compound/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -569,7 +569,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_native_compound/main.js"
 
   echo "== Builtin fast-path target: js-native increment/decrement expressions"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_incdec/main.js" -cp "$tmpdir/src" -main JsNativeIncDecMain --hxhx-out "$tmpdir/out_js_native_incdec")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_native_incdec/main.js" -cp "$tmpdir/src" -main JsNativeIncDecMain --hxhx-out "$tmpdir/out_js_native_incdec")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_incdec/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -577,7 +577,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_native_incdec/main.js"
 
   echo "== Builtin fast-path target: js-native break/continue loop control"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_loop_control/main.js" -cp "$tmpdir/src" -main JsNativeLoopControlMain --hxhx-out "$tmpdir/out_js_native_loop_control")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_native_loop_control/main.js" -cp "$tmpdir/src" -main JsNativeLoopControlMain --hxhx-out "$tmpdir/out_js_native_loop_control")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_loop_control/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -585,7 +585,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_native_loop_control/main.js"
 
   echo "== Builtin fast-path target: js-native do/while loops"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_do_while/main.js" -cp "$tmpdir/src" -main JsNativeDoWhileMain --hxhx-out "$tmpdir/out_js_native_do_while")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_native_do_while/main.js" -cp "$tmpdir/src" -main JsNativeDoWhileMain --hxhx-out "$tmpdir/out_js_native_do_while")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_do_while/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -593,7 +593,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_native_do_while/main.js"
 
   echo "== Builtin fast-path target: js-native new Array() expressions"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_native_new_array/main.js" -cp "$tmpdir/src" -main JsNativeNewArrayMain --hxhx-out "$tmpdir/out_js_native_new_array")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_native_new_array/main.js" -cp "$tmpdir/src" -main JsNativeNewArrayMain --hxhx-out "$tmpdir/out_js_native_new_array")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_native_new_array/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -601,7 +601,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_native_new_array/main.js"
 
   echo "== Builtin fast-path target: js-native instance class construction fails fast (explicit MVP boundary)"
-  if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --hxhx-no-run --js "$tmpdir/out_js_class_instance/main.js" -cp "$tmpdir/src" -main JsNativeClassInstanceMain --hxhx-out "$tmpdir/out_js_class_instance" >"$legacy_log" 2>&1; then
+  if HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --hxhx-no-run --js "$tmpdir/out_js_class_instance/main.js" -cp "$tmpdir/src" -main JsNativeClassInstanceMain --hxhx-out "$tmpdir/out_js_class_instance" >"$legacy_log" 2>&1; then
     echo "Expected js-native class construction to fail fast in MVP mode." >&2
     exit 1
   elif ! grep -q "\\[js-native:unsupported_expr\\] kind=ENew detail=JsNativeCounter" "$legacy_log"; then
@@ -612,7 +612,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
 
   echo "== Builtin fast-path target: --js output path is cwd-relative (Haxe-compatible)"
   mkdir -p "$tmpdir/workdir"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js rel/main.js --cwd "$tmpdir/workdir" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_rel")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js rel/main.js --cwd "$tmpdir/workdir" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native_rel")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/workdir/rel/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -620,7 +620,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/workdir/rel/main.js"
 
   echo "== Builtin fast-path target: js-native enum-switch + basic reflection helpers"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_enum_reflect/main.js" -cp "$tmpdir/src" -main JsNativeEnumReflectionMain --hxhx-out "$tmpdir/out_js_enum_reflect")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_enum_reflect/main.js" -cp "$tmpdir/src" -main JsNativeEnumReflectionMain --hxhx-out "$tmpdir/out_js_enum_reflect")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_enum_reflect/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -631,7 +631,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_enum_reflect/main.js"
 
   echo "== Builtin fast-path target: js-native switch expressions"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_switch_expr/main.js" -cp "$tmpdir/src" -main JsNativeSwitchExprMain --hxhx-out "$tmpdir/out_js_switch_expr")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_switch_expr/main.js" -cp "$tmpdir/src" -main JsNativeSwitchExprMain --hxhx-out "$tmpdir/out_js_switch_expr")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_switch_expr/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -639,7 +639,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_switch_expr/main.js"
 
   echo "== Builtin fast-path target: js-native array comprehensions"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_arr_comp/main.js" -cp "$tmpdir/src" -main JsNativeArrayComprehensionMain --hxhx-out "$tmpdir/out_js_arr_comp")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_arr_comp/main.js" -cp "$tmpdir/src" -main JsNativeArrayComprehensionMain --hxhx-out "$tmpdir/out_js_arr_comp")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_arr_comp/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -647,7 +647,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_arr_comp/main.js"
 
   echo "== Builtin fast-path target: js-native range expressions"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_range_expr/main.js" -cp "$tmpdir/src" -main JsNativeRangeExprMain --hxhx-out "$tmpdir/out_js_range_expr")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_range_expr/main.js" -cp "$tmpdir/src" -main JsNativeRangeExprMain --hxhx-out "$tmpdir/out_js_range_expr")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_range_expr/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -655,7 +655,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_range_expr/main.js"
 
   echo "== Builtin fast-path target: js-native try/catch throw/rethrow"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_trycatch/main.js" -cp "$tmpdir/src" -main JsNativeTryCatchMain --hxhx-out "$tmpdir/out_js_trycatch")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_trycatch/main.js" -cp "$tmpdir/src" -main JsNativeTryCatchMain --hxhx-out "$tmpdir/out_js_trycatch")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_trycatch/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -663,7 +663,7 @@ if [ "$has_js_native_target" -eq 1 ]; then
   test -f "$tmpdir/out_js_trycatch/main.js"
 
   echo "== Builtin fast-path target: js-native ordered multi-catch dispatch"
-  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js-native --js "$tmpdir/out_js_multicatch/main.js" -cp "$tmpdir/src" -main JsNativeMultiCatchMain --hxhx-out "$tmpdir/out_js_multicatch")"
+  out="$(HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target js --js "$tmpdir/out_js_multicatch/main.js" -cp "$tmpdir/src" -main JsNativeMultiCatchMain --hxhx-out "$tmpdir/out_js_multicatch")"
   echo "$out" | grep -q "^stage3=ok$"
   echo "$out" | grep -q "^artifact=$tmpdir/out_js_multicatch/main.js$"
   echo "$out" | grep -q "^run=ok$"
@@ -695,7 +695,7 @@ class StdRootInferenceMain {
   }
 }
 HX
-out="$(env -u HAXE_STD_PATH -u HAXEPATH HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml-stage3 --hxhx-no-emit -cp "$tmpdir/src" -main StdRootInferenceMain --hxhx-out "$tmpdir/out_stage3_stdroot")"
+out="$(env -u HAXE_STD_PATH -u HAXEPATH HAXE_BIN=/definitely-not-used "$HXHX_BIN" --target ocaml --hxhx-no-emit -cp "$tmpdir/src" -main StdRootInferenceMain --hxhx-out "$tmpdir/out_stage3_stdroot")"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -vq "import_missing haxe.io.Path"
 
@@ -2302,7 +2302,7 @@ echo "$out" | grep -q "^run=ok$"
 
 echo "== Contradiction fails fast"
 set +e
-out="$("$HXHX_BIN" --target ocaml -D reflaxe-target=elixir --no-output 2>&1)"
+out="$("$HXHX_BIN" --target ocaml-compat -D reflaxe-target=elixir --no-output 2>&1)"
 code=$?
 set -e
 if [ "$code" -eq 0 ]; then

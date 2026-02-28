@@ -6,22 +6,22 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable name : string; mutable functions : TyFunctionEnv.t HxArray.t }
 
-let create = fun name2 functions2 -> let self = ({ __hx_type = HxType.class_ "TyClassEnv"; name = ""; functions = Obj.magic () } : t) in (
-  ignore ((
+let create = fun name2 functions2 -> let self = ({ __hx_type = HxType.class_ "TyClassEnv"; name = ""; functions = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
-      self.name <- __assign_1;
+      (Obj.magic self : t).name <- __assign_1;
       __assign_1
     ));
-    let __assign_2 = functions2 in (
-      self.functions <- __assign_2;
+    let __assign_2 = Obj.magic functions2 in (
+      (Obj.magic self : t).functions <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassEnv"; name = ""; functions = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyClassEnv"; name = ""; functions = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getName = fun self () -> self.name
+let getName = fun self () -> (Obj.magic self : t).name
 
-let getFunctions = fun self () -> self.functions
+let getFunctions = fun self () -> (Obj.magic self : t).functions

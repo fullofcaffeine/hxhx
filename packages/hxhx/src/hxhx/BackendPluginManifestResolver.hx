@@ -10,7 +10,7 @@ import backend.plugin.BackendPluginManifestParser;
 	Why
 	- Stage3 accepts dynamic backend declarations at request time.
 	- Plugin manifests provide a stable load contract that can represent both current
-	  Haxe-provider plugins and future native `.cmxs` plugins.
+	  Haxe-provider plugins and native OCaml dynlink plugins.
 
 	How
 	- Read and parse manifest JSON using `BackendPluginManifestParser`.
@@ -32,7 +32,7 @@ class BackendPluginManifestResolver {
 		switch (manifest.backend.kind) {
 			case BackendPluginManifestKind.HaxeProvider:
 				return [manifest.backend.entry];
-			case BackendPluginManifestKind.OcamlCmxs:
+			case BackendPluginManifestKind.OcamlDynlink:
 				return NativeBackendPluginLoader.providerTypeNamesForNativeManifest(manifest, sourceLabel);
 			case _:
 				fail(sourceLabel, "unsupported backend kind `" + manifest.backend.kind + "`");

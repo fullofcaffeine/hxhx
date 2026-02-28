@@ -145,7 +145,7 @@ Dynamic registration notes:
   - `docs/02-user-guide/compat/hxhx-backend-plugin-manifest-v1.schema.json`
   - supported runtime kinds:
     - `haxe-provider` (current Stage3 load path)
-    - `ocaml-cmxs` (native load path now goes through Dynlink in OCaml runtime builds)
+    - `ocaml-dynlink` (native load path now goes through Dynlink in OCaml runtime builds)
 - Native plugin host registration ABI (C5R1):
   - runtime bridge module:
     - `packages/reflaxe.ocaml/std/runtime/HxHxBackendPluginHost.ml`
@@ -199,7 +199,7 @@ Use the native plugin build helper to produce a deterministic artifact bundle:
 bash scripts/hxhx/build-backend-plugin.sh \
   --plugin-id fixture.native.backend.plugin \
   --plugin-version 0.1.0 \
-  --kind ocaml-cmxs \
+  --kind ocaml-dynlink \
   --source-dir test/fixtures/native_backend_plugin \
   --dune-target hxhx_backend_plugin_fixture.cmxs \
   --entry plugins/hxhx_backend_plugin_fixture.cmxs \
@@ -218,7 +218,7 @@ For bytecode hosts (`hxhx` `.bc`), build with `.cma` instead:
 bash scripts/hxhx/build-backend-plugin.sh \
   --plugin-id fixture.native.backend.plugin \
   --plugin-version 0.1.0 \
-  --kind ocaml-cmxs \
+  --kind ocaml-dynlink \
   --source-dir test/fixtures/native_backend_plugin \
   --dune-target hxhx_backend_plugin_fixture.cma \
   --entry plugins/hxhx_backend_plugin_fixture.cma \
@@ -282,7 +282,7 @@ HXHX_FORBID_STAGE0=1 hxhx ...
 Behavior:
 
 - any path that would delegate to stage0 `haxe` fails fast with a clear error
-- linked builtin Stage3 targets (`--target ocaml-stage3`, `--target js-native`) remain allowed
+- linked builtin Stage3 targets (`--target ocaml`, `--target js`) remain allowed
 
 This lets gates explicitly prove “no stage0 delegation” for selected workflows without removing shim compatibility for other development paths.
 
@@ -318,31 +318,31 @@ This is an optimization / integration lever:
 Current `hxhx` target presets:
 
 - `--target ocaml`
-  - kind: `both` (bundled-first, stage0 delegation today)
-  - behavior: injects `reflaxe.ocaml` wiring (`-lib`/`-cp`/init macros/defines) and delegates to stage0 `haxe`
-- `--target ocaml-stage3`
   - kind: `builtin`
   - behavior: runs linked `Stage3Compiler` directly (no `--library reflaxe.ocaml` requirement)
-- `--target js`
+- `--target ocaml-compat`
+  - kind: `both` (bundled-first, stage0 delegation today)
+  - behavior: injects `reflaxe.ocaml` wiring (`-lib`/`-cp`/init macros/defines) and delegates to stage0 `haxe`
+- `--target js-compat`
   - kind: `bundled`
   - behavior: delegates to stage0 `haxe` and injects `--js out.js` when no explicit output target is present
-- `--target js-native`
+- `--target js`
   - kind: `builtin`
   - behavior: routes through linked Stage3 backend dispatch with backend ID `js-native`
   - status: MVP non-delegating JS emitter is enabled (constrained subset; emits one JS file artifact and Stage3 runs it via `node` when available)
 - standard `-js` / `--js` (no `--target`)
   - kind: auto-selected builtin path when compatible
   - behavior: routes through linked `js-native` Stage3 backend when no conflicting non-JS target flag is present
-  - fallback: if `js-native` is unavailable in the current binary, shim mode falls back to stage0 delegation unless `HXHX_FORBID_STAGE0=1` is set
+  - fallback: if native JS backend is unavailable in the current binary, shim mode falls back to stage0 delegation unless `HXHX_FORBID_STAGE0=1` is set
 - `--target flash|swf|as3`
   - status: intentionally unsupported in `hxhx` (fails fast with a clear message)
 - raw legacy target flags (`--swf`, `--as3`)
   - status: intentionally unsupported in `hxhx` (fails fast with the same message)
 - `--hxhx-strict-cli`
   - status: available
-  - behavior: enforces upstream-style CLI surface by rejecting hxhx-only flags (`--target`, `--hxhx-*`), while still allowing upstream JS flags (`-js` / `--js`) to route to linked `js-native`
+  - behavior: enforces upstream-style CLI surface by rejecting hxhx-only flags (`--target`, `--hxhx-*`), while still allowing upstream JS flags (`-js` / `--js`) to route to linked native JS backend (`id=js-native`)
 
-### `js-native` semantics snapshot (MVP)
+### Native JS semantics snapshot (MVP)
 
 Canonical 1.0 scope lives in:
 
@@ -359,7 +359,7 @@ Why this matters:
 - It is our first concrete linked-backend fast-path (`kind=builtin`) in the registry.
 - It gives a no-classpath-scan execution path for OCaml Stage3 bring-up and perf tracking.
 - It keeps the stable `--target` UX while we move from stage0 delegation to native `hxhx` execution.
-- The JS presets now cover both delegated (`js`) and non-delegating MVP (`js-native`) paths so CI and Gate wiring can evolve without hidden fallbacks.
+- The JS presets now cover both delegated (`js-compat`) and non-delegating MVP (`js`) paths so CI and Gate wiring can evolve without hidden fallbacks.
 - Strict CLI mode provides an explicit upstream-compatibility interface without removing hxhx extension workflows.
 
 ## How this relates to the macro “plugin system”

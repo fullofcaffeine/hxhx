@@ -4,7 +4,7 @@ This document defines the generated host-adapter conventions for promoting a Ref
 
 Scope:
 
-- lane A: `hxhx` Stage3 native backend plugin host (`ocaml-cmxs`)
+- lane A: `hxhx` Stage3 native backend plugin host (`ocaml-dynlink`)
 - lane B: upstream Haxe eval plugin host (`eval.vm.Context.loadPlugin`)
 - lane C: Stage4 native macro-module host (`macro.loadNativeModule` + `macro.runNativeExpr`)
 
@@ -75,7 +75,7 @@ Rule: generated files own host glue only. Target logic stays in `core/`.
 
 The `hxhx` adapter must conform to Stage3 native registration ABI:
 
-- manifest kind is `ocaml-cmxs`
+- manifest kind is `ocaml-dynlink`
 - manifest `backend.entry` points to `.cmxs` (native host) or `.cma` (bytecode host)
 - plugin load happens through:
   - `hxhx.BackendPluginManifestResolver`
@@ -98,6 +98,11 @@ Validation and failure semantics are enforced by:
   - pluginId mismatch: fail fast
   - duplicate provider type rows: fail fast
   - duplicate `implId` / descriptor conflicts: fail fast
+
+Migration note:
+
+- legacy manifest kind `ocaml-cmxs` is accepted temporarily with a deprecation warning.
+- planned hard cutover: remove the `ocaml-cmxs` alias after `v0.16.0`.
 
 ## Upstream eval host adapter contract
 

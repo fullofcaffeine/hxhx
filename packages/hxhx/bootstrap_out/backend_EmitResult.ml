@@ -6,8 +6,8 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable entryPath : string; mutable artifacts : Backend_EmitArtifact.t HxArray.t; mutable builtExecutable : bool }
 
-let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = ""; artifacts = Obj.magic (); builtExecutable = false } : t) in (
-  ignore (let tempRight = ref "" in (
+let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = ""; artifacts = Obj.magic (HxRuntime.hx_null); builtExecutable = false } : t) in (
+  ignore (ignore (let tempRight = ref ("" : string) in (
     ignore (if entryPath2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("" : string) in (
       tempRight := __assign_1;
       __assign_1
@@ -16,28 +16,28 @@ let create = fun entryPath2 artifacts2 builtExecutable2 -> let self = ({ __hx_ty
       __assign_2
     ));
     ignore (let __assign_3 = (!tempRight : string) in (
-      self.entryPath <- __assign_3;
+      (Obj.magic self : t).entryPath <- __assign_3;
       __assign_3
     ));
-    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if artifacts2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = let __arr_5 = HxArray.create () in __arr_5 in (
+    let tempRight1 = ref (Obj.magic (HxRuntime.hx_null) : Backend_EmitArtifact.t HxArray.t) in (
+      ignore (if artifacts2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (let __arr_5 = HxArray.create () in __arr_5) in (
         tempRight1 := __assign_4;
         __assign_4
-      ) else let __assign_6 = artifacts2 in (
+      ) else let __assign_6 = Obj.magic artifacts2 in (
         tempRight1 := __assign_6;
         __assign_6
       ));
-      ignore (let __assign_7 = !tempRight1 in (
-        self.artifacts <- __assign_7;
+      ignore (let __assign_7 = Obj.magic (!tempRight1) in (
+        (Obj.magic self : t).artifacts <- __assign_7;
         __assign_7
       ));
       let __assign_8 = builtExecutable2 in (
-        self.builtExecutable <- __assign_8;
+        (Obj.magic self : t).builtExecutable <- __assign_8;
         __assign_8
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = ""; artifacts = Obj.magic (); builtExecutable = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.EmitResult"; entryPath = ""; artifacts = Obj.magic (HxRuntime.hx_null); builtExecutable = false } : t)

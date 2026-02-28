@@ -3,4 +3,3 @@
 module BalancedTree = Haxe_ds_BalancedTree
 module EnumValueMap = Haxe_ds_EnumValueMap
 module Map = Haxe_ds_Map
-module ReadOnlyArray = Haxe_ds_ReadOnlyArray

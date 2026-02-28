@@ -6,12 +6,12 @@ let __reflaxe_ocaml__ = ()
 
 type ocamlstdioinput_t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; readByte : Obj.t -> unit -> int; readBytes : Obj.t -> HxBytes.t -> int -> int -> int; close : Obj.t -> unit -> unit; readAll : Obj.t -> Obj.t -> HxBytes.t; readFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; read : Obj.t -> int -> HxBytes.t; readUntil : Obj.t -> int -> string; readLine : Obj.t -> unit -> string; readFloat : Obj.t -> unit -> float; readDouble : Obj.t -> unit -> float; readInt8 : Obj.t -> unit -> int; readInt16 : Obj.t -> unit -> int; readUInt16 : Obj.t -> unit -> int; readInt24 : Obj.t -> unit -> int; readUInt24 : Obj.t -> unit -> int; readInt32 : Obj.t -> unit -> int; readString : Obj.t -> int -> Obj.t -> string; mutable stream : int }
 
-let ocamlstdioinput___ctor = fun (self : ocamlstdioinput_t) stream2 -> ignore (let __assign_1 = stream2 in (
-  self.stream <- __assign_1;
+let ocamlstdioinput___ctor = fun (self : ocamlstdioinput_t) stream2 -> ignore (ignore (let __assign_1 = stream2 in (
+  (Obj.magic self : ocamlstdioinput_t).stream <- __assign_1;
   __assign_1
-))
+)))
 
-let ocamlstdioinput_readByte__impl = fun (self : ocamlstdioinput_t) () -> let b = HxStdio.read_byte (self.stream) in (
+let ocamlstdioinput_readByte__impl = fun (self : ocamlstdioinput_t) () -> let b = HxStdio.read_byte ((Obj.magic self : ocamlstdioinput_t).stream) in (
   ignore (if b < 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ());
   b
 )
@@ -20,7 +20,7 @@ let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBy
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let i = ref 0 in (
     ignore (try while !i < len do ignore ((
-      ignore (HxBytes.set buf (HxInt.add pos (!i)) (self.readByte (Obj.magic self) ()));
+      ignore (HxBytes.set buf (HxInt.add pos (!i)) ((Obj.magic self : ocamlstdioinput_t).readByte (Obj.magic self) ()));
       let __old_2 = !i in let __new_3 = HxInt.add __old_2 1 in (
         ignore (i := __new_3);
         __old_2
@@ -42,20 +42,20 @@ let ocamlstdioinput_readBytes__impl = fun (self : ocamlstdioinput_t) (buf : HxBy
 ) in Obj.magic __fallback_result_9 with
   | HxRuntime.Hx_return __ret_8 -> Obj.obj __ret_8
 
-let ocamlstdioinput_readLine__impl = fun (self : ocamlstdioinput_t) () -> let s = (HxStdio.read_line (self.stream) : string) in (
+let ocamlstdioinput_readLine__impl = fun (self : ocamlstdioinput_t) () -> let s = (HxStdio.read_line ((Obj.magic self : ocamlstdioinput_t).stream) : string) in (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (Haxe_io_Eof.create ())) ["Dynamic"; "haxe.io.Eof"]) else ());
   s
 )
 
-let ocamlstdioinput_create = fun stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Input.set_bigEndian__impl (Obj.magic o) a0); readByte = (fun o () -> ocamlstdioinput_readByte__impl (Obj.magic o) ()); readBytes = (fun o a0 a1 a2 -> ocamlstdioinput_readBytes__impl (Obj.magic o) a0 a1 a2); close = (fun o () -> Haxe_io_Input.close__impl (Obj.magic o) ()); readAll = (fun o a0 -> Haxe_io_Input.readAll__impl (Obj.magic o) a0); readFullBytes = (fun o a0 a1 a2 -> Haxe_io_Input.readFullBytes__impl (Obj.magic o) a0 a1 a2); read = (fun o a0 -> Haxe_io_Input.read__impl (Obj.magic o) a0); readUntil = (fun o a0 -> Haxe_io_Input.readUntil__impl (Obj.magic o) a0); readLine = (fun o () -> ocamlstdioinput_readLine__impl (Obj.magic o) ()); readFloat = (fun o () -> Haxe_io_Input.readFloat__impl (Obj.magic o) ()); readDouble = (fun o () -> Haxe_io_Input.readDouble__impl (Obj.magic o) ()); readInt8 = (fun o () -> Haxe_io_Input.readInt8__impl (Obj.magic o) ()); readInt16 = (fun o () -> Haxe_io_Input.readInt16__impl (Obj.magic o) ()); readUInt16 = (fun o () -> Haxe_io_Input.readUInt16__impl (Obj.magic o) ()); readInt24 = (fun o () -> Haxe_io_Input.readInt24__impl (Obj.magic o) ()); readUInt24 = (fun o () -> Haxe_io_Input.readUInt24__impl (Obj.magic o) ()); readInt32 = (fun o () -> Haxe_io_Input.readInt32__impl (Obj.magic o) ()); readString = (fun o a0 a1 -> Haxe_io_Input.readString__impl (Obj.magic o) a0 a1); stream = 0 } : ocamlstdioinput_t) in (
-  ignore (let __assign_1 = stream2 in (
-    self.stream <- __assign_1;
+let ocamlstdioinput_create = fun stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (ocamlstdioinput_readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlstdioinput_readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (Haxe_io_Input.close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (ocamlstdioinput_readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); stream = 0 } : ocamlstdioinput_t) in (
+  ignore (ignore (let __assign_1 = stream2 in (
+    (Obj.magic self : ocamlstdioinput_t).stream <- __assign_1;
     __assign_1
-  ));
+  )));
   self
 )
 
-let ocamlstdioinput___empty = fun () -> ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Input.set_bigEndian__impl (Obj.magic o) a0); readByte = (fun o () -> ocamlstdioinput_readByte__impl (Obj.magic o) ()); readBytes = (fun o a0 a1 a2 -> ocamlstdioinput_readBytes__impl (Obj.magic o) a0 a1 a2); close = (fun o () -> Haxe_io_Input.close__impl (Obj.magic o) ()); readAll = (fun o a0 -> Haxe_io_Input.readAll__impl (Obj.magic o) a0); readFullBytes = (fun o a0 a1 a2 -> Haxe_io_Input.readFullBytes__impl (Obj.magic o) a0 a1 a2); read = (fun o a0 -> Haxe_io_Input.read__impl (Obj.magic o) a0); readUntil = (fun o a0 -> Haxe_io_Input.readUntil__impl (Obj.magic o) a0); readLine = (fun o () -> ocamlstdioinput_readLine__impl (Obj.magic o) ()); readFloat = (fun o () -> Haxe_io_Input.readFloat__impl (Obj.magic o) ()); readDouble = (fun o () -> Haxe_io_Input.readDouble__impl (Obj.magic o) ()); readInt8 = (fun o () -> Haxe_io_Input.readInt8__impl (Obj.magic o) ()); readInt16 = (fun o () -> Haxe_io_Input.readInt16__impl (Obj.magic o) ()); readUInt16 = (fun o () -> Haxe_io_Input.readUInt16__impl (Obj.magic o) ()); readInt24 = (fun o () -> Haxe_io_Input.readInt24__impl (Obj.magic o) ()); readUInt24 = (fun o () -> Haxe_io_Input.readUInt24__impl (Obj.magic o) ()); readInt32 = (fun o () -> Haxe_io_Input.readInt32__impl (Obj.magic o) ()); readString = (fun o a0 a1 -> Haxe_io_Input.readString__impl (Obj.magic o) a0 a1); stream = 0 } : ocamlstdioinput_t)
+let ocamlstdioinput___empty = fun () -> ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioInput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Input.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); readByte = (fun o () -> Obj.magic (ocamlstdioinput_readByte__impl (Obj.magic o) (Obj.magic ()))); readBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlstdioinput_readBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); close = (fun o () -> Obj.magic (Haxe_io_Input.close__impl (Obj.magic o) (Obj.magic ()))); readAll = (fun o a0 -> Obj.magic (Haxe_io_Input.readAll__impl (Obj.magic o) (Obj.magic a0))); readFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Input.readFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); read = (fun o a0 -> Obj.magic (Haxe_io_Input.read__impl (Obj.magic o) (Obj.magic a0))); readUntil = (fun o a0 -> Obj.magic (Haxe_io_Input.readUntil__impl (Obj.magic o) (Obj.magic a0))); readLine = (fun o () -> Obj.magic (ocamlstdioinput_readLine__impl (Obj.magic o) (Obj.magic ()))); readFloat = (fun o () -> Obj.magic (Haxe_io_Input.readFloat__impl (Obj.magic o) (Obj.magic ()))); readDouble = (fun o () -> Obj.magic (Haxe_io_Input.readDouble__impl (Obj.magic o) (Obj.magic ()))); readInt8 = (fun o () -> Obj.magic (Haxe_io_Input.readInt8__impl (Obj.magic o) (Obj.magic ()))); readInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readInt16__impl (Obj.magic o) (Obj.magic ()))); readUInt16 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt16__impl (Obj.magic o) (Obj.magic ()))); readInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readInt24__impl (Obj.magic o) (Obj.magic ()))); readUInt24 = (fun o () -> Obj.magic (Haxe_io_Input.readUInt24__impl (Obj.magic o) (Obj.magic ()))); readInt32 = (fun o () -> Obj.magic (Haxe_io_Input.readInt32__impl (Obj.magic o) (Obj.magic ()))); readString = (fun o a0 a1 -> Obj.magic (Haxe_io_Input.readString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); stream = 0 } : ocamlstdioinput_t)
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: sys.io._Stdio.OcamlStdioOutput *)
@@ -64,12 +64,12 @@ let __reflaxe_ocaml__ = ()
 
 type ocamlstdiooutput_t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; writeByte : Obj.t -> int -> unit; writeBytes : Obj.t -> HxBytes.t -> int -> int -> int; flush : Obj.t -> unit -> unit; close : Obj.t -> unit -> unit; write : Obj.t -> HxBytes.t -> unit; writeFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; prepare : Obj.t -> int -> unit; writeInput : Obj.t -> Haxe_io_Input.t -> Obj.t -> unit; writeString : Obj.t -> string -> Obj.t -> unit; writeFloat : Obj.t -> float -> unit; writeDouble : Obj.t -> float -> unit; writeInt8 : Obj.t -> int -> unit; writeUInt8 : Obj.t -> int -> unit; writeInt16 : Obj.t -> int -> unit; writeUInt16 : Obj.t -> int -> unit; writeInt24 : Obj.t -> int -> unit; writeUInt24 : Obj.t -> int -> unit; writeInt32 : Obj.t -> int -> unit; mutable stream : int }
 
-let ocamlstdiooutput___ctor = fun (self : ocamlstdiooutput_t) stream2 -> ignore (let __assign_1 = stream2 in (
-  self.stream <- __assign_1;
+let ocamlstdiooutput___ctor = fun (self : ocamlstdiooutput_t) stream2 -> ignore (ignore (let __assign_1 = stream2 in (
+  (Obj.magic self : ocamlstdiooutput_t).stream <- __assign_1;
   __assign_1
-))
+)))
 
-let ocamlstdiooutput_writeByte__impl = fun (self : ocamlstdiooutput_t) (c : int) -> ignore (HxStdio.write_byte (self.stream) c)
+let ocamlstdiooutput_writeByte__impl = fun (self : ocamlstdiooutput_t) (c : int) -> ignore (ignore (HxStdio.write_byte ((Obj.magic self : ocamlstdiooutput_t).stream) c))
 
 let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_5 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
@@ -77,30 +77,30 @@ let ocamlstdiooutput_writeBytes__impl = fun (self : ocamlstdiooutput_t) (buf : H
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
       ignore (_g := __new_3);
       __old_2
-    ) in self.writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
+    ) in (Obj.magic self : ocamlstdiooutput_t).writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
     len
   )
 ) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
-let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore (try (
+let ocamlstdiooutput_writeString__impl = fun (self : ocamlstdiooutput_t) (s : string) (encoding : Obj.t) -> ignore (ignore (try (
   ignore (if encoding != Obj.magic (HxRuntime.hx_null) then ignore () else ());
   ignore (if s == Obj.magic (HxRuntime.hx_null) || HxString.length s = 0 then raise (HxRuntime.Hx_return (Obj.repr ())) else ());
-  HxStdio.write_string (self.stream) (s : string)
+  HxStdio.write_string ((Obj.magic self : ocamlstdiooutput_t).stream) (s : string)
 ) with
-  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6)
+  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6))
 
-let ocamlstdiooutput_flush__impl = fun (self : ocamlstdiooutput_t) () -> ignore (HxStdio.flush (self.stream))
+let ocamlstdiooutput_flush__impl = fun (self : ocamlstdiooutput_t) () -> ignore (ignore (HxStdio.flush ((Obj.magic self : ocamlstdiooutput_t).stream)))
 
-let ocamlstdiooutput_create = fun stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Output.set_bigEndian__impl (Obj.magic o) a0); writeByte = (fun o a0 -> ocamlstdiooutput_writeByte__impl (Obj.magic o) a0); writeBytes = (fun o a0 a1 a2 -> ocamlstdiooutput_writeBytes__impl (Obj.magic o) a0 a1 a2); flush = (fun o () -> ocamlstdiooutput_flush__impl (Obj.magic o) ()); close = (fun o () -> Haxe_io_Output.close__impl (Obj.magic o) ()); write = (fun o a0 -> Haxe_io_Output.write__impl (Obj.magic o) a0); writeFullBytes = (fun o a0 a1 a2 -> Haxe_io_Output.writeFullBytes__impl (Obj.magic o) a0 a1 a2); prepare = (fun o a0 -> Haxe_io_Output.prepare__impl (Obj.magic o) a0); writeInput = (fun o a0 a1 -> Haxe_io_Output.writeInput__impl (Obj.magic o) a0 a1); writeString = (fun o a0 a1 -> ocamlstdiooutput_writeString__impl (Obj.magic o) a0 a1); writeFloat = (fun o a0 -> Haxe_io_Output.writeFloat__impl (Obj.magic o) a0); writeDouble = (fun o a0 -> Haxe_io_Output.writeDouble__impl (Obj.magic o) a0); writeInt8 = (fun o a0 -> Haxe_io_Output.writeInt8__impl (Obj.magic o) a0); writeUInt8 = (fun o a0 -> Haxe_io_Output.writeUInt8__impl (Obj.magic o) a0); writeInt16 = (fun o a0 -> Haxe_io_Output.writeInt16__impl (Obj.magic o) a0); writeUInt16 = (fun o a0 -> Haxe_io_Output.writeUInt16__impl (Obj.magic o) a0); writeInt24 = (fun o a0 -> Haxe_io_Output.writeInt24__impl (Obj.magic o) a0); writeUInt24 = (fun o a0 -> Haxe_io_Output.writeUInt24__impl (Obj.magic o) a0); writeInt32 = (fun o a0 -> Haxe_io_Output.writeInt32__impl (Obj.magic o) a0); stream = 0 } : ocamlstdiooutput_t) in (
-  ignore (let __assign_1 = stream2 in (
-    self.stream <- __assign_1;
+let ocamlstdiooutput_create = fun stream2 -> let self = ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (ocamlstdiooutput_writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlstdiooutput_writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (ocamlstdiooutput_flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (Haxe_io_Output.close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (ocamlstdiooutput_writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); stream = 0 } : ocamlstdiooutput_t) in (
+  ignore (ignore (let __assign_1 = stream2 in (
+    (Obj.magic self : ocamlstdiooutput_t).stream <- __assign_1;
     __assign_1
-  ));
+  )));
   self
 )
 
-let ocamlstdiooutput___empty = fun () -> ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Output.set_bigEndian__impl (Obj.magic o) a0); writeByte = (fun o a0 -> ocamlstdiooutput_writeByte__impl (Obj.magic o) a0); writeBytes = (fun o a0 a1 a2 -> ocamlstdiooutput_writeBytes__impl (Obj.magic o) a0 a1 a2); flush = (fun o () -> ocamlstdiooutput_flush__impl (Obj.magic o) ()); close = (fun o () -> Haxe_io_Output.close__impl (Obj.magic o) ()); write = (fun o a0 -> Haxe_io_Output.write__impl (Obj.magic o) a0); writeFullBytes = (fun o a0 a1 a2 -> Haxe_io_Output.writeFullBytes__impl (Obj.magic o) a0 a1 a2); prepare = (fun o a0 -> Haxe_io_Output.prepare__impl (Obj.magic o) a0); writeInput = (fun o a0 a1 -> Haxe_io_Output.writeInput__impl (Obj.magic o) a0 a1); writeString = (fun o a0 a1 -> ocamlstdiooutput_writeString__impl (Obj.magic o) a0 a1); writeFloat = (fun o a0 -> Haxe_io_Output.writeFloat__impl (Obj.magic o) a0); writeDouble = (fun o a0 -> Haxe_io_Output.writeDouble__impl (Obj.magic o) a0); writeInt8 = (fun o a0 -> Haxe_io_Output.writeInt8__impl (Obj.magic o) a0); writeUInt8 = (fun o a0 -> Haxe_io_Output.writeUInt8__impl (Obj.magic o) a0); writeInt16 = (fun o a0 -> Haxe_io_Output.writeInt16__impl (Obj.magic o) a0); writeUInt16 = (fun o a0 -> Haxe_io_Output.writeUInt16__impl (Obj.magic o) a0); writeInt24 = (fun o a0 -> Haxe_io_Output.writeInt24__impl (Obj.magic o) a0); writeUInt24 = (fun o a0 -> Haxe_io_Output.writeUInt24__impl (Obj.magic o) a0); writeInt32 = (fun o a0 -> Haxe_io_Output.writeInt32__impl (Obj.magic o) a0); stream = 0 } : ocamlstdiooutput_t)
+let ocamlstdiooutput___empty = fun () -> ({ __hx_type = HxType.class_ "sys.io._Stdio.OcamlStdioOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (ocamlstdiooutput_writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (ocamlstdiooutput_writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (ocamlstdiooutput_flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (Haxe_io_Output.close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (ocamlstdiooutput_writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); stream = 0 } : ocamlstdiooutput_t)
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: sys.io.Stdio *)

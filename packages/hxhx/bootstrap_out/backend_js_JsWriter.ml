@@ -7,16 +7,16 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable out : StringBuf.t; mutable indent : int; mutable unit : string }
 
 let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = "" } : t) in (
-  ignore ((
+  ignore (ignore ((
     ignore (let __assign_1 = 0 in (
-      self.indent <- __assign_1;
+      (Obj.magic self : t).indent <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = StringBuf.create () in (
-      self.out <- __assign_2;
+    ignore (let __assign_2 = Obj.magic (StringBuf.create ()) in (
+      (Obj.magic self : t).out <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref "" in (
+    let tempRight = ref ("" : string) in (
       ignore (if indentUnit == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("  " : string) in (
         tempRight := __assign_3;
         __assign_3
@@ -25,39 +25,39 @@ let create = fun indentUnit -> let self = ({ __hx_type = HxType.class_ "backend.
         __assign_4
       ));
       let __assign_5 = (!tempRight : string) in (
-        self.unit <- __assign_5;
+        (Obj.magic self : t).unit <- __assign_5;
         __assign_5
       )
     )
-  ));
+  )));
   self
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsWriter"; out = StringBuf.create (); indent = 0; unit = "" } : t)
 
-let pushIndent = fun self () -> ignore (let __recv_6 = self in __recv_6.indent <- HxInt.add (__recv_6.indent) 1)
+let pushIndent = fun self () -> ignore (ignore (let __recv_6 = self in let __recv_typed_7 = (Obj.magic __recv_6 : t) in __recv_typed_7.indent <- HxInt.add (__recv_typed_7.indent) 1))
 
-let popIndent = fun self () -> ignore (if self.indent > 0 then ignore (let __recv_7 = self in __recv_7.indent <- HxInt.sub (__recv_7.indent) 1) else ())
+let popIndent = fun self () -> ignore (ignore (if (Obj.magic self : t).indent > 0 then ignore (let __recv_8 = self in let __recv_typed_9 = (Obj.magic __recv_8 : t) in __recv_typed_9.indent <- HxInt.sub (__recv_typed_9.indent) 1) else ()))
 
-let writeln = fun self (line : string) -> ignore (let _g = ref 0 in let _g1 = self.indent in (
+let writeln = fun self (line : string) -> ignore (ignore (let _g = ref 0 in let _g1 = (Obj.magic self : t).indent in (
   ignore (while !_g < _g1 do ignore ((
-    ignore (let __old_8 = !_g in let __new_9 = HxInt.add __old_8 1 in (
-      ignore (_g := __new_9);
-      __old_8
+    ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+      ignore (_g := __new_11);
+      __old_10
     ));
-    StringBuf.add (self.out) (Obj.repr (self.unit))
+    StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr ((Obj.magic self : t).unit))
   )) done);
-  let tempString = ref "" in (
-    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_10 = ("" : string) in (
-      tempString := __assign_10;
-      __assign_10
-    ) else let __assign_11 = (line : string) in (
-      tempString := __assign_11;
-      __assign_11
+  let tempString = ref ("" : string) in (
+    ignore (if line == Obj.magic (HxRuntime.hx_null) then let __assign_12 = ("" : string) in (
+      tempString := __assign_12;
+      __assign_12
+    ) else let __assign_13 = (line : string) in (
+      tempString := __assign_13;
+      __assign_13
     ));
-    ignore (StringBuf.add (self.out) (Obj.repr (!tempString)));
-    StringBuf.add (self.out) (Obj.repr "\n")
+    ignore (StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr (!tempString)));
+    StringBuf.add (Obj.magic ((Obj.magic self : t).out)) (Obj.repr "\n")
   )
-))
+)))
 
-let toString = fun self () -> StringBuf.toString (self.out) ()
+let toString = fun self () -> StringBuf.toString (Obj.magic ((Obj.magic self : t).out)) ()

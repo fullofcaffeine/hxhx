@@ -205,7 +205,7 @@ EOF
 build_args=(
   --plugin-id "$PLUGIN_ID"
   --plugin-version "$PLUGIN_VERSION"
-  --kind ocaml-cmxs
+  --kind ocaml-dynlink
   --source-dir "$scaffold_dir/plugin/hxhx"
   --dune-target "${module_name}.${ARTIFACT_EXT}"
   --entry "plugins/${module_name}.${ARTIFACT_EXT}"

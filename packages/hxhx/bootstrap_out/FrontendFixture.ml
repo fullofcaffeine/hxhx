@@ -7,39 +7,39 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable label : string; mutable source : string; mutable expectPackagePath : string; mutable expectMainClassName : string; mutable expectHasStaticMain : bool }
 
 let create = fun label2 source2 expectPackagePath2 expectMainClassName2 expectHasStaticMain2 -> let self = ({ __hx_type = HxType.class_ "FrontendFixture"; label = ""; source = ""; expectPackagePath = ""; expectMainClassName = ""; expectHasStaticMain = false } : t) in (
-  ignore ((
+  ignore (ignore ((
     ignore (let __assign_1 = (label2 : string) in (
-      self.label <- __assign_1;
+      (Obj.magic self : t).label <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = (source2 : string) in (
-      self.source <- __assign_2;
+      (Obj.magic self : t).source <- __assign_2;
       __assign_2
     ));
     ignore (let __assign_3 = (expectPackagePath2 : string) in (
-      self.expectPackagePath <- __assign_3;
+      (Obj.magic self : t).expectPackagePath <- __assign_3;
       __assign_3
     ));
     ignore (let __assign_4 = (expectMainClassName2 : string) in (
-      self.expectMainClassName <- __assign_4;
+      (Obj.magic self : t).expectMainClassName <- __assign_4;
       __assign_4
     ));
     let __assign_5 = expectHasStaticMain2 in (
-      self.expectHasStaticMain <- __assign_5;
+      (Obj.magic self : t).expectHasStaticMain <- __assign_5;
       __assign_5
     )
-  ));
+  )));
   self
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "FrontendFixture"; label = ""; source = ""; expectPackagePath = ""; expectMainClassName = ""; expectHasStaticMain = false } : t)
 
-let getLabel = fun self () -> self.label
+let getLabel = fun self () -> (Obj.magic self : t).label
 
-let getSource = fun self () -> self.source
+let getSource = fun self () -> (Obj.magic self : t).source
 
-let getExpectPackagePath = fun self () -> self.expectPackagePath
+let getExpectPackagePath = fun self () -> (Obj.magic self : t).expectPackagePath
 
-let getExpectMainClassName = fun self () -> self.expectMainClassName
+let getExpectMainClassName = fun self () -> (Obj.magic self : t).expectMainClassName
 
-let getExpectHasStaticMain = fun self () -> self.expectHasStaticMain
+let getExpectHasStaticMain = fun self () -> (Obj.magic self : t).expectHasStaticMain

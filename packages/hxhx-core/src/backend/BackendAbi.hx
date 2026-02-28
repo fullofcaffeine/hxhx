@@ -21,6 +21,39 @@ class BackendAbi {
 	public static inline var GEN_IR_VERSION:Int = 1;
 	public static inline var MACRO_API_VERSION:Int = 1;
 
+	static function normalizePluginLabel(pluginId:String):String {
+		final normalized = pluginId == null ? "" : StringTools.trim(pluginId);
+		return normalized.length == 0 ? "<unknown-plugin>" : normalized;
+	}
+
+	/**
+		Validate manifest-level plugin compatibility requirements.
+
+		Why
+		- Native plugin manifests declare ABI/IR/macro API requirements independently from
+		  backend descriptor registration.
+		- Loader paths should fail fast *before* attempting runtime loading when versions
+		  are incompatible.
+	**/
+	public static function validateManifestRequires(pluginId:String, abiVersion:Int, genIrVersion:Int, macroApiVersion:Int):Null<String> {
+		final label = normalizePluginLabel(pluginId);
+		if (abiVersion != VERSION) {
+			return "backend ABI mismatch for plugin " + label + ": expected abiVersion=" + VERSION + ", got " + abiVersion;
+		}
+		if (genIrVersion != GEN_IR_VERSION) {
+			return "backend GenIR mismatch for plugin " + label + ": expected genIrVersion=" + GEN_IR_VERSION + ", got " + genIrVersion;
+		}
+		if (macroApiVersion != MACRO_API_VERSION) {
+			return "backend macro API mismatch for plugin "
+				+ label
+				+ ": expected macroApiVersion="
+				+ MACRO_API_VERSION
+				+ ", got "
+				+ macroApiVersion;
+		}
+		return null;
+	}
+
 	static function descriptorLabel(descriptor:TargetDescriptor):String {
 		if (descriptor.implId != null && descriptor.implId.length > 0) {
 			return descriptor.implId;

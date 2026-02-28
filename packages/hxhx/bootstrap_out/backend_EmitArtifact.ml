@@ -7,7 +7,7 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable kind : string; mutable path : string }
 
 let create = fun kind2 path2 -> let self = ({ __hx_type = HxType.class_ "backend.EmitArtifact"; kind = ""; path = "" } : t) in (
-  ignore (let tempRight = ref "" in (
+  ignore (ignore (let tempRight = ref ("" : string) in (
     ignore (if kind2 == Obj.magic (HxRuntime.hx_null) then let __assign_1 = ("artifact" : string) in (
       tempRight := __assign_1;
       __assign_1
@@ -16,10 +16,10 @@ let create = fun kind2 path2 -> let self = ({ __hx_type = HxType.class_ "backend
       __assign_2
     ));
     ignore (let __assign_3 = (!tempRight : string) in (
-      self.kind <- __assign_3;
+      (Obj.magic self : t).kind <- __assign_3;
       __assign_3
     ));
-    let tempRight1 = ref "" in (
+    let tempRight1 = ref ("" : string) in (
       ignore (if path2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = ("" : string) in (
         tempRight1 := __assign_4;
         __assign_4
@@ -28,11 +28,11 @@ let create = fun kind2 path2 -> let self = ({ __hx_type = HxType.class_ "backend
         __assign_5
       ));
       let __assign_6 = (!tempRight1 : string) in (
-        self.path <- __assign_6;
+        (Obj.magic self : t).path <- __assign_6;
         __assign_6
       )
     )
-  ));
+  )));
   self
 )
 

@@ -6,28 +6,28 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable source : string; mutable filePath : string; mutable decl : HxModuleDecl.t }
 
-let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic () } : t) in (
-  ignore ((
+let create = fun source2 decl2 filePath2 -> let self = ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (source2 : string) in (
-      self.source <- __assign_1;
+      (Obj.magic self : t).source <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = decl2 in (
-      self.decl <- __assign_2;
+    ignore (let __assign_2 = Obj.magic decl2 in (
+      (Obj.magic self : t).decl <- __assign_2;
       __assign_2
     ));
     let __assign_3 = (filePath2 : string) in (
-      self.filePath <- __assign_3;
+      (Obj.magic self : t).filePath <- __assign_3;
       __assign_3
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "ParsedModule"; source = ""; filePath = ""; decl = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getSource = fun self () -> self.source
+let getSource = fun self () -> (Obj.magic self : t).source
 
-let getFilePath = fun self () -> self.filePath
+let getFilePath = fun self () -> (Obj.magic self : t).filePath
 
-let getDecl = fun self () -> self.decl
+let getDecl = fun self () -> (Obj.magic self : t).decl

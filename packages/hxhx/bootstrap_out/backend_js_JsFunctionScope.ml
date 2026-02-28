@@ -6,75 +6,75 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable locals : string HxMap.string_map; mutable used : bool HxMap.string_map; mutable classRefs : string HxMap.string_map; mutable tempCounter : int }
 
-let create = fun classRefs2 -> let self = ({ __hx_type = HxType.class_ "backend.js.JsFunctionScope"; locals = HxMap.create_string (); used = HxMap.create_string (); classRefs = Obj.magic (); tempCounter = 0 } : t) in (
-  ignore ((
+let create = fun classRefs2 -> let self = ({ __hx_type = HxType.class_ "backend.js.JsFunctionScope"; locals = HxMap.create_string (); used = HxMap.create_string (); classRefs = Obj.magic (HxRuntime.hx_null); tempCounter = 0 } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = 0 in (
-      self.tempCounter <- __assign_1;
+      (Obj.magic self : t).tempCounter <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = HxMap.create_string () in (
-      self.used <- __assign_2;
+    ignore (let __assign_2 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).used <- __assign_2;
       __assign_2
     ));
-    ignore (let __assign_3 = HxMap.create_string () in (
-      self.locals <- __assign_3;
+    ignore (let __assign_3 = Obj.magic (HxMap.create_string ()) in (
+      (Obj.magic self : t).locals <- __assign_3;
       __assign_3
     ));
-    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if classRefs2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = HxMap.create_string () in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
+      ignore (if classRefs2 == Obj.magic (HxRuntime.hx_null) then let __assign_4 = Obj.magic (HxMap.create_string ()) in (
         tempRight := __assign_4;
         __assign_4
-      ) else let __assign_5 = classRefs2 in (
+      ) else let __assign_5 = Obj.magic classRefs2 in (
         tempRight := __assign_5;
         __assign_5
       ));
-      let __assign_6 = !tempRight in (
-        self.classRefs <- __assign_6;
+      let __assign_6 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).classRefs <- __assign_6;
         __assign_6
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsFunctionScope"; locals = HxMap.create_string (); used = HxMap.create_string (); classRefs = Obj.magic (); tempCounter = 0 } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsFunctionScope"; locals = HxMap.create_string (); used = HxMap.create_string (); classRefs = Obj.magic (HxRuntime.hx_null); tempCounter = 0 } : t)
 
 let reserve = fun self (name : string) -> try let __fallback_result_11 = let candidate = ref (Backend_js_JsNameMangler.identifier (name : string) : string) in (
   ignore (if HxString.length (!candidate) = 0 then ignore (let __assign_7 = ("_" : string) in (
     candidate := __assign_7;
     __assign_7
   )) else ());
-  ignore (if not (HxMap.exists_string (self.used) (!candidate)) then ignore ((
-    ignore (HxMap.set_string (self.used) (!candidate) true);
+  ignore (if not (HxMap.exists_string ((Obj.magic self : t).used) (!candidate)) then ignore ((
+    ignore (HxMap.set_string ((Obj.magic self : t).used) (!candidate) true);
     raise (HxRuntime.Hx_return (Obj.repr (!candidate)))
   )) else ());
   let suffix = ref 1 in (
-    ignore (while HxMap.exists_string (self.used) ((HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix)) do ignore (let __old_8 = !suffix in let __new_9 = HxInt.add __old_8 1 in (
+    ignore (while HxMap.exists_string ((Obj.magic self : t).used) ((HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix)) do ignore (let __old_8 = !suffix in let __new_9 = HxInt.add __old_8 1 in (
       ignore (suffix := __new_9);
       __old_8
     )) done);
     let unique = ((HxString.toStdString (!candidate) ^ "_") ^ string_of_int (!suffix) : string) in (
-      ignore (HxMap.set_string (self.used) unique true);
+      ignore (HxMap.set_string ((Obj.magic self : t).used) unique true);
       unique
     )
   )
 ) in Obj.magic __fallback_result_11 with
   | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10
 
-let declareLocal = fun self (raw : string) -> try let __fallback_result_13 = let existing = (HxMap.get_string (self.locals) raw : string) in (
-  ignore (if existing != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr existing)) else ());
-  let safe = (reserve self (raw : string) : string) in (
-    ignore (HxMap.set_string (self.locals) raw safe);
+let declareLocal = fun self (raw : string) -> try let __fallback_result_13 = let existing = (HxMap.get_string ((Obj.magic self : t).locals) raw : string) in (
+  ignore (if existing != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (existing : string))) else ());
+  let safe = (reserve (Obj.magic self) (raw : string) : string) in (
+    ignore (HxMap.set_string ((Obj.magic self : t).locals) raw safe);
     safe
   )
 ) in Obj.magic __fallback_result_13 with
   | HxRuntime.Hx_return __ret_12 -> Obj.obj __ret_12
 
-let resolveLocal = fun self (raw : string) -> HxMap.get_string (self.locals) raw
+let resolveLocal = fun self (raw : string) -> HxMap.get_string ((Obj.magic self : t).locals) raw
 
-let resolveClassRef = fun self (raw : string) -> HxMap.get_string (self.classRefs) raw
+let resolveClassRef = fun self (raw : string) -> HxMap.get_string ((Obj.magic self : t).classRefs) raw
 
-let freshTemp = fun self (prefix : string) -> try let __fallback_result_20 = let tempString = ref "" in (
+let freshTemp = fun self (prefix : string) -> try let __fallback_result_20 = let tempString = ref ("" : string) in (
   ignore (if prefix == Obj.magic (HxRuntime.hx_null) || HxString.length prefix = 0 then let __assign_14 = ("__tmp" : string) in (
     tempString := __assign_14;
     __assign_14
@@ -82,19 +82,19 @@ let freshTemp = fun self (prefix : string) -> try let __fallback_result_20 = let
     tempString := __assign_15;
     __assign_15
   ));
-  ignore (while true do ignore (let name = (reserve self ((HxString.toStdString (!tempString) ^ "_") ^ string_of_int (self.tempCounter) : string) : string) in (
-    ignore (let __obj_16 = self in let __old_17 = __obj_16.tempCounter in let __new_18 = HxInt.add __old_17 1 in (
-      ignore (__obj_16.tempCounter <- __new_18);
+  ignore (while true do ignore (let name = (reserve (Obj.magic self) ((HxString.toStdString (!tempString) ^ "_") ^ string_of_int ((Obj.magic self : t).tempCounter) : string) : string) in (
+    ignore (let __obj_16 = self in let __old_17 = (Obj.magic __obj_16 : t).tempCounter in let __new_18 = HxInt.add __old_17 1 in (
+      ignore ((Obj.magic __obj_16 : t).tempCounter <- __new_18);
       __old_17
     ));
-    if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then raise (HxRuntime.Hx_return (Obj.repr name)) else ()
+    if name != Obj.magic (HxRuntime.hx_null) && HxString.length name > 0 then raise (HxRuntime.Hx_return (Obj.repr (name : string))) else ()
   )) done);
-  reserve self ("__tmp_fallback" : string)
+  reserve (Obj.magic self) ("__tmp_fallback" : string)
 ) in Obj.magic __fallback_result_20 with
   | HxRuntime.Hx_return __ret_19 -> Obj.obj __ret_19
 
-let exprScope = fun self () -> let self = self in let __anon_21 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_21 "resolveLocal" (Obj.repr (fun name -> resolveLocal self (name : string))));
-  ignore (HxAnon.set __anon_21 "resolveClassRef" (Obj.repr (fun name -> resolveClassRef self (name : string))));
+let exprScope = fun self () -> let self = Obj.magic self in let __anon_21 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_21 "resolveLocal" (Obj.repr (fun name -> resolveLocal (Obj.magic self) (name : string))));
+  ignore (HxAnon.set __anon_21 "resolveClassRef" (Obj.repr (fun name -> resolveClassRef (Obj.magic self) (name : string))));
   __anon_21
 )

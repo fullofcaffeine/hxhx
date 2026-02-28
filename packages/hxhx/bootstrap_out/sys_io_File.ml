@@ -15,13 +15,13 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.File" } : t)
 
 let getContent = fun path -> HxFile.getContent (path : string)
 
-let saveContent = fun path content -> HxFile.saveContent (path : string) (content : string)
+let saveContent = fun path content -> ignore (HxFile.saveContent (path : string) (content : string))
 
 let getBytes = fun path -> HxBytes.ofData (HxFile.getBytes (path : string)) ()
 
-let saveBytes = fun path bytes -> HxFile.saveBytes (path : string) (HxBytes.getData bytes ())
+let saveBytes = fun path bytes -> ignore (HxFile.saveBytes (path : string) (HxBytes.getData bytes ()))
 
-let copy = fun srcPath dstPath -> HxFile.copy (srcPath : string) (dstPath : string)
+let copy = fun srcPath dstPath -> ignore (HxFile.copy (srcPath : string) (dstPath : string))
 
 let read = fun path binary -> Sys_io_FileInput.create (HxFileStream.open_in (path : string) binary)
 

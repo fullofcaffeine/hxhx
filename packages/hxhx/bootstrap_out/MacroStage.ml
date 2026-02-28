@@ -13,6 +13,6 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "MacroStage" } : 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroStage" } : t)
 
-let expand = fun m generatedOcamlModules -> MacroExpandedModule.create m true generatedOcamlModules
+let expand = fun m generatedOcamlModules -> MacroExpandedModule.create (Obj.magic m) true (Obj.magic generatedOcamlModules)
 
-let expandProgram = fun modules generatedOcamlModules -> MacroExpandedProgram.create modules true generatedOcamlModules
+let expandProgram = fun modules generatedOcamlModules -> MacroExpandedProgram.create (Obj.magic modules) true (Obj.magic generatedOcamlModules)

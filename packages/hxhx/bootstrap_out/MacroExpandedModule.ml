@@ -6,35 +6,35 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable macroMode : bool; mutable typed : TypedModule.t; mutable generatedOcamlModules : Obj.t HxArray.t }
 
-let create = fun typed2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedModule"; macroMode = false; typed = Obj.magic (); generatedOcamlModules = Obj.magic () } : t) in (
-  ignore ((
-    ignore (let __assign_1 = typed2 in (
-      self.typed <- __assign_1;
+let create = fun typed2 macroMode2 generatedOcamlModules2 -> let self = ({ __hx_type = HxType.class_ "MacroExpandedModule"; macroMode = false; typed = Obj.magic (HxRuntime.hx_null); generatedOcamlModules = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
+    ignore (let __assign_1 = Obj.magic typed2 in (
+      (Obj.magic self : t).typed <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_2 = macroMode2 in (
-      self.macroMode <- __assign_2;
+      (Obj.magic self : t).macroMode <- __assign_2;
       __assign_2
     ));
-    let tempRight = ref (Obj.magic (HxRuntime.hx_null)) in (
-      ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = let __arr_4 = HxArray.create () in __arr_4 in (
+    let tempRight = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
+      ignore (if generatedOcamlModules2 == Obj.magic (HxRuntime.hx_null) then let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
         tempRight := __assign_3;
         __assign_3
-      ) else let __assign_5 = generatedOcamlModules2 in (
+      ) else let __assign_5 = Obj.magic generatedOcamlModules2 in (
         tempRight := __assign_5;
         __assign_5
       ));
-      let __assign_6 = !tempRight in (
-        self.generatedOcamlModules <- __assign_6;
+      let __assign_6 = Obj.magic (!tempRight) in (
+        (Obj.magic self : t).generatedOcamlModules <- __assign_6;
         __assign_6
       )
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedModule"; macroMode = false; typed = Obj.magic (); generatedOcamlModules = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "MacroExpandedModule"; macroMode = false; typed = Obj.magic (HxRuntime.hx_null); generatedOcamlModules = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getTyped = fun self () -> self.typed
+let getTyped = fun self () -> (Obj.magic self : t).typed
 
-let getGeneratedOcamlModules = fun self () -> self.generatedOcamlModules
+let getGeneratedOcamlModules = fun self () -> (Obj.magic self : t).generatedOcamlModules

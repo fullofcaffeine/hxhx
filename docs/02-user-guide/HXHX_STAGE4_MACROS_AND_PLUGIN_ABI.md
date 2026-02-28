@@ -1,5 +1,9 @@
 # HXHX Stage 4: Native Macro Execution + Plugin ABI (Design)
 
+> Scope note: Stage4 is the macro/plugin slice of the native pipeline.
+> The Stage3 typer component remains macro-execution-free by design.
+> See `docs/02-user-guide/concepts/native_mode_pipeline.md` for end-to-end flow.
+
 Stage 4 is when `hxhx` stops being “a compiler that can type code” and becomes a **compiler ecosystem**:
 
 - it **executes macros** (including build macros like `@:build`, CLI macros like `--macro`, and macro libraries)

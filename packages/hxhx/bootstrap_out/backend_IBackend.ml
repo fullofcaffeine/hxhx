@@ -3,3 +3,5 @@
 (* Haxe type: backend.IBackend *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t; id : Obj.t -> unit -> string; describe : Obj.t -> unit -> string; capabilities : Obj.t -> unit -> Obj.t; emit : Obj.t -> MacroExpandedProgram.t -> Backend_BackendContext.t -> Backend_EmitResult.t }

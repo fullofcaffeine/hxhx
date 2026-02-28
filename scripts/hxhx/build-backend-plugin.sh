@@ -6,7 +6,7 @@ ABI_FILE="$ROOT/packages/hxhx-core/src/backend/BackendAbi.hx"
 
 PLUGIN_ID=""
 PLUGIN_VERSION=""
-KIND="ocaml-cmxs"
+KIND="ocaml-dynlink"
 ENTRY=""
 OUT_DIR=""
 SOURCE_DIR=""
@@ -28,10 +28,10 @@ Required:
   --out-dir <dir>                Output directory for manifest/artifacts.
 
 Optional:
-  --kind <haxe-provider|ocaml-cmxs>   Manifest runtime kind (default: ocaml-cmxs).
+  --kind <haxe-provider|ocaml-dynlink> Manifest runtime kind (default: ocaml-dynlink).
   --entry <value>                Provider type path (haxe-provider) or output
-                                 artifact path relative to --out-dir (ocaml-cmxs).
-  --source-dir <dir>             OCaml plugin source directory (required for ocaml-cmxs).
+                                 artifact path relative to --out-dir (ocaml-dynlink).
+  --source-dir <dir>             OCaml plugin source directory (required for ocaml-dynlink).
   --dune-target <file.cmxs>      Dune build target inside --source-dir.
                                  Default: basename of --entry, else backend_plugin.cmxs.
   --manifest-name <file.json>    Manifest filename (default: backend-plugin.json).
@@ -42,7 +42,7 @@ Examples:
   bash scripts/hxhx/build-backend-plugin.sh \
     --plugin-id demo.native \
     --plugin-version 0.1.0 \
-    --kind ocaml-cmxs \
+    --kind ocaml-dynlink \
     --source-dir test/fixtures/native_backend_plugin \
     --dune-target hxhx_backend_plugin_fixture.cmxs \
     --entry plugins/hxhx_backend_plugin_fixture.cmxs \
@@ -180,11 +180,16 @@ done
 [ -f "$ABI_FILE" ] || fail "missing ABI constants file: $ABI_FILE"
 
 case "$KIND" in
-  haxe-provider|ocaml-cmxs) ;;
+  haxe-provider|ocaml-dynlink|ocaml-cmxs) ;;
   *)
-    fail "--kind must be one of: haxe-provider, ocaml-cmxs"
+    fail "--kind must be one of: haxe-provider, ocaml-dynlink"
     ;;
 esac
+
+if [ "$KIND" = "ocaml-cmxs" ]; then
+  echo "build-backend-plugin: warning: --kind ocaml-cmxs is deprecated; use ocaml-dynlink." >&2
+  KIND="ocaml-dynlink"
+fi
 
 safe_token_or_fail "$PLUGIN_ID" "plugin id"
 safe_token_or_fail "$PLUGIN_VERSION" "plugin version"
@@ -205,10 +210,10 @@ if [ "$KIND" = "haxe-provider" ]; then
   [ -n "$manifest_entry" ] || fail "--entry is required for --kind haxe-provider"
   safe_token_or_fail "$manifest_entry" "haxe-provider entry"
 else
-  [ -n "$SOURCE_DIR" ] || fail "--source-dir is required for --kind ocaml-cmxs"
+  [ -n "$SOURCE_DIR" ] || fail "--source-dir is required for --kind ocaml-dynlink"
   [ -d "$SOURCE_DIR" ] || fail "source directory not found: $SOURCE_DIR"
-  command -v dune >/dev/null 2>&1 || fail "dune is required for --kind ocaml-cmxs"
-  command -v ocamlopt >/dev/null 2>&1 || fail "ocamlopt is required for --kind ocaml-cmxs"
+  command -v dune >/dev/null 2>&1 || fail "dune is required for --kind ocaml-dynlink"
+  command -v ocamlopt >/dev/null 2>&1 || fail "ocamlopt is required for --kind ocaml-dynlink"
 
   if [ -z "$DUNE_TARGET" ]; then
     if [ -n "$manifest_entry" ]; then
@@ -235,7 +240,7 @@ else
     manifest_entry="$DUNE_TARGET"
   fi
   if [[ ! "$manifest_entry" =~ \.(cmxs|cma)$ ]]; then
-    fail "--entry must end with .cmxs or .cma for --kind ocaml-cmxs"
+    fail "--entry must end with .cmxs or .cma for --kind ocaml-dynlink"
   fi
 
   artifact_output="$OUT_DIR/$manifest_entry"

@@ -3,3 +3,5 @@
 (* Haxe type: backend.ITargetCore *)
 
 let __reflaxe_ocaml__ = ()
+
+type t = { __hx_type : Obj.t; coreId : Obj.t -> unit -> string; emit : Obj.t -> MacroExpandedProgram.t -> Backend_BackendContext.t -> Backend_EmitResult.t }

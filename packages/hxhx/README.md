@@ -111,44 +111,44 @@ List available presets:
 
 Current presets:
 
-- `--target ocaml`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
-  - `--target ocaml-stage3`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+- `--target ocaml-compat`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
+- `--target ocaml`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
   - OCaml profile contract:
     - `-D ocaml_profile=portable` (default)
     - `-D ocaml_profile=metal` (runtime-layered mode; links only required runtime modules and runs a fail-fast metal verifier before emit)
     - migration/error code map: `docs/02-user-guide/OCAML_PROFILE_CONTRACT.md` (see “Metal verifier code map”)
     - runtime module matrix: `docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md`
     - any other value fails fast
-- `--target js`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
-- `--target js-native`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
+- `--target js-compat`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
+- `--target js`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
   - canonical scoped support matrix (in-scope + out-of-scope semantics): `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
 - Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
 
 Delegation guard:
 
 - Set `HXHX_FORBID_STAGE0=1` to fail any invocation path that would delegate to stage0 `haxe`.
-- Linked Stage3 builtins (`ocaml-stage3`, `js-native`) remain allowed under this guard.
+- Linked Stage3 builtins (`ocaml`, `js`) remain allowed under this guard.
 
 Examples:
 
 ```bash
 # Stage0 delegation path
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml -- compile.hxml
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-compat -- compile.hxml
 
 # Linked Stage3 fast-path (no emit build)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main
 
 # Linked Stage3 fast-path with explicit OCaml profile
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-stage3 --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
+"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
 
 # Stage0 JS preset
-"$(bash scripts/hxhx/build-hxhx.sh)" --target js -- -cp src -main Main
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js-compat -- -cp src -main Main
 
 # Linked Stage3 JS preset (no-emit diagnostics)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target js-native --hxhx-no-emit -cp src -main Main
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js --hxhx-no-emit -cp src -main Main
 
 # Linked Stage3 JS preset (MVP emit + run)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target js-native --js out/main.js -cp src -main Main
+"$(bash scripts/hxhx/build-hxhx.sh)" --target js --js out/main.js -cp src -main Main
 ```
 
 ## Strict CLI compatibility mode
@@ -177,11 +177,11 @@ This now reports:
 
 - stage0 `haxe` baseline
 - stage1 shim delegation baseline
-- builtin `--target ocaml-stage3` fast-path baseline
-- builtin `--target js-native` emit baseline (`--hxhx-no-run` to isolate emitter/startup cost)
+- builtin `--target ocaml` fast-path baseline
+- builtin `--target js` emit baseline (`--hxhx-no-run` to isolate emitter/startup cost)
 
-If the selected `hxhx` binary does not expose `js-native`, the harness reports that row as skipped.
-Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and include the js-native row.
+If the selected `hxhx` binary does not expose native `--target js`, the harness reports that row as skipped.
+Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and include the native JS row.
 
 Benchmark bootstrap regeneration scenarios (cold/warm/skip):
 

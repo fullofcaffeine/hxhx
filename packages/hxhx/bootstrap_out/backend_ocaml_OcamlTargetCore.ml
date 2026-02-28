@@ -4,11 +4,11 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; coreId : Obj.t -> unit -> string; emit : Obj.t -> Obj.t -> Backend_BackendContext.t -> Backend_EmitResult.t }
+type t = { __hx_type : Obj.t; coreId : Obj.t -> unit -> string; emit : Obj.t -> MacroExpandedProgram.t -> Backend_BackendContext.t -> Backend_EmitResult.t }
 
 let __ctor = fun (self : t) () -> ignore ((
   ignore self;
-  ()
+  ignore ()
 ))
 
 let coreId__impl = fun (self : t) () -> (
@@ -16,34 +16,35 @@ let coreId__impl = fun (self : t) () -> (
   "reflaxe.ocaml.target-core"
 )
 
-let emit__impl = fun (self : t) (program : Obj.t) (context : Backend_BackendContext.t) -> (
+let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Backend_BackendContext.t) -> (
   ignore self;
-  let profile = Backend_BackendContext.ensureOcamlProfileDefine context () in (
-    ignore (if profile = "metal" then ignore (Backend_ocaml_MetalProfileVerifier.verifyProgram (Obj.obj program)) else ());
-    let entryPath = (EmitterStage.emitToDir (Obj.obj program) (context.outputDir : string) (context.emitFullBodies) (context.buildExecutable) profile : string) in let tempString = ref "" in (
-      ignore (if context.buildExecutable then let __assign_1 = ("entry_executable" : string) in (
+  let profile = (Backend_BackendContext.ensureOcamlProfileDefine (Obj.magic context) () : string) in (
+    ignore (if HxString.equals profile "metal" then ignore (Backend_ocaml_MetalProfileVerifier.verifyProgram (Obj.magic program)) else ());
+    let portableMetalizationPlan = Obj.magic (Backend_ocaml_PortableMetalizationPlanner.buildPlan (Obj.magic program) (profile : string)) in let entryPath = (EmitterStage.emitToDirWithPortableMetalizationPlan (Obj.magic program) ((Obj.magic context : Backend_BackendContext.t).outputDir : string) ((Obj.magic context : Backend_BackendContext.t).emitFullBodies) ((Obj.magic context : Backend_BackendContext.t).buildExecutable) (profile : string) (Obj.magic portableMetalizationPlan) : string) in let portableMetalizationReportPath = (Backend_ocaml_PortableMetalizationPlanner.writeReport ((Obj.magic context : Backend_BackendContext.t).outputDir : string) (Obj.magic portableMetalizationPlan) : string) in let tempString = ref ("" : string) in (
+      ignore (if (Obj.magic context : Backend_BackendContext.t).buildExecutable then let __assign_1 = ("entry_executable" : string) in (
         tempString := __assign_1;
         __assign_1
       ) else let __assign_2 = ("entry_planned_executable" : string) in (
         tempString := __assign_2;
         __assign_2
       ));
-      Backend_EmitResult.create (entryPath : string) (let __arr_3 = HxArray.create () in (
+      Backend_EmitResult.create (entryPath : string) (Obj.magic (let __arr_3 = HxArray.create () in (
         ignore (HxArray.push __arr_3 (Backend_EmitArtifact.create (!tempString : string) (entryPath : string)));
+        ignore (HxArray.push __arr_3 (Backend_EmitArtifact.create ("portable_metalization_report" : string) (portableMetalizationReportPath : string)));
         __arr_3
-      )) (context.buildExecutable)
+      ))) ((Obj.magic context : Backend_BackendContext.t).buildExecutable)
     )
   )
 )
 
-let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> coreId__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1) } : t) in (
+let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t) in (
   ignore ((
     ignore self;
-    ()
+    ignore ()
   ));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> coreId__impl (Obj.magic o) ()); emit = (fun o a0 a1 -> emit__impl (Obj.magic o) a0 a1) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.ocaml.OcamlTargetCore"; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
 
-let emitBridge = fun core program context -> core.emit (Obj.magic core) program context
+let emitBridge = fun core program context -> (Obj.magic core : t).emit (Obj.magic core) (Obj.magic program) (Obj.magic context)

@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "backend.js.JsNam
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.js.JsNameMangler" } : t)
 
-let isReserved = fun name -> let tempResult = ref false in (
+let isReserved = fun name -> let tempResult = ref (false : bool) in (
   ignore (match name with
     | "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger" | "default" | "delete" | "do" | "else" | "enum" | "export" | "extends" | "false" | "finally" | "for" | "function" | "if" | "implements" | "import" | "in" | "instanceof" | "interface" | "let" | "new" | "null" | "package" | "private" | "protected" | "public" | "return" | "static" | "super" | "switch" | "this" | "throw" | "true" | "try" | "typeof" | "var" | "void" | "while" | "with" | "yield" -> let __assign_2 = true in (
       tempResult := __assign_2;
@@ -26,7 +26,7 @@ let isReserved = fun name -> let tempResult = ref false in (
   !tempResult
 )
 
-let identifier = fun raw -> let tempString = ref "" in (
+let identifier = fun raw -> let tempString = ref ("" : string) in (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_3 = ("" : string) in (
     tempString := __assign_3;
     __assign_3
@@ -34,11 +34,11 @@ let identifier = fun raw -> let tempString = ref "" in (
     tempString := __assign_4;
     __assign_4
   ));
-  let out = StringBuf.create () in let _g = ref 0 in let _g1 = HxString.length (!tempString) in (
+  let out = Obj.magic (StringBuf.create ()) in let _g = ref 0 in let _g1 = HxString.length (!tempString) in (
     ignore (while !_g < _g1 do ignore (let i = let __old_5 = !_g in let __new_6 = HxInt.add __old_5 1 in (
       ignore (_g := __new_6);
       __old_5
-    ) in let c = HxString.charCodeAt (!tempString) i in let isAlpha = (let __nullable_7 = c in let __nullable_8 = 97 in if __nullable_7 == HxRuntime.hx_null then false else Obj.obj __nullable_7 >= __nullable_8) && (let __nullable_9 = c in let __nullable_10 = 122 in if __nullable_9 == HxRuntime.hx_null then false else Obj.obj __nullable_9 <= __nullable_10) || (let __nullable_11 = c in let __nullable_12 = 65 in if __nullable_11 == HxRuntime.hx_null then false else Obj.obj __nullable_11 >= __nullable_12) && (let __nullable_13 = c in let __nullable_14 = 90 in if __nullable_13 == HxRuntime.hx_null then false else Obj.obj __nullable_13 <= __nullable_14) in let isNum = (let __nullable_15 = c in let __nullable_16 = 48 in if __nullable_15 == HxRuntime.hx_null then false else Obj.obj __nullable_15 >= __nullable_16) && (let __nullable_17 = c in let __nullable_18 = 57 in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 <= __nullable_18) in let tempString1 = ref "" in (
+    ) in let c = HxString.charCodeAt (!tempString) i in let isAlpha = (let __nullable_7 = c in let __nullable_8 = 97 in if __nullable_7 == HxRuntime.hx_null then false else Obj.obj __nullable_7 >= __nullable_8) && (let __nullable_9 = c in let __nullable_10 = 122 in if __nullable_9 == HxRuntime.hx_null then false else Obj.obj __nullable_9 <= __nullable_10) || (let __nullable_11 = c in let __nullable_12 = 65 in if __nullable_11 == HxRuntime.hx_null then false else Obj.obj __nullable_11 >= __nullable_12) && (let __nullable_13 = c in let __nullable_14 = 90 in if __nullable_13 == HxRuntime.hx_null then false else Obj.obj __nullable_13 <= __nullable_14) in let isNum = (let __nullable_15 = c in let __nullable_16 = 48 in if __nullable_15 == HxRuntime.hx_null then false else Obj.obj __nullable_15 >= __nullable_16) && (let __nullable_17 = c in let __nullable_18 = 57 in if __nullable_17 == HxRuntime.hx_null then false else Obj.obj __nullable_17 <= __nullable_18) in let tempString1 = ref ("" : string) in (
       ignore (if isAlpha || isNum || (let __nullable_19 = c in if __nullable_19 == HxRuntime.hx_null then false else Obj.obj __nullable_19 = 95) then let __assign_20 = (HxString.fromCharCode (let __nullable_int_21 = c in if __nullable_int_21 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_21) : string) in (
         tempString1 := __assign_20;
         __assign_20
@@ -47,11 +47,11 @@ let identifier = fun raw -> let tempString = ref "" in (
         __assign_22
       ));
       let ch = (!tempString1 : string) in (
-        ignore (if i = 0 && isNum then ignore (StringBuf.add out (Obj.repr "_")) else ());
-        StringBuf.add out (Obj.repr ch)
+        ignore (if i = 0 && isNum then ignore (StringBuf.add (Obj.magic out) (Obj.repr "_")) else ());
+        StringBuf.add (Obj.magic out) (Obj.repr ch)
       )
     )) done);
-    let r = ref (StringBuf.toString out () : string) in (
+    let r = ref (StringBuf.toString (Obj.magic out) () : string) in (
       ignore (if HxString.length (!r) = 0 then ignore (let __assign_23 = ("_" : string) in (
         r := __assign_23;
         __assign_23
@@ -64,7 +64,7 @@ let identifier = fun raw -> let tempString = ref "" in (
 
 let classVarName = fun fullName -> "__hx_cls_" ^ HxString.toStdString (identifier (fullName : string))
 
-let quoteString = fun raw -> let tempString = ref "" in (
+let quoteString = fun raw -> let tempString = ref ("" : string) in (
   ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_24 = ("" : string) in (
     tempString := __assign_24;
     __assign_24
@@ -72,28 +72,28 @@ let quoteString = fun raw -> let tempString = ref "" in (
     tempString := __assign_25;
     __assign_25
   ));
-  let out = StringBuf.create () in (
-    ignore (StringBuf.add out (Obj.repr "\""));
+  let out = Obj.magic (StringBuf.create ()) in (
+    ignore (StringBuf.add (Obj.magic out) (Obj.repr "\""));
     let _g = ref 0 in let _g1 = HxString.length (!tempString) in (
       ignore (while !_g < _g1 do ignore (let i = let __old_26 = !_g in let __new_27 = HxInt.add __old_26 1 in (
         ignore (_g := __new_27);
         __old_26
-      ) in let code = HxString.charCodeAt (!tempString) i in if code == HxRuntime.hx_null then ignore (if (let __nullable_28 = code in let __nullable_29 = 32 in if __nullable_28 == HxRuntime.hx_null then false else Obj.obj __nullable_28 < __nullable_29) || (let __nullable_30 = code in let __nullable_31 = 126 in if __nullable_30 == HxRuntime.hx_null then false else Obj.obj __nullable_30 > __nullable_31) then ignore (StringBuf.add out (Obj.repr ("\\u" ^ HxString.toStdString (StringTools.hex (let __nullable_int_32 = code in if __nullable_int_32 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_32) (Obj.repr 4))))) else ignore (StringBuf.addChar out (let __nullable_int_33 = code in if __nullable_int_33 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_33))) else ignore (let __switch_40 = code in if __switch_40 == HxRuntime.hx_null then ignore (if (let __nullable_34 = code in let __nullable_35 = 32 in if __nullable_34 == HxRuntime.hx_null then false else Obj.obj __nullable_34 < __nullable_35) || (let __nullable_36 = code in let __nullable_37 = 126 in if __nullable_36 == HxRuntime.hx_null then false else Obj.obj __nullable_36 > __nullable_37) then ignore (StringBuf.add out (Obj.repr ("\\u" ^ HxString.toStdString (StringTools.hex (let __nullable_int_38 = code in if __nullable_int_38 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_38) (Obj.repr 4))))) else ignore (StringBuf.addChar out (let __nullable_int_39 = code in if __nullable_int_39 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_39))) else match Obj.obj __switch_40 with
-        | 8 -> ignore (StringBuf.add out (Obj.repr "\\b"))
-        | 9 -> ignore (StringBuf.add out (Obj.repr "\\t"))
-        | 10 -> ignore (StringBuf.add out (Obj.repr "\\n"))
-        | 12 -> ignore (StringBuf.add out (Obj.repr "\\f"))
-        | 13 -> ignore (StringBuf.add out (Obj.repr "\\r"))
-        | 34 -> ignore (StringBuf.add out (Obj.repr "\\\""))
-        | 92 -> ignore (StringBuf.add out (Obj.repr "\\\\"))
-        | _ -> ignore (if (let __nullable_34 = code in let __nullable_35 = 32 in if __nullable_34 == HxRuntime.hx_null then false else Obj.obj __nullable_34 < __nullable_35) || (let __nullable_36 = code in let __nullable_37 = 126 in if __nullable_36 == HxRuntime.hx_null then false else Obj.obj __nullable_36 > __nullable_37) then ignore (StringBuf.add out (Obj.repr ("\\u" ^ HxString.toStdString (StringTools.hex (let __nullable_int_38 = code in if __nullable_int_38 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_38) (Obj.repr 4))))) else ignore (StringBuf.addChar out (let __nullable_int_39 = code in if __nullable_int_39 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_39))))) done);
-      ignore (StringBuf.add out (Obj.repr "\""));
-      StringBuf.toString out ()
+      ) in let code = HxString.charCodeAt (!tempString) i in if code == HxRuntime.hx_null then ignore (if (let __nullable_28 = code in let __nullable_29 = 32 in if __nullable_28 == HxRuntime.hx_null then false else Obj.obj __nullable_28 < __nullable_29) || (let __nullable_30 = code in let __nullable_31 = 126 in if __nullable_30 == HxRuntime.hx_null then false else Obj.obj __nullable_30 > __nullable_31) then ignore (StringBuf.add (Obj.magic out) (Obj.repr ("\\u" ^ HxString.toStdString (StringTools.hex (let __nullable_int_32 = code in if __nullable_int_32 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_32) (Obj.repr 4))))) else ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_33 = code in if __nullable_int_33 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_33))) else ignore (let __switch_40 = code in if __switch_40 == HxRuntime.hx_null then ignore (if (let __nullable_34 = code in let __nullable_35 = 32 in if __nullable_34 == HxRuntime.hx_null then false else Obj.obj __nullable_34 < __nullable_35) || (let __nullable_36 = code in let __nullable_37 = 126 in if __nullable_36 == HxRuntime.hx_null then false else Obj.obj __nullable_36 > __nullable_37) then ignore (StringBuf.add (Obj.magic out) (Obj.repr ("\\u" ^ HxString.toStdString (StringTools.hex (let __nullable_int_38 = code in if __nullable_int_38 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_38) (Obj.repr 4))))) else ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_39 = code in if __nullable_int_39 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_39))) else match Obj.obj __switch_40 with
+        | 8 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\b"))
+        | 9 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\t"))
+        | 10 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\n"))
+        | 12 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\f"))
+        | 13 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\r"))
+        | 34 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\\""))
+        | 92 -> ignore (StringBuf.add (Obj.magic out) (Obj.repr "\\\\"))
+        | _ -> ignore (if (let __nullable_34 = code in let __nullable_35 = 32 in if __nullable_34 == HxRuntime.hx_null then false else Obj.obj __nullable_34 < __nullable_35) || (let __nullable_36 = code in let __nullable_37 = 126 in if __nullable_36 == HxRuntime.hx_null then false else Obj.obj __nullable_36 > __nullable_37) then ignore (StringBuf.add (Obj.magic out) (Obj.repr ("\\u" ^ HxString.toStdString (StringTools.hex (let __nullable_int_38 = code in if __nullable_int_38 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_38) (Obj.repr 4))))) else ignore (StringBuf.addChar (Obj.magic out) (let __nullable_int_39 = code in if __nullable_int_39 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_39))))) done);
+      ignore (StringBuf.add (Obj.magic out) (Obj.repr "\""));
+      StringBuf.toString (Obj.magic out) ()
     )
   )
 )
 
-let propertySuffix = fun name -> let id = (identifier (name : string) : string) in let tempResult = ref "" in (
+let propertySuffix = fun name -> let id = (identifier (name : string) : string) in let tempResult = ref ("" : string) in (
   ignore (if HxString.equals id name then let __assign_41 = ("." ^ HxString.toStdString id : string) in (
     tempResult := __assign_41;
     __assign_41

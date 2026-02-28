@@ -6,28 +6,28 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable packagePath : string; mutable imports : string HxArray.t; mutable mainClass : TyClassEnv.t }
 
-let create = fun packagePath2 imports2 mainClass2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic () } : t) in (
-  ignore ((
+let create = fun packagePath2 imports2 mainClass2 -> let self = ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = (packagePath2 : string) in (
-      self.packagePath <- __assign_1;
+      (Obj.magic self : t).packagePath <- __assign_1;
       __assign_1
     ));
-    ignore (let __assign_2 = imports2 in (
-      self.imports <- __assign_2;
+    ignore (let __assign_2 = Obj.magic imports2 in (
+      (Obj.magic self : t).imports <- __assign_2;
       __assign_2
     ));
-    let __assign_3 = mainClass2 in (
-      self.mainClass <- __assign_3;
+    let __assign_3 = Obj.magic mainClass2 in (
+      (Obj.magic self : t).mainClass <- __assign_3;
       __assign_3
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; imports = Obj.magic (); mainClass = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "TyModuleEnv"; packagePath = ""; imports = Obj.magic (HxRuntime.hx_null); mainClass = Obj.magic (HxRuntime.hx_null) } : t)
 
-let getPackagePath = fun self () -> self.packagePath
+let getPackagePath = fun self () -> (Obj.magic self : t).packagePath
 
-let getImports = fun self () -> self.imports
+let getImports = fun self () -> (Obj.magic self : t).imports
 
-let getMainClass = fun self () -> self.mainClass
+let getMainClass = fun self () -> (Obj.magic self : t).mainClass

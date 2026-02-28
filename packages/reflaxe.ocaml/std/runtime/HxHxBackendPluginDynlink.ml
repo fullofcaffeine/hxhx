@@ -1,7 +1,7 @@
 (* HXHX Stage3 native backend plugin Dynlink bridge.
 
    Why
-   - Stage3 plugin manifests may declare `backend.kind = "ocaml-cmxs"`.
+   - Stage3 plugin manifests may declare `backend.kind = "ocaml-dynlink"`.
    - Loading this kind is an OCaml runtime responsibility (`Dynlink.loadfile`) and must
      remain isolated behind one explicit boundary module.
 

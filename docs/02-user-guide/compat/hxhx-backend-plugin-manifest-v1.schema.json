@@ -37,6 +37,7 @@
           "type": "string",
           "enum": [
             "haxe-provider",
+            "ocaml-dynlink",
             "ocaml-cmxs"
           ]
         },

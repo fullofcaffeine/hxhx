@@ -1,11 +1,12 @@
 package hxhx;
 
+import backend.BackendAbi;
 import backend.BackendRegistrationSpec;
 import backend.plugin.BackendPluginManifest;
 import backend.plugin.BackendPluginManifestKind;
 
 /**
-	Typed native plugin load adapter (`ocaml-cmxs` manifest kind).
+	Typed native plugin load adapter (`ocaml-dynlink` manifest kind).
 
 	Why
 	- `BackendPluginManifestResolver` needs one place to activate native plugin manifests
@@ -14,6 +15,8 @@ import backend.plugin.BackendPluginManifestKind;
 	  load and before registry registration.
 
 	How
+	- Preflight manifest requirements (`abiVersion`, `genIrVersion`, `macroApiVersion`)
+	  before runtime load.
 	- Call the OCaml Dynlink runtime bridge to load plugin + capture registration snapshot.
 	- Decode provider types via `NativeBackendPluginHostAbi`.
 	- Resolve provider registration specs and fail fast on conflicts (`implId`, target ID).
@@ -42,8 +45,15 @@ class NativeBackendPluginLoader {
 	public static function providerTypeNamesForNativeManifest(manifest:BackendPluginManifest, manifestPath:String):Array<String> {
 		if (manifest == null || manifest.backend == null)
 			fail(manifestPath, "manifest backend section is required");
-		if (manifest.backend.kind != BackendPluginManifestKind.OcamlCmxs)
-			fail(manifestPath, "native loader expects backend.kind=ocaml-cmxs");
+		if (manifest.backend.kind != BackendPluginManifestKind.OcamlDynlink)
+			fail(manifestPath, "native loader expects backend.kind=ocaml-dynlink");
+		if (manifest.requires == null)
+			fail(manifestPath, "requires section is required");
+
+		final requiresError = BackendAbi.validateManifestRequires(manifest.pluginId, manifest.requires.abiVersion, manifest.requires.genIrVersion,
+			manifest.requires.macroApiVersion);
+		if (requiresError != null)
+			fail(manifestPath, requiresError);
 
 		final snapshot = try {
 			NativeBackendPluginDynlink.loadAndCapture(manifestPath, manifest.backend.entry, manifest.pluginId);

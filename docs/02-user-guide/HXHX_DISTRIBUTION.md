@@ -12,8 +12,8 @@ Gate 4 exists so we can build and ship the `hxhx` binary with a predictable layo
 ## Quick glossary (beginner-friendly)
 
 - **stage0 `haxe`**: your already-installed upstream Haxe compiler binary.
-- **`hxhx --target ocaml`**: compatibility-friendly preset path. It wires OCaml target flags and follows the delegated workflow.
-- **`hxhx --target ocaml-stage3`**: linked Stage3 backend path. This is the native/non-delegating direction of travel.
+- **`hxhx --target ocaml-compat`**: compatibility-friendly preset path. It wires OCaml target flags and follows the delegated workflow.
+- **`hxhx --target ocaml`**: linked Stage3 backend path. This is the native/non-delegating direction of travel.
 
 ## Version reporting (current behavior)
 
@@ -117,11 +117,11 @@ This reports:
 
 - `haxe --version` vs `hxhx --version`
 - `haxe --no-output` compile vs `hxhx --no-output` compile
-- linked Stage3 OCaml fast-path: `--target ocaml-stage3 --hxhx-no-emit`
-- linked Stage3 JS emit throughput row: `--target js-native --hxhx-no-run --js ...`
+- linked Stage3 OCaml fast-path: `--target ocaml --hxhx-no-emit`
+- linked Stage3 JS emit throughput row: `--target js --hxhx-no-run --js ...`
 
-If the selected `hxhx` binary does not expose `js-native`, the harness reports that row as `skipped`.
-Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild (`HXHX_FORCE_STAGE0=1`) and measure the js-native row.
+If the selected `hxhx` binary does not expose native `--target js`, the harness reports that row as `skipped`.
+Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild (`HXHX_FORCE_STAGE0=1`) and measure that native JS row.
 
 As `hxhx` becomes a real compiler (stops delegating), this benchmark suite should be expanded and the acceptance gates should include real-world workloads (upstream `tests/runci`, macro-heavy projects, and curated external repos).
 
@@ -141,8 +141,8 @@ KPI threshold policy lives in: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md:1`.
 Use this when you want a direct, plain-English comparison of:
 
 1. eval/interp baseline (`haxe --interp`)
-2. `hxhx --target ocaml`
-3. `hxhx --target ocaml-stage3`
+2. `hxhx --target ocaml-compat`
+3. `hxhx --target ocaml`
 
 Command:
 

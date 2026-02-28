@@ -15,4 +15,6 @@ let __empty = fun () -> ({ __hx_type = HxType.class_ "backend.GenIrBoundary" } :
 
 let asBackendProgram = fun program -> program
 
-let requireProgram = fun program -> Obj.obj program
+let fromDynamic = fun program -> Obj.obj program
+
+let requireProgram = fun program -> program
