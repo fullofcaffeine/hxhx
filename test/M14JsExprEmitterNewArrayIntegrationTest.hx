@@ -23,6 +23,9 @@ class M14JsExprEmitterNewArrayIntegrationTest {
 		final sizedArray = HxParser.parseExprText("new Array<Int>(3)");
 		assertEquals(JsExprEmitter.emit(sizedArray, exprScope), "new Array(3)", "new Array(size) lowers to constructor call");
 
+		final bytesCtor = HxParser.parseExprText("new Bytes(3, null)");
+		assertEquals(JsExprEmitter.emit(bytesCtor, exprScope), "new Bytes(3, null)", "new Bytes(length,data) lowers to constructor call");
+
 		var unsupportedError = "";
 		try {
 			final unsupportedCtor = HxParser.parseExprText("new MissingType()");

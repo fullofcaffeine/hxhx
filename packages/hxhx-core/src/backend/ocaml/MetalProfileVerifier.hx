@@ -135,10 +135,10 @@ class MetalProfileVerifier {
 			case SDoWhile(body, cond, pos):
 				verifyStmt(filePath, className, fnName, body, violations);
 				verifyExpr(filePath, className, fnName, pos, cond, violations);
-			case SSwitch(scrutinee, cases, pos):
+			case SSwitch(scrutinee, _patterns, bodies, pos):
 				verifyExpr(filePath, className, fnName, pos, scrutinee, violations);
-				for (c in cases)
-					verifyStmt(filePath, className, fnName, c.body, violations);
+				for (body in bodies)
+					verifyStmt(filePath, className, fnName, body, violations);
 			case STry(tryBody, catches, _):
 				verifyStmt(filePath, className, fnName, tryBody, violations);
 				for (c in catches) {
@@ -218,10 +218,10 @@ class MetalProfileVerifier {
 				verifyExpr(filePath, className, fnName, stmtPos, inner, violations);
 			case ELambda(_, body):
 				verifyExpr(filePath, className, fnName, stmtPos, body, violations);
-			case ESwitch(scrutinee, cases):
+			case ESwitch(scrutinee, _patterns, exprs):
 				verifyExpr(filePath, className, fnName, stmtPos, scrutinee, violations);
-				for (c in cases)
-					verifyExpr(filePath, className, fnName, stmtPos, c.expr, violations);
+				for (branchExpr in exprs)
+					verifyExpr(filePath, className, fnName, stmtPos, branchExpr, violations);
 			case ENew(_, args):
 				for (arg in args)
 					verifyExpr(filePath, className, fnName, stmtPos, arg, violations);

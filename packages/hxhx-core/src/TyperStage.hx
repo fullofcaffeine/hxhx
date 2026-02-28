@@ -190,18 +190,21 @@ class TyperStage {
 				case SBlock(stmts, _pos):
 					for (ss in stmts)
 						typeStmt(ss);
-				case SSwitch(scrutinee, cases, pos):
+				case SSwitch(scrutinee, patterns, bodies, pos):
 					// Bring-up: type-check the scrutinee, then each case body.
 					// Binder patterns declare a best-effort local for the body.
 					final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
-					if (cases != null) {
-						for (c in cases) {
-							switch (c.pattern) {
+					if (patterns != null && bodies != null) {
+						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
+						for (i in 0...count) {
+							final pattern = patterns[i];
+							final body = bodies[i];
+							switch (pattern) {
 								case PBind(name):
 									scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
 								case _:
 							}
-							typeStmt(c.body);
+							typeStmt(body);
 						}
 					}
 				case SIf(cond, thenBranch, elseBranch, pos):
@@ -590,22 +593,25 @@ class TyperStage {
 				// can proceed deterministically through upstream-shaped code (notably runci).
 				// Correct semantics (pattern matching + guards + value typing) are Stage 4+ work.
 				TyType.fromHintText("Dynamic");
-			case ESwitch(scrutinee, cases):
+			case ESwitch(scrutinee, patterns, exprs):
 				// Bring-up: type the scrutinee and unify case-expression types best-effort.
 				// This is intentionally permissive; if unification fails we widen to Dynamic.
 				final scrutTy = inferExprType(scrutinee, scope, ctx, pos);
 				var out:TyType = TyType.unknown();
-				if (cases != null) {
-					for (c in cases) {
+				if (patterns != null && exprs != null) {
+					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
+					for (i in 0...count) {
+						final pattern = patterns[i];
+						final branchExpr = exprs[i];
 						var branchTy:TyType = TyType.unknown();
-						switch (c.pattern) {
+						switch (pattern) {
 							case PBind(name):
 								// Bring-up: we do not model nested scopes yet; declare the binder as
 								// a best-effort local so the case body can type its references.
 								scope.declareLocal(name, scrutTy.isUnknown() ? TyType.fromHintText("Dynamic") : scrutTy);
-								branchTy = inferExprType(c.expr, scope, ctx, pos);
+								branchTy = inferExprType(branchExpr, scope, ctx, pos);
 							case _:
-								branchTy = inferExprType(c.expr, scope, ctx, pos);
+								branchTy = inferExprType(branchExpr, scope, ctx, pos);
 						}
 
 						if (out.isUnknown())

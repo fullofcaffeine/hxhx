@@ -1318,11 +1318,12 @@ class HxParser {
 		// `{ <cases> }`
 		if (!cur.kind.match(TLBrace)) {
 			// Nothing more to consume deterministically.
-			return ESwitch(scrutinee, []);
+			return ESwitch(scrutinee, [], []);
 		}
 		bump(); // '{'
 
-		final cases = new Array<{pattern:HxSwitchPattern, expr:HxExpr}>();
+		final patterns = new Array<HxSwitchPattern>();
+		final exprs = new Array<HxExpr>();
 		while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !stop()) {
 			final pat:HxSwitchPattern = if (acceptKeyword(KCase)) {
 				parseSwitchPattern();
@@ -1340,12 +1341,13 @@ class HxParser {
 				|| cur.kind.match(TKeyword(KDefault)));
 			if (cur.kind.match(TSemicolon))
 				bump();
-			cases.push({pattern: pat, expr: expr});
+			patterns.push(pat);
+			exprs.push(expr);
 		}
 		if (cur.kind.match(TRBrace))
 			bump();
 
-		return ESwitch(scrutinee, cases);
+		return ESwitch(scrutinee, patterns, exprs);
 	}
 
 	function parseTryCatchExpr(stop:() -> Bool):HxExpr {
@@ -1671,10 +1673,11 @@ class HxParser {
 
 				if (!cur.kind.match(TLBrace)) {
 					syncToStmtEnd();
-					SSwitch(scrutinee, [], pos);
+					SSwitch(scrutinee, [], [], pos);
 				} else {
 					bump(); // '{'
-					final cases = new Array<{pattern:HxSwitchPattern, body:HxStmt}>();
+					final patterns = new Array<HxSwitchPattern>();
+					final bodies = new Array<HxStmt>();
 					while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 						final pat:HxSwitchPattern = if (acceptKeyword(KCase)) {
 							parseSwitchPattern();
@@ -1691,11 +1694,12 @@ class HxParser {
 							stmts.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase))
 								|| cur.kind.match(TKeyword(KDefault))));
 						}
-						cases.push({pattern: pat, body: SBlock(stmts, pos)});
+						patterns.push(pat);
+						bodies.push(SBlock(stmts, pos));
 					}
 					if (cur.kind.match(TRBrace))
 						bump();
-					SSwitch(scrutinee, cases, pos);
+					SSwitch(scrutinee, patterns, bodies, pos);
 				}
 			case TOther("@".code):
 				// Expression-level metadata: `@:meta expr`.

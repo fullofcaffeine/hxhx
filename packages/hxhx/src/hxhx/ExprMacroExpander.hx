@@ -194,17 +194,18 @@ class ExprMacroExpander {
 				s;
 			case SContinue(_):
 				s;
-			case SSwitch(scrutinee, cases, pos):
+			case SSwitch(scrutinee, patterns, bodies, pos):
 				final rScrutinee = rewriteExpr(scrutinee, session, allowed, allowKeys, importMap, modulePkg, trace, 0, onExpand);
 				var changed = rScrutinee != scrutinee;
-				final outCases = new Array<{pattern:HxSwitchPattern, body:HxStmt}>();
-				for (c in cases) {
-					final rBody = rewriteStmt(c.body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
-					if (rBody != c.body)
+				final outBodies = new Array<HxStmt>();
+				for (i in 0...bodies.length) {
+					final body = bodies[i];
+					final rBody = rewriteStmt(body, session, allowed, allowKeys, importMap, modulePkg, trace, onExpand);
+					if (rBody != body)
 						changed = true;
-					outCases.push({pattern: c.pattern, body: rBody});
+					outBodies.push(rBody);
 				}
-				changed ? SSwitch(rScrutinee, outCases, pos) : s;
+				changed ? SSwitch(rScrutinee, patterns.copy(), outBodies, pos) : s;
 			case SReturnVoid(_):
 				s;
 			case SReturn(e, pos):
@@ -345,7 +346,7 @@ class ExprMacroExpander {
 			case ELambda(_, _): "Lambda";
 			case ETryCatchRaw(_): "TryCatch";
 			case ESwitchRaw(_): "Switch";
-			case ESwitch(_, _): "Switch";
+			case ESwitch(_, _, _): "Switch";
 			case EIdent(_): "Ident";
 			case EThis: "This";
 			case ESuper: "Super";

@@ -125,16 +125,15 @@ enum HxStmt {
 		  - truncates parsing due to unconsumed braces.
 
 		What
-		- A scrutinee expression and an ordered list of cases.
-		- Each case stores:
-		  - a small pattern (`HxSwitchPattern`)
-		  - a statement body (typically a block)
+		- A scrutinee expression plus two parallel ordered arrays:
+		  - `patterns`: case patterns (`HxSwitchPattern`)
+		  - `bodies`: case statement bodies (`HxStmt`, typically blocks)
 
 		How (bring-up semantics)
 		- This uses a restricted pattern subset (see `HxSwitchPattern`).
 		- Lowered by the bootstrap emitter to nested `if ... then ... else ...` chains.
 	**/
-	SSwitch(scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, body:HxStmt}>, pos:HxPos);
+	SSwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, pos:HxPos);
 
 	/**
 		Try/catch statement: `try stmt catch(name[:Type]) stmt ...`.

@@ -75,8 +75,8 @@ class JsExprEmitter {
 				emit(inner, scope);
 			case EUntyped(inner):
 				emit(inner, scope);
-			case ESwitch(scrutinee, cases):
-				emitSwitchExpr(scrutinee, cases, scope);
+			case ESwitch(scrutinee, patterns, exprs):
+				emitSwitchExpr(scrutinee, patterns, exprs, scope);
 			case ESwitchRaw(_):
 				unsupported("ESwitchRaw");
 			case ETryCatchRaw(_):
@@ -127,6 +127,9 @@ class JsExprEmitter {
 				if (args.length == 0)
 					return "[]";
 				return "new Array(" + argsJs + ")";
+			case "Bytes" | "haxe.io.Bytes":
+				final ctor = resolveIdent(typePath, scope);
+				return "new " + ctor + "(" + argsJs + ")";
 			case _:
 		}
 
@@ -215,14 +218,17 @@ class JsExprEmitter {
 		return out.join(" ");
 	}
 
-	static function emitSwitchExpr(scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, expr:HxExpr}>, scope:JsEmitScope):String {
+	static function emitSwitchExpr(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, scope:JsEmitScope):String {
 		final out = new Array<String>();
 		out.push("(function () {");
 		out.push("var __sw = " + emit(scrutinee, scope) + ";");
 
 		var isFirst = true;
-		for (c in cases) {
-			final lowered = JsSwitchPatternLowering.lower(c.pattern, "__sw");
+		final count = patterns.length < exprs.length ? patterns.length : exprs.length;
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			final branchExpr = exprs[i];
+			final lowered = JsSwitchPatternLowering.lower(pattern, "__sw");
 			final head = isFirst ? "if" : "else if";
 
 			var branchScope = scope;
@@ -235,7 +241,7 @@ class JsExprEmitter {
 				bindPrefix = "var " + bindSafe + " = __sw; ";
 			}
 
-			out.push(head + " (" + lowered.cond + ") { " + bindPrefix + "return " + emit(c.expr, branchScope) + "; }");
+			out.push(head + " (" + lowered.cond + ") { " + bindPrefix + "return " + emit(branchExpr, branchScope) + "; }");
 			isFirst = false;
 		}
 

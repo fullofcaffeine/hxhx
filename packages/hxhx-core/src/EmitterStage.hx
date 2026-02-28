@@ -2452,7 +2452,7 @@ class EmitterStage {
 				+ ") else ("
 				+ exprToOcaml(elseExpr, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 				+ "))";
-			case ESwitch(scrutinee, cases):
+			case ESwitch(scrutinee, patterns, exprs):
 				// Stage 3 bring-up: lower a small structured switch expression subset to nested `if`.
 				//
 				// We intentionally implement matching in terms of `Obj.repr` + `HxRuntime.dynamic_equals`
@@ -2482,16 +2482,19 @@ class EmitterStage {
 					};
 				}
 				var chain = backendDialect.dynamicNullValue();
-				if (cases != null) {
-					for (i in 0...cases.length) {
-						final c = cases[cases.length - 1 - i];
-						final localTy = switch (c.pattern) {
+				if (patterns != null && exprs != null) {
+					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
+					for (i in 0...count) {
+						final idx = count - 1 - i;
+						final pattern = patterns[idx];
+						final branchExpr = exprs[idx];
+						final localTy = switch (pattern) {
 							case PBind(name):
 								extendTyByIdent(tyByIdent, name, TyType.fromHintText("Dynamic"));
 							case _:
 								extendTyByIdentMany(tyByIdent, null, TyType.fromHintText("Dynamic"));
 						};
-						final body = exprToOcaml(c.expr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
+						final body = exprToOcaml(branchExpr, arityByIdent, localTy, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 							callSigByCallee);
 						// Switch expressions can legitimately unify unrelated branch types in Haxe
 						// (e.g. `case OpAdd: Int`, `case OpEq: Bool`), but OCaml requires a single
@@ -2499,13 +2502,13 @@ class EmitterStage {
 						//
 						// Bring-up strategy: cast each branch to `Obj.t` to keep emission resilient.
 						final bodyAsDynamic = "(Obj.magic (" + body + "))";
-						final thenExpr = switch (c.pattern) {
+						final thenExpr = switch (pattern) {
 							case PBind(name):
 								"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyAsDynamic + "))";
 							case _:
 								"(" + bodyAsDynamic + ")";
 						};
-						final cond = patternCond(c.pattern);
+						final cond = patternCond(pattern);
 						chain = "(if " + cond + " then " + thenExpr + " else (" + chain + "))";
 					}
 				}
@@ -2722,10 +2725,10 @@ class EmitterStage {
 					// segfault at runtime once forced into a concrete OCaml type (e.g. `print_endline`).
 					final parts = tryExtractTypePathPartsFromExpr(obj);
 					(parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) ? false : hasBringupPoison(obj);
-				case ESwitch(scrutinee, cases):
+				case ESwitch(scrutinee, _patterns, exprs):
 					if (hasBringupPoison(scrutinee)) {
 						true;
-					} else if (cases == null) {
+					} else if (exprs == null) {
 						false;
 					} else {
 						// Stage 3 bring-up: do not collapse an entire switch expression just because one
@@ -2742,8 +2745,8 @@ class EmitterStage {
 						// - Otherwise, allow emission and let unsupported cases degrade to `(Obj.magic 0)`
 						//   at their expression sites.
 						var allPoison = true;
-						for (c in cases) {
-							if (!hasBringupPoison(c.expr)) {
+						for (branchExpr in exprs) {
+							if (!hasBringupPoison(branchExpr)) {
 								allPoison = false;
 								break;
 							}
@@ -2876,11 +2879,11 @@ class EmitterStage {
 				collectAssignedNamesInExprRec(cond, out);
 				collectAssignedNamesInExprRec(thenExpr, out);
 				collectAssignedNamesInExprRec(elseExpr, out);
-			case ESwitch(scrutinee, cases):
+			case ESwitch(scrutinee, _patterns, exprs):
 				collectAssignedNamesInExprRec(scrutinee, out);
-				if (cases != null)
-					for (c in cases)
-						collectAssignedNamesInExprRec(c.expr, out);
+				if (exprs != null)
+					for (branchExpr in exprs)
+						collectAssignedNamesInExprRec(branchExpr, out);
 			case ECast(inner, _hint):
 				collectAssignedNamesInExprRec(inner, out);
 			case EUntyped(inner):
@@ -2924,11 +2927,11 @@ class EmitterStage {
 				if (catches != null)
 					for (c in catches)
 						collectAssignedNamesInStmtRec(c.body, out);
-			case SSwitch(scrutinee, cases, _pos):
+			case SSwitch(scrutinee, _patterns, bodies, _pos):
 				collectAssignedNamesInExprRec(scrutinee, out);
-				if (cases != null)
-					for (c in cases)
-						collectAssignedNamesInStmtRec(c.body, out);
+				if (bodies != null)
+					for (body in bodies)
+						collectAssignedNamesInStmtRec(body, out);
 			case SThrow(expr, _pos):
 				collectAssignedNamesInExprRec(expr, out);
 			case SReturn(expr, _pos):
@@ -2960,10 +2963,10 @@ class EmitterStage {
 				if (name != null && name.length > 0)
 					locals.set(name, true);
 				collectLocalsForPreludeFromStmtRec(body, locals);
-			case SSwitch(_, cases, _):
-				if (cases != null)
-					for (c in cases)
-						collectLocalsForPreludeFromStmtRec(c.body, locals);
+			case SSwitch(_, _patterns, bodies, _):
+				if (bodies != null)
+					for (body in bodies)
+						collectLocalsForPreludeFromStmtRec(body, locals);
 			case _:
 		}
 	}
@@ -3006,11 +3009,11 @@ class EmitterStage {
 				if (values != null)
 					for (v in values)
 						scanExprForPreludeDepsRec(v, locals, calls, idents);
-			case ESwitch(scrutinee, cases):
+			case ESwitch(scrutinee, _patterns, exprs):
 				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				if (cases != null)
-					for (c in cases)
-						scanExprForPreludeDepsRec(c.expr, locals, calls, idents);
+				if (exprs != null)
+					for (branchExpr in exprs)
+						scanExprForPreludeDepsRec(branchExpr, locals, calls, idents);
 			case ENew(_, args):
 				if (args != null)
 					for (a in args)
@@ -3070,11 +3073,11 @@ class EmitterStage {
 			case SForIn(_name, iterable, body, _):
 				scanExprForPreludeDepsRec(iterable, locals, calls, idents);
 				scanStmtForPreludeDepsRec(body, locals, calls, idents);
-			case SSwitch(scrutinee, cases, _):
+			case SSwitch(scrutinee, _patterns, bodies, _):
 				scanExprForPreludeDepsRec(scrutinee, locals, calls, idents);
-				if (cases != null)
-					for (c in cases)
-						scanStmtForPreludeDepsRec(c.body, locals, calls, idents);
+				if (bodies != null)
+					for (body in bodies)
+						scanStmtForPreludeDepsRec(body, locals, calls, idents);
 			case SReturn(expr, _):
 				scanExprForPreludeDepsRec(expr, locals, calls, idents);
 			case SExpr(expr, _):
@@ -3386,14 +3389,14 @@ class EmitterStage {
 					false;
 				case SDoWhile(_body, _cond, _):
 					false;
-				case SSwitch(_scrutinee, cases, _):
+				case SSwitch(_scrutinee, _patterns, bodies, _):
 					// Bring-up: treat switches as non-returning unless every case body returns.
-					if (cases == null || cases.length == 0) {
+					if (bodies == null || bodies.length == 0) {
 						false;
 					} else {
 						var all = true;
-						for (c in cases) {
-							if (!stmtAlwaysReturns(c.body)) {
+						for (body in bodies) {
+							if (!stmtAlwaysReturns(body)) {
 								all = false;
 								break;
 							}
@@ -3541,12 +3544,12 @@ class EmitterStage {
 						exprContainsIdent(inner, needle);
 					case EUntyped(inner):
 						exprContainsIdent(inner, needle);
-					case ESwitch(scrutinee, cases):
+					case ESwitch(scrutinee, _patterns, exprs):
 						if (exprContainsIdent(scrutinee, needle)) true; else {
 							var seen = false;
-							if (cases != null)
-								for (c in cases)
-									if (exprContainsIdent(c.expr, needle)) {
+							if (exprs != null)
+								for (branchExpr in exprs)
+									if (exprContainsIdent(branchExpr, needle)) {
 										seen = true;
 										break;
 									}
@@ -3598,12 +3601,12 @@ class EmitterStage {
 						exprHintsInt(inner, needle);
 					case EUntyped(inner):
 						exprHintsInt(inner, needle);
-					case ESwitch(scrutinee, cases):
+					case ESwitch(scrutinee, _patterns, exprs):
 						if (exprHintsInt(scrutinee, needle)) true; else {
 							var seen = false;
-							if (cases != null)
-								for (c in cases)
-									if (exprHintsInt(c.expr, needle)) {
+							if (exprs != null)
+								for (branchExpr in exprs)
+									if (exprHintsInt(branchExpr, needle)) {
 										seen = true;
 										break;
 									}
@@ -3637,13 +3640,13 @@ class EmitterStage {
 					bodyHintsIntLoopVar(body, loopVarName);
 				case SForIn(_name, _iterable, body, _):
 					bodyHintsIntLoopVar(body, loopVarName);
-				case SSwitch(_scrutinee, cases, _):
-					if (cases == null) {
+				case SSwitch(_scrutinee, _patterns, bodies, _):
+					if (bodies == null) {
 						false;
 					} else {
 						var seen = false;
-						for (c in cases)
-							if (bodyHintsIntLoopVar(c.body, loopVarName)) {
+						for (body in bodies)
+							if (bodyHintsIntLoopVar(body, loopVarName)) {
 								seen = true;
 								break;
 							}
@@ -3667,7 +3670,7 @@ class EmitterStage {
 					stmtToUnit(tryBody, tyCtxRaw);
 				case SThrow(_expr, _pos):
 					"()";
-				case SSwitch(scrutinee, cases, _pos):
+				case SSwitch(scrutinee, patterns, bodies, _pos):
 					final sw = exprToOcaml(scrutinee, arityByIdent, tyCtx, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee);
 					function patternCond(p:HxSwitchPattern):String {
 						return switch (p) {
@@ -3693,23 +3696,26 @@ class EmitterStage {
 						};
 					}
 					var chain = "()";
-					if (cases != null) {
-						for (i in 0...cases.length) {
-							final c = cases[cases.length - 1 - i];
-							final caseTy = switch (c.pattern) {
+					if (patterns != null && bodies != null) {
+						final count = patterns.length < bodies.length ? patterns.length : bodies.length;
+						for (i in 0...count) {
+							final idx = count - 1 - i;
+							final pattern = patterns[idx];
+							final body = bodies[idx];
+							final caseTy = switch (pattern) {
 								case PBind(name):
 									extendTyByIdentLocal(tyCtx, name, TyType.fromHintText("Dynamic"));
 								case _:
 									cloneTyCtxLocal(tyCtx);
 							};
-							final bodyUnit = stmtToUnit(c.body, cast caseTy);
-							final thenUnit = switch (c.pattern) {
+							final bodyUnit = stmtToUnit(body, cast caseTy);
+							final thenUnit = switch (pattern) {
 								case PBind(name):
 									"(let " + ocamlValueIdent(name) + " = __sw in (" + bodyUnit + "))";
 								case _:
 									"(" + bodyUnit + ")";
 							};
-							final cond = patternCond(c.pattern);
+							final cond = patternCond(pattern);
 							chain = "(if " + cond + " then " + thenUnit + " else (" + chain + "))";
 						}
 					}
@@ -5055,13 +5061,13 @@ class EmitterStage {
 									for (v in values)
 										if (v != null)
 											staticInitWorklist.push(v);
-							case ESwitch(scrutinee, cases):
+							case ESwitch(scrutinee, _patterns, exprs):
 								if (scrutinee != null)
 									staticInitWorklist.push(scrutinee);
-								if (cases != null)
-									for (c in cases)
-										if (c != null && c.expr != null)
-											staticInitWorklist.push(c.expr);
+								if (exprs != null)
+									for (branchExpr in exprs)
+										if (branchExpr != null)
+											staticInitWorklist.push(branchExpr);
 							case ENew(_, args):
 								if (args != null)
 									for (a in args)
@@ -5484,13 +5490,13 @@ class EmitterStage {
 											exprWorklist.push(expr);
 									case SBreak(_):
 									case SContinue(_):
-									case SSwitch(scrutinee, cases, _):
+									case SSwitch(scrutinee, _patterns, bodies, _):
 										if (scrutinee != null)
 											exprWorklist.push(scrutinee);
-										if (cases != null)
-											for (c in cases)
-												if (c != null && c.body != null)
-													stmtWorklist.push(c.body);
+										if (bodies != null)
+											for (body in bodies)
+												if (body != null)
+													stmtWorklist.push(body);
 									case SReturnVoid(_):
 									case SReturn(expr, _):
 										if (expr != null)
@@ -5563,13 +5569,13 @@ class EmitterStage {
 											for (v in values)
 												if (v != null)
 													exprWorklist.push(v);
-									case ESwitch(scrutinee, cases):
+									case ESwitch(scrutinee, _patterns, exprs):
 										if (scrutinee != null)
 											exprWorklist.push(scrutinee);
-										if (cases != null)
-											for (c in cases)
-												if (c != null && c.expr != null)
-													exprWorklist.push(c.expr);
+										if (exprs != null)
+											for (branchExpr in exprs)
+												if (branchExpr != null)
+													exprWorklist.push(branchExpr);
 									case ENew(_typePath, args):
 										// `ENew` lowers through the class constructor helper (`new_`) in Stage3.
 										// Register a dependency on `new` so SCC ordering keeps the callee available.

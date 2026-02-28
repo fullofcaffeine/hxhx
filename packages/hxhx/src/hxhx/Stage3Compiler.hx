@@ -694,10 +694,10 @@ class Stage3Compiler {
 			case SContinue(_pos):
 			case SThrow(expr, _pos):
 				collectUnsupportedExprRawInExpr(expr, out, max);
-			case SSwitch(scrutinee, cases, _pos):
+			case SSwitch(scrutinee, _patterns, bodies, _pos):
 				collectUnsupportedExprRawInExpr(scrutinee, out, max);
-				for (c in cases)
-					collectUnsupportedExprRawInStmt(c.body, out, max);
+				for (body in bodies)
+					collectUnsupportedExprRawInStmt(body, out, max);
 			case SReturnVoid(_pos):
 			case SReturn(expr, _pos):
 				collectUnsupportedExprRawInExpr(expr, out, max);
@@ -748,10 +748,10 @@ class Stage3Compiler {
 				0;
 			case SThrow(expr, _pos):
 				countUnsupportedExprsInExpr(expr);
-			case SSwitch(scrutinee, cases, _pos):
+			case SSwitch(scrutinee, _patterns, bodies, _pos):
 				var c = countUnsupportedExprsInExpr(scrutinee);
-				for (cc in cases)
-					c += countUnsupportedExprsInStmt(cc.body);
+				for (body in bodies)
+					c += countUnsupportedExprsInStmt(body);
 				c;
 			case SReturnVoid(_pos):
 				0;

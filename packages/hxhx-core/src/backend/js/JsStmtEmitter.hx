@@ -71,8 +71,8 @@ class JsStmtEmitter {
 				emitTry(writer, tryBody, catches, scope);
 			case SForIn(name, iterable, body, _):
 				emitForIn(writer, name, iterable, body, scope);
-			case SSwitch(scrutinee, cases, _):
-				emitSwitch(writer, scrutinee, cases, scope);
+			case SSwitch(scrutinee, patterns, bodies, _):
+				emitSwitch(writer, scrutinee, patterns, bodies, scope);
 			case SReturnVoid(_):
 				writer.writeln("return;");
 			case SReturn(expr, _):
@@ -218,13 +218,16 @@ class JsStmtEmitter {
 		}
 	}
 
-	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, body:HxStmt}>, scope:JsFunctionScope):Void {
+	static function emitSwitch(writer:JsWriter, scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxStmt>, scope:JsFunctionScope):Void {
 		final scrutineeVar = scope.freshTemp("__sw");
 		writer.writeln("var " + scrutineeVar + " = " + JsExprEmitter.emit(scrutinee, scope.exprScope()) + ";");
 
 		var isFirst = true;
-		for (c in cases) {
-			final lowered = JsSwitchPatternLowering.lower(c.pattern, scrutineeVar);
+		final count = patterns.length < bodies.length ? patterns.length : bodies.length;
+		for (i in 0...count) {
+			final pattern = patterns[i];
+			final body = bodies[i];
+			final lowered = JsSwitchPatternLowering.lower(pattern, scrutineeVar);
 			final head = isFirst ? "if" : "else if";
 			writer.writeln(head + " (" + lowered.cond + ") {");
 			writer.pushIndent();
@@ -232,7 +235,7 @@ class JsStmtEmitter {
 				final bind = scope.declareLocal(lowered.bindName);
 				writer.writeln("var " + bind + " = " + scrutineeVar + ";");
 			}
-			emitStmtBlockContent(writer, c.body, scope);
+			emitStmtBlockContent(writer, body, scope);
 			writer.popIndent();
 			writer.writeln("}");
 			isFirst = false;

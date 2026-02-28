@@ -157,10 +157,9 @@ enum HxExpr {
 		  (selecting targets and controlling subprocess execution).
 
 		What
-		- A scrutinee expression and an ordered list of cases.
-		- Each case stores:
-		  - a small pattern (`HxSwitchPattern`)
-		  - a single expression result
+		- A scrutinee expression plus two parallel ordered arrays:
+		  - `patterns`: case patterns (`HxSwitchPattern`)
+		  - `exprs`: case result expressions (`HxExpr`)
 
 		How (bootstrap constraints)
 		- Case bodies are expressions (not statement blocks) so we avoid introducing an
@@ -168,7 +167,7 @@ enum HxExpr {
 		- Full Haxe switch semantics are deferred; see `HxSwitchPattern` docs for the
 		  supported subset.
 	**/
-	ESwitch(scrutinee:HxExpr, cases:Array<{pattern:HxSwitchPattern, expr:HxExpr}>);
+	ESwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>);
 
 	/**
 		Constructor call: `new TypePath(args...)`.
