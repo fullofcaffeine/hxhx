@@ -82,6 +82,37 @@ cleanup_legacy_parts() {
   find "$dir" -maxdepth 1 -type f -name "${stem}_part*.ml" -delete >/dev/null 2>&1 || true
 }
 
+display_path_for_placeholder() {
+  local path="$1"
+  local display="$path"
+  local repo_root
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -n "$repo_root" ]; then
+    if [ "$path" = "$repo_root" ]; then
+      display="."
+    else
+      case "$path" in
+        "$repo_root"/*)
+          display="${path#$repo_root/}"
+          ;;
+      esac
+    fi
+  fi
+  echo "$display"
+}
+
+write_placeholder() {
+  local target="$1"
+  local dir="$2"
+  local base="$3"
+  local display_dir
+  display_dir="$(display_path_for_placeholder "$dir")"
+  {
+    echo "(* Sharded bootstrap source placeholder for ${base}. *)"
+    echo "(* Rehydrate before dune build with: scripts/hxhx/hydrate-bootstrap-shards.sh ${display_dir} *)"
+  } >"$target"
+}
+
 shard_file() {
   local target="$1"
   local dir base size manifest chunk_count tmp_dir idx
@@ -103,6 +134,7 @@ shard_file() {
       return 1
     fi
     cleanup_legacy_parts "$dir" "$base"
+    write_placeholder "$target" "$dir" "$base"
     echo "[shard-bootstrap] keep existing shards: $target"
     return 0
   fi
@@ -147,10 +179,7 @@ EOF_PARTS
     idx=$((idx + 1))
   done
 
-  {
-    echo "(* Sharded bootstrap source placeholder for ${base}. *)"
-    echo "(* Rehydrate before dune build with: scripts/hxhx/hydrate-bootstrap-shards.sh ${dir} *)"
-  } >"$target"
+  write_placeholder "$target" "$dir" "$base"
 
   rm -rf "$tmp_dir"
 

@@ -1420,7 +1420,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.ocaml.PortableMetalizationPlanner" [];
   HxType.register_class_static_fields "backend.ocaml.PortableMetalizationPlanner" [ "appendExclusion"; "buildPlan"; "collectFunctionRegions"; "contextName"; "functionRegionKey"; "isFunctionContext"; "normalizeClassName"; "normalizeContext"; "normalizeFilePath"; "normalizeFunctionName"; "normalizeReason"; "normalizeToken"; "regionKeyFromContext"; "writeReport" ];
   HxType.register_class_instance_fields "backend.plugin.BackendPluginManifestParser" [];
-  HxType.register_class_static_fields "backend.plugin.BackendPluginManifestParser" [ "fail"; "normalizeSourceLabel"; "parse"; "parseKind"; "requireField"; "requireInt"; "requireObject"; "requireString"; "requireStringArray"; "validate"; "warnDeprecatedKind"; "warnedDeprecatedOcamlCmxsKind" ];
+  HxType.register_class_static_fields "backend.plugin.BackendPluginManifestParser" [ "fail"; "normalizeSourceLabel"; "parse"; "parseKind"; "requireField"; "requireInt"; "requireObject"; "requireString"; "requireStringArray"; "validate" ];
   HxType.register_class_instance_fields "backend.plugin.ManifestJsonArray" [ "values" ];
   HxType.register_class_static_fields "backend.plugin.ManifestJsonArray" [];
   HxType.register_class_instance_fields "backend.plugin.ManifestJsonParser" [ "consumeIf"; "expectCode"; "expectKeyword"; "fail"; "index"; "input"; "isEof"; "length"; "nextCode"; "parseArray"; "parseDigits"; "parseDocument"; "parseNumber"; "parseObject"; "parseString"; "parseUnicodeEscape"; "parseValue"; "peekCode"; "skipWhitespace" ];
