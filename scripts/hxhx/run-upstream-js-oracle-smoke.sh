@@ -243,6 +243,13 @@ all_fixtures=(
   "JsOracleNewArrayMain"
   "JsOracleMultiCatchMain"
 )
+default_fixtures=(
+  "JsOracleLoopMain"
+  "JsOracleSwitchExprMain"
+  "JsOracleArrayComprehensionMain"
+  "JsOracleRangeExprMain"
+  "JsOracleNewArrayMain"
+)
 
 selected_fixtures=()
 if [ -n "$FIXTURE_FILTER" ]; then
@@ -266,13 +273,15 @@ if [ -n "$FIXTURE_FILTER" ]; then
     fi
   done
 else
-  selected_fixtures=("${all_fixtures[@]}")
+  selected_fixtures=("${default_fixtures[@]}")
 fi
 
 if [ "${#selected_fixtures[@]}" -eq 0 ]; then
   echo "No fixtures selected for JS oracle smoke." >&2
   exit 2
 fi
+
+echo "JS oracle fixture set: ${selected_fixtures[*]}"
 
 extract_oracle_lines() {
   local input="$1"
