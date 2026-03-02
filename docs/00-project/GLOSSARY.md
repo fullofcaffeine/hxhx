@@ -34,6 +34,14 @@ Use these terms first. They are what users care about.
 - **Gate 3**: target/workflow compatibility checks (scoped matrix).
 - **Gate 4**: distribution and performance/acceptance checks.
 
+## Milestone tags (`Mxx`)
+
+- `Mxx` labels are internal engineering milestone tags used in tests, docs, and bead planning.
+- **M13**: OCaml tooling/output polish lanes (dune layouts, `.mli`, source maps).
+- **M14**: native backend/plugin/platform integration lanes.
+
+These tags are contributor shorthand. New users can ignore them and follow `docs/01-getting-started/START_HERE.md`.
+
 ## Internal stage terms (contributors)
 
 These are contributor architecture terms, not primary onboarding language:

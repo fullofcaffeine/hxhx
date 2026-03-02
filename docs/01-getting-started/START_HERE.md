@@ -3,6 +3,7 @@
 This page is the fastest way to pick the right workflow.
 
 If you see unfamiliar terms, check `docs/00-project/GLOSSARY.md`.
+For a full docs map, see `docs/README.md`.
 
 ## Choose your path
 
@@ -87,6 +88,7 @@ Read:
 
 ## Additional references
 
+- `docs/README.md`
 - `docs/00-project/GLOSSARY.md`
 - `docs/01-getting-started/TESTING.md`
 - `docs/02-user-guide/concepts/execution_modes.md`
@@ -94,3 +96,10 @@ Read:
 - `docs/02-user-guide/concepts/targets_backends_plugins.md`
 - `docs/02-user-guide/concepts/what_delegates_today.md`
 - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`
+
+## What are `M13` / `M14` labels?
+
+- `Mxx` labels are contributor milestone tags used in test file names and beads.
+- `M13` mainly covers OCaml tooling/output polish checks (for example, `test/M13MliIntegrationTest.hx`).
+- `M14` mainly covers native backend/plugin/platform integration checks (for example, `test/M14BackendRegistryIntegrationTest.hx`).
+- They are useful for contributors, but not required to follow beginner workflows.

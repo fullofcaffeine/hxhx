@@ -21,6 +21,7 @@ This repo also contains `reflaxe.ocaml` and native promotion tooling so Reflaxe 
 ## Start here
 
 If you are new, read:
+- `docs/README.md`
 - `docs/01-getting-started/START_HERE.md`
 - `docs/00-project/GLOSSARY.md`
 - `docs/00-project/CI_GATES.md`
