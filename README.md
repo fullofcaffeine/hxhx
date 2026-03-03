@@ -57,6 +57,7 @@ bash scripts/hxhx/build-hxhx.sh
   - `packages/reflaxe.ocaml/README.md`
   - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
 - **Native promotion workflow (Reflaxe -> native plugin/builtin host adapters)**
+  - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
   - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
   - `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
   - `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md`
