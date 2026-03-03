@@ -1826,7 +1826,31 @@ echo "$out" | grep -q "^hi$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: parent package type name resolves"
-echo "Skipping in bootstrap lane: parent-package type fallback currently tracked in stage3 regression beads."
+tmppkg_parent="$tmpdir/pkg_parent_type"
+mkdir -p "$tmppkg_parent/src/a/b"
+cat >"$tmppkg_parent/src/a/Util.hx" <<'HX'
+package a;
+
+class Util {
+  public static function hello():String {
+    return "hi-parent";
+  }
+}
+HX
+cat >"$tmppkg_parent/src/a/b/Main.hx" <<'HX'
+package a.b;
+
+class Main {
+  static function main() {
+    // Upstream shape: refer to a type in the parent package without an explicit import.
+    var s = Util.hello();
+    untyped __ocaml__("print_endline s");
+  }
+}
+HX
+out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmppkg_parent/src" -main a.b.Main --hxhx-out "$tmppkg_parent/out")"
+echo "$out" | grep -q "^hi-parent$"
+echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: optional args can be skipped by type (runci install git)"
 tmpopt="$tmpdir/optional_arg_shift"

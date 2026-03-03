@@ -95,6 +95,16 @@ private class _InstanceMethodEntry {
 	}
 }
 
+private class _ModuleNameEntry {
+	public final key:String;
+	public final moduleName:String;
+
+	public function new(key:String, moduleName:String) {
+		this.key = key;
+		this.moduleName = moduleName;
+	}
+}
+
 class EmitterStage {
 	/**
 		The OCaml compilation unit we are currently emitting.
@@ -128,6 +138,16 @@ class EmitterStage {
 		- `exprToOcaml` consults it when lowering single-part type paths (`Int64.mul`).
 	**/
 	static var currentImportInt64:Null<String> = null;
+
+	/**
+		Fallback index for package/type path lookups during emission.
+
+		Why
+		- In bootstrap OCaml builds, `Reflect.field(map, "get")` can fail for lowered map
+		  values even when the source-side `Map` is populated.
+		- Parent-package type fallback (`package a.b; Util.foo()`) relies on this lookup.
+	**/
+	static var currentModuleNameEntries:Array<_ModuleNameEntry> = [];
 
 	/**
 		Per-module instance-field metadata used by Stage3 full-body emission.
@@ -696,7 +716,6 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
-
 		inline function resolveTyIdentName(name:String):String {
 			if (mapGetRaw(tyByIdentRaw, name) != null)
 				return name;
@@ -729,9 +748,14 @@ class EmitterStage {
 			return resolved == null ? null : cast resolved;
 		}
 
-		inline function moduleNameForKey(key:String):String {
+		function moduleNameForKey(key:String):String {
 			final resolved = mapGetRaw(moduleNameByPkgAndClassRaw, key);
-			return resolved == null ? null : cast resolved;
+			if (resolved != null)
+				return cast resolved;
+			for (entry in currentModuleNameEntries)
+				if (entry.key == key)
+					return entry.moduleName;
+			return null;
 		}
 
 		inline function callSigFor(callee:String):Null<EmitterCallSig> {
@@ -4510,6 +4534,13 @@ class EmitterStage {
 					moduleNameByPkgAndClass.set(keyRel, emitted);
 			}
 		}
+		final moduleNameEntries = new Array<_ModuleNameEntry>();
+		for (key in moduleNameByPkgAndClass.keys()) {
+			final moduleName = moduleNameByPkgAndClass.get(key);
+			if (moduleName != null)
+				moduleNameEntries.push(new _ModuleNameEntry(key, moduleName));
+		}
+		currentModuleNameEntries = moduleNameEntries;
 
 		// Index static members by module name so we can approximate `import Foo.Bar.*` static wildcard imports.
 		//

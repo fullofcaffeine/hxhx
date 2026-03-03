@@ -84,12 +84,25 @@ class ResolverStage {
 			names.push(name);
 		names.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 
-		final out = new Array<String>();
+		final outSet = new Map<String, Bool>();
 		for (name in names) {
 			if (name == moduleName)
 				continue;
-			out.push(pkg + "." + name);
+			// Real Haxe lookup for unqualified type names walks the current package and then
+			// parent packages (e.g. `package a.b; Util` can resolve to `a.Util`).
+			//
+			// Emit every candidate path here; parseProjectRoots filters by actual file existence.
+			var cur = pkg;
+			while (cur.length > 0) {
+				outSet.set(cur + "." + name, true);
+				final lastDot = cur.lastIndexOf(".");
+				cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
+			}
 		}
+		final out = new Array<String>();
+		for (dep in outSet.keys())
+			out.push(dep);
+		out.sort((a, b) -> a < b ? -1 : (a > b ? 1 : 0));
 		return out;
 	}
 
