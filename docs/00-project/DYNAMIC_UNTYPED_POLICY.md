@@ -15,6 +15,7 @@ This repo treats `Dynamic`, `Any`, and `untyped` as restricted escape hatches.
 - `scripts/ci/no-dynamic-check.js`
 
 That guard scans scoped compiler lanes and fails if restricted constructs appear outside allowlisted boundary files.
+It explicitly checks typed/generic `Dynamic` and typed/generic `Any` usage, plus `untyped __ocaml__`.
 
 ## Allowlist categories
 

@@ -138,6 +138,16 @@ jobs:
           echo "HXHX_FORBID_STAGE0=${HXHX_FORBID_STAGE0:-0}"
           npm run -s test:upstream:replacement-ready 2>&1 | tee .artifacts/gate-m7.log
 
+      - name: Verify replacement markers
+        env:
+          REQUIRE_STRICT_MARKER: ${{ (github.event_name == 'schedule' || github.event_name == 'release' || inputs.strict) && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          grep -q '^M7_REPLACEMENT_READY:' .artifacts/gate-m7.log
+          if [ "${REQUIRE_STRICT_MARKER}" = "1" ]; then
+            grep -q '^M7_STRICT_STAGE0:' .artifacts/gate-m7.log
+          fi
+
       - name: Upload Gate M7 logs
         if: always()
         uses: actions/upload-artifact@v4

@@ -9,7 +9,9 @@ package hxhxmacrohost;
 	  validating it before activation.
 
 	Snapshot contract
-	- First non-empty line: `v1` (`NativeMacroModuleAbi.SNAPSHOT_VERSION`).
+	- First non-empty line: snapshot version token (`NativeMacroModuleAbi.SNAPSHOT_VERSION`).
+	- Second non-empty line: `abiVersion=<int>`.
+	- Third non-empty line: `macroApiVersion=<int>`.
 	- Remaining lines: `<pluginId>\t<expr>`.
 	- Tokens must be non-empty and must not contain tabs/newlines.
 
@@ -19,6 +21,8 @@ package hxhxmacrohost;
 **/
 class NativeMacroModuleHostAbi {
 	static inline final FIELD_SEPARATOR = "\t";
+	static inline final ABI_HEADER_PREFIX = "abiVersion=";
+	static inline final MACRO_API_HEADER_PREFIX = "macroApiVersion=";
 
 	static inline function trim(value:String):String {
 		return value == null ? "" : StringTools.trim(value);
@@ -68,6 +72,17 @@ class NativeMacroModuleHostAbi {
 		};
 	}
 
+	static function requireHeaderInt(line:String, prefix:String, field:String, expected:Int, lineNumber:Int, sourceLabel:String):Void {
+		if (!StringTools.startsWith(line, prefix))
+			fail(sourceLabel, "missing " + field + " header at line " + lineNumber + " (expected `" + prefix + expected + "`)");
+		final rawValue = trim(line.substr(prefix.length));
+		final parsed = Std.parseInt(rawValue);
+		if (parsed == null)
+			fail(sourceLabel, "invalid " + field + " value `" + rawValue + "` at line " + lineNumber);
+		if (parsed != expected)
+			fail(sourceLabel, field + " mismatch: expected " + field + "=" + expected + ", got " + parsed);
+	}
+
 	public static function decodeSnapshot(snapshot:String, sourceLabel:String):Array<{
 		pluginId:String,
 		expr:String
@@ -78,25 +93,38 @@ class NativeMacroModuleHostAbi {
 			pluginId:String,
 			expr:String
 		}>();
-		var sawVersion = false;
+		var headerState = 0;
 		var lineNumber = 0;
 		for (line in lines) {
 			lineNumber++;
 			final normalized = trim(trimTrailingCr(line));
 			if (normalized.length == 0)
 				continue;
-			if (!sawVersion) {
-				if (normalized != NativeMacroModuleAbi.SNAPSHOT_VERSION) {
+			if (headerState == 0) {
+				if (normalized != NativeMacroModuleAbi.SNAPSHOT_VERSION)
 					fail(sourceLabel, "invalid snapshot version `" + normalized + "` (expected `" + NativeMacroModuleAbi.SNAPSHOT_VERSION + "`)");
-				}
-				sawVersion = true;
+				headerState = 1;
+				continue;
+			}
+			if (headerState == 1) {
+				requireHeaderInt(normalized, ABI_HEADER_PREFIX, "abiVersion", NativeMacroModuleAbi.ABI_VERSION, lineNumber, sourceLabel);
+				headerState = 2;
+				continue;
+			}
+			if (headerState == 2) {
+				requireHeaderInt(normalized, MACRO_API_HEADER_PREFIX, "macroApiVersion", NativeMacroModuleAbi.MACRO_API_VERSION, lineNumber, sourceLabel);
+				headerState = 3;
 				continue;
 			}
 			rows.push(decodeRow(normalized, lineNumber, sourceLabel));
 		}
 
-		if (!sawVersion)
+		if (headerState == 0)
 			fail(sourceLabel, "snapshot is missing version header `" + NativeMacroModuleAbi.SNAPSHOT_VERSION + "`");
+		if (headerState == 1)
+			fail(sourceLabel, "snapshot is missing abiVersion header `abiVersion=" + NativeMacroModuleAbi.ABI_VERSION + "`");
+		if (headerState == 2)
+			fail(sourceLabel, "snapshot is missing macroApiVersion header `macroApiVersion=" + NativeMacroModuleAbi.MACRO_API_VERSION + "`");
 		return rows;
 	}
 

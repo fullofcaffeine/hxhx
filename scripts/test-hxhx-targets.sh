@@ -1733,8 +1733,11 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprest/src" -main Main --hxhx-out "$tmprest/out")"
 echo "$out" | grep -q "^stage3=ok$"
-# Keep this as parse+runtime smoke in bootstrap lane. Value-level parity for rest args
-# remains tracked by deeper gate coverage.
+rest_values="$(printf '%s\n' "$out" | grep -c '^0$' || true)"
+if [ "$rest_values" -ne 3 ]; then
+  echo "Stage3 regression: expected deterministic rest-args output count=3 (value line `0`), got $rest_values." >&2
+  exit 1
+fi
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: rest-only args (no fixed params) pack into Array<T>"
@@ -1758,8 +1761,11 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmprestonly/src" -main Main --hxhx-out "$tmprestonly/out")"
 echo "$out" | grep -q "^stage3=ok$"
-# Keep this as parse+runtime smoke in bootstrap lane. Value-level parity for rest-only
-# signatures remains tracked by deeper gate coverage.
+rest_only_values="$(printf '%s\n' "$out" | grep -c '^0$' || true)"
+if [ "$rest_only_values" -ne 3 ]; then
+  echo "Stage3 regression: expected deterministic rest-only output count=3 (value line `0`), got $rest_only_values." >&2
+  exit 1
+fi
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: string ternary in println emits"
@@ -1776,8 +1782,7 @@ class Main {
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpternary/src" -main Main --hxhx-out "$tmpternary/out")"
 echo "$out" | grep -q "^stage3=ok$"
-# Keep this as emit+run smoke in bootstrap lane; exact string value parity is
-# covered by deeper stage3/runtime gates.
+echo "$out" | grep -q "^>0<$"
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: string interpolation + hex escapes"
@@ -1795,8 +1800,13 @@ class Main {
 }
 HX
 out="$("$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies -cp "$tmpstr/src" -main Main --hxhx-out "$tmpstr/out")"
-# Keep this as emit+run smoke in bootstrap lane; value-level string formatting
-# parity is covered by deeper stage3/runtime gates.
+echo "$out" | grep -q "^stage3=ok$"
+echo "$out" | grep -q "^hex=A$"
+echo "$out" | grep -q '^dollar=\$$'
+if printf '%s\n' "$out" | grep -Eq '^x=|^y='; then
+  echo "Stage3 regression: interpolation fallback unexpectedly changed (`x=`/`y=` lines reappeared)." >&2
+  exit 1
+fi
 echo "$out" | grep -q "^run=ok$"
 
 echo "== Stage3 bring-up: package type paths lower to OCaml modules"
@@ -2399,8 +2409,8 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.BuildFieldMacros.addGeneratedField()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-# Keep this as macro-plumbing smoke in bootstrap lane; exact runtime value output
-# is covered by deeper macro/runtime gates.
+grep -q 'print_endline ("from_hxhx_build_macro")' "$tmpbuild/out/Main.ml"
+grep -q 'let rec generated ()' "$tmpbuild/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2419,8 +2429,8 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-# Keep this as macro-plumbing smoke in bootstrap lane; exact runtime value output
-# is covered by deeper macro/runtime gates.
+grep -q 'print_endline ("from_hxhx_build_macro_return")' "$tmpbuild_ret/out/Main.ml"
+grep -q 'let rec generated_return ()' "$tmpbuild_ret/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2443,8 +2453,11 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-# Keep this as macro-plumbing smoke in bootstrap lane; exact runtime value output
-# is covered by deeper macro/runtime gates.
+grep -q 'print_endline ("from_hxhx_build_macro_replaced")' "$tmpbuild_rep/out/Main.ml"
+if grep -q 'print_endline ("ORIG")' "$tmpbuild_rep/out/Main.ml"; then
+  echo "Stage3 regression: build macro replacement did not replace original field body." >&2
+  exit 1
+fi
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 
@@ -2463,8 +2476,8 @@ out="$(HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_STABLE" "$HXHX_BIN" --hxhx-stag
 echo "$out" | grep -q "^build_macro\\[Main\\]\\[0\\]=hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()$"
 echo "$out" | grep -q "^build_macro_run\\[Main\\]\\[0\\]=ok$"
 echo "$out" | grep -q "^build_fields\\[Main\\]=1$"
-# Keep this as macro-plumbing smoke in bootstrap lane; exact runtime value output
-# is covered by deeper macro/runtime gates.
+grep -q 'let generated_var = 123' "$tmpbuild_print/out/Main.ml"
+grep -q 'print_endline ("from_hxhx_field_printer")' "$tmpbuild_print/out/Main.ml"
 echo "$out" | grep -q "^stage3=ok$"
 echo "$out" | grep -q "^run=ok$"
 

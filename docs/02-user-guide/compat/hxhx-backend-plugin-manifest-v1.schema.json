@@ -36,7 +36,7 @@
         "kind": {
           "type": "string",
           "enum": [
-            "haxe-provider",
+            "linked-provider",
             "ocaml-dynlink"
           ]
         },

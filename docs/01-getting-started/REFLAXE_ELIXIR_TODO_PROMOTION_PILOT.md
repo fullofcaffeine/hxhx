@@ -95,3 +95,9 @@ This keeps core CI fast while preserving a repeatable promotion pilot lane for m
 
 The external `reflaxe.elixir` repository remains outside this monorepo’s tracked source tree.
 Do not vendor/copy external repository sources into this repository as part of this pilot.
+
+Important licensing posture:
+
+- `reflaxe.elixir` is copyleft-licensed (see that repo's license docs for exact terms/version).
+- This monorepo remains MIT-focused, so `reflaxe.elixir` is integrated as an **external fetched input**, not a bundled tracked source.
+- The pilot validates interoperability/promotion workflow; it does not change distribution licensing for this repository.

@@ -144,7 +144,7 @@ Dynamic registration notes:
 - Manifest schema (v1):
   - `docs/02-user-guide/compat/hxhx-backend-plugin-manifest-v1.schema.json`
   - supported runtime kinds:
-    - `haxe-provider` (current Stage3 load path)
+    - `linked-provider` (current Stage3 linked-provider load path)
     - `ocaml-dynlink` (native load path now goes through Dynlink in OCaml runtime builds)
 - Native plugin host registration ABI (C5R1):
   - runtime bridge module:
@@ -254,7 +254,7 @@ Manifest-only flow for Haxe providers (no `.cmxs` build step):
 bash scripts/hxhx/build-backend-plugin.sh \
   --plugin-id fixture.haxe.provider \
   --plugin-version 0.1.0 \
-  --kind haxe-provider \
+  --kind linked-provider \
   --entry my.backend.Provider \
   --target-id js-native \
   --out-dir .tmp/plugin-out
@@ -379,20 +379,27 @@ See:
 - `docs/02-user-guide/COMPILER_PLUGIN_SYSTEM.md:1`
 - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md:1`
 
-## Example: `reflaxe.elixir` as a bundled vs builtin backend
+## External promotion example: `reflaxe.elixir` (copyleft-safe integration mode)
 
-Bundled (early, stage0 shim compatible):
+For `reflaxe.elixir`, this monorepo uses an **external integration workflow**:
 
-- `hxhx` ships `reflaxe.elixir` sources.
-- `hxhx --target elixir` expands to:
-  - add `-cp <dist>/lib/reflaxe.elixir/src` (or equivalent)
-  - add `--library reflaxe.elixir`
-  - add the defines that the backend expects
+- fetch external sources into `vendor/reflaxe-elixir` (git-ignored),
+- run promotion/build/load checks from local scripts/CI pilot lanes,
+- do **not** vendor/copy `reflaxe.elixir` sources into this MIT repository.
 
-Builtin (later, after macro execution is native):
+Why:
 
-- `reflaxe.elixir` is compiled/linked into `hxhx`.
-- `hxhx --target elixir` selects the builtin backend implementation with no classpath injection.
+- `reflaxe.elixir` is copyleft-licensed, so we keep a strict provenance boundary for this MIT monorepo.
+- The pilot workflow remains reproducible without mixing tracked source trees.
+
+Canonical workflow and policy:
+
+- `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
+
+General note:
+
+- “Bundled sources in dist” remains a valid pattern for permissively licensed backends.
+- `reflaxe.elixir` is intentionally **external-only** in this repository’s default distribution posture.
 
 ## Beads tracking
 

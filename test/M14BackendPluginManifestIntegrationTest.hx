@@ -54,9 +54,9 @@ class M14BackendPluginManifestIntegrationTest {
 	}
 
 	static function main():Void {
-		final parsed = BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider"), "fixture://valid-haxe");
+		final parsed = BackendPluginManifestParser.parse(manifestJson("linked-provider", "M14ResolverFixtureProvider"), "fixture://valid-haxe");
 		assertTrue(parsed.schemaVersion == BackendPluginManifestParser.SCHEMA_VERSION, "unexpected schema version");
-		assertTrue(parsed.backend.kind == BackendPluginManifestKind.HaxeProvider, "unexpected backend kind");
+		assertTrue(parsed.backend.kind == BackendPluginManifestKind.LinkedProvider, "unexpected backend kind");
 		assertTrue(parsed.backend.entry == "M14ResolverFixtureProvider", "unexpected backend entry");
 		assertTrue(parsed.requires.abiVersion == BackendAbi.VERSION, "unexpected abiVersion");
 
@@ -64,9 +64,11 @@ class M14BackendPluginManifestIntegrationTest {
 		assertTrue(parsedNative.backend.kind == BackendPluginManifestKind.OcamlDynlink, "unexpected native backend kind");
 		final parsedNativeBytecode = BackendPluginManifestParser.parse(manifestJson("ocaml-dynlink", "plugin/backend.cma"), "fixture://valid-native-bytecode");
 		assertTrue(parsedNativeBytecode.backend.kind == BackendPluginManifestKind.OcamlDynlink, "unexpected native bytecode backend kind");
+		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider"), "fixture://legacy-kind"),
+			"unsupported backend kind");
 		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("ocaml-cmxs", "plugin/backend.cmxs"), "fixture://deprecated-native-kind"),
 			"unsupported backend kind");
-		final parsedWithTrailingWhitespace = BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider") + "\n \t\r",
+		final parsedWithTrailingWhitespace = BackendPluginManifestParser.parse(manifestJson("linked-provider", "M14ResolverFixtureProvider") + "\n \t\r",
 			"fixture://valid-trailing-whitespace");
 		assertTrue(parsedWithTrailingWhitespace.pluginId == "fixture.backend.plugin", "unexpected pluginId with trailing whitespace");
 
@@ -76,7 +78,7 @@ class M14BackendPluginManifestIntegrationTest {
 			pluginId: "fixture.backend.plugin",
 			pluginVersion: "0.1.0",
 			backend: {
-				kind: "haxe-provider",
+				kind: "linked-provider",
 				entry: "M14ResolverFixtureProvider",
 				targetIds: ["js-native"]
 			},
@@ -86,7 +88,7 @@ class M14BackendPluginManifestIntegrationTest {
 				macroApiVersion: BackendAbi.MACRO_API_VERSION
 			}
 		}), "fixture://bad-schema-type"), "schemaVersion");
-		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("haxe-provider", "M14ResolverFixtureProvider", null,
+		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("linked-provider", "M14ResolverFixtureProvider", null,
 			BackendAbi.VERSION + 1), "fixture://abi-mismatch"),
 			"backend ABI mismatch");
 		assertFailsContains(function() BackendPluginManifestParser.parse(manifestJson("unknown", "M14ResolverFixtureProvider"), "fixture://unknown-kind"),
@@ -96,7 +98,7 @@ class M14BackendPluginManifestIntegrationTest {
 			pluginId: "fixture.backend.plugin",
 			pluginVersion: "0.1.0",
 			backend: {
-				kind: "haxe-provider",
+				kind: "linked-provider",
 				entry: "M14ResolverFixtureProvider",
 				targetIds: []
 			},
@@ -116,9 +118,9 @@ class M14BackendPluginManifestIntegrationTest {
 		deleteIfExists(haxeManifestPath);
 		deleteIfExists(nativeManifestPath);
 
-		writeManifest(haxeManifestPath, manifestJson("haxe-provider", "M14ResolverFixtureProvider"));
+		writeManifest(haxeManifestPath, manifestJson("linked-provider", "M14ResolverFixtureProvider"));
 		final providerTypes = BackendPluginManifestResolver.providerTypeNamesForManifestPath(haxeManifestPath);
-		assertTrue(providerTypes.length == 1, "expected one provider type from haxe-provider manifest");
+		assertTrue(providerTypes.length == 1, "expected one provider type from linked-provider manifest");
 		assertTrue(providerTypes[0] == "M14ResolverFixtureProvider", "unexpected provider type resolved from manifest");
 
 		writeManifest(nativeManifestPath, manifestJson("ocaml-dynlink", "plugin/backend.cmxs"));

@@ -1,15 +1,19 @@
-# What Delegates Today (Truth Table)
+# What Delegates Today (Canonical Target-Preset Truth Table)
 
 This table answers one question quickly:
-**does this lane require upstream `haxe` (stage0) at runtime compile time?**
+**for each target preset, does runtime compilation require upstream `haxe` (stage0)?**
 
-| Lane / Command | Runtime compile path delegates to stage0? | Macro level | Plugin level | Intended use |
-| --- | --- | --- | --- | --- |
-| `haxe -lib reflaxe.ocaml ...` | **Yes** | Upstream macro behavior | N/A for `hxhx` loader | Mainstream Haxe + OCaml backend |
-| `hxhx --target js-compat ...` | **Yes** | Delegated through upstream lane | N/A | Compatibility lane |
-| `hxhx --target ocaml-compat ...` | **Yes** | Delegated through upstream lane | N/A | Compatibility lane with `reflaxe.ocaml` |
-| `hxhx --target js ...` | **No** (native runtime path) | Native lane with current scoped support | Supports backend plugin loading in native path | Native JS backend validation/use |
-| `hxhx --target ocaml ...` | **No** (native runtime path) | Native lane with current scoped support | Supports backend plugin loading in native path | Native OCaml backend validation/use |
+| Target preset / command | Lane kind | Runtime compile path delegates to stage0? | Macro level | Plugin level | Intended use |
+| --- | --- | --- | --- | --- | --- |
+| `haxe -lib reflaxe.ocaml ...` | Upstream lane | **Yes** | Upstream macro behavior | N/A for `hxhx` loader | Mainstream Haxe + OCaml backend |
+| `hxhx --target js-compat ...` | Delegated compat lane | **Yes** | Delegated through upstream lane | N/A | Compatibility lane |
+| `hxhx --target ocaml-compat ...` | Delegated compat lane | **Yes** | Delegated through upstream lane | N/A | Compatibility lane with `reflaxe.ocaml` |
+| `hxhx --target js ...` | Native lane | **No** (native runtime path) | Native lane with current scoped support | Supports backend plugin loading in native path | Native JS backend validation/use |
+| `hxhx --target ocaml ...` | Native lane | **No** (native runtime path) | Native lane with current scoped support | Supports backend plugin loading in native path | Native OCaml backend validation/use |
+
+Source for target preset behavior:
+
+- `packages/hxhx/src/hxhx/TargetPresets.hx`
 
 ## Two practical caveats
 

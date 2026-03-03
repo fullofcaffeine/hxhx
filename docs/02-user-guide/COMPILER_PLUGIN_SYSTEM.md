@@ -11,6 +11,10 @@ projects depend on.
 
 This doc defines what “plugin system support” means for `reflaxe.ocaml`’s Haxe-in-Haxe path.
 
+Canonical lane delegation table:
+
+- `docs/02-user-guide/concepts/what_delegates_today.md`
+
 ## Source of truth
 
 Behavior is defined by upstream Haxe:
@@ -45,9 +49,10 @@ We will stage this intentionally:
 
 - Supporting every macro API edge case immediately is not required for “Phase A — Haxe-in-Haxe enough”.
 - Perfect parity for display server behavior is a later gate.
-- **Executing macros inside `hxhx` itself** is not a Gate 0 requirement. Until the Haxe-in-Haxe compiler grows a real
-  macro interpreter/runtime, macros are executed by the *stage0* Haxe compiler (upstream OCaml), and `reflaxe.ocaml`
-  must correctly compile the resulting typed output.
+- Full “user macro parity” in native mode is not a Gate 0 requirement.
+- In **compat/delegated lanes** (`--target *-compat`), macros run via stage0 upstream `haxe`.
+- In **native lanes** (`--target ocaml` / `--target js`), `hxhx` runs native macro-host slices for the currently
+  supported subset. Library macro initializers remain opt-in during bring-up (`HXHX_RUN_HAXELIB_MACROS=1`).
 
 However, Gate 1 (upstream `compile-macro.hxml`) is *macro heavy*, so we should expect macro work early.
 
@@ -148,11 +153,11 @@ Tests
   - handshake + stub APIs (`--hxhx-macro-selftest`)
   - fixture macro libraries that behave like compiler plugins (hooks + defines + classpath injection + emission)
 
-## `--library` and `--target` in `hxhx` (native mode)
+## `--library` and `--target` in `hxhx` (lane behavior)
 
 `hxhx` currently has **two** relevant “surfaces”:
 
-1) **Stage0 shim surface** (`hxhx --target ocaml ...`)
+1) **Compat/delegated surface** (`hxhx --target ocaml-compat ...`, `hxhx --target js-compat ...`)
    - `hxhx` forwards most flags to a stage0 `haxe` compiler (via `HAXE_BIN`) and relies on upstream for:
      - typing
      - macro execution
@@ -160,7 +165,7 @@ Tests
      the upstream macro runtime.
    - This surface exists for compatibility while the native stages mature.
 
-2) **Bring-up native surface** (`hxhx --hxhx-stage3 ...` / later Stage4)
+2) **Native surface** (`hxhx --target ocaml ...`, `hxhx --target js ...`)
    - `hxhx` resolves and types the program itself (bootstrap typer) and executes macros via the Stage4 macro host.
    - `--library <lib>` is resolved by:
      - preferring `haxe_libraries/<lib>.hxml` (lix-style), walking up from the current working directory, else
@@ -170,5 +175,5 @@ Tests
 
 Practical implication for “plugin system” work:
 
-- When we say “plugin loader”, we mean the **bring-up native surface**: macro libraries register hooks and the
-  compiler invokes them over the macro-host ABI (no stage0 delegation).
+- When we say “plugin loader”, we mean the **native surface**: macro libraries register hooks and the compiler invokes
+  them over the macro-host ABI (no stage0 delegation).

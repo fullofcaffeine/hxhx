@@ -103,10 +103,10 @@ class BackendPluginManifestParser {
 
 	static function parseKind(value:String, sourceLabel:String):BackendPluginManifestKind {
 		return switch (value) {
-			case BackendPluginManifestKind.HaxeProvider: BackendPluginManifestKind.HaxeProvider;
+			case BackendPluginManifestKind.LinkedProvider: BackendPluginManifestKind.LinkedProvider;
 			case BackendPluginManifestKind.OcamlDynlink: BackendPluginManifestKind.OcamlDynlink;
 			case _:
-				fail(sourceLabel, "unsupported backend kind `" + value + "` (supported: haxe-provider, ocaml-dynlink)");
+				fail(sourceLabel, "unsupported backend kind `" + value + "` (supported: linked-provider, ocaml-dynlink)");
 		}
 	}
 
@@ -156,7 +156,7 @@ class BackendPluginManifestParser {
 			return requiresError;
 
 		switch (manifest.backend.kind) {
-			case BackendPluginManifestKind.HaxeProvider:
+			case BackendPluginManifestKind.LinkedProvider:
 				return null;
 			case BackendPluginManifestKind.OcamlDynlink:
 				if (!StringTools.endsWith(entry, ".cmxs") && !StringTools.endsWith(entry, ".cma"))

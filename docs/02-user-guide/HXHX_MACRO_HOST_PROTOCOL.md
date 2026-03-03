@@ -351,7 +351,10 @@ Load a promoted native macro module artifact and validate its registration ABI b
 Validation semantics:
 
 - The macro host dynlinks the artifact and captures registration snapshot rows.
-- Snapshot format is versioned (`v1`) and decoded by `NativeMacroModuleHostAbi`.
+- Snapshot format is versioned (`v2`) and decoded by `NativeMacroModuleHostAbi`.
+- Snapshot headers must match host compatibility requirements before any handler registration is accepted:
+  - `abiVersion=<expected>`
+  - `macroApiVersion=<expected>`
 - All rows must match request plugin ID (`i=`); mismatches are hard errors.
 - Duplicate expression registrations are hard errors.
 

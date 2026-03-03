@@ -42,6 +42,8 @@ const temporaryAllowlist = new Set([])
 const patterns = [
   { label: 'typed_dynamic', re: /:\s*Dynamic\b/ },
   { label: 'generic_dynamic', re: /<Dynamic>/ },
+  { label: 'typed_any', re: /:\s*(?:Std\.)?Any\b/ },
+  { label: 'generic_any', re: /<\s*(?:Std\.)?Any\s*>/ },
   { label: 'catch_dynamic', re: /\bcatch\s*\([^)]*:\s*Dynamic\)/ },
   { label: 'untyped_ocaml', re: /\buntyped\s+__ocaml__/ },
 ]

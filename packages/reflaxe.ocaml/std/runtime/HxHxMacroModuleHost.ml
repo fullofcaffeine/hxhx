@@ -1,4 +1,6 @@
-let snapshot_version : string = "v1"
+let snapshot_version : string = "v2"
+let abi_version : int = 1
+let macro_api_version : int = 1
 
 type expr_registration = {
   plugin_id : string;
@@ -43,6 +45,10 @@ let () =
 let snapshot () : string =
   let lines = Buffer.create 256 in
   Buffer.add_string lines snapshot_version;
+  Buffer.add_char lines '\n';
+  Buffer.add_string lines ("abiVersion=" ^ string_of_int abi_version);
+  Buffer.add_char lines '\n';
+  Buffer.add_string lines ("macroApiVersion=" ^ string_of_int macro_api_version);
   Buffer.add_char lines '\n';
   List.iter
     (fun row ->

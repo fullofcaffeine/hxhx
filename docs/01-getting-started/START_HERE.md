@@ -5,6 +5,12 @@ This page is the fastest way to pick the right workflow.
 If you see unfamiliar terms, check `docs/00-project/GLOSSARY.md`.
 For a full docs map, see `docs/README.md`.
 
+Canonical definitions for all paths:
+
+- Beginner truth table (lanes + profiles + gates): `docs/02-user-guide/concepts/execution_modes.md`
+- Delegation truth table (exact presets): `docs/02-user-guide/concepts/what_delegates_today.md`
+- Gate/workflow meanings: `docs/00-project/CI_GATES.md`
+
 ## Choose your path
 
 ### 1) I want to compile Haxe code right now
@@ -22,6 +28,7 @@ Then run `hxhx` with your preferred target.
 Start here next:
 - `README.md`
 - `docs/01-getting-started/TESTING.md`
+- `docs/02-user-guide/concepts/execution_modes.md`
 
 ### 2) I want mainstream `haxe` + `reflaxe.ocaml`
 
@@ -36,6 +43,7 @@ haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=na
 Read:
 - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
 - `packages/reflaxe.ocaml/README.md`
+- `docs/02-user-guide/concepts/execution_modes.md`
 
 ### 3) I want the `hxhx` native lane
 
@@ -50,10 +58,13 @@ npm run test:upstream:replacement-ready:strict
 Read:
 - `docs/00-project/STAGE0_POLICY.md`
 - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
+- `docs/02-user-guide/concepts/execution_modes.md`
+- `docs/00-project/CI_GATES.md`
 
 ### 4) I want to promote a Reflaxe compiler/target to native plugin artifacts
 
 Use this when you want a runtime-loaded backend plugin instead of only Haxe-provider mode.
+For `reflaxe.elixir`, use the external fetched pilot workflow (no vendoring in this repo).
 
 ```bash
 bash scripts/hxhx/plugin-init.sh \
@@ -73,6 +84,8 @@ Read:
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
 - `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
 - `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md`
+- `docs/02-user-guide/concepts/execution_modes.md`
+- `docs/00-project/CI_GATES.md`
 
 ## Plugin vs builtin backend (quick)
 

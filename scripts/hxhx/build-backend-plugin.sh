@@ -28,8 +28,8 @@ Required:
   --out-dir <dir>                Output directory for manifest/artifacts.
 
 Optional:
-  --kind <haxe-provider|ocaml-dynlink> Manifest runtime kind (default: ocaml-dynlink).
-  --entry <value>                Provider type path (haxe-provider) or output
+  --kind <linked-provider|ocaml-dynlink> Manifest runtime kind (default: ocaml-dynlink).
+  --entry <value>                Provider type path (linked-provider) or output
                                  artifact path relative to --out-dir (ocaml-dynlink).
   --source-dir <dir>             OCaml plugin source directory (required for ocaml-dynlink).
   --dune-target <file.cmxs>      Dune build target inside --source-dir.
@@ -49,11 +49,11 @@ Examples:
     --target-id js-native \
     --out-dir .tmp/plugin-out
 
-  # Emit manifest-only declaration for a Haxe provider class
+  # Emit manifest-only declaration for a linked provider class
   bash scripts/hxhx/build-backend-plugin.sh \
     --plugin-id demo.haxe \
     --plugin-version 0.1.0 \
-    --kind haxe-provider \
+    --kind linked-provider \
     --entry my.backend.Provider \
     --target-id js-native \
     --out-dir .tmp/plugin-out
@@ -180,9 +180,9 @@ done
 [ -f "$ABI_FILE" ] || fail "missing ABI constants file: $ABI_FILE"
 
 case "$KIND" in
-  haxe-provider|ocaml-dynlink) ;;
+  linked-provider|ocaml-dynlink) ;;
   *)
-    fail "--kind must be one of: haxe-provider, ocaml-dynlink"
+    fail "--kind must be one of: linked-provider, ocaml-dynlink"
     ;;
 esac
 
@@ -201,9 +201,9 @@ mkdir -p "$OUT_DIR"
 artifact_output=""
 manifest_entry="$ENTRY"
 
-if [ "$KIND" = "haxe-provider" ]; then
-  [ -n "$manifest_entry" ] || fail "--entry is required for --kind haxe-provider"
-  safe_token_or_fail "$manifest_entry" "haxe-provider entry"
+if [ "$KIND" = "linked-provider" ]; then
+  [ -n "$manifest_entry" ] || fail "--entry is required for --kind linked-provider"
+  safe_token_or_fail "$manifest_entry" "linked-provider entry"
 else
   [ -n "$SOURCE_DIR" ] || fail "--source-dir is required for --kind ocaml-dynlink"
   [ -d "$SOURCE_DIR" ] || fail "source directory not found: $SOURCE_DIR"

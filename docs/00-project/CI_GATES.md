@@ -3,6 +3,20 @@
 This page maps GitHub Actions workflow names to plain-English purpose and trigger scope.
 
 For gate terminology (`Gate 1`, `Gate 2`, etc.), see `docs/00-project/GLOSSARY.md`.
+For lane/profile context, use the canonical beginner truth table:
+
+- `docs/02-user-guide/concepts/execution_modes.md`
+- `docs/02-user-guide/concepts/what_delegates_today.md`
+
+## Gate purpose by lane (quick map)
+
+| Gate | Primary purpose in lane terms |
+| --- | --- |
+| Gate 0 | Fast safety checks across delegated/native lanes before merge |
+| Gate 1 | Upstream macro/unit compatibility baseline (oracle lane confidence) |
+| Gate 2 | Wider upstream macro/workload compatibility checks |
+| Gate 3 | Native target/workflow compatibility scope checks (`--target ocaml/js`) |
+| Gate 4 | Distribution, plugin, and performance readiness checks |
 
 ## Trigger classes
 
@@ -10,6 +24,15 @@ For gate terminology (`Gate 1`, `Gate 2`, etc.), see `docs/00-project/GLOSSARY.m
 - **Nightly/scheduled**: heavier oracle/perf lanes that are too expensive for every PR.
 - **Release**: strict release-readiness lanes used for publish confidence.
 - **Manual**: maintainer-triggered diagnostics or targeted reruns.
+
+## Release policy (M7 strict)
+
+- `Release / Semantic Publish` (`.github/workflows/release.yml`) is the automation lane for normal semantic releases.
+- `Gate M7 / Replacement Bundle` (`.github/workflows/gate-m7.yml`) is the strict replacement-readiness lane.
+- For current 0.x automation, M7 strict is **not** a hard precondition of semantic publish.
+- For 1.0 release readiness/sign-off, M7 strict **is required** and must show:
+  - `M7_STRICT_STAGE0:PASS`
+  - `M7_REPLACEMENT_READY:PASS`
 
 ## PR-required fast lanes
 
@@ -33,7 +56,7 @@ PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, 
 | `Gate 1 / Upstream Macro Unit Compatibility` | `.github/workflows/gate1.yml` | Full upstream unit macro compatibility baseline. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 2 / Upstream Macro Workloads` | `.github/workflows/gate2.yml` | Wider upstream `runci` macro workload checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
-| `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Replacement bundle lane used for strict release-readiness. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
+| `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
 

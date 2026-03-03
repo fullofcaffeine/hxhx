@@ -61,6 +61,7 @@ bash scripts/hxhx/build-hxhx.sh
   - `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
   - `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md`
   - `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
+  - Note: `reflaxe.elixir` is exercised via external fetched workflow (copyleft-safe boundary), not vendored/bundled sources in this repo.
 
 ## Core concepts (recommended before deep docs)
 

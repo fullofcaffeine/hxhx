@@ -12,10 +12,13 @@ package hxhxmacrohost;
 	What
 	- `ABI_VERSION`:
 	  - host/plugin contract version (integer, bump on breaking changes).
+	- `MACRO_API_VERSION`:
+	  - macro entrypoint contract version (integer, bump on incompatible macro API changes).
 	- `SNAPSHOT_VERSION`:
 	  - encoded registration snapshot version (`NativeMacroModuleHost.snapshot`).
 **/
 class NativeMacroModuleAbi {
 	public static inline final ABI_VERSION:Int = 1;
-	public static inline final SNAPSHOT_VERSION:String = "v1";
+	public static inline final MACRO_API_VERSION:Int = 1;
+	public static inline final SNAPSHOT_VERSION:String = "v2";
 }

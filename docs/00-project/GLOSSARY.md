@@ -2,6 +2,12 @@
 
 This page defines project terms in plain language.
 
+Canonical beginner references:
+
+- Lanes + profiles + gate purpose table: `docs/02-user-guide/concepts/execution_modes.md`
+- Exact preset delegation matrix: `docs/02-user-guide/concepts/what_delegates_today.md`
+- Workflow/gate mapping: `docs/00-project/CI_GATES.md`
+
 ## Core projects
 
 - `hxhx`: the compiler product in this repo.

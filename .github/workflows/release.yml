@@ -52,6 +52,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Release policy marker (M7 strict)
+        run: |
+          set -euo pipefail
+          echo "M7_RELEASE_POLICY=SEPARATE_GATE"
+          echo "M7 strict is not a blocking precondition for automated 0.x semantic publish."
+          echo "1.0 release sign-off requires Gate M7 strict markers (M7_STRICT_STAGE0:PASS and M7_REPLACEMENT_READY:PASS)."
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}

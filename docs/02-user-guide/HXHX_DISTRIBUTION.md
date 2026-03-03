@@ -2,12 +2,16 @@
 
 `hxhx` is the long-term **Haxe-in-Haxe compiler**.
 
-Today it is still a **stage0 shim**:
+Today it ships **two execution lanes**:
 
-- it is a native OCaml executable produced by `reflaxe.ocaml`
-- it delegates compilation to a stage0 `haxe` binary (`HAXE_BIN` / PATH)
+- **compat/delegated lane** (`--target *-compat`): forwards compile work to stage0 `haxe`
+- **native lane** (`--target ocaml` / `--target js`): runs linked native backends in `hxhx`
 
-Gate 4 exists so we can build and ship the `hxhx` binary with a predictable layout, and track a minimal performance baseline.
+Gate 4 exists so we can build and ship the `hxhx` binary with a predictable layout, and track performance baselines across both lanes.
+
+Canonical target-preset truth table (delegation + stage0 requirements):
+
+- `docs/02-user-guide/concepts/what_delegates_today.md`
 
 ## Quick glossary (beginner-friendly)
 
