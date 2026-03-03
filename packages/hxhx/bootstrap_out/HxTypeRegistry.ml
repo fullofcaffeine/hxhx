@@ -1406,7 +1406,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.js.JsSwitchPatternLowering" [];
   HxType.register_class_static_fields "backend.js.JsSwitchPatternLowering" [ "lower" ];
   HxType.register_class_instance_fields "backend.js.JsTargetCore" [ "coreId"; "emit" ];
-  HxType.register_class_static_fields "backend.js.JsTargetCore" [ "collectClassUnits"; "emitBridge"; "emitClass"; "emitRuntimePrelude"; "ensureDirectory"; "resolveMainRef"; "simpleName" ];
+  HxType.register_class_static_fields "backend.js.JsTargetCore" [ "allowStaticBodyFallback"; "collectClassUnits"; "emitBridge"; "emitClass"; "emitRuntimePrelude"; "ensureDirectory"; "resolveMainRef"; "simpleName" ];
   HxType.register_class_instance_fields "backend.js.JsWriter" [ "indent"; "out"; "popIndent"; "pushIndent"; "toString"; "unit"; "writeln" ];
   HxType.register_class_static_fields "backend.js.JsWriter" [];
   HxType.register_class_instance_fields "backend.ocaml.MetalProfileVerifier" [];

@@ -2329,6 +2329,7 @@ class HxParser {
 				case _:
 					var visibility:HxVisibility = Public;
 					var isStatic = false;
+					var sawFinal = false;
 
 					// Modifiers (subset).
 					var keep = true;
@@ -2353,6 +2354,14 @@ class HxParser {
 							//   `function`, and skip the entire member, which then breaks wildcard imports
 							//   (`import runci.System.*`) and can cause runtime segfaults in the Stage3 emit-runner.
 							keep = true;
+						} else if (acceptKeyword(KFinal)) {
+							// Stage3 bring-up: support class-level finals:
+							//   `static final NAME = expr;`
+							//
+							// Keep this as a modifier so `final function` still parses as a function
+							// declaration, while bare `final name = ...` can be parsed as a field below.
+							sawFinal = true;
+							keep = true;
 						}
 					}
 
@@ -2361,7 +2370,7 @@ class HxParser {
 						continue;
 					}
 
-					if (acceptKeyword(KVar)) {
+					if (acceptKeyword(KVar) || sawFinal) {
 						// Class field: `var name[:Type] [= expr];` (subset; no properties yet).
 						final name = readIdent("field name");
 						var typeHint = "";

@@ -20,8 +20,8 @@ let normalize_token ~(field : string) (value : string) : string =
   token
 
 let resolve_entry_path (manifest_path : string) (entry_path : string) : string =
-  if Filename.is_implicit entry_path then
-    Filename.concat (Filename.dirname manifest_path) entry_path
+  if Stdlib.Filename.is_implicit entry_path then
+    Stdlib.Filename.concat (Stdlib.Filename.dirname manifest_path) entry_path
   else entry_path
 
 let load_and_capture (manifest_path : string) (entry_path : string)
@@ -30,7 +30,7 @@ let load_and_capture (manifest_path : string) (entry_path : string)
   let entry_path = normalize_token ~field:"entry_path" entry_path in
   let plugin_id = normalize_token ~field:"plugin_id" plugin_id in
   let resolved_entry = resolve_entry_path manifest_path entry_path in
-  if not (Sys.file_exists resolved_entry) then
+  if not (Stdlib.Sys.file_exists resolved_entry) then
     failwith
       ("native plugin artifact not found: " ^ resolved_entry ^ " (manifest: "
      ^ manifest_path ^ ", plugin: " ^ plugin_id ^ ")");

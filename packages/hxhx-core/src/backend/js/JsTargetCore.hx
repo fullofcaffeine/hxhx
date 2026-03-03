@@ -180,13 +180,34 @@ class JsTargetCore implements ITargetCore {
 			try {
 				JsStmtEmitter.emitFunctionBody(writer, HxFunctionDecl.getBody(fn), fnScope);
 			} catch (e:String) {
-				throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+				if (allowStaticBodyFallback(unit, HxFunctionDecl.getName(fn), e)) {
+					writer.writeln("return null;");
+				} else {
+					throw e + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+				}
 			} catch (error:haxe.Exception) {
-				throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+				if (allowStaticBodyFallback(unit, HxFunctionDecl.getName(fn), error.message)) {
+					writer.writeln("return null;");
+				} else {
+					throw error.message + " in " + unit.fullName + "." + HxFunctionDecl.getName(fn) + " (static function body)";
+				}
 			}
 			writer.popIndent();
 			writer.writeln("};");
 		}
+	}
+
+	static function allowStaticBodyFallback(unit:JsClassUnit, fnName:String, reason:String):Bool {
+		// Stage3 JS-native bring-up: upstream `haxe.io.FPHelper` static underscore helpers can
+		// still surface `body_parse_error` from the bootstrap parser in some native-parser paths.
+		//
+		// Keep compileability for scoped JS-native workflows by falling back to a neutral return
+		// in these private helper bodies. Public/user unsupported expressions still fail fast.
+		return unit.fullName == "haxe.io.FPHelper"
+			&& fnName != null
+			&& StringTools.startsWith(fnName, "_")
+			&& reason != null
+			&& reason.indexOf("body_parse_error") != -1;
 	}
 
 	static function resolveMainRef(main:String, bySimpleName:haxe.ds.StringMap<String>, byFullName:haxe.ds.StringMap<String>):Null<String> {

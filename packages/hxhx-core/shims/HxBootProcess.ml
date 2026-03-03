@@ -126,7 +126,7 @@ let kill (p : t) : unit =
   match p.exit_code with
   | Some _ -> ()
   | None ->
-      (try Unix.kill p.pid Sys.sigkill with _ -> ())
+      (try Unix.kill p.pid Stdlib.Sys.sigkill with _ -> ())
 
 let close (p : t) : unit =
   ensure_cached p;

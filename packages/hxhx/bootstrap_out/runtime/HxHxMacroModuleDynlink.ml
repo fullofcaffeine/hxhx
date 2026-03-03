@@ -5,15 +5,15 @@ let normalize_token ~(field : string) (value : string) : string =
   token
 
 let resolve_module_path (module_path : string) : string =
-  if Filename.is_implicit module_path then
-    Filename.concat (Sys.getcwd ()) module_path
+  if Stdlib.Filename.is_implicit module_path then
+    Stdlib.Filename.concat (Stdlib.Sys.getcwd ()) module_path
   else module_path
 
 let load_and_capture (module_path : string) (plugin_id : string) : string =
   let module_path = normalize_token ~field:"module_path" module_path in
   let plugin_id = normalize_token ~field:"plugin_id" plugin_id in
   let resolved_module_path = resolve_module_path module_path in
-  if not (Sys.file_exists resolved_module_path) then
+  if not (Stdlib.Sys.file_exists resolved_module_path) then
     failwith
       ("native macro module artifact not found: " ^ resolved_module_path
      ^ " (plugin: " ^ plugin_id ^ ")");

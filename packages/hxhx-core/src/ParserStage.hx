@@ -51,6 +51,94 @@ class ParserStage {
 					// produce stub providers.
 					var main = HxModuleDecl.getMainClass(nativeDecl);
 					var mainName = HxClassDecl.getName(main);
+					var staticPatchApplied = false;
+
+					/**
+						Normalize static member flags from a source scan.
+
+						Why
+						- Native parser payloads can occasionally degrade `static` metadata for
+						  some methods in upstream-shaped std modules.
+						- Stage3 emission uses `isStatic` to decide whether to inject a synthetic
+						  receiver (`this_`). If the static flag is wrong, generated OCaml calls
+						  can become partial applications and fail compilation.
+
+						How
+						- Re-scan class headers for explicit `static` declarations.
+						- If a native class member is marked non-static but the scanner says it is
+						  static, upgrade it to static.
+						- Never downgrade native static flags from this scanner.
+					**/
+					final scannedClassStaticsByName:Map<String, HxClassDecl> = new Map();
+					for (scanned in scanModuleLocalHelperClasses(source, null)) {
+						final scannedName = scanned == null ? null : HxClassDecl.getName(scanned);
+						if (scannedName != null && scannedName.length > 0 && !scannedClassStaticsByName.exists(scannedName))
+							scannedClassStaticsByName.set(scannedName, scanned);
+					}
+
+					function patchClassStaticFlagsFromScan(cls:HxClassDecl):HxClassDecl {
+						if (cls == null)
+							return cls;
+						final className = HxClassDecl.getName(cls);
+						if (className == null || className.length == 0)
+							return cls;
+						final scanned = scannedClassStaticsByName.get(className);
+						if (scanned == null)
+							return cls;
+
+						final scannedFnStaticByName:Map<String, Bool> = new Map();
+						for (fn in HxClassDecl.getFunctions(scanned)) {
+							final fnName = HxFunctionDecl.getName(fn);
+							if (fnName != null && fnName.length > 0)
+								scannedFnStaticByName.set(fnName, HxFunctionDecl.getIsStatic(fn));
+						}
+
+						var changed = false;
+						final patchedFns = new Array<HxFunctionDecl>();
+						final existingFnNames:Map<String, Bool> = new Map();
+						for (fn in HxClassDecl.getFunctions(cls)) {
+							final fnName = HxFunctionDecl.getName(fn);
+							final scannedStatic = fnName == null ? null : scannedFnStaticByName.get(fnName);
+							final isStatic = scannedStatic == null ? HxFunctionDecl.getIsStatic(fn) : scannedStatic;
+							if (isStatic != HxFunctionDecl.getIsStatic(fn))
+								changed = true;
+							if (fnName != null && fnName.length > 0)
+								existingFnNames.set(fnName, true);
+							patchedFns.push(isStatic == HxFunctionDecl.getIsStatic(fn) ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn),
+								HxFunctionDecl.getVisibility(fn), isStatic, HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn),
+								HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn)));
+						}
+						for (fn in HxClassDecl.getFunctions(scanned)) {
+							final fnName = HxFunctionDecl.getName(fn);
+							if (fnName == null || fnName.length == 0 || existingFnNames.exists(fnName))
+								continue;
+							patchedFns.push(fn);
+							existingFnNames.set(fnName, true);
+							changed = true;
+						}
+
+						final patchedFields = new Array<HxFieldDecl>();
+						final existingFieldNames:Map<String, Bool> = new Map();
+						for (f in HxClassDecl.getFields(cls)) {
+							patchedFields.push(f);
+							final fieldName = HxFieldDecl.getName(f);
+							if (fieldName != null && fieldName.length > 0)
+								existingFieldNames.set(fieldName, true);
+						}
+						for (f in HxClassDecl.getFields(scanned)) {
+							final fieldName = HxFieldDecl.getName(f);
+							if (fieldName == null || fieldName.length == 0 || existingFieldNames.exists(fieldName))
+								continue;
+							patchedFields.push(f);
+							existingFieldNames.set(fieldName, true);
+							changed = true;
+						}
+
+						if (!changed)
+							return cls;
+						staticPatchApplied = true;
+						return new HxClassDecl(HxClassDecl.getName(cls), HxClassDecl.getHasStaticMain(cls), patchedFns, patchedFields);
+					}
 
 					// Some upstream modules have a non-class main type (notably enums).
 					//
@@ -80,7 +168,10 @@ class ParserStage {
 						}
 					}
 
-					final existingClasses = HxModuleDecl.getClasses(nativeDecl);
+					main = patchClassStaticFlagsFromScan(main);
+					final existingClasses = new Array<HxClassDecl>();
+					for (c in HxModuleDecl.getClasses(nativeDecl))
+						existingClasses.push(patchClassStaticFlagsFromScan(c));
 					final existingNames:Map<String, Bool> = new Map();
 					for (c in existingClasses) {
 						final nm = c == null ? null : HxClassDecl.getName(c);
@@ -114,6 +205,7 @@ class ParserStage {
 						&& enumDecls.length == 0
 						&& typedefDecls.length == 0
 						&& abstractDecls.length == 0
+						&& !staticPatchApplied
 						&& main == HxModuleDecl.getMainClass(nativeDecl)) {
 						return nativeDecl;
 					}
@@ -975,7 +1067,13 @@ class ParserStage {
 					sawStatic = false;
 					vis = HxVisibility.Public;
 				case "function":
-					// Best-effort: collect static function name + arity so stub modules can be emitted.
+					// Best-effort: collect function name + arity + static flag from the scanned class body.
+					//
+					// Why include non-static functions:
+					// - Native parser bring-up can mislabel some method static flags in std modules.
+					// - `enrichNativeDecl` uses this scanned surface to reconcile static metadata.
+					// - Capturing only static functions hides useful "this is non-static" evidence and
+					//   can leave call-site receiver injection broken (partial applications at OCaml link-time).
 					final wantStaticFn = sawStatic;
 					final fnVis = vis;
 
@@ -1065,8 +1163,8 @@ class ParserStage {
 						}
 					}
 
-					if (wantStaticFn && fnName.length > 0 && fnName != "new") {
-						functions.push(new HxFunctionDecl(fnName, fnVis, true, args, "", [], ""));
+					if (fnName.length > 0 && fnName != "new") {
+						functions.push(new HxFunctionDecl(fnName, fnVis, wantStaticFn, args, "", [], ""));
 					}
 
 					sawStatic = false;
