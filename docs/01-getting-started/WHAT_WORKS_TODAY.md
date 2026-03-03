@@ -39,3 +39,7 @@ npm run test:hxhx:promotion-backend-smoke
 For CI gate meaning and marker expectations:
 
 - `docs/00-project/CI_GATES.md`
+
+For current macro support boundaries (compat vs native matrix):
+
+- `docs/02-user-guide/COMPILER_PLUGIN_SYSTEM.md`

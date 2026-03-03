@@ -56,6 +56,21 @@ We will stage this intentionally:
 
 However, Gate 1 (upstream `compile-macro.hxml`) is *macro heavy*, so we should expect macro work early.
 
+## Macro support matrix (today)
+
+| Capability | Compat/delegated lanes (`--target *-compat`) | Native lanes (`--target ocaml|js`) | Notes |
+| --- | --- | --- | --- |
+| CLI `--macro ...` | ✅ via upstream stage0 `haxe` | 🟡 supported for current native macro-host subset | See native protocol limits below. |
+| `@:build` / `@:autoBuild` | ✅ upstream behavior | 🟡 supported for current bring-up subset | Build-field shape is intentionally constrained in bring-up. |
+| Macro hook registration (`onAfterTyping`, `onGenerate`, ...) | ✅ upstream behavior | 🟡 supported for current bring-up subset | Hook callbacks are routed through the native macro host. |
+| Library macro initializers | ✅ automatic (upstream behavior) | 🟡 opt-in during bring-up (`HXHX_RUN_HAXELIB_MACROS=1`) | Keeps native lanes deterministic while maturing. |
+| Promoted native macro modules (`macro.loadNativeModule`) | N/A | ✅ supported (with ABI/version validation) | Used by native macro-module promotion tests. |
+| Full upstream macro API parity | ✅ by delegation | ❌ not complete yet | Tracked by Gate 1/2 progression and Stage4 roadmap. |
+
+Native macro-host protocol details and current entrypoint limits:
+
+- `docs/02-user-guide/HXHX_MACRO_HOST_PROTOCOL.md`
+
 ## API surface (what we consider “plugin system” APIs)
 
 The authoritative list lives in upstream:
