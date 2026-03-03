@@ -10,6 +10,13 @@ We are **not fully there yet**.
 
 Today we can do a lot of stage0-free work, but we still rely on stage0 `haxe` for some bootstrap regeneration paths.
 
+Related status pages:
+
+- 1.0 roadmap milestones and closure notes:
+  - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
+- Portable stdlib parity status:
+  - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+
 ## Status matrix (as of 2026-02-21)
 
 Use this table as the short answer for "are we self-hosting yet?"
@@ -20,7 +27,7 @@ Use this table as the short answer for "are we self-hosting yet?"
 | Run a stage3 compile path with stage0 blocked | Proves the compiler can do real work in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--target ocaml --hxhx-no-emit`) |
 | Run macro host selftest with stage0 blocked | Proves macro host bootstrap path works in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--hxhx-macro-selftest`) |
 | Regenerate `packages/hxhx/bootstrap_out` without stage0 `haxe` | This is the major blocker for strong self-hosting | Not yet | `scripts/hxhx/regenerate-hxhx-bootstrap.sh` still uses stage0 emit |
-| Replacement-ready gates pass with delegation blocked | Needed for strong release confidence | Partial | We have stage0-free smoke evidence, but not full strong-self-hosting gate closure yet |
+| Replacement-ready gates pass with delegation blocked | Needed for strong release confidence | Partial | Criteria command: `HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full`; expected marker: `M7_STRICT_STAGE0:PASS`; current state: strict definition is documented, but full strong-self-hosting closure is still in progress |
 
 Status meaning:
 
@@ -43,6 +50,12 @@ HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:fu
 Expected strict marker:
 
 - `M7_STRICT_STAGE0:PASS`
+
+Strict replacement status criteria used on this page:
+
+1. Run `HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full`.
+2. Require marker `M7_STRICT_STAGE0:PASS`.
+3. Treat failures or skipped strict rungs as not closed for strong self-hosting.
 
 ## Two meanings of "self-hosting"
 

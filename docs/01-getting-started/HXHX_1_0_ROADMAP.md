@@ -137,7 +137,7 @@ Meaning in plain terms:
 
 ### M16. Portable stdlib parity closure (hard 1.0 blocker)
 
-Status: In progress  
+Status: Done (for the declared Haxe 4.3.7 portable baseline scope)  
 Bead: `haxe.ocaml-yfh`
 
 Meaning in plain terms:
@@ -151,13 +151,24 @@ Meaning in plain terms:
   - statuses: `override|runtime_backed|lowering_intrinsic|passthrough_verified|passthrough_unverified`
 - Coverage status is generated into:
   - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
+- Current matrix summary is fully closed for the baseline scope (`passthrough_unverified=0`):
+  - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 - Missing-module closure is generated deterministically and auto-split into closure buckets under `haxe.ocaml-yfh.5`:
   - `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_HAXE_4_3_7.json`
   - `npm run stdlib:closure:generate`
   - `npm run stdlib:closure:sync`
+- Current closure worklist is empty for this baseline (`missingModules=0`):
+  - `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_HAXE_4_3_7.json`
 - PR CI includes a fast stdlib parity lane; nightly/manual CI includes a broader parity lane.
 - Portability lanes run with `ocaml_portable_native_surface=error` (local default remains `warn`).
 - 1.0 is not considered complete until baseline portable stdlib parity closure is green for the declared scope.
+
+Cross-check pages:
+
+- Replacement strict/stage0-forbidden closure status:
+  - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
+- Portable stdlib parity evidence and per-module coverage:
+  - `docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md`
 
 ## Fast “where are we now?” commands
 

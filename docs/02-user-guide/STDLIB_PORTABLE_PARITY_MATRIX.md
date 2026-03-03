@@ -1,5 +1,12 @@
 # Portable Stdlib Parity Matrix (OCaml, Haxe 4.3.7 baseline)
 
+Related status pages:
+
+- 1.0 milestone summary and stdlib closure status:
+  - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
+- Strict replacement/stage0-forbidden closure status:
+  - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
+
 Generated from:
 - `docs/00-project/STDLIB_PORTABLE_BASELINE_HAXE_4_3_7.json`
 - `docs/00-project/STDLIB_PORTABLE_EVIDENCE_HAXE_4_3_7.json`
@@ -213,4 +220,3 @@ Summary: `204` modules total, `42` overrides, `2` runtime-backed, `5` lowering-i
 | `sys.thread.Thread` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Thread.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
 | `sys.thread.ThreadPoolException` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/ThreadPoolException.hx; test/portable/fixtures/sys_thread_bucket01_basic/src/Main.hx |
 | `sys.thread.Tls` | `override` | packages/reflaxe.ocaml/std/_std/sys/thread/Tls.hx; test/portable/fixtures/sys_thread_bucket02_tls/src/Main.hx |
-
