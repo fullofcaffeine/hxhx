@@ -15,8 +15,12 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 - **`--target ocaml-compat`**: compatibility/delegation-friendly preset path.
 - **`--target ocaml`**: linked Stage3 backend path (native, non-delegating direction).
 
-Today `hxhx` is still a **stage0 shim** delegating to a stage0 `haxe` binary, so the only meaningful metric is *shim overhead*.
-As `hxhx` becomes a real compiler, this suite must be expanded (macro-heavy projects, upstream `tests/runci`, curated real repos).
+`hxhx` now has both delegated and native lanes.
+
+- delegated/compat rows measure shim-overhead-style behavior
+- native rows (`--target ocaml`, `--target js`) measure linked backend/runtime behavior
+
+This suite should continue expanding with macro-heavy projects, upstream `tests/runci`, and curated real workloads.
 
 ## Baseline (macOS arm64)
 

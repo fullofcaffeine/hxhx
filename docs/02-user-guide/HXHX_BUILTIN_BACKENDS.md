@@ -288,7 +288,7 @@ This lets gates explicitly prove “no stage0 delegation” for selected workflo
 
 ## How bundling works (without static linking)
 
-Bundling is the simplest starting point and works even while `hxhx` is still a stage0 shim:
+Bundling is the simplest starting point and works well for delegated/compat lanes while native lanes continue to mature:
 
 - `dist/hxhx/.../lib/<backend>/` contains the backend source (and possibly its `haxelib.json`).
 - `hxhx` computes its install root (relative to `argv[0]`) and adds `-cp <dist>/lib/...` to the forwarded `haxe` args.

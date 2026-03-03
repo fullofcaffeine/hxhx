@@ -108,7 +108,8 @@ Matrix status taxonomy:
 
 ## Macro / HXHX status (bootstrapping path)
 
-- `hxhx` is a bring-up harness and stage0 shim by default, with explicit Stage 1/3 flags for bootstrap rungs.
+- `hxhx` exposes both delegated (`--target *-compat`) and native (`--target ocaml|js`) lanes.
+- Delegated lane remains useful for compatibility/oracle workflows; native lane is the non-delegating runtime path.
 - Macro transport and Stage 4 API overrides exist for bring-up and CI selftests, but upstream “replacement” gates
   are still tracked separately.
 - See:
