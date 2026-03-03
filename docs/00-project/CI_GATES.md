@@ -49,6 +49,14 @@ For lane/profile context, use the canonical beginner truth table:
 
 PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, gate-lite workflows, builtin smoke, JS oracle, stdlib tier1, semantic diff smoke).
 
+Stable success markers used by required lanes:
+
+- `STAGE0_FREE_SMOKE:PASS` (`ci.yml` job `stage0-free-smoke`)
+- `JS_NATIVE_SMOKE:PASS` (`ci.yml` job `js-native-smoke`)
+- `PLUGIN_MATRIX_STRICT:PASS` (`ci.yml` job `plugin-matrix`)
+- `GATE1_LITE:PASS` (`gate1-lite.yml`)
+- `GATE2_LITE:PASS` (`gate2-lite.yml`)
+
 ## Scheduled compatibility and release gates (slow lanes)
 
 | Workflow | File | Purpose | Trigger class | Triggers |

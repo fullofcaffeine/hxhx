@@ -89,6 +89,8 @@ jobs:
           set -euo pipefail
           mkdir -p .artifacts
           npm run test:upstream:unit-macro-stage3-no-emit 2>&1 | tee .artifacts/gate1-lite.log
+      - name: Emit gate1-lite marker
+        run: echo "GATE1_LITE:PASS"
 
       - name: Upload Gate1 Lite logs
         if: always()

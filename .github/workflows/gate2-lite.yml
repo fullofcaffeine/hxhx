@@ -82,3 +82,5 @@ jobs:
 
       - name: Run workloads (fast profile)
         run: npm run test:workloads
+      - name: Emit gate2-lite marker
+        run: echo "GATE2_LITE:PASS"

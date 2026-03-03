@@ -142,6 +142,8 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/hxhx/check-stage0-policy.sh release
+      - name: Emit stage0-free marker
+        run: echo "STAGE0_FREE_SMOKE:PASS"
 
   js-native-smoke:
     name: JS-native smoke
@@ -228,6 +230,8 @@ jobs:
           echo "HXHX_BIN=${HXHX_BIN}"
           echo "HXHX_JS_ORACLE_FIXTURES=${HXHX_JS_ORACLE_FIXTURES}"
           npm run test:upstream:js-oracle-smoke
+      - name: Emit js-native marker
+        run: echo "JS_NATIVE_SMOKE:PASS"
 
   plugin-matrix:
     name: Plugin matrix (strict)
@@ -289,6 +293,8 @@ jobs:
         run: |
           set -euo pipefail
           npm run -s test:plugins:strict-matrix
+      - name: Emit plugin matrix marker
+        run: echo "PLUGIN_MATRIX_STRICT:PASS"
 
   test:
     name: Tests
