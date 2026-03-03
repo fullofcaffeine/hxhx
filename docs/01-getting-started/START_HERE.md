@@ -10,6 +10,7 @@ Canonical definitions for all paths:
 - Beginner truth table (lanes + profiles + gates): `docs/02-user-guide/concepts/execution_modes.md`
 - Delegation truth table (exact presets): `docs/02-user-guide/concepts/what_delegates_today.md`
 - Gate/workflow meanings: `docs/00-project/CI_GATES.md`
+- Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 
 ## Choose your path
 
@@ -27,6 +28,8 @@ Then run `hxhx` with your preferred target.
 
 Start here next:
 - `README.md`
+- `docs/01-getting-started/QUICKSTART_COMPAT.md`
+- `docs/01-getting-started/QUICKSTART_NATIVE.md`
 - `docs/01-getting-started/TESTING.md`
 - `docs/02-user-guide/concepts/execution_modes.md`
 

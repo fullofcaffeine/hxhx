@@ -5,6 +5,9 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 ## Beginner paths
 
 - Compile Haxe code with `hxhx`: `docs/01-getting-started/START_HERE.md`
+- Quickstart (compat/delegated lane): `docs/01-getting-started/QUICKSTART_COMPAT.md`
+- Quickstart (native lane): `docs/01-getting-started/QUICKSTART_NATIVE.md`
+- Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 - Use upstream `haxe` + `reflaxe.ocaml`: `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
 - Promote Reflaxe backends to native plugin artifacts: `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - Validate native (non-delegating) `hxhx` lanes: `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`

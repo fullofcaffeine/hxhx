@@ -28,9 +28,11 @@ If you are new, read:
 
 That guide gives a beginner path for:
 1. building/running `hxhx`,
-2. using upstream `haxe` with `reflaxe.ocaml`,
-3. promoting a Reflaxe target/compiler to native plugin artifacts,
-4. understanding plugin vs builtin target modes.
+2. choosing compat vs native quickstart lanes,
+3. checking what works today at a glance,
+4. using upstream `haxe` with `reflaxe.ocaml`,
+5. promoting a Reflaxe target/compiler to native plugin artifacts,
+6. understanding plugin vs builtin target modes.
 
 ## Quick setup
 
@@ -50,6 +52,9 @@ bash scripts/hxhx/build-hxhx.sh
 ## Pick your workflow
 
 - **`hxhx` compiler workflow**
+  - `docs/01-getting-started/QUICKSTART_COMPAT.md`
+  - `docs/01-getting-started/QUICKSTART_NATIVE.md`
+  - `docs/01-getting-started/WHAT_WORKS_TODAY.md`
   - `docs/01-getting-started/HXHX_1_0_ROADMAP.md`
   - `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
   - `docs/02-user-guide/HAXE_IN_HAXE_ACCEPTANCE.md`
