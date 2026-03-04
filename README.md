@@ -32,7 +32,8 @@ That guide gives a beginner path for:
 3. checking what works today at a glance,
 4. using upstream `haxe` with `reflaxe.ocaml`,
 5. promoting a Reflaxe target/compiler to native plugin artifacts,
-6. understanding plugin vs builtin target modes.
+6. understanding plugin vs builtin target modes,
+7. embedding `hxhx` via a supported subprocess contract.
 
 ## Quick setup
 
@@ -68,6 +69,9 @@ bash scripts/hxhx/build-hxhx.sh
   - `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md`
   - `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
   - Note: `reflaxe.elixir` is exercised via external fetched workflow (copyleft-safe boundary), not vendored/bundled sources in this repo.
+- **Embedding workflow (`hxhx` as subprocess)**
+  - `docs/02-user-guide/EMBEDDING.md`
+  - Runnable example: `npm run hxhx:example:embedding-subprocess`
 
 ## Core concepts (recommended before deep docs)
 

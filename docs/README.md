@@ -12,6 +12,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - Promote Reflaxe backends to native plugin artifacts: `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - Validate native (non-delegating) `hxhx` lanes: `docs/01-getting-started/HXHX_SELF_HOSTING_CHECKLIST.md`
 - Promote Reflaxe compilers/backends to native plugins: `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`
+- Embed `hxhx` in another app (supported subprocess contract): `docs/02-user-guide/EMBEDDING.md`
 
 ## Terms and CI
 

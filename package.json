@@ -150,6 +150,7 @@
     "hxhx:plugin:init": "bash scripts/hxhx/plugin-init.sh",
     "hxhx:plugin:promote-backend": "bash scripts/hxhx/promote-backend-plugin.sh",
     "hxhx:plugin:promote-eval": "bash scripts/hxhx/promote-eval-adapter.sh",
+    "hxhx:example:embedding-subprocess": "node scripts/hxhx/run-embedding-subprocess-example.js",
     "hxhx:bench": "bash scripts/hxhx/bench.sh",
     "hxhx:bench:kpi": "bash scripts/hxhx/bench-kpi.sh",
     "hxhx:bench:bootstrap-regen": "bash scripts/hxhx/bench-bootstrap-regen.sh",

@@ -91,6 +91,19 @@ Read:
 - `docs/02-user-guide/concepts/execution_modes.md`
 - `docs/00-project/CI_GATES.md`
 
+### 5) I want to embed `hxhx` into another application
+
+Use this when your host app should spawn `hxhx` as a subprocess and collect machine-readable reports/diagnostics.
+
+```bash
+npm run hxhx:example:embedding-subprocess
+```
+
+Read:
+- `docs/02-user-guide/EMBEDDING.md`
+- `docs/02-user-guide/HXHX_DISTRIBUTION.md`
+- `docs/02-user-guide/OCAML_PROFILE_CONTRACT.md`
+
 ## Plugin vs builtin backend (quick)
 
 | Mode | What it is | Best for | Tradeoff |

@@ -26,3 +26,4 @@ npm run test:acceptance
 
 - `hxhx-library-reflaxe-ocaml-plugin`: Stage3 plugin fixture (`--library`, macro hooks, classpath injection).
 - `hxhx-js-todoapp`: lix-first JS todo app (`coconut.ui`, `tink_web`, `tink_sql` schema types) compiled via `hxhx --target js`.
+- `hxhx-embedding-subprocess` (fixture): tiny success/failure modules used by `npm run hxhx:example:embedding-subprocess` to demonstrate embedding report + diagnostic capture.
