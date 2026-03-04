@@ -188,6 +188,14 @@ Use this when you want the repo to function as a compiler-bootstrap example:
 
 - **Stage0**: external `haxe` compiles repo Haxe sources to OCaml.
   - Main maintainer command: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
+  - Stage0 haxe binary selection policy (regen lane):
+    - default: `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native`
+    - optional strict mode: `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=require-native`
+    - wrapper baseline mode: `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=warn`
+    - explicit native candidate override: `HXHX_STAGE0_NATIVE_HAXE_BIN=/abs/path/to/haxe`
+  - Regen report JSON (`--report-json`) includes deterministic selection fields:
+    - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
+  - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
     - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
     - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`

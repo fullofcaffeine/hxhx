@@ -43,6 +43,11 @@ Options:
   --profile                  Enable stage0 `--times` and per-filter timing (`-D filter-times`).
   --report-json <path>       Write a machine-readable timing summary JSON.
   --diag-every <seconds>     When heartbeat is disabled, print periodic stage0 diagnostics.
+  --stage0-haxe-policy <mode>
+                             Stage0 haxe binary policy: warn | prefer-native | require-native.
+  --stage0-native-haxe-bin <path>
+                             Explicit native stage0 haxe candidate (used by prefer/require-native).
+  --stage0-selection-only    Resolve/log stage0 haxe selection and exit before emit/copy/verify.
   -h, --help                 Show this help.
 
 Environment knobs (all optional):
@@ -59,6 +64,11 @@ Environment knobs (all optional):
   HXHX_BOOTSTRAP_PROFILE=1          Enable `--times` + `-D filter-times`.
   HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
   HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
+  HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native
+                                    Stage0 haxe binary policy for bootstrap regen.
+  HXHX_STAGE0_NATIVE_HAXE_BIN=/abs/path/to/haxe
+                                    Explicit native stage0 haxe candidate.
+  HXHX_STAGE0_SELECTION_ONLY=1      Resolve/log stage0 haxe selection and exit early.
 USAGE
 }
 
@@ -83,6 +93,17 @@ assert_non_negative_int() {
 			exit 1
 			;;
 		*)
+			;;
+	esac
+}
+
+assert_stage0_haxe_policy() {
+	local value="$1"
+	case "$value" in
+		warn|prefer-native|require-native) ;;
+		*)
+			echo "Invalid HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY: '$value' (expected warn|prefer-native|require-native)." >&2
+			exit 1
 			;;
 	esac
 }
@@ -120,6 +141,9 @@ HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED="${HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED:-0}"
 HXHX_BOOTSTRAP_FORCE="${HXHX_BOOTSTRAP_FORCE:-0}"
 HXHX_BOOTSTRAP_PROFILE="${HXHX_BOOTSTRAP_PROFILE:-0}"
 HXHX_BOOTSTRAP_REPORT_JSON="${HXHX_BOOTSTRAP_REPORT_JSON:-}"
+HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="${HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY:-prefer-native}"
+HXHX_STAGE0_NATIVE_HAXE_BIN="${HXHX_STAGE0_NATIVE_HAXE_BIN:-}"
+HXHX_STAGE0_SELECTION_ONLY="${HXHX_STAGE0_SELECTION_ONLY:-0}"
 
 used_deprecated_kill_flag=0
 while [ $# -gt 0 ]; do
@@ -188,7 +212,26 @@ while [ $# -gt 0 ]; do
 				echo "Missing value for --diag-every" >&2
 				exit 1
 			fi
-			HXHX_STAGE0_DIAG_EVERY="$1"
+				HXHX_STAGE0_DIAG_EVERY="$1"
+				;;
+		--stage0-haxe-policy)
+			shift
+			if [ $# -eq 0 ]; then
+				echo "Missing value for --stage0-haxe-policy" >&2
+				exit 1
+			fi
+			HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$1"
+			;;
+		--stage0-native-haxe-bin)
+			shift
+			if [ $# -eq 0 ]; then
+				echo "Missing value for --stage0-native-haxe-bin" >&2
+				exit 1
+			fi
+				HXHX_STAGE0_NATIVE_HAXE_BIN="$1"
+				;;
+		--stage0-selection-only)
+			HXHX_STAGE0_SELECTION_ONLY=1
 			;;
 		-h|--help)
 			usage
@@ -220,7 +263,9 @@ assert_bool_01 "HXHX_BOOTSTRAP_KEEP_REPO_SERVER" "$HXHX_BOOTSTRAP_KEEP_REPO_SERV
 assert_bool_01 "HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED" "$HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED"
 assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
 assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
+assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
 assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
+assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
@@ -238,6 +283,13 @@ phase_shard_sec=0
 phase_verify_sec=0
 total_sec=0
 skipped_emit=0
+stage0_haxe_requested="$HAXE_BIN"
+stage0_haxe_resolved=""
+stage0_haxe_mode="unknown"
+stage0_haxe_file_desc="unknown"
+stage0_haxe_version=""
+stage0_haxe_native_candidate=""
+stage0_haxe_switched=0
 resolved_haxe_connect="$HAXE_CONNECT"
 repo_server_started_here=0
 repo_server_was_running=0
@@ -449,11 +501,115 @@ collect_fingerprint_tree() {
 	find "$dir" -type f | LC_ALL=C sort
 }
 
+detect_stage0_haxe_mode() {
+	local resolved_path="$1"
+	local file_desc="$2"
+	if printf '%s\n' "$file_desc" | grep -Eiq 'script|text executable'; then
+		printf 'wrapper\n'
+		return
+	fi
+	if printf '%s\n' "$resolved_path" | grep -Eiq '/node_modules/\.bin/|/\.nvm/'; then
+		printf 'wrapper\n'
+		return
+	fi
+	printf 'native\n'
+}
+
+resolve_stage0_native_haxe_candidate() {
+	local resolved_path="$1"
+	local detected_version="$2"
+
+	if [ -n "$HXHX_STAGE0_NATIVE_HAXE_BIN" ] && [ -x "$HXHX_STAGE0_NATIVE_HAXE_BIN" ]; then
+		printf '%s\n' "$HXHX_STAGE0_NATIVE_HAXE_BIN"
+		return
+	fi
+
+	if [ -n "${HAXE_STD_PATH:-}" ]; then
+		local std_parent=""
+		std_parent="$(cd "${HAXE_STD_PATH}/.." 2>/dev/null && pwd || true)"
+		if [ -n "$std_parent" ] && [ -x "$std_parent/haxe" ] && [ "$std_parent/haxe" != "$resolved_path" ]; then
+			printf '%s\n' "$std_parent/haxe"
+			return
+		fi
+	fi
+
+	if [ -n "$detected_version" ] && [ -x "$HOME/haxe/versions/$detected_version/haxe" ]; then
+		local home_candidate="$HOME/haxe/versions/$detected_version/haxe"
+		if [ "$home_candidate" != "$resolved_path" ]; then
+			printf '%s\n' "$home_candidate"
+			return
+		fi
+	fi
+
+	printf '\n'
+}
+
+resolve_stage0_haxe_bin() {
+	stage0_haxe_resolved="$(command -v "$HAXE_BIN" 2>/dev/null || true)"
+	if [ -z "$stage0_haxe_resolved" ]; then
+		echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
+		exit 1
+	fi
+
+	stage0_haxe_file_desc="$(file -b "$stage0_haxe_resolved" 2>/dev/null || echo unknown)"
+	stage0_haxe_mode="$(detect_stage0_haxe_mode "$stage0_haxe_resolved" "$stage0_haxe_file_desc")"
+	stage0_haxe_version="$("$HAXE_BIN" --version 2>/dev/null | head -n 1 | tr -d '\r' || true)"
+	stage0_haxe_native_candidate="$(resolve_stage0_native_haxe_candidate "$stage0_haxe_resolved" "$stage0_haxe_version")"
+	stage0_haxe_switched=0
+
+	if [ "$stage0_haxe_mode" = "wrapper" ] && [ "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY" != "warn" ]; then
+		if [ -n "$stage0_haxe_native_candidate" ] && [ "$stage0_haxe_native_candidate" != "$stage0_haxe_resolved" ]; then
+			HAXE_BIN="$stage0_haxe_native_candidate"
+			stage0_haxe_resolved="$stage0_haxe_native_candidate"
+			stage0_haxe_file_desc="$(file -b "$stage0_haxe_resolved" 2>/dev/null || echo unknown)"
+			stage0_haxe_mode="$(detect_stage0_haxe_mode "$stage0_haxe_resolved" "$stage0_haxe_file_desc")"
+			stage0_haxe_version="$("$HAXE_BIN" --version 2>/dev/null | head -n 1 | tr -d '\r' || true)"
+			stage0_haxe_switched=1
+		fi
+	fi
+
+	if [ "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY" = "require-native" ] && [ "$stage0_haxe_mode" != "native" ]; then
+		echo "Stage0 haxe policy violation: require-native, but resolved binary is wrapper: $stage0_haxe_resolved" >&2
+		if [ -n "$stage0_haxe_native_candidate" ]; then
+			echo "Set HAXE_BIN=$stage0_haxe_native_candidate or HXHX_STAGE0_NATIVE_HAXE_BIN=$stage0_haxe_native_candidate." >&2
+		else
+			echo "No native candidate auto-detected. Set HXHX_STAGE0_NATIVE_HAXE_BIN=/abs/path/to/haxe." >&2
+		fi
+		exit 1
+	fi
+}
+
+print_stage0_haxe_selection() {
+	echo "== Stage0 haxe requested: $stage0_haxe_requested"
+	echo "== Stage0 haxe policy: $HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
+	echo "== Stage0 haxe resolved: $stage0_haxe_resolved"
+	echo "== Stage0 haxe mode: $stage0_haxe_mode"
+	if [ -n "$stage0_haxe_version" ]; then
+		echo "== Stage0 haxe version: $stage0_haxe_version"
+	fi
+	if [ -n "$stage0_haxe_native_candidate" ] && [ "$stage0_haxe_native_candidate" != "$stage0_haxe_resolved" ]; then
+		echo "== Stage0 native candidate: $stage0_haxe_native_candidate"
+	fi
+	if [ "$stage0_haxe_switched" = "1" ]; then
+		echo "== Stage0 haxe policy action: switched wrapper to native candidate"
+	fi
+	if [ "$stage0_haxe_mode" = "wrapper" ] && [ "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY" = "warn" ]; then
+		echo "== Stage0 haxe warning: wrapper mode active; set HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native to auto-upgrade when possible."
+	elif [ "$stage0_haxe_mode" = "wrapper" ] && [ "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY" = "prefer-native" ] && [ "$stage0_haxe_switched" = "0" ]; then
+		echo "== Stage0 haxe warning: wrapper mode active and no native candidate was auto-detected."
+	fi
+}
+
 compute_fingerprint() {
 	{
 		echo "schema=v1"
-		echo "haxe_bin=$(command -v "$HAXE_BIN" 2>/dev/null || echo "$HAXE_BIN")"
-		echo "haxe_version=$("$HAXE_BIN" --version 2>/dev/null || true)"
+		echo "haxe_bin_requested=$stage0_haxe_requested"
+		echo "haxe_bin_resolved=$stage0_haxe_resolved"
+		echo "haxe_bin_mode=$stage0_haxe_mode"
+		echo "haxe_bin_policy=$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
+		echo "haxe_bin_switched=$stage0_haxe_switched"
+		echo "haxe_native_candidate=$stage0_haxe_native_candidate"
+		echo "haxe_version=$stage0_haxe_version"
 		echo "stage0_disable_prepasses=$HXHX_STAGE0_DISABLE_PREPASSES"
 		echo "stage0_progress=$HXHX_STAGE0_PROGRESS"
 		echo "stage0_telemetry=$HXHX_STAGE0_TELEMETRY"
@@ -503,6 +659,13 @@ write_report_json() {
   "mode": "$(json_escape "$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo fast || echo full)")",
   "skipped_emit": $skipped_emit,
   "haxe_bin": "$(json_escape "$HAXE_BIN")",
+  "haxe_bin_requested": "$(json_escape "$stage0_haxe_requested")",
+  "haxe_bin_resolved": "$(json_escape "$stage0_haxe_resolved")",
+  "haxe_bin_mode": "$(json_escape "$stage0_haxe_mode")",
+  "haxe_bin_policy": "$(json_escape "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY")",
+  "haxe_bin_switched": $stage0_haxe_switched,
+  "haxe_native_candidate": "$(json_escape "$stage0_haxe_native_candidate")",
+  "haxe_version": "$(json_escape "$stage0_haxe_version")",
   "haxe_connect": "$(json_escape "$resolved_haxe_connect")",
   "phase_seconds": {
     "preflight": $phase_preflight_sec,
@@ -666,10 +829,7 @@ if [ "$used_deprecated_kill_flag" = "1" ]; then
 	echo "WARN: --kill-stale-haxe-servers is deprecated; prefer --kill-all-haxe-servers." >&2
 fi
 
-if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
-	echo "Missing Haxe compiler on PATH (expected '$HAXE_BIN')." >&2
-	exit 1
-fi
+resolve_stage0_haxe_bin
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
 	echo "Missing dune/ocamlc on PATH." >&2
@@ -682,6 +842,7 @@ if [ ! -d "$PKG_DIR" ]; then
 fi
 
 echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
+print_stage0_haxe_selection
 if [ "$HXHX_BOOTSTRAP_FAST" = "1" ]; then
 	echo "== Mode: fast (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
 else
@@ -711,6 +872,18 @@ if [ -n "$HXHX_LOG_DIR" ]; then
 fi
 if [ "$HXHX_STAGE0_DIAG_EVERY" != "0" ]; then
 	echo "== Stage0 disabled-heartbeat diagnostics: every ${HXHX_STAGE0_DIAG_EVERY}s"
+fi
+
+if [ "$HXHX_STAGE0_SELECTION_ONLY" = "1" ]; then
+	echo "== Stage0 selection-only mode: skipping preflight/emit/copy/shard/verify"
+	skipped_emit=1
+	total_sec=0
+	write_report_json "$HXHX_BOOTSTRAP_REPORT_JSON"
+	if [ -n "$HXHX_BOOTSTRAP_REPORT_JSON" ]; then
+		echo "== Wrote regen timing report: $HXHX_BOOTSTRAP_REPORT_JSON"
+	fi
+	echo "OK: stage0 haxe selection resolved"
+	exit 0
 fi
 
 total_start="$(now_ts)"

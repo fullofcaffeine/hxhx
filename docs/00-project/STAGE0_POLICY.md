@@ -10,6 +10,70 @@ The policy goal is simple:
 - Runtime behavior should be stage0-free for native lanes.
 - Stage0 is allowed only for explicit bootstrap maintenance tasks.
 
+## Bootstrap Stage0 Binary Selection (Regen Lane)
+
+Bootstrap regeneration now records and enforces an explicit stage0-haxe selection policy:
+
+- Script: `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`
+- Default policy: `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native`
+
+Policy modes:
+
+- `warn`: keep resolved `HAXE_BIN` even if it is a wrapper.
+- `prefer-native`: if resolved `HAXE_BIN` looks like a wrapper and a native candidate is detected, switch to native automatically.
+- `require-native`: fail fast unless the resolved binary is native.
+
+Native candidate detection order:
+
+1. `HXHX_STAGE0_NATIVE_HAXE_BIN` (if executable)
+2. `$(dirname "$HAXE_STD_PATH")/haxe` (if present/executable)
+3. `$HOME/haxe/versions/<detected-version>/haxe` (if present/executable)
+
+Each regen run prints deterministic selection markers:
+
+- `Stage0 haxe requested`
+- `Stage0 haxe policy`
+- `Stage0 haxe resolved`
+- `Stage0 haxe mode` (`native` or `wrapper`)
+- optional `Stage0 native candidate`
+- optional `Stage0 haxe policy action: switched wrapper to native candidate`
+
+Quick non-emitting selection probe:
+
+```bash
+HAXE_BIN="$(which haxe)" \
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
+  --stage0-selection-only \
+  --report-json .tmp/stage0-selection-only.json
+```
+
+Machine-readable reports (`--report-json`) include:
+
+- `haxe_bin_requested`
+- `haxe_bin_resolved`
+- `haxe_bin_mode`
+- `haxe_bin_policy`
+- `haxe_bin_switched`
+- `haxe_native_candidate`
+
+Repro command pair (wrapper baseline vs native-preferred):
+
+```bash
+# Wrapper baseline (no auto-upgrade)
+HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=warn \
+HAXE_BIN="$(which haxe)" \
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
+  --incremental --no-verify --force \
+  --report-json .tmp/stage0-wrapper-report.json
+
+# Native-preferred (default policy)
+HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native \
+HAXE_BIN="$(which haxe)" \
+bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
+  --incremental --no-verify --force \
+  --report-json .tmp/stage0-native-report.json
+```
+
 ## Policy table
 
 | Lane | Allowed stage0 usage | Required guardrails | Typical commands |
