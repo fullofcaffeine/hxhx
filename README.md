@@ -35,6 +35,10 @@ That guide gives a beginner path for:
 6. understanding plugin vs builtin target modes,
 7. embedding `hxhx` via a supported subprocess contract.
 
+Lane chooser + mini glossary shortcuts:
+- `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
+- `docs/01-getting-started/TERMS_YOU_MUST_KNOW.md`
+
 ## Quick setup
 
 ```bash

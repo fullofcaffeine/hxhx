@@ -5,6 +5,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 ## Beginner paths
 
 - Compile Haxe code with `hxhx`: `docs/01-getting-started/START_HERE.md`
+- Choose the right lane quickly: `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
+- Beginner mini glossary (~15 terms): `docs/01-getting-started/TERMS_YOU_MUST_KNOW.md`
 - Quickstart (compat/delegated lane): `docs/01-getting-started/QUICKSTART_COMPAT.md`
 - Quickstart (native lane): `docs/01-getting-started/QUICKSTART_NATIVE.md`
 - Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`

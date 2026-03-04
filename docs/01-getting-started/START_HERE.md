@@ -2,6 +2,11 @@
 
 This page is the fastest way to pick the right workflow.
 
+First stop (beginner shortcuts):
+
+- Lane chooser: `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
+- Mini glossary (~15 terms): `docs/01-getting-started/TERMS_YOU_MUST_KNOW.md`
+
 If you see unfamiliar terms, check `docs/00-project/GLOSSARY.md`.
 For a full docs map, see `docs/README.md`.
 
@@ -11,6 +16,7 @@ Canonical definitions for all paths:
 - Delegation truth table (exact presets): `docs/02-user-guide/concepts/what_delegates_today.md`
 - Gate/workflow meanings: `docs/00-project/CI_GATES.md`
 - Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
+- Dedicated lane chooser page: `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
 
 ## Choose your path
 
