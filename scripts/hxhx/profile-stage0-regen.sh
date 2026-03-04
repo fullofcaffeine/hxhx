@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
+PROGRESS_SUMMARY_SCRIPT="$ROOT/scripts/hxhx/summarize-stage0-progress.js"
 
 POLICY="${HXHX_STAGE0_PROFILE_POLICY:-prefer-native}"
 FAILFAST_SECS="${HXHX_STAGE0_PROFILE_FAILFAST_SECS:-120}"
@@ -160,6 +161,7 @@ mkdir -p "$OUT_DIR"
 REPORT_JSON="$OUT_DIR/regen_report.json"
 PROGRESS_LOG="$OUT_DIR/reflaxe_ocaml_progress.log"
 SUMMARY_FILE="$OUT_DIR/summary.txt"
+PROGRESS_SUMMARY_JSON="$OUT_DIR/progress_summary.json"
 RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
@@ -207,48 +209,21 @@ const line = [
 console.log(line);
 ' "$REPORT_JSON" | tee "$SUMMARY_FILE"
 
-node -e '
-const fs = require("fs");
-const path = process.argv[1];
-if (!fs.existsSync(path)) {
-  console.log("top_class_end_dt_ms: no-progress-log");
-  process.exit(0);
-}
-const lines = fs.readFileSync(path, "utf8").split(/\r?\n/);
-const classRows = [];
-const checkpointRows = [];
-for (const line of lines) {
-  let m = line.match(/class_end count=\d+ name=([^ ]+) dt_ms=(\d+)/);
-  if (m) {
-    classRows.push({ name: m[1], dt: Number(m[2]) });
-    continue;
-  }
-  m = line.match(/onOutputComplete ([^=]+) dt=(\d+)s/);
-  if (m) checkpointRows.push({ phase: m[1].trim(), dt: Number(m[2]) });
-}
-if (classRows.length === 0) {
-  console.log("top_class_end_dt_ms: none");
-} else {
-  classRows.sort((a, b) => b.dt - a.dt);
-  console.log("top_class_end_dt_ms:");
-  for (const row of classRows.slice(0, 10)) {
-    console.log(`  ${row.dt}\t${row.name}`);
-  }
-}
-if (checkpointRows.length === 0) {
-  console.log("output_checkpoints: none");
-} else {
-  console.log("output_checkpoints:");
-  for (const row of checkpointRows) {
-    console.log(`  ${row.dt}s\t${row.phase}`);
-  }
-}
-' "$PROGRESS_LOG" | tee -a "$SUMMARY_FILE"
+if [ -f "$PROGRESS_SUMMARY_SCRIPT" ]; then
+	node "$PROGRESS_SUMMARY_SCRIPT" \
+		--input "$PROGRESS_LOG" \
+		--top 10 \
+		--json-out "$PROGRESS_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
+else
+	echo "top_class_total_dt_ms: summary-script-missing" | tee -a "$SUMMARY_FILE"
+	echo "output_checkpoints: none" | tee -a "$SUMMARY_FILE"
+fi
 
 echo "stdout_log=$RUN_STDOUT" | tee -a "$SUMMARY_FILE"
 echo "stderr_log=$RUN_STDERR" | tee -a "$SUMMARY_FILE"
 echo "report_json=$REPORT_JSON" | tee -a "$SUMMARY_FILE"
 echo "progress_log=$PROGRESS_LOG" | tee -a "$SUMMARY_FILE"
+echo "progress_summary_json=$PROGRESS_SUMMARY_JSON" | tee -a "$SUMMARY_FILE"
 
 if [ "$run_code" != "0" ]; then
 	echo "Profile run exited non-zero (code=$run_code). Summary artifacts are still available." | tee -a "$SUMMARY_FILE"

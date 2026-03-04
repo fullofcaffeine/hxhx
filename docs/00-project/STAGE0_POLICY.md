@@ -127,7 +127,17 @@ Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
 
 - `regen_report.json` (policy/mode/peak RSS)
 - `reflaxe_ocaml_progress.log` (telemetry stream)
-- `summary.txt` (top class contributors + checkpoint lines)
+- `progress_summary.json` (machine-readable class/checkpoint aggregate)
+- `summary.txt` (report line + top class contributors + checkpoint lines)
+
+You can summarize any existing progress log directly:
+
+```bash
+node scripts/hxhx/summarize-stage0-progress.js \
+  --input /tmp/stage0-profile/reflaxe_ocaml_progress.log \
+  --top 15 \
+  --json-out /tmp/stage0-profile/progress_summary.json
+```
 
 Current contributor pattern from 65s samples typically shows parser/typer-heavy classes near the top, for example:
 
