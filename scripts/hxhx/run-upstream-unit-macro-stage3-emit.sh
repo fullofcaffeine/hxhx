@@ -32,7 +32,20 @@ if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
 fi
 
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
-  echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
+  if command -v haxelib >/dev/null 2>&1; then
+    HAXELIB_BIN="haxelib"
+  else
+    echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
+    exit 1
+  fi
+fi
+
+HAXELIB_RESOLVED="$(command -v "$HAXELIB_BIN" 2>/dev/null || true)"
+if [ -z "$HAXELIB_RESOLVED" ] || [ ! -x "$HAXELIB_RESOLVED" ]; then
+  HAXELIB_RESOLVED="$(command -v haxelib 2>/dev/null || true)"
+fi
+if [ -z "$HAXELIB_RESOLVED" ] || [ ! -x "$HAXELIB_RESOLVED" ]; then
+  echo "Missing runnable haxelib binary (requested '$HAXELIB_BIN')." >&2
   exit 1
 fi
 
@@ -60,9 +73,9 @@ fi
 UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"
 has_utest() {
   if command -v rg >/dev/null 2>&1; then
-    "$HAXELIB_BIN" list 2>/dev/null | rg -q "^utest:"
+    "$HAXELIB_RESOLVED" list 2>/dev/null | rg -q "^utest:"
   else
-    "$HAXELIB_BIN" list 2>/dev/null | grep -q "^utest:"
+    "$HAXELIB_RESOLVED" list 2>/dev/null | grep -q "^utest:"
   fi
 }
 
@@ -79,7 +92,7 @@ prepare_haxelib_hxml() {
 
   for attempt in 1 2 3; do
     set +e
-    raw_lines="$("$HAXELIB_BIN" --always path "$lib" 2>"$err_log")"
+    raw_lines="$("$HAXELIB_RESOLVED" --always path "$lib" 2>"$err_log")"
     code="$?"
     set -e
 
@@ -125,7 +138,7 @@ prepare_haxelib_hxml() {
 
 if ! has_utest; then
   echo "Installing utest (pinned $UTEST_COMMIT)..."
-  "$HAXELIB_BIN" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
+  "$HAXELIB_RESOLVED" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
 fi
 
 # Precompute `haxe_libraries/utest.hxml` so Stage3 can resolve `-lib utest` without relying on
@@ -137,7 +150,7 @@ set +e
 out="$(
   cd "$UPSTREAM_DIR/tests/unit"
   rm -rf out_hxhx_unit_macro_stage3_emit
-  HAXELIB_BIN="$HAXELIB_BIN" \
+  HAXELIB_BIN="$HAXELIB_RESOLVED" \
     "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
 )"
 code="$?"

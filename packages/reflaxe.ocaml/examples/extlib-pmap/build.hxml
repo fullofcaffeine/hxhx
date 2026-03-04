@@ -3,4 +3,4 @@
 --no-output
 -lib reflaxe.ocaml
 -D ocaml_output=out
--D ocaml_dune_libraries=unix,extlib
+-D ocaml_dune_libraries=unix,extlib,threads

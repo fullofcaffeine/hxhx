@@ -54,6 +54,13 @@ Build `hxhx` from committed bootstrap snapshots:
 bash scripts/hxhx/build-hxhx.sh
 ```
 
+Performance tip for heavy bootstrap/source maintenance runs:
+
+```bash
+# If `which haxe` points to a Lix shim, prefer native stage0 explicitly.
+HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+```
+
 ## Pick your workflow
 
 - **`hxhx` compiler workflow**

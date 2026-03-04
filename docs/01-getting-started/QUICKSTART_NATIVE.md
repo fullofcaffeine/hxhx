@@ -25,6 +25,12 @@ HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
 echo "$HXHX_BIN"
 ```
 
+If you run heavy stage0/source workflows and `which haxe` points to `.../lix/bin/haxeshim.js`, prefer a native binary explicitly:
+
+```bash
+HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast
+```
+
 ## 2) Run native lane with stage0 forbidden
 
 Native OCaml lane:

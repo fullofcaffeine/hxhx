@@ -52,7 +52,10 @@ const allowedTextExts = new Set([
 const copyleftAcronym = 'G' + 'PL'
 const lesserCopyleftAcronym = 'L' + copyleftAcronym
 const bannedContentRules = [
-  { id: 'copyleft_full_text', re: /gnu general public license/i },
+  {
+    id: 'copyleft_full_text',
+    re: new RegExp(['gnu', 'general', 'public', 'license'].join('\\s+'), 'i'),
+  },
   { id: 'copyleft_license_field', re: new RegExp(`"license"\\s*:\\s*"${copyleftAcronym}[^"]*"`, 'i') },
   { id: 'copyleft_acronym_major', re: new RegExp(`\\b${copyleftAcronym}(?:-|\\s)?(?:2(?:\\.0)?|3(?:\\.0)?)\\b`, 'i') },
   { id: 'copyleft_acronym_lesser', re: new RegExp(`\\b${lesserCopyleftAcronym}(?:-|\\s)?(?:2(?:\\.1)?|3(?:\\.0)?)\\b`, 'i') },

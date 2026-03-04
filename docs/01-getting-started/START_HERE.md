@@ -23,6 +23,8 @@ Canonical definitions for all paths:
 - Use direct lane flags: `--ocaml`, `--ocaml-eval`, `--compat`, and canonical `--js <file>`.
 - `--target` was removed on purpose (hard cutover, no compatibility shim).
 - `--target-id` is still valid, but only in plugin scaffold/build scripts (for example `plugin-init.sh`).
+- Performance tip for heavy bootstrap/source runs: if `which haxe` points to a Lix shim (`.../lix/bin/haxeshim.js`), prefer a native binary explicitly, for example:
+  - `HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --fast`
 
 ## Choose your path
 

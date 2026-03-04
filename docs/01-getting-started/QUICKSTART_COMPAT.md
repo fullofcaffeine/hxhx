@@ -22,6 +22,12 @@ HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
 echo "$HXHX_BIN"
 ```
 
+If delegated runs look unusually slow or memory-heavy and `which haxe` resolves to a Lix shim (`.../lix/bin/haxeshim.js`), point to a native stage0 binary:
+
+```bash
+export HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe"
+```
+
 ## 2) Run a compat compile
 
 OCaml delegated macro lane:

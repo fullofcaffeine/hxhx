@@ -26,7 +26,20 @@ if [ ! -d "$UPSTREAM_DIR/tests/unit" ]; then
 fi
 
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
-  echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
+  if command -v haxelib >/dev/null 2>&1; then
+    HAXELIB_BIN="haxelib"
+  else
+    echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
+    exit 1
+  fi
+fi
+
+HAXELIB_RESOLVED="$(command -v "$HAXELIB_BIN" 2>/dev/null || true)"
+if [ -z "$HAXELIB_RESOLVED" ] || [ ! -x "$HAXELIB_RESOLVED" ]; then
+  HAXELIB_RESOLVED="$(command -v haxelib 2>/dev/null || true)"
+fi
+if [ -z "$HAXELIB_RESOLVED" ] || [ ! -x "$HAXELIB_RESOLVED" ]; then
+  echo "Missing runnable haxelib binary (requested '$HAXELIB_BIN')." >&2
   exit 1
 fi
 
@@ -77,15 +90,15 @@ fi
 UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"
 has_utest() {
   if command -v rg >/dev/null 2>&1; then
-    "$HAXELIB_BIN" list 2>/dev/null | rg -q "^utest:"
+    "$HAXELIB_RESOLVED" list 2>/dev/null | rg -q "^utest:"
   else
-    "$HAXELIB_BIN" list 2>/dev/null | grep -q "^utest:"
+    "$HAXELIB_RESOLVED" list 2>/dev/null | grep -q "^utest:"
   fi
 }
 
 if ! has_utest; then
   echo "Installing utest (pinned $UTEST_COMMIT)..."
-  "$HAXELIB_BIN" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
+  "$HAXELIB_RESOLVED" --always git utest https://github.com/haxe-utest/utest "$UTEST_COMMIT"
 fi
 
 echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hxhx --hxhx-stage3 emit+build+run)"

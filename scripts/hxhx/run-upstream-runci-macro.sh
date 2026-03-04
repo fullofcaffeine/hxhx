@@ -222,8 +222,12 @@ if ! command -v "$HAXE_BIN" >/dev/null 2>&1; then
 fi
 
 if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
-  echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
-  exit 1
+  if command -v haxelib >/dev/null 2>&1; then
+    HAXELIB_BIN="haxelib"
+  else
+    echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
+    exit 1
+  fi
 fi
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
@@ -271,7 +275,14 @@ fi
 # - For Gate2, we care more about robustness than shaving a few ms of wrapper overhead.
 # - We still keep `haxe` itself pinned to the concrete stage0 binary to avoid accidentally
 #   picking up a different toolchain inside upstream worktrees.
-STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN")"
+STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN" 2>/dev/null || true)"
+if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
+  STAGE0_HAXELIB="$(command -v haxelib 2>/dev/null || true)"
+fi
+if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
+  echo "Missing runnable haxelib binary (requested '$HAXELIB_BIN')." >&2
+  exit 1
+fi
 
 if [ -z "$STAGE0_STD_PATH" ]; then
   STAGE0_HAXE_DIR="$(cd "$(dirname "$STAGE0_HAXE")" && pwd)"
@@ -999,6 +1010,7 @@ if [ "$HXHX_GATE2_MODE" = "stage3_no_emit" ] || [ "$HXHX_GATE2_MODE" = "stage3_n
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+export HAXELIB_BIN="${WRAP_DIR}/haxelib"
 if [ -z "\${HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES:-}" ]; then
   export HXHX_RESOLVE_IMPLICIT_PACKAGE_TYPES=0
 fi
@@ -1018,6 +1030,7 @@ elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "st
   cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+export HAXELIB_BIN="${WRAP_DIR}/haxelib"
 if [ -n "\${HXHX_GATE2_WRAP_LOG:-}" ]; then
   printf '%s\n' "haxe \$*" >>"\${HXHX_GATE2_WRAP_LOG}"
 fi
@@ -1048,6 +1061,7 @@ else
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+export HAXELIB_BIN="${WRAP_DIR}/haxelib"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
@@ -1186,7 +1200,7 @@ esac
   elif [ "$HXHX_GATE2_MODE" = "stage3_emit_runner" ] || [ "$HXHX_GATE2_MODE" = "stage3_emit_runner_minimal" ]; then
     rm -rf out_hxhx_runci_stage3_emit_runner
     set +e
-    PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$HAXELIB_BIN" \
+    PATH="$WRAP_DIR:$PATH" HAXELIB_BIN="$WRAP_DIR/haxelib" \
       run_with_gate2_timeout_and_heartbeat "${HXHX_GATE2_RUNCI_TIMEOUT_SEC}" \
       "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies RunCi.hxml --hxhx-out out_hxhx_runci_stage3_emit_runner
     code="$?"

@@ -174,6 +174,15 @@ if [ ! -d "$UPSTREAM_DIR/tests/runci" ] || [ ! -f "$UPSTREAM_DIR/tests/RunCi.hxm
   exit 0
 fi
 
+if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
+  if command -v haxelib >/dev/null 2>&1; then
+    HAXELIB_BIN="haxelib"
+  else
+    echo "Missing haxelib on PATH (expected '$HAXELIB_BIN')." >&2
+    exit 1
+  fi
+fi
+
 need_cmd "$HAXE_BIN" "stage0 compiler"
 need_cmd "$HAXELIB_BIN" "haxelib CLI"
 
@@ -204,7 +213,14 @@ fi
 # Why:
 # - The raw binary relies on dynamic loader setup on macOS and can be brittle.
 # - For gate runners, we care more about robustness than shaving a few ms of wrapper overhead.
-STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN")"
+STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN" 2>/dev/null || true)"
+if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
+  STAGE0_HAXELIB="$(command -v haxelib 2>/dev/null || true)"
+fi
+if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
+  echo "Missing runnable haxelib binary (requested '$HAXELIB_BIN')." >&2
+  exit 1
+fi
 
 if [ -z "$STAGE0_STD_PATH" ]; then
   STAGE0_HAXE_DIR="$(cd "$(dirname "$STAGE0_HAXE")" && pwd)"
@@ -577,6 +593,7 @@ cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 export NEKOPATH="${NEKOPATH_DIR}"
+export HAXELIB_BIN="${WRAP_DIR}/haxelib"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
@@ -724,6 +741,7 @@ run_target_attempt() {
     (
       cd "$ROOT"
       HAXE_UPSTREAM_DIR="$UPSTREAM_DIR_ORIG" \
+      HAXELIB_BIN="$STAGE0_HAXELIB" \
       HXHX_GATE2_MODE=stage3_no_emit_direct \
       HXHX_GATE2_SKIP_PARTY="${HXHX_GATE2_SKIP_PARTY}" \
       bash "$ROOT/scripts/hxhx/run-upstream-runci-macro.sh"

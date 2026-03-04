@@ -2163,7 +2163,31 @@ class EmitterStage {
 				if (c == "(Obj.magic 0)") {
 					"(Obj.magic 0)";
 				} else {
-					final sig = callSigFor(c);
+					final receiverPreApplied = c.indexOf(" (this_)") != -1;
+
+					function callSigForExpr(expr:HxExpr):Null<EmitterCallSig> {
+						return switch (expr) {
+							case EIdent(name):
+								final lowered = ocamlValueIdent(name);
+								final byLowered = callSigFor(lowered);
+								byLowered != null ? byLowered : callSigFor(name);
+							case EField(_obj, name):
+								final lowered = ocamlValueIdent(name);
+								final byLowered = callSigFor(lowered);
+								byLowered != null ? byLowered : callSigFor(name);
+							case _:
+								null;
+						};
+					}
+
+					var sig = callSigFor(c);
+					if (sig == null && !receiverPreApplied) {
+						final firstSpace = c.indexOf(" ");
+						if (firstSpace > 0)
+							sig = callSigFor(c.substr(0, firstSpace));
+						if (sig == null)
+							sig = callSigForExpr(callee);
+					}
 
 					// Stage 3 bring-up safety: avoid emitting OCaml that over-applies a function.
 					//
