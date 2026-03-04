@@ -47,7 +47,7 @@ For lane/profile context, use the canonical beginner truth table:
 | `Gate 3 Builtin / Native Target Smoke` | `.github/workflows/gate3-builtin.yml` | Native builtin target smoke (`ocaml` and `js`) plus JS oracle smoke lane. | **PR required** (+scheduled/manual) | `push`, `pull_request`, weekly schedule, manual |
 | `Oracle / JS Smoke (Upstream vs HXHX)` | `.github/workflows/js-oracle-smoke.yml` | Focused JS behavior comparison against upstream oracle. | **PR required** (+manual) | `push`, `pull_request`, manual |
 | `Stdlib Portable / Tier1` | `.github/workflows/stdlib-portable-lite.yml` | Tier1 portable stdlib conformance checks. | **PR required** | `push`, `pull_request` |
-| `Stdlib / Semantic Diff` | `.github/workflows/semantic-diff.yml` | Semantic diff smoke lane for portable behavior drift detection. | **PR required** (+scheduled/manual) | `push`, `pull_request`, weekly schedule, manual |
+| `Stdlib / Semantic Diff` | `.github/workflows/semantic-diff.yml` | Scoped semantic-diff-lite canary for stdlib/runtimegen-sensitive PRs, plus nightly expanded lane. | **PR required** (+scheduled/manual) | `push`, `pull_request`, weekly schedule, manual |
 
 PR-required baseline is: **guardrails + core tests + scoped smokes** (`ci.yml`, gate-lite workflows, builtin smoke, JS oracle, stdlib tier1, semantic diff smoke).
 
@@ -58,6 +58,15 @@ Stable success markers used by required lanes:
 - `PLUGIN_MATRIX_STRICT:PASS` (`ci.yml` job `plugin-matrix`)
 - `GATE1_LITE:PASS` (`gate1-lite.yml`)
 - `GATE2_LITE:PASS` (`gate2-lite.yml`)
+- `SEMANTIC_DIFF_LITE_SCOPE:RUN` or `SEMANTIC_DIFF_LITE_SCOPE:SKIP_NO_RELEVANT_CHANGES` (`semantic-diff.yml` job `Semantic diff (PR smoke)`)
+- `SEMANTIC_DIFF_LITE:PASS` (emitted when scoped semantic-diff lane executes)
+
+Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and include:
+
+- `changed_files.txt` (revision file list)
+- `matched_files.txt` (scoped trigger matches)
+- `semantic_diff_lite.marker.txt` (scope + pass/skip markers)
+- lane reports under `.artifacts/semantic-diff/pr/**` when the scoped lane runs
 
 ## Scheduled compatibility and release gates (slow lanes)
 

@@ -32,13 +32,56 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect semantic-diff scoped changes
+        id: scope
+        run: |
+          set -euo pipefail
+          ARTIFACT_DIR=".artifacts/semantic-diff/pr"
+          mkdir -p "$ARTIFACT_DIR"
+
+          BASE_SHA=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          HEAD_SHA="${{ github.sha }}"
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            if git rev-parse "${HEAD_SHA}^" >/dev/null 2>&1; then
+              BASE_SHA="$(git rev-parse "${HEAD_SHA}^")"
+            fi
+          fi
+
+          if [ -n "$BASE_SHA" ]; then
+            git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "$ARTIFACT_DIR/changed_files.txt"
+          else
+            git ls-files > "$ARTIFACT_DIR/changed_files.txt"
+          fi
+
+          scope_regex='^(packages/reflaxe\.ocaml/std/|packages/reflaxe\.ocaml/src/reflaxe/ocaml/runtimegen/|packages/reflaxe\.ocaml/src/reflaxe/ocaml/OcamlCompiler\.hx|packages/reflaxe\.ocaml/src/reflaxe/ocaml/OcamlRuntimeMode\.hx)'
+          if grep -En "$scope_regex" "$ARTIFACT_DIR/changed_files.txt" > "$ARTIFACT_DIR/matched_files.txt"; then
+            echo "SEMANTIC_DIFF_LITE_SCOPE:RUN" | tee "$ARTIFACT_DIR/semantic_diff_lite.marker.txt"
+            echo "should_run=1" >> "$GITHUB_OUTPUT"
+          else
+            : > "$ARTIFACT_DIR/matched_files.txt"
+            echo "SEMANTIC_DIFF_LITE_SCOPE:SKIP_NO_RELEVANT_CHANGES" | tee "$ARTIFACT_DIR/semantic_diff_lite.marker.txt"
+            echo "should_run=0" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup OCaml toolchain (OCaml 5.2.1)
+        if: steps.scope.outputs.should_run == '1'
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5.2.1
           dune-cache: true
 
+      - name: Skip semantic-diff setup (scope unchanged)
+        if: steps.scope.outputs.should_run != '1'
+        run: echo "Skipping toolchain setup (semantic-diff scope not touched)."
+
       - name: Install OCaml packages
+        if: steps.scope.outputs.should_run == '1'
         run: |
           set -euo pipefail
           eval "$(opam env)"
@@ -48,18 +91,21 @@ jobs:
           ocamlc -version
 
       - name: Export OCaml switch binaries to PATH
+        if: steps.scope.outputs.should_run == '1'
         run: |
           set -euo pipefail
           eval "$(opam env)"
           echo "${OPAM_SWITCH_PREFIX}/bin" >> "$GITHUB_PATH"
 
       - name: Setup Node.js
+        if: steps.scope.outputs.should_run == '1'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
       - name: Cache Haxe toolchain (lix)
+        if: steps.scope.outputs.should_run == '1'
         uses: actions/cache@v4
         with:
           path: |
@@ -69,9 +115,11 @@ jobs:
             ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
 
       - name: Install npm dependencies
+        if: steps.scope.outputs.should_run == '1'
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Install Haxe (pinned via lix)
+        if: steps.scope.outputs.should_run == '1'
         run: |
           set -euo pipefail
           npx lix download
@@ -82,9 +130,11 @@ jobs:
           haxe -version
 
       - name: Download Haxe libraries (lix)
+        if: steps.scope.outputs.should_run == '1'
         run: npx lix download
 
       - name: Run semantic-diff PR smoke lane
+        if: steps.scope.outputs.should_run == '1'
         env:
           SEMANTIC_DIFF_PROFILE: pr
           SEMANTIC_DIFF_SEED: "1337"
@@ -95,6 +145,21 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/test-stdlib-semantic-diff-lane.sh
+
+      - name: Emit semantic-diff-lite pass marker
+        if: steps.scope.outputs.should_run == '1'
+        run: |
+          set -euo pipefail
+          echo "SEMANTIC_DIFF_LITE:PASS" | tee -a .artifacts/semantic-diff/pr/semantic_diff_lite.marker.txt
+
+      - name: Emit semantic-diff-lite skip marker
+        if: steps.scope.outputs.should_run != '1'
+        run: |
+          set -euo pipefail
+          ARTIFACT_DIR=".artifacts/semantic-diff/pr"
+          mkdir -p "$ARTIFACT_DIR"
+          echo "SEMANTIC_DIFF_LITE:SKIP_NO_RELEVANT_CHANGES" | tee -a "$ARTIFACT_DIR/semantic_diff_lite.marker.txt"
+          printf "Scoped semantic-diff paths were unchanged in this revision.\n" > "$ARTIFACT_DIR/summary.txt"
 
       - name: Upload semantic-diff PR artifacts
         if: always()
@@ -178,6 +243,9 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/test-stdlib-semantic-diff-lane.sh
+
+      - name: Emit semantic-diff nightly marker
+        run: echo "SEMANTIC_DIFF_NIGHTLY:PASS"
 
       - name: Upload semantic-diff nightly artifacts
         if: always()

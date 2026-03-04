@@ -62,6 +62,10 @@ Notes:
   - `npm run test:stdlib:semantic-diff:minimizer`
 - CI lane driver (profile via env: `SEMANTIC_DIFF_PROFILE=pr|nightly`):
   - `npm run test:stdlib:semantic-diff:lane`
+- CI scoped PR canary (`.github/workflows/semantic-diff.yml`):
+  - runs only when scoped files change (`packages/reflaxe.ocaml/std/**`, `packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/**`, runtime-plan hooks in `OcamlCompiler.hx` / `OcamlRuntimeMode.hx`)
+  - markers: `SEMANTIC_DIFF_LITE_SCOPE:RUN` then `SEMANTIC_DIFF_LITE:PASS`
+  - artifact bundle: `semantic-diff-pr-artifacts`
 
 ## Cleanup after heavy runs
 

@@ -24,7 +24,7 @@ Scope manifests used by this map:
 | PM-09 | Builtin target smoke (ocaml+js) for replacement bundle | Native builtin lane | `ocaml,js` | `portable` (default for OCaml) | `scripts/hxhx/run-replacement-ready.sh` (`npm run test:upstream:replacement-ready:full`) | `BUILTIN_TARGET_SMOKE:PASS` |
 | PM-10 | Strict stage0-forbidden bundle gate | Native strict replacement scope | `Macro,Js,Neko` + native compile lanes `ocaml,js` | strict M7 (`HXHX_M7_STRICT=1`) | `.github/workflows/gate-m7.yml` / `npm run test:upstream:replacement-ready:strict` | `M7_STRICT_STAGE0:PASS` |
 | PM-11 | Replacement-ready bundle gate (scoped 1.0) | Oracle replacement scope | scope-defined (`Macro,Js,Neko`; policy includes `ocaml`, `ocaml-compat`, `js`, `js-compat`) | M7 full profile | `.github/workflows/gate-m7.yml` / `npm run test:upstream:replacement-ready` | `M7_REPLACEMENT_READY:PASS` |
-| PM-12 | Stdlib semantic-diff smoke / expanded | Portable oracle diff lane | generated stdlib-focused programs | `portable` | `.github/workflows/semantic-diff.yml` jobs `Semantic diff (PR smoke)` and `Semantic diff (nightly expanded)` | workflow job success (no PASS token today) |
+| PM-12 | Stdlib semantic-diff scoped PR canary / nightly expanded | Portable oracle diff lane | generated stdlib-focused programs | `portable` | `.github/workflows/semantic-diff.yml` jobs `Semantic diff (PR smoke)` and `Semantic diff (nightly expanded)` | `SEMANTIC_DIFF_LITE_SCOPE:RUN` or `SEMANTIC_DIFF_LITE_SCOPE:SKIP_NO_RELEVANT_CHANGES` (PR scope), `SEMANTIC_DIFF_LITE:PASS` (when scoped run executes), `SEMANTIC_DIFF_NIGHTLY:PASS` (nightly) |
 
 ## Marker Registry
 
@@ -41,9 +41,13 @@ These are the canonical marker strings used for parity statements in logs:
 - `BUILTIN_TARGET_SMOKE:PASS`
 - `M7_STRICT_STAGE0:PASS`
 - `M7_REPLACEMENT_READY:PASS`
+- `SEMANTIC_DIFF_LITE_SCOPE:RUN`
+- `SEMANTIC_DIFF_LITE_SCOPE:SKIP_NO_RELEVANT_CHANGES`
+- `SEMANTIC_DIFF_LITE:PASS`
+- `SEMANTIC_DIFF_NIGHTLY:PASS`
 
 ## Claim Rules
 
 - Use `M7_REPLACEMENT_READY:PASS` for scoped oracle replacement-readiness statements.
 - Use both `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` for stage0-forbidden/native replacement statements.
-- When a lane has no explicit PASS token yet (for example semantic-diff), cite workflow name + job name + run URL.
+- For semantic-diff-lite PR canary claims, include scope marker (`RUN` or `SKIP`), pass marker when present, and `semantic-diff-pr-artifacts`.
