@@ -210,6 +210,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors.
     - emits `.hxhx/profile/stage0-regen/<timestamp>/progress_summary.json` for deterministic class/checkpoint aggregation.
     - summarize any existing progress log: `node scripts/hxhx/summarize-stage0-progress.js --input <reflaxe_ocaml_progress.log> --top 15 --json-out <out.json>`
+    - compare multiple run summaries: `npm run hxhx:profile:stage0-compare -- --summary-dir <run1> --summary-dir <run2> --summary-dir <run3> --min-presence 2 --sort median --json-out <compare.json>`
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
     - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
     - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`

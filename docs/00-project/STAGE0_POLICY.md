@@ -139,6 +139,18 @@ node scripts/hxhx/summarize-stage0-progress.js \
   --json-out /tmp/stage0-profile/progress_summary.json
 ```
 
+You can compare multiple runs and rank stable hotspots (median by default):
+
+```bash
+node scripts/hxhx/compare-stage0-progress-summaries.js \
+  --summary-dir /tmp/stage0-profile-run1 \
+  --summary-dir /tmp/stage0-profile-run2 \
+  --summary-dir /tmp/stage0-profile-run3 \
+  --min-presence 2 \
+  --sort median \
+  --json-out /tmp/stage0-profile/compare_summary.json
+```
+
 Current contributor pattern from 65s samples typically shows parser/typer-heavy classes near the top, for example:
 
 - `HxParser`
