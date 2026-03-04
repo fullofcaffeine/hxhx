@@ -10,6 +10,7 @@ We treat the upstream Haxe repo as the **source of truth** for correctness and c
 - Upstream checkout (default): `vendor/haxe` (fetch with `bash scripts/vendor/fetch-haxe-upstream.sh`)
 - Override upstream checkout: `HAXE_UPSTREAM_DIR=/path/to/haxe`
 - Upstream test harnesses: `tests/unit/*` and `tests/runci/*` (see `tests/RunCi.hx`)
+- Canonical parity matrix for Haxe 4.3.7: `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
 
 ## Key point: “compile the test files” is necessary but not sufficient
 
@@ -309,6 +310,9 @@ For Haxe **4.3.7**, this repo tracks two distinct acceptance scopes:
 2) **Native stage0-forbidden scope** (non-delegating runtime signal)
 
 These scopes are related, but not identical.
+
+For the exact suites × lanes × targets × profiles mapping and marker registry, use:
+`docs/00-project/PARITY_MAP_HAXE_4_3_7.md`.
 
 ### 1) Oracle replacement-ready scope
 
