@@ -115,6 +115,9 @@ if (minPresence > samples && explicitSummaries.length === 0) {
   fail(`Invalid --min-presence: ${minPresence} exceeds requested samples ${samples}`);
 }
 
+const compareJsonPath = jsonOutPath || path.join(process.cwd(), '.hxhx', 'profile', 'stage0-regen', 'compare.latest.json');
+fs.mkdirSync(path.dirname(compareJsonPath), { recursive: true });
+
 function walkSummaries(dir) {
   const out = [];
   if (!fs.existsSync(dir)) return out;
@@ -159,13 +162,56 @@ if (explicitSummaries.length > 0) {
   selected = found;
 }
 
+function writePartialOutputs(reason) {
+  const lines = [];
+  lines.push(`stage0_hotspot_regression runs=${selected.length} requested=${samples} min_presence=${minPresence} sort=${sortKey}`);
+  lines.push(`status=partial reason=${reason}`);
+  if (selected.length > 0) {
+    lines.push('selected_summaries:');
+    for (const s of selected) {
+      lines.push(`  ${s.path}`);
+    }
+  } else {
+    lines.push('selected_summaries: none');
+  }
+  lines.push(`compare_json=${compareJsonPath}`);
+
+  const text = `${lines.join('\n')}\n`;
+  process.stdout.write(text);
+  if (textOutPath) {
+    fs.mkdirSync(path.dirname(textOutPath), { recursive: true });
+    fs.writeFileSync(textOutPath, text, 'utf8');
+  }
+  fs.writeFileSync(compareJsonPath, JSON.stringify({
+    schema: 'stage0-hotspot-regression.v1',
+    status: 'partial',
+    reason,
+    run_count: selected.length,
+    requested_samples: samples,
+    min_presence: minPresence,
+    sort_key: sortKey,
+    selected_summaries: selected.map((s) => s.path),
+    rows: [],
+  }, null, 2) + '\n', 'utf8');
+}
+
 if (selected.length < 2) {
-  fail(`Need at least 2 summaries, found ${selected.length}` + (allowPartial ? ' (allow_partial active)' : ''), allowPartial ? 0 : 3);
+  const reason = `need_at_least_2_summaries_found_${selected.length}`;
+  if (allowPartial) {
+    writePartialOutputs(reason);
+    process.exit(0);
+  }
+  fail(`Need at least 2 summaries, found ${selected.length}.`, 3);
 }
 if (selected.length < samples && !allowPartial && explicitSummaries.length === 0) {
   fail(`Only found ${selected.length} summaries (requested ${samples}).`, 4);
 }
 if (selected.length < minPresence) {
+  const reason = `min_presence_${minPresence}_exceeds_available_runs_${selected.length}`;
+  if (allowPartial) {
+    writePartialOutputs(reason);
+    process.exit(0);
+  }
   fail(`min_presence=${minPresence} exceeds available runs=${selected.length}`);
 }
 
@@ -173,9 +219,6 @@ const compareScript = path.join(__dirname, '..', 'hxhx', 'compare-stage0-progres
 if (!fs.existsSync(compareScript)) {
   fail(`Missing compare script: ${compareScript}`);
 }
-
-const compareJsonPath = jsonOutPath || path.join(process.cwd(), '.hxhx', 'profile', 'stage0-regen', 'compare.latest.json');
-fs.mkdirSync(path.dirname(compareJsonPath), { recursive: true });
 
 const compareArgs = [compareScript];
 for (const s of selected) {

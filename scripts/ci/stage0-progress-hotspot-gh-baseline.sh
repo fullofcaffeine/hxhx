@@ -238,11 +238,11 @@ selected_count="${#selected_paths[@]}"
 if [ "$selected_count" -lt 2 ]; then
   msg="Need at least 2 summaries for baseline comparison (found $selected_count)."
   if [ "$allow_partial" = "1" ]; then
-    echo "$msg"
-    exit 0
+    echo "$msg (continuing in allow-partial mode)."
+  else
+    echo "$msg" >&2
+    exit 4
   fi
-  echo "$msg" >&2
-  exit 4
 fi
 if [ "$selected_count" -lt "$samples" ] && [ "$allow_partial" != "1" ]; then
   echo "Only $selected_count summaries found (requested $samples)." >&2
