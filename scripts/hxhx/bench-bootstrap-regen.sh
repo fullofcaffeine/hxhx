@@ -4,13 +4,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REGEN_SCRIPT="$ROOT/scripts/hxhx/regenerate-hxhx-bootstrap.sh"
 SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
-STATE_DIR="${HXHX_STATE_DIR:-$ROOT/.hxhx/state}"
-FINGERPRINT_FILE="$STATE_DIR/bootstrap_regen_fingerprint.v1"
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 REPS="${HXHX_BOOTSTRAP_BENCH_REPS:-1}"
 SCENARIOS_RAW="${HXHX_BOOTSTRAP_BENCH_SCENARIOS:-cold,warm,skip}"
 VERIFY_FLAG="${HXHX_BOOTSTRAP_BENCH_VERIFY:-0}"
+STAGE0_POLICY="${HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY:-}"
+STAGE0_NATIVE_BIN="${HXHX_BOOTSTRAP_BENCH_STAGE0_NATIVE_HAXE_BIN:-}"
+COMPARE_STAGE0_POLICIES="${HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES:-0}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 REPORT_DIR="${HXHX_BOOTSTRAP_BENCH_REPORT_DIR:-$ROOT/.hxhx/bench/bootstrap-regen/$TIMESTAMP}"
 
@@ -21,8 +22,16 @@ Usage: bash scripts/hxhx/bench-bootstrap-regen.sh
 Environment knobs:
   HAXE_BIN                             Haxe executable path (default: haxe)
   HXHX_BOOTSTRAP_BENCH_REPS           Repetitions per scenario (default: 1)
-  HXHX_BOOTSTRAP_BENCH_SCENARIOS      Comma list: cold,warm,skip (default: cold,warm,skip)
+  HXHX_BOOTSTRAP_BENCH_SCENARIOS      Comma list: cold,warm,skip,select (default: cold,warm,skip)
   HXHX_BOOTSTRAP_BENCH_VERIFY         0/1 run snapshot verify step (default: 0)
+  HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY
+                                      Stage0 haxe policy override for all runs
+                                      (warn|prefer-native|require-native)
+  HXHX_BOOTSTRAP_BENCH_STAGE0_NATIVE_HAXE_BIN
+                                      Native haxe candidate override used by regen script
+  HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES
+                                      0/1 run each benchmark twice:
+                                      wrapper=warn and native=prefer-native
   HXHX_BOOTSTRAP_BENCH_REPORT_DIR     Output directory for per-run JSON reports
 
 Examples:
@@ -31,6 +40,10 @@ Examples:
 
   # Include verify and 2 reps
   HXHX_BOOTSTRAP_BENCH_VERIFY=1 HXHX_BOOTSTRAP_BENCH_REPS=2 bash scripts/hxhx/bench-bootstrap-regen.sh
+
+  # Compare wrapper vs native stage0 policy on warm path
+  HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 \
+    bash scripts/hxhx/bench-bootstrap-regen.sh
 USAGE
 }
 
@@ -75,9 +88,30 @@ if ! is_non_negative_int "$VERIFY_FLAG"; then
 	exit 1
 fi
 
+if ! is_non_negative_int "$COMPARE_STAGE0_POLICIES"; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES: '$COMPARE_STAGE0_POLICIES' (expected 0 or 1)." >&2
+	exit 1
+fi
+
+if [ "$COMPARE_STAGE0_POLICIES" = "1" ] && [ -n "$STAGE0_POLICY" ]; then
+	echo "Cannot set HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY when HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1." >&2
+	exit 1
+fi
+
+if [ -n "$STAGE0_POLICY" ]; then
+	case "$STAGE0_POLICY" in
+		warn|prefer-native|require-native)
+			;;
+		*)
+			echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY: '$STAGE0_POLICY' (expected warn|prefer-native|require-native)." >&2
+			exit 1
+			;;
+	esac
+fi
+
 mkdir -p "$REPORT_DIR"
 RESULTS_TSV="$REPORT_DIR/results.tsv"
-: >"$RESULTS_TSV"
+printf 'scenario\tpolicy\trep\telapsed_sec\temit_sec\ttotal_sec\tskipped_emit\thaxe_mode\thaxe_policy\tswitched\tpeak_rss_mb\treport\n' >"$RESULTS_TSV"
 
 cleanup() {
 	bash "$SERVER_HELPER" stop >/dev/null 2>&1 || true
@@ -96,53 +130,159 @@ echo "HAXE_BIN: $HAXE_BIN"
 echo "Scenarios: $SCENARIOS_RAW"
 echo "Reps per scenario: $REPS"
 echo "Verify mode: $VERIFY_FLAG"
+if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
+	echo "Stage0 policy mode: compare(wrapper=warn,native=prefer-native)"
+else
+	echo "Stage0 policy mode: ${STAGE0_POLICY:-default}"
+fi
+if [ -n "$STAGE0_NATIVE_BIN" ]; then
+	echo "Stage0 native candidate override: $STAGE0_NATIVE_BIN"
+fi
 echo "Reports: $REPORT_DIR"
 echo ""
+
+run_regen_with_policy() {
+	local policy_value="$1"
+	local report_path="$2"
+	shift 2
+	local -a regen_args=("$@" "${verify_args[@]}")
+	if [ -n "$report_path" ]; then
+		regen_args+=(--report-json "$report_path")
+	fi
+
+	if [ -n "$policy_value" ] && [ -n "$STAGE0_NATIVE_BIN" ]; then
+		HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$policy_value" \
+		HXHX_STAGE0_NATIVE_HAXE_BIN="$STAGE0_NATIVE_BIN" \
+		HAXE_BIN="$HAXE_BIN" \
+		bash "$REGEN_SCRIPT" "${regen_args[@]}"
+		return
+	fi
+	if [ -n "$policy_value" ]; then
+		HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$policy_value" \
+		HAXE_BIN="$HAXE_BIN" \
+		bash "$REGEN_SCRIPT" "${regen_args[@]}"
+		return
+	fi
+	if [ -n "$STAGE0_NATIVE_BIN" ]; then
+		HXHX_STAGE0_NATIVE_HAXE_BIN="$STAGE0_NATIVE_BIN" \
+		HAXE_BIN="$HAXE_BIN" \
+		bash "$REGEN_SCRIPT" "${regen_args[@]}"
+		return
+	fi
+	HAXE_BIN="$HAXE_BIN" bash "$REGEN_SCRIPT" "${regen_args[@]}"
+}
+
+extract_report_metrics() {
+	local report_path="$1"
+	if ! command -v node >/dev/null 2>&1; then
+		printf 'na\tna\tna\tna\tna\tna\tna\n'
+		return
+	fi
+	node -e '
+const fs = require("fs");
+const reportPath = process.argv[1];
+let report = {};
+try {
+  report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+} catch (_) {}
+const get = (value) => (value === undefined || value === null || value === "" ? "na" : String(value));
+const values = [
+  get(report.phase_seconds && report.phase_seconds.emit),
+  get(report.phase_seconds && report.phase_seconds.total),
+  get(report.skipped_emit),
+  get(report.haxe_bin_mode),
+  get(report.haxe_bin_policy),
+  get(report.haxe_bin_switched),
+  get(report.stage0_observability && report.stage0_observability.heartbeat_peak_rss_mb)
+];
+process.stdout.write(values.join("\t"));
+' "$report_path"
+}
 
 run_once() {
 	local scenario="$1"
 	local rep="$2"
-	shift 2
-	local report_path="$REPORT_DIR/${scenario}.run${rep}.json"
+	local policy_label="$3"
+	local policy_value="$4"
+	shift 4
+	local policy_slug="${policy_label//[^A-Za-z0-9._-]/_}"
+	local report_path="$REPORT_DIR/${scenario}.${policy_slug}.run${rep}.json"
 	local start_ts end_ts elapsed
+	local emit_sec total_sec skipped_emit haxe_mode haxe_policy switched peak_rss_mb
 
 	start_ts="$(date +%s)"
-	HAXE_BIN="$HAXE_BIN" bash "$REGEN_SCRIPT" "$@" "${verify_args[@]}" --report-json "$report_path"
+	run_regen_with_policy "$policy_value" "$report_path" "$@"
 	end_ts="$(date +%s)"
 	elapsed="$((end_ts - start_ts))"
 
-	printf '%s\t%s\t%s\t%s\n' "$scenario" "$rep" "$elapsed" "$report_path" >>"$RESULTS_TSV"
-	printf 'run %-5s #%s  %4ss  report=%s\n' "$scenario" "$rep" "$elapsed" "$report_path"
+	IFS=$'\t' read -r emit_sec total_sec skipped_emit haxe_mode haxe_policy switched peak_rss_mb <<<"$(extract_report_metrics "$report_path")"
+
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+		"$scenario" "$policy_label" "$rep" "$elapsed" "$emit_sec" "$total_sec" "$skipped_emit" "$haxe_mode" "$haxe_policy" "$switched" "$peak_rss_mb" "$report_path" >>"$RESULTS_TSV"
+	printf 'run %-5s policy=%-14s #%s %4ss emit=%ss peak_rss=%sMB report=%s\n' \
+		"$scenario" "$policy_label" "$rep" "$elapsed" "$emit_sec" "$peak_rss_mb" "$report_path"
 }
 
-prime_skip_fingerprint_if_needed() {
-	if [ -f "$FINGERPRINT_FILE" ]; then
+run_once_for_active_policies() {
+	local scenario="$1"
+	local rep="$2"
+	shift 2
+	if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
+		run_once "$scenario" "$rep" "wrapper" "warn" "$@"
+		run_once "$scenario" "$rep" "native" "prefer-native" "$@"
 		return
 	fi
-	echo "Priming fingerprint for skip scenario (one warm force run, not measured)..."
-	HAXE_BIN="$HAXE_BIN" bash "$REGEN_SCRIPT" --incremental --use-repo-server --keep-repo-server --force --no-verify >/dev/null
+	local policy_label="default"
+	if [ -n "$STAGE0_POLICY" ]; then
+		policy_label="$STAGE0_POLICY"
+	fi
+	run_once "$scenario" "$rep" "$policy_label" "$STAGE0_POLICY" "$@"
 }
 
 run_scenario_cold() {
 	local rep
 	for rep in $(seq 1 "$REPS"); do
 		bash "$SERVER_HELPER" stop >/dev/null 2>&1 || true
-		run_once "cold" "$rep" --full --clean-out --force
+		run_once_for_active_policies "cold" "$rep" --full --clean-out --force
 	done
 }
 
 run_scenario_warm() {
 	local rep
 	for rep in $(seq 1 "$REPS"); do
-		run_once "warm" "$rep" --incremental --use-repo-server --keep-repo-server --force
+		run_once_for_active_policies "warm" "$rep" --incremental --use-repo-server --keep-repo-server --force
 	done
 }
 
+run_skip_for_policy() {
+	local rep="$1"
+	local policy_label="$2"
+	local policy_value="$3"
+	echo "Priming fingerprint for skip scenario policy=$policy_label (not measured)..."
+	run_regen_with_policy "$policy_value" "" --incremental --use-repo-server --keep-repo-server --force --no-verify >/dev/null
+	run_once "skip" "$rep" "$policy_label" "$policy_value" --incremental --use-repo-server --keep-repo-server --skip-if-unchanged
+}
+
 run_scenario_skip() {
-	prime_skip_fingerprint_if_needed
 	local rep
 	for rep in $(seq 1 "$REPS"); do
-		run_once "skip" "$rep" --incremental --use-repo-server --keep-repo-server --skip-if-unchanged
+		if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
+			run_skip_for_policy "$rep" "wrapper" "warn"
+			run_skip_for_policy "$rep" "native" "prefer-native"
+		else
+			local policy_label="default"
+			if [ -n "$STAGE0_POLICY" ]; then
+				policy_label="$STAGE0_POLICY"
+			fi
+			run_skip_for_policy "$rep" "$policy_label" "$STAGE0_POLICY"
+		fi
+	done
+}
+
+run_scenario_select() {
+	local rep
+	for rep in $(seq 1 "$REPS"); do
+		run_once_for_active_policies "select" "$rep" --stage0-selection-only
 	done
 }
 
@@ -161,10 +301,14 @@ for scenario in "${scenarios[@]}"; do
 			echo "-- scenario=skip"
 			run_scenario_skip
 			;;
+		select)
+			echo "-- scenario=select"
+			run_scenario_select
+			;;
 		'')
 			;;
 		*)
-			echo "Unknown scenario '$scenario'. Allowed values: cold,warm,skip." >&2
+			echo "Unknown scenario '$scenario'. Allowed values: cold,warm,skip,select." >&2
 			exit 1
 			;;
 	esac
@@ -173,25 +317,32 @@ done
 echo ""
 echo "== Summary (seconds)"
 awk -F '\t' '
+NR == 1 {
+	next
+}
 {
 	sc = $1
-	sec = $3 + 0
-	if (!(sc in count)) {
-		count[sc] = 0
-		sum[sc] = 0
-		best[sc] = sec
-		worst[sc] = sec
+	policy = $2
+	key = sc "|" policy
+	sec = $4 + 0
+	if (!(key in count)) {
+		count[key] = 0
+		sum[key] = 0
+		best[key] = sec
+		worst[key] = sec
+		scenario[key] = sc
+		policies[key] = policy
 	}
-	count[sc]++
-	sum[sc] += sec
-	if (sec < best[sc]) best[sc] = sec
-	if (sec > worst[sc]) worst[sc] = sec
+	count[key]++
+	sum[key] += sec
+	if (sec < best[key]) best[key] = sec
+	if (sec > worst[key]) worst[key] = sec
 }
 END {
-	printf "%-8s %-6s %-6s %-6s %-6s\n", "scenario", "runs", "avg", "best", "worst"
-	for (sc in count) {
-		avg = int(sum[sc] / count[sc])
-		printf "%-8s %-6d %-6d %-6d %-6d\n", sc, count[sc], avg, best[sc], worst[sc]
+	printf "%-8s %-14s %-6s %-6s %-6s %-6s\n", "scenario", "policy", "runs", "avg", "best", "worst"
+	for (key in count) {
+		avg = int(sum[key] / count[key])
+		printf "%-8s %-14s %-6d %-6d %-6d %-6d\n", scenario[key], policies[key], count[key], avg, best[key], worst[key]
 	}
 }
 ' "$RESULTS_TSV"

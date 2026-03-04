@@ -55,6 +55,9 @@ Machine-readable reports (`--report-json`) include:
 - `haxe_bin_policy`
 - `haxe_bin_switched`
 - `haxe_native_candidate`
+- `stage0_observability.heartbeat_seconds`
+- `stage0_observability.heartbeat_samples`
+- `stage0_observability.heartbeat_peak_rss_mb`
 
 Repro command pair (wrapper baseline vs native-preferred):
 
@@ -73,6 +76,23 @@ bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
   --incremental --no-verify --force \
   --report-json .tmp/stage0-native-report.json
 ```
+
+Benchmark harness (single command, policy A/B compare):
+
+```bash
+HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm \
+HXHX_BOOTSTRAP_BENCH_REPS=1 \
+HXHX_BOOTSTRAP_BENCH_VERIFY=0 \
+HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 \
+npm run hxhx:bench:bootstrap-regen
+```
+
+The benchmark writes `results.tsv` with per-run policy + peak RSS columns:
+
+- `policy` (`wrapper` or `native`)
+- `haxe_mode`
+- `haxe_policy`
+- `peak_rss_mb`
 
 ## Policy table
 

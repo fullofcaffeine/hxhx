@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       scenarios:
-        description: "Comma-separated scenarios (cold,warm,skip)"
+        description: "Comma-separated scenarios (cold,warm,skip,select)"
         required: true
         default: "warm,skip"
       reps:

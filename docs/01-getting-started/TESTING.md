@@ -195,7 +195,10 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - explicit native candidate override: `HXHX_STAGE0_NATIVE_HAXE_BIN=/abs/path/to/haxe`
   - Regen report JSON (`--report-json`) includes deterministic selection fields:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
+    - `stage0_observability.heartbeat_peak_rss_mb` (plus heartbeat samples/interval)
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
+  - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
+    - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
     - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
     - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`

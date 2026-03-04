@@ -282,7 +282,13 @@ phase_copy_sec=0
 phase_shard_sec=0
 phase_verify_sec=0
 total_sec=0
+total_start=0
 skipped_emit=0
+stage0_heartbeat_samples=0
+stage0_heartbeat_peak_rss_mb=0
+script_status="ok"
+script_exit_code=0
+script_report_written=0
 stage0_haxe_requested="$HAXE_BIN"
 stage0_haxe_resolved=""
 stage0_haxe_mode="unknown"
@@ -656,6 +662,8 @@ write_report_json() {
 	mkdir -p "$(dirname "$report_path")"
 	cat >"$report_path" <<JSON
 {
+  "status": "$(json_escape "$script_status")",
+  "exit_code": $script_exit_code,
   "mode": "$(json_escape "$([ "$HXHX_BOOTSTRAP_FAST" = "1" ] && echo fast || echo full)")",
   "skipped_emit": $skipped_emit,
   "haxe_bin": "$(json_escape "$HAXE_BIN")",
@@ -667,6 +675,11 @@ write_report_json() {
   "haxe_native_candidate": "$(json_escape "$stage0_haxe_native_candidate")",
   "haxe_version": "$(json_escape "$stage0_haxe_version")",
   "haxe_connect": "$(json_escape "$resolved_haxe_connect")",
+  "stage0_observability": {
+    "heartbeat_seconds": $HXHX_STAGE0_HEARTBEAT,
+    "heartbeat_samples": $stage0_heartbeat_samples,
+    "heartbeat_peak_rss_mb": $stage0_heartbeat_peak_rss_mb
+  },
   "phase_seconds": {
     "preflight": $phase_preflight_sec,
     "emit": $phase_emit_sec,
@@ -678,18 +691,46 @@ write_report_json() {
   "fingerprint": "$(json_escape "$current_fingerprint")"
 }
 JSON
+	script_report_written=1
 }
+
+on_script_exit() {
+	local code="$?"
+	script_exit_code="$code"
+	if [ "$code" != "0" ]; then
+		script_status="error"
+	fi
+	if [ "$code" != "0" ] \
+		&& [ -n "$HXHX_BOOTSTRAP_REPORT_JSON" ] \
+		&& [ "$script_report_written" != "1" ]; then
+		if [ "$total_start" != "0" ] && [ "$total_sec" = "0" ]; then
+			total_sec="$(( $(now_ts) - total_start ))"
+		fi
+		write_report_json "$HXHX_BOOTSTRAP_REPORT_JSON" || true
+		echo "== Wrote regen timing report after failure (exit=$code): $HXHX_BOOTSTRAP_REPORT_JSON" >&2
+	fi
+	return "$code"
+}
+
+trap on_script_exit EXIT
 
 run_stage0_emit() {
 	local -a stage0_args=("$@")
 	local log_file
+	local metrics_file
+	local emit_code
 	log_file="$(create_stage0_log_file hxhx-stage0-emit)"
+	metrics_file="$(create_stage0_log_file hxhx-stage0-metrics)"
+	printf '0\t0\n' >"$metrics_file"
 	echo "== Stage0 emit command: $HAXE_BIN ${stage0_args[*]}"
 	echo "== Stage0 emit log: $log_file"
 
+	set +e
 	(
 		cd "$PKG_DIR"
 		local pid=""
+		local heartbeat_samples_local=0
+		local heartbeat_peak_rss_mb_local=0
 		"$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
 		pid="$!"
 
@@ -722,6 +763,7 @@ run_stage0_emit() {
 					kill -9 "$pid" >/dev/null 2>&1 || true
 					echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 					tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+					printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
 					exit 1
 				fi
 			fi
@@ -760,6 +802,11 @@ run_stage0_emit() {
 			if [ -n "$rss_kb" ]; then
 				local rss_mb
 				rss_mb="$((rss_kb / 1024))"
+				heartbeat_samples_local="$((heartbeat_samples_local + 1))"
+				if [ "$rss_mb" -gt "$heartbeat_peak_rss_mb_local" ]; then
+					heartbeat_peak_rss_mb_local="$rss_mb"
+				fi
+				printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
 				if [ -n "$child_pid" ]; then
 					echo "== Stage0 emit ${status_mode}: elapsed=$((now - start_hb))s rss=${rss_mb}MB pid=$pid child=$child_pid$heartbeat_suffix"
 				else
@@ -789,9 +836,31 @@ run_stage0_emit() {
 		if [ "$code" != "0" ]; then
 			echo "Stage0 emit failed (exit=$code). Last $HXHX_STAGE0_LOG_TAIL_LINES lines:" >&2
 			tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+			printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
 			exit "$code"
 		fi
+		printf '%s\t%s\n' "$heartbeat_samples_local" "$heartbeat_peak_rss_mb_local" >"$metrics_file"
 	)
+	emit_code="$?"
+	set -e
+
+	if [ -f "$metrics_file" ]; then
+		local observed_samples=""
+		local observed_peak=""
+		IFS=$'\t' read -r observed_samples observed_peak <"$metrics_file" || true
+		if [ -n "$observed_samples" ] && [ "$observed_samples" -gt "$stage0_heartbeat_samples" ]; then
+			stage0_heartbeat_samples="$observed_samples"
+		fi
+		if [ -n "$observed_peak" ] && [ "$observed_peak" -gt "$stage0_heartbeat_peak_rss_mb" ]; then
+			stage0_heartbeat_peak_rss_mb="$observed_peak"
+		fi
+	fi
+	cleanup_stage0_log_file "$metrics_file"
+
+	if [ "$emit_code" != "0" ]; then
+		cleanup_stage0_log_file "$log_file"
+		return "$emit_code"
+	fi
 
 	if [ "$HXHX_BOOTSTRAP_DEBUG" = "1" ]; then
 		echo "== Stage0 emit completed; last $HXHX_STAGE0_LOG_TAIL_LINES lines:"
