@@ -151,6 +151,17 @@ node scripts/hxhx/compare-stage0-progress-summaries.js \
   --json-out /tmp/stage0-profile/compare_summary.json
 ```
 
+For CI-style regression output (latest N runs, baseline vs latest deltas):
+
+```bash
+npm run hxhx:profile:stage0-hotspot-baseline -- \
+  --root .hxhx/profile/stage0-regen \
+  --samples 5 \
+  --min-presence 2 \
+  --sort median \
+  --json-out .hxhx/profile/stage0-regen/compare.latest.json
+```
+
 Current contributor pattern from 65s samples typically shows parser/typer-heavy classes near the top, for example:
 
 - `HxParser`
