@@ -162,6 +162,17 @@ npm run hxhx:profile:stage0-hotspot-baseline -- \
   --json-out .hxhx/profile/stage0-regen/compare.latest.json
 ```
 
+For GitHub Actions artifact-based baselines (recent runs + current summary):
+
+```bash
+npm run hxhx:profile:stage0-hotspot-gh-baseline -- \
+  --workflow "Smoke / Stage0 Source Build" \
+  --artifact-prefix stage0-source-smoke-profile \
+  --samples 5 \
+  --allow-partial \
+  --current-summary /tmp/stage0_profile_regen/progress_summary.json
+```
+
 Current contributor pattern from 65s samples typically shows parser/typer-heavy classes near the top, for example:
 
 - `HxParser`

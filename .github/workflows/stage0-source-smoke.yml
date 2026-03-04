@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: stage0-source-smoke-${{ github.ref }}
@@ -20,7 +21,7 @@ jobs:
   stage0-source-smoke:
     name: Stage0 source-build smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,6 +93,45 @@ jobs:
           echo "== swap summary =="
           swapon --show
           free -h
+      - name: Capture stage0 regen profile sample
+        id: profile
+        run: |
+          set -euo pipefail
+          PROFILE_DIR="$RUNNER_TEMP/stage0_profile_regen"
+          echo "dir=$PROFILE_DIR" >> "$GITHUB_OUTPUT"
+          npm run -s hxhx:profile:stage0-regen -- --policy prefer-native --failfast 65 --heartbeat 20 --out-dir "$PROFILE_DIR"
+      - name: Compare stage0 hotspot baseline
+        id: hotspot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          COMPARE_JSON="$RUNNER_TEMP/stage0_hotspot_compare.json"
+          COMPARE_TXT="$RUNNER_TEMP/stage0_hotspot_compare.txt"
+          bash scripts/ci/stage0-progress-hotspot-gh-baseline.sh \
+            --workflow "Smoke / Stage0 Source Build" \
+            --artifact-prefix "stage0-source-smoke-profile" \
+            --samples 5 \
+            --run-limit 30 \
+            --min-presence 2 \
+            --sort median \
+            --allow-partial \
+            --current-summary "${{ steps.profile.outputs.dir }}/progress_summary.json" \
+            --json-out "$COMPARE_JSON" \
+            --text-out "$COMPARE_TXT"
+          echo "compare_json=$COMPARE_JSON" >> "$GITHUB_OUTPUT"
+          echo "compare_txt=$COMPARE_TXT" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Stage0 hotspot regression"
+            echo ""
+            if [ -f "$COMPARE_TXT" ]; then
+              echo "\`\`\`"
+              cat "$COMPARE_TXT"
+              echo "\`\`\`"
+            else
+              echo "No hotspot regression output produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Build stage0 lane and run smoke checks
         env:
           HXHX_FORCE_STAGE0: "1"
@@ -150,5 +190,16 @@ jobs:
         with:
           name: stage0-source-smoke-build-log-${{ github.run_id }}
           path: ${{ runner.temp }}/stage0_source_build.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload stage0 profile/hotspot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage0-source-smoke-profile-${{ github.run_id }}
+          path: |
+            ${{ steps.profile.outputs.dir }}
+            ${{ steps.hotspot.outputs.compare_json }}
+            ${{ steps.hotspot.outputs.compare_txt }}
           if-no-files-found: warn
           retention-days: 14

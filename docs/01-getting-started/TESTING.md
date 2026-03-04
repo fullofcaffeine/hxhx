@@ -305,11 +305,12 @@ Notes:
     stage0 source-build behavior (`HXHX_FORCE_STAGE0=1`) on a nightly/manual lane
     (tuned with `HXHX_STAGE0_OCAML_BUILD=byte`, `HXHX_STAGE0_DISABLE_PREPASSES=1`, and `HXHX_STAGE0_NO_INLINE=1`; the lane enforces `>=8GB` swapfile capacity on ubuntu runners to reduce OOM kills).
   - each Stage0 Source Smoke run emits `stage0_peak_tree_rss_mb=<n>` and uploads
-    `stage0_source_build.log` as a workflow artifact.
+    `stage0_source_build.log` plus stage0 profile/hotspot artifacts as workflow artifacts.
   - local telemetry helpers:
     - parse one build log: `bash scripts/ci/extract-stage0-peak-rss.sh <stage0_source_build.log>`
     - aggregate recent GitHub samples (default 5): `bash scripts/ci/stage0-source-rss-baseline.sh --allow-partial`
     - include failed runs in the sample set for early diagnosis: `bash scripts/ci/stage0-source-rss-baseline.sh --include-failures --allow-partial`
+    - aggregate recent stage0 hotspot summaries from workflow artifacts: `npm run hxhx:profile:stage0-hotspot-gh-baseline -- --allow-partial --current-summary <progress_summary.json>`
   - current ubuntu-latest success baseline (5 samples, 2026-02-20): `min=15028MB`, `median=15103MB`, `avg=15134.4MB`, `max=15253MB`; CI policy keeps `HXHX_STAGE0_MAX_RSS_MB=0` (cap disabled) to avoid false-positive kills near runner limits.
   - local stage0 policy checks:
     - `npm run test:stage0-policy` (runtime guard)
