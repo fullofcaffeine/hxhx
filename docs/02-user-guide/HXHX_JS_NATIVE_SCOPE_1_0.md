@@ -2,8 +2,8 @@
 
 This is the canonical scope document for `hxhx` linked JS support in the 1.0 track.
 
-- Delegated JS lane: `--target js-compat` (stage0 `haxe` delegation).
-- Linked JS lane: `--target js` (Stage3 builtin backend, non-delegating emit path).
+- Delegated JS lane: `--compat --js <file>` (stage0 `haxe` delegation).
+- Linked JS lane: `--js <file>` (Stage3 builtin backend, non-delegating emit path).
 
 If this matrix and another doc disagree, this matrix wins.
 
@@ -11,7 +11,7 @@ If this matrix and another doc disagree, this matrix wins.
 
 | Area | Status | Evidence |
 | --- | --- | --- |
-| Linked backend selection (`--target js`, `-js/--js` routing, strict CLI `--js`) | In scope | `scripts/test-hxhx-targets.sh`, `npm run test:m14:js-target-core-wiring` |
+| Linked backend selection (`--js <file>`, `-js/--js` routing, strict CLI `--js`) | In scope | `scripts/test-hxhx-targets.sh`, `npm run test:m14:js-target-core-wiring` |
 | Single-file JS emit + `stage3=ok`/artifact/run markers | In scope | `scripts/test-hxhx-targets.sh` |
 | Statement `try/catch` + `throw` / rethrow lowering | Partial (compile/run smoke) | `npm run test:m14:js-stmt-try-throw`, `scripts/test-hxhx-targets.sh` (runtime parity remains a known gap) |
 | Ordered multi-catch dispatch lowering (`Int`, `Float`, `Bool`, `String`, `Array`, `Dynamic`) | Partial (compile/run smoke) | `npm run test:m14:js-stmt-multi-catch`, `scripts/test-hxhx-targets.sh` (runtime parity remains a known gap) |

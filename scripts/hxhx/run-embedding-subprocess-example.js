@@ -124,7 +124,7 @@ function main() {
   const hxhxBin = resolveHxhxBin()
 
   const successArgs = [
-    '--target', 'ocaml',
+    '--ocaml',
     '--hxhx-no-run',
     '--hxhx-out', successOutDir,
     '-cp', fixtureCp,
@@ -148,7 +148,7 @@ function main() {
   const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 
   const failureArgs = [
-    '--target', 'ocaml',
+    '--ocaml',
     '--hxhx-no-run',
     '--hxhx-out', failureOutDir,
     '-cp', fixtureCp,

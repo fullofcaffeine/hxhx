@@ -181,8 +181,8 @@ rm -rf "$EXAMPLE_DIR/out" "$EXAMPLE_DIR/out_stage3"
 echo "== hxhx native reflaxe benchmark"
 echo "Workload: $EXAMPLE_DIR"
 echo "Stage0 (plain words): existing installed haxe compiler."
-echo "ocaml-compat target: preset/delegation-friendly path."
-echo "ocaml target: linked Stage3 backend path (no stage0 delegation in this lane)."
+echo "delegated lane: --ocaml-eval (compat path via stage0)."
+echo "native lane: --ocaml (linked Stage3 backend path, no stage0 delegation)."
 echo "HXHX_BIN: $HXHX_BIN"
 echo "HAXE_BIN: $HAXE_BIN"
 echo "Iterations per run: $ITERS"
@@ -204,8 +204,8 @@ if [ ! -f "$EXAMPLE_DIR/out_stage3/out.exe" ]; then
 fi
 
 echo "Compile timings (single shot):"
-echo "  delegated (target ocaml-compat): ${delegate_compile_ms}ms"
-echo "  stage3 (target ocaml): ${stage3_compile_ms}ms"
+echo "  delegated (--ocaml-eval): ${delegate_compile_ms}ms"
+echo "  stage3 (--ocaml): ${stage3_compile_ms}ms"
 echo ""
 
 interp_out="$(capture_interp)"

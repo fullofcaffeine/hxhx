@@ -12,13 +12,13 @@ This file records **baseline numbers** for the minimal `hxhx` benchmark harness:
 ## Quick glossary (beginner-friendly)
 
 - **stage0**: your existing upstream Haxe compiler binary.
-- **`--target ocaml-compat`**: compatibility/delegation-friendly preset path.
-- **`--target ocaml`**: linked Stage3 backend path (native, non-delegating direction).
+- **`--ocaml-eval`**: compatibility/delegation-friendly OCaml lane.
+- **`--ocaml`**: linked Stage3 backend path (native, non-delegating direction).
 
 `hxhx` now has both delegated and native lanes.
 
 - delegated/compat rows measure shim-overhead-style behavior
-- native rows (`--target ocaml`, `--target js`) measure linked backend/runtime behavior
+- native rows (`--ocaml`, `--js <file>`) measure linked backend/runtime behavior
 
 This suite should continue expanding with macro-heavy projects, upstream `tests/runci`, and curated real workloads.
 
@@ -45,13 +45,13 @@ stage1: no-output compile        avg=   139ms  best=   108ms  worst=   201ms  re
 
 The benchmark harness now always includes:
 
-- `stage1: --target ocaml`
-- `stage1: --target js emit`
+- `stage1: --ocaml`
+- `stage1: --js emit`
 
-When a selected `hxhx` binary does not expose native `--target js`, the JS row is still recorded as a sample result in skipped form:
+When a selected `hxhx` binary does not expose native `--js <file>`, the JS row is still recorded as a sample result in skipped form:
 
 ```
-stage1: --target js emit  skipped  reason=target_unavailable
+stage1: --js emit  skipped  reason=target_unavailable
 ```
 
 Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and capture numeric native-JS results on hosts where the current binary lacks that target.
@@ -67,8 +67,8 @@ npm run hxhx:bench:native-reflaxe
 This benchmark checks the same workload across:
 
 1. `haxe --interp` (eval baseline)
-2. `hxhx --target ocaml-compat`
-3. `hxhx --target ocaml`
+2. `hxhx --ocaml-eval`
+3. `hxhx --ocaml`
 
 Default pass rule:
 

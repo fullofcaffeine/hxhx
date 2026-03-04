@@ -108,7 +108,7 @@ Matrix status taxonomy:
 
 ## Macro / HXHX status (bootstrapping path)
 
-- `hxhx` exposes both delegated (`--target *-compat`) and native (`--target ocaml|js`) lanes.
+- `hxhx` exposes both delegated (`--ocaml-eval`, `--compat`) and native (`--ocaml`, `--js <file>`) lanes.
 - Delegated lane remains useful for compatibility/oracle workflows; native lane is the non-delegating runtime path.
 - Macro transport and Stage 4 API overrides exist for bring-up and CI selftests, but upstream “replacement” gates
   are still tracked separately.

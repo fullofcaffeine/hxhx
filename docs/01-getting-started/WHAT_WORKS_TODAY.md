@@ -12,9 +12,9 @@ If you need deeper architectural details, use:
 | Workflow | Command shape | Current status | Notes |
 | --- | --- | --- | --- |
 | Upstream Haxe + `reflaxe.ocaml` | `haxe -lib reflaxe.ocaml ...` | Working | Compatibility-first baseline path. |
-| `hxhx` compat lane | `hxhx --target ocaml-compat ...` / `--target js-compat ...` | Working | Delegates runtime compile to stage0 upstream `haxe`. |
-| `hxhx` native OCaml lane | `hxhx --target ocaml ...` | Working (scoped native lane) | Non-delegating runtime lane; use `HXHX_FORBID_STAGE0=1` for strict checks. |
-| `hxhx` native JS lane | `hxhx --target js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
+| `hxhx` compat lane | `hxhx --ocaml-eval ...` / `hxhx --compat --js out.js ...` | Working | Delegates runtime compile to stage0 upstream `haxe`. |
+| `hxhx` native OCaml lane | `hxhx --ocaml ...` | Working (scoped native lane) | Non-delegating runtime lane; use `HXHX_FORBID_STAGE0=1` for strict checks. |
+| `hxhx` native JS lane | `hxhx --js out.js ...` | Working (scoped MVP) | Scope is intentionally bounded; see `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`. |
 | Native backend plugin loading | `-D hxhx_backend_plugin_manifest=...` | Working | Uses `ocaml-dynlink` manifest kind (`.cmxs` / `.cma`). |
 | Native macro module loading | `macro.loadNativeModule` / `macro.runNativeExpr` | Working (promoted-module rung) | ABI/version validation is enforced before registration. |
 

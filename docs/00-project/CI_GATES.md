@@ -19,7 +19,7 @@ For lane/profile context, use the canonical beginner truth table:
 | Gate 0 | Fast safety checks across delegated/native lanes before merge |
 | Gate 1 | Upstream macro/unit compatibility baseline (oracle lane confidence) |
 | Gate 2 | Wider upstream macro/workload compatibility checks |
-| Gate 3 | Native target/workflow compatibility scope checks (`--target ocaml/js`) |
+| Gate 3 | Native target/workflow compatibility scope checks (`--ocaml`, `--js <file>`) |
 | Gate 4 | Distribution, plugin, and performance readiness checks |
 
 ## Trigger classes

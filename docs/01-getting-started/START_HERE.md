@@ -13,10 +13,16 @@ For a full docs map, see `docs/README.md`.
 Canonical definitions for all paths:
 
 - Beginner truth table (lanes + profiles + gates): `docs/02-user-guide/concepts/execution_modes.md`
-- Delegation truth table (exact presets): `docs/02-user-guide/concepts/what_delegates_today.md`
+- Delegation truth table (exact lane commands): `docs/02-user-guide/concepts/what_delegates_today.md`
 - Gate/workflow meanings: `docs/00-project/CI_GATES.md`
 - Beginner status snapshot: `docs/01-getting-started/WHAT_WORKS_TODAY.md`
 - Dedicated lane chooser page: `docs/01-getting-started/CHOOSE_YOUR_LANE.md`
+
+## CLI Cutover Rules (Beginner)
+
+- Use direct lane flags: `--ocaml`, `--ocaml-eval`, `--compat`, and canonical `--js <file>`.
+- `--target` was removed on purpose (hard cutover, no compatibility shim).
+- `--target-id` is still valid, but only in plugin scaffold/build scripts (for example `plugin-init.sh`).
 
 ## Choose your path
 

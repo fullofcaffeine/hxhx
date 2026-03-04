@@ -46,12 +46,12 @@ See `docs/00-project/GLOSSARY.md` for term definitions.
 
 Use this as the single quick-reference table when deciding what to run.
 
-| Scenario | Lane / preset | Profile default | Gate purpose to prioritize |
+| Scenario | Lane / command | Profile default | Gate purpose to prioritize |
 | --- | --- | --- | --- |
-| Compile a Haxe app with compatibility-first behavior | Delegated lane (`--target *-compat`) or upstream `haxe` | `portable` | Gate 0 fast safety (`CI / Core PR Checks`) |
+| Compile a Haxe app with compatibility-first behavior | Delegated lane (`--ocaml-eval` or `--compat --js <file>`) or upstream `haxe` | `portable` | Gate 0 fast safety (`CI / Core PR Checks`) |
 | Use upstream `haxe` + `reflaxe.ocaml` | Upstream lane (`haxe -lib reflaxe.ocaml`) | `portable` | Gate 1/Gate 2 oracle macro compatibility |
-| Validate non-delegating `hxhx` compile paths | Native lane (`--target ocaml` / `--target js`) | `portable` unless explicitly set to `metal` | Gate 3 builtin/native target smoke + stage0-forbidden checks |
-| Optimize OCaml output performance on metal-safe code | Native lane (`--target ocaml`) | `metal` | Gate 4 distribution/perf acceptance and KPI reports |
+| Validate non-delegating `hxhx` compile paths | Native lane (`--ocaml` / `--js <file>`) | `portable` unless explicitly set to `metal` | Gate 3 builtin/native target smoke + stage0-forbidden checks |
+| Optimize OCaml output performance on metal-safe code | Native lane (`--ocaml`) | `metal` | Gate 4 distribution/perf acceptance and KPI reports |
 | Promote backend behavior into runtime-loaded native artifacts | Native lane + backend plugin (`ocaml-dynlink`) | `portable` for baseline compatibility, `metal` for perf-focused lanes | Gate 4 plugin acceptance/perf and ABI compatibility checks |
 
 Related canonical references:

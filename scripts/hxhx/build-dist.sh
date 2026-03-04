@@ -123,7 +123,7 @@ echo "== Bundling backend sources (best-effort)"
 lib_dir="$dist_dir/lib"
 mkdir -p "$lib_dir"
 
-# Bundle reflaxe.ocaml (this repo) sources so `hxhx --target ocaml-compat` can work without haxelib.
+# Bundle reflaxe.ocaml (this repo) sources so delegated `hxhx --ocaml-eval` can work without haxelib.
 mkdir -p "$lib_dir/reflaxe.ocaml"
 cp -R "$ROOT/packages/reflaxe.ocaml/src" "$lib_dir/reflaxe.ocaml/src"
 cp -R "$ROOT/packages/reflaxe.ocaml/std" "$lib_dir/reflaxe.ocaml/std"

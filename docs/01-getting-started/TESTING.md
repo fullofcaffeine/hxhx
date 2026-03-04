@@ -322,7 +322,7 @@ Notes:
 - `npm run test:hxhx-targets` also validates request-scoped Stage3 provider loading:
   `HXHX_BACKEND_PROVIDERS=backend.js.JsBackend` must override `js-native` backend selection
   (`backend_selected_impl=provider/js-native-wrapper`) while fallback stays `builtin/js-native`.
-- If the current `hxhx` binary does not expose native JS preset `--target js`, `npm run test:hxhx-targets` skips
+- If the current `hxhx` binary does not expose native JS lane `--js <file>`, `npm run test:hxhx-targets` skips
   native-JS-only checks and prints explicit skip markers (dedicated JS smoke CI still enforces the lane).
   (`--wait <host:port>` + `--connect <host:port>` roundtrip).
 
@@ -382,7 +382,7 @@ Select targets via `HXHX_GATE3_TARGETS` (comma-separated) or pass them as args:
 HXHX_GATE3_TARGETS="Macro,Js,Neko" npm run test:upstream:runci-targets
 ```
 
-Run a lightweight JS runtime oracle comparison (upstream `haxe` vs linked `hxhx --target js`):
+Run a lightweight JS runtime oracle comparison (upstream `haxe` vs linked `hxhx --js <file>`):
 
 ```bash
 npm run test:upstream:js-oracle-smoke
@@ -404,7 +404,7 @@ HXHX_JS_ORACLE_FIXTURES=JsOracleLoopMain,JsOracleSwitchExprMain,JsOracleTryCatch
   npm run test:upstream:js-oracle-smoke
 ```
 
-Run the linked builtin target smoke (delegated `--target ocaml-compat` vs builtin `--target ocaml`):
+Run the linked builtin target smoke (delegated `--ocaml-eval` vs native `--ocaml`):
 
 ```bash
 npm run test:hxhx:builtin-target-smoke

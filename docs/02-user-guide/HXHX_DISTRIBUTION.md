@@ -4,20 +4,20 @@
 
 Today it ships **two execution lanes**:
 
-- **compat/delegated lane** (`--target *-compat`): forwards compile work to stage0 `haxe`
-- **native lane** (`--target ocaml` / `--target js`): runs linked native backends in `hxhx`
+- **compat/delegated lane** (`--ocaml-eval` and `--compat ...`): forwards compile work to stage0 `haxe`
+- **native lane** (`--ocaml` / `--js <file>`): runs linked native backends in `hxhx`
 
 Gate 4 exists so we can build and ship the `hxhx` binary with a predictable layout, and track performance baselines across both lanes.
 
-Canonical target-preset truth table (delegation + stage0 requirements):
+Canonical lane truth table (delegation + stage0 requirements):
 
 - `docs/02-user-guide/concepts/what_delegates_today.md`
 
 ## Quick glossary (beginner-friendly)
 
 - **stage0 `haxe`**: your already-installed upstream Haxe compiler binary.
-- **`hxhx --target ocaml-compat`**: compatibility-friendly preset path. It wires OCaml target flags and follows the delegated workflow.
-- **`hxhx --target ocaml`**: linked Stage3 backend path. This is the native/non-delegating direction of travel.
+- **`hxhx --ocaml-eval`**: compatibility-friendly delegated OCaml lane with reflaxe.ocaml injection.
+- **`hxhx --ocaml`**: linked Stage3 backend path. This is the native/non-delegating direction of travel.
 
 ## Version reporting (current behavior)
 
@@ -121,10 +121,10 @@ This reports:
 
 - `haxe --version` vs `hxhx --version`
 - `haxe --no-output` compile vs `hxhx --no-output` compile
-- linked Stage3 OCaml fast-path: `--target ocaml --hxhx-no-emit`
-- linked Stage3 JS emit throughput row: `--target js --hxhx-no-run --js ...`
+- linked Stage3 OCaml fast-path: `--ocaml --hxhx-no-emit`
+- linked Stage3 JS emit throughput row: `--js out.js --hxhx-no-run ...`
 
-If the selected `hxhx` binary does not expose native `--target js`, the harness reports that row as `skipped`.
+If the selected `hxhx` binary does not expose native `--js <file>` lane support, the harness reports that row as `skipped`.
 Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild (`HXHX_FORCE_STAGE0=1`) and measure that native JS row.
 
 As `hxhx` becomes a real compiler (stops delegating), this benchmark suite should be expanded and the acceptance gates should include real-world workloads (upstream `tests/runci`, macro-heavy projects, and curated external repos).
@@ -145,8 +145,8 @@ KPI threshold policy lives in: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md:1`.
 Use this when you want a direct, plain-English comparison of:
 
 1. eval/interp baseline (`haxe --interp`)
-2. `hxhx --target ocaml-compat`
-3. `hxhx --target ocaml`
+2. `hxhx --ocaml-eval`
+3. `hxhx --ocaml`
 
 Command:
 

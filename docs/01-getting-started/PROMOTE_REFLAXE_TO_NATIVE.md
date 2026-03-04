@@ -109,7 +109,6 @@ HXHX_FORBID_STAGE0=1 \
 HXHX_TRACE_BACKEND_SELECTION=1 \
 HXHX_TRACE_BACKEND_PROVIDERS=1 \
 "$HXHX_BIN" \
-  --target js \
   --js .tmp/promotion-demo/out/main.js \
   --hxhx-no-run \
   -cp src \

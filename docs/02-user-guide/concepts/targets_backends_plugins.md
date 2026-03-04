@@ -4,7 +4,7 @@ This page explains how target selection maps to backend execution.
 
 ## Core concepts
 
-- **Target preset**: CLI-level selector (`--target ...`) that chooses a run plan.
+- **Lane selector**: CLI-level selector (`--ocaml`, `--ocaml-eval`, `--compat`, `--js <file>`) that chooses a run plan.
 - **Backend**: code generator implementation that emits artifacts.
 - **Builtin backend**: backend compiled into `hxhx`.
 - **Backend plugin**: backend loaded at runtime from native OCaml dynlink artifact (`.cmxs` / `.cma`) via manifest.

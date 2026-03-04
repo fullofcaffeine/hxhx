@@ -24,7 +24,7 @@ Use this table as the short answer for "are we self-hosting yet?"
 | Check | Why it matters | Current status | Evidence |
 |---|---|---|---|
 | Build `hxhx` with stage0 delegation blocked (`HXHX_FORBID_STAGE0=1`) | Proves we can build from committed snapshots without silently falling back to stage0 | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` |
-| Run a stage3 compile path with stage0 blocked | Proves the compiler can do real work in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--target ocaml --hxhx-no-emit`) |
+| Run a stage3 compile path with stage0 blocked | Proves the compiler can do real work in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--ocaml --hxhx-no-emit`) |
 | Run macro host selftest with stage0 blocked | Proves macro host bootstrap path works in stage0-forbidden mode | Pass | `.github/workflows/ci.yml` job `stage0-free-smoke` (`--hxhx-macro-selftest`) |
 | Regenerate `packages/hxhx/bootstrap_out` without stage0 `haxe` | This is the major blocker for strong self-hosting | Not yet | `scripts/hxhx/regenerate-hxhx-bootstrap.sh` still uses stage0 emit |
 | Replacement-ready gates pass with delegation blocked | Needed for strong release confidence | Partial | Criteria command: `HXHX_M7_STRICT=1 HXHX_FORBID_STAGE0=1 npm run test:upstream:replacement-ready:full`; expected marker: `M7_STRICT_STAGE0:PASS`; current state: strict definition is documented, but full strong-self-hosting closure is still in progress |
@@ -74,7 +74,7 @@ This repo tracks the **strong** definition as the real goal.
    - `.github/workflows/ci.yml` -> job `stage0-free-smoke`
 2. That lane checks:
    - building `hxhx` with `HXHX_FORBID_STAGE0=1`
-   - a Stage3 compile path (`--target ocaml --hxhx-no-emit`)
+   - a Stage3 compile path (`--ocaml --hxhx-no-emit`)
    - macro host selftest (`--hxhx-macro-selftest`)
 3. We can block accidental delegation:
    - `HXHX_FORBID_STAGE0=1` is the guardrail.

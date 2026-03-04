@@ -184,7 +184,7 @@ Current contributor pattern from 65s samples typically shows parser/typer-heavy 
 
 | Lane | Allowed stage0 usage | Required guardrails | Typical commands |
 | --- | --- | --- | --- |
-| Runtime (native mode) | **Forbidden** for stage0 delegation paths | `HXHX_FORBID_STAGE0=1`; fail fast if delegation is attempted | `hxhx --target ocaml ...`, `hxhx --target js ...` |
+| Runtime (native mode) | **Forbidden** for stage0 delegation paths | `HXHX_FORBID_STAGE0=1`; fail fast if delegation is attempted | `hxhx --ocaml ...`, `hxhx --js out.js ...` |
 | Build | Allowed only when explicitly requested | `HXHX_FORCE_STAGE0=1` for source regeneration/builds; otherwise use committed bootstrap snapshots | `bash scripts/hxhx/build-hxhx.sh`, `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh` |
 | Maintenance | Allowed for maintainer-only bootstrap refresh and diagnostics | Explicit maintainer scripts; never implicit in normal runtime/release lanes | `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh`, `bash scripts/hxhx/regenerate-hxhx-macro-host-bootstrap.sh` |
 

@@ -1,6 +1,6 @@
 # hxhx-js-todoapp
 
-A lix-first JS todo app that is compiled through `hxhx --target js`.
+A lix-first JS todo app that is compiled through `hxhx --js <file>`.
 
 This example intentionally combines:
 
@@ -39,7 +39,7 @@ To view the frontend manually:
 ```bash
 cd examples/hxhx-js-todoapp
 ./setup-lix.sh
-"$(bash ../../scripts/hxhx/build-hxhx.sh)" --target js build.hxml --js out/main.js
+"$(bash ../../scripts/hxhx/build-hxhx.sh)" build.hxml --js out/main.js
 node -e 'global.window={console:console};global.document={getElementById:function(){return null;}};global.window.document=global.document;global.navigator={};require("./out/main.js")'
 python3 -m http.server 4321
 # then open http://localhost:4321/public/index.html

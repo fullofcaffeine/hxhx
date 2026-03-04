@@ -3,12 +3,12 @@
 Fast on-ramp glossary for beginners. Full glossary: `docs/00-project/GLOSSARY.md`.
 
 1. **stage0**: upstream `haxe` binary used as oracle/bootstrap compiler.
-2. **compat lane**: `--target *-compat`; compatibility-first and may delegate to stage0.
-3. **native lane**: `--target ocaml` / `--target js`; linked Stage3 path.
-4. **`--target ocaml-compat`**: compat OCaml preset (delegation allowed).
-5. **`--target js-compat`**: compat JS preset (delegation allowed).
-6. **`--target ocaml`**: native linked OCaml backend path.
-7. **`--target js`**: native linked JS backend path.
+2. **compat lane**: `--ocaml-eval` and `--compat --js <file>`; compatibility-first and may delegate to stage0.
+3. **native lane**: `--ocaml` / `--js <file>`; linked Stage3 path.
+4. **`--ocaml-eval`**: delegated OCaml lane (stage0 + reflaxe.ocaml injection).
+5. **`--compat`**: pure upstream passthrough lane (stage0; no hxhx injection).
+6. **`--ocaml`**: native linked OCaml backend path.
+7. **`--js <file>`**: native linked JS backend path.
 8. **linked-provider plugin**: manifest kind that names a Haxe provider type.
 9. **ocaml-dynlink plugin**: native plugin artifact loaded at runtime (`.cmxs` / `.cma`).
 10. **builtin backend**: backend linked into `hxhx` and shipped with the binary.

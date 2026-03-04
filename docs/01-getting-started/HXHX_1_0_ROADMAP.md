@@ -115,7 +115,7 @@ Meaning in plain terms:
 - Python runs now default to no-install behavior (`HXHX_GATE3_PYTHON_ALLOW_INSTALL=0`) so local validation does not implicitly mutate host package state.
 - Java target has a validated baseline run and is intentionally kept opt-in (not in default `Macro,Js,Neko`) to keep common Gate3 runs fast.
 - Gate1, Gate2, and Gate3 now have weekly Linux scheduled baselines in CI, while PR/push CI remains fast.
-- Linked builtin target smoke (`--target ocaml` vs delegated `--target ocaml-compat`) now has a reproducible runner and weekly/manual CI cadence.
+- Linked builtin target smoke (`--ocaml` vs delegated `--ocaml-eval`) now has a reproducible runner and weekly/manual CI cadence.
 - A debug escape hatch remains available (`HXHX_GATE3_FORCE_JS_SERVER=1`).
 
 ### M7. Replacement-ready acceptance

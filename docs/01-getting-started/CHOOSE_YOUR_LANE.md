@@ -20,6 +20,11 @@ Pick one lane based on your goal. If terms are unfamiliar, read `docs/01-getting
 - **linked-provider plugin**: manifest kind that points at a Haxe provider type.
 - **ocaml-dynlink plugin**: native runtime-loaded `.cmxs`/`.cma` provider artifact.
 
+CLI cutover reminder:
+
+- `--target` is removed; use direct lane flags only.
+- `--target-id` is still valid in plugin scaffold/build scripts (for provider IDs), not for compile lane selection.
+
 Legacy alias:
 
 - `Haxe-provider` (legacy term) means `linked-provider`.

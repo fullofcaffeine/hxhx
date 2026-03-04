@@ -199,10 +199,10 @@ Macro modules are compiled (by `hxhx`) into a macro-host-consumable form:
 - initial rung: compile macro modules to OCaml and link them into `hxhx-macro` (simplest)
 - later rung: compile macro modules to `.cmxs` and load into `hxhx-macro` dynamically
 
-### How this interacts with `--library` and `--target`
+### How this interacts with `--library` and lane flags
 
 - `--library` (`-lib`) remains the *language-level* mechanism: it adds macro code to the compilation universe.
-- `--target <id>` (our distribution shim) remains a *preset mechanism* that injects the right `--library`/`-D` flags.
+- lane flags (`--ocaml`, `--ocaml-eval`, `--compat`, `--js <file>`) remain the *execution selector* mechanism.
 
 See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1` for the registry semantics. Stage 4 extends it with:
 

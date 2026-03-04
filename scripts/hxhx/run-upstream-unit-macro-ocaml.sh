@@ -90,7 +90,7 @@ echo "== Gate 1 (ocaml --interp emulation): upstream tests/unit/compile-macro.hx
   # Use a deterministic output dir inside the upstream test folder to avoid interfering with other runs.
   #
   # IMPORTANT:
-  # - Do NOT rely on `--target ocaml-compat` here: in dev (non-dist) builds the preset would inject `-lib reflaxe.ocaml`,
+  # - Do NOT rely on `--ocaml-eval` preset injection here: in dev (non-dist) builds this may inject `-lib reflaxe.ocaml`,
   #   which only resolves when executed from this repo root (scoped haxe_libraries).
   # - Instead, inject reflaxe.ocaml directly via `-cp` + init macros, so this runner works from inside upstream.
   HAXE_BIN="$HAXE_BIN" HAXELIB_BIN="$HAXELIB_BIN" "$HXHX_BIN" \

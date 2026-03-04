@@ -159,7 +159,6 @@ function main() {
   function compileWithManifest(manifestPath, outDir) {
     fs.mkdirSync(outDir, { recursive: true })
     const runResult = run(hxhxBin, [
-      '--target', 'js',
       '--js', path.join(outDir, 'main.js'),
       '--hxhx-no-run',
       '-cp', fixtureSrc,

@@ -19,7 +19,7 @@ Use this ID in your integration docs/config so upgrades are explicit and auditab
   - or distribution layout `dist/hxhx/<version>/<platform>-<arch>/bin/hxhx`
 - CLI arguments:
   - Upstream-compatible args (`-cp`, `-main`, `-D`, output flags)
-  - `hxhx` target preset args (`--target ocaml`, `--target ocaml-compat`, `--target js`, `--target js-compat`)
+  - `hxhx` lane args (`--ocaml`, `--ocaml-eval`, `--compat`, and canonical `--js <file>`)
 - Environment variables:
   - `HXHX_FORBID_STAGE0=1` to enforce non-delegating behavior during native-lane embedding
   - `HXHX_MACRO_HOST_EXE=/path/to/hxhx-macro-host` when macro-host resolution must be explicit
@@ -56,7 +56,7 @@ npm run hxhx:example:embedding-subprocess
 What it does:
 
 1. Resolves or builds `hxhx`.
-2. Compiles `examples/hxhx-embedding-subprocess/src/Main.hx` with `--target ocaml` and captures:
+2. Compiles `examples/hxhx-embedding-subprocess/src/Main.hx` with `--ocaml` and captures:
    - exit code
    - stdout/stderr logs
    - `ocaml_portable_metalization_plan_report.json` summary
