@@ -1,0 +1,77 @@
+# Weekly CI Evidence Runbook
+
+Last audited: 2026-03-03
+
+This runbook defines how maintainers audit scheduled CI health each week and what to do when a gate regresses.
+
+## Audit window
+
+- Primary review window: **Wednesday after 08:00 UTC**.
+- Why this window:
+  - Gate M7 scheduled run has already executed (Sunday 09:00 UTC).
+  - Gate 1 and Gate 2 scheduled runs have already executed (Monday 07:00/09:00 UTC).
+  - Semantic-diff nightly expanded run has just executed (Wednesday 07:00 UTC).
+- KPI report workflow is not currently scheduled; trigger it manually during this window.
+
+## Required weekly evidence set
+
+| Workflow | File | Cadence | Expected pass signal | Evidence artifact/log |
+| --- | --- | --- | --- | --- |
+| Gate 1 / Upstream Macro Unit Compatibility | `.github/workflows/gate1.yml` | Weekly schedule | `GATE1_MACRO:PASS` | Workflow run logs (marker in log output) |
+| Gate 2 / Upstream Macro Workloads | `.github/workflows/gate2.yml` | Weekly schedule | `GATE2_MACRO:PASS` | Workflow run logs (marker in log output) |
+| Gate M7 / Replacement Bundle | `.github/workflows/gate-m7.yml` | Weekly schedule | `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` | Artifact `gate-m7-logs-<run_id>` + run logs |
+| Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
+| Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
+
+## Weekly procedure
+
+1. Open GitHub Actions and filter to the five workflows above.
+2. Verify latest scheduled runs for Gate 1, Gate 2, Gate M7, and semantic-diff are green.
+3. Open each run and confirm expected markers appear in logs.
+4. For Gate M7 and semantic-diff, download artifacts and confirm expected files are present.
+5. Manually dispatch `Perf / HXHX KPI (Report Only)`.
+6. Download KPI artifact and compare `report.json` against:
+   - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
+   - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
+7. Record evidence links and outcomes in the weekly ops note/bead comment.
+
+## Triage matrix
+
+| Signal | Owner | First action (same day) | Escalation |
+| --- | --- | --- | --- |
+| Gate 1 or Gate 2 scheduled failure | On-duty CI maintainer | Re-run once to rule out transient infrastructure failure; if reproducible, open regression bead with run URL + failing step | Escalate to compiler owners if not green within 24h |
+| Gate M7 scheduled failure or missing strict marker | On-duty release maintainer | Re-run Gate M7 with strict defaults; attach `gate-m7-logs-<run_id>` and marker lines to regression bead | Treat as release blocker until resolved |
+| Semantic-diff nightly failure or missing artifact | On-duty stdlib maintainer | Re-run workflow, inspect comparator/lane logs, and attach `semantic-diff-nightly-artifacts` to bead | Escalate to stdlib/runtime owners if unresolved in 24h |
+| KPI workflow emits no report or exceeds threshold budget | On-duty performance maintainer | Re-run KPI once; compare `report.json` with threshold file and classify expected vs regression | Escalate to release maintainer when regression exceeds thresholds on two consecutive weekly runs |
+| Scheduled workflow did not run | On-duty CI maintainer | Trigger manual dispatch immediately and capture run URL | Escalate to infra/CI owners if scheduler miss repeats next week |
+
+## Local reproduction commands
+
+```bash
+# Gate 1
+npm run test:upstream:unit-macro
+
+# Gate 2
+npm run test:upstream:runci-macro
+
+# Gate M7 strict
+npm run test:upstream:replacement-ready:strict
+
+# Semantic diff (nightly profile)
+SEMANTIC_DIFF_PROFILE=nightly \
+SEMANTIC_DIFF_SEED=7331 \
+SEMANTIC_DIFF_MAX_PROGRAMS=1000 \
+SEMANTIC_DIFF_TIMEOUT_MS=15000 \
+SEMANTIC_DIFF_COMPARATOR_REPEATS=2 \
+SEMANTIC_DIFF_ARTIFACT_DIR=.artifacts/semantic-diff/nightly \
+bash scripts/test-stdlib-semantic-diff-lane.sh
+
+# KPI report generation
+HXHX_KPI_REPS=2 HXHX_KPI_RUN_MACRO_LANE=1 npm run hxhx:bench:kpi
+```
+
+## Related docs
+
+- `docs/00-project/CI_GATES.md`
+- `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
+- `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`

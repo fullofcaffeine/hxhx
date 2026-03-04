@@ -9,6 +9,8 @@ For lane/profile context, use the canonical beginner truth table:
 - `docs/02-user-guide/concepts/what_delegates_today.md`
 - Haxe 4.3.7 parity contract map (suites × lanes × targets × profiles × markers):
   `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
+- Weekly ops audit procedure (scheduled gates + triage):
+  `docs/00-project/WEEKLY_CI_EVIDENCE.md`
 
 ## Gate purpose by lane (quick map)
 
