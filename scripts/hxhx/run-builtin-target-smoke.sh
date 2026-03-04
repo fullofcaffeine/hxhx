@@ -76,22 +76,22 @@ if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
 fi
 
 ensure_target_available() {
-  local target="$1"
+  local lane="$1"
   local targets=""
   if ! targets="$("$HXHX_BIN" --hxhx-list-targets 2>/dev/null)"; then
     return 1
   fi
-  printf '%s\n' "$targets" | grep -qx "$target"
+  printf '%s\n' "$targets" | grep -qx "$lane"
 }
 
 JS_NATIVE_AVAILABLE=1
 if [ "$JS_NATIVE_LANE" = "1" ] && ! ensure_target_available "js"; then
   JS_NATIVE_AVAILABLE=0
   if [ "$REQUIRE_JS_NATIVE" = "1" ]; then
-    echo "hxhx binary does not expose --target js and HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=1." >&2
+    echo "hxhx binary does not expose native js lane and HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=1." >&2
     exit 1
   fi
-  echo "WARN: current hxhx binary does not expose --target js; skipping js-native smoke lane." >&2
+  echo "WARN: current hxhx binary does not expose native js lane; skipping js-native smoke lane." >&2
   echo "      Set HXHX_BUILTIN_SMOKE_REQUIRE_JS_NATIVE=1 to fail when js-native is unavailable." >&2
 fi
 
@@ -168,8 +168,8 @@ echo "js_native_lane=$JS_NATIVE_LANE"
 if [ "$OCAML_LANE" = "1" ]; then
   echo "reps=$REPS"
   for i in $(seq 1 "$REPS"); do
-    delegate_ms="$(run_timed delegated "$HXHX_BIN" --target ocaml-compat -- -cp "$tmpdir/src" -main Main --no-output -D ocaml_no_build -D "ocaml_output=$tmpdir/out_delegate")"
-    builtin_ms="$(run_timed builtin "$HXHX_BIN" --target ocaml --hxhx-no-emit -cp "$tmpdir/src" -main Main --hxhx-out "$tmpdir/out_builtin")"
+    delegate_ms="$(run_timed delegated "$HXHX_BIN" --ocaml-eval -- -cp "$tmpdir/src" -main Main --no-output -D ocaml_no_build -D "ocaml_output=$tmpdir/out_delegate")"
+    builtin_ms="$(run_timed builtin "$HXHX_BIN" --ocaml --hxhx-no-emit -cp "$tmpdir/src" -main Main --hxhx-out "$tmpdir/out_builtin")"
 
     delegate_total=$((delegate_total + delegate_ms))
     builtin_total=$((builtin_total + builtin_ms))
@@ -205,7 +205,7 @@ if [ "$JS_NATIVE_LANE" = "1" ]; then
   fi
   echo "== js-native emit+run smoke"
   js_artifact="$tmpdir/out_js_native/main.js"
-  if ! js_out="$("$HXHX_BIN" --target js --js "$js_artifact" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native" 2>&1)"; then
+  if ! js_out="$("$HXHX_BIN" --js "$js_artifact" -cp "$tmpdir/src" -main JsNativeMain --hxhx-out "$tmpdir/out_js_native" 2>&1)"; then
     echo "builtin_target_smoke=fail" >&2
     echo "mode=js-native" >&2
     printf '%s\n' "$js_out" >&2

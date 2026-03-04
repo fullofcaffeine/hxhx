@@ -81,9 +81,9 @@ build_hxhx_if_needed() {
   # If any example declares it needs hxhx, build it once and export HXHX_EXE.
   #
   # Markers:
-  # - USE_HXHX: run the example via `hxhx --target ocaml-compat` (stage0 shim path).
+  # - USE_HXHX: run the example via `hxhx --ocaml-eval` (stage0 shim path).
   # - USE_HXHX_STAGE3: run the example via `hxhx --hxhx-stage3` (bring-up path).
-  # - USE_HXHX_JS: run the example via `hxhx --target js-compat`.
+  # - USE_HXHX_JS: run the example via `hxhx --compat --js`.
   if ! has_marker_in_roots "USE_HXHX" "${EXAMPLE_ROOTS[@]}" \
     && ! has_marker_in_roots "USE_HXHX_STAGE3" "${EXAMPLE_ROOTS[@]}" \
     && ! has_marker_in_roots "USE_HXHX_JS" "${EXAMPLE_ROOTS[@]}"; then
@@ -232,11 +232,11 @@ for dir in "${EXAMPLE_DIRS[@]}"; do
         echo "Skipping JS example (missing node): ${dir}"
         exit 0
       fi
-      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target js-compat build.hxml --js out/main.js
+      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --compat build.hxml --js out/main.js
       artifact="out/main.js"
       run_cmd=(node -e "global.window={console:console};global.document={getElementById:function(){return null;}};global.window.document=global.document;global.navigator={};require('./${artifact}');")
     elif [ -f "USE_HXHX" ]; then
-      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --target ocaml-compat build.hxml -D ocaml_build=native
+      HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_EXE" --ocaml-eval build.hxml -D ocaml_build=native
       artifact="out/_build/default/out.exe"
       run_cmd=("./$artifact")
     else

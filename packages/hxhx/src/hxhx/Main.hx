@@ -4,6 +4,20 @@ import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;
 import hxhx.Stage1Compiler.Stage1Args;
 
+private typedef StandardTargetScan = {
+	final hasJs:Bool;
+	final hasNonJs:Bool;
+	final hasLegacy:Bool;
+	final missingValueFlag:Null<String>;
+}
+
+private typedef RoutePlan = {
+	final lane:String;
+	final backendId:Null<String>;
+	final forwarded:Array<String>;
+	final stage0Required:Bool;
+}
+
 /**
 	`hxhx` (Haxe-in-Haxe compiler) driver.
 
@@ -23,6 +37,10 @@ import hxhx.Stage1Compiler.Stage1Args;
 **/
 class Main {
 	static inline final COMPAT_HAXE_VERSION:String = "4.3.7";
+	static inline final LANE_NATIVE_OCAML:String = "native-ocaml";
+	static inline final LANE_NATIVE_JS:String = "native-js";
+	static inline final LANE_STAGE0_COMPAT:String = "stage0-compat";
+	static inline final LANE_STAGE0_OCAML_EVAL:String = "stage0-ocaml-eval";
 
 	static function fatal<T>(msg:String):T {
 		Sys.println(msg);
@@ -358,7 +376,7 @@ class Main {
 
 		final outDir = getDefineValue(argv, "ocaml_output");
 		if (outDir == null || outDir.length == 0) {
-			fatal("hxhx: ocaml run mode requires -D ocaml_output=<dir> (or use --target ocaml preset)");
+			fatal("hxhx: ocaml run mode requires -D ocaml_output=<dir> (or use --ocaml)");
 		}
 
 		// NOTE (Gate1 bring-up):
@@ -565,60 +583,6 @@ class Main {
 			return;
 		}
 
-		// Stage0/builtin target preset selection (`--target`).
-		//
-		// This is a shim-owned flag family and should never be forwarded to stage0 `haxe`.
-		// See `docs/02-user-guide/HXHX_BUILTIN_BACKENDS.md:1`.
-		var selectedShimTargetPreset:Null<String> = null;
-		{
-			// Only parse shim flags in the pre-`--` section (so `hxhx -- --target ...` forwards).
-			final idx = shimArgs.indexOf("--target");
-			final idx2 = shimArgs.indexOf("--hxhx-target");
-			final i = idx != -1 ? idx : idx2;
-			if (i != -1) {
-				if (i + 1 >= shimArgs.length) {
-					fatal("Usage: hxhx --target <id> [haxe args...]");
-				}
-
-				final targetId = shimArgs[i + 1];
-				// Remove the shim flag from the forwarded args (only if it was part of the forwarded set).
-				if (sep == -1) {
-					forwarded = forwarded.copy();
-					forwarded.splice(i, 2);
-				}
-
-				final resolved = try {
-					TargetPresets.resolve(targetId, forwarded);
-				} catch (e:String) {
-					fatal("hxhx: " + e);
-				};
-				selectedShimTargetPreset = resolved.id;
-				forwarded = resolved.forwarded;
-
-				if (resolved.runMode == TargetPresets.RUN_MODE_BUILTIN_STAGE3) {
-					if (ocamlInterpLike) {
-						fatal("hxhx: --hxhx-ocaml-interp cannot be combined with --target " + resolved.id);
-					}
-					final stage3Args = ["--hxhx-backend", resolved.id].concat(forwarded);
-					final code = Stage3Compiler.run(stage3Args);
-					Sys.exit(code);
-				}
-			}
-
-			if (shimArgs.length == 1 && shimArgs[0] == "--hxhx-list-targets") {
-				for (t in TargetPresets.listTargets())
-					Sys.println(t);
-				return;
-			}
-		}
-
-		final unsupportedLegacyTarget = findUnsupportedLegacyTarget(forwarded);
-		if (unsupportedLegacyTarget != null) {
-			fatal('hxhx: Target "'
-				+ unsupportedLegacyTarget
-				+ '" is not supported in this implementation. Legacy Flash/AS3 targets are intentionally unsupported.');
-		}
-
 		// Compatibility note:
 		// `hxhx` is intended to be drop-in compatible with the `haxe` CLI.
 		// Many tools parse `haxe --version` as SemVer, so this shim must keep
@@ -630,6 +594,12 @@ class Main {
 
 		if (isHelpQuery(args)) {
 			printHxhxHelp();
+			return;
+		}
+
+		if (shimArgs.length == 1 && shimArgs[0] == "--hxhx-list-targets") {
+			for (lane in CliRouting.listLaneSelectors())
+				Sys.println(lane);
 			return;
 		}
 
@@ -647,40 +617,39 @@ class Main {
 			return;
 		}
 
-		// Native JS routing for standard upstream flags (`-js` / `--js`).
-		//
-		// Why
-		// - Preserve upstream CLI ergonomics for JS output without requiring hxhx-only flags
-		//   like `--target js`.
-		// - Keep strict CLI mode usable in non-delegating flows.
-		//
-		// Guardrails
-		// - Explicit shim target presets still win (`--target ...`).
-		// - We only auto-route when JS is the only explicit standard target family in the request.
-		// - If builtin JS backend is unavailable:
-		//   - with stage0 allowed: fall back to normal stage0 delegation,
-		//   - with `HXHX_FORBID_STAGE0=1`: fail fast with a clear error.
-		if (selectedShimTargetPreset == null && shouldRouteStandardJsToNative(forwarded)) {
-			final resolvedJsNative = try {
-				TargetPresets.resolve("js", forwarded);
-			} catch (e:String) {
-				if (forbidStage0Delegation) {
-					fatal("hxhx: --js requested native routing, but builtin js backend is unavailable: " + e);
+		final plan = try {
+			CliRouting.plan(shimArgs, forwarded);
+		} catch (e:String) {
+			fatal("hxhx: " + e);
+		}
+		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
+			Sys.println("route_lane=" + plan.lane);
+			if (plan.backendId != null)
+				Sys.println("route_backend_id=" + plan.backendId);
+			if (plan.stage0Required)
+				Sys.println("stage0_haxe_bin=" + haxeBin);
+		}
+
+		switch (plan.lane) {
+			case LANE_NATIVE_OCAML | LANE_NATIVE_JS:
+				if (ocamlInterpLike) {
+					fatal("hxhx: --hxhx-ocaml-interp cannot be combined with native target lanes.");
 				}
-				null;
-			}
-			if (resolvedJsNative != null) {
-				final stage3Args = ["--hxhx-backend", resolvedJsNative.id].concat(resolvedJsNative.forwarded);
+				final stage3Args = ["--hxhx-backend", plan.backendId].concat(plan.forwarded);
 				final code = Stage3Compiler.run(stage3Args);
 				Sys.exit(code);
-			}
+			case LANE_STAGE0_OCAML_EVAL:
+				if (forbidStage0Delegation)
+					fatal("hxhx: stage0 forbidden; --ocaml-eval requires stage0.");
+				final code = Sys.command(haxeBin, plan.forwarded);
+				Sys.exit(code);
+			case LANE_STAGE0_COMPAT:
+				if (forbidStage0Delegation)
+					fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids --compat because this path delegates to stage0 `haxe`.");
+				final code = Sys.command(haxeBin, plan.forwarded);
+				Sys.exit(code);
+			case _:
+				fatal("hxhx: internal error: unknown route lane " + plan.lane);
 		}
-
-		if (forbidStage0Delegation) {
-			fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids stage0 delegation for this invocation. Use --hxhx-stage3 or a builtin target preset (for example: --target ocaml / --target js).");
-		}
-
-		final code = Sys.command(haxeBin, forwarded);
-		Sys.exit(code);
 	}
 }

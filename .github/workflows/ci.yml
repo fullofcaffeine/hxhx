@@ -83,6 +83,8 @@ jobs:
           fi
       - name: Run guardrails
         run: npm run ci:guards
+      - name: Validate hxhx direct-flag CLI contract
+        run: npm run test:hxhx:cli-contract
 
   stage0-free-smoke:
     name: Stage0-free smoke

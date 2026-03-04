@@ -99,7 +99,7 @@ target_available() {
 }
 
 if ! target_available "js"; then
-	echo "hxhx binary does not expose --target js (required for plugin/builtin KPI lanes)." >&2
+	echo "hxhx binary does not expose native js lane (required for plugin/builtin KPI lanes)." >&2
 	exit 1
 fi
 
@@ -220,10 +220,10 @@ run_macro_overhead_lane() {
 	done
 }
 
-portable_cmd="\"$HXHX_BIN\" --target ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_ocaml_portable\" -D ocaml_profile=portable"
-metal_cmd="\"$HXHX_BIN\" --target ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_ocaml_metal\" -D ocaml_profile=metal"
-builtin_js_cmd="\"$HXHX_BIN\" --target js --js \"$WORK_DIR/out_js_builtin/main.js\" --hxhx-no-run -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_js_builtin\""
-plugin_js_cmd="\"$HXHX_BIN\" --target js --js \"$WORK_DIR/out_js_plugin/main.js\" --hxhx-no-run -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_js_plugin\" -D hxhx_backend_provider=backend.js.JsBackend"
+portable_cmd="\"$HXHX_BIN\" --ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_ocaml_portable\" -D ocaml_profile=portable"
+metal_cmd="\"$HXHX_BIN\" --ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_ocaml_metal\" -D ocaml_profile=metal"
+builtin_js_cmd="\"$HXHX_BIN\" --js \"$WORK_DIR/out_js_builtin/main.js\" --hxhx-no-run -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_js_builtin\""
+plugin_js_cmd="\"$HXHX_BIN\" --js \"$WORK_DIR/out_js_plugin/main.js\" --hxhx-no-run -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_js_plugin\" -D hxhx_backend_provider=backend.js.JsBackend"
 upstream_cmd="\"$HAXE_BIN\" --no-output -cp \"$WORK_DIR/src\" -main Main"
 
 echo "== hxhx KPI harness"
@@ -247,12 +247,12 @@ if [ "$RUN_MACRO_LANE" = "1" ]; then
 	upstream_macro_enabled_cmd="\"$HAXE_BIN\" --no-output -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main"
 	run_macro_overhead_lane "upstream_haxe" "$upstream_macro_base_cmd" "$upstream_macro_enabled_cmd"
 
-	macro_base_portable_cmd="\"$HXHX_BIN\" --target ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_portable_base\" -D ocaml_profile=portable"
-	macro_enabled_portable_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --target ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_portable_enabled\" -D ocaml_profile=portable"
+	macro_base_portable_cmd="\"$HXHX_BIN\" --ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_portable_base\" -D ocaml_profile=portable"
+	macro_enabled_portable_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_portable_enabled\" -D ocaml_profile=portable"
 	run_macro_overhead_lane "ocaml_portable_builtin" "$macro_base_portable_cmd" "$macro_enabled_portable_cmd"
 
-	macro_base_metal_cmd="\"$HXHX_BIN\" --target ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_metal_base\" -D ocaml_profile=metal"
-	macro_enabled_metal_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --target ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_metal_enabled\" -D ocaml_profile=metal"
+	macro_base_metal_cmd="\"$HXHX_BIN\" --ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" -main Main --hxhx-out \"$WORK_DIR/out_macro_metal_base\" -D ocaml_profile=metal"
+	macro_enabled_metal_cmd="HXHX_MACRO_HOST_EXE=\"$HXHX_MACRO_HOST_BIN\" \"$HXHX_BIN\" --ocaml --hxhx-no-emit -cp \"$WORK_DIR/src\" --macro 'KpiBenchMacros.init()' -main Main --hxhx-out \"$WORK_DIR/out_macro_metal_enabled\" -D ocaml_profile=metal"
 	run_macro_overhead_lane "ocaml_metal_builtin" "$macro_base_metal_cmd" "$macro_enabled_metal_cmd"
 fi
 

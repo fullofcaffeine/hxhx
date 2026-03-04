@@ -50,15 +50,15 @@ We will stage this intentionally:
 - Supporting every macro API edge case immediately is not required for “Phase A — Haxe-in-Haxe enough”.
 - Perfect parity for display server behavior is a later gate.
 - Full “user macro parity” in native mode is not a Gate 0 requirement.
-- In **compat/delegated lanes** (`--target *-compat`), macros run via stage0 upstream `haxe`.
-- In **native lanes** (`--target ocaml` / `--target js`), `hxhx` runs native macro-host slices for the currently
+- In **compat/delegated lanes** (`--ocaml-eval`, or `--compat` passthrough commands), macros run via stage0 upstream `haxe`.
+- In **native lanes** (`--ocaml` / `--js <file>`), `hxhx` runs native macro-host slices for the currently
   supported subset. Library macro initializers remain opt-in during bring-up (`HXHX_RUN_HAXELIB_MACROS=1`).
 
 However, Gate 1 (upstream `compile-macro.hxml`) is *macro heavy*, so we should expect macro work early.
 
 ## Macro support matrix (today)
 
-| Capability | Compat/delegated lanes (`--target *-compat`) | Native lanes (`--target ocaml|js`) | Notes |
+| Capability | Compat/delegated lanes (`--ocaml-eval`, `--compat ...`) | Native lanes (`--ocaml`, `--js <file>`) | Notes |
 | --- | --- | --- | --- |
 | CLI `--macro ...` | ✅ via upstream stage0 `haxe` | 🟡 supported for current native macro-host subset | See native protocol limits below. |
 | `@:build` / `@:autoBuild` | ✅ upstream behavior | 🟡 supported for current bring-up subset | Build-field shape is intentionally constrained in bring-up. |
@@ -168,11 +168,11 @@ Tests
   - handshake + stub APIs (`--hxhx-macro-selftest`)
   - fixture macro libraries that behave like compiler plugins (hooks + defines + classpath injection + emission)
 
-## `--library` and `--target` in `hxhx` (lane behavior)
+## `--library` and lane flags in `hxhx` (lane behavior)
 
 `hxhx` currently has **two** relevant “surfaces”:
 
-1) **Compat/delegated surface** (`hxhx --target ocaml-compat ...`, `hxhx --target js-compat ...`)
+1) **Compat/delegated surface** (`hxhx --ocaml-eval ...`, `hxhx --compat ...`)
    - `hxhx` forwards most flags to a stage0 `haxe` compiler (via `HAXE_BIN`) and relies on upstream for:
      - typing
      - macro execution
@@ -180,7 +180,7 @@ Tests
      the upstream macro runtime.
    - This surface exists for compatibility while the native stages mature.
 
-2) **Native surface** (`hxhx --target ocaml ...`, `hxhx --target js ...`)
+2) **Native surface** (`hxhx --ocaml ...`, `hxhx --js <file> ...`)
    - `hxhx` resolves and types the program itself (bootstrap typer) and executes macros via the Stage4 macro host.
    - `--library <lib>` is resolved by:
      - preferring `haxe_libraries/<lib>.hxml` (lix-style), walking up from the current working directory, else

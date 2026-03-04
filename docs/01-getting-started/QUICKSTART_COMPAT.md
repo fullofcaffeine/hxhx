@@ -24,16 +24,16 @@ echo "$HXHX_BIN"
 
 ## 2) Run a compat compile
 
-OCaml compat preset:
+OCaml delegated macro lane:
 
 ```bash
-"$HXHX_BIN" --target ocaml-compat -cp src -main Main --no-output -D ocaml_no_build
+"$HXHX_BIN" --ocaml-eval -cp src -main Main --no-output -D ocaml_no_build
 ```
 
-JS compat preset:
+JS passthrough compat lane:
 
 ```bash
-"$HXHX_BIN" --target js-compat -cp src -main Main --js out/main.js
+"$HXHX_BIN" --compat --js out/main.js -cp src -main Main
 ```
 
 ## 3) Verify lane behavior
@@ -41,15 +41,15 @@ JS compat preset:
 Add trace output to confirm selection:
 
 ```bash
-HXHX_TRACE_BACKEND_SELECTION=1 "$HXHX_BIN" --target ocaml-compat -cp src -main Main --no-output -D ocaml_no_build
+HXHX_TRACE_BACKEND_SELECTION=1 "$HXHX_BIN" --ocaml-eval -cp src -main Main --no-output -D ocaml_no_build
 ```
 
 This lane is expected to rely on stage0 runtime delegation.
 
 ## Troubleshooting
 
-- `hxhx: target preset not found`
-  - run `"$HXHX_BIN" --hxhx-help` and confirm `--target ocaml-compat` or `--target js-compat` is present.
+- `hxhx: --target removed`
+  - use direct flags: `--ocaml`, `--ocaml-eval`, `--js <file>`, and `--compat`.
 - `No such file or directory` for upstream `haxe`
   - ensure `haxe -version` works on `PATH` (or set `HAXE_BIN` explicitly).
 - you want non-delegating behavior

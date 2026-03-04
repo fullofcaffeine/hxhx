@@ -102,7 +102,7 @@ PY
 compile_delegated() {
   (
     cd "$EXAMPLE_DIR"
-    HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_BIN" --target ocaml-compat build.hxml -D ocaml_build=native >/dev/null 2>&1
+    HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_BIN" --ocaml-eval build.hxml -D ocaml_build=native >/dev/null 2>&1
   )
 }
 
@@ -110,7 +110,7 @@ compile_stage3() {
   (
     cd "$ROOT"
     HXHX_FORBID_STAGE0=1 HXHX_REPO_ROOT="$ROOT" HAXE_BIN="$HAXE_BIN" "$HXHX_BIN" \
-      --target ocaml \
+      --ocaml \
       --hxhx-no-run \
       --hxhx-emit-full-bodies \
       --hxhx-out "$EXAMPLE_DIR/out_stage3" \
@@ -224,8 +224,8 @@ fi
 
 echo "Runtime timings (same workload, higher = slower):"
 interp_median="$(bench_lane "stage0 eval baseline: haxe --interp" run_interp_once)"
-delegated_median="$(bench_lane "hxhx --target ocaml-compat (delegated preset)" run_delegated_once)"
-stage3_median="$(bench_lane "hxhx --target ocaml (native)" run_stage3_once)"
+delegated_median="$(bench_lane "hxhx --ocaml-eval (delegated preset)" run_delegated_once)"
+stage3_median="$(bench_lane "hxhx --ocaml (native)" run_stage3_once)"
 echo ""
 
 speed_interp="$(speedup_pct "$interp_median" "$stage3_median")"

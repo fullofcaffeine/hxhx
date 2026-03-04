@@ -2,7 +2,7 @@
 
 Use this path when you want `hxhx` native runtime compile behavior.
 
-In native lane, `hxhx` uses linked backends (`--target ocaml` / `--target js`) and should not delegate runtime compile work to stage0.
+In native lane, `hxhx` uses linked backends (`--ocaml` / `--js <file>`) and should not delegate runtime compile work to stage0.
 
 Canonical definitions:
 
@@ -30,13 +30,13 @@ echo "$HXHX_BIN"
 Native OCaml lane:
 
 ```bash
-HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --target ocaml -cp src -main Main --hxhx-no-emit
+HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --ocaml -cp src -main Main --hxhx-no-emit
 ```
 
 Native JS lane:
 
 ```bash
-HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --target js -cp src -main Main --js out/main.js --hxhx-no-run
+HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --js out/main.js -cp src -main Main --hxhx-no-run
 ```
 
 ## 3) Run core native checks

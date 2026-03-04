@@ -2,5 +2,5 @@
 -cp packages/hxhx/src
 -cp packages/hxhx-core/src
 
--main M14TargetPresetNamingCutoverIntegrationTest
+-main M14DirectFlagCliContractTest
 --interp

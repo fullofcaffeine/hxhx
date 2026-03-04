@@ -60,7 +60,7 @@ ensure_target_available() {
 }
 
 if ! ensure_target_available "js"; then
-  echo "hxhx binary does not expose --target js (required for this oracle smoke)." >&2
+  echo "hxhx binary does not expose native js lane (required for this oracle smoke)." >&2
   exit 1
 fi
 
@@ -310,7 +310,7 @@ run_fixture() {
   fi
 
   if ! HAXE_BIN=/definitely-not-used HXHX_FORBID_STAGE0="$FORBID_STAGE0" \
-    "$HXHX_BIN" --target js --hxhx-no-run --js "$hx_js" -cp "$tmpdir/src" -main "$main" \
+    "$HXHX_BIN" --hxhx-no-run --js "$hx_js" -cp "$tmpdir/src" -main "$main" \
     --hxhx-out "$tmpdir/out/hxhx/${main}" >"$hx_compile_log" 2>&1; then
     echo "js_oracle_smoke=fail" >&2
     echo "fixture=${main}" >&2
