@@ -12,6 +12,10 @@ VERIFY_FLAG="${HXHX_BOOTSTRAP_BENCH_VERIFY:-0}"
 STAGE0_POLICY="${HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY:-}"
 STAGE0_NATIVE_BIN="${HXHX_BOOTSTRAP_BENCH_STAGE0_NATIVE_HAXE_BIN:-}"
 COMPARE_STAGE0_POLICIES="${HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES:-0}"
+STAGE0_NO_OPT="${HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT:-0}"
+STAGE0_NO_INLINE="${HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE:-0}"
+STAGE0_DISABLE_PREPASSES="${HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES:-0}"
+STAGE0_OCAMLRUNPARAM="${HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM:-}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 REPORT_DIR="${HXHX_BOOTSTRAP_BENCH_REPORT_DIR:-$ROOT/.hxhx/bench/bootstrap-regen/$TIMESTAMP}"
 
@@ -32,6 +36,14 @@ Environment knobs:
   HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES
                                       0/1 run each benchmark twice:
                                       wrapper=warn and native=prefer-native
+  HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT
+                                      0/1 pass HXHX_STAGE0_NO_OPT to regen runs
+  HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE
+                                      0/1 pass HXHX_STAGE0_NO_INLINE to regen runs
+  HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES
+                                      0/1 pass HXHX_STAGE0_DISABLE_PREPASSES to regen runs
+  HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM
+                                      pass HXHX_STAGE0_OCAMLRUNPARAM to regen runs
   HXHX_BOOTSTRAP_BENCH_REPORT_DIR     Output directory for per-run JSON reports
 
 Examples:
@@ -92,6 +104,30 @@ if ! is_non_negative_int "$COMPARE_STAGE0_POLICIES"; then
 	echo "Invalid HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES: '$COMPARE_STAGE0_POLICIES' (expected 0 or 1)." >&2
 	exit 1
 fi
+if ! is_non_negative_int "$STAGE0_NO_OPT"; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT: '$STAGE0_NO_OPT' (expected 0 or 1)." >&2
+	exit 1
+fi
+if ! is_non_negative_int "$STAGE0_NO_INLINE"; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE: '$STAGE0_NO_INLINE' (expected 0 or 1)." >&2
+	exit 1
+fi
+if ! is_non_negative_int "$STAGE0_DISABLE_PREPASSES"; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES: '$STAGE0_DISABLE_PREPASSES' (expected 0 or 1)." >&2
+	exit 1
+fi
+if [ "$STAGE0_NO_OPT" != "0" ] && [ "$STAGE0_NO_OPT" != "1" ]; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT: '$STAGE0_NO_OPT' (expected 0 or 1)." >&2
+	exit 1
+fi
+if [ "$STAGE0_NO_INLINE" != "0" ] && [ "$STAGE0_NO_INLINE" != "1" ]; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE: '$STAGE0_NO_INLINE' (expected 0 or 1)." >&2
+	exit 1
+fi
+if [ "$STAGE0_DISABLE_PREPASSES" != "0" ] && [ "$STAGE0_DISABLE_PREPASSES" != "1" ]; then
+	echo "Invalid HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES: '$STAGE0_DISABLE_PREPASSES' (expected 0 or 1)." >&2
+	exit 1
+fi
 
 if [ "$COMPARE_STAGE0_POLICIES" = "1" ] && [ -n "$STAGE0_POLICY" ]; then
 	echo "Cannot set HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY when HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1." >&2
@@ -135,6 +171,7 @@ if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
 else
 	echo "Stage0 policy mode: ${STAGE0_POLICY:-default}"
 fi
+echo "Stage0 compile knobs: no_opt=$STAGE0_NO_OPT no_inline=$STAGE0_NO_INLINE disable_prepasses=$STAGE0_DISABLE_PREPASSES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>}"
 if [ -n "$STAGE0_NATIVE_BIN" ]; then
 	echo "Stage0 native candidate override: $STAGE0_NATIVE_BIN"
 fi
@@ -153,23 +190,40 @@ run_regen_with_policy() {
 	if [ -n "$policy_value" ] && [ -n "$STAGE0_NATIVE_BIN" ]; then
 		HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$policy_value" \
 		HXHX_STAGE0_NATIVE_HAXE_BIN="$STAGE0_NATIVE_BIN" \
+		HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
+		HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
+		HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
+		HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \
 		HAXE_BIN="$HAXE_BIN" \
 		bash "$REGEN_SCRIPT" "${regen_args[@]}"
 		return
 	fi
 	if [ -n "$policy_value" ]; then
 		HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$policy_value" \
+		HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
+		HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
+		HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
+		HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \
 		HAXE_BIN="$HAXE_BIN" \
 		bash "$REGEN_SCRIPT" "${regen_args[@]}"
 		return
 	fi
 	if [ -n "$STAGE0_NATIVE_BIN" ]; then
 		HXHX_STAGE0_NATIVE_HAXE_BIN="$STAGE0_NATIVE_BIN" \
+		HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
+		HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
+		HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
+		HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \
 		HAXE_BIN="$HAXE_BIN" \
 		bash "$REGEN_SCRIPT" "${regen_args[@]}"
 		return
 	fi
-	HAXE_BIN="$HAXE_BIN" bash "$REGEN_SCRIPT" "${regen_args[@]}"
+	HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
+	HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
+	HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
+	HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \
+	HAXE_BIN="$HAXE_BIN" \
+	bash "$REGEN_SCRIPT" "${regen_args[@]}"
 }
 
 extract_report_metrics() {

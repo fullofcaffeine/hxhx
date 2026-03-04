@@ -41,6 +41,12 @@ Options:
   --skip-if-unchanged        Skip stage0 emit when fingerprint matches previous successful regen.
   --force                    Ignore fingerprint match and force stage0 emit.
   --profile                  Enable stage0 `--times` and per-filter timing (`-D filter-times`).
+  --stage0-no-opt            Add `--no-opt` to stage0 haxe compile (lower memory, slower output).
+  --stage0-opt               Disable stage0 `--no-opt` override.
+  --stage0-no-inline         Add `--no-inline` to stage0 haxe compile (lower peak RSS; slower builds).
+  --stage0-inline            Disable stage0 `--no-inline` override.
+  --stage0-ocamlrunparam <value>
+                             Set OCAMLRUNPARAM for stage0 haxe process only (e.g. s=4M).
   --report-json <path>       Write a machine-readable timing summary JSON.
   --diag-every <seconds>     When heartbeat is disabled, print periodic stage0 diagnostics.
   --stage0-haxe-policy <mode>
@@ -62,6 +68,9 @@ Environment knobs (all optional):
   HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED=1  Enable fingerprint skip.
   HXHX_BOOTSTRAP_FORCE=1            Force emit even when fingerprint matches.
   HXHX_BOOTSTRAP_PROFILE=1          Enable `--times` + `-D filter-times`.
+  HXHX_STAGE0_NO_OPT=1              Add `--no-opt` to stage0 haxe compile.
+  HXHX_STAGE0_NO_INLINE=1           Add `--no-inline` to stage0 haxe compile.
+  HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
   HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
   HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
   HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native
@@ -122,6 +131,9 @@ HXHX_STAGE0_TELEMETRY_CLASS="${HXHX_STAGE0_TELEMETRY_CLASS:-}"
 HXHX_STAGE0_TELEMETRY_FIELD="${HXHX_STAGE0_TELEMETRY_FIELD:-}"
 HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
+HXHX_STAGE0_NO_OPT="${HXHX_STAGE0_NO_OPT:-0}"
+HXHX_STAGE0_NO_INLINE="${HXHX_STAGE0_NO_INLINE:-0}"
+HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-900}"
@@ -198,6 +210,26 @@ while [ $# -gt 0 ]; do
 		--profile)
 			HXHX_BOOTSTRAP_PROFILE=1
 			;;
+		--stage0-no-opt)
+			HXHX_STAGE0_NO_OPT=1
+			;;
+		--stage0-opt)
+			HXHX_STAGE0_NO_OPT=0
+			;;
+		--stage0-no-inline)
+			HXHX_STAGE0_NO_INLINE=1
+			;;
+		--stage0-inline)
+			HXHX_STAGE0_NO_INLINE=0
+			;;
+		--stage0-ocamlrunparam)
+			shift
+			if [ $# -eq 0 ]; then
+				echo "Missing value for --stage0-ocamlrunparam" >&2
+				exit 1
+			fi
+			HXHX_STAGE0_OCAMLRUNPARAM="$1"
+			;;
 		--report-json)
 			shift
 			if [ $# -eq 0 ]; then
@@ -263,6 +295,8 @@ assert_bool_01 "HXHX_BOOTSTRAP_KEEP_REPO_SERVER" "$HXHX_BOOTSTRAP_KEEP_REPO_SERV
 assert_bool_01 "HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED" "$HXHX_BOOTSTRAP_SKIP_IF_UNCHANGED"
 assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
 assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
+assert_bool_01 "HXHX_STAGE0_NO_OPT" "$HXHX_STAGE0_NO_OPT"
+assert_bool_01 "HXHX_STAGE0_NO_INLINE" "$HXHX_STAGE0_NO_INLINE"
 assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
 assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
 assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
@@ -617,6 +651,9 @@ compute_fingerprint() {
 		echo "haxe_native_candidate=$stage0_haxe_native_candidate"
 		echo "haxe_version=$stage0_haxe_version"
 		echo "stage0_disable_prepasses=$HXHX_STAGE0_DISABLE_PREPASSES"
+		echo "stage0_no_opt=$HXHX_STAGE0_NO_OPT"
+		echo "stage0_no_inline=$HXHX_STAGE0_NO_INLINE"
+		echo "stage0_ocamlrunparam=$HXHX_STAGE0_OCAMLRUNPARAM"
 		echo "stage0_progress=$HXHX_STAGE0_PROGRESS"
 		echo "stage0_telemetry=$HXHX_STAGE0_TELEMETRY"
 		echo "stage0_telemetry_detail=$HXHX_STAGE0_TELEMETRY_DETAIL"
@@ -675,6 +712,9 @@ write_report_json() {
   "haxe_native_candidate": "$(json_escape "$stage0_haxe_native_candidate")",
   "haxe_version": "$(json_escape "$stage0_haxe_version")",
   "haxe_connect": "$(json_escape "$resolved_haxe_connect")",
+  "stage0_no_opt": $HXHX_STAGE0_NO_OPT,
+  "stage0_no_inline": $HXHX_STAGE0_NO_INLINE,
+  "stage0_ocamlrunparam": "$(json_escape "$HXHX_STAGE0_OCAMLRUNPARAM")",
   "stage0_observability": {
     "heartbeat_seconds": $HXHX_STAGE0_HEARTBEAT,
     "heartbeat_samples": $stage0_heartbeat_samples,
@@ -731,7 +771,11 @@ run_stage0_emit() {
 		local pid=""
 		local heartbeat_samples_local=0
 		local heartbeat_peak_rss_mb_local=0
-		"$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
+		if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
+			OCAMLRUNPARAM="$HXHX_STAGE0_OCAMLRUNPARAM" "$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
+		else
+			"$HAXE_BIN" "${stage0_args[@]}" >"$log_file" 2>&1 &
+		fi
 		pid="$!"
 
 		local interval="0"
@@ -933,6 +977,15 @@ fi
 if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
 	echo "== Stage0 profile mode: enabled (--times + -D filter-times)"
 fi
+if [ "$HXHX_STAGE0_NO_OPT" = "1" ]; then
+	echo "== Stage0 compile mode: --no-opt enabled"
+fi
+if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
+	echo "== Stage0 compile mode: --no-inline enabled"
+fi
+if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
+	echo "== Stage0 OCaml runtime tuning: OCAMLRUNPARAM=$HXHX_STAGE0_OCAMLRUNPARAM"
+fi
 if [ "$HXHX_KEEP_LOGS" = "1" ]; then
 	echo "== Stage0 logs: retained (HXHX_KEEP_LOGS=1)"
 fi
@@ -1008,6 +1061,12 @@ if [ "$skipped_emit" = "0" ]; then
 	fi
 	if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
 		haxe_args+=(-D reflaxe_ocaml_telemetry)
+	fi
+	if [ "$HXHX_STAGE0_NO_OPT" = "1" ]; then
+		haxe_args+=(--no-opt)
+	fi
+	if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
+		haxe_args+=(--no-inline)
 	fi
 	if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
 		haxe_args+=(-D filter-times --times)

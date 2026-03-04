@@ -193,12 +193,21 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional strict mode: `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=require-native`
     - wrapper baseline mode: `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=warn`
     - explicit native candidate override: `HXHX_STAGE0_NATIVE_HAXE_BIN=/abs/path/to/haxe`
+    - optional lower-memory compile knob: `HXHX_STAGE0_NO_OPT=1` (adds `--no-opt`)
+    - optional lower-memory compile knob: `HXHX_STAGE0_NO_INLINE=1` (adds `--no-inline`)
+    - optional OCaml GC tuning for stage0 process: `HXHX_STAGE0_OCAMLRUNPARAM=s=4M`
   - Regen report JSON (`--report-json`) includes deterministic selection fields:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
     - `stage0_observability.heartbeat_peak_rss_mb` (plus heartbeat samples/interval)
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
     - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
+    - include compile knobs in benchmark runs:
+      `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT=1`, `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE=1`, `HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES=1`, and/or `HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM=s=4M`
+  - Stage0 contributor profiling helper (telemetry + summary):
+    - `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20`
+    - optional OCaml runtime tuning: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocamlrunparam s=4M`
+    - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors.
   - Script preflight checks for stale `haxe --wait` / `--server-connect` processes before emit.
     - Opt-in safe cleanup (repo-owned only): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-repo-server`
     - Opt-in global cleanup (unsafe): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --kill-all-haxe-servers`

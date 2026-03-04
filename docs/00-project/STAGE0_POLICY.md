@@ -49,12 +49,16 @@ bash scripts/hxhx/regenerate-hxhx-bootstrap.sh \
 
 Machine-readable reports (`--report-json`) include:
 
+- `status` (`ok` / `error`) and `exit_code`
 - `haxe_bin_requested`
 - `haxe_bin_resolved`
 - `haxe_bin_mode`
 - `haxe_bin_policy`
 - `haxe_bin_switched`
 - `haxe_native_candidate`
+- `stage0_no_opt` (`0` / `1`)
+- `stage0_no_inline` (`0` / `1`)
+- `stage0_ocamlrunparam` (string; empty when unset)
 - `stage0_observability.heartbeat_seconds`
 - `stage0_observability.heartbeat_samples`
 - `stage0_observability.heartbeat_peak_rss_mb`
@@ -93,6 +97,44 @@ The benchmark writes `results.tsv` with per-run policy + peak RSS columns:
 - `haxe_mode`
 - `haxe_policy`
 - `peak_rss_mb`
+
+You can pass stage0 compile knobs through the benchmark:
+
+- `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT=1`
+- `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE=1`
+- `HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES=1`
+- `HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM=s=4M`
+
+## Stage0 Contributor Profiling (Regen Lane)
+
+Use the profiling helper for reproducible contributor summaries:
+
+```bash
+# Fast failing profile sample (collects report + progress log + summary)
+npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20
+
+# Compare with lower-memory knob
+npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-inline
+
+# Try aggressive low-memory knobs together
+npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-opt --no-inline
+
+# Include OCaml GC tuning for stage0 haxe process
+npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-opt --no-inline --ocamlrunparam s=4M
+```
+
+Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
+
+- `regen_report.json` (policy/mode/peak RSS)
+- `reflaxe_ocaml_progress.log` (telemetry stream)
+- `summary.txt` (top class contributors + checkpoint lines)
+
+Current contributor pattern from 65s samples typically shows parser/typer-heavy classes near the top, for example:
+
+- `HxParser`
+- `ParserStage`
+- `hxhx.ExprMacroExpander`
+- `TyperStage`
 
 ## Policy table
 
