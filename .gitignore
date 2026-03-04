@@ -1,6 +1,7 @@
 # Reflaxe.OCaml build outputs (local dev)
 out_ocaml*/
 out_ocaml_*/
+/out/
 
 # Local typed AST dumps (debugging)
 dump_tmp/dump/

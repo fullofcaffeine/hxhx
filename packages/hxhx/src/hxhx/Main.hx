@@ -14,7 +14,7 @@ import hxhx.Stage1Compiler.Stage1Args;
 
 	What it does today:
 	- With no args (example harness mode): prints `OK hxhx`.
-	- With args: runs Stage 0 `haxe` with the same args, in the same working directory.
+	- With args: resolves shim/native paths first; otherwise delegates to Stage 0 `haxe`.
 
 	Long-term:
 	- The delegation path is removed and `hxhx` becomes the real compiler.
@@ -32,6 +32,46 @@ class Main {
 
 	static function isVersionQuery(args:Array<String>):Bool {
 		return args.length == 1 && (args[0] == "--version" || args[0] == "-version");
+	}
+
+	static function isHelpQuery(args:Array<String>):Bool {
+		return args.length == 1 && (args[0] == "--help" || args[0] == "-help" || args[0] == "-h" || args[0] == "--hxhx-help");
+	}
+
+	static function printHxhxHelp():Void {
+		Sys.println("hxhx Compiler " + COMPAT_HAXE_VERSION + " (compatibility baseline)");
+		Sys.println("Usage: hxhx <target> [options] [hxml files and dot paths...]");
+		Sys.println("");
+		Sys.println("Target:");
+		Sys.println("  --ocaml                              compile in native OCaml lane");
+		Sys.println("  --ocaml-eval                         compile in delegated OCaml eval lane");
+		Sys.println("  -js, --js <file>                     emit JavaScript in native lane");
+		Sys.println("  --compat                             delegate to upstream stage0 haxe");
+		Sys.println("");
+		Sys.println("Core options:");
+		Sys.println("  --version                            print compatibility version");
+		Sys.println("  --help                               show hxhx supported-surface help");
+		Sys.println("  --hxhx-help                          alias for --help");
+		Sys.println("  --no-output                          skip target file emission");
+		Sys.println("  --cwd <dir>                          run as if in the given directory");
+		Sys.println("");
+		Sys.println("hxhx options:");
+		Sys.println("  --hxhx-list-targets                  list supported hxhx lane selectors");
+		Sys.println("  --hxhx-strict-cli                    reject hxhx-only flags");
+		Sys.println("  --hxhx-stage3 ...                    run native Stage3 driver directly");
+		Sys.println("  --hxhx-no-emit                       typecheck only in Stage3 lane");
+		Sys.println("  --hxhx-no-run                        emit/build without execution");
+		Sys.println("  --hxhx-parse <File.hx>               parse a file via native parser seam");
+		Sys.println("  --hxhx-selftest                      run internal selftest");
+		Sys.println("");
+		Sys.println("Environment:");
+		Sys.println("  HXHX_FORBID_STAGE0=1                 fail on any stage0 delegation path");
+		Sys.println("  HAXE_BIN=<path>                      stage0 binary path for delegated flows");
+		Sys.println("");
+		Sys.println("Notes:");
+		Sys.println("  - Removed flags: --target / --hxhx-target.");
+		Sys.println("  - Legacy Flash/AS3 targets are intentionally unsupported.");
+		Sys.println("  - Use --compat for explicit stage0 delegation.");
 	}
 
 	static function hasDefine(args:Array<String>, name:String):Bool {
@@ -83,6 +123,23 @@ class Main {
 			if (a != flag)
 				out.push(a);
 		return out;
+	}
+
+	static function hasFlag(args:Array<String>, flag:String):Bool {
+		return args.indexOf(flag) != -1;
+	}
+
+	static function findFlagValue(args:Array<String>, flag:String):Null<String> {
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == flag) {
+				if (i + 1 < args.length)
+					return args[i + 1];
+				return null;
+			}
+			i += 1;
+		}
+		return null;
 	}
 
 	static function hasAnyTarget(args:Array<String>):Bool {
@@ -160,6 +217,8 @@ class Main {
 		if (flag == null || flag.length == 0)
 			return false;
 		if (flag == "--target" || flag == "--hxhx-target")
+			return true;
+		if (flag == "--ocaml" || flag == "--ocaml-eval" || flag == "--compat")
 			return true;
 		if (StringTools.startsWith(flag, "--hxhx-") && flag != "--hxhx-strict-cli")
 			return true;
@@ -569,26 +628,8 @@ class Main {
 			return;
 		}
 
-		if (args.length == 1 && args[0] == "--hxhx-help") {
-			Sys.println("hxhx (stage0 shim + stage1 bring-up)");
-			Sys.println("");
-			Sys.println("Usage:");
-			Sys.println("  hxhx [haxe args...]");
-			Sys.println("  hxhx --target <id> [haxe args...]");
-			Sys.println("  hxhx --hxhx-strict-cli [haxe args...]");
-			Sys.println("  hxhx --hxhx-parse <File.hx>");
-			Sys.println("  hxhx --hxhx-selftest");
-			Sys.println("  hxhx --hxhx-list-targets");
-			Sys.println("");
-			Sys.println("Environment:");
-			Sys.println("  HAXE_BIN  Path to stage0 `haxe` (default: haxe)");
-			Sys.println("  HXHX_FORBID_STAGE0  Set to 1/true to fail any stage0 delegation path");
-			Sys.println("");
-			Sys.println("Notes:");
-			Sys.println("  - `--version` is served by hxhx and reports compatibility baseline " + COMPAT_HAXE_VERSION + ".");
-			Sys.println("  - `--help` is still forwarded to stage0 `haxe`.");
-			Sys.println("  - `--hxhx-strict-cli` rejects non-upstream flags (e.g. --target, --hxhx-stage3).");
-			Sys.println("  - Use `--hxhx-help` for this shim help.");
+		if (isHelpQuery(args)) {
+			printHxhxHelp();
 			return;
 		}
 

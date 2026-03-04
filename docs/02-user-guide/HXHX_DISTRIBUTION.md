@@ -24,7 +24,7 @@ Canonical target-preset truth table (delegation + stage0 requirements):
 For compatibility with upstream tooling/tests:
 
 - `hxhx --version` prints a SemVer-style compatibility version (e.g. `4.3.7`) without requiring stage0 delegation
-- `hxhx --hxhx-help` prints shim-specific help
+- `hxhx --help` prints hxhx-supported-surface help (`--hxhx-help` remains an alias)
 
 The “hxhx build artifact version” is the repo release tag / version used when packaging (see below).
 
