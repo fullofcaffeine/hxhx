@@ -25,6 +25,7 @@ Use these terms first. They are what users care about.
 
 - **Builtin backend**: backend compiled into `hxhx` and shipped with the binary.
 - **Backend plugin**: backend loaded at runtime from a native OCaml dynlink artifact (`.cmxs` / `.cma`) via manifest.
+- **Haxe-provider (legacy term)**: old wording for what is now the `linked-provider` manifest kind.
 - **Native promotion**: turning a Reflaxe-based compiler/target into a native plugin artifact.
 
 ## Profile terms (OCaml output)

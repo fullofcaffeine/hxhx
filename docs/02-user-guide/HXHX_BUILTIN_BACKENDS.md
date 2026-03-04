@@ -232,9 +232,19 @@ Runtime load smoke (build + load + emit + run + negative checks):
 npm run test:hxhx:native-plugin-runtime-smoke
 ```
 
-Note: this smoke defaults to source-lane `hxhx` build (`HXHX_FORCE_STAGE0=1`) so runtime
-bridge changes are exercised even when bootstrap snapshots lag. Set
-`HXHX_NATIVE_PLUGIN_RUNTIME_STAGE0_BUILD=0` to use the bootstrap lane.
+Auditable happy-path gate (build + load + backend selection assertion, JS runner):
+
+```bash
+npm run test:hxhx:native-plugin-happy-path
+```
+
+Expected marker:
+
+- `NATIVE_PLUGIN_HAPPY_PATH:PASS`
+
+The happy-path checker uses `HXHX_BIN` when provided and otherwise reuses existing build outputs
+(`packages/hxhx/bootstrap_work/_build/default/out.{bc,exe}`) before falling back to `build-hxhx.sh`.
+Set `HXHX_NATIVE_PLUGIN_RUNTIME_STAGE0_BUILD=1` only when you explicitly need a source-lane build.
 
 This smoke validates:
 

@@ -68,28 +68,38 @@ private class BuildFieldPayloadItem {
 }
 
 /**
-	Stage 3 compiler bring-up (`--hxhx-stage3`).
+	Stage 3 native compiler lane (`--hxhx-stage3`).
+
+	Last audited: 2026-03-03.
 
 	Why
 	- Stage 1 proves we can parse and resolve modules without delegating to Stage0 `haxe`,
 	  but it intentionally stops at `--no-output`.
 	- Stage 3 is the first rung where `hxhx` behaves like a *real compiler*:
 	  parse → resolve → type → emit target code → build an executable.
-	- This bring-up path is intentionally narrow: it compiles only the tiny subset we can
-	  already type reliably in the bootstrap `hih-compiler` pipeline.
+	- This lane is the native orchestration entrypoint for builtin backends and
+	  plugin-backed backend dispatch during Stage3 workflows.
 
 	What (today)
-	- Supports a very small subset of the Haxe CLI:
+	- Supports the Stage3 CLI surface:
 	  - `-cp <dir>` / `-p <dir>` (repeatable)
 	  - `-main <Dotted.TypeName>`
 	  - `-C / --cwd` (affects relative `-cp` and `--hxhx-out`)
 	  - `.hxml` expansion (via `Stage1Args`)
-	- Adds one internal flag:
+	  - Stage3 control flags (`--hxhx-backend`, `--hxhx-no-emit`, `--hxhx-no-run`, etc.)
+	- Adds one Stage3 output flag:
 	  - `--hxhx-out <dir>`: where emitted `.ml` and the built executable are written
-	- Runs the Stage 2/3 pipeline from `packages/hxhx-core` (with acceptance fixtures under `workloads/hih-compiler`):
+	- Runs the Stage 2/3 pipeline from `packages/hxhx-core`:
 	  - `ResolverStage.parseProject` (transitive import closure)
-	  - `TyperStage.typeModule` (literal + identifier return typing)
-	  - `EmitterStage.emitToDir` (minimal OCaml emission + `ocamlopt` build)
+	  - `TyperStage.typeModule` (native typing lane)
+	  - backend selection + dispatch (`BackendRegistry`, provider/manifest resolution)
+	  - `EmitterStage.emitToDir` when using the bootstrap OCaml emitter lane
+
+	Runtime integration boundary
+	- Stage3 orchestration does not own portable/metal runtime-plan reporting.
+	- Reflaxe runtime planning/report artifacts are generated in the backend/runtime
+	  pipeline (`RuntimeCopier`/`OcamlCompiler`), while Stage3 bootstrap OCaml output
+	  owns only the local emit/copy/link behavior in `EmitterStage.emitToDir`.
 
 	Non-goals
 	- Full macro integration (`@:build`, typed AST transforms, etc.) is Stage 4.
@@ -97,7 +107,8 @@ private class BuildFieldPayloadItem {
 
 	Gotchas
 	- This is an internal bootstrap flag: it must never be forwarded to stage0 `haxe`.
-	- The emitted OCaml is intentionally minimal and only supports the acceptance subset.
+	- Backend availability depends on the selected lane (builtin registry and/or
+	  plugin manifest/provider inputs).
 **/
 class Stage3Compiler {
 	static function error(msg:String):Int {

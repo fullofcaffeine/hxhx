@@ -66,7 +66,7 @@ Read:
 
 ### 4) I want to promote a Reflaxe compiler/target to native plugin artifacts
 
-Use this when you want a runtime-loaded backend plugin instead of only Haxe-provider mode.
+Use this when you want a runtime-loaded backend plugin instead of only linked-provider (Haxe type) plugin mode.
 For `reflaxe.elixir`, use the external fetched pilot workflow (no vendoring in this repo).
 
 ```bash

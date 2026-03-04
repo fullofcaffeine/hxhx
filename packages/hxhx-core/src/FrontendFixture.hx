@@ -1,17 +1,14 @@
 /**
-	Deterministic “upstream-shaped” parser fixtures for Stage 2.
+	Deterministic parser fixtures for Stage 2 frontend checks.
 
 	Why:
-	- We want the Stage 2 compiler to gradually converge on the upstream Haxe
-	  frontend behavior.
-	- Upstream `tests/misc` contains many small, focused fixtures (module
-	  resolution, metadata placement, multiple types per file, etc.).
-	- However, we do not want `workloads/hih-compiler` to depend on a local
-	  checkout of the upstream repo at runtime (CI determinism).
+	- Stage 2 needs small, stable fixtures that exercise package/class/function
+	  parsing behavior without relying on external repositories at runtime.
+	- Fixtures are intentionally repo-owned to keep clean-room provenance clear.
 
 	What:
 	- This class stores:
-	  - a human label pointing at the upstream fixture we are emulating
+	  - a human label for the local fixture case
 	  - a source string (kept small and deterministic)
 	  - the minimal expected AST summary for this phase (package + first class +
 		whether a static `main` exists)

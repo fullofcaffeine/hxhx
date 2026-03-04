@@ -1,5 +1,26 @@
 # OCaml Family Alignment Spike (`portable|metal`)
 
+## Status
+
+This document is a **historical planning spike**.
+
+Last audited: 2026-03-03.
+
+Several previously listed gaps are now implemented and should be tracked in current
+contracts/docs instead of this spike narrative:
+
+- profile + runtime plan report artifacts:
+  - `ocaml_profile_report.json`
+  - `ocaml_runtime_plan_report.json`
+- compiler/runtime integration path used for report emission and runtime selection
+- policy and acceptance markers for portable/metal lanes
+
+Authoritative current references:
+
+- `docs/02-user-guide/OCAML_PROFILE_CONTRACT.md`
+- `packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/RuntimeCopier.hx`
+- `docs/00-project/CI_GATES.md`
+
 ## Scope
 
 This spike aligns `hxhx`/`reflaxe.ocaml` with the family profile contract used in sibling compiler repos.

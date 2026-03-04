@@ -46,7 +46,7 @@ let fail = fun manifestPath message -> let tempString = ref ("" : string) in (
 
 let providerTypeNamesForManifest = fun manifest sourceLabel -> try let __fallback_result_14 = (
   ignore (let _g = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind") : string) in match _g with
-    | "haxe-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_11 = HxArray.create () in (
+    | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (let __arr_11 = HxArray.create () in (
       ignore (HxArray.push __arr_11 (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "entry")));
       __arr_11
     )))))

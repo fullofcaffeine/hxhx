@@ -1,5 +1,7 @@
 /**
-	Stage 2 codegen/emitter skeleton.
+	Stage 2/3 OCaml emitter and bootstrap build helper.
+
+	Last audited: 2026-03-03.
 
 	Why:
 	- The real Haxe compiler has multiple generators; for Haxe-in-Haxe we’ll need
@@ -8,20 +10,25 @@
 	  built artifact” slice to keep bootstrapping honest.
 
 	What (in this repo today):
-	- `emit` remains a no-op placeholder for the long-term backend story.
-	- `emitToDir` is a Stage 3 bring-up helper used by `hxhx --hxhx-stage3`:
-	  it emits a *tiny* OCaml program for the supported bootstrap subset and
-	  builds it with `ocamlopt`.
+	- `emit` remains a placeholder entrypoint for the long-term backend-agnostic API.
+	- `emitToDir` is the Stage3 bootstrap OCaml path used by `hxhx --hxhx-stage3`:
+	  it emits module units, copies repo-owned runtime units, and can compile an
+	  executable with `ocamlopt`.
 
-	Supported subset (intentionally narrow):
-	- A single module with a single main class.
-	- `static` functions whose body is effectively `return <literal-or-ident>;`
-	  (or no explicit return, treated as `Void`).
+	Current scope:
+	- Handles Stage3 OCaml emission for the native bootstrap lane.
+	- Includes runtime copy/link behavior for `packages/reflaxe.ocaml/std/runtime`.
+	- Supports broader expression/statement lowering than the original bring-up
+	  subset, but still does not claim full upstream Haxe semantic coverage.
+
+	Runtime/report boundary:
+	- Reflaxe portable/metal runtime-plan and profile reports are generated in
+	  `RuntimeCopier`/`OcamlCompiler`.
+	- This class focuses on Stage3 OCaml emission and local bootstrap build wiring.
 
 	Non-goals:
 	- Full Haxe semantics (nullability, classes, enums, etc.).
-	- Runtime library integration (`hx_runtime`) — this helper emits OCaml that
-	  depends only on the OCaml standard library.
+	- Defining the cross-target backend contract used by non-Stage3 lanes.
 **/
 private typedef EmitterCallSig = {
 	/** Total OCaml parameters after lowering (includes the rest-array parameter when present). */

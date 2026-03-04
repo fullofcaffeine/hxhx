@@ -67,28 +67,27 @@ class CompilerDriver {
 			Sys.println("missing_import=ok");
 		}
 
-		// Stage2 bootstrap: keep the native frontend and the Haxe frontend aligned.
-		// We use upstream `tests/misc` fixtures as the behavioral oracle and keep a
-		// small, deterministic subset embedded here.
-		final upstreamShaped = [
-			new FrontendFixture("tests/misc/resolution/projects/spec/pack/Mod.hx", [
+		// Stage2 bootstrap: keep the native frontend and the pure-Haxe frontend aligned
+		// using repo-owned deterministic fixtures.
+		final parserFixtures = [
+			new FrontendFixture("fixtures/parser/pack/ParserCaseMod.hx", [
 				"package pack;",
-				"@:build(Macro.build()) class Mod {}",
-				"@:build(Macro.build()) class ModSubType {}",
-			].join("\n"), "pack", "Mod", false),
-			new FrontendFixture("tests/misc/resolution/projects/spec/pack/ModWithStatic.hx", [
+				"@:build(Macro.build()) class ParserCaseMod {}",
+				"@:build(Macro.build()) class ParserCaseModCompanion {}",
+			].join("\n"), "pack", "ParserCaseMod", false),
+			new FrontendFixture("fixtures/parser/pack/ParserCaseWithStatic.hx", [
 				"package pack;",
 				"",
-				"class ModWithStatic {",
-				'  public static function TheStatic() return "pack.ModWithStatic.TheStatic function";',
+				"class ParserCaseWithStatic {",
+				'  public static function localStatic() return "pack.ParserCaseWithStatic.localStatic";',
 				"}",
 				"",
 				"@:build(Macro.build())",
-				"class TheStatic {}",
-			].join("\n"), "pack", "ModWithStatic", false),
+				"class ParserCaseWithStaticMarker {}",
+			].join("\n"), "pack", "ParserCaseWithStatic", false),
 		];
 
-		for (case_ in upstreamShaped) {
+		for (case_ in parserFixtures) {
 			final label = case_.getLabel();
 			final src = case_.getSource();
 			final parsed = ParserStage.parse(src, label).getDecl();
@@ -103,13 +102,13 @@ class CompilerDriver {
 			if (HxClassDecl.getHasStaticMain(parsedMain) != case_.getExpectHasStaticMain()) {
 				throw new HxParseError('Fixture ' + label + ': static main mismatch', new HxPos(0, 0, 0));
 			}
-			if (label.indexOf("ModWithStatic") >= 0) {
-				final found = HxClassDecl.getFunctions(parsedMain).filter(f -> HxFunctionDecl.getName(f) == "TheStatic");
+			if (label.indexOf("ParserCaseWithStatic") >= 0) {
+				final found = HxClassDecl.getFunctions(parsedMain).filter(f -> HxFunctionDecl.getName(f) == "localStatic");
 				if (found.length != 1)
-					throw new HxParseError('Fixture ' + label + ': expected 1 TheStatic function', new HxPos(0, 0, 0));
+					throw new HxParseError('Fixture ' + label + ': expected 1 localStatic function', new HxPos(0, 0, 0));
 				final retStr = HxFunctionDecl.getReturnStringLiteral(found[0]);
-				if (retStr != "pack.ModWithStatic.TheStatic function") {
-					throw new HxParseError('Fixture ' + label + ': TheStatic return differs', new HxPos(0, 0, 0));
+				if (retStr != "pack.ParserCaseWithStatic.localStatic") {
+					throw new HxParseError('Fixture ' + label + ': localStatic return differs', new HxPos(0, 0, 0));
 				}
 			}
 

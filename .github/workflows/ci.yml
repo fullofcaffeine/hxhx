@@ -287,12 +287,28 @@ jobs:
           haxe -version
       - name: Download Haxe libraries (lix)
         run: npx lix download
+      - name: Build hxhx once (shared for plugin matrix + happy path)
+        run: |
+          set -euo pipefail
+          HXHX_BIN="$(bash scripts/hxhx/build-hxhx.sh | tail -n 1)"
+          if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+            echo "Failed to build hxhx binary for plugin matrix lanes." >&2
+            exit 1
+          fi
+          echo "HXHX_BIN=$HXHX_BIN" >> "$GITHUB_ENV"
       - name: Run strict plugin matrix
         env:
           HXHX_PLUGIN_MATRIX_STRICT: "1"
+          HXHX_BIN: ${{ env.HXHX_BIN }}
         run: |
           set -euo pipefail
           npm run -s test:plugins:strict-matrix
+      - name: Run auditable native plugin happy path
+        env:
+          HXHX_BIN: ${{ env.HXHX_BIN }}
+        run: |
+          set -euo pipefail
+          npm run -s test:hxhx:native-plugin-happy-path
       - name: Emit plugin matrix marker
         run: echo "PLUGIN_MATRIX_STRICT:PASS"
 

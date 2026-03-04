@@ -274,7 +274,7 @@ let requireStringArray = fun value fieldPath sourceLabel -> let raw = ref (Obj.m
 
 let parseKind = fun value sourceLabel -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match value with
-    | "haxe-provider" -> let __assign_64 = ("haxe-provider" : string) in (
+    | "linked-provider" -> let __assign_64 = ("linked-provider" : string) in (
       tempResult := __assign_64;
       __assign_64
     )
@@ -298,7 +298,7 @@ let parseKind = fun value sourceLabel -> let tempResult = ref (Obj.magic (HxRunt
           tempRight := __assign_63;
           __assign_63
         ));
-        HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "unsupported backend kind `") ^ HxString.toStdString value) ^ "` (supported: haxe-provider, ocaml-dynlink)")) ["Dynamic"; "String"]
+        HxType.hx_throw_typed_rtti (Obj.repr ((((("invalid backend plugin manifest (" ^ HxString.toStdString (!tempRight)) ^ "): ") ^ "unsupported backend kind `") ^ HxString.toStdString value) ^ "` (supported: linked-provider, ocaml-dynlink)")) ["Dynamic"; "String"]
       )
     ));
   !tempResult
@@ -365,7 +365,7 @@ let validate = fun manifest -> try let __fallback_result_79 = (
           let requiresError = (Backend_BackendAbi.validateManifestRequires (!tempString : string) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "abiVersion")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "genIrVersion")) (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "requires")) "macroApiVersion")) : string) in (
             ignore (if requiresError != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (requiresError : string))) else ());
             let _g = (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind") : string) in match _g with
-              | "haxe-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+              | "linked-provider" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
               | "ocaml-dynlink" -> ignore ((
                 ignore (if not (StringTools.endsWith (!tempString2 : string) (".cmxs" : string)) && not (StringTools.endsWith (!tempString2 : string) (".cma" : string)) then raise (HxRuntime.Hx_return (Obj.repr ("backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-dynlink`" : string))) else ());
                 raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
