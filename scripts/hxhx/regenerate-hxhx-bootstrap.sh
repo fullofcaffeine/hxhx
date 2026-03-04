@@ -922,7 +922,7 @@ run_bootstrap_verify() {
 	echo "== Verifying bootstrap snapshot builds (hydrate + dune)"
 	rm -rf "$BOOTSTRAP_VERIFY_DIR"
 	mkdir -p "$BOOTSTRAP_VERIFY_DIR"
-	(cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" -cf - .) | (cd "$BOOTSTRAP_VERIFY_DIR" && tar -xf -)
+	(cd "$BOOTSTRAP_DIR" && tar --exclude="_build" --exclude="*.install" --exclude="ocaml_profile_report.json" --exclude="ocaml_runtime_plan_report.json" -cf - .) | (cd "$BOOTSTRAP_VERIFY_DIR" && tar -xf -)
 	if find "$BOOTSTRAP_VERIFY_DIR" -maxdepth 1 -type f -name "*.ml.parts" | grep -q .; then
 		bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_VERIFY_DIR"
 	fi
@@ -1088,7 +1088,7 @@ if [ "$skipped_emit" = "0" ]; then
 	rm -rf "$BOOTSTRAP_DIR"
 	mkdir -p "$BOOTSTRAP_DIR"
 	# Copy everything except build artifacts and generator sources.
-	(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
+	(cd "$OUT_DIR" && tar --exclude='_build' --exclude='_gen_hx' --exclude='ocaml_profile_report.json' --exclude='ocaml_runtime_plan_report.json' -cf - .) | (cd "$BOOTSTRAP_DIR" && tar -xf -)
 	phase_copy_sec="$(( $(now_ts) - copy_start ))"
 
 	shard_start="$(now_ts)"

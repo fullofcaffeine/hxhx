@@ -91,6 +91,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.BackendPluginLoader");
   ignore (HxType.class_ "hxhx.BackendPluginManifestResolver");
   ignore (HxType.class_ "hxhx.BackendProviderResolver");
+  ignore (HxType.class_ "hxhx.CliRouting");
   ignore (HxType.class_ "hxhx.DisplayResponseSynthesizer");
   ignore (HxType.class_ "hxhx.ExprMacroExpander");
   ignore (HxType.class_ "hxhx.Hxml");
@@ -104,9 +105,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.Stage1Compiler");
   ignore (HxType.class_ "hxhx.Stage1Resolver");
   ignore (HxType.class_ "hxhx.Stage3Compiler");
-  ignore (HxType.class_ "hxhx.TargetPresets");
   ignore (HxType.class_ "hxhx._Stage3Compiler.BuildFieldPayloadItem");
-  ignore (HxType.class_ "hxhx._TargetPresets.ArgScan");
   ignore (HxType.class_ "hxhx.macro.MacroHostClient");
   ignore (HxType.class_ "hxhx.macro.MacroHostSession");
   ignore (HxType.class_ "hxhx.macro.MacroProtocol");
@@ -1044,6 +1043,9 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.BackendProviderResolver" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_BackendProviderResolver.create ())
   );
+  HxType.register_class_ctor "hxhx.CliRouting" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_CliRouting.create ())
+  );
   HxType.register_class_ctor "hxhx.DisplayResponseSynthesizer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_DisplayResponseSynthesizer.create ())
   );
@@ -1094,9 +1096,6 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.Stage3Compiler" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_Stage3Compiler.create ())
   );
-  HxType.register_class_ctor "hxhx.TargetPresets" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (Hxhx_TargetPresets.create ())
-  );
   HxType.register_class_ctor "hxhx._Stage3Compiler.BuildFieldPayloadItem" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'name' for hxhx._Stage3Compiler.BuildFieldPayloadItem" in
@@ -1104,9 +1103,6 @@ let init () : unit =
     let a2 = if len > 2 then HxRuntime.unbox_bool_or_obj ((HxArray.get args 2)) else failwith "Type.createInstance: missing ctor arg 'isStatic' for hxhx._Stage3Compiler.BuildFieldPayloadItem" in
     let a3 = if len > 3 then Obj.obj ((HxArray.get args 3)) else failwith "Type.createInstance: missing ctor arg 'visibility' for hxhx._Stage3Compiler.BuildFieldPayloadItem" in
     Obj.repr (Hxhx_Stage3Compiler.buildfieldpayloaditem_create a0 a1 a2 a3)
-  );
-  HxType.register_class_ctor "hxhx._TargetPresets.ArgScan" (fun (_args : Obj.t HxArray.t) ->
-    Obj.repr (Hxhx_TargetPresets.argscan_create ())
   );
   HxType.register_class_ctor "hxhx.macro.MacroHostClient" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_macro_MacroHostClient.create ())
@@ -1255,6 +1251,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.BackendPluginLoader" (fun () -> Obj.repr (Hxhx_BackendPluginLoader.__empty ()));
   HxType.register_class_empty_ctor "hxhx.BackendPluginManifestResolver" (fun () -> Obj.repr (Hxhx_BackendPluginManifestResolver.__empty ()));
   HxType.register_class_empty_ctor "hxhx.BackendProviderResolver" (fun () -> Obj.repr (Hxhx_BackendProviderResolver.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.CliRouting" (fun () -> Obj.repr (Hxhx_CliRouting.__empty ()));
   HxType.register_class_empty_ctor "hxhx.DisplayResponseSynthesizer" (fun () -> Obj.repr (Hxhx_DisplayResponseSynthesizer.__empty ()));
   HxType.register_class_empty_ctor "hxhx.ExprMacroExpander" (fun () -> Obj.repr (Hxhx_ExprMacroExpander.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Hxml" (fun () -> Obj.repr (Hxhx_Hxml.__empty ()));
@@ -1268,9 +1265,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.Stage1Compiler" (fun () -> Obj.repr (Hxhx_Stage1Compiler.__empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage1Resolver" (fun () -> Obj.repr (Hxhx_Stage1Compiler.stage1resolver___empty ()));
   HxType.register_class_empty_ctor "hxhx.Stage3Compiler" (fun () -> Obj.repr (Hxhx_Stage3Compiler.__empty ()));
-  HxType.register_class_empty_ctor "hxhx.TargetPresets" (fun () -> Obj.repr (Hxhx_TargetPresets.__empty ()));
   HxType.register_class_empty_ctor "hxhx._Stage3Compiler.BuildFieldPayloadItem" (fun () -> Obj.repr (Hxhx_Stage3Compiler.buildfieldpayloaditem___empty ()));
-  HxType.register_class_empty_ctor "hxhx._TargetPresets.ArgScan" (fun () -> Obj.repr (Hxhx_TargetPresets.argscan___empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroHostClient" (fun () -> Obj.repr (Hxhx_macro_MacroHostClient.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroHostSession" (fun () -> Obj.repr (Hxhx_macro_MacroHostClient.macrohostsession___empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroProtocol" (fun () -> Obj.repr (Hxhx_macro_MacroProtocol.__empty ()));
@@ -1461,6 +1456,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.BackendPluginManifestResolver" [ "fail"; "normalizePath"; "providerTypeNamesForManifest"; "providerTypeNamesForManifestPath" ];
   HxType.register_class_instance_fields "hxhx.BackendProviderResolver" [];
   HxType.register_class_static_fields "hxhx.BackendProviderResolver" [ "knownProviderRegistrations"; "providerRegistrations"; "registrationsForType"; "requireProvider" ];
+  HxType.register_class_instance_fields "hxhx.CliRouting" [];
+  HxType.register_class_static_fields "hxhx.CliRouting" [ "addDefineIfMissing"; "addLibraryIfMissing"; "addMacroIfMissing"; "consumesStandardTargetValue"; "findFlagValue"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasDefine"; "hasFlag"; "hasLibrary"; "hasMacro"; "listLaneSelectors"; "plan"; "planningTargetArgs"; "scanStandardTargetFlags"; "stripRoutingFlags" ];
   HxType.register_class_instance_fields "hxhx.DisplayResponseSynthesizer" [];
   HxType.register_class_static_fields "hxhx.DisplayResponseSynthesizer" [ "compactWhitespace"; "countArgumentIndexBeforeToken"; "extractArgTypeHintFromSegment"; "extractExprOfInner"; "findCallNameBeforeParen"; "findFunctionArgTypeHint"; "findMatchingCloseToken"; "findTypedefStructBody"; "formatCompletionList"; "isIdentContinue"; "isIdentStart"; "parseDisplayRequestQuery"; "parseStrictInt"; "parseStructFieldNames"; "readDisplaySource"; "stripTypePath"; "synthesize"; "synthesizeExprOfStructCompletion"; "tokenizeDisplaySource"; "xmlEscape" ];
   HxType.register_class_instance_fields "hxhx.ExprMacroExpander" [];
@@ -1470,7 +1467,7 @@ let init () : unit =
   HxType.register_class_instance_fields "hxhx.LibraryResolver" [];
   HxType.register_class_static_fields "hxhx.LibraryResolver" [ "emptySpec"; "findScopedHxml"; "haxelibBin"; "lixBin"; "resolve"; "resolveFromHxml"; "resolveViaProcess"; "tryResolveViaCommand" ];
   HxType.register_class_instance_fields "hxhx.Main" [];
-  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "isVersionQuery"; "main"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
+  HxType.register_class_static_fields "hxhx.Main" [ "absPath"; "addDefineIfMissing"; "defaultExeName"; "fatal"; "findFlagValue"; "findUnsupportedLegacyTarget"; "getDefineValue"; "hasAnyTarget"; "hasDefine"; "hasFlag"; "hasStandardJsTargetFlag"; "hasStandardNonJsTargetFlag"; "isHelpQuery"; "isStrictCliDisallowedFlag"; "isTrueEnv"; "isVersionQuery"; "main"; "printHxhxHelp"; "rmrf"; "runOcamlInterpLike"; "sanitizeName"; "shouldRouteStandardJsToNative"; "stripAll"; "validateStrictCliShimArgs" ];
   HxType.register_class_instance_fields "hxhx.NativeBackendPluginDynlink" [];
   HxType.register_class_static_fields "hxhx.NativeBackendPluginDynlink" [ "loadAndCapture" ];
   HxType.register_class_instance_fields "hxhx.NativeBackendPluginHost" [];
@@ -1487,12 +1484,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.Stage1Resolver" [ "normalizeSep"; "resolveClassPath"; "resolveMain"; "resolveModule" ];
   HxType.register_class_instance_fields "hxhx.Stage3Compiler" [];
   HxType.register_class_static_fields "hxhx.Stage3Compiler" [ "absFromCwd"; "anyNonBuiltinMacro"; "appendManifestRequests"; "appendPluginLoadRequest"; "appendProviderRequests"; "bool01"; "buildFieldsPayloadForParsed"; "buildMacroHostExe"; "canRunNode"; "collectBundledBackendPluginManifestPaths"; "collectBundledBackendProviderTypeNames"; "collectDeclarationValues"; "collectExplicitBackendPluginManifestPaths"; "collectExplicitBackendProviderTypeNames"; "collectUnsupportedExprRawInExpr"; "collectUnsupportedExprRawInModule"; "collectUnsupportedExprRawInStmt"; "countUnsupportedExprsInExpr"; "countUnsupportedExprsInFunction"; "countUnsupportedExprsInModule"; "countUnsupportedExprsInStmt"; "decodeWaitStdioRequest"; "emitWithBackend"; "encodeConnectRequest"; "error"; "escapeOneLine"; "findBuildMacroExprs"; "findFlagValue"; "findJsOutputFileHint"; "findManyFlagValues"; "findSingleFlagValue"; "formatException"; "hasDefineFlag"; "hasFlag"; "inferMainFromDisplayRequest"; "inferRepoRootForScripts"; "isBuiltinMacroExpr"; "isTrueEnv"; "loadDynamicBackendProviders"; "parseConnectMode"; "parseDelimitedList"; "parseGeneratedMembers"; "parseGlobalStage3Flags"; "parseWaitMode"; "processConnectResponse"; "readConnectDisplayStdin"; "resolveBuiltinBackend"; "resolveHaxelibSpec"; "run"; "runConnect"; "runOne"; "runWaitSocket"; "runWaitStdio"; "runWaitStdioRequest"; "shouldAutoBuildMacroHost"; "summarizeArgs"; "synthesizeDisplayResponse"; "trim"; "writeWaitStdioReply" ];
-  HxType.register_class_instance_fields "hxhx.TargetPresets" [];
-  HxType.register_class_static_fields "hxhx.TargetPresets" [ "apply"; "applyJs"; "applyJsNative"; "applyOcaml"; "applyOcamlStage3"; "ensureBuiltinBackendRegistered"; "findBundledLibRoot"; "listTargets"; "resolve"; "unsupportedLegacyTargetMessage" ];
   HxType.register_class_instance_fields "hxhx._Stage3Compiler.BuildFieldPayloadItem" [ "getIsStatic"; "getKind"; "getName"; "getVisibility"; "isStatic"; "kind"; "name"; "visibility" ];
   HxType.register_class_static_fields "hxhx._Stage3Compiler.BuildFieldPayloadItem" [];
-  HxType.register_class_instance_fields "hxhx._TargetPresets.ArgScan" [];
-  HxType.register_class_static_fields "hxhx._TargetPresets.ArgScan" [ "addCpIfExists"; "addDefineIfMissing"; "addMacroIfMissing"; "consumesValue"; "firstExplicitTarget"; "getDefineValue"; "hasDefine"; "hasLib"; "hasMacro"; "hasNoOutputLike"; "hasTargetFlag"; "listExplicitTargets"; "stripLib"; "stripMacro" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroHostClient" [];
   HxType.register_class_static_fields "hxhx.macro.MacroHostClient" [ "connect"; "decodeNativeExprListPayload"; "getType"; "loadNativeModule"; "openSession"; "resolveMacroHostExe"; "resolveMacroHostExePath"; "run"; "runAll"; "runNativeModuleExpr"; "selftest"; "withClient"; "withSession" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroHostSession" [ "client"; "close"; "expandExpr"; "loadNativeModule"; "run"; "runHook"; "runNativeExpr" ];
@@ -1649,6 +1642,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.BackendPluginLoader" [ "hxhx.BackendPluginLoader" ];
   HxType.register_class_tags "hxhx.BackendPluginManifestResolver" [ "hxhx.BackendPluginManifestResolver" ];
   HxType.register_class_tags "hxhx.BackendProviderResolver" [ "hxhx.BackendProviderResolver" ];
+  HxType.register_class_tags "hxhx.CliRouting" [ "hxhx.CliRouting" ];
   HxType.register_class_tags "hxhx.DisplayResponseSynthesizer" [ "hxhx.DisplayResponseSynthesizer" ];
   HxType.register_class_tags "hxhx.ExprMacroExpander" [ "hxhx.ExprMacroExpander" ];
   HxType.register_class_tags "hxhx.Hxml" [ "hxhx.Hxml" ];
@@ -1662,9 +1656,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.Stage1Compiler" [ "hxhx.Stage1Compiler" ];
   HxType.register_class_tags "hxhx.Stage1Resolver" [ "hxhx.Stage1Resolver" ];
   HxType.register_class_tags "hxhx.Stage3Compiler" [ "hxhx.Stage3Compiler" ];
-  HxType.register_class_tags "hxhx.TargetPresets" [ "hxhx.TargetPresets" ];
   HxType.register_class_tags "hxhx._Stage3Compiler.BuildFieldPayloadItem" [ "hxhx._Stage3Compiler.BuildFieldPayloadItem" ];
-  HxType.register_class_tags "hxhx._TargetPresets.ArgScan" [ "hxhx._TargetPresets.ArgScan" ];
   HxType.register_class_tags "hxhx.macro.MacroHostClient" [ "hxhx.macro.MacroHostClient" ];
   HxType.register_class_tags "hxhx.macro.MacroHostSession" [ "hxhx.macro.MacroHostSession" ];
   HxType.register_class_tags "hxhx.macro.MacroProtocol" [ "hxhx.macro.MacroProtocol" ];

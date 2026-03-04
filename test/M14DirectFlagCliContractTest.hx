@@ -70,7 +70,6 @@ class M14DirectFlagCliContractTest {
 		assertTrue(hasArgPair(nativeOcaml.forwarded, "--hxhx-out", "out"), "native ocaml default out dir");
 		assertTrue(hasDefine(nativeOcaml.forwarded, "ocaml_output=out"), "native ocaml output define");
 		assertTrue(hasDefine(nativeOcaml.forwarded, "reflaxe-target=ocaml"), "native ocaml reflaxe target define");
-		assertTrue(hasDefine(nativeOcaml.forwarded, "target.name=ocaml"), "native ocaml target.name define");
 
 		final nativeOcamlWithDefine = plan(["--ocaml", "-D", "ocaml_output=foo", "-main", "Main"]);
 		assertTrue(hasArgPair(nativeOcamlWithDefine.forwarded, "--hxhx-out", "foo"), "native ocaml output define mirrored to --hxhx-out");
@@ -81,7 +80,6 @@ class M14DirectFlagCliContractTest {
 		assertEquals(nativeJs.lane, "native-js", "native js lane");
 		assertEquals(nativeJs.backendId, "js-native", "native js backend");
 		assertTrue(hasDefine(nativeJs.forwarded, "js"), "native js define");
-		assertTrue(hasDefine(nativeJs.forwarded, "target.name=js"), "native js target.name define");
 
 		final compat = plan(["--compat", "--js", "out.js", "-main", "Main"]);
 		assertEquals(compat.lane, "stage0-compat", "compat lane");
@@ -92,10 +90,9 @@ class M14DirectFlagCliContractTest {
 		assertEquals(eval.lane, "stage0-ocaml-eval", "ocaml eval lane");
 		assertTrue(hasToken(eval.forwarded, "--no-output"), "ocaml eval auto no-output");
 		assertTrue(hasArgPair(eval.forwarded, "--library", "reflaxe.ocaml"), "ocaml eval library injection");
-		assertTrue(hasArgPair(eval.forwarded, "--macro", "reflaxe.ReflectCompiler.InitMacro.init()"), "ocaml eval init macro injection");
-		assertTrue(hasArgPair(eval.forwarded, "--macro", "reflaxe.ReflectCompiler.ReflectCompiler_Addon.addon()"), "ocaml eval addon macro injection");
 		assertTrue(hasDefine(eval.forwarded, "reflaxe-target=ocaml"), "ocaml eval reflaxe define");
-		assertTrue(hasDefine(eval.forwarded, "target.name=ocaml"), "ocaml eval target.name define");
+		assertTrue(hasDefine(eval.forwarded, "reflaxe-target-code-injection=ocaml"), "ocaml eval code injection define");
+		assertTrue(hasDefine(eval.forwarded, "retain-untyped-meta"), "ocaml eval retain untyped define");
 		assertTrue(hasDefine(eval.forwarded, "ocaml_output=out"), "ocaml eval output define");
 		assertTrue(hasDefine(eval.forwarded, "ocaml_build=1"), "ocaml eval build define");
 		assertTrue(hasDefine(eval.forwarded, "ocaml_bin=main"), "ocaml eval bin define");

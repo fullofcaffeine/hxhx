@@ -65,10 +65,9 @@ class CliRouting {
 				throw "Contradiction: --ocaml-eval but -D reflaxe-target=" + evalReflaxeTarget;
 			}
 			addLibraryIfMissing(evalArgs, "reflaxe.ocaml");
-			addMacroIfMissing(evalArgs, "reflaxe.ReflectCompiler.InitMacro.init()");
-			addMacroIfMissing(evalArgs, "reflaxe.ReflectCompiler.ReflectCompiler_Addon.addon()");
 			addDefineIfMissing(evalArgs, "reflaxe-target=ocaml");
-			addDefineIfMissing(evalArgs, "target.name=ocaml");
+			addDefineIfMissing(evalArgs, "reflaxe-target-code-injection=ocaml");
+			addDefineIfMissing(evalArgs, "retain-untyped-meta");
 			addDefineIfMissing(evalArgs, "ocaml_output=out");
 			addDefineIfMissing(evalArgs, "ocaml_build=1");
 			addDefineIfMissing(evalArgs, "ocaml_bin=main");
@@ -106,7 +105,6 @@ class CliRouting {
 
 			addDefineIfMissing(nativeOcaml, "ocaml_output=" + outDir);
 			addDefineIfMissing(nativeOcaml, "reflaxe-target=ocaml");
-			addDefineIfMissing(nativeOcaml, "target.name=ocaml");
 
 			return {
 				lane: LANE_NATIVE_OCAML,
@@ -119,7 +117,6 @@ class CliRouting {
 		if (targetScan.hasJs && !targetScan.hasNonJs) {
 			final nativeJs = baseForwarded.copy();
 			addDefineIfMissing(nativeJs, "js");
-			addDefineIfMissing(nativeJs, "target.name=js");
 			return {
 				lane: LANE_NATIVE_JS,
 				backendId: "js-native",

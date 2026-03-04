@@ -2,6 +2,8 @@
 out_ocaml*/
 out_ocaml_*/
 /out/
+/out.exe
+.hxhx/
 
 # Local typed AST dumps (debugging)
 dump_tmp/dump/

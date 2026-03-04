@@ -113,27 +113,27 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                 ignore _hx;
                 print_endline "missing_import=ok"
               ) else raise (__exn_21));
-            let upstreamShaped = Obj.magic (let __arr_22 = HxArray.create () in (
-              ignore (HxArray.push __arr_22 (FrontendFixture.create ("tests/misc/resolution/projects/spec/pack/Mod.hx" : string) (HxArray.join (let __arr_23 = HxArray.create () in (
+            let parserFixtures = Obj.magic (let __arr_22 = HxArray.create () in (
+              ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseMod.hx" : string) (HxArray.join (let __arr_23 = HxArray.create () in (
                 ignore (HxArray.push __arr_23 "package pack;");
-                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class Mod {}");
-                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ModSubType {}");
+                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ParserCaseMod {}");
+                ignore (HxArray.push __arr_23 "@:build(Macro.build()) class ParserCaseModCompanion {}");
                 __arr_23
-              )) "\n" (fun x -> x) : string) ("pack" : string) ("Mod" : string) false));
-              ignore (HxArray.push __arr_22 (FrontendFixture.create ("tests/misc/resolution/projects/spec/pack/ModWithStatic.hx" : string) (HxArray.join (let __arr_24 = HxArray.create () in (
+              )) "\n" (fun x -> x) : string) ("pack" : string) ("ParserCaseMod" : string) false));
+              ignore (HxArray.push __arr_22 (FrontendFixture.create ("fixtures/parser/pack/ParserCaseWithStatic.hx" : string) (HxArray.join (let __arr_24 = HxArray.create () in (
                 ignore (HxArray.push __arr_24 "package pack;");
                 ignore (HxArray.push __arr_24 "");
-                ignore (HxArray.push __arr_24 "class ModWithStatic {");
-                ignore (HxArray.push __arr_24 "  public static function TheStatic() return \"pack.ModWithStatic.TheStatic function\";");
+                ignore (HxArray.push __arr_24 "class ParserCaseWithStatic {");
+                ignore (HxArray.push __arr_24 "  public static function localStatic() return \"pack.ParserCaseWithStatic.localStatic\";");
                 ignore (HxArray.push __arr_24 "}");
                 ignore (HxArray.push __arr_24 "");
                 ignore (HxArray.push __arr_24 "@:build(Macro.build())");
-                ignore (HxArray.push __arr_24 "class TheStatic {}");
+                ignore (HxArray.push __arr_24 "class ParserCaseWithStaticMarker {}");
                 __arr_24
-              )) "\n" (fun x -> x) : string) ("pack" : string) ("ModWithStatic" : string) false));
+              )) "\n" (fun x -> x) : string) ("pack" : string) ("ParserCaseWithStatic" : string) false));
               __arr_22
             )) in (
-              ignore (let _g = ref 0 in while !_g < HxArray.length upstreamShaped do ignore (let case_ = Obj.magic (HxArray.get (Obj.magic upstreamShaped) (!_g)) in (
+              ignore (let _g = ref 0 in while !_g < HxArray.length parserFixtures do ignore (let case_ = Obj.magic (HxArray.get (Obj.magic parserFixtures) (!_g)) in (
                 ignore (let __old_25 = !_g in let __new_26 = HxInt.add __old_25 1 in (
                   ignore (_g := __new_26);
                   __new_26
@@ -142,14 +142,14 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                   ignore (if not (HxString.equals parsedPkg (FrontendFixture.getExpectPackagePath (Obj.magic case_) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": package mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
                   ignore (if not (HxString.equals (HxClassDecl.getName (Obj.magic parsedMain)) (FrontendFixture.getExpectMainClassName (Obj.magic case_) ())) then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": class mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
                   ignore (if HxClassDecl.getHasStaticMain (Obj.magic parsedMain) <> FrontendFixture.getExpectHasStaticMain (Obj.magic case_) () then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": static main mismatch" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                  ignore (if HxString.indexOf label "ModWithStatic" 0 >= 0 then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t HxArray.t) in (
+                  ignore (if HxString.indexOf label "ParserCaseWithStatic" 0 >= 0 then ignore (let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxFunctionDecl.t HxArray.t) in (
                     ignore (let _this = Obj.magic (HxClassDecl.getFunctions (Obj.magic parsedMain)) in let _g2 = Obj.magic (let __arr_27 = HxArray.create () in __arr_27) in (
                       ignore (let _g1 = ref 0 in let _g3 = Obj.magic _this in while !_g1 < HxArray.length _g3 do ignore (let v = Obj.magic (HxArray.get (Obj.magic _g3) (!_g1)) in (
                         ignore (let __old_28 = !_g1 in let __new_29 = HxInt.add __old_28 1 in (
                           ignore (_g1 := __new_29);
                           __new_29
                         ));
-                        if HxString.equals (HxFunctionDecl.getName (Obj.magic v)) "TheStatic" then ignore (HxArray.push _g2 v) else ()
+                        if HxString.equals (HxFunctionDecl.getName (Obj.magic v)) "localStatic" then ignore (HxArray.push _g2 v) else ()
                       )) done);
                       let __assign_30 = Obj.magic _g2 in (
                         tempArray := __assign_30;
@@ -157,8 +157,8 @@ let run = fun () -> ignore (let preferredFixtureRoot = ("workloads/hih-compiler/
                       )
                     ));
                     let found = Obj.magic (!tempArray) in (
-                      ignore (if HxArray.length found <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": expected 1 TheStatic function" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
-                      let retStr = (HxFunctionDecl.getReturnStringLiteral (Obj.magic (HxArray.get (Obj.magic found) 0)) : string) in if not (HxString.equals retStr "pack.ModWithStatic.TheStatic function") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": TheStatic return differs" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()
+                      ignore (if HxArray.length found <> 1 then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": expected 1 localStatic function" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ());
+                      let retStr = (HxFunctionDecl.getReturnStringLiteral (Obj.magic (HxArray.get (Obj.magic found) 0)) : string) in if not (HxString.equals retStr "pack.ParserCaseWithStatic.localStatic") then ignore (HxType.hx_throw_typed_rtti (Obj.repr (HxParseError.create (("Fixture " ^ HxString.toStdString label) ^ ": localStatic return differs" : string) (Obj.magic (HxPos.create 0 0 0)))) ["Dynamic"; "HxParseError"]) else ()
                     )
                   )) else ());
                   let haxeDecl = Obj.magic (HxParser.parseModule (Obj.magic (HxParser.create (src : string))) (Obj.magic (HxRuntime.hx_null))) in (

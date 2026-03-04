@@ -565,39 +565,42 @@ class EmitterStage {
 
 		This is an intentionally scoped dynamic boundary for Stage3 recursive emitter helpers.
 	**/
-	static function mapGetRaw<T>(mapLike:Null<{}>, key:String):Null<T> {
+	static function mapGetRaw<TMap, TValue>(mapLike:Null<TMap>, key:String):Null<TValue> {
 		if (mapLike == null || key == null)
 			return null;
-		final getFn = Reflect.field(mapLike, "get");
+		final mapLikeObj:{} = cast mapLike;
+		final getFn = Reflect.field(mapLikeObj, "get");
 		if (getFn == null)
 			return null;
-		final value = Reflect.callMethod(mapLike, getFn, [key]);
+		final value = Reflect.callMethod(mapLikeObj, getFn, [key]);
 		return value == null ? null : cast value;
 	}
 
 	/**
 		Check whether a map-like object has a key, with a fallback to `get(...) != null`.
 	**/
-	static function mapHasRaw<T>(mapLike:Null<{}>, key:String):Bool {
+	static function mapHasRaw<TMap>(mapLike:Null<TMap>, key:String):Bool {
 		if (mapLike == null || key == null)
 			return false;
-		final existsFn = Reflect.field(mapLike, "exists");
+		final mapLikeObj:{} = cast mapLike;
+		final existsFn = Reflect.field(mapLikeObj, "exists");
 		if (existsFn == null)
 			return mapGetRaw(mapLike, key) != null;
-		final existsValue = Reflect.callMethod(mapLike, existsFn, [key]);
+		final existsValue = Reflect.callMethod(mapLikeObj, existsFn, [key]);
 		return existsValue == true;
 	}
 
 	/**
 		Get a string-key iterator from a map-like object, if available.
 	**/
-	static function mapKeysRaw<T>(mapLike:Null<{}>):Null<Iterator<String>> {
+	static function mapKeysRaw<TMap>(mapLike:Null<TMap>):Null<Iterator<String>> {
 		if (mapLike == null)
 			return null;
-		final keysFn = Reflect.field(mapLike, "keys");
+		final mapLikeObj:{} = cast mapLike;
+		final keysFn = Reflect.field(mapLikeObj, "keys");
 		if (keysFn == null)
 			return null;
-		final keysValue = Reflect.callMethod(mapLike, keysFn, []);
+		final keysValue = Reflect.callMethod(mapLikeObj, keysFn, []);
 		return keysValue == null ? null : cast keysValue;
 	}
 
@@ -606,14 +609,14 @@ class EmitterStage {
 		final tyByIdentRaw = tyByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(tyByIdentRaw, name) != null)
+			if (mapGetRaw(cast tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -724,14 +727,14 @@ class EmitterStage {
 		final moduleNameByPkgAndClassRaw = moduleNameByPkgAndClass;
 		final callSigByCalleeRaw = callSigByCallee;
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(tyByIdentRaw, name) != null)
+			if (mapGetRaw(cast tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(tyByIdentRaw, resolveTyIdentName(name)) != null;
+			return mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -739,11 +742,11 @@ class EmitterStage {
 		}
 
 		inline function hasArity(name:String):Bool {
-			return mapHasRaw(arityByIdentRaw, name);
+			return mapHasRaw(cast arityByIdentRaw, name);
 		}
 
 		inline function arityFor(name:String):Int {
-			final resolved = mapGetRaw(arityByIdentRaw, name);
+			final resolved = mapGetRaw(cast arityByIdentRaw, name);
 			if (resolved == null)
 				return 0;
 			final arity:Int = cast resolved;
@@ -751,12 +754,12 @@ class EmitterStage {
 		}
 
 		inline function staticImportModule(name:String):String {
-			final resolved = mapGetRaw(staticImportByIdentRaw, name);
+			final resolved = mapGetRaw(cast staticImportByIdentRaw, name);
 			return resolved == null ? null : cast resolved;
 		}
 
 		function moduleNameForKey(key:String):String {
-			final resolved = mapGetRaw(moduleNameByPkgAndClassRaw, key);
+			final resolved = mapGetRaw(cast moduleNameByPkgAndClassRaw, key);
 			if (resolved != null)
 				return cast resolved;
 			for (entry in currentModuleNameEntries)
@@ -766,7 +769,7 @@ class EmitterStage {
 		}
 
 		inline function callSigFor(callee:String):Null<EmitterCallSig> {
-			final resolved = mapGetRaw(callSigByCalleeRaw, callee);
+			final resolved = mapGetRaw(cast callSigByCalleeRaw, callee);
 			return resolved == null ? null : cast resolved;
 		}
 
@@ -787,7 +790,7 @@ class EmitterStage {
 		}
 
 		function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -1010,10 +1013,10 @@ class EmitterStage {
 
 		function extendTyByIdent(ty:Null<Map<String, TyType>>, name:String, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
-			final keys:Null<Iterator<String>> = mapKeysRaw(ty);
+			final keys:Null<Iterator<String>> = mapKeysRaw(cast ty);
 			if (keys != null) {
 				for (k in keys) {
-					final existing = mapGetRaw(ty, k);
+					final existing = mapGetRaw(cast ty, k);
 					if (existing != null)
 						out.set(k, cast existing);
 				}
@@ -1024,10 +1027,10 @@ class EmitterStage {
 
 		function extendTyByIdentMany(ty:Null<Map<String, TyType>>, names:Array<String>, t:TyType):Map<String, TyType> {
 			final out = new Map<String, TyType>();
-			final keys:Null<Iterator<String>> = mapKeysRaw(ty);
+			final keys:Null<Iterator<String>> = mapKeysRaw(cast ty);
 			if (keys != null) {
 				for (k in keys) {
-					final existing = mapGetRaw(ty, k);
+					final existing = mapGetRaw(cast ty, k);
 					if (existing != null)
 						out.set(k, cast existing);
 				}
@@ -2755,14 +2758,14 @@ class EmitterStage {
 		final staticImportByIdentRaw = staticImportByIdent;
 
 		inline function resolveTyIdentName(name:String):String {
-			if (mapGetRaw(tyByIdentRaw, name) != null)
+			if (mapGetRaw(cast tyByIdentRaw, name) != null)
 				return name;
 			final lowered = ocamlValueIdent(name);
-			return lowered != name && mapGetRaw(tyByIdentRaw, lowered) != null ? lowered : name;
+			return lowered != name && mapGetRaw(cast tyByIdentRaw, lowered) != null ? lowered : name;
 		}
 
 		inline function hasTyIdent(name:String):Bool {
-			return mapGetRaw(tyByIdentRaw, resolveTyIdentName(name)) != null;
+			return mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name)) != null;
 		}
 
 		inline function hasThisBinding():Bool {
@@ -2770,11 +2773,11 @@ class EmitterStage {
 		}
 
 		inline function hasStaticImport(name:String):Bool {
-			return mapGetRaw(staticImportByIdentRaw, name) != null;
+			return mapGetRaw(cast staticImportByIdentRaw, name) != null;
 		}
 
 		inline function tyForIdent(name:String):String {
-			final resolved = mapGetRaw(tyByIdentRaw, resolveTyIdentName(name));
+			final resolved = mapGetRaw(cast tyByIdentRaw, resolveTyIdentName(name));
 			if (resolved == null)
 				return "";
 			final t:TyType = cast resolved;
@@ -3272,11 +3275,9 @@ class EmitterStage {
 						return true;
 				return false;
 			}
-			final localKeys:Null<Iterator<String>> = mapKeysRaw(local);
-			if (localKeys != null)
-				for (k in localKeys)
-					if (mapGetRaw(local, k) == true && !hasName(k))
-						out.push(k);
+			for (k in local.keys())
+				if (local.get(k) == true && !hasName(k))
+					out.push(k);
 			return out;
 		}
 
@@ -3314,10 +3315,10 @@ class EmitterStage {
 		// - Even if the typer can't infer `a` from the call site, we can approximate it
 		//   from the known return type of `foo` in the same module.
 		final localHints:Map<String, TyType> = new Map();
-		final localHintKeys:Null<Iterator<String>> = mapKeysRaw(localTypeHintsMap);
+		final localHintKeys:Null<Iterator<String>> = mapKeysRaw(cast localTypeHintsMap);
 		if (localHintKeys != null)
 			for (k in localHintKeys) {
-				final hint = mapGetRaw(localTypeHintsMap, k);
+				final hint = mapGetRaw(cast localTypeHintsMap, k);
 				if (hint != null)
 					localHints.set(k, cast hint);
 			}
@@ -3414,8 +3415,8 @@ class EmitterStage {
 					elemTy.isUnknown() ? TyType.fromHintText("Array") : TyType.fromHintText("Array<" + elemTy.toString() + ">");
 				case ENew(typePath, _args):
 					(typePath == null || typePath.length == 0) ? TyType.unknown() : TyType.fromHintText(typePath);
-				case ECall(EIdent(fn), _args) if (mapGetRaw(fnReturnTypesMap, fn) != null):
-					cast mapGetRaw(fnReturnTypesMap, fn);
+				case ECall(EIdent(fn), _args) if (mapGetRaw(cast fnReturnTypesMap, fn) != null):
+					cast mapGetRaw(cast fnReturnTypesMap, fn);
 				case _:
 					TyType.unknown();
 			}
@@ -3490,16 +3491,16 @@ class EmitterStage {
 
 		function extendTyWithLocals(base:Map<String, TyType>, locals:Map<String, Bool>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			final baseKeys:Null<Iterator<String>> = mapKeysRaw(base);
+			final baseKeys:Null<Iterator<String>> = mapKeysRaw(cast base);
 			if (baseKeys != null)
 				for (k in baseKeys) {
-					final existingBase = mapGetRaw(base, k);
+					final existingBase = mapGetRaw(cast base, k);
 					if (existingBase != null)
 						out.set(k, cast existingBase);
 				}
 
 			final localNames = new Array<String>();
-			final localKeys:Null<Iterator<String>> = mapKeysRaw(locals);
+			final localKeys:Null<Iterator<String>> = mapKeysRaw(cast locals);
 			if (localKeys != null)
 				for (name in localKeys)
 					localNames.push(name);
@@ -3524,10 +3525,10 @@ class EmitterStage {
 
 		function extendTyByIdentLocal(ty:Map<String, TyType>, name:String, t:TyType):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			final keys:Null<Iterator<String>> = mapKeysRaw(ty);
+			final keys:Null<Iterator<String>> = mapKeysRaw(cast ty);
 			if (keys != null)
 				for (k in keys) {
-					final existing = mapGetRaw(ty, k);
+					final existing = mapGetRaw(cast ty, k);
 					if (existing != null)
 						out.set(k, cast existing);
 				}
@@ -3537,10 +3538,10 @@ class EmitterStage {
 
 		function cloneTyCtxLocal(ty:Map<String, TyType>):Map<String, TyType> {
 			final out:Map<String, TyType> = new Map();
-			final keys:Null<Iterator<String>> = mapKeysRaw(ty);
+			final keys:Null<Iterator<String>> = mapKeysRaw(cast ty);
 			if (keys != null)
 				for (k in keys) {
-					final existing = mapGetRaw(ty, k);
+					final existing = mapGetRaw(cast ty, k);
 					if (existing != null)
 						out.set(k, cast existing);
 				}
@@ -3584,7 +3585,7 @@ class EmitterStage {
 		}
 
 		inline function tyCtxGet(value:Map<String, TyType>, name:String):Null<TyType> {
-			final resolved = mapGetRaw(value, name);
+			final resolved = mapGetRaw(cast value, name);
 			return resolved == null ? null : cast resolved;
 		}
 
@@ -5135,7 +5136,7 @@ class EmitterStage {
 						final membersRaw:Map<String, Bool> = staticMembersByModule.get(importModName);
 						if (membersRaw == null)
 							continue;
-						final memberKeys:Null<Iterator<String>> = mapKeysRaw(membersRaw);
+						final memberKeys:Null<Iterator<String>> = mapKeysRaw(cast membersRaw);
 						if (memberKeys == null)
 							continue;
 						for (name in memberKeys) {
@@ -5353,7 +5354,7 @@ class EmitterStage {
 							final callsRaw:Map<String, Bool> = fnCallsByName.get(nameRaw);
 							if (callsRaw == null)
 								continue;
-							final callKeys:Null<Iterator<String>> = mapKeysRaw(callsRaw);
+							final callKeys:Null<Iterator<String>> = mapKeysRaw(cast callsRaw);
 							if (callKeys == null)
 								continue;
 							for (callee in callKeys) {

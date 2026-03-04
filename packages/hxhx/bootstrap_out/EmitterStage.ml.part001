@@ -1,4 +1,5 @@
-                 | "toString" -> ignore (let obj = Obj.magic _g5 in if HxArray.length args = 0 then ignore (if (match obj with
+oduleNameByPkgAndClass) (Obj.magic (HxRuntime.hx_null)))) ^ ") ()" : string))) else ignore ())
+                                            | "toString" -> ignore (let obj = Obj.magic _g5 in if HxArray.length args = 0 then ignore (if (match obj with
                                               | HxExpr.ENull -> 0
                                               | HxExpr.EBool _ -> 1
                                               | HxExpr.EString _ -> 2
@@ -109846,8 +109847,8 @@ let rec stmtListToOcaml = fun stmts allowedValueIdents returnExc arityByIdent ty
         )) done);
         false
       ) in Obj.magic __fallback_result_42919 with
-        | HxRuntime.Hx_return __ret_42918 -> Obj.obj __ret_42918 in let localKeys = mapKeysRaw (Obj.repr local) in (
-        ignore (if localKeys != Obj.magic (HxRuntime.hx_null) then ignore (let k = localKeys in while (let __iter_42920 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_42920)) () do ignore (let k2 = ((let __iter_42921 = k in fun () -> HxIterator.next (Obj.magic __iter_42921)) () : string) in if (let __nullable_42922 = mapGetRaw (Obj.repr local) (k2 : string) in if __nullable_42922 == HxRuntime.hx_null then false else Obj.obj __nullable_42922 = true) && not (hasName (k2 : string)) then ignore (HxArray.push out k2) else ()) done) else ());
+        | HxRuntime.Hx_return __ret_42918 -> Obj.obj __ret_42918 in (
+        ignore (let k = HxIterator.of_array (HxMap.keys_string local) in while (let __iter_42920 = k in fun () -> HxIterator.hasNext (Obj.magic __iter_42920)) () do ignore (let k2 = ((let __iter_42921 = k in fun () -> HxIterator.next (Obj.magic __iter_42921)) () : string) in if (let __nullable_42922 = HxMap.get_string local k2 in if __nullable_42922 == HxRuntime.hx_null then false else Obj.obj __nullable_42922 = true) && not (hasName (k2 : string)) then ignore (HxArray.push out k2) else ()) done);
         out
       )
     ) in let collectTopLevelDeclaredLocals = fun ss -> try let __fallback_result_42930 = let out = HxMap.create_string () in (

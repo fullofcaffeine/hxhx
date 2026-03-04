@@ -10,7 +10,6 @@
 		"hxhx_macro_MacroState.ml",
 		"hxhx_macro_MacroProtocol.ml",
 		"hxhx_macro_MacroHostClient.ml",
-		"hxhx_TargetPresets.ml",
 		"hxhx_Stage3Compiler.ml",
 		"hxhx_Stage1Compiler.ml",
 		"hxhx_NativeBackendPluginLoader.ml",
@@ -22,6 +21,7 @@
 		"hxhx_Hxml.ml",
 		"hxhx_ExprMacroExpander.ml",
 		"hxhx_DisplayResponseSynthesizer.ml",
+		"hxhx_CliRouting.ml",
 		"hxhx_BackendProviderResolver.ml",
 		"hxhx_BackendPluginManifestResolver.ml",
 		"hxhx_BackendPluginLoader.ml",
@@ -137,7 +137,7 @@
 		"CompilerDriver.ml",
 		"Any.ml"
 	],
-	"id": 8,
+	"id": 10,
 	"wasCached": false,
 	"version": 1
 }
