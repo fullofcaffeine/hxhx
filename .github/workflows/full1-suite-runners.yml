@@ -106,8 +106,6 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Run Full1 strict suite
-        env:
-          HXHX_FORCE_STAGE0: "1"
         run: |
           set -euo pipefail
           node scripts/ci/run-upstream-suite.js \
