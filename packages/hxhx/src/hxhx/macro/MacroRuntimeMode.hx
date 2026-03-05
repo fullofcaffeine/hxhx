@@ -1,5 +1,9 @@
 package hxhx.macro;
 
+#if !hxhx_stage0_no_external_macro_host
+import hxhx.macro.MacroHostClient;
+#end
+
 /**
 	Macro runtime mode selector and factory.
 
@@ -25,7 +29,11 @@ class MacroRuntimeMode {
 			case INPROC:
 				return InProcMacroRuntime.openSession();
 			case EXTERNAL_HOST:
+				#if hxhx_stage0_no_external_macro_host
+				throw "invalid macro runtime mode `" + mode + "` (external-host disabled in stage0 profiling lane; expected inproc)";
+				#else
 				return MacroHostClient.openSession();
+				#end
 			case _:
 				throw "invalid macro runtime mode `" + mode + "` (expected inproc|external-host)";
 		}
@@ -46,7 +54,11 @@ class MacroRuntimeMode {
 			case INPROC:
 				INPROC;
 			case EXTERNAL_HOST:
+				#if hxhx_stage0_no_external_macro_host
+				throw "invalid macro runtime mode `" + raw + "` (external-host disabled in stage0 profiling lane; expected inproc)";
+				#else
 				EXTERNAL_HOST;
+				#end
 			case _:
 				throw "invalid macro runtime mode `" + raw + "` (expected inproc|external-host)";
 		};

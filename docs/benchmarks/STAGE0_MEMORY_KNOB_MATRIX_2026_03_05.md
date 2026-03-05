@@ -37,12 +37,18 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Mitigation median: `6821MB`
   - Median reduction: `-3.49%` (regression)
   - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-063216/summary.json`
+- `--no-external-macro-host` (`HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST=1` / `-D hxhx_stage0_no_external_macro_host`)
+  - Baseline median: `6412MB`
+  - Mitigation median: `6683MB`
+  - Median reduction: `-4.23%` (regression)
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-065135/summary.json`
 
 ## Interpretation
 
 - The strongest single knob in this matrix remains `HXHX_STAGE0_DISABLE_PREPASSES=1`.
 - `--no-line-directives` gives a small but stable win in this sample family (`~1-2%` median).
 - `--no-expr-macros` is not viable as a mitigation in this probe family (regresses median peak RSS).
+- `--no-external-macro-host` is not viable as a mitigation in this probe family (regresses median peak RSS).
 - In these sample families, reductions are material in some cases but still do not cross `20%` consistently.
 - Keep this as an explicit troubleshooting/CI-tuning knob, not a global default change yet.
 

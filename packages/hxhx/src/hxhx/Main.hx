@@ -1,7 +1,9 @@
 package hxhx;
 
+#if !hxhx_stage0_no_external_macro_host
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;
+#end
 import hxhx.Stage1Compiler.Stage1Args;
 
 private typedef StandardTargetScan = {
@@ -452,6 +454,7 @@ class Main {
 		//
 		// This is *not* a user-facing Haxe CLI flag. It exists so CI can validate
 		// the ABI boundary early (spawn → handshake → stubbed Context/Compiler call).
+		#if !hxhx_stage0_no_external_macro_host
 		if (args.length == 1 && args[0] == "--hxhx-macro-selftest") {
 			try {
 				MacroState.reset();
@@ -489,6 +492,7 @@ class Main {
 				fatal("hxhx: macro getType failed: " + e);
 			}
 		}
+		#end
 
 		// Stage 1 (bring-up): minimal "non-shim" compilation path.
 		//

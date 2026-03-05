@@ -246,6 +246,18 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `--no-expr-macros` maps to `HXHX_STAGE0_NO_EXPR_MACROS=1` and adds
 `-D hxhx_stage0_no_expr_macros`, which compiles out Stage3 expression-macro expansion paths in profiling runs.
 
+Additional external-runtime-path mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-external-macro-host"
+```
+
+`--no-external-macro-host` maps to `HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST=1` and adds
+`-D hxhx_stage0_no_external_macro_host`, which compiles out external macro-host runtime mode paths in profiling runs.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash

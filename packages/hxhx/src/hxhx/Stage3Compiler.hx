@@ -4,7 +4,9 @@ import haxe.io.Path;
 import haxe.io.Eof;
 import haxe.io.Bytes;
 import hxhx.Stage1Compiler.Stage1Args;
+#if !hxhx_stage0_no_external_macro_host
 import hxhx.macro.MacroHostClient;
+#end
 import hxhx.macro.MacroRuntimeMode;
 import hxhx.macro.MacroRuntimeSession;
 import backend.BackendContext;
@@ -196,6 +198,14 @@ class Stage3Compiler {
 			noRun: noRun,
 			rest: rest
 		};
+	}
+
+	static inline function hasConfiguredExternalMacroHostExe():Bool {
+		#if hxhx_stage0_no_external_macro_host
+		return false;
+		#else
+		return MacroHostClient.resolveMacroHostExePath().length > 0;
+		#end
 	}
 
 	/**
@@ -1468,9 +1478,7 @@ class Stage3Compiler {
 			// Notes
 			// - This is a bring-up tool. It is not meant to be used for production builds.
 			// - The produced macro host is built via stage0 `haxe` (the script), not via hxhx itself.
-			if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST
-				&& MacroHostClient.resolveMacroHostExePath().length == 0
-				&& shouldAutoBuildMacroHost()) {
+			if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST && !hasConfiguredExternalMacroHostExe() && shouldAutoBuildMacroHost()) {
 				final repoRoot = inferRepoRootForScripts();
 				if (repoRoot.length == 0)
 					return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
@@ -1614,7 +1622,7 @@ class Stage3Compiler {
 			if (macroSession == null) {
 				// Optional convenience: auto-build a macro host that contains the build macro entrypoints.
 				if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST
-					&& MacroHostClient.resolveMacroHostExePath().length == 0
+					&& !hasConfiguredExternalMacroHostExe()
 					&& shouldAutoBuildMacroHost()) {
 					final repoRoot = inferRepoRootForScripts();
 					if (repoRoot.length == 0)

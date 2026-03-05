@@ -11,3 +11,5 @@ failfast120_ab_line_directives	baseline_median	6609	124	error	0.00
 failfast120_ab_line_directives	no_line_directives_median	6494	124	error	1.74
 failfast120_ab_no_expr_macros	baseline_median	6591	124	error	0.00
 failfast120_ab_no_expr_macros	no_expr_macros_median	6821	124	error	-3.49
+failfast120_ab_no_external_macro_host	baseline_median	6412	124	error	0.00
+failfast120_ab_no_external_macro_host	no_external_macro_host_median	6683	124	error	-4.23
