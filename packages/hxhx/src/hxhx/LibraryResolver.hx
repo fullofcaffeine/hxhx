@@ -98,6 +98,12 @@ class LibraryResolver {
 		if (haxelibSpec != null)
 			return haxelibSpec;
 
+		// When `haxelib` is a lix shim, plain `haxelib path` can stay scoped to
+		// local `haxe_libraries` metadata. `--always` forces native haxelib lookup.
+		final haxelibAlwaysSpec = tryResolveViaCommand(haxelibBin(), ["--always", "path", lib]);
+		if (haxelibAlwaysSpec != null)
+			return haxelibAlwaysSpec;
+
 		throw "failed to resolve -lib " + lib + " via lix or haxelib";
 	}
 
