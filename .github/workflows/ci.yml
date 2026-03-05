@@ -83,6 +83,8 @@ jobs:
           fi
       - name: Run guardrails
         run: npm run ci:guards
+      - name: Validate build-hxhx connect retry smoke
+        run: npm run test:hxhx:build-connect-retry-smoke
       - name: Validate hxhx direct-flag CLI contract
         run: npm run test:hxhx:cli-contract
 

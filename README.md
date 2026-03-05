@@ -62,6 +62,9 @@ HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-boot
 
 # Keep dune worker count deterministic (useful for memory-pressure tuning).
 HXHX_DUNE_JOBS=4 bash scripts/hxhx/build-hxhx.sh
+
+# If source builds use --connect and appear stuck, auto-retry sooner.
+HXHX_FORCE_STAGE0=1 HXHX_STAGE0_USE_REPO_SERVER=1 HXHX_STAGE0_CONNECT_IDLE_SECS=90 bash scripts/hxhx/build-hxhx.sh
 ```
 
 ## Pick your workflow

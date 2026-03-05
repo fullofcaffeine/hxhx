@@ -23,6 +23,7 @@ HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
 HXHX_STAGE0_FAILFAST_SECS="${HXHX_STAGE0_FAILFAST_SECS:-7200}"
 HXHX_STAGE0_HEARTBEAT_TAIL_LINES="${HXHX_STAGE0_HEARTBEAT_TAIL_LINES:-0}"
 HXHX_STAGE0_MAX_RSS_MB="${HXHX_STAGE0_MAX_RSS_MB:-0}"
+HXHX_STAGE0_CONNECT_IDLE_SECS="${HXHX_STAGE0_CONNECT_IDLE_SECS:-180}"
 HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
 HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 HXHX_BOOTSTRAP_HEARTBEAT="${HXHX_BOOTSTRAP_HEARTBEAT:-20}"
@@ -171,6 +172,13 @@ esac
 case "$HXHX_STAGE0_MAX_RSS_MB" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_STAGE0_MAX_RSS_MB: $HXHX_STAGE0_MAX_RSS_MB (expected non-negative integer)." >&2
+    exit 2
+    ;;
+esac
+
+case "$HXHX_STAGE0_CONNECT_IDLE_SECS" in
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_STAGE0_CONNECT_IDLE_SECS: $HXHX_STAGE0_CONNECT_IDLE_SECS (expected non-negative integer)." >&2
     exit 2
     ;;
 esac
@@ -350,6 +358,40 @@ fi
 resolved_haxe_connect="$HAXE_CONNECT"
 repo_server_started_here=0
 
+cpu_is_idle() {
+  local cpu="${1:-}"
+  if [ -z "$cpu" ]; then
+    return 1
+  fi
+  awk -v c="$cpu" 'BEGIN { exit ((c + 0.0) < 1.0 ? 0 : 1) }'
+}
+
+read_repo_server_pid() {
+  if [ "$HXHX_STAGE0_USE_REPO_SERVER" != "1" ]; then
+    return 1
+  fi
+  if [ ! -x "$HAXE_SERVER_HELPER" ]; then
+    return 1
+  fi
+  local status_line=""
+  status_line="$("$HAXE_SERVER_HELPER" status 2>/dev/null || true)"
+  case "$status_line" in
+    running\ pid=*)
+      printf '%s\n' "$status_line" | sed -E 's/^running pid=([0-9]+) .*$/\1/'
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+read_pid_cpu_pct() {
+  local pid="${1:-}"
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+  ps -o %cpu= -p "$pid" 2>/dev/null | tr -d ' ' || true
+}
+
 cleanup_repo_server() {
   if [ "$repo_server_started_here" = "1" ] && [ "$HXHX_STAGE0_KEEP_REPO_SERVER" != "1" ]; then
     if [ -x "$HAXE_SERVER_HELPER" ]; then
@@ -401,37 +443,45 @@ resolve_stage0_connect
   rm -rf out
   mkdir -p out
 
-  haxe_args=(build.hxml -D "ocaml_build=$build_mode")
-  if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
-    haxe_args+=(-v)
-  fi
-  if [ -n "$resolved_haxe_connect" ]; then
-    haxe_args+=(--connect "$resolved_haxe_connect")
-  fi
-  if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_progress)
-  fi
-  if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_telemetry)
-  fi
-  if [ "$HXHX_STAGE0_TELEMETRY_DETAIL" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_telemetry_detail)
-  fi
-  if [ -n "$HXHX_STAGE0_TELEMETRY_CLASS" ]; then
-    haxe_args+=(-D "reflaxe_ocaml_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS")
-  fi
-  if [ -n "$HXHX_STAGE0_TELEMETRY_FIELD" ]; then
-    haxe_args+=(-D "reflaxe_ocaml_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD")
-  fi
-  if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
-    haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
-  fi
-  if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
-    haxe_args+=(--times)
-  fi
-  if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
-    haxe_args+=(--no-inline)
-  fi
+  haxe_args=()
+  stage0_connect_stall_code=86
+
+  populate_haxe_args() {
+    local mode="$1"
+    haxe_args=(build.hxml -D "ocaml_build=$mode")
+    if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
+      haxe_args+=(-v)
+    fi
+    if [ -n "$resolved_haxe_connect" ]; then
+      haxe_args+=(--connect "$resolved_haxe_connect")
+    fi
+    if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
+      haxe_args+=(-D reflaxe_ocaml_progress)
+    fi
+    if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
+      haxe_args+=(-D reflaxe_ocaml_telemetry)
+    fi
+    if [ "$HXHX_STAGE0_TELEMETRY_DETAIL" = "1" ]; then
+      haxe_args+=(-D reflaxe_ocaml_telemetry_detail)
+    fi
+    if [ -n "$HXHX_STAGE0_TELEMETRY_CLASS" ]; then
+      haxe_args+=(-D "reflaxe_ocaml_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS")
+    fi
+    if [ -n "$HXHX_STAGE0_TELEMETRY_FIELD" ]; then
+      haxe_args+=(-D "reflaxe_ocaml_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD")
+    fi
+    if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
+      haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
+    fi
+    if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
+      haxe_args+=(--times)
+    fi
+    if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
+      haxe_args+=(--no-inline)
+    fi
+  }
+
+  populate_haxe_args "$build_mode"
 
   run_stage0_build() {
     if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ] && [ "$HXHX_STAGE0_FAILFAST_SECS" = "0" ]; then
@@ -457,6 +507,16 @@ resolve_stage0_connect
     local proc_state=""
     local log_bytes=""
     local heartbeat_suffix=""
+    local connect_watch_enabled=0
+    local connect_idle_started=0
+    local connect_idle_elapsed=0
+    local connect_log_static=0
+    local last_log_bytes=""
+    local client_idle=0
+    local server_idle=0
+    local repo_server_pid=""
+    local repo_server_cpu=""
+    local tree_cpu_pct=""
     local code=0
 
     log_file="$(create_stage0_log_file hxhx-stage0-build)"
@@ -473,6 +533,16 @@ resolve_stage0_connect
     pid="$!"
 
     start_hb="$(date +%s)"
+    if [ -n "$resolved_haxe_connect" ] && [ "$HXHX_STAGE0_CONNECT_IDLE_SECS" != "0" ]; then
+      connect_watch_enabled=1
+      repo_server_pid="$(read_repo_server_pid || true)"
+      if [ -n "$repo_server_pid" ]; then
+        echo "== Stage0 connect watch: idle=${HXHX_STAGE0_CONNECT_IDLE_SECS}s endpoint=$resolved_haxe_connect server_pid=$repo_server_pid" >&2
+      else
+        echo "== Stage0 connect watch: idle=${HXHX_STAGE0_CONNECT_IDLE_SECS}s endpoint=$resolved_haxe_connect (server pid unavailable)" >&2
+      fi
+    fi
+
     while kill -0 "$pid" >/dev/null 2>&1; do
       sleep "$interval" || true
       now="$(date +%s)"
@@ -488,11 +558,74 @@ resolve_stage0_connect
         fi
       fi
 
+      tree_pids=""
+      if [ "$connect_watch_enabled" = "1" ] || [ "$HXHX_STAGE0_HEARTBEAT" != "0" ]; then
+        tree_pids="$(collect_process_tree_pids "$pid")"
+      fi
+
+      if [ "$connect_watch_enabled" = "1" ]; then
+        log_bytes="$(wc -c <"$log_file" 2>/dev/null | tr -d ' ' || true)"
+        if [ -n "$log_bytes" ] && [ -n "$last_log_bytes" ] && [ "$log_bytes" = "$last_log_bytes" ]; then
+          connect_log_static=1
+        else
+          connect_log_static=0
+        fi
+        if [ -n "$log_bytes" ]; then
+          last_log_bytes="$log_bytes"
+        fi
+
+        client_idle=1
+        for tree_pid in $tree_pids; do
+          tree_cpu_pct="$(read_pid_cpu_pct "$tree_pid")"
+          if [ -z "$tree_cpu_pct" ]; then
+            continue
+          fi
+          if ! cpu_is_idle "$tree_cpu_pct"; then
+            client_idle=0
+            break
+          fi
+        done
+
+        if [ -z "$repo_server_pid" ] || ! kill -0 "$repo_server_pid" >/dev/null 2>&1; then
+          repo_server_pid="$(read_repo_server_pid || true)"
+        fi
+        server_idle=1
+        repo_server_cpu=""
+        if [ -n "$repo_server_pid" ]; then
+          repo_server_cpu="$(read_pid_cpu_pct "$repo_server_pid")"
+          if [ -n "$repo_server_cpu" ] && ! cpu_is_idle "$repo_server_cpu"; then
+            server_idle=0
+          fi
+        fi
+
+        if [ "$connect_log_static" = "1" ] && [ "$client_idle" = "1" ] && [ "$server_idle" = "1" ]; then
+          if [ "$connect_idle_started" = "0" ]; then
+            connect_idle_started="$now"
+          fi
+          connect_idle_elapsed="$((now - connect_idle_started))"
+          if [ "$connect_idle_elapsed" -ge "$HXHX_STAGE0_CONNECT_IDLE_SECS" ]; then
+            echo "Stage0 build appears stalled on --connect handoff (idle ${connect_idle_elapsed}s; log static)." >&2
+            echo "Retrying once without --connect (set HXHX_STAGE0_CONNECT_IDLE_SECS=0 to disable this detector)." >&2
+            kill "$pid" >/dev/null 2>&1 || true
+            sleep 2
+            if kill -0 "$pid" >/dev/null 2>&1; then
+              kill -9 "$pid" >/dev/null 2>&1 || true
+            fi
+            echo "Last $HXHX_STAGE0_LOG_TAIL_LINES lines before retry:" >&2
+            tail -n "$HXHX_STAGE0_LOG_TAIL_LINES" "$log_file" >&2 || true
+            cleanup_stage0_log_file "$log_file"
+            return "$stage0_connect_stall_code"
+          fi
+        else
+          connect_idle_started=0
+          connect_idle_elapsed=0
+        fi
+      fi
+
       if [ "$HXHX_STAGE0_HEARTBEAT" = "0" ]; then
         continue
       fi
 
-      tree_pids="$(collect_process_tree_pids "$pid")"
       rss_probe_pid="$pid"
       rss_kb=""
       tree_rss_kb=0
@@ -526,6 +659,12 @@ resolve_stage0_connect
       fi
       if [ -n "$log_bytes" ]; then
         heartbeat_suffix="$heartbeat_suffix log=${log_bytes}B"
+      fi
+      if [ -n "$repo_server_pid" ]; then
+        heartbeat_suffix="$heartbeat_suffix server_pid=${repo_server_pid}"
+      fi
+      if [ -n "$repo_server_cpu" ]; then
+        heartbeat_suffix="$heartbeat_suffix server_cpu=${repo_server_cpu}%"
       fi
       if [ -n "$rss_kb" ]; then
         rss_mb="$((rss_kb / 1024))"
@@ -564,44 +703,32 @@ resolve_stage0_connect
     cleanup_stage0_log_file "$log_file"
   }
 
-  if ! run_stage0_build; then
+  run_stage0_build_with_connect_retry() {
+    local code=0
+    set +e
+    run_stage0_build
+    code="$?"
+    set -e
+    if [ "$code" -eq "$stage0_connect_stall_code" ] && [ -n "$resolved_haxe_connect" ]; then
+      echo "== Stage0 build: rerunning once without --connect after idle-handoff detection." >&2
+      resolved_haxe_connect=""
+      populate_haxe_args "$build_mode"
+      set +e
+      run_stage0_build
+      code="$?"
+      set -e
+    fi
+    return "$code"
+  }
+
+  if ! run_stage0_build_with_connect_retry; then
     if [ "$build_mode" = "native" ]; then
       echo "hxhx stage0 build: native failed; retrying bytecode (expected on some platforms; set HXHX_STAGE0_OCAML_BUILD=byte to skip native attempts)." >&2
       build_mode="byte"
       rm -rf out
       mkdir -p out
-      haxe_args=(build.hxml -D "ocaml_build=$build_mode")
-      if [ "$HXHX_STAGE0_VERBOSE" = "1" ]; then
-        haxe_args+=(-v)
-      fi
-      if [ -n "$resolved_haxe_connect" ]; then
-        haxe_args+=(--connect "$resolved_haxe_connect")
-      fi
-      if [ "$HXHX_STAGE0_PROGRESS" = "1" ]; then
-        haxe_args+=(-D reflaxe_ocaml_progress)
-      fi
-      if [ "$HXHX_STAGE0_TELEMETRY" = "1" ]; then
-        haxe_args+=(-D reflaxe_ocaml_telemetry)
-      fi
-      if [ "$HXHX_STAGE0_TELEMETRY_DETAIL" = "1" ]; then
-        haxe_args+=(-D reflaxe_ocaml_telemetry_detail)
-      fi
-      if [ -n "$HXHX_STAGE0_TELEMETRY_CLASS" ]; then
-        haxe_args+=(-D "reflaxe_ocaml_telemetry_class=$HXHX_STAGE0_TELEMETRY_CLASS")
-      fi
-      if [ -n "$HXHX_STAGE0_TELEMETRY_FIELD" ]; then
-        haxe_args+=(-D "reflaxe_ocaml_telemetry_field=$HXHX_STAGE0_TELEMETRY_FIELD")
-      fi
-      if [ "$HXHX_STAGE0_DISABLE_PREPASSES" = "1" ]; then
-        haxe_args+=(-D reflaxe_ocaml_disable_expression_preprocessors)
-      fi
-      if [ "$HXHX_STAGE0_TIMES" = "1" ]; then
-        haxe_args+=(--times)
-      fi
-      if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
-        haxe_args+=(--no-inline)
-      fi
-      run_stage0_build
+      populate_haxe_args "$build_mode"
+      run_stage0_build_with_connect_retry
     else
       exit 1
     fi
