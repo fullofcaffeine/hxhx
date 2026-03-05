@@ -212,7 +212,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional OCaml GC tuning for stage0 process: `HXHX_STAGE0_OCAMLRUNPARAM=s=4M`
   - Regen report JSON (`--report-json`) includes deterministic selection fields:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
-    - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_ocamlrunparam`
+    - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_ocamlrunparam`
     - `stage0_observability.heartbeat_peak_rss_mb` (plus heartbeat samples/interval)
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
@@ -230,6 +230,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional pure-Haxe parser fallback trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-hx-parser`
     - optional Stage3 expression-macro graph trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-expr-macros`
     - optional external macro-host runtime-path trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-external-macro-host`
+    - optional Stage3 native-lane path trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-stage3`
     - optional stage0 compile-graph minimization (OCaml-only backend graph): `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocaml-only`
     - optional generated-output metadata trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-line-directives`
     - repeated baseline-vs-mitigation memory A/B runner:

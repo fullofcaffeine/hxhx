@@ -258,6 +258,18 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `--no-external-macro-host` maps to `HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST=1` and adds
 `-D hxhx_stage0_no_external_macro_host`, which compiles out external macro-host runtime mode paths in profiling runs.
 
+Additional Stage3-lane graph-trimming mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-stage3"
+```
+
+`--no-stage3` maps to `HXHX_STAGE0_NO_STAGE3=1` and adds
+`-D hxhx_stage0_no_stage3`, which compiles out Stage3 native lane entrypoints in profiling runs.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash

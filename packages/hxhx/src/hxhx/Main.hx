@@ -4,6 +4,9 @@ package hxhx;
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;
 #end
+#if !hxhx_stage0_no_stage3
+import hxhx.Stage3Compiler;
+#end
 import hxhx.Stage1Compiler.Stage1Args;
 
 private typedef StandardTargetScan = {
@@ -508,8 +511,12 @@ class Main {
 		// This is explicitly NOT part of the `haxe` CLI surface and will never be forwarded.
 		// It exists so we can validate “type → emit → build” without relying on stage0.
 		if (args.length >= 1 && args[0] == "--hxhx-stage3") {
+			#if hxhx_stage0_no_stage3
+			fatal("hxhx: --hxhx-stage3 unavailable in stage0 no-stage3 profiling lane");
+			#else
 			final code = Stage3Compiler.run(args.slice(1));
 			Sys.exit(code);
+			#end
 		}
 
 		// Shim-only run mode: emulate `--interp` by compiling to OCaml native and running the produced binary.
@@ -639,9 +646,13 @@ class Main {
 				if (ocamlInterpLike) {
 					fatal("hxhx: --hxhx-ocaml-interp cannot be combined with native target lanes.");
 				}
+				#if hxhx_stage0_no_stage3
+				fatal("hxhx: native target lanes unavailable in stage0 no-stage3 profiling lane");
+				#else
 				final stage3Args = ["--hxhx-backend", plan.backendId].concat(plan.forwarded);
 				final code = Stage3Compiler.run(stage3Args);
 				Sys.exit(code);
+				#end
 			case LANE_STAGE0_OCAML_EVAL:
 				if (forbidStage0Delegation)
 					fatal("hxhx: stage0 forbidden; --ocaml-eval requires stage0.");
