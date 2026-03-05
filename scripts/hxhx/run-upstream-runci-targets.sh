@@ -300,7 +300,37 @@ if [ -z "$STAGE0_NEKO" ] || [ ! -x "$STAGE0_NEKO" ]; then
   exit 0
 fi
 
-NEKOPATH_DIR="$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)"
+resolve_nekopath_dir() {
+  local candidate=""
+  local -a candidates=()
+
+  if [ -n "${NEKOPATH:-}" ]; then
+    candidates+=("${NEKOPATH}")
+  fi
+  candidates+=("$(cd "$(dirname "$STAGE0_NEKOTOOLS")" && pwd)")
+  candidates+=("$(cd "$(dirname "$STAGE0_NEKO")" && pwd)")
+  candidates+=("/usr/lib/neko")
+  candidates+=("/usr/lib64/neko")
+  candidates+=("/usr/lib/x86_64-linux-gnu/neko")
+  candidates+=("/usr/local/lib/neko")
+  candidates+=("/opt/homebrew/lib/neko")
+
+  for candidate in "${candidates[@]}"; do
+    if [ -d "$candidate" ] && [ -f "$candidate/std.ndll" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+NEKOPATH_DIR="$(resolve_nekopath_dir || true)"
+if [ -n "$NEKOPATH_DIR" ]; then
+  echo "Using NEKOPATH directory: ${NEKOPATH_DIR}" >&2
+else
+  echo "Warning: Could not resolve NEKOPATH directory containing std.ndll; preserving system defaults." >&2
+fi
 
 # We want the upstream tests to match our compatibility target (default: 4.3.7).
 if command -v git >/dev/null 2>&1 && git -C "$UPSTREAM_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -633,14 +663,16 @@ WRAP_DIR="$(mktemp -d)"
 cat >"$WRAP_DIR/haxe" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${NEKOPATH_DIR}" ]; then
+  export NEKOPATH="${NEKOPATH_DIR}"
+  export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+  export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+  export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+fi
 export HAXELIB_BIN="${WRAP_DIR}/haxelib"
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
-export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
-export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
-export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 export HAXE_BIN="${STAGE0_HAXE}"
 exec "${HXHX_BIN}" "\$@"
 EOF
@@ -649,13 +681,15 @@ chmod +x "$WRAP_DIR/haxe"
 cat >"$WRAP_DIR/haxelib" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${NEKOPATH_DIR}" ]; then
+  export NEKOPATH="${NEKOPATH_DIR}"
+  export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+  export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+  export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+fi
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
-export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
-export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
-export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 if [ "\${1:-}" = "path" ]; then
   retries="\${HXHX_HAXELIB_PATH_RETRIES:-3}"
   delay="\${HXHX_HAXELIB_PATH_RETRY_DELAY_SEC:-1}"
@@ -685,13 +719,15 @@ chmod +x "$WRAP_DIR/haxelib"
 cat >"$WRAP_DIR/nekotools" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${NEKOPATH_DIR}" ]; then
+  export NEKOPATH="${NEKOPATH_DIR}"
+  export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+  export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+  export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+fi
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
-export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
-export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
-export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 exec "${STAGE0_NEKOTOOLS}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/nekotools"
@@ -699,13 +735,15 @@ chmod +x "$WRAP_DIR/nekotools"
 cat >"$WRAP_DIR/neko" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-export NEKOPATH="${NEKOPATH_DIR}"
+if [ -n "${NEKOPATH_DIR}" ]; then
+  export NEKOPATH="${NEKOPATH_DIR}"
+  export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
+  export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
+  export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
+fi
 if [ -n "${STAGE0_STD_PATH}" ]; then
   export HAXE_STD_PATH="${STAGE0_STD_PATH}"
 fi
-export LD_LIBRARY_PATH="${NEKOPATH_DIR}:\${LD_LIBRARY_PATH:-}"
-export DYLD_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_LIBRARY_PATH:-}"
-export DYLD_FALLBACK_LIBRARY_PATH="${NEKOPATH_DIR}:\${DYLD_FALLBACK_LIBRARY_PATH:-}"
 exec "${STAGE0_NEKO}" "\$@"
 EOF
 chmod +x "$WRAP_DIR/neko"
