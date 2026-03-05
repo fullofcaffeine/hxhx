@@ -11,6 +11,8 @@ POLICY="${HXHX_STAGE0_AB_POLICY:-prefer-native}"
 BASELINE_ARGS_RAW="${HXHX_STAGE0_AB_BASELINE_ARGS:-}"
 MITIGATION_ARGS_RAW="${HXHX_STAGE0_AB_MITIGATION_ARGS:---disable-prepasses}"
 OUT_DIR="${HXHX_STAGE0_AB_OUT_DIR:-$ROOT/.hxhx/profile/stage0-regen-ab/$(date +%Y%m%d-%H%M%S)}"
+MIN_REDUCTION_PCT="${HXHX_STAGE0_AB_MIN_REDUCTION_PCT:-}"
+REDUCTION_METRIC="${HXHX_STAGE0_AB_REDUCTION_METRIC:-median}"
 
 usage() {
 	cat <<'USAGE'
@@ -27,6 +29,9 @@ Options:
   --baseline-args "<args>"      Extra args for baseline profile runs
   --mitigation-args "<args>"    Extra args for mitigation profile runs
                                 (default: --disable-prepasses)
+  --min-reduction-pct <pct>     Optional threshold gate (e.g. 20)
+  --reduction-metric <name>     Which reduction metric to gate on: median|avg
+                                (default: median)
   --out-dir <dir>               Output directory
   -h, --help                    Show this help
 
@@ -37,6 +42,8 @@ Environment equivalents:
   HXHX_STAGE0_AB_POLICY
   HXHX_STAGE0_AB_BASELINE_ARGS
   HXHX_STAGE0_AB_MITIGATION_ARGS
+  HXHX_STAGE0_AB_MIN_REDUCTION_PCT
+  HXHX_STAGE0_AB_REDUCTION_METRIC
   HXHX_STAGE0_AB_OUT_DIR
 
 Output files:
@@ -87,6 +94,14 @@ while [ "$#" -gt 0 ]; do
 			OUT_DIR="${2:-}"
 			shift 2
 			;;
+		--min-reduction-pct)
+			MIN_REDUCTION_PCT="${2:-}"
+			shift 2
+			;;
+		--reduction-metric)
+			REDUCTION_METRIC="${2:-}"
+			shift 2
+			;;
 		-h|--help)
 			usage
 			exit 0
@@ -119,6 +134,20 @@ case "$POLICY" in
 		exit 2
 		;;
 esac
+case "$REDUCTION_METRIC" in
+	median|avg)
+		;;
+	*)
+		echo "Invalid --reduction-metric: $REDUCTION_METRIC (expected median|avg)." >&2
+		exit 2
+		;;
+esac
+if [ -n "$MIN_REDUCTION_PCT" ]; then
+	if ! [[ "$MIN_REDUCTION_PCT" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+		echo "Invalid --min-reduction-pct: $MIN_REDUCTION_PCT (expected non-negative number)." >&2
+		exit 2
+	fi
+fi
 
 mkdir -p "$OUT_DIR"
 RESULTS_TSV="$OUT_DIR/results.tsv"
@@ -131,6 +160,7 @@ echo "== Stage0 A/B profile"
 echo "reps=$REPS failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s policy=$POLICY"
 echo "baseline_args=${BASELINE_ARGS_RAW:-<none>}"
 echo "mitigation_args=${MITIGATION_ARGS_RAW:-<none>}"
+echo "min_reduction_pct=${MIN_REDUCTION_PCT:-<none>} reduction_metric=$REDUCTION_METRIC"
 echo "out_dir=$OUT_DIR"
 
 run_lane() {
@@ -241,6 +271,20 @@ console.log(`mitigation_median_peak_rss_mb=${fmt(mMedian, 0)}`);
 console.log(`avg_reduction_pct=${fmt(avgReductionPct)}`);
 console.log(`median_reduction_pct=${fmt(medianReductionPct)}`);
 ' "$RESULTS_TSV" "$SUMMARY_JSON" | tee "$SUMMARY_TXT"
+
+if [ -n "$MIN_REDUCTION_PCT" ]; then
+	gate_value="$(jq -r "if \"$REDUCTION_METRIC\" == \"avg\" then .avg_reduction_pct else .median_reduction_pct end" "$SUMMARY_JSON")"
+	if [ "$gate_value" = "null" ] || [ -z "$gate_value" ]; then
+		echo "gate_status=fail reason=no_${REDUCTION_METRIC}_reduction_value threshold_pct=$MIN_REDUCTION_PCT" | tee -a "$SUMMARY_TXT"
+		exit 3
+	fi
+	if awk -v value="$gate_value" -v threshold="$MIN_REDUCTION_PCT" 'BEGIN { exit(value + 0 >= threshold + 0 ? 0 : 1) }'; then
+		echo "gate_status=pass metric=$REDUCTION_METRIC value_pct=$gate_value threshold_pct=$MIN_REDUCTION_PCT" | tee -a "$SUMMARY_TXT"
+	else
+		echo "gate_status=fail metric=$REDUCTION_METRIC value_pct=$gate_value threshold_pct=$MIN_REDUCTION_PCT" | tee -a "$SUMMARY_TXT"
+		exit 3
+	fi
+fi
 
 echo "results_tsv=$RESULTS_TSV" | tee -a "$SUMMARY_TXT"
 echo "summary_json=$SUMMARY_JSON" | tee -a "$SUMMARY_TXT"

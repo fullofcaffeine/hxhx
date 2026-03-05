@@ -185,6 +185,17 @@ npm run hxhx:profile:stage0-regen-ab -- \
 This writes `results.tsv` plus `summary.json`/`summary.txt` with median and average reduction percentages.
 Only runs with `peak_rss_mb > 0` are included in reduction math.
 
+Optional threshold gate (fails with exit code `3` when reduction is below target):
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--disable-prepasses" \
+  --min-reduction-pct 20 \
+  --reduction-metric median
+```
+
 For GitHub Actions artifact-based baselines (recent runs + current summary):
 
 ```bash
