@@ -173,6 +173,18 @@ npm run hxhx:profile:stage0-hotspot-baseline -- \
   --json-out .hxhx/profile/stage0-regen/compare.latest.json
 ```
 
+For variance-safe memory A/B comparisons (baseline vs mitigation across repeated runs):
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--disable-prepasses"
+```
+
+This writes `results.tsv` plus `summary.json`/`summary.txt` with median and average reduction percentages.
+Only runs with `peak_rss_mb > 0` are included in reduction math.
+
 For GitHub Actions artifact-based baselines (recent runs + current summary):
 
 ```bash

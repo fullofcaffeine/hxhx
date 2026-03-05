@@ -159,6 +159,7 @@
     "hxhx:bench:kpi": "bash scripts/hxhx/bench-kpi.sh",
     "hxhx:bench:bootstrap-regen": "bash scripts/hxhx/bench-bootstrap-regen.sh",
     "hxhx:profile:stage0-regen": "bash scripts/hxhx/profile-stage0-regen.sh",
+    "hxhx:profile:stage0-regen-ab": "bash scripts/hxhx/profile-stage0-regen-ab.sh",
     "hxhx:profile:stage0-summary": "node scripts/hxhx/summarize-stage0-progress.js",
     "hxhx:profile:stage0-compare": "node scripts/hxhx/compare-stage0-progress-summaries.js",
     "hxhx:profile:stage0-hotspot-baseline": "node scripts/ci/stage0-progress-hotspot-baseline.js",
