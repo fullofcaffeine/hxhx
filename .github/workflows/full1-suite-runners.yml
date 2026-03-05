@@ -8,8 +8,8 @@ on:
     - cron: "0 9 * * 6"
 
 concurrency:
-  group: full1-suite-runners-${{ github.ref }}
-  cancel-in-progress: true
+  group: full1-suite-runners-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
