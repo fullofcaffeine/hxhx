@@ -38,6 +38,21 @@ const SUITES = {
   },
 }
 
+const SUITE_HAXELIB_DEPS = {
+  server: [
+    { name: 'utest', repo: 'https://github.com/haxe-utest/utest', ref: 'a94f8812e8786f2b5fec52ce9f26927591d26327' },
+    { name: 'haxeserver', repo: 'https://github.com/Simn/haxeserver' },
+    { name: 'hxnodejs', repo: 'https://github.com/HaxeFoundation/hxnodejs' },
+  ],
+  display: [
+    { name: 'utest', repo: 'https://github.com/haxe-utest/utest', ref: 'a94f8812e8786f2b5fec52ce9f26927591d26327' },
+    { name: 'haxeserver', repo: 'https://github.com/Simn/haxeserver' },
+  ],
+  threads: [
+    { name: 'utest', repo: 'https://github.com/haxe-utest/utest', ref: 'a94f8812e8786f2b5fec52ce9f26927591d26327' },
+  ],
+}
+
 function fail(message) {
   console.error(`[full1-suite] ERROR: ${message}`)
   process.exit(1)
@@ -132,6 +147,49 @@ function runCommand(command, args, options) {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 64,
   })
+}
+
+function resolveHaxelibBin() {
+  const configured = String(process.env.HAXELIB_BIN || '').trim()
+  return configured || 'haxelib'
+}
+
+function ensureSuiteDependencies(suite, cwd, env) {
+  const deps = SUITE_HAXELIB_DEPS[suite] || []
+  if (deps.length === 0) {
+    return
+  }
+
+  const haxelibBin = resolveHaxelibBin()
+  for (const dep of deps) {
+    const probe = runCommand(haxelibBin, ['path', dep.name], { cwd, env })
+    if (probe.status === 0) {
+      continue
+    }
+
+    const installArgs = ['git', dep.name, dep.repo]
+    if (dep.ref) {
+      installArgs.push(dep.ref)
+    }
+
+    let installOk = false
+    let lastInstall = null
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const result = runCommand(haxelibBin, installArgs, { cwd, env })
+      lastInstall = result
+      if (result.status === 0) {
+        installOk = true
+        break
+      }
+      const retryMessage = result.stderr || result.stdout || `exit=${result.status}`
+      console.error(`[full1-suite] dependency install retry ${attempt}/3 for ${dep.name}: ${retryMessage}`)
+    }
+
+    if (!installOk) {
+      const errText = `${lastInstall && lastInstall.stdout ? lastInstall.stdout : ''}${lastInstall && lastInstall.stderr ? lastInstall.stderr : ''}`
+      fail(`failed to install required dependency ${dep.name} via haxelib git\n${errText}`)
+    }
+  }
 }
 
 function parseHxmlDirective(line) {
@@ -306,6 +364,7 @@ function main() {
   if (parsed.strict) {
     env.HXHX_FORBID_STAGE0 = '1'
   }
+  ensureSuiteDependencies(parsed.suite, suiteDir, env)
 
   const startedAt = new Date()
   const commandRuns = []
