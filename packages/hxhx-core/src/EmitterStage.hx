@@ -1114,7 +1114,7 @@ class EmitterStage {
 			case EField(EIdent("String"), "fromCharCode"):
 				// Stage 3 bring-up: map Haxe `String.fromCharCode(int)` to an OCaml function value.
 				// This is used in upstream-ish stdlib code as `var fcc = String.fromCharCode;`.
-				"(fun i -> String.make 1 (Char.chr i))";
+				"(fun i -> Stdlib.String.make 1 (Char.chr i))";
 			case ECall(EField(EIdent("Math"), "pow"), [_a, _b]):
 				// Bring-up: avoid pulling in correct float/int coercions for exponentiation.
 				"(Obj.magic 0)";
@@ -1234,7 +1234,7 @@ class EmitterStage {
 				+ "let __i = ("
 				+ i2
 				+ ") in "
-				+ "if (__i < 0) || (__i >= String.length __s) then (-1) else (Char.code (String.get __s __i)))";
+				+ "if (__i < 0) || (__i >= Stdlib.String.length __s) then (-1) else (Char.code (Stdlib.String.get __s __i)))";
 
 			// Stage 3 bring-up: `StringTools.hex(n)` is used in upstream unit code but our
 			// bootstrap emitter doesn't model optional parameters.
@@ -2152,6 +2152,34 @@ class EmitterStage {
 						+ " (this_)"
 						+ " ("
 						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+						+ ")";
+				}
+				// Stage3 stdlib bring-up guard:
+				// - `haxe.ds.EnumValueMap.compareArg` calls `compare(v1, v2)` in instance context.
+				// - In some recovered AST paths, implicit receiver insertion can still be skipped,
+				//   yielding partial application in emitted OCaml.
+				// - Emit receiver-aware call form directly for this known shape.
+				if (c == "compare" && hasThisBinding() && args.length == 2) {
+					return c
+						+ " (this_)"
+						+ " ("
+						+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+						+ ") ("
+						+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+						+ ")";
+				}
+				// Stage3 stdlib bring-up guard:
+				// - Some parser-recovery paths collapse `compare(v1, v2)` into `compare()` in
+				//   `haxe.ds.EnumValueMap.compareArg`.
+				// - The generic missing-arg filler then inserts poison values and still misses
+				//   the receiver, producing a partial application.
+				// - Recover the known local-param call shape directly when available.
+				if (c == "compare" && hasThisBinding() && args.length == 0 && hasTyIdent("v1") && hasTyIdent("v2")) {
+					return c
+						+ " (this_) ("
+						+ exprToOcaml(EIdent("v1"), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
+						+ ") ("
+						+ exprToOcaml(EIdent("v2"), arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee)
 						+ ")";
 				}
 				// Safety: if the callee is already "bring-up poison", do not apply arguments.
@@ -4956,14 +4984,14 @@ class EmitterStage {
 						out.push("  let n32 = Int32.of_int n in");
 						out.push("  let rec build (x : Int32.t) (acc : string) : string =");
 						out.push("    let digit = Int32.to_int (Int32.logand x 0xFl) in");
-						out.push("    let acc2 = (String.make 1 hexChars.[digit]) ^ acc in");
+						out.push("    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in");
 						out.push("    let x2 = Int32.shift_right_logical x 4 in");
 						out.push("    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2");
 						out.push("  in");
 						out.push("  let s = build n32 \"\" in");
 						out.push("  if digits <= 0 then s else");
 						out.push("    let rec pad (s0 : string) : string =");
-						out.push("      if String.length s0 < digits then pad (\"0\" ^ s0) else s0");
+						out.push("      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0");
 						out.push("    in");
 						out.push("    pad s");
 						out.push("");
@@ -5524,7 +5552,7 @@ class EmitterStage {
 								if (tyByIdent.get(name) == null)
 									tyByIdent.set(name, TyType.unknown());
 
-							final body = if (parsedFn == null) {
+							var body = if (parsedFn == null) {
 								"()";
 							} else if (!moduleEmitBodies) {
 								returnExprToOcaml(parsedFn.getFirstReturnExpr(), allowed, tf.getReturnType(), arityByName, tyByIdent, staticImportByIdent,
@@ -5544,6 +5572,20 @@ class EmitterStage {
 								+ retTy
 								+ ")";
 							};
+							// Stage3 stdlib bring-up guard:
+							// - `haxe.ds.EnumValueMap.compareArg` can recover as
+							//   `compare ((Obj.magic 0)) ((Obj.magic 0))`, which misses receiver/arg
+							//   forwarding and fails with partial-application type errors.
+							// - Normalize that exact degraded body to the receiver-aware local-param call.
+							if (mainModuleName == "Haxe_ds_EnumValueMap"
+								&& nameRaw == "compareArg"
+								&& !isStaticFn
+								&& args.length >= 2
+								&& body == "compare ((Obj.magic 0)) ((Obj.magic 0))") {
+								final arg0 = ocamlReadValueIdent(args[0].getName());
+								final arg1 = ocamlReadValueIdent(args[1].getName());
+								body = "compare (this_) (" + arg0 + ") (" + arg1 + ")";
+							}
 
 							final kw = i == 0 ? "let rec" : "and";
 							out.push(kw + " " + name + " " + ocamlArgs + " : " + retTy + " = " + body);
@@ -6111,14 +6153,14 @@ class EmitterStage {
 							+ "  let n32 = Int32.of_int n in\n"
 							+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
 							+ "    let digit = Int32.to_int (Int32.logand x 0xFl) in\n"
-							+ "    let acc2 = (String.make 1 hexChars.[digit]) ^ acc in\n"
+							+ "    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in\n"
 							+ "    let x2 = Int32.shift_right_logical x 4 in\n"
 							+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
 							+ "  in\n"
 							+ "  let s = build n32 \"\" in\n"
 							+ "  if digits <= 0 then s else\n"
 							+ "    let rec pad (s0 : string) : string =\n"
-							+ "      if String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
+							+ "      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
 							+ "    in\n"
 							+ "    pad s\n");
 					}
@@ -6131,14 +6173,14 @@ class EmitterStage {
 						+ "  let n32 = Int32.of_int n in\n"
 						+ "  let rec build (x : Int32.t) (acc : string) : string =\n"
 						+ "    let digit = Int32.to_int (Int32.logand x 0xFl) in\n"
-						+ "    let acc2 = (String.make 1 hexChars.[digit]) ^ acc in\n"
+						+ "    let acc2 = (Stdlib.String.make 1 (Stdlib.String.get hexChars digit)) ^ acc in\n"
 						+ "    let x2 = Int32.shift_right_logical x 4 in\n"
 						+ "    if Int32.compare x2 0l = 0 then acc2 else build x2 acc2\n"
 						+ "  in\n"
 						+ "  let s = build n32 \"\" in\n"
 						+ "  if digits <= 0 then s else\n"
 						+ "    let rec pad (s0 : string) : string =\n"
-						+ "      if String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
+						+ "      if Stdlib.String.length s0 < digits then pad (\"0\" ^ s0) else s0\n"
 						+ "    in\n"
 						+ "    pad s\n");
 					generatedPaths.push(shimFile);
@@ -6194,11 +6236,11 @@ class EmitterStage {
 				}
 			}
 		}
-		// Stage 3 macro bridge noise control:
-		// add warning-20 suppression to generated macro bridge modules where
-		// callMacroApi placeholder arity intentionally diverges during bring-up.
+		// Stage 3 warning-20 noise control:
+		// add warning-20 suppression to generated modules where placeholder
+		// arity intentionally diverges during bring-up (macro bridge + syntax shims).
 		{
-			final macroShimNames = ["Haxe_macro_Compiler", "Haxe_macro_TypeTools"];
+			final macroShimNames = ["Haxe_macro_Compiler", "Haxe_macro_TypeTools", "Php_Syntax"];
 			for (shimName in macroShimNames) {
 				final shimFile = shimName + ".ml";
 				final shimPath = haxe.io.Path.join([outAbs, shimFile]);
