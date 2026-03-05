@@ -13,6 +13,8 @@ For lane/profile context, use the canonical beginner truth table:
   `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`
 - Weekly ops audit procedure (scheduled gates + triage):
   `docs/00-project/WEEKLY_CI_EVIDENCE.md`
+- Full vs scoped release contract:
+  `docs/00-project/FULL_1_0_CONTRACT.md`
 
 ## Gate purpose by lane (quick map)
 
@@ -31,14 +33,18 @@ For lane/profile context, use the canonical beginner truth table:
 - **Release**: strict release-readiness lanes used for publish confidence.
 - **Manual**: maintainer-triggered diagnostics or targeted reruns.
 
-## Release policy (M7 strict)
+## Release policy (Scoped 1.0)
 
 - `Release / Semantic Publish` (`.github/workflows/release.yml`) is the automation lane for normal semantic releases.
 - `Gate M7 / Replacement Bundle` (`.github/workflows/gate-m7.yml`) is the strict replacement-readiness lane.
 - For current 0.x automation, M7 strict is **not** a hard precondition of semantic publish.
-- For 1.0 release readiness/sign-off, M7 strict **is required** and must show:
+- For Scoped 1.0 release readiness/sign-off, M7 strict **is required** and must show:
   - `M7_STRICT_STAGE0:PASS`
   - `M7_REPLACEMENT_READY:PASS`
+
+For Full 1.0 claims, use the strict Full contract and markers in:
+
+- `docs/00-project/FULL_1_0_CONTRACT.md`
 
 ## PR-required fast lanes
 

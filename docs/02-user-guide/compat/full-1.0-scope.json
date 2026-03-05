@@ -1,0 +1,65 @@
+{
+  "contractVersion": "1.0.0",
+  "haxeCompatibilityBaseline": "4.3.7",
+  "scoped": {
+    "name": "Scoped 1.0",
+    "description": "Current replacement-ready scope with explicit native/delegated lanes and M7 strict sign-off.",
+    "lanes": [
+      "--ocaml",
+      "--js <file>",
+      "--ocaml-eval",
+      "--compat"
+    ],
+    "requiredMarkers": [
+      {
+        "marker": "GATE1_LITE:PASS",
+        "workflow": ".github/workflows/gate1-lite.yml"
+      },
+      {
+        "marker": "GATE2_LITE:PASS",
+        "workflow": ".github/workflows/gate2-lite.yml"
+      },
+      {
+        "marker": "STAGE0_FREE_SMOKE:PASS",
+        "workflow": ".github/workflows/ci.yml"
+      },
+      {
+        "marker": "JS_NATIVE_SMOKE:PASS",
+        "workflow": ".github/workflows/ci.yml"
+      },
+      {
+        "marker": "PLUGIN_MATRIX_STRICT:PASS",
+        "workflow": ".github/workflows/ci.yml"
+      },
+      {
+        "marker": "M7_STRICT_STAGE0:PASS",
+        "workflow": ".github/workflows/gate-m7.yml"
+      },
+      {
+        "marker": "M7_REPLACEMENT_READY:PASS",
+        "workflow": ".github/workflows/gate-m7.yml"
+      }
+    ]
+  },
+  "full": {
+    "name": "Full 1.0",
+    "description": "Strict Haxe 4.3.7-equivalent claim. These markers are planned and become mandatory when their gates exist.",
+    "requiredMarkersPlanned": [
+      "FULL1_PARITY_MAP:PASS",
+      "FULL1_SUITE_MATRIX:PASS",
+      "FULL1_MACRO_EVAL_PARITY:PASS",
+      "FULL1_PLUGIN_PARITY:PASS",
+      "FULL1_PERF_PARITY:PASS",
+      "FULL1_RELEASE_GO:PASS"
+    ],
+    "nonGoals": [
+      "Targets outside the explicit scope manifest",
+      "Implicit 1.0 claims without marker evidence"
+    ]
+  },
+  "docsMustDisambiguate": [
+    "docs/00-project/CI_GATES.md",
+    "docs/01-getting-started/HXHX_1_0_ROADMAP.md",
+    "docs/00-project/FULL_1_0_CONTRACT.md"
+  ]
+}

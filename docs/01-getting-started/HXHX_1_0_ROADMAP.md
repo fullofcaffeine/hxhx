@@ -1,17 +1,18 @@
-# HXHX 1.0 Roadmap (Plain-English Guide)
+# HXHX Scoped 1.0 Roadmap (Plain-English Guide)
 
-This guide explains where we are in the `hxhx 1.0` journey without assuming compiler expertise.
+This guide explains where we are in the `hxhx Scoped 1.0` journey without assuming compiler expertise.
 
 Use this when you want to answer:
 
-- What does “1.0” actually mean here?
+- What does “Scoped 1.0” actually mean here?
+- How is Full 1.0 different?
 - What is done vs still risky?
 - Which bead/task tracks each milestone?
 - How can I quickly verify progress myself?
 
-## What “hxhx 1.0” means
+## What “hxhx Scoped 1.0” means
 
-For this project, `hxhx 1.0` means:
+For this project, `hxhx Scoped 1.0` means:
 
 1. You can use `hxhx` as a practical Haxe compiler for Haxe `4.3.7` workloads.
 2. Macro/tooling workflows work in native mode (not just by delegating to stage0 `haxe`).
@@ -20,8 +21,12 @@ For this project, `hxhx 1.0` means:
 
 Scope lock for release naming:
 
-- `hxhx 1.0` is **core-first**: stage0-free runtime path, macro/plugin baseline, and production support for the explicitly supported targets.
-- Additional non-legacy upstream targets land in follow-up waves (`1.1+`) instead of blocking the core `1.0` label.
+- `hxhx Scoped 1.0` is **core-first**: stage0-free runtime path, macro/plugin baseline, and production support for the explicitly supported targets.
+- Additional non-legacy upstream targets land in follow-up waves (`1.1+`) instead of blocking the core `Scoped 1.0` label.
+
+For strict Full 1.0 contract details, see:
+
+- `docs/00-project/FULL_1_0_CONTRACT.md`
 
 This is tracked primarily under epic: `haxe.ocaml-xgv.10`.
 
@@ -135,7 +140,7 @@ Meaning in plain terms:
   - Focused Gate2 display rung is now fail-fast (no Darwin-specific retry/skip fallback path).
 - Scope reminder: this status is explicitly bounded to the supported target/gate policy documented in this guide and `README.md`.
 
-### M16. Portable stdlib parity closure (hard 1.0 blocker)
+### M16. Portable stdlib parity closure (hard Scoped 1.0 blocker)
 
 Status: Done (for the declared Haxe 4.3.7 portable baseline scope)  
 Bead: `haxe.ocaml-yfh`
@@ -161,7 +166,7 @@ Meaning in plain terms:
   - `docs/00-project/STDLIB_PORTABLE_CLOSURE_WORKLIST_HAXE_4_3_7.json`
 - PR CI includes a fast stdlib parity lane; nightly/manual CI includes a broader parity lane.
 - Portability lanes run with `ocaml_portable_native_surface=error` (local default remains `warn`).
-- 1.0 is not considered complete until baseline portable stdlib parity closure is green for the declared scope.
+- Scoped 1.0 is not considered complete until baseline portable stdlib parity closure is green for the declared scope.
 
 Cross-check pages:
 
@@ -210,7 +215,7 @@ Why these checks:
 
 ## Scope and expectations
 
-Important: “1.0” here is not “all possible Haxe targets and every edge case forever.”
+Important: Scoped 1.0 here is not “all possible Haxe targets and every edge case forever.”
 
 It is a concrete engineering bar tied to:
 
@@ -225,4 +230,4 @@ Performance references:
 
 - KPI baseline: `docs/benchmarks/HXHX_KPI_BASELINE.md`
 - KPI thresholds: `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
-- Post-1.0 convergence policy: keep OCaml `portable` as default and track `upstream/portable/metal` deltas until portable performance converges to target budgets.
+- Post-Scoped 1.0 convergence policy: keep OCaml `portable` as default and track `upstream/portable/metal` deltas until portable performance converges to target budgets.
