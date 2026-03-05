@@ -67,6 +67,10 @@ Options:
                             Add `-D hxhx_stage0_no_native_decode_extract` (inline ParserStage native decode helpers for stage0 A/B only).
   --stage0-native-decode-extract
                             Disable stage0 no-native-decode-extract override.
+  --stage0-no-parser-scan-extract
+                            Add `-D hxhx_stage0_no_parser_scan_extract` (inline ParserStage scan helpers for stage0 A/B only).
+  --stage0-parser-scan-extract
+                            Disable stage0 no-parser-scan-extract override.
   --stage0-ocaml-only        Add `-D hxhx_stage0_ocaml_only` (exclude linked js-native backend from stage0 compile graph).
   --stage0-with-js           Disable stage0 ocaml-only define (default behavior).
   --stage0-no-line-directives
@@ -108,6 +112,8 @@ Environment knobs (all optional):
                                      Add `-D hxhx_stage0_no_source_normalize_extract` for stage0 emit.
   HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=1
                                      Add `-D hxhx_stage0_no_native_decode_extract` for stage0 emit.
+  HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=1
+                                     Add `-D hxhx_stage0_no_parser_scan_extract` for stage0 emit.
   HXHX_STAGE0_OCAML_ONLY=1          Add `-D hxhx_stage0_ocaml_only` for stage0 emit.
   HXHX_STAGE0_NO_LINE_DIRECTIVES=1  Add `-D ocaml_no_line_directives` for stage0 emit.
   HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
@@ -193,6 +199,7 @@ HXHX_STAGE0_NO_STAGE3="${HXHX_STAGE0_NO_STAGE3:-0}"
 HXHX_STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_NO_INTERNAL_TOOLS:-0}"
 HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="${HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT:-0}"
 HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT="${HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT:-0}"
+HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT="${HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT:-0}"
 HXHX_STAGE0_OCAML_ONLY="${HXHX_STAGE0_OCAML_ONLY:-0}"
 HXHX_STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_NO_LINE_DIRECTIVES:-0}"
 HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
@@ -333,6 +340,12 @@ while [ $# -gt 0 ]; do
 		--stage0-native-decode-extract)
 			HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=0
 			;;
+		--stage0-no-parser-scan-extract)
+			HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=1
+			;;
+		--stage0-parser-scan-extract)
+			HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=0
+			;;
 		--stage0-ocaml-only)
 			HXHX_STAGE0_OCAML_ONLY=1
 			;;
@@ -428,6 +441,7 @@ assert_bool_01 "HXHX_STAGE0_NO_STAGE3" "$HXHX_STAGE0_NO_STAGE3"
 assert_bool_01 "HXHX_STAGE0_NO_INTERNAL_TOOLS" "$HXHX_STAGE0_NO_INTERNAL_TOOLS"
 assert_bool_01 "HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" "$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
 assert_bool_01 "HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT"
+assert_bool_01 "HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT"
 assert_bool_01 "HXHX_STAGE0_OCAML_ONLY" "$HXHX_STAGE0_OCAML_ONLY"
 assert_bool_01 "HXHX_STAGE0_NO_LINE_DIRECTIVES" "$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 	assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
@@ -795,6 +809,7 @@ compute_fingerprint() {
 		echo "stage0_no_internal_tools=$HXHX_STAGE0_NO_INTERNAL_TOOLS"
 		echo "stage0_no_source_normalize_extract=$HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
 		echo "stage0_no_native_decode_extract=$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT"
+		echo "stage0_no_parser_scan_extract=$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT"
 		echo "stage0_ocaml_only=$HXHX_STAGE0_OCAML_ONLY"
 		echo "stage0_no_line_directives=$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 		echo "stage0_ocamlrunparam=$HXHX_STAGE0_OCAMLRUNPARAM"
@@ -867,6 +882,7 @@ write_report_json() {
   "stage0_no_internal_tools": $HXHX_STAGE0_NO_INTERNAL_TOOLS,
   "stage0_no_source_normalize_extract": $HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT,
   "stage0_no_native_decode_extract": $HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT,
+  "stage0_no_parser_scan_extract": $HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT,
   "stage0_ocaml_only": $HXHX_STAGE0_OCAML_ONLY,
   "stage0_no_line_directives": $HXHX_STAGE0_NO_LINE_DIRECTIVES,
   "dune_jobs": "$(json_escape "$HXHX_DUNE_JOBS")",
@@ -1175,6 +1191,9 @@ fi
 if [ "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" = "1" ]; then
 	echo "== Stage0 compile mode: ParserStage native decode helpers inlined (-D hxhx_stage0_no_native_decode_extract)"
 fi
+if [ "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" = "1" ]; then
+	echo "== Stage0 compile mode: ParserStage scan helpers inlined (-D hxhx_stage0_no_parser_scan_extract)"
+fi
 if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
 	echo "== Stage0 compile mode: ocaml-only backend graph enabled (-D hxhx_stage0_ocaml_only)"
 fi
@@ -1289,6 +1308,9 @@ if [ "$skipped_emit" = "0" ]; then
 	fi
 	if [ "$HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_no_native_decode_extract)
+	fi
+	if [ "$HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT" = "1" ]; then
+		haxe_args+=(-D hxhx_stage0_no_parser_scan_extract)
 	fi
 	if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_ocaml_only)

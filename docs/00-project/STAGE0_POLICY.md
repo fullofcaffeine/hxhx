@@ -60,6 +60,9 @@ Machine-readable reports (`--report-json`) include:
 - `stage0_no_opt` (`0` / `1`)
 - `stage0_no_inline` (`0` / `1`)
 - `stage0_no_internal_tools` (`0` / `1`)
+- `stage0_no_source_normalize_extract` (`0` / `1`)
+- `stage0_no_native_decode_extract` (`0` / `1`)
+- `stage0_no_parser_scan_extract` (`0` / `1`)
 - `stage0_ocamlrunparam` (string; empty when unset)
 - `stage0_observability.heartbeat_seconds`
 - `stage0_observability.heartbeat_samples`
@@ -335,6 +338,21 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `--no-native-decode-extract` maps to `HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=1` and adds
 `-D hxhx_stage0_no_native_decode_extract`, which keeps native-protocol decode helpers in `ParserStage`
 for A/B profiling. The default path delegates decode helpers to `ParserStageNativeDecode`.
+
+Additional parser helper-scan graph candidate (inline baseline vs extracted helper):
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --baseline-args "--no-parser-scan-extract" \
+  --mitigation-args "" \
+  --parity-mode status-exit
+```
+
+`--no-parser-scan-extract` maps to `HXHX_STAGE0_NO_PARSER_SCAN_EXTRACT=1` and adds
+`-D hxhx_stage0_no_parser_scan_extract`, which keeps module-local helper scanners inline in `ParserStage`
+for A/B profiling. The default path delegates scanner helpers to `ParserStageScanHelpers`.
 
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 

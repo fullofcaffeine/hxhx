@@ -70,7 +70,7 @@ class ParserStage {
 						- Never downgrade native static flags from this scanner.
 					**/
 					final scannedClassStaticsByName:Map<String, HxClassDecl> = new Map();
-					for (scanned in scanModuleLocalHelperClasses(source, null)) {
+					for (scanned in scanHelperClasses(source, null)) {
 						final scannedName = scanned == null ? null : HxClassDecl.getName(scanned);
 						if (scannedName != null && scannedName.length > 0 && !scannedClassStaticsByName.exists(scannedName))
 							scannedClassStaticsByName.set(scannedName, scanned);
@@ -144,9 +144,9 @@ class ParserStage {
 					//
 					// If the native protocol returns `Unknown`, scan for a matching top-level enum
 					// and treat it as the module's main provider so emission doesn't drop the unit.
-					final enumDeclsAll = scanModuleLocalHelperEnums(source, null);
-					final typedefDeclsAll = scanModuleLocalHelperTypedefs(source, null);
-					final abstractDeclsAll = scanModuleLocalHelperAbstracts(source, null);
+					final enumDeclsAll = scanHelperEnums(source, null);
+					final typedefDeclsAll = scanHelperTypedefs(source, null);
+					final abstractDeclsAll = scanHelperAbstracts(source, null);
 					if ((mainName == null || mainName.length == 0 || mainName == "Unknown") && expectedMainClass != null) {
 						function tryPickMainFrom(candidates:Array<HxClassDecl>):Bool {
 							if (candidates == null)
@@ -185,7 +185,7 @@ class ParserStage {
 					}
 
 					final extras = new Array<HxClassDecl>();
-					for (c in scanModuleLocalHelperClasses(source, mainName))
+					for (c in scanHelperClasses(source, mainName))
 						if (isMissingAndNotMain(c))
 							extras.push(c);
 					final enumDecls = new Array<HxClassDecl>();
@@ -291,6 +291,39 @@ class ParserStage {
 		#end
 	}
 
+	static inline function scanHelperClasses(source:String, mainClassName:Null<String>):Array<HxClassDecl> {
+		#if hxhx_stage0_no_parser_scan_extract
+		return scanModuleLocalHelperClasses(source, mainClassName);
+		#else
+		return ParserStageScanHelpers.scanModuleLocalHelperClasses(source, mainClassName);
+		#end
+	}
+
+	static inline function scanHelperEnums(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+		#if hxhx_stage0_no_parser_scan_extract
+		return scanModuleLocalHelperEnums(source, mainTypeName);
+		#else
+		return ParserStageScanHelpers.scanModuleLocalHelperEnums(source, mainTypeName);
+		#end
+	}
+
+	static inline function scanHelperTypedefs(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+		#if hxhx_stage0_no_parser_scan_extract
+		return scanModuleLocalHelperTypedefs(source, mainTypeName);
+		#else
+		return ParserStageScanHelpers.scanModuleLocalHelperTypedefs(source, mainTypeName);
+		#end
+	}
+
+	static inline function scanHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+		#if hxhx_stage0_no_parser_scan_extract
+		return scanModuleLocalHelperAbstracts(source, mainTypeName);
+		#else
+		return ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, mainTypeName);
+		#end
+	}
+
+	#if hxhx_stage0_no_parser_scan_extract
 	/**
 		Best-effort scanner for module-local helper classes.
 
@@ -1285,6 +1318,7 @@ class ParserStage {
 
 		return {isIdent: false, text: "", nextPos: len};
 	}
+	#end
 
 	#if hxhx_stage0_no_native_decode_extract
 	/**
