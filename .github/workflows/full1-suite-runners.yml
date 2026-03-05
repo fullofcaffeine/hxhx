@@ -53,8 +53,16 @@ jobs:
           }
 
           retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
           retry_apt sudo apt-get install -y \
-            ocaml dune ocaml-findlib \
+            ocaml "${dune_pkg}" ocaml-findlib \
             neko \
             python3 pypy3 \
             default-jdk \
