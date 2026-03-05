@@ -167,7 +167,7 @@ function extractFirstHaxelibClassPath(outputText) {
 }
 
 function hasUsableHaxelibPath(haxelibBin, lib, cwd, env) {
-  const probe = runCommand(haxelibBin, ['path', lib], { cwd, env })
+  const probe = runCommand(haxelibBin, ['--always', 'path', lib], { cwd, env })
   if (probe.status !== 0) {
     return false
   }
@@ -190,7 +190,7 @@ function ensureSuiteDependencies(suite, cwd, env) {
       continue
     }
 
-    const installArgs = ['git', dep.name, dep.repo]
+    const installArgs = ['--always', 'git', dep.name, dep.repo]
     if (dep.ref) {
       installArgs.push(dep.ref)
     }
