@@ -69,36 +69,7 @@ jobs:
             default-jdk \
             build-essential \
             php \
-            lua5.4 \
-            mono-devel
-
-          if ! command -v dotnet >/dev/null 2>&1; then
-            retry_apt sudo apt-get install -y dotnet-sdk-8.0 || true
-          fi
-
-          if ! command -v hl >/dev/null 2>&1; then
-            retry_apt sudo apt-get install -y hashlink || true
-          fi
-          if ! command -v hl >/dev/null 2>&1; then
-            retry_apt sudo apt-get install -y \
-              libmbedtls-dev \
-              libpcre3-dev \
-              zlib1g-dev \
-              libsqlite3-dev \
-              libuv1-dev \
-              libsdl2-dev \
-              libjpeg-dev \
-              libpng-dev \
-              libvorbis-dev \
-              libopenal-dev \
-              libglu1-mesa-dev \
-              libturbojpeg0-dev
-            HL_REF="${HXHX_HASHLINK_REF:-1.15}"
-            HL_SRC_DIR="$(mktemp -d)"
-            git clone --depth 1 --branch "${HL_REF}" https://github.com/HaxeFoundation/hashlink.git "${HL_SRC_DIR}"
-            make -C "${HL_SRC_DIR}" -j"$(nproc)"
-            sudo cp "${HL_SRC_DIR}/hl" /usr/local/bin/hl
-          fi
+            lua5.4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
