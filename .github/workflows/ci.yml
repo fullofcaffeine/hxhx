@@ -53,8 +53,33 @@ jobs:
       - name: Install OCaml toolchain for connect-retry smoke
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ocaml dune
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get install -y ocaml "${dune_pkg}"
           dune --version
           ocamlc -version
       - name: Setup Node.js
