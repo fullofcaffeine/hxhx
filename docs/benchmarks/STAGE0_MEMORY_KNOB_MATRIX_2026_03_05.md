@@ -64,6 +64,13 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-081044/summary.json`
   - Caveat: this run family is not lane-equivalent (`baseline=status:error`, `mitigation=status:ok`);
     treat as a profiling signal only, not a default mitigation candidate.
+- `--no-stage3 --no-line-directives --no-external-macro-host --no-internal-tools` (parity-aware rerun)
+  - Baseline median: `6455MB`
+  - Mitigation median: `279MB`
+  - Median reduction: `95.68%`
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-082757/summary.json`
+  - Parity classification: `non-equivalent` (`equivalent_pairs=0/3`, `parity_mode=status-exit`)
+  - Recommendation: `profiling-only`
 
 ## Interpretation
 

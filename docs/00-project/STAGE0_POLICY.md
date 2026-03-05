@@ -183,8 +183,23 @@ npm run hxhx:profile:stage0-regen-ab -- \
   --mitigation-args "--disable-prepasses"
 ```
 
-This writes `results.tsv` plus `summary.json`/`summary.txt` with median and average reduction percentages.
+This writes `results.tsv` plus `summary.json`/`summary.txt` with median and average reduction percentages,
+pair parity fields, and a recommendation classification (`promotable|profiling-only|rejected`).
 Only runs with `peak_rss_mb > 0` are included in reduction math.
+
+For parity-sensitive probes, require per-rep status parity (`status` or `status+exit`):
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-stage3 --no-line-directives --no-external-macro-host --no-internal-tools" \
+  --parity-mode status-exit \
+  --require-status-parity
+```
+
+When parity is required and baseline/mitigation outcomes diverge, the runner exits `4`
+with `parity_gate_status=fail` in `summary.txt`.
 
 Additional mitigation candidate for source-level graph reduction:
 
@@ -284,6 +299,12 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `-D hxhx_stage0_no_internal_tools`, which compiles out internal bring-up CLI paths (`--hxhx-stage1`, `--hxhx-parse`, `--hxhx-selftest`, `--hxhx-ocaml-interp`) in profiling runs.
 
 This knob is profiling-only today; do not treat it as lane-equivalent for release snapshots until behavior parity is explicitly proven for maintained internal-tool workflows.
+
+Internal-tool availability contract:
+
+- Maintained source builds and release/dist builds must keep these internal workflows available:
+  `--hxhx-stage1`, `--hxhx-parse`, `--hxhx-selftest`, `--hxhx-ocaml-interp`.
+- `hxhx_stage0_no_internal_tools` is allowed only in profiling A/B runs and must not be enabled in committed bootstrap snapshots or release build lanes.
 
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 

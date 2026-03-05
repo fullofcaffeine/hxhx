@@ -236,6 +236,8 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional generated-output metadata trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-line-directives`
     - repeated baseline-vs-mitigation memory A/B runner:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses"`
+    - optional parity gate for equivalent baseline/mitigation outcomes (exit code `4` on mismatch):
+      `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --parity-mode status-exit --require-status-parity`
     - enforce a reduction threshold in CI/local scripts (exit code 3 on miss):
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --min-reduction-pct 20 --reduction-metric median`
     - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors (`peak_rss_source=report|stdout_fallback`).
