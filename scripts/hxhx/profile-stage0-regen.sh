@@ -12,8 +12,10 @@ NO_OPT="${HXHX_STAGE0_PROFILE_NO_OPT:-0}"
 NO_INLINE="${HXHX_STAGE0_PROFILE_NO_INLINE:-0}"
 STAGE0_NO_NATIVE_PARSER="${HXHX_STAGE0_PROFILE_NO_NATIVE_PARSER:-0}"
 STAGE0_NO_HX_PARSER="${HXHX_STAGE0_PROFILE_NO_HX_PARSER:-0}"
+STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_PROFILE_NO_EXPR_MACROS:-0}"
 DISABLE_PREPASSES="${HXHX_STAGE0_PROFILE_DISABLE_PREPASSES:-0}"
 STAGE0_OCAML_ONLY="${HXHX_STAGE0_PROFILE_OCAML_ONLY:-0}"
+STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_PROFILE_NO_LINE_DIRECTIVES:-0}"
 STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_PROFILE_OCAMLRUNPARAM:-}"
 SCENARIO_ARGS="${HXHX_STAGE0_PROFILE_SCENARIO_ARGS:---incremental --no-verify --force}"
 TELEMETRY_DETAIL="${HXHX_STAGE0_PROFILE_TELEMETRY_DETAIL:-0}"
@@ -35,8 +37,10 @@ Options:
   --no-inline                                    Enable stage0 --no-inline mitigation
   --no-native-parser                             Disable native parser path for stage0 compile
   --no-hx-parser                                 Trim pure-Haxe parser fallback paths in stage0 compile graph
+  --no-expr-macros                               Trim Stage3 expression macro expander path in stage0 compile graph
   --disable-prepasses                            Enable stage0 prepass disable define
   --ocaml-only                                   Enable stage0 ocaml-only backend graph define
+  --no-line-directives                           Disable OCaml line directives during stage0 emit
   --ocamlrunparam <value>                        Set OCAMLRUNPARAM for stage0 haxe process
   --telemetry-detail                             Enable detailed builder telemetry
   --telemetry-class <TypeName>                   Restrict detail telemetry to one class
@@ -99,6 +103,10 @@ while [ "$#" -gt 0 ]; do
 			STAGE0_NO_HX_PARSER=1
 			shift
 			;;
+		--no-expr-macros)
+			STAGE0_NO_EXPR_MACROS=1
+			shift
+			;;
 		--no-opt)
 			NO_OPT=1
 			shift
@@ -109,6 +117,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--ocaml-only)
 			STAGE0_OCAML_ONLY=1
+			shift
+			;;
+		--no-line-directives)
+			STAGE0_NO_LINE_DIRECTIVES=1
 			shift
 			;;
 		--ocamlrunparam)
@@ -169,8 +181,10 @@ assert_bool_01 "NO_OPT" "$NO_OPT"
 assert_bool_01 "NO_INLINE" "$NO_INLINE"
 assert_bool_01 "STAGE0_NO_NATIVE_PARSER" "$STAGE0_NO_NATIVE_PARSER"
 assert_bool_01 "STAGE0_NO_HX_PARSER" "$STAGE0_NO_HX_PARSER"
+assert_bool_01 "STAGE0_NO_EXPR_MACROS" "$STAGE0_NO_EXPR_MACROS"
 assert_bool_01 "DISABLE_PREPASSES" "$DISABLE_PREPASSES"
 assert_bool_01 "STAGE0_OCAML_ONLY" "$STAGE0_OCAML_ONLY"
+assert_bool_01 "STAGE0_NO_LINE_DIRECTIVES" "$STAGE0_NO_LINE_DIRECTIVES"
 assert_bool_01 "TELEMETRY_DETAIL" "$TELEMETRY_DETAIL"
 
 if [ ! -x "$REGEN_SCRIPT" ]; then
@@ -187,7 +201,7 @@ RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
 echo "== Stage0 regen profile run"
-echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
+echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
 echo "out_dir=$OUT_DIR"
 
 set +e
@@ -202,8 +216,10 @@ HXHX_STAGE0_NO_OPT="$NO_OPT" \
 HXHX_STAGE0_NO_INLINE="$NO_INLINE" \
 HXHX_STAGE0_NO_NATIVE_PARSER="$STAGE0_NO_NATIVE_PARSER" \
 HXHX_STAGE0_NO_HX_PARSER="$STAGE0_NO_HX_PARSER" \
+HXHX_STAGE0_NO_EXPR_MACROS="$STAGE0_NO_EXPR_MACROS" \
 HXHX_STAGE0_DISABLE_PREPASSES="$DISABLE_PREPASSES" \
 HXHX_STAGE0_OCAML_ONLY="$STAGE0_OCAML_ONLY" \
+HXHX_STAGE0_NO_LINE_DIRECTIVES="$STAGE0_NO_LINE_DIRECTIVES" \
 HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \
 bash "$REGEN_SCRIPT" $SCENARIO_ARGS --report-json "$REPORT_JSON" >"$RUN_STDOUT" 2>"$RUN_STDERR"
 run_code="$?"

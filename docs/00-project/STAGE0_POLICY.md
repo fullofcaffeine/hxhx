@@ -222,6 +222,30 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `--no-hx-parser` maps to `HXHX_STAGE0_NO_HX_PARSER=1` and adds
 `-D hxhx_stage0_no_hx_parser`, which trims pure-Haxe parser fallback paths from the stage0 compile graph.
 
+Additional output-metadata mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-line-directives"
+```
+
+`--no-line-directives` maps to `HXHX_STAGE0_NO_LINE_DIRECTIVES=1` and adds
+`-D ocaml_no_line_directives` during stage0 emit, trimming generated OCaml line-directive metadata.
+
+Additional Stage3 expression-macro graph-trimming mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-expr-macros"
+```
+
+`--no-expr-macros` maps to `HXHX_STAGE0_NO_EXPR_MACROS=1` and adds
+`-D hxhx_stage0_no_expr_macros`, which compiles out Stage3 expression-macro expansion paths in profiling runs.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash

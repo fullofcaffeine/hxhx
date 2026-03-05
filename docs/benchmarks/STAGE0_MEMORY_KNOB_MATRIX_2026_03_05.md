@@ -26,10 +26,24 @@ Failfast `120s` family:
 - Baseline: `8496MB`
 - `HXHX_STAGE0_DISABLE_PREPASSES=1`: `7014MB` (`-17.44%`)
 
+Repeated A/B (`reps=3`, failfast `120s`) families:
+- `--no-line-directives` (`HXHX_STAGE0_NO_LINE_DIRECTIVES=1` / `-D ocaml_no_line_directives`)
+  - Baseline median: `6609MB`
+  - Mitigation median: `6494MB`
+  - Median reduction: `1.74%`
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-061752/summary.json`
+- `--no-expr-macros` (`HXHX_STAGE0_NO_EXPR_MACROS=1` / `-D hxhx_stage0_no_expr_macros`)
+  - Baseline median: `6591MB`
+  - Mitigation median: `6821MB`
+  - Median reduction: `-3.49%` (regression)
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-063216/summary.json`
+
 ## Interpretation
 
-- The strongest single knob in these runs is `HXHX_STAGE0_DISABLE_PREPASSES=1`.
-- In this sample family, reductions are material but did not cross `20%` consistently.
+- The strongest single knob in this matrix remains `HXHX_STAGE0_DISABLE_PREPASSES=1`.
+- `--no-line-directives` gives a small but stable win in this sample family (`~1-2%` median).
+- `--no-expr-macros` is not viable as a mitigation in this probe family (regresses median peak RSS).
+- In these sample families, reductions are material in some cases but still do not cross `20%` consistently.
 - Keep this as an explicit troubleshooting/CI-tuning knob, not a global default change yet.
 
 ## Repro command pattern

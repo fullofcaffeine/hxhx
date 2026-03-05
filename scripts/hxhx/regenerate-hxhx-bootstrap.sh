@@ -49,8 +49,13 @@ Options:
   --stage0-native-parser     Disable stage0 no-native-parser override.
   --stage0-no-hx-parser      Add `-D hxhx_stage0_no_hx_parser` (trim pure-Haxe parser fallbacks in stage0 profiling lane).
   --stage0-hx-parser         Disable stage0 no-hx-parser override.
+  --stage0-no-expr-macros    Add `-D hxhx_stage0_no_expr_macros` (trim Stage3 expression-macro expander path in stage0 compile graph).
+  --stage0-expr-macros       Disable stage0 no-expr-macros override.
   --stage0-ocaml-only        Add `-D hxhx_stage0_ocaml_only` (exclude linked js-native backend from stage0 compile graph).
   --stage0-with-js           Disable stage0 ocaml-only define (default behavior).
+  --stage0-no-line-directives
+                             Add `-D ocaml_no_line_directives` (reduce generated output metadata in stage0 emit).
+  --stage0-line-directives   Disable stage0 no-line-directives override (default behavior).
   --stage0-ocamlrunparam <value>
                              Set OCAMLRUNPARAM for stage0 haxe process only (e.g. s=4M).
   --report-json <path>       Write a machine-readable timing summary JSON.
@@ -78,7 +83,9 @@ Environment knobs (all optional):
   HXHX_STAGE0_NO_INLINE=1           Add `--no-inline` to stage0 haxe compile.
   HXHX_STAGE0_NO_NATIVE_PARSER=1    Add `-D hxhx_stage0_no_native_parser` for stage0 emit.
   HXHX_STAGE0_NO_HX_PARSER=1        Add `-D hxhx_stage0_no_hx_parser` for stage0 emit.
+  HXHX_STAGE0_NO_EXPR_MACROS=1      Add `-D hxhx_stage0_no_expr_macros` for stage0 emit.
   HXHX_STAGE0_OCAML_ONLY=1          Add `-D hxhx_stage0_ocaml_only` for stage0 emit.
+  HXHX_STAGE0_NO_LINE_DIRECTIVES=1  Add `-D ocaml_no_line_directives` for stage0 emit.
   HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
   HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
   HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
@@ -156,7 +163,9 @@ HXHX_STAGE0_NO_OPT="${HXHX_STAGE0_NO_OPT:-0}"
 HXHX_STAGE0_NO_INLINE="${HXHX_STAGE0_NO_INLINE:-0}"
 HXHX_STAGE0_NO_NATIVE_PARSER="${HXHX_STAGE0_NO_NATIVE_PARSER:-0}"
 HXHX_STAGE0_NO_HX_PARSER="${HXHX_STAGE0_NO_HX_PARSER:-0}"
+HXHX_STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_NO_EXPR_MACROS:-0}"
 HXHX_STAGE0_OCAML_ONLY="${HXHX_STAGE0_OCAML_ONLY:-0}"
+HXHX_STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_NO_LINE_DIRECTIVES:-0}"
 HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
@@ -259,11 +268,23 @@ while [ $# -gt 0 ]; do
 		--stage0-hx-parser)
 			HXHX_STAGE0_NO_HX_PARSER=0
 			;;
+		--stage0-no-expr-macros)
+			HXHX_STAGE0_NO_EXPR_MACROS=1
+			;;
+		--stage0-expr-macros)
+			HXHX_STAGE0_NO_EXPR_MACROS=0
+			;;
 		--stage0-ocaml-only)
 			HXHX_STAGE0_OCAML_ONLY=1
 			;;
 		--stage0-with-js)
 			HXHX_STAGE0_OCAML_ONLY=0
+			;;
+		--stage0-no-line-directives)
+			HXHX_STAGE0_NO_LINE_DIRECTIVES=1
+			;;
+		--stage0-line-directives)
+			HXHX_STAGE0_NO_LINE_DIRECTIVES=0
 			;;
 		--stage0-ocamlrunparam)
 			shift
@@ -342,7 +363,9 @@ assert_bool_01 "HXHX_STAGE0_NO_OPT" "$HXHX_STAGE0_NO_OPT"
 assert_bool_01 "HXHX_STAGE0_NO_INLINE" "$HXHX_STAGE0_NO_INLINE"
 assert_bool_01 "HXHX_STAGE0_NO_NATIVE_PARSER" "$HXHX_STAGE0_NO_NATIVE_PARSER"
 assert_bool_01 "HXHX_STAGE0_NO_HX_PARSER" "$HXHX_STAGE0_NO_HX_PARSER"
+assert_bool_01 "HXHX_STAGE0_NO_EXPR_MACROS" "$HXHX_STAGE0_NO_EXPR_MACROS"
 assert_bool_01 "HXHX_STAGE0_OCAML_ONLY" "$HXHX_STAGE0_OCAML_ONLY"
+assert_bool_01 "HXHX_STAGE0_NO_LINE_DIRECTIVES" "$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 	assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
 	assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
 	assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
@@ -702,7 +725,9 @@ compute_fingerprint() {
 		echo "stage0_no_inline=$HXHX_STAGE0_NO_INLINE"
 		echo "stage0_no_native_parser=$HXHX_STAGE0_NO_NATIVE_PARSER"
 		echo "stage0_no_hx_parser=$HXHX_STAGE0_NO_HX_PARSER"
+		echo "stage0_no_expr_macros=$HXHX_STAGE0_NO_EXPR_MACROS"
 		echo "stage0_ocaml_only=$HXHX_STAGE0_OCAML_ONLY"
+		echo "stage0_no_line_directives=$HXHX_STAGE0_NO_LINE_DIRECTIVES"
 		echo "stage0_ocamlrunparam=$HXHX_STAGE0_OCAMLRUNPARAM"
 		echo "stage0_progress=$HXHX_STAGE0_PROGRESS"
 		echo "stage0_telemetry=$HXHX_STAGE0_TELEMETRY"
@@ -767,7 +792,9 @@ write_report_json() {
   "stage0_no_inline": $HXHX_STAGE0_NO_INLINE,
   "stage0_no_native_parser": $HXHX_STAGE0_NO_NATIVE_PARSER,
   "stage0_no_hx_parser": $HXHX_STAGE0_NO_HX_PARSER,
+  "stage0_no_expr_macros": $HXHX_STAGE0_NO_EXPR_MACROS,
   "stage0_ocaml_only": $HXHX_STAGE0_OCAML_ONLY,
+  "stage0_no_line_directives": $HXHX_STAGE0_NO_LINE_DIRECTIVES,
   "dune_jobs": "$(json_escape "$HXHX_DUNE_JOBS")",
   "stage0_ocamlrunparam": "$(json_escape "$HXHX_STAGE0_OCAMLRUNPARAM")",
   "stage0_observability": {
@@ -1056,8 +1083,14 @@ fi
 if [ "$HXHX_STAGE0_NO_HX_PARSER" = "1" ]; then
 	echo "== Stage0 compile mode: pure-Haxe parser fallbacks trimmed (-D hxhx_stage0_no_hx_parser)"
 fi
+if [ "$HXHX_STAGE0_NO_EXPR_MACROS" = "1" ]; then
+	echo "== Stage0 compile mode: Stage3 expression macros disabled (-D hxhx_stage0_no_expr_macros)"
+fi
 if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
 	echo "== Stage0 compile mode: ocaml-only backend graph enabled (-D hxhx_stage0_ocaml_only)"
+fi
+if [ "$HXHX_STAGE0_NO_LINE_DIRECTIVES" = "1" ]; then
+	echo "== Stage0 compile mode: line directives disabled (-D ocaml_no_line_directives)"
 fi
 if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 	echo "== Stage0 OCaml runtime tuning: OCAMLRUNPARAM=$HXHX_STAGE0_OCAMLRUNPARAM"
@@ -1150,8 +1183,14 @@ if [ "$skipped_emit" = "0" ]; then
 	if [ "$HXHX_STAGE0_NO_HX_PARSER" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_no_hx_parser)
 	fi
+	if [ "$HXHX_STAGE0_NO_EXPR_MACROS" = "1" ]; then
+		haxe_args+=(-D hxhx_stage0_no_expr_macros)
+	fi
 	if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
 		haxe_args+=(-D hxhx_stage0_ocaml_only)
+	fi
+	if [ "$HXHX_STAGE0_NO_LINE_DIRECTIVES" = "1" ]; then
+		haxe_args+=(-D ocaml_no_line_directives)
 	fi
 	if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
 		haxe_args+=(-D filter-times --times)

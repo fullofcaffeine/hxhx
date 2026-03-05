@@ -1758,9 +1758,9 @@ class Stage3Compiler {
 				closeMacroSession();
 				return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
 			}
-			#if hxhx_stage0_no_hx_parser
+			#if (hxhx_stage0_no_hx_parser || hxhx_stage0_no_expr_macros)
 			closeMacroSession();
-			return error("expression macro expansion unavailable in stage0 no-hx-parser profiling lane");
+			return error("expression macro expansion unavailable in stage0 profiling lane");
 			#else
 			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, macroSession, exprMacros);
 			resolvedForTyping = exp.modules;
