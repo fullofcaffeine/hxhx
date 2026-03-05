@@ -306,6 +306,21 @@ Internal-tool availability contract:
   `--hxhx-stage1`, `--hxhx-parse`, `--hxhx-selftest`, `--hxhx-ocaml-interp`.
 - `hxhx_stage0_no_internal_tools` is allowed only in profiling A/B runs and must not be enabled in committed bootstrap snapshots or release build lanes.
 
+Additional parser-source graph candidate (inline baseline vs extracted helper):
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --baseline-args "--no-source-normalize-extract" \
+  --mitigation-args "" \
+  --parity-mode status-exit
+```
+
+`--no-source-normalize-extract` maps to `HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1` and adds
+`-D hxhx_stage0_no_source_normalize_extract`, which inlines HxParser source-normalization helpers back
+into the parser module for A/B profiling. The default path keeps these helpers extracted.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash

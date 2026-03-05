@@ -78,6 +78,13 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-084157/summary.json`
   - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
   - Recommendation: `rejected`
+- `--no-source-normalize-extract` baseline vs extracted helper default (parity-aware)
+  - Baseline median: `7104MB`
+  - Mitigation median: `6854MB`
+  - Median reduction: `3.52%`
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-090149/summary.json`
+  - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
+  - Recommendation: `profiling-only`
 
 ## Interpretation
 
@@ -89,6 +96,7 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
 - Stacked combinations (`--no-stage3 --no-line-directives`, optionally with `--disable-prepasses`) show material gains in some runs, but with high variance and still below `20%` median in these repeated probes.
 - The stacked combo that adds `--no-internal-tools` shows an outsized reduction, but it is not equivalent to the baseline lane in this probe family and stays profiling-only until behavior parity is demonstrated.
 - Even with parity-equivalent fail-mode runs, aggressive stackings (for example adding `--no-opt` to `--disable-prepasses --no-stage3 --no-line-directives`) can regress median peak RSS materially.
+- Extracting `HxParser` source-normalization helpers out of the main parser module shows a parity-equivalent but small win (`~3.5%` median) and remains profiling-only for now.
 - In these sample families, reductions are material in some cases but still do not cross `20%` consistently.
 - Keep this as an explicit troubleshooting/CI-tuning knob, not a global default change yet.
 

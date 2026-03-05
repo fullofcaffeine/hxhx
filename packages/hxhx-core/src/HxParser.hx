@@ -120,20 +120,28 @@ class HxParser {
 		- Reuses the same lexer + `parseExpr` routine as module parsing, but stops at EOF.
 	**/
 	public static function parseExprText(source:String):HxExpr {
-		final p = new HxParser(normalizeDenseEscapedQuotes(source));
+		final normalized =
+			#if hxhx_stage0_no_source_normalize_extract
+			normalizeDenseEscapedQuotesInline(source);
+			#else
+			HxParserSourceNormalize.normalizeDenseEscapedQuotes(source);
+			#end
+		final p = new HxParser(normalized);
 		final e = p.parseExpr(() -> p.cur.kind.match(TEof));
 		return e;
 	}
 
-	static function normalizeDenseEscapedQuotes(source:String):String {
-		// Native protocol expression payloads can occasionally arrive with escaped quote
-		// strings compacted to `"""` (for `"\\""`) when whitespace is stripped.
-		//
-		// Example:
-		//   [" ".code, ... , """.code, ...]
-		//
-		// Without this normalization, `readString` sees the first two quotes as an empty
-		// string and then fails with an unterminated literal on the third quote.
+	#if hxhx_stage0_no_source_normalize_extract
+	/**
+		Inline fallback for stage0 A/B measurement only.
+
+		Why
+		- We use this define to compare extracted-helper vs in-class-helper compile graphs under the
+		  same stage0 profiler harness.
+		- This path is not intended as a long-term behavior branch; it exists to generate parity A/B
+		  evidence for `haxe.ocaml-a0pt.1.5`.
+	**/
+	static function normalizeDenseEscapedQuotesInline(source:String):String {
 		if (source == null || source.length == 0)
 			return source;
 		var normalized = source;
@@ -143,21 +151,11 @@ class HxParser {
 			final escapedQuoteString = q + "\\" + q + q;
 			normalized = StringTools.replace(normalized, triple, escapedQuoteString);
 		}
-		normalized = normalizeDenseKeywordSpacing(normalized);
+		normalized = normalizeDenseKeywordSpacingInline(normalized);
 		return normalized;
 	}
 
-	/**
-		Repair compacted keyword spacing in native payload expression slices.
-
-		Why
-		- Native payload emitters can compact spaces in expression snippets.
-		- Constructor forms like `new js.lib.DataView(...)` can arrive as
-		  `newjs.lib.DataView(...)`.
-		- Without spacing repair, the lexer reads `newjs` as an identifier and we lose
-		  constructor semantics (`ENew`), which later emits invalid JS (`newjs.*`).
-	**/
-	static function normalizeDenseKeywordSpacing(source:String):String {
+	static function normalizeDenseKeywordSpacingInline(source:String):String {
 		if (source == null || source.length == 0)
 			return source;
 		final compactNewExpr = ~/(^|[^A-Za-z0-9_])new([A-Za-z_])/g;
@@ -165,6 +163,7 @@ class HxParser {
 			return re.matched(1) + "new " + re.matched(2);
 		});
 	}
+	#end
 
 	/**
 		Parse a function body statement list from standalone source text.
