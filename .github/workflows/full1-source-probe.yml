@@ -98,10 +98,24 @@ jobs:
       - name: Run Full1 source-build probe (non-blocking)
         run: |
           set +e
-          node scripts/ci/full1-source-probe.js --artifacts-dir ".artifacts/full1/source-probe"
+          node scripts/ci/full1-source-probe.js --artifacts-dir ".artifacts/full1/source-probe" &
+          probe_pid="$!"
+          elapsed=0
+          while kill -0 "${probe_pid}" 2>/dev/null; do
+            echo "full1-source-probe heartbeat: pid=${probe_pid} elapsed=${elapsed}s"
+            sleep 20
+            elapsed=$((elapsed + 20))
+          done
+          wait "${probe_pid}"
           probe_exit="$?"
           set -e
           echo "full1-source-probe exit=${probe_exit} (non-blocking lane)"
+          if [ -f ".artifacts/full1/source-probe/source-probe.summary.json" ]; then
+            echo "full1-source-probe summary:"
+            cat ".artifacts/full1/source-probe/source-probe.summary.json"
+          else
+            echo "full1-source-probe summary missing"
+          fi
           exit 0
 
       - name: Upload source-probe artifacts
