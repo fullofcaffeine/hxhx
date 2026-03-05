@@ -154,28 +154,61 @@ function resolveHaxelibBin() {
   return configured || 'haxelib'
 }
 
-function extractFirstHaxelibClassPath(outputText) {
+function parseHaxelibPathLines(outputText) {
   const lines = String(outputText || '').split(/\r?\n/)
+  const parsed = []
   for (const rawLine of lines) {
     const line = rawLine.trim()
-    if (!line || line.startsWith('-')) {
+    if (!line) {
       continue
     }
-    return line
+    parsed.push(line)
   }
-  return ''
+  return parsed
 }
 
-function hasUsableHaxelibPath(haxelibBin, lib, cwd, env) {
+function probeHaxelibPathLines(haxelibBin, lib, cwd, env) {
   const probe = runCommand(haxelibBin, ['--always', 'path', lib], { cwd, env })
   if (probe.status !== 0) {
-    return false
+    return null
   }
-  const candidate = extractFirstHaxelibClassPath(probe.stdout || '')
-  if (!candidate) {
-    return false
+  const lines = parseHaxelibPathLines(probe.stdout || '')
+  if (lines.length === 0) {
+    return null
   }
-  return fs.existsSync(candidate)
+  if (lines.some((line) => /^-lib\s+\S+\s+is missing\b/.test(line))) {
+    return null
+  }
+
+  const classPaths = lines.filter((line) => !line.startsWith('-'))
+  if (classPaths.length > 0 && classPaths.some((cpPath) => !fs.existsSync(cpPath))) {
+    return null
+  }
+  return lines
+}
+
+function writeSuiteHaxelibHxml(lib, lines, suiteDir) {
+  const hxmlDir = path.join(suiteDir, 'haxe_libraries')
+  ensureDir(hxmlDir)
+  const hxmlPath = path.join(hxmlDir, `${lib}.hxml`)
+  const out = []
+  for (const line of lines) {
+    if (
+      line.startsWith('-D ')
+      || line.startsWith('--macro ')
+      || line.startsWith('-cp ')
+      || line.startsWith('--class-path ')
+      || line.startsWith('-')
+    ) {
+      out.push(line)
+      continue
+    }
+    out.push(`-cp ${line}`)
+  }
+  if (out.length === 0) {
+    fail(`failed to generate haxelib hxml for ${lib}: no path/macros/defines emitted`)
+  }
+  fs.writeFileSync(hxmlPath, `${out.join('\n')}\n`, 'utf8')
 }
 
 function ensureSuiteDependencies(suite, cwd, env) {
@@ -186,32 +219,34 @@ function ensureSuiteDependencies(suite, cwd, env) {
 
   const haxelibBin = resolveHaxelibBin()
   for (const dep of deps) {
-    if (hasUsableHaxelibPath(haxelibBin, dep.name, cwd, env)) {
-      continue
-    }
-
-    const installArgs = ['--always', 'git', dep.name, dep.repo]
-    if (dep.ref) {
-      installArgs.push(dep.ref)
-    }
-
-    let installOk = false
-    let lastInstall = null
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      const result = runCommand(haxelibBin, installArgs, { cwd, env })
-      lastInstall = result
-      if (result.status === 0 && hasUsableHaxelibPath(haxelibBin, dep.name, cwd, env)) {
-        installOk = true
-        break
+    let resolvedLines = probeHaxelibPathLines(haxelibBin, dep.name, cwd, env)
+    if (resolvedLines == null) {
+      const installArgs = ['--always', 'git', dep.name, dep.repo]
+      if (dep.ref) {
+        installArgs.push(dep.ref)
       }
-      const retryMessage = result.stderr || result.stdout || `exit=${result.status}`
-      console.error(`[full1-suite] dependency install retry ${attempt}/3 for ${dep.name}: ${retryMessage}`)
+
+      let installOk = false
+      let lastInstall = null
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const result = runCommand(haxelibBin, installArgs, { cwd, env })
+        lastInstall = result
+        resolvedLines = probeHaxelibPathLines(haxelibBin, dep.name, cwd, env)
+        if (result.status === 0 && resolvedLines != null) {
+          installOk = true
+          break
+        }
+        const retryMessage = result.stderr || result.stdout || `exit=${result.status}`
+        console.error(`[full1-suite] dependency install retry ${attempt}/3 for ${dep.name}: ${retryMessage}`)
+      }
+
+      if (!installOk || resolvedLines == null) {
+        const errText = `${lastInstall && lastInstall.stdout ? lastInstall.stdout : ''}${lastInstall && lastInstall.stderr ? lastInstall.stderr : ''}`
+        fail(`failed to install required dependency ${dep.name} via haxelib git\n${errText}`)
+      }
     }
 
-    if (!installOk) {
-      const errText = `${lastInstall && lastInstall.stdout ? lastInstall.stdout : ''}${lastInstall && lastInstall.stderr ? lastInstall.stderr : ''}`
-      fail(`failed to install required dependency ${dep.name} via haxelib git\n${errText}`)
-    }
+    writeSuiteHaxelibHxml(dep.name, resolvedLines, cwd)
   }
 }
 
