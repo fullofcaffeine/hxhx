@@ -239,6 +239,9 @@ class ParserStage {
 						HxModuleDecl.getHeaderOnly(nativeDecl), HxModuleDecl.getHasToplevelMain(nativeDecl));
 				}
 
+				#if hxhx_stage0_no_hx_parser
+				return enrichNativeDecl(parseViaNativeHooks(source, expectedMainClass));
+				#else
 				final v = Sys.getEnv("HIH_FORCE_HX_PARSER");
 				if (v == "1" || v == "true" || v == "yes")
 					return enrichNativeDecl(new HxParser(source).parseModule(expectedMainClass));
@@ -267,6 +270,7 @@ class ParserStage {
 				} catch (eNative:String) {
 					return fallbackAfterNativeFailure(eNative);
 				}
+				#end
 			})());
 			#else
 			new HxParser(source).parseModule(expectedMainClass);
@@ -1506,6 +1510,7 @@ class ParserStage {
 		}
 
 		var outBody = body;
+		#if !hxhx_stage0_no_hx_parser
 		if (methodBodySrc != null && methodBodySrc.length > 0) {
 			if (Sys.getEnv("HXHX_TRACE_BODY_PARSE_HAVE") == "1") {
 				try {
@@ -1549,6 +1554,7 @@ class ParserStage {
 			}
 			HxParser.debugBodyLabel = "";
 		}
+		#end
 
 		return new HxFunctionDecl(name, vis, isStatic, args, returnTypeHint, outBody, retStr);
 	}
@@ -1676,6 +1682,10 @@ class ParserStage {
 				return EFloat(f);
 		}
 
+		#if hxhx_stage0_no_hx_parser
+		// Stage0 profiling lane: avoid pulling the pure-Haxe parser fallback surface.
+		return EUnsupported(s);
+		#else
 		// Fallback: try to parse a small field/call chain (e.g. `Util.ping()`).
 		return try {
 			HxParser.parseExprText(s);
@@ -1686,6 +1696,7 @@ class ParserStage {
 			// Last resort: treat as unsupported so emitters don't attempt to print raw Haxe text as OCaml.
 			EUnsupported(s);
 		}
+		#end
 	}
 
 	static function parseRegexLiteral(source:String):Null<{pattern:String, flags:String}> {

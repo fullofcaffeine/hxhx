@@ -112,7 +112,7 @@ class CompilerDriver {
 				}
 			}
 
-			#if (hih_native_parser && !hxhx_stage0_no_native_parser)
+			#if (hih_native_parser && !hxhx_stage0_no_native_parser && !hxhx_stage0_no_hx_parser)
 			// Compare against the pure-Haxe frontend for this subset.
 			final haxeDecl = new HxParser(src).parseModule();
 			if (HxModuleDecl.getPackagePath(haxeDecl) != parsedPkg)

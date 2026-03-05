@@ -210,6 +210,18 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `-D hxhx_stage0_no_native_parser`, forcing the pure-Haxe parser branch even when
 `-D hih_native_parser` is present in `build.hxml`.
 
+Additional fallback-trimming mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-hx-parser"
+```
+
+`--no-hx-parser` maps to `HXHX_STAGE0_NO_HX_PARSER=1` and adds
+`-D hxhx_stage0_no_hx_parser`, which trims pure-Haxe parser fallback paths from the stage0 compile graph.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash

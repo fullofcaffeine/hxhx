@@ -1207,6 +1207,10 @@ class Stage3Compiler {
 	static function parseGeneratedMembers(members:Array<String>):{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
 		if (members == null || members.length == 0)
 			return {functions: [], fields: []};
+		#if hxhx_stage0_no_hx_parser
+		// Stage0 profiling lane: trim pure-Haxe parser payload from stage0 compile graph.
+		return {functions: [], fields: []};
+		#else
 		final combined = members.join("\n");
 		final fake = "class __HxHxBuildFields {\n" + combined + "\n}\n";
 		final p = new HxParser(fake);
@@ -1216,6 +1220,7 @@ class Stage3Compiler {
 			functions: HxClassDecl.getFunctions(cls),
 			fields: HxClassDecl.getFields(cls)
 		};
+		#end
 	}
 
 	static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
@@ -1753,9 +1758,14 @@ class Stage3Compiler {
 				closeMacroSession();
 				return error("expression macro expansion requested (HXHX_EXPR_MACROS), but no macro host session is available");
 			}
+			#if hxhx_stage0_no_hx_parser
+			closeMacroSession();
+			return error("expression macro expansion unavailable in stage0 no-hx-parser profiling lane");
+			#else
 			final exp = ExprMacroExpander.expandResolvedModules(resolvedForTyping, macroSession, exprMacros);
 			resolvedForTyping = exp.modules;
 			Sys.println("expr_macros_expanded=" + exp.expandedCount);
+			#end
 		}
 
 		final typerIndex = TyperIndex.build(resolvedForTyping);
