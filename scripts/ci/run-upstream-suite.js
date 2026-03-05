@@ -269,6 +269,51 @@ function hasMiscFilterDefine(args) {
   return false
 }
 
+function hasExplicitTargetArg(args) {
+  const targetFlags = new Set([
+    '--ocaml',
+    '--ocaml-eval',
+    '--compat',
+    '--js',
+    '-js',
+    '--lua',
+    '--swf',
+    '--neko',
+    '--php',
+    '--cpp',
+    '--cppia',
+    '--cs',
+    '--java',
+    '--jvm',
+    '--python',
+    '--hl',
+    '--interp',
+  ])
+  return args.some((arg) => targetFlags.has(arg))
+}
+
+function normalizeNativeCommandArgs(args) {
+  const out = []
+  let sawInterp = false
+  for (const arg of args) {
+    if (arg === '--interp') {
+      sawInterp = true
+      continue
+    }
+    out.push(arg)
+  }
+
+  const hadTarget = hasExplicitTargetArg(out)
+  if (!hadTarget) {
+    out.unshift('--ocaml')
+  }
+  if ((sawInterp || !hadTarget) && !out.includes('--hxhx-no-emit')) {
+    out.push('--hxhx-no-emit')
+  }
+
+  return out
+}
+
 function resolveHxhxBinary(root, currentValue) {
   if (currentValue) {
     const resolved = path.resolve(root, currentValue)
@@ -315,7 +360,9 @@ function buildSuiteCommands(parsed, suiteConfig, suiteDir) {
   const commands = []
 
   for (const group of groups) {
-    const args = directiveGroupToArgv(group)
+    const rawArgs = directiveGroupToArgv(group)
+    const containsHxmlArg = rawArgs.some((arg) => arg.toLowerCase().endsWith('.hxml'))
+    const args = containsHxmlArg ? rawArgs.slice() : normalizeNativeCommandArgs(rawArgs)
     if (parsed.suite === 'misc' && parsed.miscFilter && !hasMiscFilterDefine(args)) {
       args.push('-D', `MISC_TEST_FILTER=${parsed.miscFilter}`)
     }
