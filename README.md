@@ -116,6 +116,7 @@ Current direction: keep target-core logic reusable so promotion is packaging/loa
 - Native JS lane (`--js <file>`) exists as a scoped MVP lane with explicit in/out-of-scope matrix:
   - `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
 - Full upstream compatibility gates (Gate 1/2/3) run on weekly/manual cadence (see `docs/00-project/CI_GATES.md`).
+- Full1 strict suite scaffolding uses a stable bootstrap-based matrix plus a non-blocking source-build probe lane for `server`/`optimization` (`FULL1_SOURCE_BUILD_PROBE:*` evidence in CI artifacts).
 - Semantic-diff PR canary is now scoped to stdlib/runtimegen-sensitive changes and always publishes triage artifacts (`semantic-diff-pr-artifacts`).
 - Macro runtime mode parity is tracked weekly in both `external-host` and `inproc` lanes (see `.github/workflows/macro-runtime-parity-weekly.yml` and `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`).
 - Native lanes default to in-process macro runtime (`inproc`); fallback/rollback remains available with `HXHX_MACRO_RUNTIME_MODE=external-host`.

@@ -25,6 +25,12 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
+## Advisory weekly evidence (non-blocking)
+
+| Workflow | File | Cadence | Expected signal | Evidence artifact/log |
+| --- | --- | --- | --- | --- |
+| Full1 / Source-Build Probe | `.github/workflows/full1-source-probe.yml` | Weekly schedule | `FULL1_SOURCE_BUILD_PROBE:PASS` (ideal) or `FULL1_SOURCE_BUILD_PROBE:WARN` (diagnostic follow-up required) | Artifact `full1-source-probe-<run_id>` |
+
 ## Weekly procedure
 
 1. Open GitHub Actions and filter to the weekly evidence workflows above.
@@ -35,11 +41,14 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
    - `macro-runtime-parity-blockers.md`
    - suite logs (`unit`, `runci`, `display/protocol`)
 5. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
-6. Manually dispatch `Perf / HXHX KPI (Report Only)`.
-7. Download KPI artifact and compare `report.json` against:
+6. Check `Full1 / Source-Build Probe`:
+   - `PASS`: source-build probe agrees with current strict matrix behavior.
+   - `WARN`: do not block release by this alone; open/update a bead with artifact links and classify as bootstrap-lag, source-build instability, or parity bug.
+7. Manually dispatch `Perf / HXHX KPI (Report Only)`.
+8. Download KPI artifact and compare `report.json` against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
    - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
-8. Record evidence links and outcomes in the weekly ops note/bead comment.
+9. Record evidence links and outcomes in the weekly ops note/bead comment.
 
 ## Triage matrix
 
@@ -50,6 +59,7 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | Gate M7 scheduled failure or missing strict marker | On-duty release maintainer | Re-run Gate M7 with strict defaults; attach `gate-m7-logs-<run_id>` and marker lines to regression bead | Treat as release blocker until resolved |
 | Semantic-diff nightly failure or missing artifact | On-duty stdlib maintainer | Re-run workflow, inspect comparator/lane logs, and attach `semantic-diff-nightly-artifacts` to bead | Escalate to stdlib/runtime owners if unresolved in 24h |
 | KPI workflow emits no report or exceeds threshold budget | On-duty performance maintainer | Re-run KPI once; compare `report.json` with threshold file and classify expected vs regression | Escalate to release maintainer when regression exceeds thresholds on two consecutive weekly runs |
+| Full1 source-build probe emits `FULL1_SOURCE_BUILD_PROBE:WARN` | On-duty Full1 maintainer | Download `full1-source-probe-*` artifact, identify whether failure is build path, macro-host path, or suite parity, and update/open a blocker bead with run URL + summary JSON | Escalate to compiler owners if WARN repeats for two consecutive weekly runs on the same suite |
 | Scheduled workflow did not run | On-duty CI maintainer | Trigger manual dispatch immediately and capture run URL | Escalate to infra/CI owners if scheduler miss repeats next week |
 
 ## Local reproduction commands
@@ -75,6 +85,9 @@ bash scripts/test-stdlib-semantic-diff-lane.sh
 
 # KPI report generation
 HXHX_KPI_REPS=2 HXHX_KPI_RUN_MACRO_LANE=1 npm run hxhx:bench:kpi
+
+# Full1 source-build probe (non-blocking diagnostic lane)
+npm run -s test:full1:source-probe
 ```
 
 ## Related docs

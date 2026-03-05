@@ -1,0 +1,200 @@
+#!/usr/bin/env node
+/**
+ * full1-source-probe.js
+ *
+ * Non-blocking diagnostic lane for Full1:
+ * - Build hxhx from source (HXHX_FORCE_STAGE0=1)
+ * - Reuse that binary for selected strict upstream suites
+ * - Emit FULL1_SOURCE_BUILD_PROBE:PASS or FULL1_SOURCE_BUILD_PROBE:WARN
+ *
+ * This script is intentionally non-blocking (exit code 0) so it can run as
+ * scheduled evidence without destabilizing the primary bootstrap-based matrix.
+ */
+
+const fs = require('fs')
+const path = require('path')
+const cp = require('child_process')
+
+const DEFAULT_SUITES = ['server', 'optimization']
+
+function parseArgs(argv) {
+  const out = {
+    root: process.cwd(),
+    artifactsDir: '.artifacts/full1/source-probe',
+    suites: DEFAULT_SUITES.slice(),
+  }
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]
+    if (arg === '--root') {
+      out.root = String(argv[i + 1] || '').trim()
+      i += 1
+      continue
+    }
+    if (arg === '--artifacts-dir') {
+      out.artifactsDir = String(argv[i + 1] || '').trim()
+      i += 1
+      continue
+    }
+    if (arg === '--suites') {
+      const raw = String(argv[i + 1] || '').trim()
+      i += 1
+      out.suites = raw.length === 0
+        ? []
+        : raw
+          .split(',')
+          .map((v) => v.trim().toLowerCase())
+          .filter((v) => v.length > 0)
+      continue
+    }
+    throw new Error(`unknown argument: ${arg}`)
+  }
+
+  if (out.suites.length === 0) {
+    throw new Error('no suites selected for source probe')
+  }
+
+  out.root = path.resolve(out.root)
+  out.artifactsDir = path.resolve(out.root, out.artifactsDir)
+  return out
+}
+
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true })
+}
+
+function run(command, args, options) {
+  return cp.spawnSync(command, args, {
+    cwd: options.cwd,
+    env: options.env,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 64,
+  })
+}
+
+function parseBuildBinaryPath(stdoutText) {
+  const lines = String(stdoutText || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+  if (lines.length === 0) {
+    return ''
+  }
+  const candidate = lines[lines.length - 1]
+  if (candidate.startsWith('== ')) {
+    return ''
+  }
+  return candidate
+}
+
+function main() {
+  const startedAt = new Date()
+  let parsed
+  try {
+    parsed = parseArgs(process.argv.slice(2))
+  } catch (error) {
+    console.error(`[full1-source-probe] ERROR: ${String(error && error.message ? error.message : error)}`)
+    process.exit(2)
+  }
+
+  ensureDir(parsed.artifactsDir)
+  const suitesArtifactsDir = path.join(parsed.artifactsDir, 'suites')
+  ensureDir(suitesArtifactsDir)
+
+  const summary = {
+    schema: 'full1-source-probe-summary.v1',
+    started_at: startedAt.toISOString(),
+    root: parsed.root,
+    suites: parsed.suites,
+    build: {
+      attempted: true,
+      exit_code: null,
+      hxhx_bin: '',
+      stdout: '',
+      stderr: '',
+      error: '',
+    },
+    suites_run: [],
+    marker: 'FULL1_SOURCE_BUILD_PROBE:WARN',
+    status: 'warn',
+  }
+
+  const env = { ...process.env }
+  env.HXHX_FORCE_STAGE0 = env.HXHX_FORCE_STAGE0 || '1'
+  env.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS = env.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS || '900'
+  env.HXHX_STAGE0_CONNECT_IDLE_SECS = env.HXHX_STAGE0_CONNECT_IDLE_SECS || '45'
+
+  const buildScript = path.join(parsed.root, 'scripts/hxhx/build-hxhx.sh')
+  const buildResult = run('bash', [buildScript], { cwd: parsed.root, env })
+  summary.build.exit_code = buildResult.status == null ? -1 : buildResult.status
+  summary.build.stdout = buildResult.stdout || ''
+  summary.build.stderr = buildResult.stderr || ''
+  summary.build.error = buildResult.error ? String(buildResult.error.message || buildResult.error) : ''
+
+  let hxhxBin = ''
+  if (summary.build.exit_code === 0) {
+    const candidate = parseBuildBinaryPath(buildResult.stdout || '')
+    if (candidate.length > 0) {
+      const resolved = path.resolve(parsed.root, candidate)
+      if (fs.existsSync(resolved)) {
+        hxhxBin = resolved
+        summary.build.hxhx_bin = resolved
+      }
+    }
+  }
+
+  if (hxhxBin.length > 0) {
+    for (const suite of parsed.suites) {
+      const suiteStartedAt = new Date()
+      const suiteResult = run(
+        'node',
+        [
+          path.join(parsed.root, 'scripts/ci/run-upstream-suite.js'),
+          '--suite',
+          suite,
+          '--strict',
+          '--hxhx-bin',
+          hxhxBin,
+          '--artifacts-dir',
+          suitesArtifactsDir,
+        ],
+        { cwd: parsed.root, env }
+      )
+      const suiteEndedAt = new Date()
+      summary.suites_run.push({
+        suite,
+        started_at: suiteStartedAt.toISOString(),
+        ended_at: suiteEndedAt.toISOString(),
+        duration_ms: suiteEndedAt.getTime() - suiteStartedAt.getTime(),
+        exit_code: suiteResult.status == null ? -1 : suiteResult.status,
+        stdout: suiteResult.stdout || '',
+        stderr: suiteResult.stderr || '',
+        error: suiteResult.error ? String(suiteResult.error.message || suiteResult.error) : '',
+      })
+    }
+  }
+
+  const allSuitePass = summary.suites_run.length === parsed.suites.length
+    && summary.suites_run.every((runItem) => runItem.exit_code === 0)
+  const buildPass = summary.build.exit_code === 0 && hxhxBin.length > 0
+
+  if (buildPass && allSuitePass) {
+    summary.status = 'pass'
+    summary.marker = 'FULL1_SOURCE_BUILD_PROBE:PASS'
+  } else {
+    summary.status = 'warn'
+    summary.marker = 'FULL1_SOURCE_BUILD_PROBE:WARN'
+  }
+
+  const endedAt = new Date()
+  summary.ended_at = endedAt.toISOString()
+  summary.duration_ms = endedAt.getTime() - startedAt.getTime()
+
+  const summaryPath = path.join(parsed.artifactsDir, 'source-probe.summary.json')
+  fs.writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
+
+  console.log(`[full1-source-probe] summary=${summaryPath}`)
+  console.log(summary.marker)
+}
+
+main()

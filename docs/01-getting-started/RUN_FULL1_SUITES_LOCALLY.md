@@ -48,6 +48,21 @@ Each command writes:
 npm run -s test:full1:suites:strict
 ```
 
+## Source-Build Probe (Non-Blocking Diagnostic Lane)
+
+Use this when you need to check whether a source-only fix works before bootstrap snapshots catch up.
+
+```bash
+npm run -s test:full1:source-probe
+```
+
+What it does:
+
+- forces source build (`HXHX_FORCE_STAGE0=1`),
+- runs narrowed strict suites (`server`, `optimization`),
+- writes artifacts under `.artifacts/full1/source-probe/`,
+- emits `FULL1_SOURCE_BUILD_PROBE:PASS` or `FULL1_SOURCE_BUILD_PROBE:WARN`.
+
 ## Optional Debug Knobs
 
 - Run only one misc project:
@@ -59,3 +74,4 @@ npm run -s test:full1:suites:strict
 
 - These runners are part of Full1 gate scaffolding and may fail while parity work is still in progress.
 - Failures are expected to be actionable through the suite log and summary artifacts.
+- The primary Full1 matrix remains bootstrap-based for stability; source probe is advisory evidence.
