@@ -1,5 +1,11 @@
 package hxhx.macro;
 
+private enum MacroHostReadResult {
+	ReadLine(line:String);
+	ReadEof;
+	ReadError(message:String);
+}
+
 /**
 	Macro host RPC client (Stage 4, Model A).
 
@@ -224,7 +230,10 @@ class MacroHostClient {
 **/
 private class MacroClient {
 	final proc:sys.io.Process;
+	final hostIdleTimeoutSecs:Int;
+	final hostTotalTimeoutSecs:Int;
 	var nextId:Int = 1;
+	var timeoutTriggered:Bool = false;
 
 	static final TRACE:Bool = {
 		final v = Sys.getEnv("HXHX_MACRO_TRACE");
@@ -238,9 +247,12 @@ private class MacroClient {
 		|| v == "true"
 		|| v == "yes";
 	};
+	static inline var HOST_POLL_INTERVAL_SECS:Float = 0.05;
 
 	function new(proc:sys.io.Process) {
 		this.proc = proc;
+		this.hostIdleTimeoutSecs = parseTimeoutSeconds("HXHX_MACRO_HOST_IDLE_SECS", 90);
+		this.hostTotalTimeoutSecs = parseTimeoutSeconds("HXHX_MACRO_HOST_TOTAL_SECS", 300);
 	}
 
 	public static function connect(exe:String):MacroClient {
@@ -262,6 +274,8 @@ private class MacroClient {
 
 	public function call(method:String, tail:String):String {
 		final id = nextId++;
+		final callStart = haxe.Timer.stamp();
+		var lastProgress = callStart;
 		if (TRACE) {
 			try
 				Sys.stderr().writeString("[hxhx macro rpc] -> " + method + "\n")
@@ -279,22 +293,8 @@ private class MacroClient {
 		}
 
 		while (true) {
-			final line = try {
-				proc.stdout.readLine();
-			} catch (_:haxe.io.Eof) {
-				final hostStderr = drainStderr(60);
-				final exitCode = try proc.exitCode() catch (_:String) -1;
-				throw "macro host: unexpected EOF while waiting for response (method="
-					+ method
-					+ ", exit="
-					+ exitCode
-					+ ")"
-					+ (hostStderr.length == 0 ? "" : ("\nmacro host stderr:\n" + hostStderr));
-			} catch (e:haxe.io.Error) {
-				throw "macro host: failed to read response: " + Std.string(e);
-			} catch (e:String) {
-				throw "macro host: failed to read response: " + e;
-			}
+			final line = readLineForPhase(method, "response", callStart, lastProgress);
+			lastProgress = haxe.Timer.stamp();
 			final trimmed = StringTools.trim(line);
 			if (trimmed.length == 0)
 				continue;
@@ -321,6 +321,114 @@ private class MacroClient {
 		}
 
 		return "";
+	}
+
+	static function parseTimeoutSeconds(name:String, defaultValue:Int):Int {
+		final raw = Sys.getEnv(name);
+		if (raw == null)
+			return defaultValue;
+		final text = StringTools.trim(raw);
+		if (text.length == 0)
+			return defaultValue;
+		final parsed = Std.parseInt(text);
+		if (parsed == null || parsed < 0) {
+			try
+				Sys.stderr().writeString('hxhx: invalid ${name}=${raw}; expected non-negative integer, using ${defaultValue}.\n')
+			catch (_:haxe.io.Error) {} catch (_:String) {}
+			return defaultValue;
+		}
+		return parsed;
+	}
+
+	function readLineForPhase(method:String, phase:String, callStart:Float, lastProgress:Float):String {
+		final lineResult = readLineWithTimeout(method, phase, callStart, lastProgress);
+		return switch (lineResult) {
+			case ReadLine(line):
+				line;
+			case ReadEof:
+				final hostStderr = drainStderr(60);
+				final exitCode = try proc.exitCode() catch (_:String) -1;
+				throw "macro host: unexpected EOF during "
+					+ phase
+					+ " (method="
+					+ method
+					+ ", exit="
+					+ exitCode
+					+ ")"
+					+ (hostStderr.length == 0 ? "" : ("\nmacro host stderr:\n" + hostStderr));
+			case ReadError(message):
+				throw "macro host: failed to read " + phase + " line: " + message;
+		}
+	}
+
+	function readLineWithTimeout(method:String, phase:String, callStart:Float, lastProgress:Float):MacroHostReadResult {
+		#if eval
+		try {
+			return ReadLine(proc.stdout.readLine());
+		} catch (_:haxe.io.Eof) {
+			return ReadEof;
+		} catch (e:haxe.io.Error) {
+			return ReadError(Std.string(e));
+		} catch (e:String) {
+			return ReadError(e);
+		}
+		#else
+		var result:MacroHostReadResult = ReadError("uninitialized");
+		var done = false;
+		sys.thread.Thread.create(function() {
+			try {
+				result = ReadLine(proc.stdout.readLine());
+			} catch (_:haxe.io.Eof) {
+				result = ReadEof;
+			} catch (e:haxe.io.Error) {
+				result = ReadError(Std.string(e));
+			} catch (e:String) {
+				result = ReadError(e);
+			}
+			done = true;
+		});
+		while (!done) {
+			ensureNoTimeout(method, phase, callStart, lastProgress);
+			Sys.sleep(HOST_POLL_INTERVAL_SECS);
+		}
+		return result;
+		#end
+	}
+
+	function ensureNoTimeout(method:String, phase:String, callStart:Float, lastProgress:Float):Void {
+		final now = haxe.Timer.stamp();
+		final totalElapsed = now - callStart;
+		final idleElapsed = now - lastProgress;
+
+		if (hostTotalTimeoutSecs > 0 && totalElapsed >= hostTotalTimeoutSecs) {
+			failTimeout("total", method, phase, totalElapsed, idleElapsed);
+		}
+
+		if (hostIdleTimeoutSecs > 0 && idleElapsed >= hostIdleTimeoutSecs) {
+			failTimeout("idle", method, phase, totalElapsed, idleElapsed);
+		}
+	}
+
+	function failTimeout(reason:String, method:String, phase:String, totalElapsed:Float, idleElapsed:Float):Void {
+		timeoutTriggered = true;
+		final marker = "MACRO_HOST_STALL_DETECTED=1" + " reason=" + reason + " method=" + method + " phase=" + phase;
+		try
+			Sys.stderr().writeString(marker + "\n")
+		catch (_:haxe.io.Error) {} catch (_:String) {}
+
+		#if !eval
+		sys.thread.Thread.create(function() {
+			try
+				proc.kill()
+			catch (_:haxe.io.Error) {} catch (_:String) {}
+			try
+				proc.close()
+			catch (_:haxe.io.Error) {} catch (_:String) {}
+		});
+		#end
+
+		throw "macro host timeout (reason=" + reason + ", method=" + method + ", phase=" + phase + ", total=" + Std.int(totalElapsed) + "s, idle="
+			+ Std.int(idleElapsed) + "s)\n" + marker;
 	}
 
 	function drainStderr(maxLines:Int):String {
@@ -474,6 +582,9 @@ private class MacroClient {
 	}
 
 	public function close():Void {
+		if (timeoutTriggered)
+			return;
+
 		try {
 			proc.stdin.writeString("quit\n", null);
 			proc.stdin.flush();

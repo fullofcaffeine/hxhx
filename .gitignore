@@ -57,6 +57,7 @@ test/portable/**/out/
 test/portable/**/stdout.txt
 test/portable/**/stderr.txt
 tmp_stat_portable.txt
+.tmp/
 
 # Node
 node_modules/

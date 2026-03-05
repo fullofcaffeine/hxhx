@@ -406,6 +406,12 @@ The macro RPC section specifically runs:
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-selftest`
 - `HXHX_MACRO_HOST_EXE=... <hxhx> --hxhx-macro-run "BuiltinMacros.smoke()"`
 
+Timeout guardrails (external-host mode):
+
+- `HXHX_MACRO_HOST_IDLE_SECS=<n>`: fail if no macro-host stdout progress for `<n>` seconds (default `90`; `0` disables idle timeout).
+- `HXHX_MACRO_HOST_TOTAL_SECS=<n>`: fail if a single macro-host call exceeds `<n>` seconds total (default `300`; `0` disables total timeout).
+- On timeout, `hxhx` emits marker `MACRO_HOST_STALL_DETECTED=1 ...` and kills the host process before failing.
+
 Native macro-module dynlink smoke (C7R lane):
 
 ```bash
