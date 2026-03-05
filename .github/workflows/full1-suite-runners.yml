@@ -2,19 +2,6 @@ name: Full1 / Suite Runners Strict
 
 on:
   workflow_dispatch:
-    inputs:
-      suite:
-        description: "Suite to run (all,misc,server,threads,optimization,display)"
-        type: choice
-        required: false
-        default: all
-        options:
-          - all
-          - misc
-          - server
-          - threads
-          - optimization
-          - display
   schedule:
     # Weekly strict suite evidence for Full1 parity closure.
     - cron: "0 9 * * 6"
@@ -39,7 +26,6 @@ jobs:
       fail-fast: false
       matrix:
         suite: [misc, server, threads, optimization, display]
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.suite == '' || github.event.inputs.suite == 'all' || github.event.inputs.suite == matrix.suite }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
