@@ -5,7 +5,8 @@ import haxe.io.Eof;
 import haxe.io.Bytes;
 import hxhx.Stage1Compiler.Stage1Args;
 import hxhx.macro.MacroHostClient;
-import hxhx.macro.MacroHostClient.MacroHostSession;
+import hxhx.macro.MacroRuntimeMode;
+import hxhx.macro.MacroRuntimeSession;
 import backend.BackendContext;
 import backend.BackendDispatchBoundary;
 import backend.BackendRegistry;
@@ -128,6 +129,7 @@ class Stage3Compiler {
 	static function parseGlobalStage3Flags(args:Array<String>):{
 		outDir:String,
 		backendId:String,
+		macroRuntimeMode:Null<String>,
 		typeOnly:Bool,
 		emitFullBodies:Bool,
 		noEmit:Bool,
@@ -136,6 +138,7 @@ class Stage3Compiler {
 	} {
 		var outDir = "";
 		var backendId = "ocaml-stage3";
+		var macroRuntimeMode:Null<String> = null;
 		var typeOnly = false;
 		var emitFullBodies = false;
 		var noEmit = false;
@@ -159,6 +162,12 @@ class Stage3Compiler {
 					}
 					backendId = args[i + 1];
 					i += 2;
+				case "--hxhx-macro-runtime":
+					if (i + 1 >= args.length) {
+						throw "missing value after --hxhx-macro-runtime";
+					}
+					macroRuntimeMode = args[i + 1];
+					i += 2;
 				case "--hxhx-type-only":
 					typeOnly = true;
 					i += 1;
@@ -180,6 +189,7 @@ class Stage3Compiler {
 		return {
 			outDir: outDir,
 			backendId: backendId,
+			macroRuntimeMode: macroRuntimeMode,
 			typeOnly: typeOnly,
 			emitFullBodies: emitFullBodies,
 			noEmit: noEmit,
@@ -1243,11 +1253,17 @@ class Stage3Compiler {
 		}
 		final outDir = g.outDir;
 		final backendId = g.backendId;
+		final macroRuntimeMode = try {
+			MacroRuntimeMode.resolve(g.macroRuntimeMode);
+		} catch (e:String) {
+			return error(e);
+		}
 		var typeOnly = g.typeOnly;
 		var emitFullBodies = g.emitFullBodies;
 		var noEmit = g.noEmit;
 		var noRun = g.noRun;
 		final rest = g.rest;
+		MacroRuntimeMode.emitMarker(macroRuntimeMode);
 		final jsOutputHintRaw = findJsOutputFileHint(rest);
 
 		// Stage3 bring-up is intentionally stricter than a full `haxe` CLI, but it needs to be able to
@@ -1342,7 +1358,7 @@ class Stage3Compiler {
 		// before typing by asking the macro host for a replacement expression snippet.
 		final exprMacros = parseDelimitedList(Sys.getEnv("HXHX_EXPR_MACROS"));
 
-		var macroSession:Null<MacroHostSession> = null;
+		var macroSession:Null<MacroRuntimeSession> = null;
 		inline function closeMacroSession():Void {
 			if (macroSession != null) {
 				macroSession.close();
@@ -1447,7 +1463,9 @@ class Stage3Compiler {
 			// Notes
 			// - This is a bring-up tool. It is not meant to be used for production builds.
 			// - The produced macro host is built via stage0 `haxe` (the script), not via hxhx itself.
-			if (MacroHostClient.resolveMacroHostExePath().length == 0 && shouldAutoBuildMacroHost()) {
+			if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST
+				&& MacroHostClient.resolveMacroHostExePath().length == 0
+				&& shouldAutoBuildMacroHost()) {
 				final repoRoot = inferRepoRootForScripts();
 				if (repoRoot.length == 0)
 					return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
@@ -1482,7 +1500,7 @@ class Stage3Compiler {
 			// This does not yet allow macros to transform the typed AST (e.g. `@:build`). It is purely
 			// “execute macro expressions and surface deterministic results/errors”.
 			try {
-				macroSession = MacroHostClient.openSession();
+				macroSession = MacroRuntimeMode.openSession(macroRuntimeMode);
 				if (runHaxelibMacros) {
 					for (i in 0...libMacros.length)
 						Sys.println("lib_macro_run[" + i + "]=" + macroSession.run(libMacros[i]));
@@ -1590,7 +1608,9 @@ class Stage3Compiler {
 			// Ensure we have a macro host session.
 			if (macroSession == null) {
 				// Optional convenience: auto-build a macro host that contains the build macro entrypoints.
-				if (MacroHostClient.resolveMacroHostExePath().length == 0 && shouldAutoBuildMacroHost()) {
+				if (macroRuntimeMode == MacroRuntimeMode.EXTERNAL_HOST
+					&& MacroHostClient.resolveMacroHostExePath().length == 0
+					&& shouldAutoBuildMacroHost()) {
 					final repoRoot = inferRepoRootForScripts();
 					if (repoRoot.length == 0)
 						return error("macro host auto-build enabled, but repo root could not be inferred (set HXHX_REPO_ROOT)");
@@ -1607,10 +1627,10 @@ class Stage3Compiler {
 				}
 
 				try {
-					macroSession = MacroHostClient.openSession();
+					macroSession = MacroRuntimeMode.openSession(macroRuntimeMode);
 				} catch (e:String) {
 					closeMacroSession();
-					return error("macro host required for @:build, but could not be started: " + e);
+					return error("macro runtime required for @:build, but could not be started: " + e);
 				}
 			}
 
@@ -2164,6 +2184,10 @@ class Stage3Compiler {
 			if (global.backendId != null && global.backendId.length > 0) {
 				unitArgs.push("--hxhx-backend");
 				unitArgs.push(global.backendId);
+			}
+			if (global.macroRuntimeMode != null && global.macroRuntimeMode.length > 0) {
+				unitArgs.push("--hxhx-macro-runtime");
+				unitArgs.push(global.macroRuntimeMode);
 			}
 			if (global.typeOnly)
 				unitArgs.push("--hxhx-type-only");

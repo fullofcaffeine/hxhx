@@ -1,0 +1,179 @@
+package hxhx.macro;
+
+/**
+	Stage4 in-process macro runtime (bring-up subset).
+
+	Why
+	- The long-term direction is in-process macro execution by default.
+	- This class provides the first selectable in-process mode without requiring
+	  the external `hxhx-macro-host` process.
+
+	Scope
+	- Supports the current builtin macro entrypoint subset used by Stage4 bring-up.
+	- Does not yet support generated external entrypoints (`EntryPointsGen`) in-process.
+**/
+class InProcMacroRuntime {
+	public static function openSession():MacroRuntimeSession {
+		return new InProcMacroSession();
+	}
+
+	public static function parseOneStringLiteralArg(s:String):Null<String> {
+		if (s == null)
+			return null;
+		final t = StringTools.trim(s);
+		if (t.length < 2)
+			return null;
+		final q = t.charCodeAt(0);
+		if (q != "\"".code && q != "'".code)
+			return null;
+		if (t.charCodeAt(t.length - 1) != q)
+			return null;
+		var body = t.substr(1, t.length - 2);
+		body = StringTools.replace(body, "\\\\", "\\");
+		body = StringTools.replace(body, "\\\"", "\"");
+		body = StringTools.replace(body, "\\'", "'");
+		return body;
+	}
+
+	public static function builtinTypeDesc(name:String):String {
+		return switch (name) {
+			case "Int", "Float", "Bool", "String", "Void":
+				"builtin:" + name;
+			case _:
+				"unknown:" + name;
+		}
+	}
+
+	public static function isBuiltin(expr:String):Bool {
+		return StringTools.startsWith(expr, "BuiltinMacros.") || StringTools.startsWith(expr, "hxhxmacrohost.BuiltinMacros.");
+	}
+
+	public static function withoutBuiltinPrefix(expr:String):String {
+		if (StringTools.startsWith(expr, "BuiltinMacros."))
+			return expr.substr("BuiltinMacros.".length);
+		if (StringTools.startsWith(expr, "hxhxmacrohost.BuiltinMacros."))
+			return expr.substr("hxhxmacrohost.BuiltinMacros.".length);
+		return expr;
+	}
+}
+
+private class InProcMacroSession implements MacroRuntimeSession {
+	final afterTypingHooks:Array<Void->Void> = [];
+	final onGenerateHooks:Array<Void->Void> = [];
+	final afterGenerateHooks:Array<Void->Void> = [];
+
+	public function new() {}
+
+	public function run(expr:String):String {
+		final e = StringTools.trim(expr == null ? "" : expr);
+		if (e.length == 0)
+			throw "macro.run: missing expr";
+
+		if (StringTools.startsWith(e, "include(") && StringTools.endsWith(e, ")")) {
+			final inside = StringTools.trim(e.substr("include(".length, e.length - "include(".length - 1));
+			final moduleName = InProcMacroRuntime.parseOneStringLiteralArg(inside);
+			if (moduleName != null && moduleName.length > 0) {
+				MacroState.includeModule(moduleName);
+				return "include=ok";
+			}
+		}
+
+		if (!InProcMacroRuntime.isBuiltin(e))
+			return "ran:" + e;
+
+		final builtin = InProcMacroRuntime.withoutBuiltinPrefix(e);
+		return switch (builtin) {
+			case "smoke()":
+				MacroState.setDefine("HXHX_SMOKE", "1");
+				"smoke:type="
+				+ InProcMacroRuntime.builtinTypeDesc("String")
+				+ ";define="
+				+ (MacroState.defined("HXHX_SMOKE") ? "yes" : "no");
+			case "genModule()":
+				MacroState.emitOcamlModule("HxHxGen", "let generated : string = \"" + InProcMacroRuntime.builtinTypeDesc("String") + "\"");
+				MacroState.setDefine("HXHX_GEN", "1");
+				"genModule=ok";
+			case "addCpFromEnv()":
+				final cp = Sys.getEnv("HXHX_ADD_CP");
+				if (cp != null && StringTools.trim(cp).length > 0) {
+					MacroState.addClassPath(cp);
+					"addCp=ok";
+				} else {
+					"addCp=skip";
+				}
+			case "genHxModule()":
+				MacroState.emitHxModule("Gen", "class Gen {}");
+				MacroState.setDefine("HXHX_HXGEN", "1");
+				"genHx=ok";
+			case "readFlag()":
+				"flag=" + MacroState.definedValue("HXHX_FLAG");
+			case "dumpDefines()":
+				MacroState.setDefine("HXHX_ENUM", "1");
+				final defs = MacroState.listDefinesPairsSorted();
+				final map:Map<String, String> = [];
+				for (kv in defs)
+					map.set(kv[0], kv[1]);
+				final flagMap = map.exists("HXHX_FLAG") ? map.get("HXHX_FLAG") : null;
+				final enumMap = map.exists("HXHX_ENUM") ? map.get("HXHX_ENUM") : null;
+				final flagGet = map.exists("HXHX_FLAG") ? map.get("HXHX_FLAG") : null;
+				final enumGet = map.exists("HXHX_ENUM") ? map.get("HXHX_ENUM") : null;
+				"defines:flag_map="
+				+ Std.string(flagMap)
+				+ ";flag_get="
+				+ Std.string(flagGet)
+				+ ";enum_map="
+				+ Std.string(enumMap)
+				+ ";enum_get="
+				+ Std.string(enumGet);
+			case "registerHooks()":
+				final afterTypingId = afterTypingHooks.length;
+				afterTypingHooks.push(() -> MacroState.setDefine("HXHX_AFTER_TYPING", "1"));
+				MacroState.registerHook("afterTyping", afterTypingId);
+
+				final onGenerateId = onGenerateHooks.length;
+				onGenerateHooks.push(() -> {
+					MacroState.emitOcamlModule("HxHxHook", "let hook_generated : int = 1");
+					MacroState.setDefine("HXHX_ON_GENERATE", "1");
+				});
+				MacroState.registerHook("onGenerate", onGenerateId);
+				"hooks=ok";
+			case "fail()":
+				throw "intentional macro host failure (for position payload tests)";
+			case _:
+				"ran:" + e;
+		}
+	}
+
+	public function runHook(kind:String, id:Int):Void {
+		switch (kind == null ? "" : kind) {
+			case "afterTyping":
+				if (id < 0 || id >= afterTypingHooks.length)
+					throw "macro.runHook: unknown afterTyping hook id: " + id;
+				afterTypingHooks[id]();
+			case "onGenerate":
+				if (id < 0 || id >= onGenerateHooks.length)
+					throw "macro.runHook: unknown onGenerate hook id: " + id;
+				onGenerateHooks[id]();
+			case "afterGenerate":
+				if (id < 0 || id >= afterGenerateHooks.length)
+					throw "macro.runHook: unknown afterGenerate hook id: " + id;
+				afterGenerateHooks[id]();
+			case _:
+				throw "macro.runHook: unknown kind: " + kind;
+		}
+	}
+
+	public function expandExpr(expr:String):String {
+		final e = StringTools.trim(expr == null ? "" : expr);
+		if (e.length == 0)
+			throw "macro.expandExpr: empty expr";
+		return switch (e) {
+			case "unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()":
+				"\"<compilation-date>\"";
+			case _:
+				throw "macro.expandExpr: expr not registered: " + e;
+		}
+	}
+
+	public function close():Void {}
+}

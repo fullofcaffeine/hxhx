@@ -412,6 +412,15 @@ Timeout guardrails (external-host mode):
 - `HXHX_MACRO_HOST_TOTAL_SECS=<n>`: fail if a single macro-host call exceeds `<n>` seconds total (default `300`; `0` disables total timeout).
 - On timeout, `hxhx` emits marker `MACRO_HOST_STALL_DETECTED=1 ...` and kills the host process before failing.
 
+Macro runtime mode selection (Stage4 bring-up):
+
+- Default mode: `external-host` (spawn `hxhx-macro-host` and use RPC).
+- Experimental in-process mode: `inproc` (no macro-host process spawn).
+- Select mode via:
+  - env: `HXHX_MACRO_RUNTIME_MODE=external-host|inproc`
+  - Stage3 flag: `--hxhx-macro-runtime external-host|inproc`
+- Stage3 emits deterministic marker: `hxhx_macro_runtime_mode=<mode>`
+
 Native macro-module dynlink smoke (C7R lane):
 
 ```bash

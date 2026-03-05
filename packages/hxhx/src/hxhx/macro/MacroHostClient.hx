@@ -617,7 +617,7 @@ private class MacroClient {
 	- `run(expr)`: calls `macro.run` and returns the `v=` payload.
 	- `runHook(kind,id)`: calls `macro.runHook` to execute a previously-registered hook closure.
 **/
-class MacroHostSession {
+class MacroHostSession implements MacroRuntimeSession {
 	final client:MacroClient;
 
 	public function new(client:MacroClient) {

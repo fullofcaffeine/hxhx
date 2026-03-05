@@ -1,6 +1,6 @@
 package hxhx;
 
-import hxhx.macro.MacroHostClient.MacroHostSession;
+import hxhx.macro.MacroRuntimeSession;
 
 /**
 	Expression macro expansion (Gate1 bring-up).
@@ -33,7 +33,7 @@ import hxhx.macro.MacroHostClient.MacroHostSession;
 	- This rung exists to unblock Gate bring-up; extend only when a gate/test requires it.
 **/
 class ExprMacroExpander {
-	public static function expandResolvedModules(modules:Array<ResolvedModule>, session:MacroHostSession,
+	public static function expandResolvedModules(modules:Array<ResolvedModule>, session:MacroRuntimeSession,
 			allowlist:Array<String>):{modules:Array<ResolvedModule>, expandedCount:Int} {
 		if (modules == null || modules.length == 0)
 			return {modules: modules == null ? [] : modules, expandedCount: 0};
@@ -140,7 +140,7 @@ class ExprMacroExpander {
 		return t == "1" || t == "true" || t == "yes";
 	}
 
-	static function rewriteStmt(s:HxStmt, session:MacroHostSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
+	static function rewriteStmt(s:HxStmt, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
 			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, onExpand:() -> Void):HxStmt {
 		return switch (s) {
 			case SBlock(stmts, pos):
@@ -220,7 +220,7 @@ class ExprMacroExpander {
 		}
 	}
 
-	static function rewriteExpr(e:HxExpr, session:MacroHostSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
+	static function rewriteExpr(e:HxExpr, session:MacroRuntimeSession, allowed:haxe.ds.StringMap<Bool>, allowKeys:Array<String>,
 			importMap:haxe.ds.StringMap<String>, modulePkg:String, trace:Bool, depth:Int, onExpand:() -> Void):HxExpr {
 		if (depth > 4)
 			return e; // prevent runaway recursion in bring-up
