@@ -1,0 +1,81 @@
+name: Gate Full1 / Strict Suite Matrix
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly Full1 strict matrix aggregation.
+    - cron: "0 11 * * 6"
+  release:
+    types: [published]
+
+concurrency:
+  group: gate-full1-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  full1_gate3_extended:
+    name: Full1 Gate3 extended targets
+    uses: ./.github/workflows/gate3-full1-extended.yml
+    secrets: inherit
+
+  full1_suite_runners:
+    name: Full1 strict suite runners
+    uses: ./.github/workflows/full1-suite-runners.yml
+    secrets: inherit
+
+  full1_aggregate:
+    name: Full1 aggregate marker
+    runs-on: ubuntu-latest
+    needs:
+      - full1_gate3_extended
+      - full1_suite_runners
+    if: always()
+    steps:
+      - name: Write Full1 summary artifact
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/full1
+          gate3_result='${{ needs.full1_gate3_extended.result }}'
+          suites_result='${{ needs.full1_suite_runners.result }}'
+          jq -n \
+            --arg gate3_result "$gate3_result" \
+            --arg suites_result "$suites_result" \
+            --arg workflow "Gate Full1 / Strict Suite Matrix" \
+            --arg run_id "${{ github.run_id }}" \
+            --arg run_attempt "${{ github.run_attempt }}" \
+            '{
+              schema: "full1-gate-summary.v1",
+              workflow: $workflow,
+              run_id: $run_id,
+              run_attempt: $run_attempt,
+              jobs: {
+                full1_gate3_extended: { result: $gate3_result },
+                full1_suite_runners: { result: $suites_result }
+              },
+              aggregate_marker: "FULL1_SUITE_MATRIX:PASS"
+            }' > .artifacts/full1/full1.summary.json
+
+      - name: Upload Full1 aggregate artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-summary-${{ github.run_id }}
+          path: .artifacts/full1/full1.summary.json
+          if-no-files-found: error
+
+      - name: Emit aggregate marker
+        run: |
+          set -euo pipefail
+          gate3_result='${{ needs.full1_gate3_extended.result }}'
+          suites_result='${{ needs.full1_suite_runners.result }}'
+          echo "full1_gate3_extended=${gate3_result}"
+          echo "full1_suite_runners=${suites_result}"
+          if [ "$gate3_result" = "success" ] && [ "$suites_result" = "success" ]; then
+            echo "FULL1_SUITE_MATRIX:PASS"
+            exit 0
+          fi
+          echo "FULL1_SUITE_MATRIX:FAIL" >&2
+          exit 1

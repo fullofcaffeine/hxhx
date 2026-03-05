@@ -1,6 +1,13 @@
 name: Gate 3 Full1 / Extended Targets Strict
 
 on:
+  workflow_call:
+    inputs:
+      targets:
+        description: "Comma-separated upstream runci targets"
+        required: false
+        type: string
+        default: "Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php"
   workflow_dispatch:
     inputs:
       targets:

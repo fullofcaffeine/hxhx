@@ -21,19 +21,20 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | Gate 2 / Upstream Macro Workloads | `.github/workflows/gate2.yml` | Weekly schedule | `GATE2_MACRO:PASS` | Workflow run logs (marker in log output) |
 | Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS` plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`) | Artifacts `macro-runtime-parity-external-host-<run_id>` and `macro-runtime-parity-inproc-<run_id>` |
 | Gate M7 / Replacement Bundle | `.github/workflows/gate-m7.yml` | Weekly schedule | `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` | Artifact `gate-m7-logs-<run_id>` + run logs |
+| Gate Full1 / Strict Suite Matrix | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS` | Artifact `full1-summary-<run_id>` + logs from called Full1 workflows |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
 ## Weekly procedure
 
 1. Open GitHub Actions and filter to the weekly evidence workflows above.
-2. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, and semantic-diff are green.
+2. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, Gate Full1, and semantic-diff are green.
 3. Open each run and confirm expected markers appear in logs.
 4. For Macro Runtime Parity, download both mode-tagged artifacts and inspect:
    - `markers.txt`
    - `macro-runtime-parity-blockers.md`
    - suite logs (`unit`, `runci`, `display/protocol`)
-5. For Gate M7 and semantic-diff, download artifacts and confirm expected files are present.
+5. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
 6. Manually dispatch `Perf / HXHX KPI (Report Only)`.
 7. Download KPI artifact and compare `report.json` against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`

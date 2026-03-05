@@ -1,6 +1,7 @@
 name: Full1 / Suite Runners Strict
 
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
     # Weekly strict suite evidence for Full1 parity closure.
