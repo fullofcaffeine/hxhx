@@ -237,6 +237,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - explicit `HAXE_CONNECT=<port>` override (highest precedence)
     - helper-managed reuse: `HXHX_STAGE0_USE_REPO_SERVER=1` (with optional `HXHX_STAGE0_KEEP_REPO_SERVER=1`)
   - Observability knobs: `HXHX_BOOTSTRAP_HEARTBEAT=20` (default; set `0` to disable) and `HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS=0` (optional timeout).
+  - Dune worker knob: `HXHX_DUNE_JOBS=auto|<N>` (defaults to `auto`; set `HXHX_DUNE_JOBS=4` for a fixed worker cap when tuning memory/throughput).
 - **Stage2**: stage1 builds stage2; compare behavior/codegen stability.
   - Command: `npm run test:upstream:stage2`
 - **Gate checks**: validate against upstream behavior oracles.

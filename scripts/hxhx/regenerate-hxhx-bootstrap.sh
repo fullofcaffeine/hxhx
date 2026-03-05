@@ -78,6 +78,7 @@ Environment knobs (all optional):
   HXHX_STAGE0_NATIVE_HAXE_BIN=/abs/path/to/haxe
                                     Explicit native stage0 haxe candidate.
   HXHX_STAGE0_SELECTION_ONLY=1      Resolve/log stage0 haxe selection and exit early.
+  HXHX_DUNE_JOBS=4                  Force dune worker count (auto by default).
 USAGE
 }
 
@@ -112,6 +113,17 @@ assert_stage0_haxe_policy() {
 		warn|prefer-native|require-native) ;;
 		*)
 			echo "Invalid HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY: '$value' (expected warn|prefer-native|require-native)." >&2
+			exit 1
+			;;
+	esac
+}
+
+assert_dune_jobs() {
+	local value="$1"
+	case "$value" in
+		auto) ;;
+		''|*[!0-9]*|0)
+			echo "Invalid HXHX_DUNE_JOBS: '$value' (expected auto or a positive integer)." >&2
 			exit 1
 			;;
 	esac
@@ -156,6 +168,7 @@ HXHX_BOOTSTRAP_REPORT_JSON="${HXHX_BOOTSTRAP_REPORT_JSON:-}"
 HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="${HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY:-prefer-native}"
 HXHX_STAGE0_NATIVE_HAXE_BIN="${HXHX_STAGE0_NATIVE_HAXE_BIN:-}"
 HXHX_STAGE0_SELECTION_ONLY="${HXHX_STAGE0_SELECTION_ONLY:-0}"
+HXHX_DUNE_JOBS="${HXHX_DUNE_JOBS:-auto}"
 
 used_deprecated_kill_flag=0
 while [ $# -gt 0 ]; do
@@ -297,9 +310,10 @@ assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
 assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
 assert_bool_01 "HXHX_STAGE0_NO_OPT" "$HXHX_STAGE0_NO_OPT"
 assert_bool_01 "HXHX_STAGE0_NO_INLINE" "$HXHX_STAGE0_NO_INLINE"
-assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
-assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
-assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
+	assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
+	assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
+	assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
+	assert_dune_jobs "$HXHX_DUNE_JOBS"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PKG_DIR="$ROOT/packages/hxhx"
@@ -933,7 +947,11 @@ run_bootstrap_verify() {
 		#
 		# The bootstrap snapshot is primarily a stage0-free fallback; verifying the bytecode build
 		# is sufficient to ensure the snapshot is structurally sound and runnable everywhere.
-		dune build ./out.bc >/dev/null
+			if [ "$HXHX_DUNE_JOBS" != "auto" ]; then
+				dune build -j "$HXHX_DUNE_JOBS" ./out.bc >/dev/null
+			else
+				dune build ./out.bc >/dev/null
+			fi
 	)
 	rm -rf "$BOOTSTRAP_VERIFY_DIR"
 }
@@ -956,6 +974,14 @@ fi
 
 echo "== Regenerating hxhx via stage0 (this requires Haxe + reflaxe.ocaml)"
 print_stage0_haxe_selection
+if [ "$HXHX_DUNE_JOBS" != "auto" ]; then
+	export DUNE_JOBS="$HXHX_DUNE_JOBS"
+	echo "== Dune jobs: forced to $HXHX_DUNE_JOBS (HXHX_DUNE_JOBS)"
+elif [ -n "${DUNE_JOBS:-}" ]; then
+	echo "== Dune jobs: inherited DUNE_JOBS=$DUNE_JOBS (HXHX_DUNE_JOBS=auto)"
+else
+	echo "== Dune jobs: auto (HXHX_DUNE_JOBS=auto)"
+fi
 if [ "$HXHX_BOOTSTRAP_FAST" = "1" ]; then
 	echo "== Mode: fast (clean_out=${HXHX_BOOTSTRAP_CLEAN_OUT}, verify=${HXHX_BOOTSTRAP_VERIFY})"
 else

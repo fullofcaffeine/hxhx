@@ -27,6 +27,7 @@ HXHX_KEEP_LOGS="${HXHX_KEEP_LOGS:-0}"
 HXHX_LOG_DIR="${HXHX_LOG_DIR:-}"
 HXHX_BOOTSTRAP_HEARTBEAT="${HXHX_BOOTSTRAP_HEARTBEAT:-20}"
 HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS="${HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS:-0}"
+HXHX_DUNE_JOBS="${HXHX_DUNE_JOBS:-auto}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
@@ -109,6 +110,18 @@ case "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" in
     ;;
 esac
 
+case "$HXHX_DUNE_JOBS" in
+  auto) ;;
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_DUNE_JOBS: $HXHX_DUNE_JOBS (expected 'auto' or a positive integer)." >&2
+    exit 2
+    ;;
+  0)
+    echo "Invalid HXHX_DUNE_JOBS: $HXHX_DUNE_JOBS (expected 'auto' or a positive integer)." >&2
+    exit 2
+    ;;
+esac
+
 case "$HXHX_STAGE0_HEARTBEAT" in
   ''|*[!0-9]*)
     echo "Invalid HXHX_STAGE0_HEARTBEAT: $HXHX_STAGE0_HEARTBEAT (expected non-negative integer)." >&2
@@ -170,6 +183,15 @@ fi
 if [ ! -d "$HXHX_DIR" ]; then
   echo "Missing hxhx package directory: $HXHX_DIR" >&2
   exit 1
+fi
+
+if [ "$HXHX_DUNE_JOBS" != "auto" ]; then
+  export DUNE_JOBS="$HXHX_DUNE_JOBS"
+  echo "== Dune jobs: forced to $HXHX_DUNE_JOBS (HXHX_DUNE_JOBS)" >&2
+elif [ -n "${DUNE_JOBS:-}" ]; then
+  echo "== Dune jobs: inherited DUNE_JOBS=$DUNE_JOBS (HXHX_DUNE_JOBS=auto)" >&2
+else
+  echo "== Dune jobs: auto (HXHX_DUNE_JOBS=auto)" >&2
 fi
 
 run_bootstrap_dune_build() {

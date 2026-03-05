@@ -104,6 +104,7 @@ You can pass stage0 compile knobs through the benchmark:
 - `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE=1`
 - `HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES=1`
 - `HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM=s=4M`
+- `HXHX_DUNE_JOBS=4` (forces deterministic dune worker count for bootstrap build/verify scripts)
 
 ## Stage0 Contributor Profiling (Regen Lane)
 

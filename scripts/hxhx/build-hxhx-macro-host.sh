@@ -3,6 +3,7 @@ set -euo pipefail
 
 HAXE_BIN="${HAXE_BIN:-haxe}"
 HXHX_FORBID_STAGE0="${HXHX_FORBID_STAGE0:-0}"
+HXHX_DUNE_JOBS="${HXHX_DUNE_JOBS:-auto}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TOOL_DIR="$ROOT/packages/hxhx-macro-host"
@@ -31,6 +32,27 @@ is_true() {
   local v="${1:-}"
   [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" ]]
 }
+
+case "$HXHX_DUNE_JOBS" in
+  auto) ;;
+  ''|*[!0-9]*)
+    echo "Invalid HXHX_DUNE_JOBS: $HXHX_DUNE_JOBS (expected 'auto' or a positive integer)." >&2
+    exit 2
+    ;;
+  0)
+    echo "Invalid HXHX_DUNE_JOBS: $HXHX_DUNE_JOBS (expected 'auto' or a positive integer)." >&2
+    exit 2
+    ;;
+esac
+
+if [ "$HXHX_DUNE_JOBS" != "auto" ]; then
+  export DUNE_JOBS="$HXHX_DUNE_JOBS"
+  echo "== Macro host dune jobs: forced to $HXHX_DUNE_JOBS (HXHX_DUNE_JOBS)" >&2
+elif [ -n "${DUNE_JOBS:-}" ]; then
+  echo "== Macro host dune jobs: inherited DUNE_JOBS=$DUNE_JOBS (HXHX_DUNE_JOBS=auto)" >&2
+else
+  echo "== Macro host dune jobs: auto (HXHX_DUNE_JOBS=auto)" >&2
+fi
 
 if ! command -v dune >/dev/null 2>&1 || ! command -v ocamlc >/dev/null 2>&1; then
   echo "Skipping hxhx macro host build: dune/ocamlc not found on PATH."
