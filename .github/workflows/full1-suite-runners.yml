@@ -1,0 +1,158 @@
+name: Full1 / Suite Runners Strict
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Suite to run (all,misc,server,threads,optimization,display)"
+        type: choice
+        required: false
+        default: all
+        options:
+          - all
+          - misc
+          - server
+          - threads
+          - optimization
+          - display
+  schedule:
+    # Weekly strict suite evidence for Full1 parity closure.
+    - cron: "0 9 * * 6"
+
+concurrency:
+  group: full1-suite-runners-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  full1_suite_runner:
+    name: Full1 suite / ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [misc, server, threads, optimization, display]
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.suite == '' || github.event.inputs.suite == 'all' || github.event.inputs.suite == matrix.suite }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (Full1 suites)
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          retry_apt sudo apt-get update
+          retry_apt sudo apt-get install -y \
+            ocaml dune ocaml-findlib \
+            neko \
+            python3 pypy3 \
+            default-jdk \
+            build-essential \
+            php \
+            lua5.4 \
+            mono-devel
+
+          if ! command -v dotnet >/dev/null 2>&1; then
+            retry_apt sudo apt-get install -y dotnet-sdk-8.0 || true
+          fi
+
+          if ! command -v hl >/dev/null 2>&1; then
+            retry_apt sudo apt-get install -y hashlink || true
+          fi
+          if ! command -v hl >/dev/null 2>&1; then
+            retry_apt sudo apt-get install -y \
+              libmbedtls-dev \
+              libpcre3-dev \
+              zlib1g-dev \
+              libsqlite3-dev \
+              libuv1-dev \
+              libsdl2-dev \
+              libjpeg-dev \
+              libpng-dev \
+              libvorbis-dev \
+              libopenal-dev \
+              libglu1-mesa-dev \
+              libturbojpeg0-dev
+            HL_REF="${HXHX_HASHLINK_REF:-1.15}"
+            HL_SRC_DIR="$(mktemp -d)"
+            git clone --depth 1 --branch "${HL_REF}" https://github.com/HaxeFoundation/hashlink.git "${HL_SRC_DIR}"
+            make -C "${HL_SRC_DIR}" -j"$(nproc)"
+            sudo cp "${HL_SRC_DIR}/hl" /usr/local/bin/hl
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Run Full1 strict suite
+        run: |
+          set -euo pipefail
+          node scripts/ci/run-upstream-suite.js \
+            --suite "${{ matrix.suite }}" \
+            --strict \
+            --artifacts-dir ".artifacts/full1/suites"
+
+      - name: Upload Full1 suite artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-suite-${{ matrix.suite }}-${{ github.run_id }}
+          path: |
+            .artifacts/full1/suites/${{ matrix.suite }}.log
+            .artifacts/full1/suites/${{ matrix.suite }}.summary.json
+          if-no-files-found: warn

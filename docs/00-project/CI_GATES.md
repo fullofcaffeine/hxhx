@@ -89,6 +89,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Macro Runtime Parity (Weekly)` | `.github/workflows/macro-runtime-parity-weekly.yml` | Runs upstream macro + display checks in both macro runtime modes (`external-host`, `inproc`) with mode-tagged artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement and JSON summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
+| `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log + summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
@@ -124,6 +125,14 @@ Macro runtime parity weekly markers:
 Full1 extended Gate3 marker:
 
 - `FULL1_GATE3_EXTENDED_TARGETS:PASS` (`.github/workflows/gate3-full1-extended.yml`)
+
+Full1 strict suite runner markers:
+
+- `FULL1_SUITE_MISC:PASS`
+- `FULL1_SUITE_SERVER:PASS`
+- `FULL1_SUITE_THREADS:PASS`
+- `FULL1_SUITE_OPTIMIZATION:PASS`
+- `FULL1_SUITE_DISPLAY:PASS`
 
 Local suite runner guide for Full1 suite scaffolding (`misc/server/threads/optimization/display`):
 

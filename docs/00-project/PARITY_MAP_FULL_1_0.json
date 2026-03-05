@@ -204,7 +204,7 @@
       ],
       "profile": "scheduled-release",
       "marker": "FULL1_SUITE_MISC:PASS",
-      "workflow": ".github/workflows/gate-full1.yml",
+      "workflow": ".github/workflows/full1-suite-runners.yml",
       "enforcement": "planned"
     },
     {
@@ -216,7 +216,7 @@
       ],
       "profile": "scheduled-release",
       "marker": "FULL1_SUITE_SERVER:PASS",
-      "workflow": ".github/workflows/gate-full1.yml",
+      "workflow": ".github/workflows/full1-suite-runners.yml",
       "enforcement": "planned"
     },
     {
@@ -228,7 +228,7 @@
       ],
       "profile": "scheduled-release",
       "marker": "FULL1_SUITE_THREADS:PASS",
-      "workflow": ".github/workflows/gate-full1.yml",
+      "workflow": ".github/workflows/full1-suite-runners.yml",
       "enforcement": "planned"
     },
     {
@@ -240,7 +240,7 @@
       ],
       "profile": "scheduled-release",
       "marker": "FULL1_SUITE_OPTIMIZATION:PASS",
-      "workflow": ".github/workflows/gate-full1.yml",
+      "workflow": ".github/workflows/full1-suite-runners.yml",
       "enforcement": "planned"
     },
     {
@@ -252,7 +252,7 @@
       ],
       "profile": "scheduled-release",
       "marker": "FULL1_SUITE_DISPLAY:PASS",
-      "workflow": ".github/workflows/gate-full1.yml",
+      "workflow": ".github/workflows/full1-suite-runners.yml",
       "enforcement": "planned"
     }
   ]
