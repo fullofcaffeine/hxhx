@@ -192,7 +192,7 @@ class Stage3Compiler {
 		Resolve a Stage3 builtin backend implementation by ID.
 
 		Why
-		- `hxhx --target <id>` now routes builtin targets through one Stage3 execution path.
+		- `hxhx --ocaml` and native `--js <file>` routes builtin targets through one Stage3 execution path.
 		- We need an explicit mapping from target IDs to backend implementations.
 
 		What

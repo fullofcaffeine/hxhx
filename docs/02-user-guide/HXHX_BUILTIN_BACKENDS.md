@@ -46,7 +46,7 @@ Current builtins in `hxhx`:
 
 ### Removed flag behavior
 
-- `hxhx --target ...` fails with migration hint.
+- Legacy target-selection flags fail with a migration hint to direct flags.
 
 ## Native backend plugin kinds
 

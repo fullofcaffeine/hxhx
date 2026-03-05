@@ -1,5 +1,5 @@
 class Main {
 	static function main() {
-		Sys.println("hello from hxhx --target ocaml");
+		Sys.println("hello from hxhx --ocaml");
 	}
 }

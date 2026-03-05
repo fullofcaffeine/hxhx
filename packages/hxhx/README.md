@@ -101,54 +101,54 @@ HAXE_BIN=haxe "$(bash scripts/hxhx/build-hxhx.sh)" -- compile.hxml
 ```
 
 
-## Target presets
+## Lanes and targets
 
-List available presets:
+List available lanes/backends:
 
 ```bash
 "$(bash scripts/hxhx/build-hxhx.sh)" --hxhx-list-targets
 ```
 
-Current presets:
+Direct-flag contract:
 
-- `--target ocaml-compat`: stage0 delegation path with bundled/`-lib` injection for `reflaxe.ocaml`.
-- `--target ocaml`: linked Stage3 backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
+- `--ocaml`: linked Stage3 OCaml backend fast-path (`Stage3Compiler`) with no `--library reflaxe.ocaml` requirement.
   - OCaml profile contract:
     - `-D ocaml_profile=portable` (default)
     - `-D ocaml_profile=metal` (runtime-layered mode; links only required runtime modules and runs a fail-fast metal verifier before emit)
     - migration/error code map: `docs/02-user-guide/OCAML_PROFILE_CONTRACT.md` (see “Metal verifier code map”)
     - runtime module matrix: `docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md`
     - any other value fails fast
-- `--target js-compat`: stage0 delegation preset for JavaScript (`--js` is injected when missing).
-- `--target js`: linked Stage3 JS backend MVP (non-delegating emit for a constrained subset; runs via `node` when available).
-  - canonical scoped support matrix (in-scope + out-of-scope semantics): `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
-- Legacy Flash/AS3 targets are intentionally unsupported in `hxhx` (`--target flash|swf|as3`, `--swf`, and `--as3` all fail fast with a clear message).
+- `--ocaml-eval`: stage0 delegated OCaml macro lane with reflaxe.ocaml injection.
+- `--compat`: pure stage0 passthrough lane (no hxhx injection).
+- Native JS lane: canonical Haxe `--js <file>` routed through linked `js-native` backend.
+  - scoped support matrix (in-scope + out-of-scope semantics): `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`
+- Removed flags: `--target` / `--hxhx-target`.
 
 Delegation guard:
 
 - Set `HXHX_FORBID_STAGE0=1` to fail any invocation path that would delegate to stage0 `haxe`.
-- Linked Stage3 builtins (`ocaml`, `js`) remain allowed under this guard.
+- Native lanes (`--ocaml` and `--js <file>`) remain allowed under this guard.
 
 Examples:
 
 ```bash
-# Stage0 delegation path
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml-compat -- compile.hxml
+# Stage0 delegated OCaml macro lane
+"$(bash scripts/hxhx/build-hxhx.sh)" --ocaml-eval -main Main -cp src
 
-# Linked Stage3 fast-path (no emit build)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main
+# Linked Stage3 OCaml fast-path (no emit build)
+"$(bash scripts/hxhx/build-hxhx.sh)" --ocaml --hxhx-no-emit -cp src -main Main
 
-# Linked Stage3 fast-path with explicit OCaml profile
-"$(bash scripts/hxhx/build-hxhx.sh)" --target ocaml --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
+# Linked Stage3 OCaml fast-path with explicit metal profile
+"$(bash scripts/hxhx/build-hxhx.sh)" --ocaml --hxhx-no-emit -cp src -main Main -D ocaml_profile=metal
 
-# Stage0 JS preset
-"$(bash scripts/hxhx/build-hxhx.sh)" --target js-compat -- -cp src -main Main
+# Pure upstream passthrough lane
+"$(bash scripts/hxhx/build-hxhx.sh)" --compat -- -cp src -main Main --js out/main.js
 
-# Linked Stage3 JS preset (no-emit diagnostics)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target js --hxhx-no-emit -cp src -main Main
+# Linked Stage3 JS lane (no-emit diagnostics)
+"$(bash scripts/hxhx/build-hxhx.sh)" --js out/main.js --hxhx-no-emit -cp src -main Main
 
-# Linked Stage3 JS preset (MVP emit + run)
-"$(bash scripts/hxhx/build-hxhx.sh)" --target js --js out/main.js -cp src -main Main
+# Linked Stage3 JS lane (emit + run)
+"$(bash scripts/hxhx/build-hxhx.sh)" --js out/main.js -cp src -main Main
 ```
 
 ## Strict CLI compatibility mode
@@ -177,10 +177,10 @@ This now reports:
 
 - stage0 `haxe` baseline
 - stage1 shim delegation baseline
-- builtin `--target ocaml` fast-path baseline
-- builtin `--target js` emit baseline (`--hxhx-no-run` to isolate emitter/startup cost)
+- native `--ocaml` fast-path baseline
+- native `--js <file>` emit baseline (`--hxhx-no-run` to isolate emitter/startup cost)
 
-If the selected `hxhx` binary does not expose native `--target js`, the harness reports that row as skipped.
+If the selected `hxhx` binary does not expose native `--js <file>`, the harness reports that row as skipped.
 Set `HXHX_BENCH_FORCE_REBUILD_FOR_JS_NATIVE=1` to force a source rebuild and include the native JS row.
 
 Benchmark bootstrap regeneration scenarios (cold/warm/skip):
