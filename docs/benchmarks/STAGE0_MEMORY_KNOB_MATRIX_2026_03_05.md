@@ -71,6 +71,13 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-082757/summary.json`
   - Parity classification: `non-equivalent` (`equivalent_pairs=0/3`, `parity_mode=status-exit`)
   - Recommendation: `profiling-only`
+- `--disable-prepasses --no-opt --no-stage3 --no-line-directives` (parity-aware)
+  - Baseline median: `7173MB`
+  - Mitigation median: `7813MB`
+  - Median reduction: `-8.92%` (regression)
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-084157/summary.json`
+  - Parity classification: `equivalent-fail-mode` (`equivalent_pairs=3/3`, `parity_mode=status-exit`)
+  - Recommendation: `rejected`
 
 ## Interpretation
 
@@ -81,6 +88,7 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
 - `--no-stage3` is effectively neutral in this probe family and does not move median peak RSS materially.
 - Stacked combinations (`--no-stage3 --no-line-directives`, optionally with `--disable-prepasses`) show material gains in some runs, but with high variance and still below `20%` median in these repeated probes.
 - The stacked combo that adds `--no-internal-tools` shows an outsized reduction, but it is not equivalent to the baseline lane in this probe family and stays profiling-only until behavior parity is demonstrated.
+- Even with parity-equivalent fail-mode runs, aggressive stackings (for example adding `--no-opt` to `--disable-prepasses --no-stage3 --no-line-directives`) can regress median peak RSS materially.
 - In these sample families, reductions are material in some cases but still do not cross `20%` consistently.
 - Keep this as an explicit troubleshooting/CI-tuning knob, not a global default change yet.
 
