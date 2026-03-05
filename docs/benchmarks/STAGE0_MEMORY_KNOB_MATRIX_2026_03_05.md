@@ -57,6 +57,13 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
   - Mitigation median: `5810MB`
   - Median reduction: `9.01%`
   - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-073713/summary.json`
+- `--no-stage3 --no-line-directives --no-external-macro-host --no-internal-tools`
+  - Baseline median: `6716MB`
+  - Mitigation median: `206MB`
+  - Median reduction: `96.93%`
+  - Artifact: `.hxhx/profile/stage0-regen-ab/20260305-081044/summary.json`
+  - Caveat: this run family is not lane-equivalent (`baseline=status:error`, `mitigation=status:ok`);
+    treat as a profiling signal only, not a default mitigation candidate.
 
 ## Interpretation
 
@@ -66,6 +73,7 @@ Repeated A/B (`reps=3`, failfast `120s`) families:
 - `--no-external-macro-host` is not viable as a mitigation in this probe family (regresses median peak RSS).
 - `--no-stage3` is effectively neutral in this probe family and does not move median peak RSS materially.
 - Stacked combinations (`--no-stage3 --no-line-directives`, optionally with `--disable-prepasses`) show material gains in some runs, but with high variance and still below `20%` median in these repeated probes.
+- The stacked combo that adds `--no-internal-tools` shows an outsized reduction, but it is not equivalent to the baseline lane in this probe family and stays profiling-only until behavior parity is demonstrated.
 - In these sample families, reductions are material in some cases but still do not cross `20%` consistently.
 - Keep this as an explicit troubleshooting/CI-tuning knob, not a global default change yet.
 

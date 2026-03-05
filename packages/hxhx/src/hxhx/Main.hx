@@ -334,6 +334,7 @@ class Main {
 		- This is intentionally a *shim-only* runner: the stage0 dependency is removed later
 		  when Gate 1 flips to a non-delegating `hxhx` pipeline.
 	**/
+	#if !hxhx_stage0_no_internal_tools
 	static function runOcamlInterpLike(haxeBin:String, forwarded:Array<String>, outOverride:String):Void {
 		// Expand positional `.hxml` args so we can safely rewrite flags like `--interp`.
 		final expanded = Stage1Args.expandHxmlArgs(forwarded);
@@ -427,6 +428,7 @@ class Main {
 		final runCode = Sys.command(exe, []);
 		Sys.exit(runCode);
 	}
+	#end
 
 	static function main() {
 		final args = Sys.args();
@@ -501,10 +503,12 @@ class Main {
 		//
 		// This is explicitly NOT part of the `haxe` CLI surface and will never be forwarded.
 		// We grow it incrementally until `hxhx` no longer delegates to stage0 for normal builds.
+		#if !hxhx_stage0_no_internal_tools
 		if (args.length >= 1 && args[0] == "--hxhx-stage1") {
 			final code = Stage1Compiler.run(args.slice(1));
 			Sys.exit(code);
 		}
+		#end
 
 		// Stage 3 (bring-up): minimal typed compilation path (no macros).
 		//
@@ -529,6 +533,7 @@ class Main {
 		// - This does not make `hxhx` a real compiler: it is still a stage0 shim path.
 		var ocamlInterpLike = false;
 		var ocamlInterpOutDir = "";
+		#if !hxhx_stage0_no_internal_tools
 		{
 			var i = 0;
 			while (i < shimArgs.length) {
@@ -550,12 +555,14 @@ class Main {
 				}
 			}
 		}
+		#end
 
 		// Stage 1: internal bring-up flags.
 		//
 		// These are intentionally separate from the `haxe` CLI surface so we can
 		// iterate without breaking compatibility for upstream gate scripts that
 		// expect `hxhx` to behave like `haxe`.
+		#if !hxhx_stage0_no_internal_tools
 		if (args.length >= 1 && args[0] == "--hxhx-parse") {
 			if (args.length != 2) {
 				Sys.println("Usage: hxhx --hxhx-parse <path/to/File.hx>");
@@ -593,6 +600,7 @@ class Main {
 			Sys.println("OK hxhx selftest");
 			return;
 		}
+		#end
 
 		// Compatibility note:
 		// `hxhx` is intended to be drop-in compatible with the `haxe` CLI.
@@ -621,10 +629,15 @@ class Main {
 		final forbidStage0Delegation = isTrueEnv("HXHX_FORBID_STAGE0");
 
 		if (ocamlInterpLike) {
+			#if hxhx_stage0_no_internal_tools
+			fatal("hxhx: --hxhx-ocaml-interp unavailable in stage0 no-internal-tools profiling lane");
+			#end
 			if (forbidStage0Delegation) {
 				fatal("hxhx: HXHX_FORBID_STAGE0=1 forbids --hxhx-ocaml-interp because this path delegates to stage0 `haxe`.");
 			}
+			#if !hxhx_stage0_no_internal_tools
 			runOcamlInterpLike(haxeBin, forwarded, ocamlInterpOutDir);
+			#end
 			return;
 		}
 

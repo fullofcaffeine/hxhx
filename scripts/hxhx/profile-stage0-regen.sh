@@ -15,6 +15,7 @@ STAGE0_NO_HX_PARSER="${HXHX_STAGE0_PROFILE_NO_HX_PARSER:-0}"
 STAGE0_NO_EXPR_MACROS="${HXHX_STAGE0_PROFILE_NO_EXPR_MACROS:-0}"
 STAGE0_NO_EXTERNAL_MACRO_HOST="${HXHX_STAGE0_PROFILE_NO_EXTERNAL_MACRO_HOST:-0}"
 STAGE0_NO_STAGE3="${HXHX_STAGE0_PROFILE_NO_STAGE3:-0}"
+STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_PROFILE_NO_INTERNAL_TOOLS:-0}"
 DISABLE_PREPASSES="${HXHX_STAGE0_PROFILE_DISABLE_PREPASSES:-0}"
 STAGE0_OCAML_ONLY="${HXHX_STAGE0_PROFILE_OCAML_ONLY:-0}"
 STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_PROFILE_NO_LINE_DIRECTIVES:-0}"
@@ -42,6 +43,7 @@ Options:
   --no-expr-macros                               Trim Stage3 expression macro expander path in stage0 compile graph
   --no-external-macro-host                       Trim external macro-host runtime paths in stage0 compile graph
   --no-stage3                                    Trim Stage3 native lane paths in stage0 compile graph
+  --no-internal-tools                            Trim internal bring-up CLI paths in stage0 compile graph
   --disable-prepasses                            Enable stage0 prepass disable define
   --ocaml-only                                   Enable stage0 ocaml-only backend graph define
   --no-line-directives                           Disable OCaml line directives during stage0 emit
@@ -117,6 +119,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--no-stage3)
 			STAGE0_NO_STAGE3=1
+			shift
+			;;
+		--no-internal-tools)
+			STAGE0_NO_INTERNAL_TOOLS=1
 			shift
 			;;
 		--no-opt)
@@ -196,6 +202,7 @@ assert_bool_01 "STAGE0_NO_HX_PARSER" "$STAGE0_NO_HX_PARSER"
 assert_bool_01 "STAGE0_NO_EXPR_MACROS" "$STAGE0_NO_EXPR_MACROS"
 assert_bool_01 "STAGE0_NO_EXTERNAL_MACRO_HOST" "$STAGE0_NO_EXTERNAL_MACRO_HOST"
 assert_bool_01 "STAGE0_NO_STAGE3" "$STAGE0_NO_STAGE3"
+assert_bool_01 "STAGE0_NO_INTERNAL_TOOLS" "$STAGE0_NO_INTERNAL_TOOLS"
 assert_bool_01 "DISABLE_PREPASSES" "$DISABLE_PREPASSES"
 assert_bool_01 "STAGE0_OCAML_ONLY" "$STAGE0_OCAML_ONLY"
 assert_bool_01 "STAGE0_NO_LINE_DIRECTIVES" "$STAGE0_NO_LINE_DIRECTIVES"
@@ -215,7 +222,7 @@ RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
 echo "== Stage0 regen profile run"
-echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
+echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 no_internal_tools=$STAGE0_NO_INTERNAL_TOOLS disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
 echo "out_dir=$OUT_DIR"
 
 set +e
@@ -233,6 +240,7 @@ HXHX_STAGE0_NO_HX_PARSER="$STAGE0_NO_HX_PARSER" \
 HXHX_STAGE0_NO_EXPR_MACROS="$STAGE0_NO_EXPR_MACROS" \
 HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST="$STAGE0_NO_EXTERNAL_MACRO_HOST" \
 HXHX_STAGE0_NO_STAGE3="$STAGE0_NO_STAGE3" \
+HXHX_STAGE0_NO_INTERNAL_TOOLS="$STAGE0_NO_INTERNAL_TOOLS" \
 HXHX_STAGE0_DISABLE_PREPASSES="$DISABLE_PREPASSES" \
 HXHX_STAGE0_OCAML_ONLY="$STAGE0_OCAML_ONLY" \
 HXHX_STAGE0_NO_LINE_DIRECTIVES="$STAGE0_NO_LINE_DIRECTIVES" \

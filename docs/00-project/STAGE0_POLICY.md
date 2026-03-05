@@ -59,6 +59,7 @@ Machine-readable reports (`--report-json`) include:
 - `stage0_disable_prepasses` (`0` / `1`)
 - `stage0_no_opt` (`0` / `1`)
 - `stage0_no_inline` (`0` / `1`)
+- `stage0_no_internal_tools` (`0` / `1`)
 - `stage0_ocamlrunparam` (string; empty when unset)
 - `stage0_observability.heartbeat_seconds`
 - `stage0_observability.heartbeat_samples`
@@ -269,6 +270,20 @@ npm run hxhx:profile:stage0-regen-ab -- \
 
 `--no-stage3` maps to `HXHX_STAGE0_NO_STAGE3=1` and adds
 `-D hxhx_stage0_no_stage3`, which compiles out Stage3 native lane entrypoints in profiling runs.
+
+Additional internal-tools graph-trimming mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-internal-tools"
+```
+
+`--no-internal-tools` maps to `HXHX_STAGE0_NO_INTERNAL_TOOLS=1` and adds
+`-D hxhx_stage0_no_internal_tools`, which compiles out internal bring-up CLI paths (`--hxhx-stage1`, `--hxhx-parse`, `--hxhx-selftest`, `--hxhx-ocaml-interp`) in profiling runs.
+
+This knob is profiling-only today; do not treat it as lane-equivalent for release snapshots until behavior parity is explicitly proven for maintained internal-tool workflows.
 
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
