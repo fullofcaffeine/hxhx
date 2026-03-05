@@ -44,7 +44,14 @@ if [ -z "${HAXE_STD_PATH:-}" ]; then
   exit 0
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+if [ -n "${HXHX_BIN:-}" ]; then
+  if [ ! -f "$HXHX_BIN" ]; then
+    echo "Provided HXHX_BIN does not exist: $HXHX_BIN" >&2
+    exit 1
+  fi
+else
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
 
 # Gate 2 stage3 diagnostic still needs `-lib utest` to resolve from `RunCi.hxml`.
 UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"

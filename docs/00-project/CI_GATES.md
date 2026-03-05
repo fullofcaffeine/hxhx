@@ -9,6 +9,8 @@ For lane/profile context, use the canonical beginner truth table:
 - `docs/02-user-guide/concepts/what_delegates_today.md`
 - Haxe 4.3.7 parity contract map (suites × lanes × targets × profiles × markers):
   `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
+- Macro runtime parity blocker list (explicit gaps before inproc-default):
+  `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`
 - Weekly ops audit procedure (scheduled gates + triage):
   `docs/00-project/WEEKLY_CI_EVIDENCE.md`
 
@@ -76,6 +78,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | --- | --- | --- | --- |
 | `Gate 1 / Upstream Macro Unit Compatibility` | `.github/workflows/gate1.yml` | Full upstream unit macro compatibility baseline. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 2 / Upstream Macro Workloads` | `.github/workflows/gate2.yml` | Wider upstream `runci` macro workload checks. | **Nightly/scheduled** | weekly schedule, manual |
+| `Macro Runtime Parity (Weekly)` | `.github/workflows/macro-runtime-parity-weekly.yml` | Runs upstream macro + display checks in both macro runtime modes (`external-host`, `inproc`) with mode-tagged artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
@@ -89,6 +92,17 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 Expected strict markers in logs:
 - `M7_STRICT_STAGE0:PASS`
 - `M7_REPLACEMENT_READY:PASS`
+
+Macro runtime parity weekly markers:
+- `MACRO_RUNTIME_PARITY_UNIT_EXTERNAL_HOST:PASS`
+- `MACRO_RUNTIME_PARITY_UNIT_INPROC:PASS`
+- `MACRO_RUNTIME_PARITY_RUNCI_EXTERNAL_HOST:PASS`
+- `MACRO_RUNTIME_PARITY_RUNCI_INPROC:PASS`
+- `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_EXTERNAL_HOST:PASS`
+- `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_INPROC:PASS`
+- `MACRO_RUNTIME_PARITY_EXTERNAL_HOST:PASS`
+- `MACRO_RUNTIME_PARITY_INPROC:PASS`
+- `MACRO_RUNTIME_PARITY_WEEKLY:PASS`
 
 ## Report-only / utility workflows
 

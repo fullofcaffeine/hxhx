@@ -18,6 +18,24 @@ while we bootstrap:
 - macro state can be reset deterministically
 - the ABI boundary becomes explicit and testable (good for Gate 1/Gate 2)
 
+## Parity auditing (beginner quick path)
+
+To compare `external-host` vs `inproc` behavior in CI, use:
+
+- `.github/workflows/macro-runtime-parity-weekly.yml`
+
+That workflow runs both modes against:
+
+- upstream unit macro stage3 no-emit checks
+- upstream runci macro stage3 no-emit workload checks
+- display + macro protocol checks
+
+It emits mode-specific markers and uploads mode-tagged artifacts for triage.
+
+Open parity gaps are tracked in:
+
+- `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`
+
 ## Macro host implementations in this repo (bring-up)
 
 There are currently **two** macro-host entrypoints, depending on how the host is built:

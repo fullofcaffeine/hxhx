@@ -33,7 +33,14 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+if [ -n "${HXHX_BIN:-}" ]; then
+  if [ ! -f "$HXHX_BIN" ]; then
+    echo "Provided HXHX_BIN does not exist: $HXHX_BIN" >&2
+    exit 1
+  fi
+else
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
 
 DISPLAY_FILE="$UPSTREAM_DIR/tests/display/src-shared/Marker.hx"
 if [ ! -f "$DISPLAY_FILE" ]; then

@@ -19,27 +19,33 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | --- | --- | --- | --- | --- |
 | Gate 1 / Upstream Macro Unit Compatibility | `.github/workflows/gate1.yml` | Weekly schedule | `GATE1_MACRO:PASS` | Workflow run logs (marker in log output) |
 | Gate 2 / Upstream Macro Workloads | `.github/workflows/gate2.yml` | Weekly schedule | `GATE2_MACRO:PASS` | Workflow run logs (marker in log output) |
+| Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS` plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`) | Artifacts `macro-runtime-parity-external-host-<run_id>` and `macro-runtime-parity-inproc-<run_id>` |
 | Gate M7 / Replacement Bundle | `.github/workflows/gate-m7.yml` | Weekly schedule | `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` | Artifact `gate-m7-logs-<run_id>` + run logs |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
 ## Weekly procedure
 
-1. Open GitHub Actions and filter to the five workflows above.
-2. Verify latest scheduled runs for Gate 1, Gate 2, Gate M7, and semantic-diff are green.
+1. Open GitHub Actions and filter to the weekly evidence workflows above.
+2. Verify latest scheduled runs for Gate 1, Gate 2, Macro Runtime Parity, Gate M7, and semantic-diff are green.
 3. Open each run and confirm expected markers appear in logs.
-4. For Gate M7 and semantic-diff, download artifacts and confirm expected files are present.
-5. Manually dispatch `Perf / HXHX KPI (Report Only)`.
-6. Download KPI artifact and compare `report.json` against:
+4. For Macro Runtime Parity, download both mode-tagged artifacts and inspect:
+   - `markers.txt`
+   - `macro-runtime-parity-blockers.md`
+   - suite logs (`unit`, `runci`, `display/protocol`)
+5. For Gate M7 and semantic-diff, download artifacts and confirm expected files are present.
+6. Manually dispatch `Perf / HXHX KPI (Report Only)`.
+7. Download KPI artifact and compare `report.json` against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
    - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
-7. Record evidence links and outcomes in the weekly ops note/bead comment.
+8. Record evidence links and outcomes in the weekly ops note/bead comment.
 
 ## Triage matrix
 
 | Signal | Owner | First action (same day) | Escalation |
 | --- | --- | --- | --- |
 | Gate 1 or Gate 2 scheduled failure | On-duty CI maintainer | Re-run once to rule out transient infrastructure failure; if reproducible, open regression bead with run URL + failing step | Escalate to compiler owners if not green within 24h |
+| Macro runtime parity weekly failure (either mode) | On-duty macro/runtime maintainer | Inspect mode-tagged artifacts, identify whether failure is `external-host` only, `inproc` only, or both; file/update blocker bead with mode marker lines | Escalate to compiler owners if parity remains red for two consecutive weekly runs |
 | Gate M7 scheduled failure or missing strict marker | On-duty release maintainer | Re-run Gate M7 with strict defaults; attach `gate-m7-logs-<run_id>` and marker lines to regression bead | Treat as release blocker until resolved |
 | Semantic-diff nightly failure or missing artifact | On-duty stdlib maintainer | Re-run workflow, inspect comparator/lane logs, and attach `semantic-diff-nightly-artifacts` to bead | Escalate to stdlib/runtime owners if unresolved in 24h |
 | KPI workflow emits no report or exceeds threshold budget | On-duty performance maintainer | Re-run KPI once; compare `report.json` with threshold file and classify expected vs regression | Escalate to release maintainer when regression exceeds thresholds on two consecutive weekly runs |

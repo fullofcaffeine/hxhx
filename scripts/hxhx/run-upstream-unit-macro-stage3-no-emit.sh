@@ -49,7 +49,14 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+if [ -n "${HXHX_BIN:-}" ]; then
+  if [ ! -f "$HXHX_BIN" ]; then
+    echo "Provided HXHX_BIN does not exist: $HXHX_BIN" >&2
+    exit 1
+  fi
+else
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
 
 # Gate 1 depends on `-lib utest`. Upstream CI pins utest; match the pin so fixture content stays stable.
 UTEST_COMMIT="a94f8812e8786f2b5fec52ce9f26927591d26327"
