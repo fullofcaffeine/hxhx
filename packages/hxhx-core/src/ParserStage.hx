@@ -29,7 +29,7 @@ class ParserStage {
 	public static function parse(source:String, ?filePath:String):ParsedModule {
 		final expectedMainClass = expectedMainClassFromFile(filePath);
 		final decl =
-			#if hih_native_parser
+			#if (hih_native_parser && !hxhx_stage0_no_native_parser)
 			// Bring-up escape hatch: allow forcing the pure-Haxe parser even when the
 			// native frontend is compiled in.
 			//
@@ -275,7 +275,7 @@ class ParserStage {
 		return new ParsedModule(source, decl, path);
 	}
 
-	#if hih_native_parser
+	#if (hih_native_parser && !hxhx_stage0_no_native_parser)
 	static function parseViaNativeHooks(source:String, expectedMainClass:Null<String>):HxModuleDecl {
 		final encoded = expectedMainClass != null
 			&& expectedMainClass.length > 0 ? native.NativeParser.parseModuleDeclWithExpected(source,

@@ -10,6 +10,7 @@ FAILFAST_SECS="${HXHX_STAGE0_PROFILE_FAILFAST_SECS:-120}"
 HEARTBEAT_SECS="${HXHX_STAGE0_PROFILE_HEARTBEAT_SECS:-20}"
 NO_OPT="${HXHX_STAGE0_PROFILE_NO_OPT:-0}"
 NO_INLINE="${HXHX_STAGE0_PROFILE_NO_INLINE:-0}"
+STAGE0_NO_NATIVE_PARSER="${HXHX_STAGE0_PROFILE_NO_NATIVE_PARSER:-0}"
 DISABLE_PREPASSES="${HXHX_STAGE0_PROFILE_DISABLE_PREPASSES:-0}"
 STAGE0_OCAML_ONLY="${HXHX_STAGE0_PROFILE_OCAML_ONLY:-0}"
 STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_PROFILE_OCAMLRUNPARAM:-}"
@@ -31,6 +32,7 @@ Options:
   --heartbeat <seconds>                          Stage0 heartbeat seconds (default: 20)
   --no-opt                                       Enable stage0 --no-opt mitigation
   --no-inline                                    Enable stage0 --no-inline mitigation
+  --no-native-parser                             Disable native parser path for stage0 compile
   --disable-prepasses                            Enable stage0 prepass disable define
   --ocaml-only                                   Enable stage0 ocaml-only backend graph define
   --ocamlrunparam <value>                        Set OCAMLRUNPARAM for stage0 haxe process
@@ -85,6 +87,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--no-inline)
 			NO_INLINE=1
+			shift
+			;;
+		--no-native-parser)
+			STAGE0_NO_NATIVE_PARSER=1
 			shift
 			;;
 		--no-opt)
@@ -155,6 +161,7 @@ if ! is_non_negative_int "$HEARTBEAT_SECS"; then
 fi
 assert_bool_01 "NO_OPT" "$NO_OPT"
 assert_bool_01 "NO_INLINE" "$NO_INLINE"
+assert_bool_01 "STAGE0_NO_NATIVE_PARSER" "$STAGE0_NO_NATIVE_PARSER"
 assert_bool_01 "DISABLE_PREPASSES" "$DISABLE_PREPASSES"
 assert_bool_01 "STAGE0_OCAML_ONLY" "$STAGE0_OCAML_ONLY"
 assert_bool_01 "TELEMETRY_DETAIL" "$TELEMETRY_DETAIL"
@@ -173,7 +180,7 @@ RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
 echo "== Stage0 regen profile run"
-echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
+echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
 echo "out_dir=$OUT_DIR"
 
 set +e
@@ -186,6 +193,7 @@ HXHX_STAGE0_TELEMETRY_DETAIL="$TELEMETRY_DETAIL" \
 HXHX_STAGE0_TELEMETRY_CLASS="$TELEMETRY_CLASS" \
 HXHX_STAGE0_NO_OPT="$NO_OPT" \
 HXHX_STAGE0_NO_INLINE="$NO_INLINE" \
+HXHX_STAGE0_NO_NATIVE_PARSER="$STAGE0_NO_NATIVE_PARSER" \
 HXHX_STAGE0_DISABLE_PREPASSES="$DISABLE_PREPASSES" \
 HXHX_STAGE0_OCAML_ONLY="$STAGE0_OCAML_ONLY" \
 HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \

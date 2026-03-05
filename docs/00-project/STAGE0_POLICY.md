@@ -197,6 +197,19 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `--ocaml-only` maps to `HXHX_STAGE0_OCAML_ONLY=1` and adds
 `-D hxhx_stage0_ocaml_only` during stage0 emit so linked `js-native` backend classes are excluded from that compile graph.
 
+Additional parser-path mitigation candidate:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--no-native-parser"
+```
+
+`--no-native-parser` maps to `HXHX_STAGE0_NO_NATIVE_PARSER=1` and adds
+`-D hxhx_stage0_no_native_parser`, forcing the pure-Haxe parser branch even when
+`-D hih_native_parser` is present in `build.hxml`.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash
