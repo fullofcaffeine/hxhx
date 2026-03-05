@@ -125,6 +125,10 @@ Full1 extended Gate3 marker:
 
 - `FULL1_GATE3_EXTENDED_TARGETS:PASS` (`.github/workflows/gate3-full1-extended.yml`)
 
+Local suite runner guide for Full1 suite scaffolding (`misc/server/threads/optimization/display`):
+
+- `docs/01-getting-started/RUN_FULL1_SUITES_LOCALLY.md`
+
 ## Report-only / utility workflows
 
 | Workflow | File | Purpose | Trigger class | Triggers |

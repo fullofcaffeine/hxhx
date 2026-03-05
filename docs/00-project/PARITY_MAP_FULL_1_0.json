@@ -194,6 +194,66 @@
       "marker": "FULL1_RELEASE_GO:PASS",
       "workflow": ".github/workflows/gate-full1-rc.yml",
       "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-14",
+      "suite": "full1-suite-misc",
+      "lane": "full",
+      "targets": [
+        "misc"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_SUITE_MISC:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-15",
+      "suite": "full1-suite-server",
+      "lane": "full",
+      "targets": [
+        "server"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_SUITE_SERVER:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-16",
+      "suite": "full1-suite-threads",
+      "lane": "full",
+      "targets": [
+        "threads"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_SUITE_THREADS:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-17",
+      "suite": "full1-suite-optimization",
+      "lane": "full",
+      "targets": [
+        "optimization"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_SUITE_OPTIMIZATION:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-18",
+      "suite": "full1-suite-display",
+      "lane": "full",
+      "targets": [
+        "display"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_SUITE_DISPLAY:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
     }
   ]
 }
