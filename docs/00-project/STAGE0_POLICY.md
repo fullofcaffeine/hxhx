@@ -321,6 +321,21 @@ npm run hxhx:profile:stage0-regen-ab -- \
 `-D hxhx_stage0_no_source_normalize_extract`, which inlines HxParser source-normalization helpers back
 into the parser module for A/B profiling. The default path keeps these helpers extracted.
 
+Additional parser native-decode graph candidate (inline baseline vs extracted helper):
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --baseline-args "--no-native-decode-extract" \
+  --mitigation-args "" \
+  --parity-mode status-exit
+```
+
+`--no-native-decode-extract` maps to `HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT=1` and adds
+`-D hxhx_stage0_no_native_decode_extract`, which keeps native-protocol decode helpers in `ParserStage`
+for A/B profiling. The default path delegates decode helpers to `ParserStageNativeDecode`.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash

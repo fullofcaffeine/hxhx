@@ -212,7 +212,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional OCaml GC tuning for stage0 process: `HXHX_STAGE0_OCAMLRUNPARAM=s=4M`
   - Regen report JSON (`--report-json`) includes deterministic selection fields:
     - `haxe_bin_requested`, `haxe_bin_resolved`, `haxe_bin_mode`, `haxe_bin_policy`, `haxe_bin_switched`
-    - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_no_source_normalize_extract`, `stage0_ocamlrunparam`
+    - `stage0_disable_prepasses`, `stage0_no_opt`, `stage0_no_inline`, `stage0_no_native_parser`, `stage0_no_hx_parser`, `stage0_no_expr_macros`, `stage0_no_external_macro_host`, `stage0_no_stage3`, `stage0_no_internal_tools`, `stage0_ocaml_only`, `stage0_no_line_directives`, `stage0_no_source_normalize_extract`, `stage0_no_native_decode_extract`, `stage0_ocamlrunparam`
     - `stage0_observability.heartbeat_peak_rss_mb` (plus heartbeat samples/interval)
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
@@ -235,10 +235,13 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - optional stage0 compile-graph minimization (OCaml-only backend graph): `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocaml-only`
     - optional generated-output metadata trimming: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-line-directives`
     - optional parser-helper inline baseline for source-level A/B profiling: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-source-normalize-extract`
+    - optional parser native-decode inline baseline for source-level A/B profiling: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --no-native-decode-extract`
     - repeated baseline-vs-mitigation memory A/B runner:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses"`
     - repeated parser-source extraction A/B runner:
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --baseline-args "--no-source-normalize-extract" --mitigation-args "" --parity-mode status-exit`
+    - repeated parser native-decode extraction A/B runner:
+      `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --baseline-args "--no-native-decode-extract" --mitigation-args "" --parity-mode status-exit`
     - optional parity gate for equivalent baseline/mitigation outcomes (exit code `4` on mismatch):
       `npm run hxhx:profile:stage0-regen-ab -- --reps 3 --failfast 120 --mitigation-args "--disable-prepasses" --parity-mode status-exit --require-status-parity`
     - enforce a reduction threshold in CI/local scripts (exit code 3 on miss):

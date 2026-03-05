@@ -17,6 +17,7 @@ STAGE0_NO_EXTERNAL_MACRO_HOST="${HXHX_STAGE0_PROFILE_NO_EXTERNAL_MACRO_HOST:-0}"
 STAGE0_NO_STAGE3="${HXHX_STAGE0_PROFILE_NO_STAGE3:-0}"
 STAGE0_NO_INTERNAL_TOOLS="${HXHX_STAGE0_PROFILE_NO_INTERNAL_TOOLS:-0}"
 STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="${HXHX_STAGE0_PROFILE_NO_SOURCE_NORMALIZE_EXTRACT:-0}"
+STAGE0_NO_NATIVE_DECODE_EXTRACT="${HXHX_STAGE0_PROFILE_NO_NATIVE_DECODE_EXTRACT:-0}"
 DISABLE_PREPASSES="${HXHX_STAGE0_PROFILE_DISABLE_PREPASSES:-0}"
 STAGE0_OCAML_ONLY="${HXHX_STAGE0_PROFILE_OCAML_ONLY:-0}"
 STAGE0_NO_LINE_DIRECTIVES="${HXHX_STAGE0_PROFILE_NO_LINE_DIRECTIVES:-0}"
@@ -46,6 +47,7 @@ Options:
   --no-stage3                                    Trim Stage3 native lane paths in stage0 compile graph
   --no-internal-tools                            Trim internal bring-up CLI paths in stage0 compile graph
   --no-source-normalize-extract                  Inline HxParser normalization helpers for stage0 A/B (no extract)
+  --no-native-decode-extract                     Inline ParserStage native decode helpers for stage0 A/B (no extract)
   --disable-prepasses                            Enable stage0 prepass disable define
   --ocaml-only                                   Enable stage0 ocaml-only backend graph define
   --no-line-directives                           Disable OCaml line directives during stage0 emit
@@ -131,6 +133,10 @@ while [ "$#" -gt 0 ]; do
 			STAGE0_NO_SOURCE_NORMALIZE_EXTRACT=1
 			shift
 			;;
+		--no-native-decode-extract)
+			STAGE0_NO_NATIVE_DECODE_EXTRACT=1
+			shift
+			;;
 		--no-opt)
 			NO_OPT=1
 			shift
@@ -210,6 +216,7 @@ assert_bool_01 "STAGE0_NO_EXTERNAL_MACRO_HOST" "$STAGE0_NO_EXTERNAL_MACRO_HOST"
 assert_bool_01 "STAGE0_NO_STAGE3" "$STAGE0_NO_STAGE3"
 assert_bool_01 "STAGE0_NO_INTERNAL_TOOLS" "$STAGE0_NO_INTERNAL_TOOLS"
 assert_bool_01 "STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" "$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT"
+assert_bool_01 "STAGE0_NO_NATIVE_DECODE_EXTRACT" "$STAGE0_NO_NATIVE_DECODE_EXTRACT"
 assert_bool_01 "DISABLE_PREPASSES" "$DISABLE_PREPASSES"
 assert_bool_01 "STAGE0_OCAML_ONLY" "$STAGE0_OCAML_ONLY"
 assert_bool_01 "STAGE0_NO_LINE_DIRECTIVES" "$STAGE0_NO_LINE_DIRECTIVES"
@@ -229,7 +236,7 @@ RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
 echo "== Stage0 regen profile run"
-echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 no_internal_tools=$STAGE0_NO_INTERNAL_TOOLS no_source_normalize_extract=$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
+echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE no_native_parser=$STAGE0_NO_NATIVE_PARSER no_hx_parser=$STAGE0_NO_HX_PARSER no_expr_macros=$STAGE0_NO_EXPR_MACROS no_external_macro_host=$STAGE0_NO_EXTERNAL_MACRO_HOST no_stage3=$STAGE0_NO_STAGE3 no_internal_tools=$STAGE0_NO_INTERNAL_TOOLS no_source_normalize_extract=$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT no_native_decode_extract=$STAGE0_NO_NATIVE_DECODE_EXTRACT disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY no_line_directives=$STAGE0_NO_LINE_DIRECTIVES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
 echo "out_dir=$OUT_DIR"
 
 set +e
@@ -249,6 +256,7 @@ HXHX_STAGE0_NO_EXTERNAL_MACRO_HOST="$STAGE0_NO_EXTERNAL_MACRO_HOST" \
 HXHX_STAGE0_NO_STAGE3="$STAGE0_NO_STAGE3" \
 HXHX_STAGE0_NO_INTERNAL_TOOLS="$STAGE0_NO_INTERNAL_TOOLS" \
 HXHX_STAGE0_NO_SOURCE_NORMALIZE_EXTRACT="$STAGE0_NO_SOURCE_NORMALIZE_EXTRACT" \
+HXHX_STAGE0_NO_NATIVE_DECODE_EXTRACT="$STAGE0_NO_NATIVE_DECODE_EXTRACT" \
 HXHX_STAGE0_DISABLE_PREPASSES="$DISABLE_PREPASSES" \
 HXHX_STAGE0_OCAML_ONLY="$STAGE0_OCAML_ONLY" \
 HXHX_STAGE0_NO_LINE_DIRECTIVES="$STAGE0_NO_LINE_DIRECTIVES" \

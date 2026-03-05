@@ -284,7 +284,11 @@ class ParserStage {
 		final encoded = expectedMainClass != null
 			&& expectedMainClass.length > 0 ? native.NativeParser.parseModuleDeclWithExpected(source,
 				expectedMainClass) : native.NativeParser.parseModuleDecl(source);
+		#if hxhx_stage0_no_native_decode_extract
 		return decodeNativeProtocol(encoded);
+		#else
+		return ParserStageNativeDecode.decodeNativeProtocol(encoded);
+		#end
 	}
 
 	/**
@@ -1282,6 +1286,7 @@ class ParserStage {
 		return {isIdent: false, text: "", nextPos: len};
 	}
 
+	#if hxhx_stage0_no_native_decode_extract
 	/**
 		Decode the native frontend protocol emitted by the OCaml lexer/parser stubs.
 
@@ -1833,5 +1838,6 @@ class ParserStage {
 		head.push(tail);
 		return head;
 	}
+	#end
 	#end
 }
