@@ -12,6 +12,7 @@ VERIFY_FLAG="${HXHX_BOOTSTRAP_BENCH_VERIFY:-0}"
 STAGE0_POLICY="${HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY:-}"
 STAGE0_NATIVE_BIN="${HXHX_BOOTSTRAP_BENCH_STAGE0_NATIVE_HAXE_BIN:-}"
 COMPARE_STAGE0_POLICIES="${HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES:-0}"
+DUNE_JOBS_RAW="${HXHX_BOOTSTRAP_BENCH_DUNE_JOBS:-auto}"
 STAGE0_NO_OPT="${HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT:-0}"
 STAGE0_NO_INLINE="${HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE:-0}"
 STAGE0_DISABLE_PREPASSES="${HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES:-0}"
@@ -36,6 +37,8 @@ Environment knobs:
   HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES
                                       0/1 run each benchmark twice:
                                       wrapper=warn and native=prefer-native
+  HXHX_BOOTSTRAP_BENCH_DUNE_JOBS      Comma list of dune worker settings
+                                      (values: auto or positive integers, default: auto)
   HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT
                                       0/1 pass HXHX_STAGE0_NO_OPT to regen runs
   HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE
@@ -62,6 +65,25 @@ USAGE
 is_non_negative_int() {
 	case "$1" in
 		''|*[!0-9]*)
+			return 1
+			;;
+		*)
+			return 0
+			;;
+	esac
+}
+
+trim_token() {
+	echo "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+is_valid_dune_jobs_token() {
+	local value="$1"
+	case "$value" in
+		auto)
+			return 0
+			;;
+		''|*[!0-9]*|0)
 			return 1
 			;;
 		*)
@@ -145,9 +167,27 @@ if [ -n "$STAGE0_POLICY" ]; then
 	esac
 fi
 
+DUNE_JOBS_LIST=()
+IFS=',' read -r -a dune_jobs_tokens <<<"$DUNE_JOBS_RAW"
+for token in "${dune_jobs_tokens[@]}"; do
+	token="$(trim_token "$token")"
+	if [ -z "$token" ]; then
+		continue
+	fi
+	if ! is_valid_dune_jobs_token "$token"; then
+		echo "Invalid HXHX_BOOTSTRAP_BENCH_DUNE_JOBS token: '$token' (expected auto or a positive integer)." >&2
+		exit 1
+	fi
+	DUNE_JOBS_LIST+=("$token")
+done
+if [ "${#DUNE_JOBS_LIST[@]}" -eq 0 ]; then
+	echo "HXHX_BOOTSTRAP_BENCH_DUNE_JOBS produced no valid values." >&2
+	exit 1
+fi
+
 mkdir -p "$REPORT_DIR"
 RESULTS_TSV="$REPORT_DIR/results.tsv"
-printf 'scenario\tpolicy\trep\telapsed_sec\temit_sec\ttotal_sec\tskipped_emit\thaxe_mode\thaxe_policy\tswitched\tpeak_rss_mb\treport\n' >"$RESULTS_TSV"
+printf 'scenario\tpolicy\tdune_jobs\trep\telapsed_sec\temit_sec\ttotal_sec\tskipped_emit\thaxe_mode\thaxe_policy\tswitched\tpeak_rss_mb\treport\n' >"$RESULTS_TSV"
 
 cleanup() {
 	bash "$SERVER_HELPER" stop >/dev/null 2>&1 || true
@@ -166,6 +206,7 @@ echo "HAXE_BIN: $HAXE_BIN"
 echo "Scenarios: $SCENARIOS_RAW"
 echo "Reps per scenario: $REPS"
 echo "Verify mode: $VERIFY_FLAG"
+echo "Dune jobs matrix: $DUNE_JOBS_RAW"
 if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
 	echo "Stage0 policy mode: compare(wrapper=warn,native=prefer-native)"
 else
@@ -180,8 +221,9 @@ echo ""
 
 run_regen_with_policy() {
 	local policy_value="$1"
-	local report_path="$2"
-	shift 2
+	local dune_jobs="$2"
+	local report_path="$3"
+	shift 3
 	local -a regen_args=("$@" "${verify_args[@]}")
 	if [ -n "$report_path" ]; then
 		regen_args+=(--report-json "$report_path")
@@ -190,6 +232,7 @@ run_regen_with_policy() {
 	if [ -n "$policy_value" ] && [ -n "$STAGE0_NATIVE_BIN" ]; then
 		HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$policy_value" \
 		HXHX_STAGE0_NATIVE_HAXE_BIN="$STAGE0_NATIVE_BIN" \
+		HXHX_DUNE_JOBS="$dune_jobs" \
 		HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
 		HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
 		HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
@@ -200,6 +243,7 @@ run_regen_with_policy() {
 	fi
 	if [ -n "$policy_value" ]; then
 		HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY="$policy_value" \
+		HXHX_DUNE_JOBS="$dune_jobs" \
 		HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
 		HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
 		HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
@@ -210,6 +254,7 @@ run_regen_with_policy() {
 	fi
 	if [ -n "$STAGE0_NATIVE_BIN" ]; then
 		HXHX_STAGE0_NATIVE_HAXE_BIN="$STAGE0_NATIVE_BIN" \
+		HXHX_DUNE_JOBS="$dune_jobs" \
 		HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
 		HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
 		HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
@@ -218,6 +263,7 @@ run_regen_with_policy() {
 		bash "$REGEN_SCRIPT" "${regen_args[@]}"
 		return
 	fi
+	HXHX_DUNE_JOBS="$dune_jobs" \
 	HXHX_STAGE0_NO_OPT="$STAGE0_NO_OPT" \
 	HXHX_STAGE0_NO_INLINE="$STAGE0_NO_INLINE" \
 	HXHX_STAGE0_DISABLE_PREPASSES="$STAGE0_DISABLE_PREPASSES" \
@@ -258,39 +304,44 @@ run_once() {
 	local rep="$2"
 	local policy_label="$3"
 	local policy_value="$4"
-	shift 4
+	local dune_jobs="$5"
+	shift 5
 	local policy_slug="${policy_label//[^A-Za-z0-9._-]/_}"
-	local report_path="$REPORT_DIR/${scenario}.${policy_slug}.run${rep}.json"
+	local dune_slug="${dune_jobs//[^A-Za-z0-9._-]/_}"
+	local report_path="$REPORT_DIR/${scenario}.${policy_slug}.jobs${dune_slug}.run${rep}.json"
 	local start_ts end_ts elapsed
 	local emit_sec total_sec skipped_emit haxe_mode haxe_policy switched peak_rss_mb
 
 	start_ts="$(date +%s)"
-	run_regen_with_policy "$policy_value" "$report_path" "$@"
+	run_regen_with_policy "$policy_value" "$dune_jobs" "$report_path" "$@"
 	end_ts="$(date +%s)"
 	elapsed="$((end_ts - start_ts))"
 
 	IFS=$'\t' read -r emit_sec total_sec skipped_emit haxe_mode haxe_policy switched peak_rss_mb <<<"$(extract_report_metrics "$report_path")"
 
-	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-		"$scenario" "$policy_label" "$rep" "$elapsed" "$emit_sec" "$total_sec" "$skipped_emit" "$haxe_mode" "$haxe_policy" "$switched" "$peak_rss_mb" "$report_path" >>"$RESULTS_TSV"
-	printf 'run %-5s policy=%-14s #%s %4ss emit=%ss peak_rss=%sMB report=%s\n' \
-		"$scenario" "$policy_label" "$rep" "$elapsed" "$emit_sec" "$peak_rss_mb" "$report_path"
+	printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+		"$scenario" "$policy_label" "$dune_jobs" "$rep" "$elapsed" "$emit_sec" "$total_sec" "$skipped_emit" "$haxe_mode" "$haxe_policy" "$switched" "$peak_rss_mb" "$report_path" >>"$RESULTS_TSV"
+	printf 'run %-5s policy=%-14s jobs=%-5s #%s %4ss emit=%ss peak_rss=%sMB report=%s\n' \
+		"$scenario" "$policy_label" "$dune_jobs" "$rep" "$elapsed" "$emit_sec" "$peak_rss_mb" "$report_path"
 }
 
 run_once_for_active_policies() {
 	local scenario="$1"
 	local rep="$2"
 	shift 2
-	if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
-		run_once "$scenario" "$rep" "wrapper" "warn" "$@"
-		run_once "$scenario" "$rep" "native" "prefer-native" "$@"
-		return
-	fi
-	local policy_label="default"
-	if [ -n "$STAGE0_POLICY" ]; then
-		policy_label="$STAGE0_POLICY"
-	fi
-	run_once "$scenario" "$rep" "$policy_label" "$STAGE0_POLICY" "$@"
+	local dune_jobs=""
+	for dune_jobs in "${DUNE_JOBS_LIST[@]}"; do
+		if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
+			run_once "$scenario" "$rep" "wrapper" "warn" "$dune_jobs" "$@"
+			run_once "$scenario" "$rep" "native" "prefer-native" "$dune_jobs" "$@"
+			continue
+		fi
+		local policy_label="default"
+		if [ -n "$STAGE0_POLICY" ]; then
+			policy_label="$STAGE0_POLICY"
+		fi
+		run_once "$scenario" "$rep" "$policy_label" "$STAGE0_POLICY" "$dune_jobs" "$@"
+	done
 }
 
 run_scenario_cold() {
@@ -312,24 +363,28 @@ run_skip_for_policy() {
 	local rep="$1"
 	local policy_label="$2"
 	local policy_value="$3"
+	local dune_jobs="$4"
 	echo "Priming fingerprint for skip scenario policy=$policy_label (not measured)..."
-	run_regen_with_policy "$policy_value" "" --incremental --use-repo-server --keep-repo-server --force --no-verify >/dev/null
-	run_once "skip" "$rep" "$policy_label" "$policy_value" --incremental --use-repo-server --keep-repo-server --skip-if-unchanged
+	run_regen_with_policy "$policy_value" "$dune_jobs" "" --incremental --use-repo-server --keep-repo-server --force --no-verify >/dev/null
+	run_once "skip" "$rep" "$policy_label" "$policy_value" "$dune_jobs" --incremental --use-repo-server --keep-repo-server --skip-if-unchanged
 }
 
 run_scenario_skip() {
 	local rep
+	local dune_jobs
 	for rep in $(seq 1 "$REPS"); do
-		if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
-			run_skip_for_policy "$rep" "wrapper" "warn"
-			run_skip_for_policy "$rep" "native" "prefer-native"
-		else
-			local policy_label="default"
-			if [ -n "$STAGE0_POLICY" ]; then
-				policy_label="$STAGE0_POLICY"
+		for dune_jobs in "${DUNE_JOBS_LIST[@]}"; do
+			if [ "$COMPARE_STAGE0_POLICIES" = "1" ]; then
+				run_skip_for_policy "$rep" "wrapper" "warn" "$dune_jobs"
+				run_skip_for_policy "$rep" "native" "prefer-native" "$dune_jobs"
+			else
+				local policy_label="default"
+				if [ -n "$STAGE0_POLICY" ]; then
+					policy_label="$STAGE0_POLICY"
+				fi
+				run_skip_for_policy "$rep" "$policy_label" "$STAGE0_POLICY" "$dune_jobs"
 			fi
-			run_skip_for_policy "$rep" "$policy_label" "$STAGE0_POLICY"
-		fi
+		done
 	done
 }
 
@@ -377,8 +432,9 @@ NR == 1 {
 {
 	sc = $1
 	policy = $2
-	key = sc "|" policy
-	sec = $4 + 0
+	jobs = $3
+	key = sc "|" policy "|" jobs
+	sec = $5 + 0
 	if (!(key in count)) {
 		count[key] = 0
 		sum[key] = 0
@@ -386,6 +442,7 @@ NR == 1 {
 		worst[key] = sec
 		scenario[key] = sc
 		policies[key] = policy
+		dune_jobs[key] = jobs
 	}
 	count[key]++
 	sum[key] += sec
@@ -393,10 +450,10 @@ NR == 1 {
 	if (sec > worst[key]) worst[key] = sec
 }
 END {
-	printf "%-8s %-14s %-6s %-6s %-6s %-6s\n", "scenario", "policy", "runs", "avg", "best", "worst"
+	printf "%-8s %-14s %-8s %-6s %-6s %-6s %-6s\n", "scenario", "policy", "jobs", "runs", "avg", "best", "worst"
 	for (key in count) {
 		avg = int(sum[key] / count[key])
-		printf "%-8s %-14s %-6d %-6d %-6d %-6d\n", scenario[key], policies[key], count[key], avg, best[key], worst[key]
+		printf "%-8s %-14s %-8s %-6d %-6d %-6d %-6d\n", scenario[key], policies[key], dune_jobs[key], count[key], avg, best[key], worst[key]
 	}
 }
 ' "$RESULTS_TSV"

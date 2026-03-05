@@ -63,9 +63,14 @@ HAXE_BIN="$HOME/haxe/versions/4.3.7/haxe" bash scripts/hxhx/regenerate-hxhx-boot
 # Keep dune worker count deterministic (useful for memory-pressure tuning).
 HXHX_DUNE_JOBS=4 bash scripts/hxhx/build-hxhx.sh
 
+# Compare wrapper vs native stage0 policy and worker counts in one run.
+HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen
+
 # If source builds use --connect and appear stuck, auto-retry sooner.
 HXHX_FORCE_STAGE0=1 HXHX_STAGE0_USE_REPO_SERVER=1 HXHX_STAGE0_CONNECT_IDLE_SECS=90 bash scripts/hxhx/build-hxhx.sh
 ```
+
+Defaults stay `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native` and `HXHX_DUNE_JOBS=auto`; use fixed workers only when tuning for host-specific memory constraints.
 
 ## Pick your workflow
 

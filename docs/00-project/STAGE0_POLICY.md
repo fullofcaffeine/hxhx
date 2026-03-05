@@ -87,6 +87,7 @@ Benchmark harness (single command, policy A/B compare):
 HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm \
 HXHX_BOOTSTRAP_BENCH_REPS=1 \
 HXHX_BOOTSTRAP_BENCH_VERIFY=0 \
+HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 \
 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 \
 npm run hxhx:bench:bootstrap-regen
 ```
@@ -104,7 +105,14 @@ You can pass stage0 compile knobs through the benchmark:
 - `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE=1`
 - `HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES=1`
 - `HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM=s=4M`
-- `HXHX_DUNE_JOBS=4` (forces deterministic dune worker count for bootstrap build/verify scripts)
+- `HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4` (runs worker-count matrix inside one benchmark run)
+
+Selected defaults (worker + stage0 policy), with evidence:
+
+- Keep `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native` as default.
+- Keep `HXHX_DUNE_JOBS=auto` as default.
+- Override with fixed workers (`HXHX_DUNE_JOBS=2` or `HXHX_DUNE_JOBS=4`) only when tuning a specific host/CI memory budget.
+- Evidence table and run commands: `docs/benchmarks/STAGE0_BOOTSTRAP_THROUGHPUT_2026_03_05.md`.
 
 ## Stage0 Contributor Profiling (Regen Lane)
 

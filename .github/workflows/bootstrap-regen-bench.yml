@@ -15,6 +15,18 @@ on:
         description: "Run snapshot verify step (0/1)"
         required: true
         default: "0"
+      dune_jobs:
+        description: "Comma-separated dune worker settings (auto,2,4...)"
+        required: true
+        default: "auto,2,4"
+      compare_stage0_policies:
+        description: "Compare wrapper/native stage0 policy pairs (0/1)"
+        required: true
+        default: "1"
+      stage0_policy:
+        description: "Stage0 policy override when compare_stage0_policies=0"
+        required: true
+        default: ""
 
 permissions:
   contents: read
@@ -99,6 +111,9 @@ jobs:
           HXHX_BOOTSTRAP_BENCH_SCENARIOS="${{ github.event.inputs.scenarios }}" \
           HXHX_BOOTSTRAP_BENCH_REPS="${{ github.event.inputs.reps }}" \
           HXHX_BOOTSTRAP_BENCH_VERIFY="${{ github.event.inputs.verify }}" \
+          HXHX_BOOTSTRAP_BENCH_DUNE_JOBS="${{ github.event.inputs.dune_jobs }}" \
+          HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES="${{ github.event.inputs.compare_stage0_policies }}" \
+          HXHX_BOOTSTRAP_BENCH_STAGE0_HAXE_POLICY="${{ github.event.inputs.stage0_policy }}" \
           HXHX_BOOTSTRAP_BENCH_REPORT_DIR="$REPORT_DIR" \
           npm run hxhx:bench:bootstrap-regen
 
@@ -115,6 +130,9 @@ jobs:
               echo "- Scenarios: \`${{ github.event.inputs.scenarios }}\`"
               echo "- Repetitions: \`${{ github.event.inputs.reps }}\`"
               echo "- Verify: \`${{ github.event.inputs.verify }}\`"
+              echo "- Dune jobs: \`${{ github.event.inputs.dune_jobs }}\`"
+              echo "- Compare stage0 policies: \`${{ github.event.inputs.compare_stage0_policies }}\`"
+              echo "- Stage0 policy override: \`${{ github.event.inputs.stage0_policy || 'default' }}\`"
               echo ""
               echo "\`\`\`"
               cat "$RESULTS"

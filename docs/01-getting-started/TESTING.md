@@ -215,9 +215,11 @@ Use this when you want the repo to function as a compiler-bootstrap example:
     - `stage0_observability.heartbeat_peak_rss_mb` (plus heartbeat samples/interval)
   - Selection-only probe (no emit/copy/verify): `bash scripts/hxhx/regenerate-hxhx-bootstrap.sh --stage0-selection-only`
   - Wrapper-vs-native benchmark utility (policy compare + RSS summary):
-    - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
+    - `HXHX_BOOTSTRAP_BENCH_SCENARIOS=warm HXHX_BOOTSTRAP_BENCH_DUNE_JOBS=auto,2,4 HXHX_BOOTSTRAP_BENCH_COMPARE_STAGE0_POLICIES=1 npm run hxhx:bench:bootstrap-regen`
     - include compile knobs in benchmark runs:
       `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_OPT=1`, `HXHX_BOOTSTRAP_BENCH_STAGE0_NO_INLINE=1`, `HXHX_BOOTSTRAP_BENCH_STAGE0_DISABLE_PREPASSES=1`, and/or `HXHX_BOOTSTRAP_BENCH_STAGE0_OCAMLRUNPARAM=s=4M`
+    - benchmark evidence artifact (local + CI-like worker/policy matrix):
+      `docs/benchmarks/STAGE0_BOOTSTRAP_THROUGHPUT_2026_03_05.md`
   - Stage0 contributor profiling helper (telemetry + summary):
     - `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20`
     - optional OCaml runtime tuning: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocamlrunparam s=4M`

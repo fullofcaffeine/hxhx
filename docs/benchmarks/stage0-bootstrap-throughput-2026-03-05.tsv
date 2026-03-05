@@ -1,0 +1,7 @@
+run	profile	stage0_policy	stage0_mode	dune_jobs	status	total_sec	emit_sec	peak_rss_mb	haxe_bin_resolved
+local_wrapper_auto	local	warn	wrapper	auto	error	94	0	7262	node_modules/.bin/haxe (wrapper)
+local_native_auto	local	prefer-native	native	auto	error	95	0	2320	$HOME/haxe/versions/4.3.7/haxe
+local_native_j2	local	prefer-native	native	2	error	94	0	3534	$HOME/haxe/versions/4.3.7/haxe
+ci_wrapper_auto	ci_like	warn	wrapper	auto	error	94	0	4072	node_modules/.bin/haxe (wrapper)
+ci_native_auto	ci_like	prefer-native	native	auto	error	95	0	2052	$HOME/haxe/versions/4.3.7/haxe
+ci_native_j4	ci_like	prefer-native	native	4	error	94	0	3279	$HOME/haxe/versions/4.3.7/haxe

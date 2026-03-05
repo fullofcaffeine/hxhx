@@ -728,6 +728,7 @@ write_report_json() {
   "haxe_connect": "$(json_escape "$resolved_haxe_connect")",
   "stage0_no_opt": $HXHX_STAGE0_NO_OPT,
   "stage0_no_inline": $HXHX_STAGE0_NO_INLINE,
+  "dune_jobs": "$(json_escape "$HXHX_DUNE_JOBS")",
   "stage0_ocamlrunparam": "$(json_escape "$HXHX_STAGE0_OCAMLRUNPARAM")",
   "stage0_observability": {
     "heartbeat_seconds": $HXHX_STAGE0_HEARTBEAT,
