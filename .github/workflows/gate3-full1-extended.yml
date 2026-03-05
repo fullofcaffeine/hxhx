@@ -92,6 +92,8 @@ jobs:
               libsdl2-dev \
               libjpeg-dev \
               libpng-dev \
+              libvorbis-dev \
+              libopenal-dev \
               libglu1-mesa-dev \
               libturbojpeg0-dev
             HL_REF="${HXHX_HASHLINK_REF:-1.15}"
