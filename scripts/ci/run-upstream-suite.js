@@ -144,15 +144,25 @@ function resolveHxhxBinary(root, currentValue) {
     cwd: root,
     env: process.env,
   })
-  const buildText = `${buildResult.stdout || ''}${buildResult.stderr || ''}`
+  const stdoutText = buildResult.stdout || ''
+  const stderrText = buildResult.stderr || ''
+  const buildText = `${stdoutText}${stderrText}`
   if (buildResult.status !== 0) {
     fail(`failed to build hxhx binary (exit ${buildResult.status})\n${buildText}`)
   }
-  const lines = buildText.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0)
-  const candidate = lines.length > 0 ? lines[lines.length - 1] : ''
-  if (!candidate) {
+
+  // build-hxhx.sh prints the binary path on stdout; stderr may include progress heartbeats.
+  // Parse only stdout candidates so heartbeat/status lines can never be misread as a path.
+  const stdoutLines = stdoutText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  const candidate = stdoutLines.length > 0 ? stdoutLines[stdoutLines.length - 1] : ''
+  if (!candidate || candidate.startsWith('== ')) {
     fail('build-hxhx.sh did not print output binary path')
   }
+
   const resolved = path.resolve(root, candidate)
   if (!fs.existsSync(resolved)) {
     fail(`built hxhx binary path does not exist: ${resolved}`)
