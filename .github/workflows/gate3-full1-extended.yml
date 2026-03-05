@@ -183,8 +183,12 @@ jobs:
           echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
           echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE}"
           echo "HXHX_FORBID_STAGE0=${HXHX_FORBID_STAGE0}"
-          set -o pipefail
+          set +e
           npm run test:upstream:runci-targets 2>&1 | tee "$log_path"
+          run_status="${PIPESTATUS[0]}"
+          set -e
+
+          set +e
           node scripts/ci/gate3-target-summary.js \
             --log "$log_path" \
             --targets "${HXHX_GATE3_TARGETS}" \
@@ -192,6 +196,18 @@ jobs:
             --require-no-skip \
             --require-all-targets \
             --marker "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+          summary_status="$?"
+          set -e
+
+          if [ "$run_status" -ne 0 ]; then
+            echo "Strict extended Gate3 command failed with exit code ${run_status}." >&2
+          fi
+          if [ "$summary_status" -ne 0 ]; then
+            echo "Strict extended Gate3 summary validation failed with exit code ${summary_status}." >&2
+          fi
+          if [ "$run_status" -ne 0 ] || [ "$summary_status" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Upload Full1 Gate3 extended artifacts
         if: always()

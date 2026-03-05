@@ -168,6 +168,52 @@ need_cmd() {
   fi
 }
 
+probe_haxelib_binary() {
+  local bin="$1"
+  "$bin" help >/dev/null 2>&1 || "$bin" --help >/dev/null 2>&1 || "$bin" version >/dev/null 2>&1
+}
+
+resolve_runnable_haxelib() {
+  local requested="$1"
+  local candidate=""
+  local resolved=""
+  local -a candidates=()
+  local -a probes=()
+
+  if [ -n "$requested" ]; then
+    probes+=("$requested")
+  fi
+  probes+=("$ROOT/node_modules/.bin/haxelib")
+  probes+=("haxelib")
+  probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")
+
+  for candidate in "${probes[@]}"; do
+    if [ -z "$candidate" ]; then
+      continue
+    fi
+    if [[ "$candidate" == */* ]]; then
+      resolved="$candidate"
+    else
+      resolved="$(command -v "$candidate" 2>/dev/null || true)"
+    fi
+    if [ -z "$resolved" ] || [ ! -x "$resolved" ]; then
+      continue
+    fi
+    if ! probe_haxelib_binary "$resolved"; then
+      echo "Rejected non-runnable haxelib candidate: $resolved" >&2
+      continue
+    fi
+    candidates+=("$resolved")
+  done
+
+  for candidate in "${candidates[@]}"; do
+    echo "$candidate"
+    return 0
+  done
+
+  return 1
+}
+
 if [ ! -d "$UPSTREAM_DIR/tests/runci" ] || [ ! -f "$UPSTREAM_DIR/tests/RunCi.hxml" ]; then
   echo "Skipping upstream Gate 3: missing upstream Haxe repo at '$UPSTREAM_DIR'." >&2
   echo "Set HAXE_UPSTREAM_DIR to your local Haxe checkout." >&2
@@ -184,7 +230,6 @@ if ! command -v "$HAXELIB_BIN" >/dev/null 2>&1; then
 fi
 
 need_cmd "$HAXE_BIN" "stage0 compiler"
-need_cmd "$HAXELIB_BIN" "haxelib CLI"
 
 need_cmd dune "required to build stage1 hxhx"
 need_cmd ocamlc "required to build stage1 hxhx"
@@ -207,20 +252,13 @@ else
 fi
 
 #
-# Prefer the user's `haxelib` from PATH (often a Lix shim) over the raw Neko-based
-# `~/haxe/versions/<ver>/haxelib` binary.
-#
-# Why:
-# - The raw binary relies on dynamic loader setup on macOS and can be brittle.
-# - For gate runners, we care more about robustness than shaving a few ms of wrapper overhead.
-STAGE0_HAXELIB="$(command -v "$HAXELIB_BIN" 2>/dev/null || true)"
-if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
-  STAGE0_HAXELIB="$(command -v haxelib 2>/dev/null || true)"
-fi
-if [ -z "$STAGE0_HAXELIB" ] || [ ! -x "$STAGE0_HAXELIB" ]; then
+# Prefer a runnable `haxelib` (validated with a smoke command), not just an executable path.
+STAGE0_HAXELIB="$(resolve_runnable_haxelib "$HAXELIB_BIN" || true)"
+if [ -z "$STAGE0_HAXELIB" ]; then
   echo "Missing runnable haxelib binary (requested '$HAXELIB_BIN')." >&2
   exit 1
 fi
+echo "Using stage0 haxelib: ${STAGE0_HAXELIB}" >&2
 
 if [ -z "$STAGE0_STD_PATH" ]; then
   STAGE0_HAXE_DIR="$(cd "$(dirname "$STAGE0_HAXE")" && pwd)"
