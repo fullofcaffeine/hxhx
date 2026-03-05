@@ -14,27 +14,27 @@ const SUITES = {
   misc: {
     marker: 'FULL1_SUITE_MISC:PASS',
     cwd: 'vendor/haxe/tests/misc',
-    defaultArgs: ['compile.hxml'],
+    entryHxml: 'compile.hxml',
   },
   server: {
     marker: 'FULL1_SUITE_SERVER:PASS',
     cwd: 'vendor/haxe/tests/server',
-    defaultArgs: ['run.hxml'],
+    entryHxml: 'run.hxml',
   },
   threads: {
     marker: 'FULL1_SUITE_THREADS:PASS',
     cwd: 'vendor/haxe/tests/threads',
-    defaultArgs: ['build.hxml'],
+    entryHxml: 'build.hxml',
   },
   optimization: {
     marker: 'FULL1_SUITE_OPTIMIZATION:PASS',
     cwd: 'vendor/haxe/tests/optimization',
-    defaultArgs: ['run.hxml'],
+    entryHxml: 'run.hxml',
   },
   display: {
     marker: 'FULL1_SUITE_DISPLAY:PASS',
     cwd: 'vendor/haxe/tests/display',
-    defaultArgs: ['build.hxml'],
+    entryHxml: 'build.hxml',
   },
 }
 
@@ -121,6 +121,10 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true })
 }
 
+function readUtf8(filePath) {
+  return fs.readFileSync(filePath, 'utf8')
+}
+
 function runCommand(command, args, options) {
   return cp.spawnSync(command, args, {
     cwd: options.cwd,
@@ -128,6 +132,83 @@ function runCommand(command, args, options) {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 64,
   })
+}
+
+function parseHxmlDirective(line) {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.startsWith('#')) {
+    return null
+  }
+
+  const firstWhitespace = trimmed.search(/\s/)
+  if (firstWhitespace < 0) {
+    return { key: trimmed, value: '' }
+  }
+
+  return {
+    key: trimmed.slice(0, firstWhitespace),
+    value: trimmed.slice(firstWhitespace + 1).trim(),
+  }
+}
+
+function parseHxmlCommandGroups(hxmlPath) {
+  if (!fs.existsSync(hxmlPath)) {
+    fail(`suite hxml not found: ${hxmlPath}`)
+  }
+
+  const directives = readUtf8(hxmlPath)
+    .split(/\r?\n/)
+    .map((line) => parseHxmlDirective(line))
+    .filter((directive) => directive !== null)
+
+  let sharedEach = []
+  let groups = [[]]
+  for (const directive of directives) {
+    if (directive.key === '--each') {
+      sharedEach = groups[0].slice()
+      groups = [[]]
+      continue
+    }
+    if (directive.key === '--next') {
+      groups.push([])
+      continue
+    }
+    groups[groups.length - 1].push(directive)
+  }
+
+  const nonEmptyGroups = groups.filter((group) => group.length > 0)
+  if (sharedEach.length === 0) {
+    return nonEmptyGroups
+  }
+  return nonEmptyGroups.map((group) => [...sharedEach, ...group])
+}
+
+function directiveGroupToArgv(group) {
+  const out = []
+  for (const directive of group) {
+    out.push(directive.key)
+    if (directive.value) {
+      out.push(directive.value)
+    }
+  }
+  return out
+}
+
+function isShellOnlyCommand(args) {
+  return args.length === 2 && (args[0] === '-cmd' || args[0] === '--cmd')
+}
+
+function hasMiscFilterDefine(args) {
+  for (let i = 0; i < args.length; i += 1) {
+    if (args[i] !== '-D') {
+      continue
+    }
+    const value = String(args[i + 1] || '')
+    if (value.startsWith('MISC_TEST_FILTER=')) {
+      return true
+    }
+  }
+  return false
 }
 
 function resolveHxhxBinary(root, currentValue) {
@@ -170,13 +251,36 @@ function resolveHxhxBinary(root, currentValue) {
   return resolved
 }
 
-function buildSuiteArgs(parsed, suiteConfig) {
-  const args = []
-  if (parsed.suite === 'misc' && parsed.miscFilter) {
-    args.push('-D', `MISC_TEST_FILTER=${parsed.miscFilter}`)
+function buildSuiteCommands(parsed, suiteConfig, suiteDir) {
+  const entryHxmlPath = path.join(suiteDir, suiteConfig.entryHxml)
+  const groups = parseHxmlCommandGroups(entryHxmlPath)
+  const commands = []
+
+  for (const group of groups) {
+    const args = directiveGroupToArgv(group)
+    if (parsed.suite === 'misc' && parsed.miscFilter && !hasMiscFilterDefine(args)) {
+      args.push('-D', `MISC_TEST_FILTER=${parsed.miscFilter}`)
+    }
+    if (isShellOnlyCommand(args)) {
+      commands.push({
+        kind: 'shell',
+        argv: ['bash', '-lc', args[1]],
+        display: args[1],
+      })
+      continue
+    }
+    commands.push({
+      kind: 'hxhx',
+      argv: args,
+      display: [parsed.hxhxBin || '<built-hxhx>', ...args].join(' '),
+    })
   }
-  args.push(...suiteConfig.defaultArgs)
-  return args
+
+  if (commands.length === 0) {
+    fail(`suite entrypoint produced no runnable commands: ${entryHxmlPath}`)
+  }
+
+  return commands
 }
 
 function main() {
@@ -192,44 +296,115 @@ function main() {
   const summaryPath = path.join(parsed.artifactsDir, `${parsed.suite}.summary.json`)
 
   const hxhxBin = resolveHxhxBinary(parsed.root, parsed.hxhxBin)
-  const suiteArgs = buildSuiteArgs(parsed, suiteConfig)
+  const suiteCommands = buildSuiteCommands(parsed, suiteConfig, suiteDir)
+  for (const command of suiteCommands) {
+    if (command.kind === 'hxhx') {
+      command.display = [hxhxBin, ...command.argv].join(' ')
+    }
+  }
   const env = { ...process.env }
   if (parsed.strict) {
     env.HXHX_FORBID_STAGE0 = '1'
   }
 
   const startedAt = new Date()
-  const result = runCommand(hxhxBin, suiteArgs, {
-    cwd: suiteDir,
-    env,
-  })
+  const commandRuns = []
+  let failedCommandIndex = -1
+  let suiteExitCode = 0
+
+  for (let i = 0; i < suiteCommands.length; i += 1) {
+    const command = suiteCommands[i]
+    const commandStartedAt = new Date()
+    const result = command.kind === 'shell'
+      ? runCommand(command.argv[0], command.argv.slice(1), { cwd: suiteDir, env })
+      : runCommand(hxhxBin, command.argv, { cwd: suiteDir, env })
+    const commandEndedAt = new Date()
+    const commandExit = result.status == null ? -1 : result.status
+
+    commandRuns.push({
+      index: i,
+      kind: command.kind,
+      display: command.display,
+      argv: command.kind === 'shell' ? command.argv.slice() : [hxhxBin, ...command.argv],
+      startedAt: commandStartedAt,
+      endedAt: commandEndedAt,
+      durationMs: commandEndedAt.getTime() - commandStartedAt.getTime(),
+      exitCode: commandExit,
+      signal: result.signal || '',
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      error: result.error ? String(result.error.message || result.error) : '',
+    })
+
+    if (result.error) {
+      failedCommandIndex = i
+      suiteExitCode = 1
+      break
+    }
+    if (commandExit !== 0) {
+      failedCommandIndex = i
+      suiteExitCode = commandExit || 1
+      break
+    }
+  }
+
   const endedAt = new Date()
   const durationMs = endedAt.getTime() - startedAt.getTime()
-  const stdout = result.stdout || ''
-  const stderr = result.stderr || ''
   const combinedLog = [
     `suite=${parsed.suite}`,
     `strict=${parsed.strict ? '1' : '0'}`,
     `cwd=${suiteDir}`,
     `hxhx_bin=${hxhxBin}`,
-    `command=${[hxhxBin, ...suiteArgs].join(' ')}`,
+    `commands_total=${suiteCommands.length}`,
+    `failed_command_index=${failedCommandIndex}`,
     `started_at=${startedAt.toISOString()}`,
     `ended_at=${endedAt.toISOString()}`,
     `duration_ms=${durationMs}`,
-    '',
-    '--- stdout ---',
-    stdout,
-    '--- stderr ---',
-    stderr,
   ].join('\n')
-  fs.writeFileSync(logPath, combinedLog, 'utf8')
+  const commandLogs = []
+  for (const run of commandRuns) {
+    commandLogs.push(
+      [
+        '',
+        `--- command[${run.index}] ---`,
+        `kind=${run.kind}`,
+        `display=${run.display}`,
+        `exit_code=${run.exitCode}`,
+        `signal=${run.signal}`,
+        `started_at=${run.startedAt.toISOString()}`,
+        `ended_at=${run.endedAt.toISOString()}`,
+        `duration_ms=${run.durationMs}`,
+        run.error ? `error=${run.error}` : '',
+        '',
+        'stdout:',
+        run.stdout,
+        'stderr:',
+        run.stderr,
+      ]
+        .filter((line) => line !== '')
+        .join('\n'),
+    )
+  }
+  fs.writeFileSync(logPath, `${combinedLog}\n${commandLogs.join('\n')}\n`, 'utf8')
 
   const summary = {
     schema: 'full1-upstream-suite-summary.v1',
     suite: parsed.suite,
     strict: parsed.strict,
     marker: suiteConfig.marker,
-    command: [hxhxBin, ...suiteArgs],
+    commands: commandRuns.map((run) => ({
+      index: run.index,
+      kind: run.kind,
+      argv: run.argv,
+      display: run.display,
+      started_at: run.startedAt.toISOString(),
+      ended_at: run.endedAt.toISOString(),
+      duration_ms: run.durationMs,
+      exit_code: run.exitCode,
+      signal: run.signal,
+      error: run.error,
+    })),
+    failed_command_index: failedCommandIndex,
     cwd: suiteDir,
     hxhx_bin: hxhxBin,
     artifacts: {
@@ -238,17 +413,14 @@ function main() {
     started_at: startedAt.toISOString(),
     ended_at: endedAt.toISOString(),
     duration_ms: durationMs,
-    exit_code: result.status == null ? -1 : result.status,
-    signal: result.signal || '',
+    exit_code: suiteExitCode,
+    signal: '',
   }
   fs.writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
 
-  if (result.error) {
-    fail(`suite process spawn failed: ${String(result.error.message || result.error)}`)
-  }
-  if (result.status !== 0) {
-    console.error(`[full1-suite] suite=${parsed.suite} failed (exit ${result.status}). log=${logPath}`)
-    process.exit(result.status || 1)
+  if (suiteExitCode !== 0) {
+    console.error(`[full1-suite] suite=${parsed.suite} failed (exit ${suiteExitCode}). log=${logPath}`)
+    process.exit(suiteExitCode)
   }
 
   console.log(`[full1-suite] suite=${parsed.suite} succeeded. log=${logPath}`)
