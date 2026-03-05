@@ -1,0 +1,182 @@
+name: Gate 3 Full1 / Extended Targets Strict
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Comma-separated upstream runci targets"
+        type: string
+        required: false
+        default: "Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php"
+  schedule:
+    # Weekly strict extended target matrix evidence for Full1.
+    - cron: "0 13 * * 4"
+
+concurrency:
+  group: gate3-full1-extended-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  full1_gate3_extended:
+    name: Full1 Gate3 extended targets (strict)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (extended Gate3 set)
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get install -y \
+            ocaml "${dune_pkg}" ocaml-findlib \
+            neko \
+            python3 pypy3 \
+            default-jdk \
+            build-essential \
+            php \
+            lua5.4 \
+            mono-devel
+
+          if ! command -v dotnet >/dev/null 2>&1; then
+            retry_apt sudo apt-get install -y dotnet-sdk-8.0 || true
+          fi
+
+          if ! command -v hl >/dev/null 2>&1; then
+            retry_apt sudo apt-get install -y hashlink || true
+          fi
+
+          echo "Toolchain versions:"
+          dune --version
+          ocamlc -version
+          neko -version || true
+          node --version || true
+          javac -version
+          python3 --version
+          pypy3 --version
+          php --version | head -n 1
+          lua5.4 -v || true
+          dotnet --version || true
+          mono --version | head -n 1 || true
+          hl --version || true
+
+          if ! command -v dotnet >/dev/null 2>&1 && ! command -v mono >/dev/null 2>&1; then
+            echo "Missing dotnet and mono for C# target." >&2
+            exit 1
+          fi
+
+          if ! command -v hl >/dev/null 2>&1; then
+            echo "Missing HashLink runtime (hl) required for Hl target." >&2
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Run strict extended Gate3 matrix
+        env:
+          HXHX_GATE3_TARGETS: ${{ inputs.targets || 'Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php' }}
+          HXHX_GATE3_ALLOW_SKIP: "0"
+          HXHX_GATE3_MACRO_MODE: "direct"
+          HXHX_FORBID_STAGE0: "1"
+          HXHX_GATE3_RETRY_COUNT: "1"
+          HXHX_GATE3_RETRY_TARGETS: "Js"
+          HXHX_GATE3_RETRY_DELAY_SEC: "3"
+          HXHX_GATE3_JS_SERVER_TIMEOUT_MS: "60000"
+          HXHX_GATE3_PYTHON_ALLOW_INSTALL: "0"
+          HXHX_GATE3_TARGET_HEARTBEAT_SEC: "20"
+          HXHX_GATE3_TARGET_TIMEOUT_SEC: "3600"
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/full1
+          log_path=".artifacts/full1/gate3-full1-extended.log"
+          summary_path=".artifacts/full1/gate3-full1-extended.summary.json"
+          echo "HXHX_GATE3_TARGETS=${HXHX_GATE3_TARGETS}"
+          echo "HXHX_GATE3_ALLOW_SKIP=${HXHX_GATE3_ALLOW_SKIP}"
+          echo "HXHX_GATE3_MACRO_MODE=${HXHX_GATE3_MACRO_MODE}"
+          echo "HXHX_FORBID_STAGE0=${HXHX_FORBID_STAGE0}"
+          set -o pipefail
+          npm run test:upstream:runci-targets 2>&1 | tee "$log_path"
+          node scripts/ci/gate3-target-summary.js \
+            --log "$log_path" \
+            --targets "${HXHX_GATE3_TARGETS}" \
+            --json-out "$summary_path" \
+            --require-no-skip \
+            --require-all-targets \
+            --marker "FULL1_GATE3_EXTENDED_TARGETS:PASS"
+
+      - name: Upload Full1 Gate3 extended artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-gate3-extended-${{ github.run_id }}
+          path: |
+            .artifacts/full1/gate3-full1-extended.log
+            .artifacts/full1/gate3-full1-extended.summary.json
+          if-no-files-found: warn

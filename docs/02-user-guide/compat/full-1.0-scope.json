@@ -45,6 +45,7 @@
     "name": "Full 1.0",
     "description": "Strict Haxe 4.3.7-equivalent claim. These markers are planned and become mandatory when their gates exist.",
     "requiredMarkersPlanned": [
+      "FULL1_GATE3_EXTENDED_TARGETS:PASS",
       "FULL1_PARITY_MAP:PASS",
       "FULL1_SUITE_MATRIX:PASS",
       "FULL1_MACRO_EVAL_PARITY:PASS",

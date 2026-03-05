@@ -8,7 +8,8 @@
     "native-stage0-forbidden-smoke",
     "native-js-smoke",
     "plugin-matrix-strict",
-    "m7-strict-replacement"
+    "m7-strict-replacement",
+    "full1-gate3-extended-strict"
   ],
   "entries": [
     {
@@ -105,6 +106,27 @@
     },
     {
       "id": "F1-PM-08",
+      "suite": "full1-gate3-extended-strict",
+      "lane": "full",
+      "targets": [
+        "Macro",
+        "Js",
+        "Neko",
+        "Hl",
+        "Python",
+        "Java",
+        "Cs",
+        "Cpp",
+        "Lua",
+        "Php"
+      ],
+      "profile": "scheduled",
+      "marker": "FULL1_GATE3_EXTENDED_TARGETS:PASS",
+      "workflow": ".github/workflows/gate3-full1-extended.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-09",
       "suite": "full-suite-matrix",
       "lane": "full",
       "targets": [
@@ -125,7 +147,7 @@
       "enforcement": "planned"
     },
     {
-      "id": "F1-PM-09",
+      "id": "F1-PM-10",
       "suite": "full-macro-eval-parity",
       "lane": "full",
       "targets": [
@@ -138,7 +160,7 @@
       "enforcement": "planned"
     },
     {
-      "id": "F1-PM-10",
+      "id": "F1-PM-11",
       "suite": "full-plugin-parity",
       "lane": "full",
       "targets": [
@@ -150,7 +172,7 @@
       "enforcement": "planned"
     },
     {
-      "id": "F1-PM-11",
+      "id": "F1-PM-12",
       "suite": "full-perf-parity",
       "lane": "full",
       "targets": [
@@ -162,7 +184,7 @@
       "enforcement": "planned"
     },
     {
-      "id": "F1-PM-12",
+      "id": "F1-PM-13",
       "suite": "full-release-rc",
       "lane": "full",
       "targets": [
