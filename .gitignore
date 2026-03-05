@@ -12,6 +12,7 @@ dump_*/
 dump_out_*/
 repomix-output-*
 repomix-output.xml
+repomix-output*.zip
 
 # Local upstream repro scratch
 test/upstream_min_repro/
