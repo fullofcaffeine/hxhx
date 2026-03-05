@@ -180,12 +180,15 @@ resolve_runnable_haxelib() {
   local -a candidates=()
   local -a probes=()
 
+  # Prefer the pinned native stage0 toolchain first for deterministic CI behavior.
+  probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")
+  probes+=("$HOME/haxe/versions/stable/haxelib")
+
   if [ -n "$requested" ]; then
     probes+=("$requested")
   fi
-  probes+=("$ROOT/node_modules/.bin/haxelib")
   probes+=("haxelib")
-  probes+=("$HOME/haxe/versions/$UPSTREAM_REF/haxelib")
+  probes+=("$ROOT/node_modules/.bin/haxelib")
 
   for candidate in "${probes[@]}"; do
     if [ -z "$candidate" ]; then
