@@ -412,6 +412,45 @@ function resolveHxhxBinary(root, currentValue) {
   return resolved
 }
 
+function resolveMacroHostBinary(root, env) {
+  const configured = String(env.HXHX_MACRO_HOST_EXE || '').trim()
+  if (configured) {
+    const resolvedConfigured = path.resolve(root, configured)
+    if (!fs.existsSync(resolvedConfigured)) {
+      fail(`provided HXHX_MACRO_HOST_EXE does not exist: ${resolvedConfigured}`)
+    }
+    return resolvedConfigured
+  }
+
+  const buildScript = path.join(root, 'scripts/hxhx/build-hxhx-macro-host.sh')
+  const buildResult = runCommand('bash', [buildScript], {
+    cwd: root,
+    env,
+  })
+  const stdoutText = buildResult.stdout || ''
+  const stderrText = buildResult.stderr || ''
+  const buildText = `${stdoutText}${stderrText}`
+  if (buildResult.status !== 0) {
+    fail(`failed to build macro host binary (exit ${buildResult.status})\n${buildText}`)
+  }
+
+  const stdoutLines = stdoutText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  const candidate = stdoutLines.length > 0 ? stdoutLines[stdoutLines.length - 1] : ''
+  if (!candidate || candidate.startsWith('== ')) {
+    fail('build-hxhx-macro-host.sh did not print output binary path')
+  }
+
+  const resolved = path.resolve(root, candidate)
+  if (!fs.existsSync(resolved)) {
+    fail(`built macro host binary path does not exist: ${resolved}`)
+  }
+  return resolved
+}
+
 function buildSuiteCommands(parsed, suiteConfig, suiteDir) {
   const entryHxmlPath = path.join(suiteDir, suiteConfig.entryHxml)
   const groups = parseHxmlCommandGroups(entryHxmlPath)
@@ -470,6 +509,7 @@ function main() {
     env.HXHX_FORBID_STAGE0 = '1'
   }
   ensureSuiteDependencies(parsed.suite, suiteDir, env)
+  env.HXHX_MACRO_HOST_EXE = resolveMacroHostBinary(parsed.root, env)
 
   const startedAt = new Date()
   const commandRuns = []
