@@ -154,6 +154,30 @@ function resolveHaxelibBin() {
   return configured || 'haxelib'
 }
 
+function extractFirstHaxelibClassPath(outputText) {
+  const lines = String(outputText || '').split(/\r?\n/)
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('-')) {
+      continue
+    }
+    return line
+  }
+  return ''
+}
+
+function hasUsableHaxelibPath(haxelibBin, lib, cwd, env) {
+  const probe = runCommand(haxelibBin, ['path', lib], { cwd, env })
+  if (probe.status !== 0) {
+    return false
+  }
+  const candidate = extractFirstHaxelibClassPath(probe.stdout || '')
+  if (!candidate) {
+    return false
+  }
+  return fs.existsSync(candidate)
+}
+
 function ensureSuiteDependencies(suite, cwd, env) {
   const deps = SUITE_HAXELIB_DEPS[suite] || []
   if (deps.length === 0) {
@@ -162,8 +186,7 @@ function ensureSuiteDependencies(suite, cwd, env) {
 
   const haxelibBin = resolveHaxelibBin()
   for (const dep of deps) {
-    const probe = runCommand(haxelibBin, ['path', dep.name], { cwd, env })
-    if (probe.status === 0) {
+    if (hasUsableHaxelibPath(haxelibBin, dep.name, cwd, env)) {
       continue
     }
 
@@ -177,7 +200,7 @@ function ensureSuiteDependencies(suite, cwd, env) {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const result = runCommand(haxelibBin, installArgs, { cwd, env })
       lastInstall = result
-      if (result.status === 0) {
+      if (result.status === 0 && hasUsableHaxelibPath(haxelibBin, dep.name, cwd, env)) {
         installOk = true
         break
       }
