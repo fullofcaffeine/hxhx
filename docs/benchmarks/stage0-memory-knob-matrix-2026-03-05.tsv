@@ -1,0 +1,9 @@
+probe_family	case	peak_rss_mb	total_sec	status	reduction_vs_baseline_pct
+failfast90	baseline	8713	94	error	0.00
+failfast90	disable_prepasses	7011	94	error	19.53
+failfast90	no_inline	8628	93	error	0.98
+failfast90	no_inline_disable_prepasses	7308	95	error	16.13
+failfast90	no_opt	7079	95	error	18.75
+failfast90	no_opt_disable_prepasses	7064	96	error	18.92
+failfast120	baseline	8496	124	error	0.00
+failfast120	disable_prepasses	7014	124	error	17.44

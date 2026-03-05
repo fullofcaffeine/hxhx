@@ -726,6 +726,7 @@ write_report_json() {
   "haxe_native_candidate": "$(json_escape "$stage0_haxe_native_candidate")",
   "haxe_version": "$(json_escape "$stage0_haxe_version")",
   "haxe_connect": "$(json_escape "$resolved_haxe_connect")",
+  "stage0_disable_prepasses": $HXHX_STAGE0_DISABLE_PREPASSES,
   "stage0_no_opt": $HXHX_STAGE0_NO_OPT,
   "stage0_no_inline": $HXHX_STAGE0_NO_INLINE,
   "dune_jobs": "$(json_escape "$HXHX_DUNE_JOBS")",

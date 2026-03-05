@@ -56,6 +56,7 @@ Machine-readable reports (`--report-json`) include:
 - `haxe_bin_policy`
 - `haxe_bin_switched`
 - `haxe_native_candidate`
+- `stage0_disable_prepasses` (`0` / `1`)
 - `stage0_no_opt` (`0` / `1`)
 - `stage0_no_inline` (`0` / `1`)
 - `stage0_ocamlrunparam` (string; empty when unset)
@@ -113,6 +114,7 @@ Selected defaults (worker + stage0 policy), with evidence:
 - Keep `HXHX_DUNE_JOBS=auto` as default.
 - Override with fixed workers (`HXHX_DUNE_JOBS=2` or `HXHX_DUNE_JOBS=4`) only when tuning a specific host/CI memory budget.
 - Evidence table and run commands: `docs/benchmarks/STAGE0_BOOTSTRAP_THROUGHPUT_2026_03_05.md`.
+- Stage0 memory knob comparison (no-opt/no-inline/disable-prepasses): `docs/benchmarks/STAGE0_MEMORY_KNOB_MATRIX_2026_03_05.md`.
 
 ## Stage0 Contributor Profiling (Regen Lane)
 
