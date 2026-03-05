@@ -7,8 +7,10 @@ For lane/profile context, use the canonical beginner truth table:
 
 - `docs/02-user-guide/concepts/execution_modes.md`
 - `docs/02-user-guide/concepts/what_delegates_today.md`
-- Haxe 4.3.7 parity contract map (suites × lanes × targets × profiles × markers):
+- Scoped 1.0 parity contract map (current lanes):
   `docs/00-project/PARITY_MAP_HAXE_4_3_7.md`
+- Full 1.0 parity contract map (strict closure track):
+  `docs/00-project/PARITY_MAP_FULL_1_0.md`
 - Macro runtime parity blocker list (explicit gaps before inproc-default):
   `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`
 - Weekly ops audit procedure (scheduled gates + triage):

@@ -1,0 +1,177 @@
+{
+  "contractVersion": "1.0.0",
+  "haxeCompatibilityBaseline": "4.3.7",
+  "scopeManifest": "docs/02-user-guide/compat/full-1.0-scope.json",
+  "requiredNowSuites": [
+    "gate1-lite-macro-smoke",
+    "gate2-lite-workload-smoke",
+    "native-stage0-forbidden-smoke",
+    "native-js-smoke",
+    "plugin-matrix-strict",
+    "m7-strict-replacement"
+  ],
+  "entries": [
+    {
+      "id": "F1-PM-01",
+      "suite": "gate1-lite-macro-smoke",
+      "lane": "scoped",
+      "targets": [
+        "Macro"
+      ],
+      "profile": "pr-required",
+      "marker": "GATE1_LITE:PASS",
+      "workflow": ".github/workflows/gate1-lite.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-02",
+      "suite": "gate2-lite-workload-smoke",
+      "lane": "scoped",
+      "targets": [
+        "Macro"
+      ],
+      "profile": "pr-required",
+      "marker": "GATE2_LITE:PASS",
+      "workflow": ".github/workflows/gate2-lite.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-03",
+      "suite": "native-stage0-forbidden-smoke",
+      "lane": "scoped",
+      "targets": [
+        "ocaml"
+      ],
+      "profile": "pr-required",
+      "marker": "STAGE0_FREE_SMOKE:PASS",
+      "workflow": ".github/workflows/ci.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-04",
+      "suite": "native-js-smoke",
+      "lane": "scoped",
+      "targets": [
+        "js"
+      ],
+      "profile": "pr-required",
+      "marker": "JS_NATIVE_SMOKE:PASS",
+      "workflow": ".github/workflows/ci.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-05",
+      "suite": "plugin-matrix-strict",
+      "lane": "scoped",
+      "targets": [
+        "plugin"
+      ],
+      "profile": "pr-required",
+      "marker": "PLUGIN_MATRIX_STRICT:PASS",
+      "workflow": ".github/workflows/ci.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-06",
+      "suite": "m7-strict-replacement",
+      "lane": "scoped",
+      "targets": [
+        "Macro",
+        "Js",
+        "Neko",
+        "ocaml",
+        "js"
+      ],
+      "profile": "scheduled-release",
+      "marker": "M7_STRICT_STAGE0:PASS",
+      "workflow": ".github/workflows/gate-m7.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-07",
+      "suite": "m7-strict-replacement",
+      "lane": "scoped",
+      "targets": [
+        "Macro",
+        "Js",
+        "Neko",
+        "ocaml",
+        "js"
+      ],
+      "profile": "scheduled-release",
+      "marker": "M7_REPLACEMENT_READY:PASS",
+      "workflow": ".github/workflows/gate-m7.yml",
+      "enforcement": "required_now"
+    },
+    {
+      "id": "F1-PM-08",
+      "suite": "full-suite-matrix",
+      "lane": "full",
+      "targets": [
+        "Macro",
+        "Js",
+        "Neko",
+        "Hl",
+        "Python",
+        "Java",
+        "Cs",
+        "Cpp",
+        "Lua",
+        "Php"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_SUITE_MATRIX:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-09",
+      "suite": "full-macro-eval-parity",
+      "lane": "full",
+      "targets": [
+        "Macro",
+        "Eval"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_MACRO_EVAL_PARITY:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-10",
+      "suite": "full-plugin-parity",
+      "lane": "full",
+      "targets": [
+        "plugin"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_PLUGIN_PARITY:PASS",
+      "workflow": ".github/workflows/gate-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-11",
+      "suite": "full-perf-parity",
+      "lane": "full",
+      "targets": [
+        "perf"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_PERF_PARITY:PASS",
+      "workflow": ".github/workflows/gate-perf-full1.yml",
+      "enforcement": "planned"
+    },
+    {
+      "id": "F1-PM-12",
+      "suite": "full-release-rc",
+      "lane": "full",
+      "targets": [
+        "release"
+      ],
+      "profile": "release",
+      "marker": "FULL1_RELEASE_GO:PASS",
+      "workflow": ".github/workflows/gate-full1-rc.yml",
+      "enforcement": "planned"
+    }
+  ]
+}

@@ -10,6 +10,7 @@ This page is the canonical definition boundary for release claims:
 Machine-readable scope source of truth:
 
 - `docs/02-user-guide/compat/full-1.0-scope.json`
+- `docs/00-project/PARITY_MAP_FULL_1_0.json`
 
 ## Baseline
 
