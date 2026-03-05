@@ -2,7 +2,9 @@ package hxhx;
 
 import backend.BackendRegistrationSpec;
 import backend.ITargetBackendProvider;
+#if !hxhx_stage0_ocaml_only
 import backend.js.JsBackend;
+#end
 
 private typedef ProviderDispatch = {
 	function registrations():Array<BackendRegistrationSpec>;
@@ -48,8 +50,10 @@ class BackendProviderResolver {
 
 	static function knownProviderRegistrations(typePath:String):Null<Array<BackendRegistrationSpec>> {
 		return switch (typePath) {
+			#if !hxhx_stage0_ocaml_only
 			case "backend.js.JsBackend":
 				JsBackend.providerRegistrations();
+			#end
 			case _:
 				null;
 		}

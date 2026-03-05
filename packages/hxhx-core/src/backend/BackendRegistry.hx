@@ -1,6 +1,8 @@
 package backend;
 
+#if !hxhx_stage0_ocaml_only
 import backend.js.JsBackend;
+#end
 import backend.ocaml.OcamlStage3Backend;
 
 /**
@@ -24,18 +26,24 @@ import backend.ocaml.OcamlStage3Backend;
 	  without changing Stage3 call sites.
 **/
 class BackendRegistry {
-	static final builtinRegistrations:Array<BackendRegistrationSpec> = [
-		{
-			descriptor: OcamlStage3Backend.descriptor(),
-			create: function() return new OcamlStage3Backend()
-		},
-		{
-			descriptor: JsBackend.descriptor(),
-			create: function() return new JsBackend()
-		}
-	];
+	static final builtinRegistrations:Array<BackendRegistrationSpec> = buildBuiltinRegistrations();
 
 	static final dynamicRegistrations:Array<BackendRegistrationSpec> = [];
+
+	static function buildBuiltinRegistrations():Array<BackendRegistrationSpec> {
+		final registrations = new Array<BackendRegistrationSpec>();
+		registrations.push({
+			descriptor: OcamlStage3Backend.descriptor(),
+			create: function() return new OcamlStage3Backend()
+		});
+		#if !hxhx_stage0_ocaml_only
+		registrations.push({
+			descriptor: JsBackend.descriptor(),
+			create: function() return new JsBackend()
+		});
+		#end
+		return registrations;
+	}
 
 	static function allRegistrations():Array<BackendRegistrationSpec> {
 		return builtinRegistrations.concat(dynamicRegistrations);

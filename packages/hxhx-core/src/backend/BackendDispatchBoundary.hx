@@ -1,6 +1,8 @@
 package backend;
 
+#if !hxhx_stage0_ocaml_only
 import backend.js.JsBackend;
+#end
 import backend.ocaml.OcamlStage3Backend;
 
 /**
@@ -27,9 +29,11 @@ class BackendDispatchBoundary {
 	/**
 		Recover `JsBackend` at the dispatch seam.
 	**/
+	#if !hxhx_stage0_ocaml_only
 	public static inline function requireJsBackend(value:Dynamic):JsBackend {
 		return cast value;
 	}
+	#end
 
 	/**
 		Recover `OcamlStage3Backend` at the dispatch seam.
@@ -83,10 +87,12 @@ class BackendDispatchBoundary {
 	public static function emit(backend:IBackend, program:GenIrProgram, context:BackendContext):EmitResult {
 		#if reflaxe
 		final dispatchValue = asDispatchValue(backend);
+		#if !hxhx_stage0_ocaml_only
 		if (Std.isOfType(dispatchValue, JsBackend)) {
 			final jsBackend = requireJsBackend(dispatchValue);
 			return JsBackend.emitBridge(jsBackend, program, context);
 		}
+		#end
 		if (Std.isOfType(dispatchValue, OcamlStage3Backend)) {
 			final ocamlBackend = requireOcamlBackend(dispatchValue);
 			return OcamlStage3Backend.emitBridge(ocamlBackend, program, context);

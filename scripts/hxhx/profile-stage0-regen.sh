@@ -11,6 +11,7 @@ HEARTBEAT_SECS="${HXHX_STAGE0_PROFILE_HEARTBEAT_SECS:-20}"
 NO_OPT="${HXHX_STAGE0_PROFILE_NO_OPT:-0}"
 NO_INLINE="${HXHX_STAGE0_PROFILE_NO_INLINE:-0}"
 DISABLE_PREPASSES="${HXHX_STAGE0_PROFILE_DISABLE_PREPASSES:-0}"
+STAGE0_OCAML_ONLY="${HXHX_STAGE0_PROFILE_OCAML_ONLY:-0}"
 STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_PROFILE_OCAMLRUNPARAM:-}"
 SCENARIO_ARGS="${HXHX_STAGE0_PROFILE_SCENARIO_ARGS:---incremental --no-verify --force}"
 TELEMETRY_DETAIL="${HXHX_STAGE0_PROFILE_TELEMETRY_DETAIL:-0}"
@@ -31,6 +32,7 @@ Options:
   --no-opt                                       Enable stage0 --no-opt mitigation
   --no-inline                                    Enable stage0 --no-inline mitigation
   --disable-prepasses                            Enable stage0 prepass disable define
+  --ocaml-only                                   Enable stage0 ocaml-only backend graph define
   --ocamlrunparam <value>                        Set OCAMLRUNPARAM for stage0 haxe process
   --telemetry-detail                             Enable detailed builder telemetry
   --telemetry-class <TypeName>                   Restrict detail telemetry to one class
@@ -93,6 +95,10 @@ while [ "$#" -gt 0 ]; do
 			DISABLE_PREPASSES=1
 			shift
 			;;
+		--ocaml-only)
+			STAGE0_OCAML_ONLY=1
+			shift
+			;;
 		--ocamlrunparam)
 			shift
 			if [ "$#" -eq 0 ]; then
@@ -150,6 +156,7 @@ fi
 assert_bool_01 "NO_OPT" "$NO_OPT"
 assert_bool_01 "NO_INLINE" "$NO_INLINE"
 assert_bool_01 "DISABLE_PREPASSES" "$DISABLE_PREPASSES"
+assert_bool_01 "STAGE0_OCAML_ONLY" "$STAGE0_OCAML_ONLY"
 assert_bool_01 "TELEMETRY_DETAIL" "$TELEMETRY_DETAIL"
 
 if [ ! -x "$REGEN_SCRIPT" ]; then
@@ -166,7 +173,7 @@ RUN_STDOUT="$OUT_DIR/run.stdout.log"
 RUN_STDERR="$OUT_DIR/run.stderr.log"
 
 echo "== Stage0 regen profile run"
-echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE disable_prepasses=$DISABLE_PREPASSES ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
+echo "policy=$POLICY failfast=${FAILFAST_SECS}s heartbeat=${HEARTBEAT_SECS}s no_opt=$NO_OPT no_inline=$NO_INLINE disable_prepasses=$DISABLE_PREPASSES ocaml_only=$STAGE0_OCAML_ONLY ocamlrunparam=${STAGE0_OCAMLRUNPARAM:-<unset>} telemetry_detail=$TELEMETRY_DETAIL"
 echo "out_dir=$OUT_DIR"
 
 set +e
@@ -180,6 +187,7 @@ HXHX_STAGE0_TELEMETRY_CLASS="$TELEMETRY_CLASS" \
 HXHX_STAGE0_NO_OPT="$NO_OPT" \
 HXHX_STAGE0_NO_INLINE="$NO_INLINE" \
 HXHX_STAGE0_DISABLE_PREPASSES="$DISABLE_PREPASSES" \
+HXHX_STAGE0_OCAML_ONLY="$STAGE0_OCAML_ONLY" \
 HXHX_STAGE0_OCAMLRUNPARAM="$STAGE0_OCAMLRUNPARAM" \
 bash "$REGEN_SCRIPT" $SCENARIO_ARGS --report-json "$REPORT_JSON" >"$RUN_STDOUT" 2>"$RUN_STDERR"
 run_code="$?"

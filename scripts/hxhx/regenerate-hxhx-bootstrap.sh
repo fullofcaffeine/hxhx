@@ -45,6 +45,8 @@ Options:
   --stage0-opt               Disable stage0 `--no-opt` override.
   --stage0-no-inline         Add `--no-inline` to stage0 haxe compile (lower peak RSS; slower builds).
   --stage0-inline            Disable stage0 `--no-inline` override.
+  --stage0-ocaml-only        Add `-D hxhx_stage0_ocaml_only` (exclude linked js-native backend from stage0 compile graph).
+  --stage0-with-js           Disable stage0 ocaml-only define (default behavior).
   --stage0-ocamlrunparam <value>
                              Set OCAMLRUNPARAM for stage0 haxe process only (e.g. s=4M).
   --report-json <path>       Write a machine-readable timing summary JSON.
@@ -70,6 +72,7 @@ Environment knobs (all optional):
   HXHX_BOOTSTRAP_PROFILE=1          Enable `--times` + `-D filter-times`.
   HXHX_STAGE0_NO_OPT=1              Add `--no-opt` to stage0 haxe compile.
   HXHX_STAGE0_NO_INLINE=1           Add `--no-inline` to stage0 haxe compile.
+  HXHX_STAGE0_OCAML_ONLY=1          Add `-D hxhx_stage0_ocaml_only` for stage0 emit.
   HXHX_STAGE0_OCAMLRUNPARAM=s=4M    Set OCAMLRUNPARAM for stage0 haxe process only.
   HXHX_BOOTSTRAP_REPORT_JSON=<path> Same as --report-json.
   HXHX_STAGE0_DIAG_EVERY=30         Diagnostics cadence when heartbeat is disabled.
@@ -145,6 +148,7 @@ HXHX_STAGE0_VERBOSE="${HXHX_STAGE0_VERBOSE:-0}"
 HXHX_STAGE0_DISABLE_PREPASSES="${HXHX_STAGE0_DISABLE_PREPASSES:-0}"
 HXHX_STAGE0_NO_OPT="${HXHX_STAGE0_NO_OPT:-0}"
 HXHX_STAGE0_NO_INLINE="${HXHX_STAGE0_NO_INLINE:-0}"
+HXHX_STAGE0_OCAML_ONLY="${HXHX_STAGE0_OCAML_ONLY:-0}"
 HXHX_STAGE0_OCAMLRUNPARAM="${HXHX_STAGE0_OCAMLRUNPARAM:-}"
 HXHX_STAGE0_HEARTBEAT="${HXHX_STAGE0_HEARTBEAT:-20}"
 HXHX_STAGE0_LOG_TAIL_LINES="${HXHX_STAGE0_LOG_TAIL_LINES:-80}"
@@ -235,6 +239,12 @@ while [ $# -gt 0 ]; do
 		--stage0-inline)
 			HXHX_STAGE0_NO_INLINE=0
 			;;
+		--stage0-ocaml-only)
+			HXHX_STAGE0_OCAML_ONLY=1
+			;;
+		--stage0-with-js)
+			HXHX_STAGE0_OCAML_ONLY=0
+			;;
 		--stage0-ocamlrunparam)
 			shift
 			if [ $# -eq 0 ]; then
@@ -310,6 +320,7 @@ assert_bool_01 "HXHX_BOOTSTRAP_FORCE" "$HXHX_BOOTSTRAP_FORCE"
 assert_bool_01 "HXHX_BOOTSTRAP_PROFILE" "$HXHX_BOOTSTRAP_PROFILE"
 assert_bool_01 "HXHX_STAGE0_NO_OPT" "$HXHX_STAGE0_NO_OPT"
 assert_bool_01 "HXHX_STAGE0_NO_INLINE" "$HXHX_STAGE0_NO_INLINE"
+assert_bool_01 "HXHX_STAGE0_OCAML_ONLY" "$HXHX_STAGE0_OCAML_ONLY"
 	assert_bool_01 "HXHX_STAGE0_SELECTION_ONLY" "$HXHX_STAGE0_SELECTION_ONLY"
 	assert_non_negative_int "HXHX_STAGE0_DIAG_EVERY" "$HXHX_STAGE0_DIAG_EVERY"
 	assert_stage0_haxe_policy "$HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY"
@@ -667,6 +678,7 @@ compute_fingerprint() {
 		echo "stage0_disable_prepasses=$HXHX_STAGE0_DISABLE_PREPASSES"
 		echo "stage0_no_opt=$HXHX_STAGE0_NO_OPT"
 		echo "stage0_no_inline=$HXHX_STAGE0_NO_INLINE"
+		echo "stage0_ocaml_only=$HXHX_STAGE0_OCAML_ONLY"
 		echo "stage0_ocamlrunparam=$HXHX_STAGE0_OCAMLRUNPARAM"
 		echo "stage0_progress=$HXHX_STAGE0_PROGRESS"
 		echo "stage0_telemetry=$HXHX_STAGE0_TELEMETRY"
@@ -729,6 +741,7 @@ write_report_json() {
   "stage0_disable_prepasses": $HXHX_STAGE0_DISABLE_PREPASSES,
   "stage0_no_opt": $HXHX_STAGE0_NO_OPT,
   "stage0_no_inline": $HXHX_STAGE0_NO_INLINE,
+  "stage0_ocaml_only": $HXHX_STAGE0_OCAML_ONLY,
   "dune_jobs": "$(json_escape "$HXHX_DUNE_JOBS")",
   "stage0_ocamlrunparam": "$(json_escape "$HXHX_STAGE0_OCAMLRUNPARAM")",
   "stage0_observability": {
@@ -1011,6 +1024,9 @@ fi
 if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
 	echo "== Stage0 compile mode: --no-inline enabled"
 fi
+if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
+	echo "== Stage0 compile mode: ocaml-only backend graph enabled (-D hxhx_stage0_ocaml_only)"
+fi
 if [ -n "$HXHX_STAGE0_OCAMLRUNPARAM" ]; then
 	echo "== Stage0 OCaml runtime tuning: OCAMLRUNPARAM=$HXHX_STAGE0_OCAMLRUNPARAM"
 fi
@@ -1095,6 +1111,9 @@ if [ "$skipped_emit" = "0" ]; then
 	fi
 	if [ "$HXHX_STAGE0_NO_INLINE" = "1" ]; then
 		haxe_args+=(--no-inline)
+	fi
+	if [ "$HXHX_STAGE0_OCAML_ONLY" = "1" ]; then
+		haxe_args+=(-D hxhx_stage0_ocaml_only)
 	fi
 	if [ "$HXHX_BOOTSTRAP_PROFILE" = "1" ]; then
 		haxe_args+=(-D filter-times --times)

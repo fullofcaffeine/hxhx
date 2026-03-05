@@ -185,6 +185,18 @@ npm run hxhx:profile:stage0-regen-ab -- \
 This writes `results.tsv` plus `summary.json`/`summary.txt` with median and average reduction percentages.
 Only runs with `peak_rss_mb > 0` are included in reduction math.
 
+Additional mitigation candidate for source-level graph reduction:
+
+```bash
+npm run hxhx:profile:stage0-regen-ab -- \
+  --reps 3 \
+  --failfast 120 \
+  --mitigation-args "--ocaml-only"
+```
+
+`--ocaml-only` maps to `HXHX_STAGE0_OCAML_ONLY=1` and adds
+`-D hxhx_stage0_ocaml_only` during stage0 emit so linked `js-native` backend classes are excluded from that compile graph.
+
 Optional threshold gate (fails with exit code `3` when reduction is below target):
 
 ```bash
