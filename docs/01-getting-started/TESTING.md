@@ -226,7 +226,7 @@ Use this when you want the repo to function as a compiler-bootstrap example:
   - Stage0 contributor profiling helper (telemetry + summary):
     - `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20`
     - optional OCaml runtime tuning: `npm run hxhx:profile:stage0-regen -- --failfast 65 --heartbeat 20 --ocamlrunparam s=4M`
-    - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors.
+    - emits `.hxhx/profile/stage0-regen/<timestamp>/summary.txt` with top class contributors (`peak_rss_source=report|stdout_fallback`).
     - emits `.hxhx/profile/stage0-regen/<timestamp>/progress_summary.json` for deterministic class/checkpoint aggregation.
     - summarize any existing progress log: `node scripts/hxhx/summarize-stage0-progress.js --input <reflaxe_ocaml_progress.log> --top 15 --json-out <out.json>`
     - compare multiple run summaries: `npm run hxhx:profile:stage0-compare -- --summary-dir <run1> --summary-dir <run2> --summary-dir <run3> --min-presence 2 --sort median --json-out <compare.json>`

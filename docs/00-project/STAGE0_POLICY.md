@@ -139,7 +139,7 @@ Artifacts are written to `.hxhx/profile/stage0-regen/<timestamp>/`:
 - `regen_report.json` (policy/mode/peak RSS)
 - `reflaxe_ocaml_progress.log` (telemetry stream)
 - `progress_summary.json` (machine-readable class/checkpoint aggregate)
-- `summary.txt` (report line + top class contributors + checkpoint lines)
+- `summary.txt` (report line + top class contributors + checkpoint lines; includes `peak_rss_source=report|stdout_fallback`)
 
 You can summarize any existing progress log directly:
 

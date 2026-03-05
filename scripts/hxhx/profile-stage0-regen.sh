@@ -187,13 +187,41 @@ set -e
 
 node -e '
 const fs = require("fs");
-const path = process.argv[1];
+const reportPath = process.argv[1];
+const runStdoutPath = process.argv[2];
 let data = {};
 try {
-  data = JSON.parse(fs.readFileSync(path, "utf8"));
+  data = JSON.parse(fs.readFileSync(reportPath, "utf8"));
 } catch (_) {}
+const extractPeakFromStdout = (stdoutPath) => {
+  try {
+    const text = fs.readFileSync(stdoutPath, "utf8");
+    const matches = [...text.matchAll(/rss=(\d+)MB/g)];
+    if (matches.length === 0) {
+      return null;
+    }
+    let max = 0;
+    for (const m of matches) {
+      const value = Number(m[1]);
+      if (Number.isFinite(value) && value > max) {
+        max = value;
+      }
+    }
+    return max > 0 ? max : null;
+  } catch (_) {
+    return null;
+  }
+};
 const phase = data.phase_seconds || {};
 const obs = data.stage0_observability || {};
+const fallbackPeak = extractPeakFromStdout(runStdoutPath);
+const reportPeak = obs.heartbeat_peak_rss_mb;
+const peak = (reportPeak === undefined || reportPeak === null || Number(reportPeak) === 0) && fallbackPeak !== null
+  ? fallbackPeak
+  : reportPeak;
+const peakSource = (reportPeak === undefined || reportPeak === null || Number(reportPeak) === 0) && fallbackPeak !== null
+  ? "stdout_fallback"
+  : "report";
 const status = data.status ?? "unknown";
 const exitCode = data.exit_code ?? "na";
 const line = [
@@ -201,13 +229,14 @@ const line = [
   `exit_code=${exitCode}`,
   `haxe_mode=${data.haxe_bin_mode ?? "na"}`,
   `haxe_policy=${data.haxe_bin_policy ?? "na"}`,
-  `peak_rss_mb=${obs.heartbeat_peak_rss_mb ?? "na"}`,
+  `peak_rss_mb=${peak ?? "na"}`,
+  `peak_rss_source=${peakSource}`,
   `samples=${obs.heartbeat_samples ?? "na"}`,
   `emit_sec=${phase.emit ?? "na"}`,
   `total_sec=${phase.total ?? "na"}`
 ].join(" ");
 console.log(line);
-' "$REPORT_JSON" | tee "$SUMMARY_FILE"
+' "$REPORT_JSON" "$RUN_STDOUT" | tee "$SUMMARY_FILE"
 
 if [ -f "$PROGRESS_SUMMARY_SCRIPT" ]; then
 	node "$PROGRESS_SUMMARY_SCRIPT" \
