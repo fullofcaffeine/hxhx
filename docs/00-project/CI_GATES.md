@@ -93,6 +93,14 @@ Expected strict markers in logs:
 - `M7_STRICT_STAGE0:PASS`
 - `M7_REPLACEMENT_READY:PASS`
 
+Macro runtime mode policy (native lanes):
+- default mode is `inproc`
+- fallback/debug mode is `external-host`
+- rollback knobs:
+  - env: `HXHX_MACRO_RUNTIME_MODE=external-host`
+  - flag: `--hxhx-macro-runtime external-host`
+- audit marker: `hxhx_macro_runtime_mode=<mode>`
+
 Macro runtime parity weekly markers:
 - `MACRO_RUNTIME_PARITY_UNIT_EXTERNAL_HOST:PASS`
 - `MACRO_RUNTIME_PARITY_UNIT_INPROC:PASS`

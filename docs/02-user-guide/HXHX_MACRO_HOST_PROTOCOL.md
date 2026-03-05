@@ -432,12 +432,18 @@ Timeout guardrails (external-host mode):
 
 Macro runtime mode selection (Stage4 bring-up):
 
-- Default mode: `external-host` (spawn `hxhx-macro-host` and use RPC).
-- Experimental in-process mode: `inproc` (no macro-host process spawn).
+- Default mode: `inproc` (run macros in the `hxhx` process).
+- Fallback/debug mode: `external-host` (spawn `hxhx-macro-host` and use RPC).
 - Select mode via:
   - env: `HXHX_MACRO_RUNTIME_MODE=external-host|inproc`
   - Stage3 flag: `--hxhx-macro-runtime external-host|inproc`
 - Stage3 emits deterministic marker: `hxhx_macro_runtime_mode=<mode>`
+
+Emergency rollback knob (release safety):
+
+- If a regression is found in the default in-process mode, force fallback mode immediately:
+  - `HXHX_MACRO_RUNTIME_MODE=external-host`
+  - or add `--hxhx-macro-runtime external-host` on the compile command.
 
 Native macro-module dynlink smoke (C7R lane):
 

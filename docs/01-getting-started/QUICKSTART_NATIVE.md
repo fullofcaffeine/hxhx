@@ -45,6 +45,16 @@ Native JS lane:
 HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --js out/main.js -cp src -main Main --hxhx-no-run
 ```
 
+Macro runtime mode (native lane):
+
+- default is now in-process macros (`inproc`)
+- fallback/debug mode is external host (`external-host`)
+
+```bash
+# Emergency fallback if you hit an inproc macro regression:
+HXHX_MACRO_RUNTIME_MODE=external-host HXHX_FORBID_STAGE0=1 "$HXHX_BIN" --ocaml -cp src -main Main --hxhx-no-emit
+```
+
 ## 3) Run core native checks
 
 ```bash
@@ -69,3 +79,6 @@ Expected high-signal outputs include:
   - install `dune`, `ocamlopt`, `ocamlfind`.
 - native JS smoke fails with unsupported expression
   - check current scoped support: `docs/02-user-guide/HXHX_JS_NATIVE_SCOPE_1_0.md`.
+- macro behavior regression in native lane
+  - use rollback knob: `HXHX_MACRO_RUNTIME_MODE=external-host`
+  - capture emitted marker `hxhx_macro_runtime_mode=<mode>` in logs when filing the issue.

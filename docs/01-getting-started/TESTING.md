@@ -105,6 +105,16 @@ npm run test:upstream:display-stage3-no-emit
 npm run test:upstream:replacement-ready:strict
 ```
 
+Macro runtime mode default/rollback for these lanes:
+
+- default is `inproc` (no external macro-host spawn)
+- emergency fallback is `external-host`
+
+```bash
+# Force fallback mode for triage if needed:
+HXHX_MACRO_RUNTIME_MODE=external-host npm run test:upstream:unit-macro-stage3-no-emit
+```
+
 Gate 1 (unit macro suite) uses the upstream file:
 
 - `tests/unit/compile-macro.hxml`

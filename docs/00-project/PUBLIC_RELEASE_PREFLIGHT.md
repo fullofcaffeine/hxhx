@@ -44,6 +44,13 @@ Expected strict markers in output:
 - `M7_STRICT_STAGE0:PASS`
 - `M7_REPLACEMENT_READY:PASS`
 
+Macro runtime mode expectation for native lanes:
+
+- default should emit `hxhx_macro_runtime_mode=inproc`.
+- emergency rollback is allowed via:
+  - `HXHX_MACRO_RUNTIME_MODE=external-host`
+  - or `--hxhx-macro-runtime external-host`
+
 ## 4) Build dist with stage0 forbidden
 
 ```bash

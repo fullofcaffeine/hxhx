@@ -113,6 +113,7 @@ Current direction: keep target-core logic reusable so promotion is packaging/loa
 - Full upstream compatibility gates (Gate 1/2/3) run on weekly/manual cadence (see `docs/00-project/CI_GATES.md`).
 - Semantic-diff PR canary is now scoped to stdlib/runtimegen-sensitive changes and always publishes triage artifacts (`semantic-diff-pr-artifacts`).
 - Macro runtime mode parity is tracked weekly in both `external-host` and `inproc` lanes (see `.github/workflows/macro-runtime-parity-weekly.yml` and `docs/00-project/MACRO_RUNTIME_PARITY_BLOCKERS.md`).
+- Native lanes default to in-process macro runtime (`inproc`); fallback/rollback remains available with `HXHX_MACRO_RUNTIME_MODE=external-host`.
 
 ## Command catalog
 

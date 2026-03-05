@@ -10,13 +10,14 @@ package hxhx.macro;
 class MacroRuntimeMode {
 	public static inline var EXTERNAL_HOST:String = "external-host";
 	public static inline var INPROC:String = "inproc";
+	public static inline var DEFAULT:String = INPROC;
 
 	public static function resolve(explicitMode:Null<String>):String {
 		final fromFlag = normalize(explicitMode);
 		if (fromFlag != null)
 			return fromFlag;
 		final fromEnv = normalize(Sys.getEnv("HXHX_MACRO_RUNTIME_MODE"));
-		return fromEnv == null ? EXTERNAL_HOST : fromEnv;
+		return fromEnv == null ? DEFAULT : fromEnv;
 	}
 
 	public static function openSession(mode:String):MacroRuntimeSession {

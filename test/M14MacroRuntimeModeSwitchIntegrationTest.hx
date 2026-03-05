@@ -32,11 +32,11 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 
 	static function main():Void {
 		Sys.putEnv("HXHX_MACRO_RUNTIME_MODE", null);
-		assertEq("default mode", MacroRuntimeMode.resolve(null), MacroRuntimeMode.EXTERNAL_HOST);
+		assertEq("default mode", MacroRuntimeMode.resolve(null), MacroRuntimeMode.INPROC);
 
-		Sys.putEnv("HXHX_MACRO_RUNTIME_MODE", MacroRuntimeMode.INPROC);
-		assertEq("env mode", MacroRuntimeMode.resolve(null), MacroRuntimeMode.INPROC);
-		assertEq("explicit mode", MacroRuntimeMode.resolve(MacroRuntimeMode.EXTERNAL_HOST), MacroRuntimeMode.EXTERNAL_HOST);
+		Sys.putEnv("HXHX_MACRO_RUNTIME_MODE", MacroRuntimeMode.EXTERNAL_HOST);
+		assertEq("env mode", MacroRuntimeMode.resolve(null), MacroRuntimeMode.EXTERNAL_HOST);
+		assertEq("explicit mode", MacroRuntimeMode.resolve(MacroRuntimeMode.INPROC), MacroRuntimeMode.INPROC);
 		expectThrow("invalid mode", () -> MacroRuntimeMode.resolve("weird"), "invalid macro runtime mode");
 
 		Sys.putEnv("HXHX_MACRO_HOST_EXE", null);
