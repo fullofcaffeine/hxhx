@@ -445,7 +445,11 @@ function createSummary(parsed, startedAt, commitSha) {
 
 function finalizeSummary(summary, startedAt) {
   const blockersClassified = summary.blocker_classifications.length > 0
-    && summary.blocker_classifications.every((item) => item.classification !== 'unknown')
+    && summary.blocker_classifications.every((item) => {
+      return item.classification === 'source-fixed-bootstrap-lag'
+        || item.classification === 'real-parity-bug'
+        || item.classification === 'in-sync-pass'
+    })
   if (blockersClassified) {
     summary.status = 'pass'
     summary.marker = 'FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS'

@@ -106,12 +106,21 @@ jobs:
 
       - name: Build bootstrap lane artifact
         run: |
-          set -euo pipefail
+          set +e
           node scripts/ci/full1-bootstrap-source-reconcile.js \
             --mode build \
             --lane bootstrap \
             --artifacts-dir "${{ env.FULL1_RECONCILE_ARTIFACTS_DIR }}" \
-            --build-timeout-secs "${{ env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS }}"
+            --build-timeout-secs "${{ env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS }}" &
+          build_pid="$!"
+          elapsed=0
+          while kill -0 "${build_pid}" 2>/dev/null; do
+            echo "full1-reconcile bootstrap build heartbeat: pid=${build_pid} elapsed=${elapsed}s"
+            sleep 20
+            elapsed=$((elapsed + 20))
+          done
+          wait "${build_pid}"
+          exit "$?"
 
       - name: Upload bootstrap build artifact
         if: always()
@@ -207,12 +216,21 @@ jobs:
 
       - name: Build source lane artifact
         run: |
-          set -euo pipefail
+          set +e
           node scripts/ci/full1-bootstrap-source-reconcile.js \
             --mode build \
             --lane source \
             --artifacts-dir "${{ env.FULL1_RECONCILE_ARTIFACTS_DIR }}" \
-            --build-timeout-secs "${{ env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS }}"
+            --build-timeout-secs "${{ env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS }}" &
+          build_pid="$!"
+          elapsed=0
+          while kill -0 "${build_pid}" 2>/dev/null; do
+            echo "full1-reconcile source build heartbeat: pid=${build_pid} elapsed=${elapsed}s"
+            sleep 20
+            elapsed=$((elapsed + 20))
+          done
+          wait "${build_pid}"
+          exit "$?"
 
       - name: Upload source build artifact
         if: always()
