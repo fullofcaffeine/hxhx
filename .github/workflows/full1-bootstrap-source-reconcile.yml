@@ -101,12 +101,32 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .artifacts/full1/reconciliation
-          nohup node scripts/ci/full1-bootstrap-source-reconcile.js \
-            --artifacts-dir ".artifacts/full1/reconciliation" \
-            --build-timeout-secs "${FULL1_RECONCILE_BUILD_TIMEOUT_SECS}" \
-            --suite-timeout-secs "${FULL1_RECONCILE_SUITE_TIMEOUT_SECS}" \
-            > .artifacts/full1/reconciliation/launcher.log 2>&1 &
-          reconcile_pid="$!"
+          reconcile_pid="$(
+            python3 - <<'PY'
+import os
+import subprocess
+
+log_path = ".artifacts/full1/reconciliation/launcher.log"
+with open(log_path, "ab", buffering=0) as log_file:
+    proc = subprocess.Popen(
+        [
+            "node",
+            "scripts/ci/full1-bootstrap-source-reconcile.js",
+            "--artifacts-dir",
+            ".artifacts/full1/reconciliation",
+            "--build-timeout-secs",
+            os.environ["FULL1_RECONCILE_BUILD_TIMEOUT_SECS"],
+            "--suite-timeout-secs",
+            os.environ["FULL1_RECONCILE_SUITE_TIMEOUT_SECS"],
+        ],
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+        close_fds=True,
+    )
+    print(proc.pid)
+PY
+          )"
           echo "${reconcile_pid}" > .artifacts/full1/reconciliation/reconcile.pid
           echo "full1-bootstrap-source-reconcile launched pid=${reconcile_pid}"
 
