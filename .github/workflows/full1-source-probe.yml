@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: "0 11 * * 6"
 
+# Diagnostic but still expensive; cancel stale reruns within the same event/ref lane.
+concurrency:
+  group: full1-source-probe-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

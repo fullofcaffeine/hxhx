@@ -11,6 +11,11 @@ on:
   schedule:
     - cron: "0 13 * * 6"
 
+# Diagnostic but heavy; cancel stale reruns within the same event/ref lane.
+concurrency:
+  group: full1-bootstrap-source-reconcile-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

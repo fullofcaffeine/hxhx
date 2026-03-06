@@ -7,9 +7,11 @@ on:
     # Weekly strict suite evidence for Full1 parity closure.
     - cron: "0 9 * * 6"
 
+# Heavy Full1 runs are expensive; cancel stale reruns within the same event/ref lane.
+# Include event_name so direct/manual runs do not stomp workflow_call consumers.
 concurrency:
-  group: full1-suite-runners-${{ github.ref }}-${{ github.run_id }}
-  cancel-in-progress: false
+  group: full1-suite-runners-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
