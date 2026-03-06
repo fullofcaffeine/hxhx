@@ -30,6 +30,7 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | Workflow | File | Cadence | Expected signal | Evidence artifact/log |
 | --- | --- | --- | --- | --- |
 | Full1 / Source-Build Probe | `.github/workflows/full1-source-probe.yml` | Weekly schedule | `FULL1_SOURCE_BUILD_PROBE:PASS` (ideal) or `FULL1_SOURCE_BUILD_PROBE:WARN` (diagnostic follow-up required) | Artifact `full1-source-probe-<run_id>` |
+| Full1 / Bootstrap-Source Reconciliation | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Weekly schedule | `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS` (classification complete) or `...:WARN` (artifact pair/classification incomplete) | Artifact `full1-bootstrap-source-reconcile-<run_id>` |
 
 ## Weekly procedure
 
@@ -60,6 +61,7 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | Semantic-diff nightly failure or missing artifact | On-duty stdlib maintainer | Re-run workflow, inspect comparator/lane logs, and attach `semantic-diff-nightly-artifacts` to bead | Escalate to stdlib/runtime owners if unresolved in 24h |
 | KPI workflow emits no report or exceeds threshold budget | On-duty performance maintainer | Re-run KPI once; compare `report.json` with threshold file and classify expected vs regression | Escalate to release maintainer when regression exceeds thresholds on two consecutive weekly runs |
 | Full1 source-build probe emits `FULL1_SOURCE_BUILD_PROBE:WARN` | On-duty Full1 maintainer | Download `full1-source-probe-*` artifact, identify whether failure is build path, macro-host path, or suite parity, and update/open a blocker bead with run URL + summary JSON | Escalate to compiler owners if WARN repeats for two consecutive weekly runs on the same suite |
+| Full1 bootstrap-source reconciliation emits `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:WARN` | On-duty Full1 maintainer | Download `full1-bootstrap-source-reconcile-*` artifact, verify both lane summaries exist for `server` + `optimization`, and rerun if classification is incomplete | Escalate if WARN repeats for two consecutive weekly runs or blocker classification remains unknown |
 | Scheduled workflow did not run | On-duty CI maintainer | Trigger manual dispatch immediately and capture run URL | Escalate to infra/CI owners if scheduler miss repeats next week |
 
 ## Local reproduction commands
@@ -88,6 +90,9 @@ HXHX_KPI_REPS=2 HXHX_KPI_RUN_MACRO_LANE=1 npm run hxhx:bench:kpi
 
 # Full1 source-build probe (non-blocking diagnostic lane)
 npm run -s test:full1:source-probe
+
+# Full1 bootstrap-source reconciliation (diagnostic classification lane)
+npm run -s test:full1:bootstrap-source-reconcile
 ```
 
 ## Related docs

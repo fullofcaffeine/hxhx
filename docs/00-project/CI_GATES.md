@@ -91,6 +91,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement and JSON summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log + summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Source-Build Probe` | `.github/workflows/full1-source-probe.yml` | Non-blocking diagnostic lane: force source build (`HXHX_FORCE_STAGE0=1`) and run narrowed strict suites (`server`, `optimization`) to detect bootstrap-lagged fixes without destabilizing the primary matrix. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
+| `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 | `Gate Full1 / Strict Suite Matrix` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners + strict extended Gate3 and emits `FULL1_SUITE_MATRIX:PASS` only when both succeed. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
@@ -143,6 +144,10 @@ Full1 aggregate matrix marker:
 Full1 source-build probe marker (non-blocking diagnostic lane):
 
 - `FULL1_SOURCE_BUILD_PROBE:PASS` or `FULL1_SOURCE_BUILD_PROBE:WARN` (`.github/workflows/full1-source-probe.yml`)
+
+Full1 bootstrap-source reconciliation marker (diagnostic classification lane):
+
+- `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS` or `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:WARN` (`.github/workflows/full1-bootstrap-source-reconcile.yml`)
 
 Local suite runner guide for Full1 suite scaffolding (`misc/server/threads/optimization/display`):
 

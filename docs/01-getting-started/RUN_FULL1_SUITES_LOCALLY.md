@@ -63,6 +63,23 @@ What it does:
 - writes artifacts under `.artifacts/full1/source-probe/`,
 - emits `FULL1_SOURCE_BUILD_PROBE:PASS` or `FULL1_SOURCE_BUILD_PROBE:WARN`.
 
+## Bootstrap-Source Reconciliation (Diagnostic Classification Lane)
+
+Use this when server/optimization blockers might be hidden by bootstrap lag and you need paired evidence on the same commit.
+
+```bash
+npm run -s test:full1:bootstrap-source-reconcile
+```
+
+What it does:
+
+- builds/runs strict suite checks for `server` + `optimization` in both lanes:
+  - bootstrap-built `hxhx`
+  - source-built `hxhx` (`HXHX_FORCE_STAGE0=1`)
+- writes paired artifacts under `.artifacts/full1/reconciliation/{bootstrap,source}/`,
+- writes classification summary `.artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json`,
+- emits `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS` when blocker classification is complete, otherwise `...:WARN`.
+
 ## Optional Debug Knobs
 
 - Run only one misc project:
