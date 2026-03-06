@@ -98,6 +98,7 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Run Full1 bootstrap-source reconciliation (diagnostic)
+        continue-on-error: true
         run: |
           set +e
           elapsed=0
@@ -128,6 +129,17 @@ jobs:
             echo "full1-bootstrap-source-reconcile summary missing"
           fi
           exit 0
+
+      - name: Print reconciliation summary (diagnostic)
+        if: always()
+        run: |
+          if [ -f ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json" ]; then
+            echo "full1-bootstrap-source-reconcile summary:"
+            cat ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json"
+          else
+            echo "full1-bootstrap-source-reconcile summary missing"
+            find .artifacts/full1/reconciliation -maxdepth 2 -type f -print 2>/dev/null || true
+          fi
 
       - name: Upload reconciliation artifacts
         if: always()
