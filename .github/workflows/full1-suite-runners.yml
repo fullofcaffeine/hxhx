@@ -99,24 +99,36 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
 
-      - name: Build shared hxhx binary
+      - name: Build shared hxhx and macro host binaries
         run: |
           set -euo pipefail
           mkdir -p "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}"
-          build_stdout="$(mktemp)"
-          build_stderr="$(mktemp)"
-          bash scripts/hxhx/build-hxhx.sh >"${build_stdout}" 2>"${build_stderr}"
-          cat "${build_stderr}"
-          built_path="$(awk 'NF { line=$0 } END { print line }' "${build_stdout}")"
-          if [ -z "${built_path}" ] || [ ! -f "${built_path}" ]; then
-            echo "build-hxhx.sh did not produce a valid binary path" >&2
-            cat "${build_stdout}" >&2
-            exit 1
-          fi
-          cp "${built_path}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
-          chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
-          cp "${build_stdout}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build-hxhx.stdout.log"
-          cp "${build_stderr}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/build-hxhx.stderr.log"
+          build_one() {
+            local script_path="$1"
+            local output_name="$2"
+            local stdout_log="$3"
+            local stderr_log="$4"
+            local build_stdout
+            local build_stderr
+            local built_path
+            build_stdout="$(mktemp)"
+            build_stderr="$(mktemp)"
+            bash "${script_path}" >"${build_stdout}" 2>"${build_stderr}"
+            cat "${build_stderr}"
+            built_path="$(awk 'NF { line=$0 } END { print line }' "${build_stdout}")"
+            if [ -z "${built_path}" ] || [ ! -f "${built_path}" ]; then
+              echo "${script_path} did not produce a valid binary path" >&2
+              cat "${build_stdout}" >&2
+              exit 1
+            fi
+            cp "${built_path}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${output_name}"
+            chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${output_name}"
+            cp "${build_stdout}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${stdout_log}"
+            cp "${build_stderr}" "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/${stderr_log}"
+          }
+
+          build_one "scripts/hxhx/build-hxhx.sh" "hxhx" "build-hxhx.stdout.log" "build-hxhx.stderr.log"
+          build_one "scripts/hxhx/build-hxhx-macro-host.sh" "hxhx-macro-host" "build-hxhx-macro-host.stdout.log" "build-hxhx-macro-host.stderr.log"
 
       - name: Upload shared hxhx artifact
         uses: actions/upload-artifact@v4
@@ -124,8 +136,11 @@ jobs:
           name: full1-suite-hxhx-${{ github.run_id }}
           path: |
             .artifacts/full1/suites/hxhx
+            .artifacts/full1/suites/hxhx-macro-host
             .artifacts/full1/suites/build-hxhx.stdout.log
             .artifacts/full1/suites/build-hxhx.stderr.log
+            .artifacts/full1/suites/build-hxhx-macro-host.stdout.log
+            .artifacts/full1/suites/build-hxhx-macro-host.stderr.log
           if-no-files-found: error
 
   full1_suite_runner:
@@ -225,6 +240,8 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
+          chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
+          export HXHX_MACRO_HOST_EXE="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
           node scripts/ci/run-upstream-suite.js \
             --suite "${{ matrix.suite }}" \
             --strict \
