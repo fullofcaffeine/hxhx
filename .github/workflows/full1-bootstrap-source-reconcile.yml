@@ -105,6 +105,8 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Build bootstrap lane artifact
+        id: build_bootstrap
+        continue-on-error: true
         run: |
           set +e
           node scripts/ci/full1-bootstrap-source-reconcile.js \
@@ -120,7 +122,9 @@ jobs:
             elapsed=$((elapsed + 20))
           done
           wait "${build_pid}"
-          exit "$?"
+          build_status="$?"
+          echo "build_exit_code=${build_status}" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Upload bootstrap build artifact
         if: always()
@@ -129,8 +133,15 @@ jobs:
           name: full1-reconcile-build-bootstrap-${{ github.run_id }}
           path: |
             .artifacts/full1/reconciliation/bootstrap/build.summary.json
+            .artifacts/full1/reconciliation/bootstrap/build.stdout.log
+            .artifacts/full1/reconciliation/bootstrap/build.stderr.log
             .artifacts/full1/reconciliation/bootstrap/hxhx
           if-no-files-found: warn
+
+      - name: Fail bootstrap build job if artifact build failed
+        if: always()
+        run: |
+          test "${{ steps.build_bootstrap.outputs.build_exit_code }}" = "0"
 
   source_build:
     name: Full1 reconcile / build source
@@ -215,6 +226,8 @@ jobs:
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
       - name: Build source lane artifact
+        id: build_source
+        continue-on-error: true
         run: |
           set +e
           node scripts/ci/full1-bootstrap-source-reconcile.js \
@@ -230,7 +243,9 @@ jobs:
             elapsed=$((elapsed + 20))
           done
           wait "${build_pid}"
-          exit "$?"
+          build_status="$?"
+          echo "build_exit_code=${build_status}" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Upload source build artifact
         if: always()
@@ -239,8 +254,15 @@ jobs:
           name: full1-reconcile-build-source-${{ github.run_id }}
           path: |
             .artifacts/full1/reconciliation/source/build.summary.json
+            .artifacts/full1/reconciliation/source/build.stdout.log
+            .artifacts/full1/reconciliation/source/build.stderr.log
             .artifacts/full1/reconciliation/source/hxhx
           if-no-files-found: warn
+
+      - name: Fail source build job if artifact build failed
+        if: always()
+        run: |
+          test "${{ steps.build_source.outputs.build_exit_code }}" = "0"
 
   suite_lane_runner:
     name: Full1 reconcile / ${{ matrix.lane }} / ${{ matrix.suite }}
@@ -432,11 +454,15 @@ jobs:
           path: |
             .artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json
             .artifacts/full1/reconciliation/bootstrap/build.summary.json
+            .artifacts/full1/reconciliation/bootstrap/build.stdout.log
+            .artifacts/full1/reconciliation/bootstrap/build.stderr.log
             .artifacts/full1/reconciliation/bootstrap/hxhx
             .artifacts/full1/reconciliation/bootstrap/*.run.json
             .artifacts/full1/reconciliation/bootstrap/*.summary.json
             .artifacts/full1/reconciliation/bootstrap/*.log
             .artifacts/full1/reconciliation/source/build.summary.json
+            .artifacts/full1/reconciliation/source/build.stdout.log
+            .artifacts/full1/reconciliation/source/build.stderr.log
             .artifacts/full1/reconciliation/source/hxhx
             .artifacts/full1/reconciliation/source/*.run.json
             .artifacts/full1/reconciliation/source/*.summary.json

@@ -468,12 +468,20 @@ function runBuildMode(parsed) {
   ensureDir(parsed.artifactsDir)
   ensureDir(laneDir)
   const build = buildHxhx(parsed.root, laneEnv(parsed.lane), laneProvidedBinary(parsed, parsed.lane), parsed.buildTimeoutSecs * 1000)
+  const stdoutLogPath = path.join(laneDir, 'build.stdout.log')
+  const stderrLogPath = path.join(laneDir, 'build.stderr.log')
+  fs.writeFileSync(stdoutLogPath, String(build.stdout || ''), 'utf8')
+  fs.writeFileSync(stderrLogPath, String(build.stderr || ''), 'utf8')
+  build.stdout_log_path = stdoutLogPath
+  build.stderr_log_path = stderrLogPath
   if (build.exit_code === 0 && build.hxhx_bin) {
     build.artifact_hxhx_bin = stageBinary(path.join(laneDir, 'hxhx'), build.hxhx_bin)
   }
   const summaryPath = path.join(laneDir, 'build.summary.json')
   writeJson(summaryPath, build)
   console.log(`[full1-reconcile] lane=${parsed.lane} build_summary=${summaryPath}`)
+  console.log(`[full1-reconcile] lane=${parsed.lane} stdout_log=${stdoutLogPath}`)
+  console.log(`[full1-reconcile] lane=${parsed.lane} stderr_log=${stderrLogPath}`)
   if (build.artifact_hxhx_bin) {
     console.log(`[full1-reconcile] lane=${parsed.lane} hxhx_bin=${build.artifact_hxhx_bin}`)
   }
