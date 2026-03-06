@@ -97,37 +97,46 @@ jobs:
       - name: Fetch upstream Haxe checkout (vendor/haxe)
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
-      - name: Run Full1 bootstrap-source reconciliation (diagnostic)
-        continue-on-error: true
+      - name: Launch Full1 bootstrap-source reconciliation (diagnostic)
         run: |
-          set +e
-          elapsed=0
-          heartbeat() {
-            while true; do
-              echo "full1-bootstrap-source-reconcile heartbeat: elapsed=${elapsed}s"
-              sleep 20
-              elapsed=$((elapsed + 20))
-            done
-          }
-          heartbeat &
-          heartbeat_pid="$!"
-          trap 'kill "${heartbeat_pid}" 2>/dev/null || true' EXIT
-          node scripts/ci/full1-bootstrap-source-reconcile.js \
+          set -euo pipefail
+          mkdir -p .artifacts/full1/reconciliation
+          nohup node scripts/ci/full1-bootstrap-source-reconcile.js \
             --artifacts-dir ".artifacts/full1/reconciliation" \
             --build-timeout-secs "${FULL1_RECONCILE_BUILD_TIMEOUT_SECS}" \
-            --suite-timeout-secs "${FULL1_RECONCILE_SUITE_TIMEOUT_SECS}"
-          reconcile_exit="$?"
-          kill "${heartbeat_pid}" 2>/dev/null || true
-          wait "${heartbeat_pid}" 2>/dev/null || true
-          trap - EXIT
-          set -e
-          echo "full1-bootstrap-source-reconcile exit=${reconcile_exit} (diagnostic lane)"
-          if [ -f ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json" ]; then
-            echo "full1-bootstrap-source-reconcile summary:"
-            cat ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json"
-          else
-            echo "full1-bootstrap-source-reconcile summary missing"
+            --suite-timeout-secs "${FULL1_RECONCILE_SUITE_TIMEOUT_SECS}" \
+            > .artifacts/full1/reconciliation/launcher.log 2>&1 &
+          reconcile_pid="$!"
+          echo "${reconcile_pid}" > .artifacts/full1/reconciliation/reconcile.pid
+          echo "full1-bootstrap-source-reconcile launched pid=${reconcile_pid}"
+
+      - name: Wait for Full1 bootstrap-source reconciliation (diagnostic)
+        if: always()
+        run: |
+          set +e
+          pid_file=".artifacts/full1/reconciliation/reconcile.pid"
+          if [ ! -f "${pid_file}" ]; then
+            echo "full1-bootstrap-source-reconcile pid file missing"
+            exit 0
           fi
+          reconcile_pid="$(cat "${pid_file}")"
+          elapsed=0
+          max_wait_secs=$((FULL1_RECONCILE_BUILD_TIMEOUT_SECS + 180))
+          while kill -0 "${reconcile_pid}" 2>/dev/null; do
+            echo "full1-bootstrap-source-reconcile heartbeat: pid=${reconcile_pid} elapsed=${elapsed}s"
+            if [ "${elapsed}" -ge "${max_wait_secs}" ]; then
+              echo "full1-bootstrap-source-reconcile exceeded max wait (${max_wait_secs}s); terminating pid=${reconcile_pid}"
+              kill "${reconcile_pid}" 2>/dev/null || true
+              sleep 5
+              kill -9 "${reconcile_pid}" 2>/dev/null || true
+              break
+            fi
+            sleep 20
+            elapsed=$((elapsed + 20))
+          done
+          wait "${reconcile_pid}" 2>/dev/null
+          reconcile_exit="$?"
+          echo "full1-bootstrap-source-reconcile exit=${reconcile_exit} (diagnostic lane)"
           exit 0
 
       - name: Print reconciliation summary (diagnostic)
