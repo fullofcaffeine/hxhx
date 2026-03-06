@@ -524,6 +524,9 @@ function main() {
   if (parsed.strict) {
     env.HXHX_FORBID_STAGE0 = '1'
   }
+  if (!String(env.HXHX_MACRO_RUNTIME_MODE || '').trim()) {
+    env.HXHX_MACRO_RUNTIME_MODE = 'inproc'
+  }
   ensureSuiteDependencies(parsed.suite, suiteDir, env)
   if (shouldResolveMacroHost(env)) {
     env.HXHX_MACRO_HOST_EXE = resolveMacroHostBinary(parsed.root, env)
