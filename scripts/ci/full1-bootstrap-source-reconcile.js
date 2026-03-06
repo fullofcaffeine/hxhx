@@ -90,6 +90,10 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true })
 }
 
+function writeJson(filePath, value) {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+}
+
 function run(command, args, options) {
   return cp.spawnSync(command, args, {
     cwd: options.cwd,
@@ -333,6 +337,7 @@ function main() {
   ensureDir(parsed.artifactsDir)
   ensureDir(parsed.bootstrapArtifactsDir)
   ensureDir(parsed.sourceArtifactsDir)
+  const summaryPath = path.join(parsed.artifactsDir, 'bootstrap-source-reconciliation.summary.json')
 
   const commitSha = getCommitSha(parsed.root)
   const summary = {
@@ -357,7 +362,9 @@ function main() {
     blocker_classifications: [],
     marker: 'FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:WARN',
     status: 'warn',
+    current_phase: 'initializing',
   }
+  writeJson(summaryPath, summary)
 
   const bootstrapEnv = { ...process.env }
   delete bootstrapEnv.HXHX_FORCE_STAGE0
@@ -369,6 +376,8 @@ function main() {
 
   let bootstrapBuild
   try {
+    summary.current_phase = 'bootstrap_build'
+    writeJson(summaryPath, summary)
     bootstrapBuild = buildHxhx(parsed.root, bootstrapEnv, parsed.bootstrapHxhxBin, parsed.buildTimeoutSecs * 1000)
   } catch (error) {
     bootstrapBuild = {
@@ -381,9 +390,12 @@ function main() {
     }
   }
   summary.lanes.bootstrap.build = bootstrapBuild
+  writeJson(summaryPath, summary)
 
   let sourceBuild
   try {
+    summary.current_phase = 'source_build'
+    writeJson(summaryPath, summary)
     sourceBuild = buildHxhx(parsed.root, sourceEnv, parsed.sourceHxhxBin, parsed.buildTimeoutSecs * 1000)
   } catch (error) {
     sourceBuild = {
@@ -396,10 +408,13 @@ function main() {
     }
   }
   summary.lanes.source.build = sourceBuild
+  writeJson(summaryPath, summary)
 
   const bootstrapSuiteRuns = {}
   if (bootstrapBuild.exit_code === 0 && bootstrapBuild.hxhx_bin) {
     for (const suite of parsed.suites) {
+      summary.current_phase = `bootstrap_suite:${suite}`
+      writeJson(summaryPath, summary)
       bootstrapSuiteRuns[suite] = runSuite(
         parsed.root,
         suite,
@@ -410,10 +425,13 @@ function main() {
       )
     }
   }
+  writeJson(summaryPath, summary)
 
   const sourceSuiteRuns = {}
   if (sourceBuild.exit_code === 0 && sourceBuild.hxhx_bin) {
     for (const suite of parsed.suites) {
+      summary.current_phase = `source_suite:${suite}`
+      writeJson(summaryPath, summary)
       sourceSuiteRuns[suite] = runSuite(
         parsed.root,
         suite,
@@ -424,8 +442,10 @@ function main() {
       )
     }
   }
+  writeJson(summaryPath, summary)
 
   for (const suite of parsed.suites) {
+    summary.current_phase = `classify:${suite}`
     const classification = classifySuite(
       suite,
       bootstrapSuiteRuns[suite],
@@ -436,6 +456,7 @@ function main() {
     if (BLOCKER_SUITES.has(suite)) {
       summary.blocker_classifications.push(classification)
     }
+    writeJson(summaryPath, summary)
   }
 
   const blockersClassified = summary.blocker_classifications.length > 0
@@ -452,9 +473,8 @@ function main() {
   const endedAt = new Date()
   summary.ended_at = endedAt.toISOString()
   summary.duration_ms = endedAt.getTime() - startedAt.getTime()
-
-  const summaryPath = path.join(parsed.artifactsDir, 'bootstrap-source-reconciliation.summary.json')
-  fs.writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
+  summary.current_phase = 'done'
+  writeJson(summaryPath, summary)
 
   console.log(`[full1-reconcile] summary=${summaryPath}`)
   console.log(summary.marker)
