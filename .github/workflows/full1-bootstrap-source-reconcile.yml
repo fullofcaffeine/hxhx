@@ -122,10 +122,12 @@ jobs:
           reconcile_pid="$(cat "${pid_file}")"
           elapsed=0
           max_wait_secs=$((FULL1_RECONCILE_BUILD_TIMEOUT_SECS + 180))
+          terminated_for_timeout=0
           while kill -0 "${reconcile_pid}" 2>/dev/null; do
             echo "full1-bootstrap-source-reconcile heartbeat: pid=${reconcile_pid} elapsed=${elapsed}s"
             if [ "${elapsed}" -ge "${max_wait_secs}" ]; then
               echo "full1-bootstrap-source-reconcile exceeded max wait (${max_wait_secs}s); terminating pid=${reconcile_pid}"
+              terminated_for_timeout=1
               kill "${reconcile_pid}" 2>/dev/null || true
               sleep 5
               kill -9 "${reconcile_pid}" 2>/dev/null || true
@@ -134,14 +136,24 @@ jobs:
             sleep 20
             elapsed=$((elapsed + 20))
           done
-          wait "${reconcile_pid}" 2>/dev/null
-          reconcile_exit="$?"
-          echo "full1-bootstrap-source-reconcile exit=${reconcile_exit} (diagnostic lane)"
+          if [ "${terminated_for_timeout}" -eq 1 ]; then
+            echo "full1-bootstrap-source-reconcile terminated by workflow timeout guard"
+          elif kill -0 "${reconcile_pid}" 2>/dev/null; then
+            echo "full1-bootstrap-source-reconcile still appears live after polling window"
+          else
+            echo "full1-bootstrap-source-reconcile no longer running after polling window"
+          fi
           exit 0
 
       - name: Print reconciliation summary (diagnostic)
         if: always()
         run: |
+          if [ -f ".artifacts/full1/reconciliation/launcher.log" ]; then
+            echo "full1-bootstrap-source-reconcile launcher log tail:"
+            tail -n 200 ".artifacts/full1/reconciliation/launcher.log" || true
+          else
+            echo "full1-bootstrap-source-reconcile launcher log missing"
+          fi
           if [ -f ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json" ]; then
             echo "full1-bootstrap-source-reconcile summary:"
             cat ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json"
@@ -157,6 +169,8 @@ jobs:
           name: full1-bootstrap-source-reconcile-${{ github.run_id }}
           path: |
             .artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json
+            .artifacts/full1/reconciliation/launcher.log
+            .artifacts/full1/reconciliation/reconcile.pid
             .artifacts/full1/reconciliation/bootstrap/*.log
             .artifacts/full1/reconciliation/bootstrap/*.summary.json
             .artifacts/full1/reconciliation/source/*.log
