@@ -117,16 +117,27 @@ jobs:
         run: |
           set +e
           pid_file=".artifacts/full1/reconciliation/reconcile.pid"
+          summary_file=".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json"
           if [ ! -f "${pid_file}" ]; then
             echo "full1-bootstrap-source-reconcile pid file missing"
             exit 0
           fi
           reconcile_pid="$(cat "${pid_file}")"
-          elapsed=0
+          started_epoch="$(date +%s)"
           max_wait_secs=$((FULL1_RECONCILE_BUILD_TIMEOUT_SECS + 180))
           terminated_for_timeout=0
-          while kill -0 "${reconcile_pid}" 2>/dev/null; do
+          while true; do
+            now_epoch="$(date +%s)"
+            elapsed=$((now_epoch - started_epoch))
             echo "full1-bootstrap-source-reconcile heartbeat: pid=${reconcile_pid} elapsed=${elapsed}s"
+            if [ -f "${summary_file}" ] && grep -q '"current_phase": "done"' "${summary_file}"; then
+              echo "full1-bootstrap-source-reconcile summary indicates completion"
+              break
+            fi
+            if ! kill -0 "${reconcile_pid}" 2>/dev/null; then
+              echo "full1-bootstrap-source-reconcile process is no longer running"
+              break
+            fi
             if [ "${elapsed}" -ge "${max_wait_secs}" ]; then
               echo "full1-bootstrap-source-reconcile exceeded max wait (${max_wait_secs}s); terminating pid=${reconcile_pid}"
               terminated_for_timeout=1
@@ -136,10 +147,11 @@ jobs:
               break
             fi
             sleep 20
-            elapsed=$((elapsed + 20))
           done
           if [ "${terminated_for_timeout}" -eq 1 ]; then
             echo "full1-bootstrap-source-reconcile terminated by workflow timeout guard"
+          elif [ -f "${summary_file}" ] && grep -q '"current_phase": "done"' "${summary_file}"; then
+            echo "full1-bootstrap-source-reconcile completed and wrote summary"
           elif kill -0 "${reconcile_pid}" 2>/dev/null; then
             echo "full1-bootstrap-source-reconcile still appears live after polling window"
           else
