@@ -360,7 +360,7 @@ Use expectation-first development for all behavior changes.
 
 Use hxdoc (`/** ... */`) proactively.
 
-- Documentation threshold rule: do not reserve HaxeDoc only for obviously "big/complex" constructs/artifacts.
+- Documentation threshold rule: do not reserve HaxeDoc only for obviously "big" constructs or artifacts.
 - If a type, function, abstract, macro, extern override, or metadata pattern is even slightly non-obvious, surprising, or easy to misuse, document it with **Why / What / How** HaxeDoc where it is declared.
 - In practice, bias toward documenting earlier rather than later, especially for abstracts, compiler helpers, runtime bindings, lowering hooks, and `std/` compatibility shims.
 
