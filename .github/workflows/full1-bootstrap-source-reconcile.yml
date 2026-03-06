@@ -19,19 +19,20 @@ env:
   HAXE_VERSION: "4.3.7"
   FULL1_RECONCILE_BUILD_TIMEOUT_SECS: "900"
   FULL1_RECONCILE_SUITE_TIMEOUT_SECS: "600"
+  FULL1_RECONCILE_ARTIFACTS_DIR: ".artifacts/full1/reconciliation"
 
 jobs:
-  full1_bootstrap_source_reconcile:
-    name: Full1 bootstrap-source reconcile (diagnostic)
+  bootstrap_build:
+    name: Full1 reconcile / build bootstrap
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install host toolchains (reconciliation)
+      - name: Install host toolchains (reconciliation build)
         run: |
           set -euo pipefail
           retry_apt() {
@@ -103,77 +104,306 @@ jobs:
       - name: Fetch upstream Haxe checkout (vendor/haxe)
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
-      - name: Launch Full1 bootstrap-source reconciliation (diagnostic)
+      - name: Build bootstrap lane artifact
         run: |
           set -euo pipefail
-          mkdir -p .artifacts/full1/reconciliation
-          reconcile_pid="$(python3 -c "import os, subprocess; log_path='.artifacts/full1/reconciliation/launcher.log'; log_file=open(log_path, 'ab', buffering=0); proc=subprocess.Popen(['node', 'scripts/ci/full1-bootstrap-source-reconcile.js', '--artifacts-dir', '.artifacts/full1/reconciliation', '--build-timeout-secs', os.environ['FULL1_RECONCILE_BUILD_TIMEOUT_SECS'], '--suite-timeout-secs', os.environ['FULL1_RECONCILE_SUITE_TIMEOUT_SECS']], stdout=log_file, stderr=subprocess.STDOUT, start_new_session=True, close_fds=True); print(proc.pid); log_file.close()")"
-          echo "${reconcile_pid}" > .artifacts/full1/reconciliation/reconcile.pid
-          echo "full1-bootstrap-source-reconcile launched pid=${reconcile_pid}"
+          node scripts/ci/full1-bootstrap-source-reconcile.js \
+            --mode build \
+            --lane bootstrap \
+            --artifacts-dir "${{ env.FULL1_RECONCILE_ARTIFACTS_DIR }}" \
+            --build-timeout-secs "${{ env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS }}"
 
-      - name: Wait for Full1 bootstrap-source reconciliation (diagnostic)
+      - name: Upload bootstrap build artifact
         if: always()
-        timeout-minutes: 30
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-reconcile-build-bootstrap-${{ github.run_id }}
+          path: |
+            .artifacts/full1/reconciliation/bootstrap/build.summary.json
+            .artifacts/full1/reconciliation/bootstrap/hxhx
+          if-no-files-found: warn
+
+  source_build:
+    name: Full1 reconcile / build source
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (reconciliation build)
         run: |
-          set +e
-          pid_file=".artifacts/full1/reconciliation/reconcile.pid"
-          summary_file=".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json"
-          if [ ! -f "${pid_file}" ]; then
-            echo "full1-bootstrap-source-reconcile pid file missing"
-            exit 0
-          fi
-          reconcile_pid="$(cat "${pid_file}")"
-          started_epoch="$(date +%s)"
-          max_wait_secs=$((FULL1_RECONCILE_BUILD_TIMEOUT_SECS + 180))
-          terminated_for_timeout=0
-          while true; do
-            now_epoch="$(date +%s)"
-            elapsed=$((now_epoch - started_epoch))
-            echo "full1-bootstrap-source-reconcile heartbeat: pid=${reconcile_pid} elapsed=${elapsed}s"
-            if [ -f "${summary_file}" ] && grep -q '"current_phase": "done"' "${summary_file}"; then
-              echo "full1-bootstrap-source-reconcile summary indicates completion"
-              break
-            fi
-            if ! kill -0 "${reconcile_pid}" 2>/dev/null; then
-              echo "full1-bootstrap-source-reconcile process is no longer running"
-              break
-            fi
-            if [ "${elapsed}" -ge "${max_wait_secs}" ]; then
-              echo "full1-bootstrap-source-reconcile exceeded max wait (${max_wait_secs}s); terminating pid=${reconcile_pid}"
-              terminated_for_timeout=1
-              kill "${reconcile_pid}" 2>/dev/null || true
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
               sleep 5
-              kill -9 "${reconcile_pid}" 2>/dev/null || true
-              break
-            fi
-            sleep 20
-          done
-          if [ "${terminated_for_timeout}" -eq 1 ]; then
-            echo "full1-bootstrap-source-reconcile terminated by workflow timeout guard"
-          elif [ -f "${summary_file}" ] && grep -q '"current_phase": "done"' "${summary_file}"; then
-            echo "full1-bootstrap-source-reconcile completed and wrote summary"
-          elif kill -0 "${reconcile_pid}" 2>/dev/null; then
-            echo "full1-bootstrap-source-reconcile still appears live after polling window"
+            done
+          }
+
+          retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
           else
-            echo "full1-bootstrap-source-reconcile no longer running after polling window"
+            dune_pkg="ocaml-dune"
           fi
-          exit 0
+
+          retry_apt sudo apt-get install -y \
+            ocaml "${dune_pkg}" ocaml-findlib \
+            neko \
+            python3 pypy3 \
+            default-jdk \
+            build-essential \
+            php \
+            lua5.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Build source lane artifact
+        run: |
+          set -euo pipefail
+          node scripts/ci/full1-bootstrap-source-reconcile.js \
+            --mode build \
+            --lane source \
+            --artifacts-dir "${{ env.FULL1_RECONCILE_ARTIFACTS_DIR }}" \
+            --build-timeout-secs "${{ env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS }}"
+
+      - name: Upload source build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-reconcile-build-source-${{ github.run_id }}
+          path: |
+            .artifacts/full1/reconciliation/source/build.summary.json
+            .artifacts/full1/reconciliation/source/hxhx
+          if-no-files-found: warn
+
+  suite_lane_runner:
+    name: Full1 reconcile / ${{ matrix.lane }} / ${{ matrix.suite }}
+    if: always()
+    needs: [bootstrap_build, source_build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: bootstrap
+            suite: server
+          - lane: bootstrap
+            suite: optimization
+          - lane: source
+            suite: server
+          - lane: source
+            suite: optimization
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (reconciliation suites)
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+
+          retry_apt sudo apt-get update
+
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+
+          retry_apt sudo apt-get install -y \
+            ocaml "${dune_pkg}" ocaml-findlib \
+            neko \
+            python3 pypy3 \
+            default-jdk \
+            build-essential \
+            php \
+            lua5.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Download lane build artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: full1-reconcile-build-${{ matrix.lane }}-${{ github.run_id }}
+          path: .artifacts/full1/reconciliation
+
+      - name: Run lane suite
+        run: |
+          set -euo pipefail
+          if [ -f ".artifacts/full1/reconciliation/${{ matrix.lane }}/hxhx" ]; then
+            chmod +x ".artifacts/full1/reconciliation/${{ matrix.lane }}/hxhx"
+          fi
+          node scripts/ci/full1-bootstrap-source-reconcile.js \
+            --mode suite \
+            --lane "${{ matrix.lane }}" \
+            --suite "${{ matrix.suite }}" \
+            --artifacts-dir "${{ env.FULL1_RECONCILE_ARTIFACTS_DIR }}" \
+            --suite-timeout-secs "${{ env.FULL1_RECONCILE_SUITE_TIMEOUT_SECS }}" \
+            --hxhx-bin ".artifacts/full1/reconciliation/${{ matrix.lane }}/hxhx"
+
+      - name: Upload lane suite artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-reconcile-suite-${{ matrix.lane }}-${{ matrix.suite }}-${{ github.run_id }}
+          path: |
+            .artifacts/full1/reconciliation/${{ matrix.lane }}/${{ matrix.suite }}.run.json
+            .artifacts/full1/reconciliation/${{ matrix.lane }}/${{ matrix.suite }}.summary.json
+            .artifacts/full1/reconciliation/${{ matrix.lane }}/${{ matrix.suite }}.log
+          if-no-files-found: warn
+
+  classify:
+    name: Full1 reconcile / classify
+    if: always()
+    needs: [bootstrap_build, source_build, suite_lane_runner]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Download build artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: full1-reconcile-build-*-${{ github.run_id }}
+          path: .artifacts/full1/reconciliation
+          merge-multiple: true
+
+      - name: Download suite artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: full1-reconcile-suite-*-${{ github.run_id }}
+          path: .artifacts/full1/reconciliation
+          merge-multiple: true
+
+      - name: Classify reconciliation evidence
+        run: |
+          set -euo pipefail
+          node scripts/ci/full1-bootstrap-source-reconcile.js \
+            --mode classify \
+            --artifacts-dir "${{ env.FULL1_RECONCILE_ARTIFACTS_DIR }}"
 
       - name: Print reconciliation summary (diagnostic)
         if: always()
         run: |
-          if [ -f ".artifacts/full1/reconciliation/launcher.log" ]; then
-            echo "full1-bootstrap-source-reconcile launcher log tail:"
-            tail -n 200 ".artifacts/full1/reconciliation/launcher.log" || true
-          else
-            echo "full1-bootstrap-source-reconcile launcher log missing"
-          fi
           if [ -f ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json" ]; then
-            echo "full1-bootstrap-source-reconcile summary:"
             cat ".artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json"
           else
             echo "full1-bootstrap-source-reconcile summary missing"
-            find .artifacts/full1/reconciliation -maxdepth 2 -type f -print 2>/dev/null || true
+            find .artifacts/full1/reconciliation -maxdepth 3 -type f -print 2>/dev/null || true
           fi
 
       - name: Upload reconciliation artifacts
@@ -183,10 +413,14 @@ jobs:
           name: full1-bootstrap-source-reconcile-${{ github.run_id }}
           path: |
             .artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json
-            .artifacts/full1/reconciliation/launcher.log
-            .artifacts/full1/reconciliation/reconcile.pid
-            .artifacts/full1/reconciliation/bootstrap/*.log
+            .artifacts/full1/reconciliation/bootstrap/build.summary.json
+            .artifacts/full1/reconciliation/bootstrap/hxhx
+            .artifacts/full1/reconciliation/bootstrap/*.run.json
             .artifacts/full1/reconciliation/bootstrap/*.summary.json
-            .artifacts/full1/reconciliation/source/*.log
+            .artifacts/full1/reconciliation/bootstrap/*.log
+            .artifacts/full1/reconciliation/source/build.summary.json
+            .artifacts/full1/reconciliation/source/hxhx
+            .artifacts/full1/reconciliation/source/*.run.json
             .artifacts/full1/reconciliation/source/*.summary.json
+            .artifacts/full1/reconciliation/source/*.log
           if-no-files-found: warn

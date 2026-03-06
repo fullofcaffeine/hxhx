@@ -2,13 +2,13 @@
 /**
  * full1-bootstrap-source-reconcile.js
  *
- * Full1 diagnostic reconciliation lane:
- * - Run strict suite checks with bootstrap-built hxhx.
- * - Run strict suite checks with source-built hxhx (HXHX_FORCE_STAGE0=1).
- * - Classify per-suite outcomes to separate bootstrap lag from real parity bugs.
+ * Full1 diagnostic reconciliation lane tooling.
  *
- * The script is evidence-oriented. It only emits PASS when classification data is
- * complete for the blocker suites (server + optimization by default).
+ * Modes:
+ * - full: run bootstrap build, source build, both blocker suites, then classify.
+ * - build: build one lane and stage the resulting hxhx binary into artifacts.
+ * - suite: run one suite for one lane using a provided hxhx binary.
+ * - classify: classify existing build/suite artifacts into a single summary.
  */
 
 const fs = require('fs')
@@ -17,9 +17,12 @@ const cp = require('child_process')
 
 const DEFAULT_SUITES = ['server', 'optimization']
 const BLOCKER_SUITES = new Set(['server', 'optimization'])
+const VALID_MODES = new Set(['full', 'build', 'suite', 'classify'])
+const VALID_LANES = new Set(['bootstrap', 'source'])
 
 function parseArgs(argv) {
   const out = {
+    mode: 'full',
     root: process.cwd(),
     artifactsDir: '.artifacts/full1/reconciliation',
     suites: DEFAULT_SUITES.slice(),
@@ -27,10 +30,18 @@ function parseArgs(argv) {
     sourceHxhxBin: '',
     buildTimeoutSecs: Math.max(1, parseInt(process.env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS || '900', 10) || 900),
     suiteTimeoutSecs: Math.max(1, parseInt(process.env.FULL1_RECONCILE_SUITE_TIMEOUT_SECS || '600', 10) || 600),
+    lane: '',
+    suite: '',
+    hxhxBin: '',
   }
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
+    if (arg === '--mode') {
+      out.mode = String(argv[i + 1] || '').trim().toLowerCase()
+      i += 1
+      continue
+    }
     if (arg === '--root') {
       out.root = String(argv[i + 1] || '').trim()
       i += 1
@@ -72,9 +83,27 @@ function parseArgs(argv) {
       i += 1
       continue
     }
+    if (arg === '--lane') {
+      out.lane = String(argv[i + 1] || '').trim().toLowerCase()
+      i += 1
+      continue
+    }
+    if (arg === '--suite') {
+      out.suite = String(argv[i + 1] || '').trim().toLowerCase()
+      i += 1
+      continue
+    }
+    if (arg === '--hxhx-bin') {
+      out.hxhxBin = String(argv[i + 1] || '').trim()
+      i += 1
+      continue
+    }
     throw new Error(`unknown argument: ${arg}`)
   }
 
+  if (!VALID_MODES.has(out.mode)) {
+    throw new Error(`invalid mode: ${out.mode}`)
+  }
   if (out.suites.length === 0) {
     throw new Error('no suites selected')
   }
@@ -83,6 +112,18 @@ function parseArgs(argv) {
   out.artifactsDir = path.resolve(out.root, out.artifactsDir)
   out.bootstrapArtifactsDir = path.join(out.artifactsDir, 'bootstrap')
   out.sourceArtifactsDir = path.join(out.artifactsDir, 'source')
+
+  if (out.mode === 'build' || out.mode === 'suite') {
+    if (!VALID_LANES.has(out.lane)) {
+      throw new Error(`mode ${out.mode} requires --lane bootstrap|source`)
+    }
+  }
+  if (out.mode === 'suite') {
+    if (out.suite.length === 0) {
+      throw new Error('mode suite requires --suite <name>')
+    }
+  }
+
   return out
 }
 
@@ -92,6 +133,17 @@ function ensureDir(dir) {
 
 function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+}
+
+function readJson(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return null
+  }
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  } catch (_) {
+    return null
+  }
 }
 
 function run(command, args, options) {
@@ -138,6 +190,33 @@ function resolveProvidedBinary(root, providedPath) {
   return resolved
 }
 
+function laneArtifactsDir(parsed, lane) {
+  return lane === 'source' ? parsed.sourceArtifactsDir : parsed.bootstrapArtifactsDir
+}
+
+function laneProvidedBinary(parsed, lane) {
+  return lane === 'source' ? parsed.sourceHxhxBin : parsed.bootstrapHxhxBin
+}
+
+function laneEnv(lane) {
+  const env = { ...process.env }
+  if (lane === 'source') {
+    env.HXHX_FORCE_STAGE0 = env.HXHX_FORCE_STAGE0 || '1'
+    env.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS = env.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS || '900'
+    env.HXHX_STAGE0_CONNECT_IDLE_SECS = env.HXHX_STAGE0_CONNECT_IDLE_SECS || '45'
+  } else {
+    delete env.HXHX_FORCE_STAGE0
+  }
+  return env
+}
+
+function stageBinary(stagedPath, sourcePath) {
+  ensureDir(path.dirname(stagedPath))
+  fs.copyFileSync(sourcePath, stagedPath)
+  fs.chmodSync(stagedPath, 0o755)
+  return stagedPath
+}
+
 function buildHxhx(root, env, providedBin, timeoutMs) {
   if (providedBin) {
     return {
@@ -147,6 +226,8 @@ function buildHxhx(root, env, providedBin, timeoutMs) {
       stdout: '',
       stderr: '',
       error: '',
+      timed_out: false,
+      artifact_hxhx_bin: '',
     }
   }
 
@@ -160,6 +241,7 @@ function buildHxhx(root, env, providedBin, timeoutMs) {
     stderr: result.stderr || '',
     error: result.error ? String(result.error.message || result.error) : '',
     timed_out: Boolean(result.error && result.error.code === 'ETIMEDOUT'),
+    artifact_hxhx_bin: '',
   }
 
   if (out.exit_code === 0) {
@@ -194,15 +276,6 @@ function runSuite(root, suite, hxhxBin, artifactsDir, env, timeoutMs) {
   )
   const endedAt = new Date()
 
-  let parsedSummary = null
-  if (fs.existsSync(summaryPath)) {
-    try {
-      parsedSummary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
-    } catch (_) {
-      parsedSummary = null
-    }
-  }
-
   return {
     suite,
     started_at: startedAt.toISOString(),
@@ -210,13 +283,11 @@ function runSuite(root, suite, hxhxBin, artifactsDir, env, timeoutMs) {
     duration_ms: endedAt.getTime() - startedAt.getTime(),
     exit_code: result.status == null ? -1 : result.status,
     signal: result.signal || '',
-    stdout: result.stdout || '',
-    stderr: result.stderr || '',
     error: result.error ? String(result.error.message || result.error) : '',
     timed_out: Boolean(result.error && result.error.code === 'ETIMEDOUT'),
     summary_path: summaryPath,
     log_path: logPath,
-    summary: parsedSummary,
+    summary: readJson(summaryPath),
   }
 }
 
@@ -251,8 +322,33 @@ function readLogSnippet(logPath) {
 function laneStatus(runItem) {
   const exitCode = runItem && runItem.summary && typeof runItem.summary.exit_code === 'number'
     ? runItem.summary.exit_code
-    : runItem.exit_code
+    : runItem
+      ? runItem.exit_code
+      : -1
   return exitCode === 0 ? 'pass' : 'fail'
+}
+
+function hydrateRunItem(runPath, fallbackSummaryPath, fallbackLogPath) {
+  const runItem = readJson(runPath)
+  if (!runItem) {
+    const summary = readJson(fallbackSummaryPath)
+    if (!summary && !fs.existsSync(fallbackLogPath)) {
+      return null
+    }
+    return {
+      exit_code: summary && typeof summary.exit_code === 'number' ? summary.exit_code : -1,
+      signal: '',
+      error: '',
+      timed_out: false,
+      summary_path: fallbackSummaryPath,
+      log_path: fallbackLogPath,
+      summary,
+    }
+  }
+  if (!runItem.summary && runItem.summary_path) {
+    runItem.summary = readJson(runItem.summary_path)
+  }
+  return runItem
 }
 
 function classifySuite(suite, bootstrapRun, sourceRun, sourceBuild) {
@@ -268,7 +364,7 @@ function classifySuite(suite, bootstrapRun, sourceRun, sourceBuild) {
   let rationale = ''
   let recommendedAction = ''
 
-  if (!sourceBuild || sourceBuild.exit_code !== 0 || !sourceBuild.hxhx_bin) {
+  if (!sourceBuild || sourceBuild.exit_code !== 0 || !sourceBuild.artifact_hxhx_bin) {
     classification = 'source-build-instability'
     rationale = sourceBuild && sourceBuild.timed_out
       ? 'Source hxhx build hit the reconciliation timeout before producing a binary.'
@@ -324,35 +420,16 @@ function classifySuite(suite, bootstrapRun, sourceRun, sourceBuild) {
   }
 }
 
-function main() {
-  const startedAt = new Date()
-  let parsed
-  try {
-    parsed = parseArgs(process.argv.slice(2))
-  } catch (error) {
-    console.error(`[full1-reconcile] ERROR: ${String(error && error.message ? error.message : error)}`)
-    process.exit(2)
-  }
-
-  ensureDir(parsed.artifactsDir)
-  ensureDir(parsed.bootstrapArtifactsDir)
-  ensureDir(parsed.sourceArtifactsDir)
-  const summaryPath = path.join(parsed.artifactsDir, 'bootstrap-source-reconciliation.summary.json')
-
-  const commitSha = getCommitSha(parsed.root)
-  const summary = {
+function createSummary(parsed, startedAt, commitSha) {
+  return {
     schema: 'full1-bootstrap-source-reconciliation.v1',
     started_at: startedAt.toISOString(),
     root: parsed.root,
     commit_sha: commitSha,
     suites: parsed.suites,
     lanes: {
-      bootstrap: {
-        artifacts_dir: parsed.bootstrapArtifactsDir,
-      },
-      source: {
-        artifacts_dir: parsed.sourceArtifactsDir,
-      },
+      bootstrap: { artifacts_dir: parsed.bootstrapArtifactsDir },
+      source: { artifacts_dir: parsed.sourceArtifactsDir },
     },
     timeouts: {
       build_timeout_secs: parsed.buildTimeoutSecs,
@@ -364,104 +441,11 @@ function main() {
     status: 'warn',
     current_phase: 'initializing',
   }
-  writeJson(summaryPath, summary)
+}
 
-  const bootstrapEnv = { ...process.env }
-  delete bootstrapEnv.HXHX_FORCE_STAGE0
-
-  const sourceEnv = { ...process.env }
-  sourceEnv.HXHX_FORCE_STAGE0 = sourceEnv.HXHX_FORCE_STAGE0 || '1'
-  sourceEnv.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS = sourceEnv.HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS || '900'
-  sourceEnv.HXHX_STAGE0_CONNECT_IDLE_SECS = sourceEnv.HXHX_STAGE0_CONNECT_IDLE_SECS || '45'
-
-  let bootstrapBuild
-  try {
-    summary.current_phase = 'bootstrap_build'
-    writeJson(summaryPath, summary)
-    bootstrapBuild = buildHxhx(parsed.root, bootstrapEnv, parsed.bootstrapHxhxBin, parsed.buildTimeoutSecs * 1000)
-  } catch (error) {
-    bootstrapBuild = {
-      mode: 'provided',
-      exit_code: -1,
-      hxhx_bin: '',
-      stdout: '',
-      stderr: '',
-      error: String(error && error.message ? error.message : error),
-    }
-  }
-  summary.lanes.bootstrap.build = bootstrapBuild
-  writeJson(summaryPath, summary)
-
-  let sourceBuild
-  try {
-    summary.current_phase = 'source_build'
-    writeJson(summaryPath, summary)
-    sourceBuild = buildHxhx(parsed.root, sourceEnv, parsed.sourceHxhxBin, parsed.buildTimeoutSecs * 1000)
-  } catch (error) {
-    sourceBuild = {
-      mode: 'provided',
-      exit_code: -1,
-      hxhx_bin: '',
-      stdout: '',
-      stderr: '',
-      error: String(error && error.message ? error.message : error),
-    }
-  }
-  summary.lanes.source.build = sourceBuild
-  writeJson(summaryPath, summary)
-
-  const bootstrapSuiteRuns = {}
-  if (bootstrapBuild.exit_code === 0 && bootstrapBuild.hxhx_bin) {
-    for (const suite of parsed.suites) {
-      summary.current_phase = `bootstrap_suite:${suite}`
-      writeJson(summaryPath, summary)
-      bootstrapSuiteRuns[suite] = runSuite(
-        parsed.root,
-        suite,
-        bootstrapBuild.hxhx_bin,
-        parsed.bootstrapArtifactsDir,
-        bootstrapEnv,
-        parsed.suiteTimeoutSecs * 1000
-      )
-    }
-  }
-  writeJson(summaryPath, summary)
-
-  const sourceSuiteRuns = {}
-  if (sourceBuild.exit_code === 0 && sourceBuild.hxhx_bin) {
-    for (const suite of parsed.suites) {
-      summary.current_phase = `source_suite:${suite}`
-      writeJson(summaryPath, summary)
-      sourceSuiteRuns[suite] = runSuite(
-        parsed.root,
-        suite,
-        sourceBuild.hxhx_bin,
-        parsed.sourceArtifactsDir,
-        sourceEnv,
-        parsed.suiteTimeoutSecs * 1000
-      )
-    }
-  }
-  writeJson(summaryPath, summary)
-
-  for (const suite of parsed.suites) {
-    summary.current_phase = `classify:${suite}`
-    const classification = classifySuite(
-      suite,
-      bootstrapSuiteRuns[suite],
-      sourceSuiteRuns[suite],
-      sourceBuild
-    )
-    summary.suite_classifications.push(classification)
-    if (BLOCKER_SUITES.has(suite)) {
-      summary.blocker_classifications.push(classification)
-    }
-    writeJson(summaryPath, summary)
-  }
-
+function finalizeSummary(summary, startedAt) {
   const blockersClassified = summary.blocker_classifications.length > 0
     && summary.blocker_classifications.every((item) => item.classification !== 'unknown')
-
   if (blockersClassified) {
     summary.status = 'pass'
     summary.marker = 'FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS'
@@ -469,15 +453,184 @@ function main() {
     summary.status = 'warn'
     summary.marker = 'FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:WARN'
   }
-
   const endedAt = new Date()
   summary.ended_at = endedAt.toISOString()
   summary.duration_ms = endedAt.getTime() - startedAt.getTime()
   summary.current_phase = 'done'
-  writeJson(summaryPath, summary)
+}
 
+function runBuildMode(parsed) {
+  const laneDir = laneArtifactsDir(parsed, parsed.lane)
+  ensureDir(parsed.artifactsDir)
+  ensureDir(laneDir)
+  const build = buildHxhx(parsed.root, laneEnv(parsed.lane), laneProvidedBinary(parsed, parsed.lane), parsed.buildTimeoutSecs * 1000)
+  if (build.exit_code === 0 && build.hxhx_bin) {
+    build.artifact_hxhx_bin = stageBinary(path.join(laneDir, 'hxhx'), build.hxhx_bin)
+  }
+  const summaryPath = path.join(laneDir, 'build.summary.json')
+  writeJson(summaryPath, build)
+  console.log(`[full1-reconcile] lane=${parsed.lane} build_summary=${summaryPath}`)
+  if (build.artifact_hxhx_bin) {
+    console.log(`[full1-reconcile] lane=${parsed.lane} hxhx_bin=${build.artifact_hxhx_bin}`)
+  }
+}
+
+function runSuiteMode(parsed) {
+  const laneDir = laneArtifactsDir(parsed, parsed.lane)
+  ensureDir(parsed.artifactsDir)
+  ensureDir(laneDir)
+  const runPath = path.join(laneDir, `${parsed.suite}.run.json`)
+  const resolvedBin = parsed.hxhxBin ? path.resolve(parsed.root, parsed.hxhxBin) : ''
+  let runItem
+  if (!resolvedBin || !fs.existsSync(resolvedBin)) {
+    const now = new Date().toISOString()
+    runItem = {
+      suite: parsed.suite,
+      started_at: now,
+      ended_at: now,
+      duration_ms: 0,
+      exit_code: -1,
+      signal: '',
+      error: resolvedBin ? `missing hxhx binary: ${resolvedBin}` : 'missing hxhx binary path',
+      timed_out: false,
+      summary_path: path.join(laneDir, `${parsed.suite}.summary.json`),
+      log_path: path.join(laneDir, `${parsed.suite}.log`),
+      summary: readJson(path.join(laneDir, `${parsed.suite}.summary.json`)),
+    }
+  } else {
+    fs.chmodSync(resolvedBin, 0o755)
+    runItem = runSuite(parsed.root, parsed.suite, resolvedBin, laneDir, laneEnv(parsed.lane), parsed.suiteTimeoutSecs * 1000)
+  }
+  writeJson(runPath, runItem)
+  console.log(`[full1-reconcile] lane=${parsed.lane} suite=${parsed.suite} run_summary=${runPath}`)
+}
+
+function runClassifyMode(parsed) {
+  ensureDir(parsed.artifactsDir)
+  const startedAt = new Date()
+  const summaryPath = path.join(parsed.artifactsDir, 'bootstrap-source-reconciliation.summary.json')
+  const summary = createSummary(parsed, startedAt, getCommitSha(parsed.root))
+  summary.current_phase = 'classification'
+
+  const bootstrapBuild = readJson(path.join(parsed.bootstrapArtifactsDir, 'build.summary.json'))
+  const sourceBuild = readJson(path.join(parsed.sourceArtifactsDir, 'build.summary.json'))
+  summary.lanes.bootstrap.build = bootstrapBuild || null
+  summary.lanes.source.build = sourceBuild || null
+
+  for (const suite of parsed.suites) {
+    const bootstrapRun = hydrateRunItem(
+      path.join(parsed.bootstrapArtifactsDir, `${suite}.run.json`),
+      path.join(parsed.bootstrapArtifactsDir, `${suite}.summary.json`),
+      path.join(parsed.bootstrapArtifactsDir, `${suite}.log`)
+    )
+    const sourceRun = hydrateRunItem(
+      path.join(parsed.sourceArtifactsDir, `${suite}.run.json`),
+      path.join(parsed.sourceArtifactsDir, `${suite}.summary.json`),
+      path.join(parsed.sourceArtifactsDir, `${suite}.log`)
+    )
+    summary.current_phase = `classify:${suite}`
+    const classification = classifySuite(suite, bootstrapRun, sourceRun, sourceBuild)
+    summary.suite_classifications.push(classification)
+    if (BLOCKER_SUITES.has(suite)) {
+      summary.blocker_classifications.push(classification)
+    }
+    writeJson(summaryPath, summary)
+  }
+
+  finalizeSummary(summary, startedAt)
+  writeJson(summaryPath, summary)
   console.log(`[full1-reconcile] summary=${summaryPath}`)
   console.log(summary.marker)
+}
+
+function runFullMode(parsed) {
+  const startedAt = new Date()
+  ensureDir(parsed.artifactsDir)
+  ensureDir(parsed.bootstrapArtifactsDir)
+  ensureDir(parsed.sourceArtifactsDir)
+  const summaryPath = path.join(parsed.artifactsDir, 'bootstrap-source-reconciliation.summary.json')
+  const summary = createSummary(parsed, startedAt, getCommitSha(parsed.root))
+  writeJson(summaryPath, summary)
+
+  summary.current_phase = 'bootstrap_build'
+  writeJson(summaryPath, summary)
+  const bootstrapBuild = buildHxhx(parsed.root, laneEnv('bootstrap'), laneProvidedBinary(parsed, 'bootstrap'), parsed.buildTimeoutSecs * 1000)
+  if (bootstrapBuild.exit_code === 0 && bootstrapBuild.hxhx_bin) {
+    bootstrapBuild.artifact_hxhx_bin = stageBinary(path.join(parsed.bootstrapArtifactsDir, 'hxhx'), bootstrapBuild.hxhx_bin)
+  }
+  summary.lanes.bootstrap.build = bootstrapBuild
+  writeJson(path.join(parsed.bootstrapArtifactsDir, 'build.summary.json'), bootstrapBuild)
+  writeJson(summaryPath, summary)
+
+  summary.current_phase = 'source_build'
+  writeJson(summaryPath, summary)
+  const sourceBuild = buildHxhx(parsed.root, laneEnv('source'), laneProvidedBinary(parsed, 'source'), parsed.buildTimeoutSecs * 1000)
+  if (sourceBuild.exit_code === 0 && sourceBuild.hxhx_bin) {
+    sourceBuild.artifact_hxhx_bin = stageBinary(path.join(parsed.sourceArtifactsDir, 'hxhx'), sourceBuild.hxhx_bin)
+  }
+  summary.lanes.source.build = sourceBuild
+  writeJson(path.join(parsed.sourceArtifactsDir, 'build.summary.json'), sourceBuild)
+  writeJson(summaryPath, summary)
+
+  const bootstrapSuiteRuns = {}
+  if (bootstrapBuild.exit_code === 0 && bootstrapBuild.artifact_hxhx_bin) {
+    for (const suite of parsed.suites) {
+      summary.current_phase = `bootstrap_suite:${suite}`
+      writeJson(summaryPath, summary)
+      bootstrapSuiteRuns[suite] = runSuite(parsed.root, suite, bootstrapBuild.artifact_hxhx_bin, parsed.bootstrapArtifactsDir, laneEnv('bootstrap'), parsed.suiteTimeoutSecs * 1000)
+      writeJson(path.join(parsed.bootstrapArtifactsDir, `${suite}.run.json`), bootstrapSuiteRuns[suite])
+    }
+  }
+
+  const sourceSuiteRuns = {}
+  if (sourceBuild.exit_code === 0 && sourceBuild.artifact_hxhx_bin) {
+    for (const suite of parsed.suites) {
+      summary.current_phase = `source_suite:${suite}`
+      writeJson(summaryPath, summary)
+      sourceSuiteRuns[suite] = runSuite(parsed.root, suite, sourceBuild.artifact_hxhx_bin, parsed.sourceArtifactsDir, laneEnv('source'), parsed.suiteTimeoutSecs * 1000)
+      writeJson(path.join(parsed.sourceArtifactsDir, `${suite}.run.json`), sourceSuiteRuns[suite])
+    }
+  }
+
+  for (const suite of parsed.suites) {
+    summary.current_phase = `classify:${suite}`
+    const classification = classifySuite(suite, bootstrapSuiteRuns[suite], sourceSuiteRuns[suite], sourceBuild)
+    summary.suite_classifications.push(classification)
+    if (BLOCKER_SUITES.has(suite)) {
+      summary.blocker_classifications.push(classification)
+    }
+    writeJson(summaryPath, summary)
+  }
+
+  finalizeSummary(summary, startedAt)
+  writeJson(summaryPath, summary)
+  console.log(`[full1-reconcile] summary=${summaryPath}`)
+  console.log(summary.marker)
+}
+
+function main() {
+  let parsed
+  try {
+    parsed = parseArgs(process.argv.slice(2))
+  } catch (error) {
+    console.error(`[full1-reconcile] ERROR: ${String(error && error.message ? error.message : error)}`)
+    process.exit(2)
+  }
+
+  switch (parsed.mode) {
+    case 'build':
+      runBuildMode(parsed)
+      return
+    case 'suite':
+      runSuiteMode(parsed)
+      return
+    case 'classify':
+      runClassifyMode(parsed)
+      return
+    case 'full':
+    default:
+      runFullMode(parsed)
+  }
 }
 
 main()
