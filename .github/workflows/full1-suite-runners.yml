@@ -101,6 +101,14 @@ jobs:
       - name: Download Haxe libraries (lix)
         run: npx lix download
 
+      - name: Prepare shared suite haxelib repo
+        run: |
+          set -euo pipefail
+          node scripts/ci/prepare-suite-haxelib-deps.js \
+            --repo-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo" \
+            --summary-path "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo.summary.json" \
+            --suites "server,display,threads"
+
       - name: Build shared hxhx and macro host binaries
         run: |
           set -euo pipefail
@@ -139,6 +147,8 @@ jobs:
           path: |
             .artifacts/full1/suites/hxhx
             .artifacts/full1/suites/hxhx-macro-host
+            .artifacts/full1/suites/haxelib_repo/**
+            .artifacts/full1/suites/haxelib_repo.summary.json
             .artifacts/full1/suites/build-hxhx.stdout.log
             .artifacts/full1/suites/build-hxhx.stderr.log
             .artifacts/full1/suites/build-hxhx-macro-host.stdout.log
@@ -243,6 +253,7 @@ jobs:
           set -euo pipefail
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx"
           chmod +x "${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
+          export HAXELIB_PATH="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/haxelib_repo"
           export HXHX_MACRO_HOST_EXE="${{ env.FULL1_SUITE_ARTIFACTS_DIR }}/hxhx-macro-host"
           node scripts/ci/run-upstream-suite.js \
             --suite "${{ matrix.suite }}" \
