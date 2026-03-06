@@ -451,6 +451,22 @@ function resolveMacroHostBinary(root, env) {
   return resolved
 }
 
+function normalizeMacroRuntimeMode(env) {
+  const raw = String(env.HXHX_MACRO_RUNTIME_MODE || '').trim().toLowerCase()
+  if (!raw) {
+    return 'inproc'
+  }
+  return raw
+}
+
+function shouldResolveMacroHost(env) {
+  const configured = String(env.HXHX_MACRO_HOST_EXE || '').trim()
+  if (configured) {
+    return true
+  }
+  return normalizeMacroRuntimeMode(env) === 'external-host'
+}
+
 function buildSuiteCommands(parsed, suiteConfig, suiteDir) {
   const entryHxmlPath = path.join(suiteDir, suiteConfig.entryHxml)
   const groups = parseHxmlCommandGroups(entryHxmlPath)
@@ -509,7 +525,9 @@ function main() {
     env.HXHX_FORBID_STAGE0 = '1'
   }
   ensureSuiteDependencies(parsed.suite, suiteDir, env)
-  env.HXHX_MACRO_HOST_EXE = resolveMacroHostBinary(parsed.root, env)
+  if (shouldResolveMacroHost(env)) {
+    env.HXHX_MACRO_HOST_EXE = resolveMacroHostBinary(parsed.root, env)
+  }
 
   const startedAt = new Date()
   const commandRuns = []
