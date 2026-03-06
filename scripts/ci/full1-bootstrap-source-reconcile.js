@@ -25,6 +25,8 @@ function parseArgs(argv) {
     suites: DEFAULT_SUITES.slice(),
     bootstrapHxhxBin: '',
     sourceHxhxBin: '',
+    buildTimeoutSecs: Math.max(1, parseInt(process.env.FULL1_RECONCILE_BUILD_TIMEOUT_SECS || '900', 10) || 900),
+    suiteTimeoutSecs: Math.max(1, parseInt(process.env.FULL1_RECONCILE_SUITE_TIMEOUT_SECS || '600', 10) || 600),
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -60,6 +62,16 @@ function parseArgs(argv) {
       i += 1
       continue
     }
+    if (arg === '--build-timeout-secs') {
+      out.buildTimeoutSecs = Math.max(1, parseInt(String(argv[i + 1] || '').trim(), 10) || out.buildTimeoutSecs)
+      i += 1
+      continue
+    }
+    if (arg === '--suite-timeout-secs') {
+      out.suiteTimeoutSecs = Math.max(1, parseInt(String(argv[i + 1] || '').trim(), 10) || out.suiteTimeoutSecs)
+      i += 1
+      continue
+    }
     throw new Error(`unknown argument: ${arg}`)
   }
 
@@ -84,6 +96,7 @@ function run(command, args, options) {
     env: options.env,
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 64,
+    timeout: options.timeoutMs,
   })
 }
 
@@ -121,7 +134,7 @@ function resolveProvidedBinary(root, providedPath) {
   return resolved
 }
 
-function buildHxhx(root, env, providedBin) {
+function buildHxhx(root, env, providedBin, timeoutMs) {
   if (providedBin) {
     return {
       mode: 'provided',
@@ -134,7 +147,7 @@ function buildHxhx(root, env, providedBin) {
   }
 
   const buildScript = path.join(root, 'scripts/hxhx/build-hxhx.sh')
-  const result = run('bash', [buildScript], { cwd: root, env })
+  const result = run('bash', [buildScript], { cwd: root, env, timeoutMs })
   const out = {
     mode: 'built',
     exit_code: result.status == null ? -1 : result.status,
@@ -142,6 +155,7 @@ function buildHxhx(root, env, providedBin) {
     stdout: result.stdout || '',
     stderr: result.stderr || '',
     error: result.error ? String(result.error.message || result.error) : '',
+    timed_out: Boolean(result.error && result.error.code === 'ETIMEDOUT'),
   }
 
   if (out.exit_code === 0) {
@@ -156,7 +170,7 @@ function buildHxhx(root, env, providedBin) {
   return out
 }
 
-function runSuite(root, suite, hxhxBin, artifactsDir, env) {
+function runSuite(root, suite, hxhxBin, artifactsDir, env, timeoutMs) {
   const summaryPath = path.join(artifactsDir, `${suite}.summary.json`)
   const logPath = path.join(artifactsDir, `${suite}.log`)
   const startedAt = new Date()
@@ -172,7 +186,7 @@ function runSuite(root, suite, hxhxBin, artifactsDir, env) {
       '--artifacts-dir',
       artifactsDir,
     ],
-    { cwd: root, env }
+    { cwd: root, env, timeoutMs }
   )
   const endedAt = new Date()
 
@@ -195,6 +209,7 @@ function runSuite(root, suite, hxhxBin, artifactsDir, env) {
     stdout: result.stdout || '',
     stderr: result.stderr || '',
     error: result.error ? String(result.error.message || result.error) : '',
+    timed_out: Boolean(result.error && result.error.code === 'ETIMEDOUT'),
     summary_path: summaryPath,
     log_path: logPath,
     summary: parsedSummary,
@@ -251,8 +266,18 @@ function classifySuite(suite, bootstrapRun, sourceRun, sourceBuild) {
 
   if (!sourceBuild || sourceBuild.exit_code !== 0 || !sourceBuild.hxhx_bin) {
     classification = 'source-build-instability'
-    rationale = 'Source hxhx build failed or produced no binary path.'
+    rationale = sourceBuild && sourceBuild.timed_out
+      ? 'Source hxhx build hit the reconciliation timeout before producing a binary.'
+      : 'Source hxhx build failed or produced no binary path.'
     recommendedAction = 'Inspect source lane build logs and stabilize scripts/hxhx/build-hxhx.sh before using probe evidence for parity closure.'
+  } else if (sourceRun && sourceRun.timed_out) {
+    classification = 'source-build-instability'
+    rationale = 'Source suite execution hit the reconciliation timeout before writing a complete summary.'
+    recommendedAction = 'Increase timeout only if progress is real; otherwise fix the long-tail source suite path before using reconciliation evidence.'
+  } else if (bootstrapRun && bootstrapRun.timed_out) {
+    classification = 'bootstrap-instability'
+    rationale = 'Bootstrap suite execution hit the reconciliation timeout before writing a complete summary.'
+    recommendedAction = 'Stabilize or bound the bootstrap lane before using it as the comparison baseline for this blocker.'
   } else if (!bootstrapHasSummary || !sourceHasSummary) {
     classification = 'unknown'
     rationale = 'Missing suite summary artifact for bootstrap or source lane.'
@@ -324,6 +349,10 @@ function main() {
         artifacts_dir: parsed.sourceArtifactsDir,
       },
     },
+    timeouts: {
+      build_timeout_secs: parsed.buildTimeoutSecs,
+      suite_timeout_secs: parsed.suiteTimeoutSecs,
+    },
     suite_classifications: [],
     blocker_classifications: [],
     marker: 'FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:WARN',
@@ -340,7 +369,7 @@ function main() {
 
   let bootstrapBuild
   try {
-    bootstrapBuild = buildHxhx(parsed.root, bootstrapEnv, parsed.bootstrapHxhxBin)
+    bootstrapBuild = buildHxhx(parsed.root, bootstrapEnv, parsed.bootstrapHxhxBin, parsed.buildTimeoutSecs * 1000)
   } catch (error) {
     bootstrapBuild = {
       mode: 'provided',
@@ -355,7 +384,7 @@ function main() {
 
   let sourceBuild
   try {
-    sourceBuild = buildHxhx(parsed.root, sourceEnv, parsed.sourceHxhxBin)
+    sourceBuild = buildHxhx(parsed.root, sourceEnv, parsed.sourceHxhxBin, parsed.buildTimeoutSecs * 1000)
   } catch (error) {
     sourceBuild = {
       mode: 'provided',
@@ -376,7 +405,8 @@ function main() {
         suite,
         bootstrapBuild.hxhx_bin,
         parsed.bootstrapArtifactsDir,
-        bootstrapEnv
+        bootstrapEnv,
+        parsed.suiteTimeoutSecs * 1000
       )
     }
   }
@@ -389,7 +419,8 @@ function main() {
         suite,
         sourceBuild.hxhx_bin,
         parsed.sourceArtifactsDir,
-        sourceEnv
+        sourceEnv,
+        parsed.suiteTimeoutSecs * 1000
       )
     }
   }

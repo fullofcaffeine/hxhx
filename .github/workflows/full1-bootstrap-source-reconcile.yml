@@ -11,6 +11,8 @@ permissions:
 env:
   NODE_VERSION: "20"
   HAXE_VERSION: "4.3.7"
+  FULL1_RECONCILE_BUILD_TIMEOUT_SECS: "900"
+  FULL1_RECONCILE_SUITE_TIMEOUT_SECS: "600"
 
 jobs:
   full1_bootstrap_source_reconcile:
@@ -98,7 +100,10 @@ jobs:
       - name: Run Full1 bootstrap-source reconciliation (diagnostic)
         run: |
           set +e
-          node scripts/ci/full1-bootstrap-source-reconcile.js --artifacts-dir ".artifacts/full1/reconciliation" &
+          node scripts/ci/full1-bootstrap-source-reconcile.js \
+            --artifacts-dir ".artifacts/full1/reconciliation" \
+            --build-timeout-secs "${FULL1_RECONCILE_BUILD_TIMEOUT_SECS}" \
+            --suite-timeout-secs "${FULL1_RECONCILE_SUITE_TIMEOUT_SECS}" &
           reconcile_pid="$!"
           elapsed=0
           while kill -0 "${reconcile_pid}" 2>/dev/null; do

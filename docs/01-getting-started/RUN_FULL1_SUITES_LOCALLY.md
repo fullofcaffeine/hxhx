@@ -79,6 +79,9 @@ What it does:
 - writes paired artifacts under `.artifacts/full1/reconciliation/{bootstrap,source}/`,
 - writes classification summary `.artifacts/full1/reconciliation/bootstrap-source-reconciliation.summary.json`,
 - emits `FULL1_BOOTSTRAP_SOURCE_RECONCILIATION:PASS` when blocker classification is complete, otherwise `...:WARN`.
+- defaults to bounded timeouts so the diagnostic lane produces evidence instead of running until the workflow-level timeout:
+  - `FULL1_RECONCILE_BUILD_TIMEOUT_SECS=900`
+  - `FULL1_RECONCILE_SUITE_TIMEOUT_SECS=600`
 
 ## Optional Debug Knobs
 
