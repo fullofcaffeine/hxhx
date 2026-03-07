@@ -12,7 +12,7 @@ package hxhx.macro;
 	  external-host ABI to a full AST transport.
 
 	What
-	- Reads the active source file and scans only the top-of-module `import` block.
+	- Reads the active source file and scans only the top-of-module `import` / `using` block.
 	- Preserves:
 	  - normal imports (`import String;`)
 	  - aliased imports (`import haxe.Template as T;`)
@@ -28,8 +28,8 @@ package hxhx.macro;
 
 	Gotchas
 	- This is a bring-up rung, not full upstream import metadata parity.
-	- `using` directives are intentionally ignored because `Context.getLocalImports()` only returns
-	  imports, not usings.
+	- `Context.getLocalImports()` and `Context.getLocalUsing()` intentionally remain separate payloads
+	  even though they share the same source scan.
 **/
 class MacroLocalImports {
 	static inline final MODE_NORMAL:String = "normal";
@@ -37,7 +37,8 @@ class MacroLocalImports {
 	static inline final MODE_ALL:String = "all";
 
 	public static function encodePayloadFromSourceFile(sourceFile:String):String {
-		final imports = readImports(sourceFile);
+		final scope = readScope(sourceFile);
+		final imports = scope.imports;
 		final parts = new Array<String>();
 		parts.push(MacroProtocol.encodeLen("c", Std.string(imports.length)));
 		for (i in 0...imports.length) {
@@ -53,14 +54,30 @@ class MacroLocalImports {
 		return parts.join(" ");
 	}
 
-	static function readImports(sourceFile:String):Array<MacroLocalImportEntry> {
-		final out = new Array<MacroLocalImportEntry>();
+	public static function encodeUsingsPayloadFromSourceFile(sourceFile:String):String {
+		final scope = readScope(sourceFile);
+		final usings = scope.usings;
+		final parts = new Array<String>();
+		parts.push(MacroProtocol.encodeLen("c", Std.string(usings.length)));
+		for (i in 0...usings.length) {
+			final entry = usings[i];
+			parts.push(MacroProtocol.encodeLen("p" + i, entry.path));
+			parts.push(MacroProtocol.encodeLen("f" + i, entry.file));
+			parts.push(MacroProtocol.encodeLen("mi" + i, Std.string(entry.min)));
+			parts.push(MacroProtocol.encodeLen("ma" + i, Std.string(entry.max)));
+		}
+		return parts.join(" ");
+	}
+
+	static function readScope(sourceFile:String):MacroLocalScopeSnapshot {
+		final imports = new Array<MacroLocalImportEntry>();
+		final usings = new Array<MacroLocalUsingEntry>();
 		if (sourceFile == null || sourceFile.length == 0)
-			return out;
+			return {imports: imports, usings: usings};
 
 		final source = try sys.io.File.getContent(sourceFile) catch (_:String) null;
 		if (source == null)
-			return out;
+			return {imports: imports, usings: usings};
 
 		final lexer = new HxLexer(source);
 		var cur = lexer.next();
@@ -158,16 +175,21 @@ class MacroLocalImports {
 			}
 
 			if (isUsing)
-				return;
-
-			out.push({
-				path: names.join("."),
-				mode: wildcard ? MODE_ALL : (alias == null ? MODE_NORMAL : MODE_ALIAS),
-				alias: alias,
-				file: sourceFile,
-				min: min < 0 ? 0 : min,
-				max: max < min ? min : max
-			});
+				usings.push({
+					path: names.join("."),
+					file: sourceFile,
+					min: min < 0 ? 0 : min,
+					max: max < min ? min : max
+				});
+			else
+				imports.push({
+					path: names.join("."),
+					mode: wildcard ? MODE_ALL : (alias == null ? MODE_NORMAL : MODE_ALIAS),
+					alias: alias,
+					file: sourceFile,
+					min: min < 0 ? 0 : min,
+					max: max < min ? min : max
+				});
 		}
 
 		if (acceptKeyword(KPackage)) {
@@ -178,7 +200,7 @@ class MacroLocalImports {
 						bump();
 						packageDone = true;
 					case TEof:
-						return out;
+						return {imports: imports, usings: usings};
 					case _:
 						bump();
 				}
@@ -194,11 +216,9 @@ class MacroLocalImports {
 					bump();
 					consumeImportEntry(true);
 				case _:
-					return out;
+					return {imports: imports, usings: usings};
 			}
 		}
-
-		return out;
 	}
 }
 
@@ -214,4 +234,16 @@ private typedef MacroLocalImportEntry = {
 	var file:String;
 	var min:Int;
 	var max:Int;
+}
+
+private typedef MacroLocalUsingEntry = {
+	var path:String;
+	var file:String;
+	var min:Int;
+	var max:Int;
+}
+
+private typedef MacroLocalScopeSnapshot = {
+	var imports:Array<MacroLocalImportEntry>;
+	var usings:Array<MacroLocalUsingEntry>;
 }

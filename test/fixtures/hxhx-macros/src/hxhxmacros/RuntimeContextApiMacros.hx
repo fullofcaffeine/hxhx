@@ -3,6 +3,10 @@ package hxhxmacros;
 import String;
 import haxe.Template as T;
 import haxe.io.Bytes;
+
+using StringTools;
+using haxe.io.Path;
+
 import haxe.macro.*;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
@@ -211,6 +215,27 @@ class RuntimeContextApiMacros {
 			Context.fatalError("runtime macro local-import probe: missing wildcard haxe.macro import in " + summary, pos);
 
 		Compiler.define("HXHX_RUNTIME_LOCAL_IMPORTS", summary);
+		return summary;
+	}
+
+	public static function probeLocalUsing():String {
+		final pos = Context.currentPos();
+		final usings = Context.getLocalUsing();
+		if (usings == null || usings.length == 0)
+			Context.fatalError("runtime macro local-using probe: expected local using snapshot", pos);
+
+		final rendered = [for (cls in usings) TypeTools.toString(TInst(cls, []))];
+		rendered.sort(function(a:String, b:String):Int {
+			return Reflect.compare(a, b);
+		});
+		final summary = rendered.join(";");
+
+		if (rendered.indexOf("StringTools") < 0)
+			Context.fatalError("runtime macro local-using probe: missing StringTools using in " + summary, pos);
+		if (rendered.indexOf("haxe.io.Path") < 0)
+			Context.fatalError("runtime macro local-using probe: missing haxe.io.Path using in " + summary, pos);
+
+		Compiler.define("HXHX_RUNTIME_LOCAL_USING", summary);
 		return summary;
 	}
 

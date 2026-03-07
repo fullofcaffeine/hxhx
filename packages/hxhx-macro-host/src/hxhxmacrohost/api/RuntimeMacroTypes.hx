@@ -166,6 +166,23 @@ class RuntimeMacroTypes {
 		return [TInst(classRef(parts, name, name), [])];
 	}
 
+	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
+		final out = new Array<Ref<ClassType>>();
+		if (paths == null || paths.length == 0)
+			return out;
+		for (path in paths) {
+			final trimmed = StringTools.trim(path == null ? "" : path);
+			if (trimmed.length == 0)
+				continue;
+			final parts = trimmed.split(".");
+			if (parts.length == 0)
+				continue;
+			final name = parts.pop();
+			out.push(classRef(parts, name, name));
+		}
+		return out;
+	}
+
 	public static function resolveComplexType(t:ComplexType):Type {
 		return switch (t) {
 			case null:

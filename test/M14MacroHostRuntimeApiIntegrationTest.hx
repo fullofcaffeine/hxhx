@@ -34,6 +34,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
+			"hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
@@ -121,6 +122,11 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("local imports Template alias", localImportsOutput, "IAsName(T):haxe.Template");
 			assertContains("local imports wildcard", localImportsOutput, "IAll:haxe.macro");
 			assertContains("local imports define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_IMPORTS"), "IAsName(T):haxe.Template");
+
+			final localUsingOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()");
+			assertContains("local using StringTools", localUsingOutput, "StringTools");
+			assertContains("local using Path", localUsingOutput, "haxe.io.Path");
+			assertContains("local using define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_USING"), "haxe.io.Path");
 
 			final moduleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()");
 			assertContains("module lookup output", moduleOutput, "moduleLookup=hxhxmacros.RuntimeContextApiMacros");

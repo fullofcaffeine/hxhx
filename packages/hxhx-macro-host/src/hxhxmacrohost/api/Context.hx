@@ -284,6 +284,40 @@ class Context {
 	}
 
 	/**
+		Return the compiler-provided local `using` list for the active module.
+
+		Why
+		- Reflaxe-style helpers may inspect `Context.getLocalUsing()` to understand which extension
+		  classes are in scope for the current module.
+		- The external-host runtime cannot inspect the parser/typer state directly, so the compiler
+		  must provide a conservative top-of-module snapshot.
+
+		What
+		- Returns synthetic `ClassType` refs for the `using` paths declared in the active source file.
+		- The refs are sufficient for path rendering and identity within the current runtime type rung;
+		  they do not claim rich compiler metadata.
+	**/
+	public static function getLocalUsing():Array<Ref<ClassType>> {
+		final payload = HostToCompilerRpc.call("context.getLocalUsing", "");
+		final paths = new Array<String>();
+		if (payload == null || payload.length == 0)
+			return [];
+
+		final parts = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final pathKey = "p" + i;
+			if (!parts.exists(pathKey))
+				continue;
+			final pathText = StringTools.trim(parts.get(pathKey));
+			if (pathText.length == 0)
+				continue;
+			paths.push(pathText);
+		}
+		return RuntimeMacroTypes.localUsingRefsForPaths(paths);
+	}
+
+	/**
 		Return the compiler-provided local import list for the active module.
 
 		Why

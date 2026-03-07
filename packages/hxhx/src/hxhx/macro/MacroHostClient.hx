@@ -586,6 +586,8 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalTypeText())));
 				case "context.getLocalMethod":
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalMethod())));
+				case "context.getLocalUsing":
+					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalUsingsPayload()));
 				case "context.getLocalImports":
 					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalImportsPayload()));
 				case "context.getModule":
@@ -676,6 +678,13 @@ private class MacroClient {
 		if (buildFile == null || buildFile.length == 0)
 			return MacroProtocol.encodeLen("c", "0");
 		return MacroLocalImports.encodePayloadFromSourceFile(buildFile);
+	}
+
+	static function encodeLocalUsingsPayload():String {
+		final buildFile = resolveMacroContextBuildFile();
+		if (buildFile == null || buildFile.length == 0)
+			return MacroProtocol.encodeLen("c", "0");
+		return MacroLocalImports.encodeUsingsPayloadFromSourceFile(buildFile);
 	}
 
 	static function resolveMacroContextBuildFile():Null<String> {

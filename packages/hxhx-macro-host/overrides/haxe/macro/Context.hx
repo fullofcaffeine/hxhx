@@ -365,6 +365,10 @@ class Context {
 		return HostContext.getLocalMethod();
 	}
 
+	public static function getLocalUsing():Array<Type.Ref<Type.ClassType>> {
+		return HostContext.getLocalUsing();
+	}
+
 	public static function getLocalImports():Array<ImportExpr> {
 		return HostContext.getLocalImports();
 	}
