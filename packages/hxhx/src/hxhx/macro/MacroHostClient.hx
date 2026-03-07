@@ -595,6 +595,8 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getExpectedTypeText())));
 				case "context.getCallArguments":
 					replyOk(id, MacroProtocol.encodeLen("v", encodeCallArgumentsPayload()));
+				case "context.getMainExpr":
+					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getMainExprText())));
 				case "context.getLocalModule":
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.getLocalModule()));
 				case "context.getLocalType":

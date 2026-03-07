@@ -4,6 +4,7 @@ import haxe.io.Bytes;
 import haxe.macro.Expr;
 import haxe.macro.DisplayMode;
 import haxe.macro.Type;
+import StringTools;
 import hxhxmacrohost.api.RuntimeMacroExprs;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.MacroRuntime;
@@ -337,6 +338,32 @@ class Context {
 
 	public static function typeExpr(e:Expr):TypedExpr {
 		return RuntimeTypedExprs.typeExpr(e);
+	}
+
+	/**
+		Return a compiler-seeded main-expression snapshot.
+
+		Why
+		- Reflaxe-style compiler helpers sometimes inspect `Context.getMainExpr()` to find the typed
+		  entry expression for the current compilation.
+		- The external-host runtime has no live typer access, so the honest bring-up rung is a seeded
+		  expression snapshot provided by the compiler.
+
+		What
+		- Returns `null` when no snapshot has been seeded.
+		- Otherwise reparses the seeded expression text and re-types it through the narrow runtime
+		  typed-expression bridge.
+
+		Gotchas
+		- This is a seeded snapshot rung, not live compiler main-expression parity.
+		- Supported shapes are limited by `RuntimeMacroExprs` + `RuntimeTypedExprs`.
+	**/
+	public static function getMainExpr():TypedExpr {
+		final payload = HostToCompilerRpc.call("context.getMainExpr", "");
+		if (payload == null || StringTools.trim(payload).length == 0)
+			return cast null;
+		final expr = RuntimeMacroExprs.parseInlineString(payload, currentPos());
+		return RuntimeTypedExprs.typeExpr(expr);
 	}
 
 	public static function getTypedExpr(t:TypedExpr):Expr {

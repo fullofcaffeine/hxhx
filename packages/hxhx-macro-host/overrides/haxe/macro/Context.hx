@@ -428,6 +428,12 @@ class Context {
 		return HostContext.typeExpr(e);
 	}
 
+	#if (haxe >= version("4.3.0"))
+	public static function getMainExpr():TypedExpr {
+		return HostContext.getMainExpr();
+	}
+	#end
+
 	public static function getTypedExpr(t:TypedExpr):Expr {
 		return HostContext.getTypedExpr(t);
 	}

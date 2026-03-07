@@ -39,6 +39,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
+			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
@@ -95,6 +96,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 				}
 			]
 		});
+		MacroState.setMainExprText("1 + 2");
 
 		var failure = "";
 		try {
@@ -170,6 +172,11 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(Std.parseInt(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR_VISITS")) > 0, "expected typed expr visits define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR").indexOf("+") >= 0, "expected typed expr string define");
 
+			final mainExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeMainExpr()");
+			assertContains("main expr output", mainExprOutput, "mainExpr=");
+			assertContains("main expr type", mainExprOutput, "mainType=Int");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MAIN_EXPR").indexOf("+") >= 0, "expected runtime main expr define");
+
 			final includeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()");
 			assertContains("include output", includeOutput, "include=hxhxmacros.RuntimeContextApiMacros");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_INCLUDE") == "hxhxmacros.RuntimeContextApiMacros", "expected runtime include define");
@@ -205,6 +212,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		Sys.putEnv("HXHX_MACRO_HOST_EXE", originalHostExe);
 		MacroState.clearCurrentPos();
 		MacroState.clearLocalContext();
+		MacroState.clearMainExprText();
 
 		if (failure.length > 0)
 			fail(failure);

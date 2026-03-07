@@ -372,6 +372,36 @@ class RuntimeContextApiMacros {
 		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes;
 	}
 
+	public static function probeMainExpr():String {
+		final pos = Context.currentPos();
+		final mainExpr = Context.getMainExpr();
+		if (mainExpr == null)
+			Context.fatalError("runtime macro main-expr probe: expected seeded main expression", pos);
+
+		final rendered = TypedExprTools.toString(mainExpr, false);
+		if (rendered.indexOf("+") < 0)
+			Context.fatalError("runtime macro main-expr probe: expected binop main expression", pos);
+
+		final roundTripped = Context.getTypedExpr(mainExpr);
+		switch (roundTripped.expr) {
+			case EBinop(OpAdd, left, right):
+				switch ([left.expr, right.expr]) {
+					case [EConst(CInt("1", _)), EConst(CInt("2", _))]:
+					case _:
+						Context.fatalError("runtime macro main-expr probe: getMainExpr roundtrip mismatch", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro main-expr probe: expected binop main expression", pos);
+		}
+
+		final typeText = TypeTools.toString(mainExpr.t);
+		if (typeText != "Int")
+			Context.fatalError("runtime macro main-expr probe: expected Int typed main expression", pos);
+
+		Compiler.define("HXHX_RUNTIME_MAIN_EXPR", rendered);
+		return "mainExpr=" + rendered + ";mainType=" + typeText;
+	}
+
 	public static function probeCompilerInclude():String {
 		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
 		Compiler.include(modulePath);

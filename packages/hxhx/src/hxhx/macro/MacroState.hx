@@ -93,6 +93,7 @@ class MacroState {
 	static var supportsUnicode:Bool = true;
 	static var explicitCurrentPos:Null<MacroPositionInfo> = null;
 	static var explicitLocalContext:Null<MacroLocalContextSnapshot> = null;
+	static var explicitMainExprText:Null<String> = null;
 	static var nextSyntheticLocalTVarId:Int = 1;
 
 	static function sortStringsInPlace(arr:Array<String>):Void {
@@ -189,6 +190,7 @@ class MacroState {
 		supportsUnicode = true;
 		explicitCurrentPos = null;
 		explicitLocalContext = null;
+		explicitMainExprText = null;
 		nextSyntheticLocalTVarId = 1;
 	}
 
@@ -431,6 +433,35 @@ class MacroState {
 
 	public static function clearLocalContext():Void {
 		explicitLocalContext = null;
+	}
+
+	/**
+		Seed a compiler-owned `Context.getMainExpr()` snapshot.
+
+		Why
+		- Reflaxe-style compiler helpers may query `Context.getMainExpr()` while running inside the
+		  external macro host.
+		- The runtime host does not have live access to the compiler's main-expression typing state,
+		  so the honest bring-up rung is a compiler-seeded expression snapshot.
+
+		What
+		- Stores expression text that the runtime host later reparses through the narrow runtime parser
+		  and types through the narrow synthetic typed-expression bridge.
+
+		Gotchas
+		- This is intentionally a seeded snapshot, not full live main-expression parity.
+		- Expression coverage is limited by `RuntimeMacroExprs` + `RuntimeTypedExprs`.
+	**/
+	public static function setMainExprText(exprText:String):Void {
+		explicitMainExprText = normalizeOptionalText(exprText);
+	}
+
+	public static function clearMainExprText():Void {
+		explicitMainExprText = null;
+	}
+
+	public static function getMainExprText():Null<String> {
+		return explicitMainExprText;
 	}
 
 	static function normalizeOptionalText(value:Null<String>):Null<String> {
