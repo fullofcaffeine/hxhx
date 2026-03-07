@@ -13,6 +13,7 @@ import haxe.macro.Context;
 import haxe.macro.DisplayMode;
 import haxe.macro.Expr.ImportExpr;
 import haxe.macro.Expr.ImportMode;
+import haxe.macro.Expr.TypeDefinition;
 import haxe.macro.PositionTools;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
@@ -440,6 +441,23 @@ class RuntimeContextApiMacros {
 		Context.registerModuleDependency(modulePath, externFile);
 		Compiler.define("HXHX_RUNTIME_MODULE_DEP", modulePath + "->" + externFile);
 		return "moduleDependency=" + modulePath + "->" + externFile;
+	}
+
+	public static function probeDefineType():String {
+		final pos = Context.currentPos();
+		final typeDef:TypeDefinition = {
+			pack: ["generated", "runtime"],
+			name: "RuntimeMacroDefined",
+			pos: pos,
+			meta: [],
+			params: [],
+			isExtern: false,
+			fields: [],
+			kind: TDClass(null, [], false, false, false)
+		};
+		Context.defineType(typeDef, "runtime/generated-defined.txt");
+		Compiler.define("HXHX_RUNTIME_DEFINE_TYPE", "generated.runtime.RuntimeMacroDefined");
+		return "defineType=generated.runtime.RuntimeMacroDefined";
 	}
 
 	public static function probeResources():String {

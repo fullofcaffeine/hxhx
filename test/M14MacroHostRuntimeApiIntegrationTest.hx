@@ -43,6 +43,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
+			"hxhxmacros.RuntimeContextApiMacros.probeDefineType()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
 			"hxhxmacros.RuntimeContextApiMacros.probeParse()",
@@ -66,10 +67,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 
 	static function main():Void {
 		final originalHostExe = Sys.getEnv("HXHX_MACRO_HOST_EXE");
+		final generatedHxDir = ".tmp/m14-runtime-generated-hx";
 		MacroState.reset();
 		MacroState.seedFromCliDefines(["reflaxe-target=ocaml", "target.name=ocaml"]);
 		MacroState.seedCompilerConfiguration(["--ocaml", "-main", "Main", "--no-output"], ["/virtual/haxe/std"], "ocaml");
 		MacroState.addClassPath("test/fixtures/hxhx-macros/src");
+		MacroState.setGeneratedHxDir(generatedHxDir);
 		MacroState.setCurrentPos({
 			file: Path.normalize("test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeContextApiMacros.hx"),
 			min: 12,
@@ -198,6 +201,19 @@ class M14MacroHostRuntimeApiIntegrationTest {
 				"expected module dependency module path");
 			assertTrue(moduleDependencies[moduleDependencies.length - 1].externFile == "runtime/macro-probe.txt", "expected module dependency extern file");
 
+			final defineTypeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeDefineType()");
+			assertContains("defineType output", defineTypeOutput, "defineType=generated.runtime.RuntimeMacroDefined");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_DEFINE_TYPE") == "generated.runtime.RuntimeMacroDefined", "expected runtime defineType define");
+			assertTrue(MacroState.listGeneratedHxModuleNames().indexOf("generated.runtime.RuntimeMacroDefined") >= 0, "expected generated module snapshot");
+			final generatedSource = MacroState.getGeneratedHxModuleSource("generated.runtime.RuntimeMacroDefined");
+			assertTrue(generatedSource != null, "expected generated module source");
+			assertContains("generated source package", generatedSource, "package generated.runtime;");
+			assertContains("generated source class", generatedSource, "class RuntimeMacroDefined");
+			final defineTypeDeps = MacroState.listModuleDependencies();
+			assertTrue(defineTypeDeps[defineTypeDeps.length - 1].modulePath == "generated.runtime.RuntimeMacroDefined",
+				"expected defineType dependency module path");
+			assertTrue(defineTypeDeps[defineTypeDeps.length - 1].externFile == "runtime/generated-defined.txt", "expected defineType dependency extern file");
+
 			final resourceOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeResources()");
 			assertContains("resource output", resourceOutput, "resource=resource=ok");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_RESOURCE") == "resource=ok", "expected runtime resource define");
@@ -229,9 +245,23 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		MacroState.clearCurrentPos();
 		MacroState.clearLocalContext();
 		MacroState.clearMainExprText();
+		if (sys.FileSystem.exists(generatedHxDir))
+			deleteRecursive(generatedHxDir);
 
 		if (failure.length > 0)
 			fail(failure);
 		Sys.println("OK m14 macro host runtime api");
+	}
+
+	static function deleteRecursive(path:String):Void {
+		if (!sys.FileSystem.exists(path))
+			return;
+		if (sys.FileSystem.isDirectory(path)) {
+			for (entry in sys.FileSystem.readDirectory(path))
+				deleteRecursive(Path.join([path, entry]));
+			sys.FileSystem.deleteDirectory(path);
+		} else {
+			sys.FileSystem.deleteFile(path);
+		}
 	}
 }

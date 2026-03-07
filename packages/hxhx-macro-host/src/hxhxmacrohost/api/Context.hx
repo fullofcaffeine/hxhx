@@ -6,6 +6,7 @@ import haxe.macro.DisplayMode;
 import haxe.macro.Type;
 import StringTools;
 import hxhxmacrohost.api.RuntimeMacroExprs;
+import hxhxmacrohost.api.Compiler as HostCompiler;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.MacroRuntime;
 import hxhxmacrohost.Protocol;
@@ -406,6 +407,35 @@ class Context {
 	**/
 	public static function storeTypedExpr(t:TypedExpr):Expr {
 		return RuntimeTypedExprs.toExpr(t);
+	}
+
+	/**
+		Define a single type by emitting generated Haxe source into the compiler-managed `_gen_hx`
+		directory.
+
+		Why
+		- Reflaxe-style helper layers sometimes use `Context.defineType(...)` to add a generated type
+		  to the current compilation without requiring full typed-AST mutation support.
+		- The external-host runtime can support a useful bring-up rung by printing one
+		  `TypeDefinition` back to source and emitting it through the existing generated-module path.
+
+		What
+		- Prints `t` through a narrow repo-owned source printer.
+		- Emits the resulting source using the type's full module path (`pack.name`).
+		- Optionally records `moduleDependency` in the compiler-owned compatibility ledger.
+
+		Gotchas
+		- This is source-emission-backed compatibility, not upstream-equivalent typed mutation.
+		- It intentionally supports a narrow subset of `TypeDefinition` shapes and does not claim
+		  `defineModule(...)` semantics.
+	**/
+	public static function defineType(t:TypeDefinition, ?moduleDependency:String):Void {
+		final rendered = RuntimeMacroTypeDefinitions.renderTypeDefinition(t);
+		if (rendered == null)
+			throw "runtime macro defineType: unsupported TypeDefinition shape";
+		HostCompiler.emitHxModule(rendered.modulePath, rendered.source);
+		if (moduleDependency != null && StringTools.trim(moduleDependency).length > 0)
+			registerModuleDependency(rendered.modulePath, moduleDependency);
 	}
 
 	/**

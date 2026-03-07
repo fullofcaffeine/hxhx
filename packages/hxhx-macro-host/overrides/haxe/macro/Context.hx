@@ -309,6 +309,10 @@ class Context {
 		return HostContext.getBuildFields();
 	}
 
+	public static function defineType(t:TypeDefinition, ?moduleDependency:String):Void {
+		HostContext.defineType(t, moduleDependency);
+	}
+
 	public static function error(msg:String, pos:Position, ?depth:Int = 0):Dynamic {
 		// Bring-up rung: we cannot attach a real macro `Position` yet.
 		// Still raise a tagged error so the compiler can surface *some* `file:line` info.

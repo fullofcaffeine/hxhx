@@ -839,8 +839,9 @@ class MacroState {
 		  implementing typed AST transforms yet.
 
 		What
-		- Writes `<generatedHxDir>/<Name>.hx` with the provided source.
-		- Records the module so tests can assert what was emitted.
+		- Accepts either a simple module name (`Gen`) or a dotted module path (`demo.Gen`).
+		- Writes the corresponding `.hx` file under the generated hx directory.
+		- Records the module by full module path so tests can assert what was emitted.
 	**/
 	public static function emitHxModule(name:String, source:String):Void {
 		if (name == null)
@@ -852,25 +853,40 @@ class MacroState {
 			throw "MacroState.emitHxModule: missing generated hx dir (call setGeneratedHxDir before running macros)";
 		}
 
-		// Conservative file-safe module name: [A-Za-z_][A-Za-z0-9_]*
+		// Conservative file-safe module path:
+		// [A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*
 		inline function isAlpha(c:Int):Bool
 			return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code);
 		inline function isDigit(c:Int):Bool
 			return c >= "0".code && c <= "9".code;
 		inline function isUnderscore(c:Int):Bool
 			return c == "_".code;
-		final first = n.charCodeAt(0);
-		if (!(isAlpha(first) || isUnderscore(first)))
+		final segments = n.split(".");
+		if (segments.length == 0)
 			return;
-		for (i in 1...n.length) {
-			final c = n.charCodeAt(i);
-			if (!(isAlpha(c) || isDigit(c) || isUnderscore(c)))
+		for (segment in segments) {
+			final s = StringTools.trim(segment);
+			if (s.length == 0)
 				return;
+			final first = s.charCodeAt(0);
+			if (!(isAlpha(first) || isUnderscore(first)))
+				return;
+			for (i in 1...s.length) {
+				final c = s.charCodeAt(i);
+				if (!(isAlpha(c) || isDigit(c) || isUnderscore(c)))
+					return;
+			}
 		}
 
 		if (!sys.FileSystem.exists(generatedHxDir))
 			sys.FileSystem.createDirectory(generatedHxDir);
-		final path = haxe.io.Path.join([generatedHxDir, n + ".hx"]);
+		var dir = generatedHxDir;
+		for (i in 0...segments.length - 1) {
+			dir = haxe.io.Path.join([dir, segments[i]]);
+			if (!sys.FileSystem.exists(dir))
+				sys.FileSystem.createDirectory(dir);
+		}
+		final path = haxe.io.Path.join([dir, segments[segments.length - 1] + ".hx"]);
 		sys.io.File.saveContent(path, source == null ? "" : source);
 		generatedHxModules.set(n, source == null ? "" : source);
 	}
@@ -879,6 +895,20 @@ class MacroState {
 		for (_ in generatedHxModules.keys())
 			return true;
 		return false;
+	}
+
+	public static function listGeneratedHxModuleNames():Array<String> {
+		final out = new Array<String>();
+		for (k in generatedHxModules.keys())
+			out.push(k);
+		sortStringsInPlace(out);
+		return out;
+	}
+
+	public static function getGeneratedHxModuleSource(modulePath:String):Null<String> {
+		if (modulePath == null || modulePath.length == 0)
+			return null;
+		return generatedHxModules.get(modulePath);
 	}
 
 	/**
