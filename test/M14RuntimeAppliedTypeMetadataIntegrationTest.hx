@@ -57,6 +57,11 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				fail("expected nullSafety parameter Strict");
 		}
 
+		final syntheticType = RuntimeMacroTypes.typeForPath("hxhxmacros.RuntimeContextApiMacros", applied);
+		final syntheticClass = expectInst(syntheticType).get();
+		assertTrue(syntheticClass.meta.has(":demoMeta"), "expected demo metadata on synthetic type path");
+		assertTrue(syntheticClass.meta.has(":nullSafety"), "expected nullSafety metadata on synthetic type path");
+
 		MacroState.reset();
 	}
 }

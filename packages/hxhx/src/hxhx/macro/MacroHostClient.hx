@@ -628,6 +628,30 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalImportsPayload()));
 				case "context.getLocalTVars":
 					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalTVarsPayload()));
+				case "context.getType":
+					final name = MacroProtocol.kvGet(tail, "n");
+					if (name == null || name.length == 0) {
+						replyErr(id, method + ": missing type name");
+						return;
+					}
+					final classPaths = MacroState.listClassPaths();
+					final cfg = MacroState.getCompilerConfigurationSnapshot();
+					for (cp in cfg.stdPath)
+						if (classPaths.indexOf(cp) == -1)
+							classPaths.push(cp);
+					final resolved = hxhx.Stage1Compiler.Stage1Resolver.resolveModule(classPaths, name, Sys.getCwd());
+					if (resolved == null) {
+						replyOk(id, MacroProtocol.encodeLen("v", ""));
+						return;
+					}
+					final metadata = MacroState.listAppliedTypeMetadata(name);
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("ok", "1"));
+					parts.push(MacroProtocol.encodeLen("t", name));
+					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
+					for (i in 0...metadata.length)
+						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "context.getModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					if (name == null || name.length == 0) {

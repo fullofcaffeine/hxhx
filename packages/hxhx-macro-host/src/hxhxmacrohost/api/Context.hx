@@ -23,8 +23,8 @@ import hxhxmacrohost.Protocol;
 
 	What
 	- `defined(name)` / `definedValue(name)` query the compiler’s define store (reverse RPC).
-	- `getType(name)`, `resolveType(t, pos)`, and `typeof(expr)` expose a tiny builtin-only type
-	  model for runtime macro code that needs basic type plumbing without upstream eval.
+	- `getType(name)`, `resolveType(t, pos)`, and `typeof(expr)` expose a tiny builtin type model
+	  plus a narrow compiler-backed synthetic named-type rung for qualified type paths.
 	- `typeExpr(expr)` exposes a synthetic typed-expression rung for literal, parenthesized,
 	  `check-type`, and simple `+` expressions so runtime probes can exercise `TypedExprTools`.
 	- `getClassPath()` / `resolvePath(path)` expose compiler-owned classpath lookup so runtime macro
@@ -324,7 +324,24 @@ class Context {
 	public static function getType(name:String):Type {
 		if (name == null || name.length == 0)
 			throw "runtime macro getType: missing name";
-		return RuntimeMacroTypes.getTypeByName(name);
+		try {
+			return RuntimeMacroTypes.getTypeByName(name);
+		} catch (_:Dynamic) {}
+		final payload = HostToCompilerRpc.call("context.getType", Protocol.encodeLen("n", name));
+		if (payload == null || payload.length == 0)
+			throw "runtime macro getType: unsupported type path: " + name;
+		final parts = Protocol.kvParse(payload);
+		if (!parts.exists("ok") || parts.get("ok") != "1")
+			throw "runtime macro getType: unresolved type path: " + name;
+		final metadata = new Array<String>();
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final key = "md" + i;
+			if (parts.exists(key))
+				metadata.push(parts.get(key));
+		}
+		final typePath = parts.exists("t") ? parts.get("t") : name;
+		return RuntimeMacroTypes.typeForPath(typePath, metadata);
 	}
 
 	public static function getModule(name:String):Array<Type> {

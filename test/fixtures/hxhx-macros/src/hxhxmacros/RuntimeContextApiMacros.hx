@@ -43,7 +43,8 @@ import haxe.macro.TypeTools;
 	Gotchas
 	- Typed-expression support is still deliberately narrow:
 	  `Context.typeExpr()` only covers the synthetic literal/parenthesized/simple-binop rung exercised
-	  here, and `Context.getModule()` is still only an existence-only lookup.
+	  here, `Context.getModule()` remains a narrow synthetic module lookup, and `Context.getType()`
+	  only resolves builtins plus exact qualified type paths.
 **/
 class RuntimeContextApiMacros {
 	public static function probeConfigAndPosition():String {
@@ -100,6 +101,10 @@ class RuntimeContextApiMacros {
 		final stringType = Context.getType("String");
 		if (TypeTools.toString(stringType) != "String")
 			Context.fatalError("runtime macro type probe: expected getType(String) -> String", pos);
+		final moduleType = Context.getType("hxhxmacros.RuntimeContextApiMacros");
+		final moduleTypeText = TypeTools.toString(moduleType);
+		if (moduleTypeText != "hxhxmacros.RuntimeContextApiMacros")
+			Context.fatalError("runtime macro type probe: expected qualified getType result but got " + moduleTypeText, pos);
 
 		final boolType = Context.resolveType(macro :Bool, pos);
 		final boolTypeString = TypeTools.toString(boolType);
@@ -140,14 +145,10 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_TYPE_LITERAL", literalIntText);
 		Compiler.define("HXHX_RUNTIME_TYPE_FOLLOW", followedNullStringText);
 		Compiler.define("HXHX_RUNTIME_TYPE_UNIFY", "1");
+		Compiler.define("HXHX_RUNTIME_TYPE_MODULE", moduleTypeText);
 
-		return "getType=String;resolveType="
-			+ boolTypeString
-			+ ";nullType="
-			+ nullStringText
-			+ ";typeof=Int;follow="
-			+ followedNullStringText
-			+ ";unify=1";
+		return "getType=String;resolveType=" + boolTypeString + ";moduleType=" + moduleTypeText + ";nullType=" + nullStringText + ";typeof=Int;follow="
+			+ followedNullStringText + ";unify=1";
 	}
 
 	public static function probeLocalContextSnapshot():String {

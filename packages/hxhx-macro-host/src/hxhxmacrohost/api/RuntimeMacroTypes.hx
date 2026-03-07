@@ -166,6 +166,17 @@ class RuntimeMacroTypes {
 		return [TInst(classRef(parts, name, name, metadataEntries), [])];
 	}
 
+	public static function typeForPath(typePath:String, ?metadataEntries:Array<String>):Type {
+		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
+		if (trimmed.length == 0)
+			throw "runtime macro type path lookup: empty type path";
+		final parts = trimmed.split(".");
+		if (parts.length == 0)
+			throw "runtime macro type path lookup: invalid type path";
+		final name = parts.pop();
+		return TInst(classRef(parts, name, name, metadataEntries), []);
+	}
+
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
 		final out = new Array<Ref<ClassType>>();
 		if (paths == null || paths.length == 0)
