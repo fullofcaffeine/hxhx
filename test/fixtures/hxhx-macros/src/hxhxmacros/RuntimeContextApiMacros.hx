@@ -461,6 +461,14 @@ class RuntimeContextApiMacros {
 		return "metadata=ok";
 	}
 
+	public static function probeOnTypeNotFoundRegistration():String {
+		Context.onTypeNotFound(function(name:String) {
+			return null;
+		});
+		Compiler.define("HXHX_RUNTIME_ON_TYPE_NOT_FOUND", "registered");
+		return "onTypeNotFound=registered";
+	}
+
 	public static function probeRegisterModuleDependency():String {
 		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
 		final externFile = "runtime/macro-probe.txt";

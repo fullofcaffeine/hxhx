@@ -72,6 +72,18 @@ class MacroRuntime {
 	static final afterGenerateHooks:Array<Void->Void> = [];
 
 	/**
+		Callbacks registered via `Context.onTypeNotFound`.
+
+		Why
+		- Real macro libraries can register a fallback callback that synthesizes a type definition when
+		  the compiler cannot resolve a requested type path.
+		- The current Stage 4 bring-up does not dispatch unresolved-type callbacks yet, but it should
+		  preserve registration so the compiler can surface deterministic hook state and grow into
+		  later dispatch semantics without changing the runtime API shape again.
+	**/
+	static final onTypeNotFoundHooks:Array<String->Dynamic> = [];
+
+	/**
 		Field names for the current `Context.getBuildFields()` snapshot.
 
 		Why
@@ -122,6 +134,11 @@ class MacroRuntime {
 	public static function registerAfterGenerate(cb:Void->Void):Int {
 		afterGenerateHooks.push(cb);
 		return afterGenerateHooks.length - 1;
+	}
+
+	public static function registerOnTypeNotFound(cb:String->Dynamic):Int {
+		onTypeNotFoundHooks.push(cb);
+		return onTypeNotFoundHooks.length - 1;
 	}
 
 	public static function runHook(kind:String, id:Int):Void {

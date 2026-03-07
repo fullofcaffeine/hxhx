@@ -490,6 +490,10 @@ class Context {
 		HostContext.onAfterTyping(callback);
 	}
 
+	public static function onTypeNotFound(callback:String->TypeDefinition):Void {
+		HostContext.onTypeNotFound(callback);
+	}
+
 	public static function getMessages():Array<Message> {
 		final snapshots = HostContext.getMessages();
 		final out = new Array<Message>();

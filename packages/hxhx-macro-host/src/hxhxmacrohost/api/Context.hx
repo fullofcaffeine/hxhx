@@ -124,6 +124,30 @@ class Context {
 	}
 
 	/**
+		Register an `onTypeNotFound` hook.
+
+		Why
+		- Compiler-style macro libraries sometimes register a late fallback that can synthesize a type
+		  definition when normal resolution fails.
+		- Stage 4 does not dispatch that hook yet, but preserving registration in compiler-owned state
+		  keeps the runtime API shape honest and lets later dispatch wiring reuse the same hook path.
+
+		What
+		- Stores `cb` inside the macro host process.
+		- Notifies the compiler of the hook ID through `compiler.registerHook k=onTypeNotFound`.
+
+		Gotchas
+		- This is registration-only bring-up. Missing-type dispatch semantics remain future work.
+	**/
+	public static function onTypeNotFound(cb:String->TypeDefinition):Void {
+		if (cb == null)
+			return;
+		final id = MacroRuntime.registerOnTypeNotFound(cast cb);
+		final tail = Protocol.encodeLen("k", "onTypeNotFound") + " " + Protocol.encodeLen("i", Std.string(id));
+		HostToCompilerRpc.call("compiler.registerHook", tail);
+	}
+
+	/**
 		Return a snapshot of all compiler defines.
 
 		Why

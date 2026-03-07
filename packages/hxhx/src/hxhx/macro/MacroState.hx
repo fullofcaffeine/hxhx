@@ -106,6 +106,7 @@ class MacroState {
 	static final afterTypingHookIds:Array<Int> = [];
 	static final onGenerateHookIds:Array<Int> = [];
 	static final afterGenerateHookIds:Array<Int> = [];
+	static final onTypeNotFoundHookIds:Array<Int> = [];
 	static final messages:Array<MacroMessageSnapshot> = [];
 	static var compilerVersion:Int = DEFAULT_COMPILER_VERSION;
 	static var debugEnabled:Bool = false;
@@ -206,6 +207,7 @@ class MacroState {
 		afterTypingHookIds.resize(0);
 		onGenerateHookIds.resize(0);
 		afterGenerateHookIds.resize(0);
+		onTypeNotFoundHookIds.resize(0);
 		messages.resize(0);
 		compilerVersion = DEFAULT_COMPILER_VERSION;
 		debugEnabled = false;
@@ -779,6 +781,7 @@ class MacroState {
 		  - `afterTyping`
 		  - `onGenerate`
 		  - `afterGenerate`
+		  - `onTypeNotFound`
 	**/
 	public static function registerHook(kind:String, id:Int):Void {
 		if (kind == null)
@@ -790,6 +793,8 @@ class MacroState {
 				onGenerateHookIds.push(id);
 			case "afterGenerate":
 				afterGenerateHookIds.push(id);
+			case "onTypeNotFound":
+				onTypeNotFoundHookIds.push(id);
 			case _:
 				// Ignore unknown hook kinds during bring-up.
 		}
@@ -805,6 +810,10 @@ class MacroState {
 
 	public static function listAfterGenerateHookIds():Array<Int> {
 		return afterGenerateHookIds.copy();
+	}
+
+	public static function listOnTypeNotFoundHookIds():Array<Int> {
+		return onTypeNotFoundHookIds.copy();
 	}
 
 	/**

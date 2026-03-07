@@ -43,6 +43,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerMetadataRegistration()",
+			"hxhxmacros.RuntimeContextApiMacros.probeOnTypeNotFoundRegistration()",
 			"hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
 			"hxhxmacros.RuntimeContextApiMacros.probeDefineType()",
 			"hxhxmacros.RuntimeContextApiMacros.probeDefineModule()",
@@ -241,6 +242,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(customMetadata[customMetadata.length - 1].metadata == ":demoCustom", "expected custom metadata name");
 			assertTrue(customMetadata[customMetadata.length - 1].doc == "runtime metadata probe", "expected custom metadata doc");
 			assertTrue(customMetadata[customMetadata.length - 1].source == "runtime-probe", "expected custom metadata source");
+
+			final typeNotFoundBefore = MacroState.listOnTypeNotFoundHookIds().length;
+			final onTypeNotFoundOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeOnTypeNotFoundRegistration()");
+			assertContains("onTypeNotFound output", onTypeNotFoundOutput, "onTypeNotFound=registered");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_ON_TYPE_NOT_FOUND") == "registered", "expected runtime onTypeNotFound define");
+			assertTrue(MacroState.listOnTypeNotFoundHookIds().length == typeNotFoundBefore + 1, "expected onTypeNotFound hook count increment");
 
 			MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_DEP") == "hxhxmacros.RuntimeContextApiMacros->runtime/macro-probe.txt",
