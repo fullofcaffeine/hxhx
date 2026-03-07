@@ -164,6 +164,14 @@ class MacroRuntime {
 		}
 	}
 
+	public static function runTypeNotFoundHook(id:Int, name:String):Dynamic {
+		if (id < 0)
+			throw "MacroRuntime.runTypeNotFoundHook: invalid hook id: " + id;
+		if (id >= onTypeNotFoundHooks.length)
+			throw "MacroRuntime.runTypeNotFoundHook: unknown onTypeNotFound hook id: " + id;
+		return onTypeNotFoundHooks[id](name == null ? "" : name);
+	}
+
 	public static function builtinTypeDesc(name:String):String {
 		return switch (name) {
 			case "Int", "Float", "Bool", "String", "Void":

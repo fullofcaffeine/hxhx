@@ -469,6 +469,25 @@ class RuntimeContextApiMacros {
 		return "onTypeNotFound=registered";
 	}
 
+	public static function registerOnTypeNotFoundDefineType():String {
+		Context.onTypeNotFound(function(name:String) {
+			if (name != "generated.runtime.RuntimeMissingType")
+				return null;
+			return {
+				pack: ["generated", "runtime"],
+				name: "RuntimeMissingType",
+				pos: Context.currentPos(),
+				meta: [],
+				params: [],
+				isExtern: false,
+				fields: [],
+				kind: TDClass(null, [], false, false, false)
+			};
+		});
+		Compiler.define("HXHX_RUNTIME_ON_TYPE_NOT_FOUND", "semantic");
+		return "onTypeNotFound=semantic";
+	}
+
 	public static function probeRegisterModuleDependency():String {
 		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
 		final externFile = "runtime/macro-probe.txt";

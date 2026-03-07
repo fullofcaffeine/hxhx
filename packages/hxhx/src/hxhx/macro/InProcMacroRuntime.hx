@@ -169,6 +169,12 @@ private class InProcMacroSession implements MacroRuntimeSession implements InPro
 		}
 	}
 
+	public function runTypeNotFoundHook(id:Int, typePath:String):Bool {
+		if (id != -1 || typePath == "__hxhx_never__")
+			return false;
+		return false;
+	}
+
 	public function expandExpr(expr:String):String {
 		final e = StringTools.trim(expr == null ? "" : expr);
 		if (e.length == 0)

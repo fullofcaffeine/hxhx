@@ -1,6 +1,7 @@
 package hxhxmacrohost.api;
 
 import haxe.macro.Expr;
+import hxhxmacrohost.api.Compiler as HostCompiler;
 import StringTools;
 
 typedef RuntimeMacroRenderedTypeDefinition = {
@@ -329,6 +330,14 @@ class RuntimeMacroTypeDefinitions {
 			return null;
 		header.push(body);
 		return {modulePath: modulePath, source: header.join("\n\n")};
+	}
+
+	public static function emitTypeDefinitionResult(t:TypeDefinition):Bool {
+		final rendered = renderTypeDefinition(t);
+		if (rendered == null)
+			return false;
+		HostCompiler.emitHxModule(rendered.modulePath, rendered.source);
+		return true;
 	}
 
 	public static function renderModuleDefinition(modulePath:String, types:Array<TypeDefinition>, ?imports:Array<ImportExpr>,

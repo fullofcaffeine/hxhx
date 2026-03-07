@@ -179,6 +179,21 @@ class Main {
 					}
 					MacroRuntime.runHook(kind, hid);
 					replyOk(id, Protocol.encodeLen("v", "ok"));
+				case "macro.runTypeNotFoundHook":
+					final parsed = parseKV(tail);
+					final idStr = parsed.exists("i") ? parsed.get("i") : "";
+					final hid = Std.parseInt(idStr);
+					final typePath = parsed.exists("n") ? parsed.get("n") : "";
+					if (hid == null) {
+						replyErr(id, method + ": invalid hook id");
+						return;
+					}
+					if (typePath.length == 0) {
+						replyErr(id, method + ": missing type path");
+						return;
+					}
+					final result = MacroRuntime.runTypeNotFoundHook(hid, typePath);
+					replyOk(id, Protocol.encodeLen("v", hxhxmacrohost.api.RuntimeMacroTypeDefinitions.emitTypeDefinitionResult(cast result) ? "1" : "0"));
 				case "context.getType":
 					// Stage 4 bring-up rung: keep the legacy string probe stable for smoke tests while
 					// the runtime API itself now exposes a real builtin-only `Type` model.

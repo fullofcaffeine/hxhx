@@ -1325,6 +1325,21 @@ class Stage3Compiler {
 		return moduleName == filter;
 	}
 
+	static function dispatchOnTypeNotFoundHooks(macroSession:Null<MacroRuntimeSession>, typePath:String):Bool {
+		if (macroSession == null || typePath == null || typePath.length == 0)
+			return false;
+		final hooks = hxhx.macro.MacroState.listOnTypeNotFoundHookIds();
+		if (hooks.length == 0)
+			return false;
+		for (i in 0...hooks.length) {
+			if (macroSession.runTypeNotFoundHook(hooks[i], typePath)) {
+				Sys.println("hook_onTypeNotFound[" + i + "]=" + typePath);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	static function runOne(args:Array<String>):Int {
 		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 		final g = try {
@@ -1628,8 +1643,18 @@ class Stage3Compiler {
 					libs.push(absFromCwd(cwd, p));
 			final extra = hxhx.macro.MacroState.listClassPaths().map(cp -> absFromCwd(cwd, cp));
 			final out = base.concat(libs).concat(extra);
-			if (hxhx.macro.MacroState.hasGeneratedHxModules()) {
-				out.push(hxhx.macro.MacroState.getGeneratedHxDir());
+			final generatedHxDir = hxhx.macro.MacroState.getGeneratedHxDir();
+			if (generatedHxDir != null && generatedHxDir.length > 0) {
+				final generatedNorm = Path.normalize(generatedHxDir);
+				var hasGeneratedDir = false;
+				for (cp in out) {
+					if (Path.normalize(cp) == generatedNorm) {
+						hasGeneratedDir = true;
+						break;
+					}
+				}
+				if (!hasGeneratedDir)
+					out.push(generatedHxDir);
 			}
 			// Defensive fallback: ensure std root is present even when Stage1 parse paths are
 			// provided in permissive mode via target presets and env std vars are unset.
@@ -1864,7 +1889,9 @@ class Stage3Compiler {
 		}
 
 		final typerIndex = TyperIndex.build(resolvedForTyping);
-		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex);
+		final moduleLoader = new ModuleLoader(classPaths, definesMap, typerIndex, function(typePath:String):Bool {
+			return dispatchOnTypeNotFoundHooks(macroSession, typePath);
+		});
 		moduleLoader.markResolvedAlready(resolvedForTyping);
 
 		// Stage3 diagnostic mode: type the full resolved graph (best-effort), then stop.

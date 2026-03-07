@@ -11,6 +11,7 @@ package hxhx.macro;
 interface MacroRuntimeSession {
 	public function run(expr:String):String;
 	public function runHook(kind:String, id:Int):Void;
+	public function runTypeNotFoundHook(id:Int, typePath:String):Bool;
 	public function expandExpr(expr:String):String;
 	public function close():Void;
 }

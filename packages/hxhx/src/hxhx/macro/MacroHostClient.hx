@@ -944,6 +944,11 @@ class MacroHostSession implements MacroRuntimeSession {
 		client.call("macro.runHook", tail);
 	}
 
+	public function runTypeNotFoundHook(id:Int, typePath:String):Bool {
+		final tail = MacroProtocol.encodeLen("i", Std.string(id)) + " " + MacroProtocol.encodeLen("n", typePath == null ? "" : typePath);
+		return client.call("macro.runTypeNotFoundHook", tail) == "1";
+	}
+
 	public function close():Void {
 		client.close();
 	}

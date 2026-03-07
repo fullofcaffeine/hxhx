@@ -28,6 +28,20 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		return {code: code, stdout: stdout, stderr: stderr};
 	}
 
+	static function lastNonEmptyLine(text:String):String {
+		if (text == null)
+			return "";
+		final lines = text.split("\n");
+		var i = lines.length - 1;
+		while (i >= 0) {
+			final trimmed = StringTools.trim(lines[i]);
+			if (trimmed.length > 0)
+				return trimmed;
+			i -= 1;
+		}
+		return "";
+	}
+
 	static function buildMacroHostWithProbe():String {
 		final exprs = [
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
@@ -57,14 +71,14 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
 			'HXHX_MACRO_HOST_ENTRYPOINTS=\'${exprs.join(";")}\'',
 			'HXHX_MACRO_HOST_EXTRA_CP=\'test/fixtures/hxhx-macros/src\'',
-			'bash scripts/hxhx/build-hxhx-macro-host.sh | tail -n 1'
+			'bash scripts/hxhx/build-hxhx-macro-host.sh 2>&1'
 		].join(" ");
 		final result = runShell(command);
 		if (result.code != 0)
-			fail("macro host build failed: " + result.stderr);
-		final exe = StringTools.trim(result.stdout);
+			fail("macro host build failed: " + result.stdout + result.stderr);
+		final exe = lastNonEmptyLine(result.stdout);
 		if (exe.length == 0)
-			fail("macro host build produced no executable path");
+			fail("macro host build produced no executable path: " + result.stdout);
 		return exe;
 	}
 

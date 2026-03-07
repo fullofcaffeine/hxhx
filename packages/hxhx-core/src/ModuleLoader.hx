@@ -39,23 +39,27 @@ class ModuleLoader extends LazyTypeLoader {
 	final classPaths:Array<String>;
 	final defines:haxe.ds.StringMap<String>;
 	final index:TyperIndex;
+	final onMissingType:Null<String->Bool>;
 
 	// Directory listing cache used for exact-case path checks on case-insensitive filesystems.
 	final dirEntryCache:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>;
 
 	// Module-path based cycle/dup guard.
 	final visited:haxe.ds.StringMap<Bool>;
+	final typeNotFoundTried:haxe.ds.StringMap<Bool>;
 
 	// Newly loaded modules (drained by the Stage3 driver).
 	final pending:Array<ResolvedModule>;
 
-	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex) {
+	public function new(classPaths:Array<String>, defines:haxe.ds.StringMap<String>, index:TyperIndex, ?onMissingType:String->Bool) {
 		super();
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.index = index;
+		this.onMissingType = onMissingType;
 		this.dirEntryCache = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		this.visited = new haxe.ds.StringMap<Bool>();
+		this.typeNotFoundTried = new haxe.ds.StringMap<Bool>();
 		this.pending = [];
 	}
 
@@ -109,6 +113,20 @@ class ModuleLoader extends LazyTypeLoader {
 			final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
 			if (hit != null)
 				return hit;
+		}
+
+		if (onMissingType != null) {
+			for (mp in candidates) {
+				if (mp == null || mp.length == 0 || typeNotFoundTried.exists(mp))
+					continue;
+				typeNotFoundTried.set(mp, true);
+				if (!onMissingType(mp))
+					continue;
+				loadModuleByPath(mp);
+				final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
+				if (hit != null)
+					return hit;
+			}
 		}
 
 		return null;
@@ -193,7 +211,6 @@ class ModuleLoader extends LazyTypeLoader {
 			return;
 		if (visited.exists(modulePath))
 			return;
-		visited.set(modulePath, true);
 		final trace = Sys.getEnv("HXHX_TRACE_MODULE_LOADER") == "1";
 
 		final filePath = resolveModuleFile(modulePath);
@@ -215,6 +232,7 @@ class ModuleLoader extends LazyTypeLoader {
 				Sys.println("loader_load read_failed module=" + modulePath + " file=" + filePath);
 			return;
 		}
+		visited.set(modulePath, true);
 
 		inline function isMacroStdModule(modulePath:String, filePath:String):Bool {
 			if (modulePath != null && StringTools.startsWith(modulePath, "haxe.macro."))
