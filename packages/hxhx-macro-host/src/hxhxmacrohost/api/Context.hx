@@ -319,6 +319,10 @@ class Context {
 		return RuntimeTypedExprs.typeExpr(e);
 	}
 
+	public static function getTypedExpr(t:TypedExpr):Expr {
+		return RuntimeTypedExprs.toExpr(t);
+	}
+
 	public static function toComplexType(t:Type):Null<ComplexType> {
 		return RuntimeMacroTypes.toComplexType(t);
 	}

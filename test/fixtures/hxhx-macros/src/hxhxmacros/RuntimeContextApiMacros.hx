@@ -354,6 +354,18 @@ class RuntimeContextApiMacros {
 		if (TypeTools.toString(typedExprMapped.t) != "Int")
 			Context.fatalError("runtime macro typed-expr probe: identity map changed expression type", pos);
 
+		final roundTrippedExpr = Context.getTypedExpr(typedExpr);
+		switch (roundTrippedExpr.expr) {
+			case EBinop(OpAdd, left, right):
+				switch ([left.expr, right.expr]) {
+					case [EConst(CInt("1", _)), EConst(CInt("2", _))]:
+					case _:
+						Context.fatalError("runtime macro typed-expr probe: getTypedExpr roundtrip mismatch", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected binop from getTypedExpr", pos);
+		}
+
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR", typedExprString);
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_VISITS", Std.string(visitedNodes));
 

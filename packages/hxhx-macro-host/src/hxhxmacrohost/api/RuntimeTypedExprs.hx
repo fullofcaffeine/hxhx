@@ -82,6 +82,31 @@ class RuntimeTypedExprs {
 		};
 	}
 
+	public static function toExpr(e:TypedExpr):Expr {
+		if (e == null)
+			throw "runtime typed expr -> expr: null typed expr";
+		return switch (e.expr) {
+			case TConst(TInt(i)):
+				makeExpr(e.pos, EConst(CInt(Std.string(i), null)));
+			case TConst(TFloat(s)):
+				makeExpr(e.pos, EConst(CFloat(s)));
+			case TConst(TString(s)):
+				makeExpr(e.pos, EConst(CString(s, DoubleQuotes)));
+			case TConst(TBool(true)):
+				makeExpr(e.pos, EConst(CIdent("true")));
+			case TConst(TBool(false)):
+				makeExpr(e.pos, EConst(CIdent("false")));
+			case TConst(TNull):
+				makeExpr(e.pos, EConst(CIdent("null")));
+			case TParenthesis(inner):
+				makeExpr(e.pos, EParenthesis(toExpr(inner)));
+			case TBinop(op, e1, e2):
+				makeExpr(e.pos, EBinop(op, toExpr(e1), toExpr(e2)));
+			case _:
+				throw "runtime typed expr -> expr: unsupported typed expr shape";
+		};
+	}
+
 	static function makeTyped(pos:Position, expr:TypedExprDef, t:Type):TypedExpr {
 		return {
 			expr: expr,
@@ -95,6 +120,13 @@ class RuntimeTypedExprs {
 			file: "<macro>",
 			min: 0,
 			max: 0
+		};
+	}
+
+	static function makeExpr(pos:Position, expr:ExprDef):Expr {
+		return {
+			expr: expr,
+			pos: pos == null ? defaultPosition() : pos
 		};
 	}
 
