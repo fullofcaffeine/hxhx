@@ -370,6 +370,44 @@ class Context {
 		return RuntimeTypedExprs.toExpr(t);
 	}
 
+	/**
+		Store an untyped expression for later runtime macro use.
+
+		Why
+		- Reflaxe-style helper layers sometimes route expressions through `Context.storeExpr(...)`
+		  even when they are not relying on upstream's full macro-eval storage semantics.
+		- The external-host runtime still needs a compatible rung so those helpers do not fail
+		  immediately.
+
+		What
+		- Returns the provided expression unchanged.
+
+		Gotchas
+		- This is an identity compatibility rung, not compiler-side expression interning.
+	**/
+	public static function storeExpr(e:Expr):Expr {
+		return e;
+	}
+
+	/**
+		Store a typed expression for later runtime macro use.
+
+		Why
+		- Helper layers may route typed expressions through `Context.storeTypedExpr(...)` before
+		  converting them back to plain `Expr`.
+		- The honest runtime bring-up rung is to reuse the existing synthetic typed-expression inverse.
+
+		What
+		- Returns the `Expr` form of the supported synthetic `TypedExpr` subset.
+
+		Gotchas
+		- Coverage is limited by `RuntimeTypedExprs.toExpr(...)`.
+		- This is not upstream's full typed-expression storage/interner behavior.
+	**/
+	public static function storeTypedExpr(t:TypedExpr):Expr {
+		return RuntimeTypedExprs.toExpr(t);
+	}
+
 	public static function toComplexType(t:Type):Null<ComplexType> {
 		return RuntimeMacroTypes.toComplexType(t);
 	}

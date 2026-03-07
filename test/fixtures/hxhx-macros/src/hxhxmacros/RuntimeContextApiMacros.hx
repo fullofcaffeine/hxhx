@@ -402,6 +402,31 @@ class RuntimeContextApiMacros {
 		return "mainExpr=" + rendered + ";mainType=" + typeText;
 	}
 
+	public static function probeStoreExprPlumbing():String {
+		final pos = Context.currentPos();
+		final storedExpr = Context.storeExpr(macro "ok");
+		switch (storedExpr.expr) {
+			case EConst(CString("ok", _)):
+			case _:
+				Context.fatalError("runtime macro storeExpr probe: expected stored string expression", pos);
+		}
+
+		final storedTypedExpr = Context.storeTypedExpr(Context.typeExpr(macro 1 + 2));
+		switch (storedTypedExpr.expr) {
+			case EBinop(OpAdd, left, right):
+				switch ([left.expr, right.expr]) {
+					case [EConst(CInt("1", _)), EConst(CInt("2", _))]:
+					case _:
+						Context.fatalError("runtime macro storeExpr probe: storeTypedExpr roundtrip mismatch", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro storeExpr probe: expected typed-expression roundtrip", pos);
+		}
+
+		Compiler.define("HXHX_RUNTIME_STORE_EXPR", "ok");
+		return "storeExpr=ok;storeTypedExpr=binop";
+	}
+
 	public static function probeCompilerInclude():String {
 		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
 		Compiler.include(modulePath);

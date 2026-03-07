@@ -438,6 +438,14 @@ class Context {
 		return HostContext.getTypedExpr(t);
 	}
 
+	public static function storeTypedExpr(t:TypedExpr):Expr {
+		return HostContext.storeTypedExpr(t);
+	}
+
+	public static function storeExpr(e:Expr):Expr {
+		return HostContext.storeExpr(e);
+	}
+
 	public static function resolveType(t:ComplexType, p:Position):Type {
 		return HostContext.resolveType(t, p);
 	}

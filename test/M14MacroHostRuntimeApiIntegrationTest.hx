@@ -40,6 +40,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
+			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
@@ -176,6 +177,11 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("main expr output", mainExprOutput, "mainExpr=");
 			assertContains("main expr type", mainExprOutput, "mainType=Int");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MAIN_EXPR").indexOf("+") >= 0, "expected runtime main expr define");
+
+			final storeExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()");
+			assertContains("store expr output", storeExprOutput, "storeExpr=ok");
+			assertContains("store typed expr output", storeExprOutput, "storeTypedExpr=binop");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_STORE_EXPR") == "ok", "expected runtime store expr define");
 
 			final includeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()");
 			assertContains("include output", includeOutput, "include=hxhxmacros.RuntimeContextApiMacros");
