@@ -9,6 +9,11 @@ This document records the current cross-repo audit for:
 
 It is written as a hardening reference, not as a release contract.
 
+Companion docs:
+
+- beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
+- quick matrix: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_MATRIX.md`
+
 ## Scope
 
 Questions audited:
