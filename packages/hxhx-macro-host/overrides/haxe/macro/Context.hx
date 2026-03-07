@@ -373,6 +373,10 @@ class Context {
 		return HostContext.getLocalImports();
 	}
 
+	public static function getLocalTVars():Map<String, haxe.macro.Type.TVar> {
+		return HostContext.getLocalTVars();
+	}
+
 	public static function getModule(name:String):Array<Type> {
 		return HostContext.getModule(name);
 	}

@@ -32,7 +32,7 @@ import haxe.macro.TypeTools;
 	  - `Context.getPosInfos()` / `Context.makePosition()`
 	  - `PositionTools.getInfos()` / `PositionTools.make()`
 	  - compiler-seeded local-context queries (`getLocalModule`, `getLocalMethod`,
-		`getLocalType`, `getExpectedType`, `getLocalClass`)
+		`getLocalType`, `getExpectedType`, `getLocalClass`, `getLocalTVars`)
 
 	What
 	- Validates the slice and returns a stable summary string for external-host integration tests.
@@ -236,6 +236,44 @@ class RuntimeContextApiMacros {
 			Context.fatalError("runtime macro local-using probe: missing haxe.io.Path using in " + summary, pos);
 
 		Compiler.define("HXHX_RUNTIME_LOCAL_USING", summary);
+		return summary;
+	}
+
+	public static function probeLocalTVars():String {
+		final pos = Context.currentPos();
+		final tvars = Context.getLocalTVars();
+		if (tvars == null || !tvars.exists("count") || !tvars.exists("label"))
+			Context.fatalError("runtime macro local-tvars probe: expected local tvar snapshot", pos);
+
+		final countVar = tvars.get("count");
+		final labelVar = tvars.get("label");
+		if (countVar == null || labelVar == null)
+			Context.fatalError("runtime macro local-tvars probe: null tvar entries", pos);
+
+		final countType = TypeTools.toString(countVar.t);
+		final labelType = TypeTools.toString(labelVar.t);
+		if (countType != "Int")
+			Context.fatalError("runtime macro local-tvars probe: expected count:Int but got " + countType, pos);
+		if (labelType != "String")
+			Context.fatalError("runtime macro local-tvars probe: expected label:String but got " + labelType, pos);
+		if (countVar.capture)
+			Context.fatalError("runtime macro local-tvars probe: expected count capture=false", pos);
+		if (!labelVar.capture)
+			Context.fatalError("runtime macro local-tvars probe: expected label capture=true", pos);
+
+		final rendered = [countVar.name + ":" + countType + ":" + countVar.id + ":" + (countVar.capture ? "capture" : "plain"),
+			labelVar.name
+			+ ":"
+			+ labelType
+			+ ":"
+			+ labelVar.id
+			+ ":"
+			+ (labelVar.capture ? "capture" : "plain")];
+		rendered.sort(function(a:String, b:String):Int {
+			return Reflect.compare(a, b);
+		});
+		final summary = rendered.join(";");
+		Compiler.define("HXHX_RUNTIME_LOCAL_TVARS", summary);
 		return summary;
 	}
 

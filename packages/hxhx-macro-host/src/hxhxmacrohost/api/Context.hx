@@ -318,6 +318,44 @@ class Context {
 	}
 
 	/**
+		Return the compiler-provided local type-variable snapshot for the active module.
+
+		Why
+		- Some macro helpers inspect `Context.getLocalTVars()` to understand the immediate local type
+		  environment without needing full typed-AST access.
+		- The external-host runtime cannot inspect compiler locals directly, so the compiler must
+		  seed a conservative snapshot when tests or build macros require it.
+
+		What
+		- Returns a detached `Map<String, TVar>` keyed by local variable name.
+		- The returned TVars use the narrow runtime builtin-type model and do not claim rich metadata.
+	**/
+	public static function getLocalTVars():Map<String, TVar> {
+		final out:Map<String, TVar> = [];
+		final payload = HostToCompilerRpc.call("context.getLocalTVars", "");
+		if (payload == null || payload.length == 0)
+			return out;
+
+		final parts = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final nameKey = "n" + i;
+			final typeKey = "t" + i;
+			if (!parts.exists(nameKey) || !parts.exists(typeKey))
+				continue;
+			final name = StringTools.trim(parts.get(nameKey));
+			final typeText = StringTools.trim(parts.get(typeKey));
+			if (name.length == 0 || typeText.length == 0)
+				continue;
+			final id = parseNonNegativeInt(parts.exists("id" + i) ? parts.get("id" + i) : "", i + 1);
+			final capture = parts.exists("cap" + i) && parts.get("cap" + i) == "1";
+			final isStatic = parts.exists("st" + i) && parts.get("st" + i) == "1";
+			out.set(name, RuntimeMacroTypes.localTVar(name, typeText, id, capture, isStatic));
+		}
+		return out;
+	}
+
+	/**
 		Return the compiler-provided local import list for the active module.
 
 		Why

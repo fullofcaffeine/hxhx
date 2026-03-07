@@ -35,6 +35,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()",
+			"hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
@@ -70,7 +71,23 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			modulePath: "hxhxmacros.RuntimeContextApiMacros",
 			methodName: "probeLocalContextSnapshot",
 			localTypeText: "String",
-			expectedTypeText: "Bool"
+			expectedTypeText: "Bool",
+			localTVars: [
+				{
+					name: "count",
+					typeText: "Int",
+					id: 1,
+					capture: false,
+					isStatic: false
+				},
+				{
+					name: "label",
+					typeText: "String",
+					id: 2,
+					capture: true,
+					isStatic: false
+				}
+			]
 		});
 
 		var failure = "";
@@ -127,6 +144,11 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("local using StringTools", localUsingOutput, "StringTools");
 			assertContains("local using Path", localUsingOutput, "haxe.io.Path");
 			assertContains("local using define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_USING"), "haxe.io.Path");
+
+			final localTVarsOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()");
+			assertContains("local tvars count", localTVarsOutput, "count:Int:1:plain");
+			assertContains("local tvars label", localTVarsOutput, "label:String:2:capture");
+			assertContains("local tvars define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_TVARS"), "label:String:2:capture");
 
 			final moduleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()");
 			assertContains("module lookup output", moduleOutput, "moduleLookup=hxhxmacros.RuntimeContextApiMacros");

@@ -590,6 +590,8 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalUsingsPayload()));
 				case "context.getLocalImports":
 					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalImportsPayload()));
+				case "context.getLocalTVars":
+					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalTVarsPayload()));
 				case "context.getModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					if (name == null || name.length == 0) {
@@ -685,6 +687,23 @@ private class MacroClient {
 		if (buildFile == null || buildFile.length == 0)
 			return MacroProtocol.encodeLen("c", "0");
 		return MacroLocalImports.encodeUsingsPayloadFromSourceFile(buildFile);
+	}
+
+	static function encodeLocalTVarsPayload():String {
+		final entries = MacroState.listLocalTVars();
+		if (entries.length == 0)
+			return MacroProtocol.encodeLen("c", "0");
+		final parts = new Array<String>();
+		parts.push(MacroProtocol.encodeLen("c", Std.string(entries.length)));
+		for (i in 0...entries.length) {
+			final entry = entries[i];
+			parts.push(MacroProtocol.encodeLen("n" + i, entry.name));
+			parts.push(MacroProtocol.encodeLen("t" + i, entry.typeText));
+			parts.push(MacroProtocol.encodeLen("id" + i, Std.string(entry.id == null ? 0 : entry.id)));
+			parts.push(MacroProtocol.encodeLen("cap" + i, entry.capture == true ? "1" : "0"));
+			parts.push(MacroProtocol.encodeLen("st" + i, entry.isStatic == true ? "1" : "0"));
+		}
+		return parts.join(" ");
 	}
 
 	static function resolveMacroContextBuildFile():Null<String> {

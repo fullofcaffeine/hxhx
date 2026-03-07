@@ -24,6 +24,15 @@ typedef MacroLocalContextSnapshot = {
 	@:optional final methodName:Null<String>;
 	@:optional final localTypeText:Null<String>;
 	@:optional final expectedTypeText:Null<String>;
+	@:optional final localTVars:Array<MacroLocalTVarSnapshot>;
+}
+
+typedef MacroLocalTVarSnapshot = {
+	final name:String;
+	final typeText:String;
+	@:optional final id:Null<Int>;
+	@:optional final capture:Null<Bool>;
+	@:optional final isStatic:Null<Bool>;
 }
 
 /**
@@ -76,6 +85,7 @@ class MacroState {
 	static var supportsUnicode:Bool = true;
 	static var explicitCurrentPos:Null<MacroPositionInfo> = null;
 	static var explicitLocalContext:Null<MacroLocalContextSnapshot> = null;
+	static var nextSyntheticLocalTVarId:Int = 1;
 
 	static function sortStringsInPlace(arr:Array<String>):Void {
 		// Avoid `Array.sort(fn)` during bring-up.
@@ -170,6 +180,7 @@ class MacroState {
 		supportsUnicode = true;
 		explicitCurrentPos = null;
 		explicitLocalContext = null;
+		nextSyntheticLocalTVarId = 1;
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -389,6 +400,7 @@ class MacroState {
 		- Stores a conservative local context snapshot using Haxe type text for the type slots.
 		- Type text is intentionally narrow and currently expected to match the runtime builtin type
 		  helper subset (for example `String`, `Bool`, `Null<String>`, `Dynamic`).
+		- Optional local TVars can be seeded for runtime `Context.getLocalTVars()` probes.
 	**/
 	public static function setLocalContext(context:MacroLocalContextSnapshot):Void {
 		if (context == null) {
@@ -400,7 +412,8 @@ class MacroState {
 			modulePath: trimmedModule,
 			methodName: normalizeOptionalText(context.methodName),
 			localTypeText: normalizeOptionalText(context.localTypeText),
-			expectedTypeText: normalizeOptionalText(context.expectedTypeText)
+			expectedTypeText: normalizeOptionalText(context.expectedTypeText),
+			localTVars: normalizeLocalTVars(context.localTVars)
 		};
 	}
 
@@ -413,6 +426,29 @@ class MacroState {
 			return null;
 		final trimmed = StringTools.trim(value);
 		return trimmed.length == 0 ? null : trimmed;
+	}
+
+	static function normalizeLocalTVars(values:Array<MacroLocalTVarSnapshot>):Array<MacroLocalTVarSnapshot> {
+		final out = new Array<MacroLocalTVarSnapshot>();
+		if (values == null || values.length == 0)
+			return out;
+		for (value in values) {
+			if (value == null || value.name == null || value.typeText == null)
+				continue;
+			final name = StringTools.trim(value.name);
+			final typeText = StringTools.trim(value.typeText);
+			if (name.length == 0 || typeText.length == 0)
+				continue;
+			final id = value.id == null || value.id <= 0 ? nextSyntheticLocalTVarId++ : value.id;
+			out.push({
+				name: name,
+				typeText: typeText,
+				id: id,
+				capture: value.capture == true,
+				isStatic: value.isStatic == true
+			});
+		}
+		return out;
 	}
 
 	public static function getCurrentPos():MacroPositionInfo {
@@ -449,6 +485,21 @@ class MacroState {
 
 	public static function getExpectedTypeText():Null<String> {
 		return explicitLocalContext == null ? null : explicitLocalContext.expectedTypeText;
+	}
+
+	public static function listLocalTVars():Array<MacroLocalTVarSnapshot> {
+		if (explicitLocalContext == null || explicitLocalContext.localTVars == null || explicitLocalContext.localTVars.length == 0)
+			return [];
+		return [
+			for (entry in explicitLocalContext.localTVars)
+				{
+					name: entry.name,
+					typeText: entry.typeText,
+					id: entry.id,
+					capture: entry.capture,
+					isStatic: entry.isStatic
+				}
+		];
 	}
 
 	/**

@@ -183,6 +183,18 @@ class RuntimeMacroTypes {
 		return out;
 	}
 
+	public static function localTVar(name:String, typeText:String, id:Int, capture:Bool, isStatic:Bool):TVar {
+		return {
+			id: id <= 0 ? 1 : id,
+			name: name == null ? "" : name,
+			t: getTypeByName(typeText == null ? "Dynamic" : typeText),
+			capture: capture,
+			extra: null,
+			meta: null,
+			isStatic: isStatic
+		};
+	}
+
 	public static function resolveComplexType(t:ComplexType):Type {
 		return switch (t) {
 			case null:
