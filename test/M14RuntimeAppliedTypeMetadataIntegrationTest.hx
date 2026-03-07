@@ -57,10 +57,32 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				fail("expected nullSafety parameter Strict");
 		}
 
-		final syntheticType = RuntimeMacroTypes.typeForPath("hxhxmacros.RuntimeContextApiMacros", applied);
+		final syntheticType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeContextApiMacros", "class", applied);
 		final syntheticClass = expectInst(syntheticType).get();
 		assertTrue(syntheticClass.meta.has(":demoMeta"), "expected demo metadata on synthetic type path");
 		assertTrue(syntheticClass.meta.has(":nullSafety"), "expected nullSafety metadata on synthetic type path");
+
+		final enumApplied = ["@:enumProbeMeta"];
+		final typedefApplied = ["@:typedefProbeMeta"];
+		final abstractApplied = ["@:abstractProbeMeta"];
+		final syntheticEnum = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleState", "enum", enumApplied)).get();
+		assertTrue(syntheticEnum.meta.has(":enumProbeMeta"), "expected enum metadata on synthetic runtime type");
+		final syntheticTypedef = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied)).get();
+		assertTrue(syntheticTypedef.meta.has(":typedefProbeMeta"), "expected typedef metadata on synthetic runtime type");
+		final syntheticAbstract = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied)).get();
+		assertTrue(syntheticAbstract.meta.has(":abstractProbeMeta"), "expected abstract metadata on synthetic runtime type");
+
+		final moduleEntries = RuntimeMacroTypes.moduleTypesForModule("hxhxmacros.RuntimeModuleMembers", [
+			{name: "RuntimeModuleMembers", kind: "class", metadata: []},
+			{name: "RuntimeModuleState", kind: "enum", metadata: enumApplied},
+			{name: "RuntimeModuleData", kind: "typedef", metadata: typedefApplied},
+			{name: "RuntimeModuleId", kind: "abstract", metadata: abstractApplied}
+		]);
+		assertTrue(moduleEntries.length == 4, "expected four synthetic module members");
+		expectInst(moduleEntries[0]);
+		assertTrue(expectInst(moduleEntries[1]).get().meta.has(":enumProbeMeta"), "expected per-type enum metadata");
+		assertTrue(expectInst(moduleEntries[2]).get().meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
+		assertTrue(expectInst(moduleEntries[3]).get().meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
 
 		MacroState.reset();
 	}

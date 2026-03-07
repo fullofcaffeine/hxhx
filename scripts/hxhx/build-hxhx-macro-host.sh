@@ -8,6 +8,8 @@ HXHX_DUNE_JOBS="${HXHX_DUNE_JOBS:-auto}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TOOL_DIR="$ROOT/packages/hxhx-macro-host"
 BOOTSTRAP_DIR="$TOOL_DIR/bootstrap_out"
+DEFAULT_OUT_DIR="$TOOL_DIR/out"
+MACRO_HOST_OUT_DIR="${HXHX_MACRO_HOST_OUT_DIR:-}"
 
 # Stage4 / Gate bring-up note:
 #
@@ -116,6 +118,31 @@ normalize_cp() {
   echo "$cp"
 }
 
+resolve_out_dir() {
+  if [ -n "$MACRO_HOST_OUT_DIR" ]; then
+    if [[ "$MACRO_HOST_OUT_DIR" != /* ]]; then
+      echo "$ROOT/$MACRO_HOST_OUT_DIR"
+    else
+      echo "$MACRO_HOST_OUT_DIR"
+    fi
+    return 0
+  fi
+
+  # Dynamic macro-host builds should not contend on a single shared `out/` workspace.
+  # A stale/interrupted dune build can otherwise leave `_build/.lock` held and block every
+  # later dynamic run. Use a per-invocation temp work dir by default whenever we need a
+  # freshly generated host build.
+  if [ -n "${HXHX_MACRO_HOST_ENTRYPOINTS:-}" ] || [ -n "${HXHX_MACRO_HOST_EXTRA_CP:-}" ] || [ -n "${HXHX_MACRO_HOST_DEFINES:-}" ]; then
+    mkdir -p "$ROOT/.tmp"
+    mktemp -d "$ROOT/.tmp/hxhx-macro-host-build.XXXXXX"
+    return 0
+  fi
+
+  echo "$DEFAULT_OUT_DIR"
+}
+
+OUT_DIR="$(resolve_out_dir)"
+
 resolve_std_root() {
   # Stage3 compilation needs a real Haxe std root (macro host imports `haxe.macro.*`).
   if [ -n "${HAXE_STD_PATH:-}" ] && [ -d "${HAXE_STD_PATH}" ]; then
@@ -148,12 +175,13 @@ trim_ws() {
 
 (
   cd "$TOOL_DIR"
-  rm -rf out
-  mkdir -p out
+  rm -rf "$OUT_DIR"
+  mkdir -p "$OUT_DIR"
+  echo "== Macro host build dir: $OUT_DIR" >&2
   extra=()
   gen_cp=""
   if [ -n "${HXHX_MACRO_HOST_ENTRYPOINTS:-}" ]; then
-    gen_cp="$TOOL_DIR/out/_gen_hx"
+    gen_cp="$OUT_DIR/_gen_hx"
     mkdir -p "$gen_cp/hxhxmacrohost"
     gen_file="$gen_cp/hxhxmacrohost/EntryPointsGen.hx"
 
@@ -327,7 +355,7 @@ trim_ws() {
       --hxhx-stage3
       --hxhx-no-run
       --hxhx-emit-full-bodies
-      --hxhx-out out
+      --hxhx-out "$OUT_DIR"
       --std "$STD_ROOT"
       -cp src
       -cp overrides
@@ -351,8 +379,8 @@ trim_ws() {
     fi
     echo "hxhx(stage3) macro host build failed; falling back to stage0 (if available)." >&2
     # Clean stage3 artifacts before stage0 generation so stale shims don't poison the dune build.
-    rm -rf out
-    mkdir -p out
+    rm -rf "$OUT_DIR"
+    mkdir -p "$OUT_DIR"
     fi
   fi
 
@@ -369,23 +397,32 @@ trim_ws() {
     exit 1
   fi
 
-  cmd=("$HAXE_BIN" build.hxml -D ocaml_build=native)
+  cmd=("$HAXE_BIN" build.hxml -D ocaml_build=native "-D" "ocaml_output=$OUT_DIR")
   if [ "${#extra[@]}" -gt 0 ]; then
     cmd+=("${extra[@]}")
   fi
   "${cmd[@]}" 1>&2
 )
 
-BIN_STAGE3="$TOOL_DIR/out/out.exe"
+BIN_STAGE3="$OUT_DIR/out.exe"
 if [ -f "$BIN_STAGE3" ]; then
   echo "$BIN_STAGE3"
   exit 0
 fi
 
-BIN_STAGE0="$TOOL_DIR/out/_build/default/out.exe"
-if [ -f "$BIN_STAGE0" ]; then
-  echo "$BIN_STAGE0"
-  exit 0
+BIN_STAGE0="$OUT_DIR/_build/default/out.exe"
+if [ -d "$OUT_DIR/_build/default" ]; then
+  if [ -f "$BIN_STAGE0" ]; then
+    echo "$BIN_STAGE0"
+    exit 0
+  fi
+  shopt -s nullglob
+  stage0_candidates=("$OUT_DIR/_build/default/"*.exe)
+  shopt -u nullglob
+  if [ "${#stage0_candidates[@]}" -ge 1 ] && [ -f "${stage0_candidates[0]}" ]; then
+    echo "${stage0_candidates[0]}"
+    exit 0
+  fi
 fi
 
 echo "Missing built executable (expected stage3 '$BIN_STAGE3' or stage0 '$BIN_STAGE0')." >&2

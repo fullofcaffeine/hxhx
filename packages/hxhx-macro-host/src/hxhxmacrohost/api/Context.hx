@@ -342,7 +342,9 @@ class Context {
 				metadata.push(parts.get(key));
 		}
 		final typePath = parts.exists("t") ? parts.get("t") : name;
-		return RuntimeMacroTypes.typeForPath(typePath, metadata);
+		final moduleName = parts.exists("m") ? parts.get("m") : null;
+		final kind = parts.exists("k") ? parts.get("k") : "class";
+		return RuntimeMacroTypes.typeForResolvedDecl(typePath, kind, metadata, moduleName);
 	}
 
 	public static function getModule(name:String):Array<Type> {
@@ -354,22 +356,27 @@ class Context {
 		final parts = Protocol.kvParse(payload);
 		if (!parts.exists("ok") || parts.get("ok") != "1")
 			return [];
-		final metadata = new Array<String>();
-		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
-		for (i in 0...count) {
-			final key = "md" + i;
-			if (parts.exists(key))
-				metadata.push(parts.get(key));
-		}
-		final typeNames = new Array<String>();
+		final entries = new Array<{name:String, kind:String, metadata:Array<String>}>();
 		final typeCount = parseNonNegativeInt(parts.exists("tc") ? parts.get("tc") : "", 0);
 		for (i in 0...typeCount) {
-			final key = "tn" + i;
-			if (parts.exists(key))
-				typeNames.push(parts.get(key));
+			final nameKey = "tn" + i;
+			if (!parts.exists(nameKey))
+				continue;
+			final metadata = new Array<String>();
+			final metadataCount = parseNonNegativeInt(parts.exists("tmc" + i) ? parts.get("tmc" + i) : "", 0);
+			for (j in 0...metadataCount) {
+				final key = "tmd" + i + "_" + j;
+				if (parts.exists(key))
+					metadata.push(parts.get(key));
+			}
+			entries.push({
+				name: parts.get(nameKey),
+				kind: parts.exists("tk" + i) ? parts.get("tk" + i) : "class",
+				metadata: metadata
+			});
 		}
 		final modulePath = parts.exists("m") ? parts.get("m") : name;
-		return RuntimeMacroTypes.moduleTypesForModule(modulePath, typeNames, metadata);
+		return RuntimeMacroTypes.moduleTypesForModule(modulePath, entries);
 	}
 
 	public static function parse(expr:String, pos:Position):Expr {

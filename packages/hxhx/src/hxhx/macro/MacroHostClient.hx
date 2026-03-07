@@ -1,5 +1,11 @@
 package hxhx.macro;
 
+private typedef RuntimeResolvedTypeSnapshot = {
+	final name:String;
+	final kind:String;
+	final metadata:Array<String>;
+}
+
 private enum MacroHostReadResult {
 	ReadLine(line:String);
 	ReadEof;
@@ -230,36 +236,61 @@ class MacroHostClient {
 		return HxConditionalCompilation.filterSource(source, defines);
 	}
 
-	public static function scanResolvedModuleTypeNames(path:String, fallbackMainName:String):Array<String> {
-		final out = new Array<String>();
+	public static function scanResolvedModuleTypes(modulePath:String, path:String, fallbackMainName:String):Array<RuntimeResolvedTypeSnapshot> {
+		final out = new Array<RuntimeResolvedTypeSnapshot>();
 		final seen = new Map<String, Bool>();
-		inline function push(name:String):Void {
+		final modulePack = modulePath == null ? [] : modulePath.split(".");
+		if (modulePack.length > 0)
+			modulePack.pop();
+		inline function fullTypePath(name:String):String {
+			return modulePack.length == 0 ? name : modulePack.join(".") + "." + name;
+		}
+		inline function push(kind:String, name:String):Void {
 			final trimmed = name == null ? "" : StringTools.trim(name);
 			if (trimmed.length == 0 || seen.exists(trimmed))
 				return;
 			seen.set(trimmed, true);
-			out.push(trimmed);
+			out.push({
+				name: trimmed,
+				kind: kind,
+				metadata: MacroState.listAppliedTypeMetadata(fullTypePath(trimmed))
+			});
 		}
 
 		final filtered = readFilteredResolvedModuleSource(path);
 		if (filtered.length > 0) {
 			for (c in ParserStageScanHelpers.scanModuleLocalHelperClasses(filtered, null))
-				push(HxClassDecl.getName(c));
+				push("class", HxClassDecl.getName(c));
 			for (c in ParserStageScanHelpers.scanModuleLocalHelperEnums(filtered, null))
-				push(HxClassDecl.getName(c));
+				push("enum", HxClassDecl.getName(c));
 			for (c in ParserStageScanHelpers.scanModuleLocalHelperTypedefs(filtered, null))
-				push(HxClassDecl.getName(c));
+				push("typedef", HxClassDecl.getName(c));
 			for (c in ParserStageScanHelpers.scanModuleLocalHelperAbstracts(filtered, null))
-				push(HxClassDecl.getName(c));
+				push("abstract", HxClassDecl.getName(c));
 		}
 
 		final mainName = fallbackMainName == null ? "" : StringTools.trim(fallbackMainName);
 		if (mainName.length > 0) {
-			if (seen.exists(mainName)) {
-				out.remove(mainName);
-				out.unshift(mainName);
+			final mainMetadata = MacroState.listAppliedTypeMetadata(fullTypePath(mainName));
+			var existingIndex = -1;
+			for (i in 0...out.length)
+				if (out[i].name == mainName) {
+					existingIndex = i;
+					break;
+				}
+			if (existingIndex >= 0) {
+				final existing = out.splice(existingIndex, 1)[0];
+				out.unshift({
+					name: existing.name,
+					kind: existing.kind,
+					metadata: mainMetadata
+				});
 			} else {
-				out.unshift(mainName);
+				out.unshift({
+					name: mainName,
+					kind: "class",
+					metadata: mainMetadata
+				});
 			}
 		}
 
@@ -706,10 +737,24 @@ private class MacroClient {
 						replyOk(id, MacroProtocol.encodeLen("v", ""));
 						return;
 					}
-					final metadata = MacroState.listAppliedTypeMetadata(name);
+					final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className);
+					final targetTypeName = {
+						final parts = name.split(".");
+						parts.length == 0 ? name : parts[parts.length - 1];
+					}
+					var kind = "class";
+					var metadata = MacroState.listAppliedTypeMetadata(name);
+					for (entry in resolvedTypes)
+						if (entry.name == targetTypeName) {
+							kind = entry.kind;
+							metadata = entry.metadata;
+							break;
+						}
 					final parts = new Array<String>();
 					parts.push(MacroProtocol.encodeLen("ok", "1"));
 					parts.push(MacroProtocol.encodeLen("t", name));
+					parts.push(MacroProtocol.encodeLen("m", resolved.className));
+					parts.push(MacroProtocol.encodeLen("k", kind));
 					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
 					for (i in 0...metadata.length)
 						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
@@ -730,17 +775,19 @@ private class MacroClient {
 						replyOk(id, MacroProtocol.encodeLen("v", ""));
 						return;
 					}
-					final metadata = MacroState.listAppliedTypeMetadata(name);
-					final typeNames = MacroHostClient.scanResolvedModuleTypeNames(resolved.path, resolved.className);
+					final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className);
 					final parts = new Array<String>();
 					parts.push(MacroProtocol.encodeLen("ok", "1"));
 					parts.push(MacroProtocol.encodeLen("m", name));
-					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
-					parts.push(MacroProtocol.encodeLen("tc", Std.string(typeNames.length)));
-					for (i in 0...metadata.length)
-						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
-					for (i in 0...typeNames.length)
-						parts.push(MacroProtocol.encodeLen("tn" + i, typeNames[i]));
+					parts.push(MacroProtocol.encodeLen("tc", Std.string(resolvedTypes.length)));
+					for (i in 0...resolvedTypes.length) {
+						final entry = resolvedTypes[i];
+						parts.push(MacroProtocol.encodeLen("tn" + i, entry.name));
+						parts.push(MacroProtocol.encodeLen("tk" + i, entry.kind));
+						parts.push(MacroProtocol.encodeLen("tmc" + i, Std.string(entry.metadata.length)));
+						for (j in 0...entry.metadata.length)
+							parts.push(MacroProtocol.encodeLen("tmd" + i + "_" + j, entry.metadata[j]));
+					}
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "context.getClassPath":
 					final classPaths = gatherMacroContextClassPaths();

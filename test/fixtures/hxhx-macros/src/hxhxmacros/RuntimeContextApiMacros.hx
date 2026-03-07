@@ -325,7 +325,20 @@ class RuntimeContextApiMacros {
 		final moduleTypes = Context.getModule(modulePath);
 		if (moduleTypes == null || moduleTypes.length < 5)
 			Context.fatalError("runtime macro module probe: expected module lookup to resolve " + modulePath, pos);
-		final rendered = [for (t in moduleTypes) TypeTools.toString(t)];
+		final rendered = new Array<String>();
+		for (t in moduleTypes) {
+			final path = TypeTools.toString(t);
+			rendered.push(path);
+			switch (path) {
+				case "hxhxmacros.RuntimeModuleMembers":
+				case "hxhxmacros.RuntimeModuleHelper":
+				case "hxhxmacros.RuntimeModuleState":
+				case "hxhxmacros.RuntimeModuleData":
+				case "hxhxmacros.RuntimeModuleId":
+				case _:
+					Context.fatalError("runtime macro module probe: unexpected member " + path, pos);
+			}
+		}
 		rendered.sort(function(a:String, b:String):Int {
 			return Reflect.compare(a, b);
 		});

@@ -119,10 +119,14 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			]
 		});
 		MacroState.setMainExprText("1 + 2");
+		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeModuleState", "@:runtimeEnumMeta", false, true, false);
+		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeModuleData", "@:runtimeTypedefMeta", false, true, false);
+		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeModuleId", "@:runtimeAbstractMeta", false, true, false);
 
 		var failure = "";
 		try {
 			final exe = buildMacroHostWithProbe();
+			assertContains("macro host build dir", exe, ".tmp/hxhx-macro-host-build.");
 			Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
 
 			final output = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()");
@@ -194,7 +198,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("module lookup output", moduleOutput, "hxhxmacros.RuntimeModuleId");
 			final moduleLookupDefine = MacroState.definedValue("HXHX_RUNTIME_MODULE_LOOKUP");
 			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleMembers");
-			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleHelper");
+			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleState");
 
 			final typedExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()");
 			assertContains("typed expr output", typedExprOutput, "typedExpr=");

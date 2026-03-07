@@ -159,14 +159,10 @@ class RuntimeMacroTypes {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
 			return [];
-		final parts = trimmed.split(".");
-		if (parts.length == 0)
-			return [];
-		final name = parts.pop();
-		return [TInst(classRef(parts, name, name, metadataEntries), [])];
+		return [typeForResolvedDecl(trimmed, "class", metadataEntries)];
 	}
 
-	public static function moduleTypesForModule(modulePath:String, typeNames:Array<String>, ?metadataEntries:Array<String>):Array<Type> {
+	public static function moduleTypesForModule(modulePath:String, entries:Array<{name:String, kind:String, metadata:Array<String>}>):Array<Type> {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
 			return [];
@@ -176,18 +172,22 @@ class RuntimeMacroTypes {
 		final moduleName = parts.pop();
 		final out = new Array<Type>();
 		final seen = new Map<String, Bool>();
-		final names = (typeNames == null || typeNames.length == 0) ? [moduleName] : typeNames;
-		for (typeName in names) {
-			final trimmedName = StringTools.trim(typeName == null ? "" : typeName);
+		final resolvedEntries = (entries == null || entries.length == 0) ? [{name: moduleName, kind: "class", metadata: []}] : entries;
+		for (entry in resolvedEntries) {
+			final trimmedName = StringTools.trim(entry == null || entry.name == null ? "" : entry.name);
 			if (trimmedName.length == 0 || seen.exists(trimmedName))
 				continue;
 			seen.set(trimmedName, true);
-			out.push(TInst(classRef(parts, trimmedName, moduleName, metadataEntries), []));
+			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata));
 		}
 		return out;
 	}
 
 	public static function typeForPath(typePath:String, ?metadataEntries:Array<String>):Type {
+		return typeForResolvedDecl(typePath, "class", metadataEntries);
+	}
+
+	public static function typeForResolvedDecl(typePath:String, kind:String, ?metadataEntries:Array<String>, ?moduleNameOverride:String):Type {
 		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
 		if (trimmed.length == 0)
 			throw "runtime macro type path lookup: empty type path";
@@ -195,7 +195,8 @@ class RuntimeMacroTypes {
 		if (parts.length == 0)
 			throw "runtime macro type path lookup: invalid type path";
 		final name = parts.pop();
-		return TInst(classRef(parts, name, name, metadataEntries), []);
+		final moduleName = moduleNameOverride == null || moduleNameOverride.length == 0 ? name : moduleNameOverride;
+		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries);
 	}
 
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
@@ -368,6 +369,23 @@ class RuntimeMacroTypes {
 		}
 	}
 
+	public static function metaHas(t:Type, metadataName:String):Bool {
+		if (metadataName == null || metadataName.length == 0)
+			return false;
+		return switch (t) {
+			case TInst(c, _):
+				c.get().meta.has(metadataName);
+			case TEnum(e, _):
+				e.get().meta.has(metadataName);
+			case TType(td, _):
+				td.get().meta.has(metadataName);
+			case TAbstract(a, _):
+				a.get().meta.has(metadataName);
+			case _:
+				false;
+		}
+	}
+
 	static function renderNamedType(pack:Array<String>, name:String, params:Array<Type>):String {
 		final fullName = fullPath(pack, name);
 		if (params == null || params.length == 0)
@@ -502,6 +520,15 @@ class RuntimeMacroTypes {
 		return TInst(classRef([], "Null", "Null"), [inner]);
 	}
 
+	static function typeFromResolvedDecl(pack:Array<String>, module:String, name:String, kind:String, ?metadataEntries:Array<String>):Type {
+		return classType(pack, module, name, metadataEntries);
+	}
+
+	static function classType(pack:Array<String>, module:String, name:String, ?metadataEntries:Array<String>):Type {
+		final value:Type = TInst(classRef(pack, name, module, metadataEntries), []);
+		return value;
+	}
+
 	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<ClassType> {
 		final value:ClassType = {
 			pack: pack.copy(),
@@ -525,6 +552,66 @@ class RuntimeMacroTypes {
 			constructor: null,
 			init: null,
 			overrides: []
+		};
+		return makeRef(value, fullPath(pack, name));
+	}
+
+	static function enumRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<EnumType> {
+		final value:EnumType = {
+			pack: pack.copy(),
+			name: name,
+			module: module,
+			pos: defaultPos(),
+			isPrivate: false,
+			isExtern: true,
+			params: [],
+			meta: metadataAccess(metadataEntries),
+			doc: null,
+			exclude: function():Void {},
+			constructs: new Map(),
+			names: []
+		};
+		return makeRef(value, fullPath(pack, name));
+	}
+
+	static function defTypeRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<DefType> {
+		final value:DefType = {
+			pack: pack.copy(),
+			name: name,
+			module: module,
+			pos: defaultPos(),
+			isPrivate: false,
+			isExtern: true,
+			params: [],
+			meta: metadataAccess(metadataEntries),
+			doc: null,
+			exclude: function():Void {},
+			type: TDynamic(null)
+		};
+		return makeRef(value, fullPath(pack, name));
+	}
+
+	static function abstractRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<AbstractType> {
+		final value:AbstractType = {
+			pack: pack.copy(),
+			name: name,
+			module: module,
+			pos: defaultPos(),
+			isPrivate: false,
+			isExtern: true,
+			params: [],
+			meta: metadataAccess(metadataEntries),
+			doc: null,
+			exclude: function():Void {},
+			type: TDynamic(null),
+			impl: null,
+			binops: [],
+			unops: [],
+			from: [],
+			to: [],
+			array: [],
+			resolve: null,
+			resolveWrite: null
 		};
 		return makeRef(value, fullPath(pack, name));
 	}
