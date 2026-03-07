@@ -313,6 +313,10 @@ class Context {
 		HostContext.defineType(t, moduleDependency);
 	}
 
+	public static function defineModule(modulePath:String, types:Array<TypeDefinition>, ?imports:Array<ImportExpr>, ?usings:Array<TypePath>):Void {
+		HostContext.defineModule(modulePath, types, imports, usings);
+	}
+
 	public static function error(msg:String, pos:Position, ?depth:Int = 0):Dynamic {
 		// Bring-up rung: we cannot attach a real macro `Position` yet.
 		// Still raise a tagged error so the compiler can surface *some* `file:line` info.

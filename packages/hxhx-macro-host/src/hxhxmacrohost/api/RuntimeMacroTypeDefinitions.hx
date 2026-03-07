@@ -8,14 +8,20 @@ typedef RuntimeMacroRenderedTypeDefinition = {
 	final source:String;
 }
 
+typedef RuntimeMacroRenderedModuleDefinition = {
+	final modulePath:String;
+	final source:String;
+}
+
 /**
 	Narrow `TypeDefinition` printer for runtime external-host bring-up.
 
 	Why
-	- `Context.defineType(...)` is useful for Reflaxe-style helper layers, but upstream
-	  `haxe.macro.Printer` still does not OCaml-compile cleanly in the macro-host build path.
-	- The bring-up rung therefore needs a repo-owned printer for the subset we can support
-	  honestly today.
+	- `Context.defineType(...)` and a narrow `defineModule(...)` rung are useful for Reflaxe-style
+	  helper layers, but upstream `haxe.macro.Printer` still does not OCaml-compile cleanly in the
+	  macro-host build path.
+	- The bring-up rung therefore needs a repo-owned printer for the subset we can support honestly
+	  today.
 
 	What
 	- Supports a narrow source-emission-backed subset:
@@ -24,11 +30,27 @@ typedef RuntimeMacroRenderedTypeDefinition = {
 	  - no metadata/doc emission
 	  - optional `extends` / `implements` with simple type paths
 	  - fields only through a minimal printer equivalent to the current build-field subset
+	  - optional simple `import` / `using` headers for `defineModule(...)`
 
 	Gotchas
 	- Unsupported shapes return `null`; callers should fail fast instead of pretending parity.
 **/
 class RuntimeMacroTypeDefinitions {
+	static function validateModulePath(modulePath:String):Null<Array<String>> {
+		if (modulePath == null)
+			return null;
+		final trimmed = StringTools.trim(modulePath);
+		if (trimmed.length == 0)
+			return null;
+		final segments = trimmed.split(".");
+		if (segments.length == 0)
+			return null;
+		for (segment in segments)
+			if (!isValidIdent(segment))
+				return null;
+		return segments;
+	}
+
 	static function escapeHaxeString(s:String):String {
 		if (s == null)
 			return "";
@@ -97,6 +119,34 @@ class RuntimeMacroTypeDefinitions {
 		return parts.join(".");
 	}
 
+	static function printImportExpr(expr:ImportExpr):Null<String> {
+		if (expr == null || expr.path == null || expr.path.length == 0)
+			return null;
+		final parts = new Array<String>();
+		for (segment in expr.path) {
+			if (segment == null || !isValidIdent(segment.name))
+				return null;
+			parts.push(segment.name);
+		}
+		if (parts.length == 0)
+			return null;
+		return switch (expr.mode) {
+			case INormal:
+				"import " + parts.join(".") + ";";
+			case IAll:
+				"import " + parts.join(".") + ".*;";
+			case IAsName(alias):
+				if (!isValidIdent(alias))
+					return null;
+				"import " + parts.join(".") + " as " + alias + ";";
+		};
+	}
+
+	static function printUsingPath(tp:TypePath):Null<String> {
+		final path = printTypePath(tp);
+		return path == null ? null : "using " + path + ";";
+	}
+
 	static function tryConstToHaxe(e:Null<Expr>):Null<String> {
 		if (e == null)
 			return null;
@@ -115,7 +165,7 @@ class RuntimeMacroTypeDefinitions {
 				"null";
 			case _:
 				null;
-		}
+		};
 	}
 
 	static function tryExtractTraceString(e:Null<Expr>):Null<String> {
@@ -140,7 +190,7 @@ class RuntimeMacroTypeDefinitions {
 				}
 			case _:
 				null;
-		}
+		};
 	}
 
 	static function tryExtractReturnString(e:Null<Expr>):Null<String> {
@@ -158,7 +208,7 @@ class RuntimeMacroTypeDefinitions {
 				}
 			case _:
 				null;
-		}
+		};
 	}
 
 	static function tryExtractReturnInt(e:Null<Expr>):Null<Int> {
@@ -176,7 +226,7 @@ class RuntimeMacroTypeDefinitions {
 				}
 			case _:
 				null;
-		}
+		};
 	}
 
 	static function printFieldMinimal(f:Field):Null<String> {
@@ -215,23 +265,15 @@ class RuntimeMacroTypeDefinitions {
 				if (init != null) vis + stat + " var " + f.name + " = " + init + ";"; else vis + stat + " var " + f.name + ":Dynamic;";
 			case _:
 				null;
-		}
+		};
 	}
 
-	public static function renderTypeDefinition(t:TypeDefinition):Null<RuntimeMacroRenderedTypeDefinition> {
+	static function renderTypeBody(t:TypeDefinition):Null<String> {
 		if (t == null || !isValidIdent(t.name))
 			return null;
 		if (t.params != null && t.params.length > 0)
 			return null;
-		final pack = trimNonEmptySegments(t.pack);
-		for (segment in pack)
-			if (!isValidIdent(segment))
-				return null;
-		final modulePath = (pack.length == 0 ? "" : pack.join(".") + ".") + t.name;
-		final header = new Array<String>();
-		if (pack.length > 0)
-			header.push("package " + pack.join(".") + ";");
-		final body = switch (t.kind) {
+		return switch (t.kind) {
 			case TDClass(superClass, interfaces, isInterface, isFinal, isAbstract):
 				final head = new Array<String>();
 				if (t.isExtern)
@@ -269,7 +311,71 @@ class RuntimeMacroTypeDefinitions {
 			case _:
 				return null;
 		};
+	}
+
+	public static function renderTypeDefinition(t:TypeDefinition):Null<RuntimeMacroRenderedTypeDefinition> {
+		if (t == null || !isValidIdent(t.name))
+			return null;
+		final pack = trimNonEmptySegments(t.pack);
+		for (segment in pack)
+			if (!isValidIdent(segment))
+				return null;
+		final modulePath = (pack.length == 0 ? "" : pack.join(".") + ".") + t.name;
+		final header = new Array<String>();
+		if (pack.length > 0)
+			header.push("package " + pack.join(".") + ";");
+		final body = renderTypeBody(t);
+		if (body == null)
+			return null;
 		header.push(body);
 		return {modulePath: modulePath, source: header.join("\n\n")};
+	}
+
+	public static function renderModuleDefinition(modulePath:String, types:Array<TypeDefinition>, ?imports:Array<ImportExpr>,
+			?usings:Array<TypePath>):Null<RuntimeMacroRenderedModuleDefinition> {
+		final segments = validateModulePath(modulePath);
+		if (segments == null || types == null || types.length == 0)
+			return null;
+		final moduleName = segments[segments.length - 1];
+		final pack = segments.slice(0, segments.length - 1);
+		var hasPrimary = false;
+		final typeBodies = new Array<String>();
+		for (typeDef in types) {
+			if (typeDef == null)
+				return null;
+			final typePack = trimNonEmptySegments(typeDef.pack);
+			if (typePack.join(".") != pack.join("."))
+				return null;
+			if (typeDef.name == moduleName)
+				hasPrimary = true;
+			final body = renderTypeBody(typeDef);
+			if (body == null)
+				return null;
+			typeBodies.push(body);
+		}
+		if (!hasPrimary)
+			return null;
+
+		final header = new Array<String>();
+		if (pack.length > 0)
+			header.push("package " + pack.join(".") + ";");
+		if (imports != null) {
+			for (expr in imports) {
+				final line = printImportExpr(expr);
+				if (line == null)
+					return null;
+				header.push(line);
+			}
+		}
+		if (usings != null) {
+			for (tp in usings) {
+				final line = printUsingPath(tp);
+				if (line == null)
+					return null;
+				header.push(line);
+			}
+		}
+		header.push(typeBodies.join("\n\n"));
+		return {modulePath: segments.join("."), source: header.join("\n\n")};
 	}
 }

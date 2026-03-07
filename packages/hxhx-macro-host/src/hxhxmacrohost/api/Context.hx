@@ -439,6 +439,33 @@ class Context {
 	}
 
 	/**
+		Define a whole module by emitting one generated Haxe source file into the compiler-managed
+		`_gen_hx` directory.
+
+		Why
+		- Some target helpers generate more than one top-level type at once and route that through
+		  `Context.defineModule(...)` instead of repeated single-type emission.
+		- The external-host runtime can support a useful compatibility rung by emitting one validated
+		  source file containing a narrow, supported subset of module content.
+
+		What
+		- Validates `modulePath`, `types`, and optional simple `imports` / `usings`.
+		- Requires that one generated type matches the module basename.
+		- Emits a single generated Haxe file through the same `_gen_hx` path used by `defineType()`.
+
+		Gotchas
+		- This is source-emission-backed compatibility, not upstream-equivalent typed module mutation.
+		- Coverage is intentionally narrow and limited to the same supported type/field subset as the
+		  runtime `defineType()` rung.
+	**/
+	public static function defineModule(modulePath:String, types:Array<TypeDefinition>, ?imports:Array<ImportExpr>, ?usings:Array<TypePath>):Void {
+		final rendered = RuntimeMacroTypeDefinitions.renderModuleDefinition(modulePath, types, imports, usings);
+		if (rendered == null)
+			throw "runtime macro defineModule: unsupported module definition shape";
+		HostCompiler.emitHxModule(rendered.modulePath, rendered.source);
+	}
+
+	/**
 		Register a module dependency in the compiler-owned runtime ledger.
 
 		Why

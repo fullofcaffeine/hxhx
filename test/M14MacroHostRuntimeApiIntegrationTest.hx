@@ -44,6 +44,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
 			"hxhxmacros.RuntimeContextApiMacros.probeDefineType()",
+			"hxhxmacros.RuntimeContextApiMacros.probeDefineModule()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
 			"hxhxmacros.RuntimeContextApiMacros.probeParse()",
@@ -213,6 +214,19 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(defineTypeDeps[defineTypeDeps.length - 1].modulePath == "generated.runtime.RuntimeMacroDefined",
 				"expected defineType dependency module path");
 			assertTrue(defineTypeDeps[defineTypeDeps.length - 1].externFile == "runtime/generated-defined.txt", "expected defineType dependency extern file");
+
+			final defineModuleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeDefineModule()");
+			assertContains("defineModule output", defineModuleOutput, "defineModule=generated.runtime.RuntimeMacroModule");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_DEFINE_MODULE") == "generated.runtime.RuntimeMacroModule", "expected runtime defineModule define");
+			assertTrue(MacroState.listGeneratedHxModuleNames().indexOf("generated.runtime.RuntimeMacroModule") >= 0,
+				"expected generated module snapshot for defineModule");
+			final generatedModuleSource = MacroState.getGeneratedHxModuleSource("generated.runtime.RuntimeMacroModule");
+			assertTrue(generatedModuleSource != null, "expected generated defineModule source");
+			assertContains("generated module package", generatedModuleSource, "package generated.runtime;");
+			assertContains("generated module import", generatedModuleSource, "import haxe.Template as Tpl;");
+			assertContains("generated module using", generatedModuleSource, "using StringTools;");
+			assertContains("generated module primary type", generatedModuleSource, "class RuntimeMacroModule");
+			assertContains("generated module helper type", generatedModuleSource, "class RuntimeMacroHelper");
 
 			final resourceOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeResources()");
 			assertContains("resource output", resourceOutput, "resource=resource=ok");

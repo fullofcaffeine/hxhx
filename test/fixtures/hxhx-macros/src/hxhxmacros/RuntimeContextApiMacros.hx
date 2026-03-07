@@ -14,6 +14,7 @@ import haxe.macro.DisplayMode;
 import haxe.macro.Expr.ImportExpr;
 import haxe.macro.Expr.ImportMode;
 import haxe.macro.Expr.TypeDefinition;
+import haxe.macro.Expr.TypePath;
 import haxe.macro.PositionTools;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
@@ -458,6 +459,47 @@ class RuntimeContextApiMacros {
 		Context.defineType(typeDef, "runtime/generated-defined.txt");
 		Compiler.define("HXHX_RUNTIME_DEFINE_TYPE", "generated.runtime.RuntimeMacroDefined");
 		return "defineType=generated.runtime.RuntimeMacroDefined";
+	}
+
+	public static function probeDefineModule():String {
+		final pos = Context.currentPos();
+		final primary:TypeDefinition = {
+			pack: ["generated", "runtime"],
+			name: "RuntimeMacroModule",
+			pos: pos,
+			meta: [],
+			params: [],
+			isExtern: false,
+			fields: [],
+			kind: TDClass(null, [], false, false, false)
+		};
+		final helper:TypeDefinition = {
+			pack: ["generated", "runtime"],
+			name: "RuntimeMacroHelper",
+			pos: pos,
+			meta: [],
+			params: [],
+			isExtern: false,
+			fields: [],
+			kind: TDClass(null, [], false, false, false)
+		};
+		final imports:Array<ImportExpr> = [
+			{
+				path: [{name: "haxe", pos: pos}, {name: "Template", pos: pos}],
+				mode: IAsName("Tpl")
+			}
+		];
+		final usings:Array<TypePath> = [
+			{
+				pack: [],
+				name: "StringTools",
+				params: [],
+				sub: null
+			}
+		];
+		Context.defineModule("generated.runtime.RuntimeMacroModule", [primary, helper], imports, usings);
+		Compiler.define("HXHX_RUNTIME_DEFINE_MODULE", "generated.runtime.RuntimeMacroModule");
+		return "defineModule=generated.runtime.RuntimeMacroModule";
 	}
 
 	public static function probeResources():String {
