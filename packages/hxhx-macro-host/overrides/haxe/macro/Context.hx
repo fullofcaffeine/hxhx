@@ -460,10 +460,16 @@ class Context {
 	}
 
 	public static function filterMessages(predicate:Message->Bool):Void {
-		// Bring-up rung: message filtering is currently a no-op at runtime.
-		// Keep argument "used" so OCaml warning-as-error builds don't fail.
 		if (predicate == null)
 			return;
+		HostContext.filterMessages(function(snapshot:{kind:String, msg:String, pos:Position}):Bool {
+			final message:Message = switch (snapshot.kind) {
+				case "warning": Warning(snapshot.msg, snapshot.pos);
+				case _:
+					Info(snapshot.msg, snapshot.pos);
+			};
+			return predicate(message);
+		});
 	}
 
 	public static function getResources():Map<String, haxe.io.Bytes> {

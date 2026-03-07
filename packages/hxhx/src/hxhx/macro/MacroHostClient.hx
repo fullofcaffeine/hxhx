@@ -673,6 +673,37 @@ private class MacroClient {
 						parts.push(MacroProtocol.encodeLen("ma" + i, Std.string(snapshot.pos.max)));
 					}
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
+				case "context.replaceMessages":
+					final payload = MacroProtocol.kvGet(tail, "p");
+					final parts = MacroProtocol.kvParse(payload == null ? "" : payload);
+					final count = Std.parseInt(parts.exists("c") ? parts.get("c") : "0");
+					final next = new Array<{
+						kind:String,
+						msg:String,
+						pos:{
+							file:String,
+							min:Int,
+							max:Int
+						}
+					}>();
+					if (count != null && count > 0) {
+						for (i in 0...count) {
+							if (!parts.exists("k" + i) || !parts.exists("m" + i))
+								continue;
+							final min = Std.parseInt(parts.exists("mi" + i) ? parts.get("mi" + i) : "0");
+							final max = Std.parseInt(parts.exists("ma" + i) ? parts.get("ma" + i) : "0");
+							next.push({
+								kind: parts.get("k" + i),
+								msg: parts.get("m" + i),
+								pos: {
+									file: parts.exists("f" + i) && parts.get("f" + i).length > 0 ? parts.get("f" + i) : "<macro>",
+									min: min == null || min < 0 ? 0 : min,
+									max: max == null || max < 0 ? 0 : max}
+							});
+						}
+					}
+					MacroState.replaceMessages(next);
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case _:
 					replyErr(id, "unknown method: " + method);
 			}

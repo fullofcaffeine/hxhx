@@ -253,6 +253,28 @@ class Context {
 		return out;
 	}
 
+	public static function filterMessages(predicate:{kind:String, msg:String, pos:Position}->Bool):Void {
+		if (predicate == null)
+			return;
+		final snapshots = getMessages();
+		final kept = new Array<{kind:String, msg:String, pos:Position}>();
+		for (snapshot in snapshots)
+			if (predicate(snapshot))
+				kept.push(snapshot);
+		final parts = new Array<String>();
+		parts.push(Protocol.encodeLen("c", Std.string(kept.length)));
+		for (i in 0...kept.length) {
+			final snapshot = kept[i];
+			parts.push(Protocol.encodeLen("k" + i, snapshot.kind));
+			parts.push(Protocol.encodeLen("m" + i, snapshot.msg));
+			parts.push(Protocol.encodeLen("f" + i, snapshot.pos == null
+				|| snapshot.pos.file == null ? DEFAULT_MACRO_FILE : snapshot.pos.file));
+			parts.push(Protocol.encodeLen("mi" + i, Std.string(snapshot.pos == null ? 0 : (snapshot.pos.min < 0 ? 0 : snapshot.pos.min))));
+			parts.push(Protocol.encodeLen("ma" + i, Std.string(snapshot.pos == null ? 0 : (snapshot.pos.max < 0 ? 0 : snapshot.pos.max))));
+		}
+		HostToCompilerRpc.call("context.replaceMessages", Protocol.encodeLen("p", parts.join(" ")));
+	}
+
 	public static function getType(name:String):Type {
 		if (name == null || name.length == 0)
 			throw "runtime macro getType: missing name";

@@ -509,6 +509,28 @@ class MacroState {
 		];
 	}
 
+	public static function replaceMessages(nextMessages:Array<MacroMessageSnapshot>):Void {
+		messages.resize(0);
+		if (nextMessages == null || nextMessages.length == 0)
+			return;
+		for (message in nextMessages) {
+			if (message == null || message.kind == null || message.msg == null || message.pos == null)
+				continue;
+			final trimmedKind = StringTools.trim(message.kind);
+			if (trimmedKind.length == 0 || message.msg.length == 0)
+				continue;
+			messages.push({
+				kind: trimmedKind,
+				msg: message.msg,
+				pos: {
+					file: message.pos.file == null || message.pos.file.length == 0 ? "<macro>" : message.pos.file,
+					min: message.pos.min < 0 ? 0 : message.pos.min,
+					max: message.pos.max < 0 ? 0 : message.pos.max
+				}
+			});
+		}
+	}
+
 	public static function getLocalModule():String {
 		if (explicitLocalContext != null && explicitLocalContext.modulePath != null && explicitLocalContext.modulePath.length > 0)
 			return explicitLocalContext.modulePath;

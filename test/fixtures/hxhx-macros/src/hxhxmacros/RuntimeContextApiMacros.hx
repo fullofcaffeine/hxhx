@@ -462,7 +462,25 @@ class RuntimeContextApiMacros {
 		if (summary.indexOf("info:runtime-info@") < 0)
 			Context.fatalError("runtime macro message probe: missing info in " + summary, pos);
 
-		Compiler.define("HXHX_RUNTIME_MESSAGES", summary);
-		return summary;
+		Context.filterMessages(function(message:Message):Bool {
+			return switch (message) {
+				case Warning(_, _): true;
+				case Info(_, _): false;
+			};
+		});
+
+		final filtered = Context.getMessages();
+		if (filtered == null || filtered.length != 1)
+			Context.fatalError("runtime macro message probe: expected one filtered warning", pos);
+		switch (filtered[0]) {
+			case Warning(msg, _):
+				if (msg != "runtime-warning")
+					Context.fatalError("runtime macro message probe: wrong filtered warning", pos);
+			case _:
+				Context.fatalError("runtime macro message probe: info survived filter", pos);
+		}
+
+		Compiler.define("HXHX_RUNTIME_MESSAGES", summary + ";filtered=warning");
+		return summary + ";filtered=warning";
 	}
 }
