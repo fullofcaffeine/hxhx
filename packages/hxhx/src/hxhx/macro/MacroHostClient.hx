@@ -586,6 +586,21 @@ private class MacroClient {
 							classPaths.push(cp);
 					final resolved = hxhx.Stage1Compiler.Stage1Resolver.resolveModule(classPaths, name, Sys.getCwd());
 					replyOk(id, MacroProtocol.encodeLen("v", resolved == null ? "" : "1"));
+				case "context.getClassPath":
+					final classPaths = gatherMacroContextClassPaths();
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("c", Std.string(classPaths.length)));
+					for (i in 0...classPaths.length)
+						parts.push(MacroProtocol.encodeLen("p" + i, classPaths[i]));
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
+				case "context.resolvePath":
+					final file = MacroProtocol.kvGet(tail, "f");
+					if (file == null || file.length == 0) {
+						replyErr(id, method + ": missing file");
+						return;
+					}
+					final resolved = resolveMacroContextPath(file);
+					replyOk(id, MacroProtocol.encodeLen("v", resolved == null ? "" : resolved));
 				case "context.getBuildFields":
 					// Stage4 bring-up: expose the compiler-side build-field snapshot for the current
 					// `@:build(...)` expansion context.
@@ -620,6 +635,40 @@ private class MacroClient {
 
 	static inline function optionalText(value:Null<String>):String {
 		return value == null ? "" : value;
+	}
+
+	static function gatherMacroContextClassPaths():Array<String> {
+		final out = MacroState.listClassPaths();
+		final cfg = MacroState.getCompilerConfigurationSnapshot();
+		for (cp in cfg.stdPath)
+			if (out.indexOf(cp) == -1)
+				out.push(cp);
+		return out;
+	}
+
+	static function resolveMacroContextPath(file:String):Null<String> {
+		final trimmed = StringTools.trim(file == null ? "" : file);
+		if (trimmed.length == 0)
+			return null;
+
+		final normalized = StringTools.replace(trimmed, "\\", "/");
+		try {
+			if (haxe.io.Path.isAbsolute(normalized) && sys.FileSystem.exists(normalized) && !sys.FileSystem.isDirectory(normalized))
+				return sys.FileSystem.fullPath(normalized);
+		} catch (_:String) {}
+
+		final cwd = Sys.getCwd();
+		for (cp in gatherMacroContextClassPaths()) {
+			final cp0 = StringTools.replace(cp == null ? "" : cp, "\\", "/");
+			final base = haxe.io.Path.isAbsolute(cp0) ? cp0 : haxe.io.Path.normalize(haxe.io.Path.join([cwd, cp0]));
+			final candidate = haxe.io.Path.normalize(haxe.io.Path.join([base, normalized]));
+			try {
+				if (sys.FileSystem.exists(candidate) && !sys.FileSystem.isDirectory(candidate))
+					return sys.FileSystem.fullPath(candidate);
+			} catch (_:String) {}
+		}
+
+		return null;
 	}
 
 	inline function replyErr(id:Int, msg:String):Void {

@@ -369,6 +369,14 @@ class Context {
 		return HostContext.getModule(name);
 	}
 
+	public static function resolvePath(file:String):String {
+		return HostContext.resolvePath(file);
+	}
+
+	public static function getClassPath():Array<String> {
+		return HostContext.getClassPath();
+	}
+
 	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {
 		return HostContext.getPosInfos(p);
 	}

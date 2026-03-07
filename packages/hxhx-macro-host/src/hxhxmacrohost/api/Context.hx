@@ -23,6 +23,8 @@ import hxhxmacrohost.Protocol;
 	  model for runtime macro code that needs basic type plumbing without upstream eval.
 	- `typeExpr(expr)` exposes a synthetic typed-expression rung for literal, parenthesized,
 	  `check-type`, and simple `+` expressions so runtime probes can exercise `TypedExprTools`.
+	- `getClassPath()` / `resolvePath(path)` expose compiler-owned classpath lookup so runtime macro
+	  code can find target resources without reimplementing file search inside the host.
 	- `getLocalModule()`, `getLocalMethod()`, `getLocalType()`, and `getExpectedType()` expose a
 	  compiler-seeded local-context snapshot through the same builtin-only type model.
 	- `getModule(name)` exposes an existence-only module lookup rung backed by compiler-side classpath
@@ -184,6 +186,27 @@ class Context {
 
 	public static function toComplexType(t:Type):Null<ComplexType> {
 		return RuntimeMacroTypes.toComplexType(t);
+	}
+
+	public static function getClassPath():Array<String> {
+		final payload = HostToCompilerRpc.call("context.getClassPath", "");
+		final out = new Array<String>();
+		if (payload == null || payload.length == 0)
+			return out;
+		final parts = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final key = "p" + i;
+			if (parts.exists(key))
+				out.push(parts.get(key));
+		}
+		return out;
+	}
+
+	public static function resolvePath(file:String):String {
+		if (file == null || file.length == 0)
+			return "";
+		return HostToCompilerRpc.call("context.resolvePath", Protocol.encodeLen("f", file));
 	}
 
 	public static function getExpectedType():Null<Type> {

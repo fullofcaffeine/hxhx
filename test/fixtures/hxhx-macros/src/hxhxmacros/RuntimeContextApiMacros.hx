@@ -16,6 +16,7 @@ import haxe.macro.TypeTools;
 	  import `haxe.macro.Compiler` / `haxe.macro.Context` can observe a sane runtime API surface.
 	- This probe focuses on the current bring-up slice only:
 	  - `Compiler.getConfiguration()`
+	  - `Context.getClassPath()` / `Context.resolvePath()`
 	  - `Context.currentPos()`
 	  - `Context.getDisplayMode()`
 	  - `Context.getPosInfos()` / `Context.makePosition()`
@@ -40,6 +41,12 @@ class RuntimeContextApiMacros {
 			Context.fatalError("runtime macro API probe: missing compiler args", Context.currentPos());
 		if (config.stdPath == null || config.stdPath.length == 0)
 			Context.fatalError("runtime macro API probe: missing std path", Context.currentPos());
+		final classPath = Context.getClassPath();
+		if (classPath == null || classPath.length == 0)
+			Context.fatalError("runtime macro API probe: missing classpath snapshot", Context.currentPos());
+		final resolvedThisModule = Context.resolvePath("hxhxmacros/RuntimeContextApiMacros.hx");
+		if (resolvedThisModule == null || resolvedThisModule.length == 0)
+			Context.fatalError("runtime macro API probe: failed to resolve runtime fixture path", Context.currentPos());
 
 		final supportsUnicode = config.platformConfig.supportsUnicode;
 		final pos = Context.currentPos();
@@ -65,9 +72,11 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_CONTEXT_ARGS", Std.string(config.args.length));
 		Compiler.define("HXHX_RUNTIME_CONTEXT_FILE", info.file);
 		Compiler.define("HXHX_RUNTIME_CONTEXT_MODE", "None");
+		Compiler.define("HXHX_RUNTIME_CONTEXT_CP", Std.string(classPath.length));
+		Compiler.define("HXHX_RUNTIME_CONTEXT_RESOLVED", resolvedThisModule);
 
 		return "cfg.version=" + config.version + ";args=" + config.args.length + ";std=" + config.stdPath.length + ";unicode="
-			+ (supportsUnicode ? "1" : "0") + ";file=" + info.file + ";display=None";
+			+ (supportsUnicode ? "1" : "0") + ";cp=" + classPath.length + ";file=" + info.file + ";display=None";
 	}
 
 	public static function probeBuiltinTypePlumbing():String {

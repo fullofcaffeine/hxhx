@@ -79,12 +79,16 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("probe args", output, "args=4");
 			assertContains("probe std", output, "std=1");
 			assertContains("probe unicode", output, "unicode=1");
+			assertContains("probe classpath", output, "cp=");
 			assertContains("probe display", output, "display=None");
 			assertContains("probe file", output, "file=test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeContextApiMacros.hx");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_ARGS") == "4", "expected runtime args define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_FILE") == "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeContextApiMacros.hx",
 				"expected runtime file define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_MODE") == "None", "expected runtime display mode define");
+			assertTrue(Std.parseInt(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_CP")) > 0, "expected runtime classpath define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_RESOLVED").indexOf("RuntimeContextApiMacros.hx") >= 0,
+				"expected resolved fixture path define");
 
 			final typeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()");
 			assertContains("type probe getType", typeOutput, "getType=String");
