@@ -588,6 +588,25 @@ class Context {
 		return DisplayMode.None;
 	}
 
+	/**
+		Return whether the current display position is within `pos`.
+
+		Why
+		- Some macro helpers probe `Context.containsDisplayPosition(...)` before attempting display-only
+		  behavior.
+		- The external-host bring-up currently has no real display requests or display cursor state.
+
+		What
+		- Always returns `false` in runtime mode.
+
+		Gotchas
+		- This is an honest "no display session is active" rung, not partial display parity.
+	**/
+	public static function containsDisplayPosition(pos:Position):Bool {
+		if (pos != null) {}
+		return false;
+	}
+
 	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {
 		if (p == null)
 			return currentPos();

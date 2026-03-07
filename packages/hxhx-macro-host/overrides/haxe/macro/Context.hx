@@ -336,6 +336,10 @@ class Context {
 		return HostContext.getDisplayMode();
 	}
 
+	public static function containsDisplayPosition(pos:Position):Bool {
+		return HostContext.containsDisplayPosition(pos);
+	}
+
 	public static function currentPos():Position {
 		return HostContext.currentPos();
 	}

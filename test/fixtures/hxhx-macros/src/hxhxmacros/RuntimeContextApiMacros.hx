@@ -79,6 +79,8 @@ class RuntimeContextApiMacros {
 			case _:
 				Context.fatalError("runtime macro API probe: expected DisplayMode.None in external-host bring-up", pos);
 		}
+		if (Context.containsDisplayPosition(pos))
+			Context.fatalError("runtime macro API probe: expected containsDisplayPosition(currentPos) to be false without display state", pos);
 
 		Compiler.define("HXHX_RUNTIME_CONTEXT_ARGS", Std.string(config.args.length));
 		Compiler.define("HXHX_RUNTIME_CONTEXT_FILE", info.file);
