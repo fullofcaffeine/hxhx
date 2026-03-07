@@ -34,6 +34,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 ## Architecture and policy
 
 - Stage model and backend layering: `docs/02-user-guide/HXHX_BACKEND_LAYERING.md`
+- `.cross.hx` vs `_std` beginner guide: `docs/02-user-guide/CROSS_AND_STAGED_STDLIB_GUIDE.md`
+- Reflaxe family cross-override audit: `docs/00-project/REFLAXE_FAMILY_CROSS_OVERRIDE_AUDIT.md`
 - Stage0 policy and strict mode behavior: `docs/00-project/STAGE0_POLICY.md`
 - Dynamic/untyped boundary policy: `docs/00-project/DYNAMIC_UNTYPED_POLICY.md`
 - Provenance and licensing policy: `docs/00-project/PROVENANCE_POLICY.md`
