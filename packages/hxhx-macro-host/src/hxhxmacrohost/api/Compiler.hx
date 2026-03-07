@@ -298,6 +298,28 @@ class Compiler {
 	}
 
 	/**
+		Return the registered non-build type-level metadata that applies to `typePath`.
+	**/
+	public static function listAppliedTypeMetadata(typePath:String):Array<String> {
+		final out = new Array<String>();
+		if (typePath == null || typePath.length == 0)
+			return out;
+		final payload = HostToCompilerRpc.call("compiler.listAppliedTypeMetadata", Protocol.encodeLen("p", typePath));
+		if (payload == null || payload.length == 0)
+			return out;
+		final parts = Protocol.kvParse(payload);
+		final count = Std.parseInt(parts.exists("c") ? parts.get("c") : "0");
+		if (count == null || count <= 0)
+			return out;
+		for (i in 0...count) {
+			final key = "m" + i;
+			if (parts.exists(key))
+				out.push(parts.get(key));
+		}
+		return out;
+	}
+
+	/**
 		Force-include a module in the compilation universe (bring-up rung).
 
 		Why

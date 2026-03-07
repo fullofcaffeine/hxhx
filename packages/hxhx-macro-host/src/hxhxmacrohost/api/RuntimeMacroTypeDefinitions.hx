@@ -148,6 +148,16 @@ class RuntimeMacroTypeDefinitions {
 		return path == null ? null : "using " + path + ";";
 	}
 
+	static function renderMetadataLines(typePath:String):Array<String> {
+		final out = new Array<String>();
+		for (entry in HostCompiler.listAppliedTypeMetadata(typePath)) {
+			final trimmed = entry == null ? "" : StringTools.trim(entry);
+			if (trimmed.length > 0)
+				out.push(trimmed);
+		}
+		return out;
+	}
+
 	static function tryConstToHaxe(e:Null<Expr>):Null<String> {
 		if (e == null)
 			return null;
@@ -167,6 +177,14 @@ class RuntimeMacroTypeDefinitions {
 			case _:
 				null;
 		};
+	}
+
+	static function renderSingleTypeSource(typePath:String, t:TypeDefinition):Null<String> {
+		final body = renderTypeBody(t);
+		if (body == null)
+			return null;
+		final metadata = renderMetadataLines(typePath);
+		return metadata.length == 0 ? body : metadata.join("\n") + "\n" + body;
 	}
 
 	static function tryExtractTraceString(e:Null<Expr>):Null<String> {
@@ -325,7 +343,7 @@ class RuntimeMacroTypeDefinitions {
 		final header = new Array<String>();
 		if (pack.length > 0)
 			header.push("package " + pack.join(".") + ";");
-		final body = renderTypeBody(t);
+		final body = renderSingleTypeSource(modulePath, t);
 		if (body == null)
 			return null;
 		header.push(body);
@@ -357,7 +375,8 @@ class RuntimeMacroTypeDefinitions {
 				return null;
 			if (typeDef.name == moduleName)
 				hasPrimary = true;
-			final body = renderTypeBody(typeDef);
+			final typePath = typeDef.name == moduleName ? modulePath : modulePath + "." + typeDef.name;
+			final body = renderSingleTypeSource(typePath, typeDef);
 			if (body == null)
 				return null;
 			typeBodies.push(body);

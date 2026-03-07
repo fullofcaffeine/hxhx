@@ -122,6 +122,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeModuleState", "@:runtimeEnumMeta", false, true, false);
 		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeModuleData", "@:runtimeTypedefMeta", false, true, false);
 		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeModuleId", "@:runtimeAbstractMeta", false, true, false);
+		MacroState.registerGlobalMetadata("generated.runtime.RuntimeMacroDefined", "@:generatedMeta", false, true, false);
+		MacroState.registerGlobalMetadata("generated.runtime.RuntimeMacroDefined", "@:nullSafety(Strict)", false, true, false);
+		MacroState.registerGlobalMetadata("generated.runtime.RuntimeMacroModule", "@:moduleMeta", false, true, false);
+		MacroState.registerGlobalMetadata("generated.runtime.RuntimeMacroModule.RuntimeMacroHelper", "@:helperMeta", false, true, false);
 
 		var failure = "";
 		try {
@@ -300,6 +304,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final generatedSource = MacroState.getGeneratedHxModuleSource("generated.runtime.RuntimeMacroDefined");
 			assertTrue(generatedSource != null, "expected generated module source");
 			assertContains("generated source package", generatedSource, "package generated.runtime;");
+			assertContains("generated source generated meta", generatedSource, "@:generatedMeta");
+			assertContains("generated source nullSafety", generatedSource, "@:nullSafety(Strict)");
 			assertContains("generated source class", generatedSource, "class RuntimeMacroDefined");
 			final defineTypeDeps = MacroState.listModuleDependencies();
 			assertTrue(defineTypeDeps[defineTypeDeps.length - 1].modulePath == "generated.runtime.RuntimeMacroDefined",
@@ -316,7 +322,9 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("generated module package", generatedModuleSource, "package generated.runtime;");
 			assertContains("generated module import", generatedModuleSource, "import haxe.Template as Tpl;");
 			assertContains("generated module using", generatedModuleSource, "using StringTools;");
+			assertContains("generated module metadata", generatedModuleSource, "@:moduleMeta");
 			assertContains("generated module primary type", generatedModuleSource, "class RuntimeMacroModule");
+			assertContains("generated module helper metadata", generatedModuleSource, "@:helperMeta");
 			assertContains("generated module helper type", generatedModuleSource, "class RuntimeMacroHelper");
 
 			final resourceOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeResources()");

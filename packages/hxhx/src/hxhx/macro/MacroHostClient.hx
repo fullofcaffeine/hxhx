@@ -643,6 +643,14 @@ private class MacroClient {
 					final source = MacroProtocol.kvGet(tail, "s");
 					MacroState.registerCustomMetadata(metadata, doc, source);
 					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "compiler.listAppliedTypeMetadata":
+					final typePath = MacroProtocol.kvGet(tail, "p");
+					final metadata = MacroState.listAppliedTypeMetadata(typePath);
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
+					for (i in 0...metadata.length)
+						parts.push(MacroProtocol.encodeLen("m" + i, metadata[i]));
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "compiler.emitHxModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					final source = MacroProtocol.kvGet(tail, "s");
