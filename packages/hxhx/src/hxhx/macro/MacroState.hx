@@ -17,6 +17,13 @@ typedef MacroCompilerConfigurationSnapshot = {
 	final supportsUnicode:Bool;
 }
 
+typedef MacroLocalContextSnapshot = {
+	final modulePath:String;
+	@:optional final methodName:Null<String>;
+	@:optional final localTypeText:Null<String>;
+	@:optional final expectedTypeText:Null<String>;
+}
+
 /**
 	Compiler-side macro state (Stage 4 bring-up).
 
@@ -65,6 +72,7 @@ class MacroState {
 	static var compilerTargetName:String = "ocaml";
 	static var supportsUnicode:Bool = true;
 	static var explicitCurrentPos:Null<MacroPositionInfo> = null;
+	static var explicitLocalContext:Null<MacroLocalContextSnapshot> = null;
 
 	static function sortStringsInPlace(arr:Array<String>):Void {
 		// Avoid `Array.sort(fn)` during bring-up.
@@ -157,6 +165,7 @@ class MacroState {
 		compilerTargetName = "ocaml";
 		supportsUnicode = true;
 		explicitCurrentPos = null;
+		explicitLocalContext = null;
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -319,6 +328,46 @@ class MacroState {
 		explicitCurrentPos = null;
 	}
 
+	/**
+		Seed local macro-context query results for the active compilation.
+
+		Why
+		- Runtime macro code may query `Context.getLocalModule()`, `getLocalMethod()`,
+		  `getLocalType()`, or `getExpectedType()` even though the external-host runtime does not
+		  have direct access to upstream's live typer structures.
+		- A compiler-owned snapshot keeps this surface deterministic without over-claiming general
+		  typed reflection support.
+
+		What
+		- Stores a conservative local context snapshot using Haxe type text for the type slots.
+		- Type text is intentionally narrow and currently expected to match the runtime builtin type
+		  helper subset (for example `String`, `Bool`, `Null<String>`, `Dynamic`).
+	**/
+	public static function setLocalContext(context:MacroLocalContextSnapshot):Void {
+		if (context == null) {
+			explicitLocalContext = null;
+			return;
+		}
+		final trimmedModule = context.modulePath == null ? "" : StringTools.trim(context.modulePath);
+		explicitLocalContext = {
+			modulePath: trimmedModule,
+			methodName: normalizeOptionalText(context.methodName),
+			localTypeText: normalizeOptionalText(context.localTypeText),
+			expectedTypeText: normalizeOptionalText(context.expectedTypeText)
+		};
+	}
+
+	public static function clearLocalContext():Void {
+		explicitLocalContext = null;
+	}
+
+	static function normalizeOptionalText(value:Null<String>):Null<String> {
+		if (value == null)
+			return null;
+		final trimmed = StringTools.trim(value);
+		return trimmed.length == 0 ? null : trimmed;
+	}
+
 	public static function getCurrentPos():MacroPositionInfo {
 		if (explicitCurrentPos != null)
 			return explicitCurrentPos;
@@ -335,6 +384,24 @@ class MacroState {
 			};
 		}
 		return {file: "<macro>", min: 0, max: 0};
+	}
+
+	public static function getLocalModule():String {
+		if (explicitLocalContext != null && explicitLocalContext.modulePath != null && explicitLocalContext.modulePath.length > 0)
+			return explicitLocalContext.modulePath;
+		return definedValue("HXHX_BUILD_MODULE");
+	}
+
+	public static function getLocalMethod():Null<String> {
+		return explicitLocalContext == null ? null : explicitLocalContext.methodName;
+	}
+
+	public static function getLocalTypeText():Null<String> {
+		return explicitLocalContext == null ? null : explicitLocalContext.localTypeText;
+	}
+
+	public static function getExpectedTypeText():Null<String> {
+		return explicitLocalContext == null ? null : explicitLocalContext.expectedTypeText;
 	}
 
 	/**

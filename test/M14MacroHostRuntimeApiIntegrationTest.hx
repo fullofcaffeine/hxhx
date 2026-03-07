@@ -31,7 +31,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 	static function buildMacroHostWithProbe():String {
 		final exprs = [
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
-			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()"
+			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
+			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -57,6 +58,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			file: Path.normalize("test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeContextApiMacros.hx"),
 			min: 12,
 			max: 34
+		});
+		MacroState.setLocalContext({
+			modulePath: "hxhxmacros.RuntimeContextApiMacros",
+			methodName: "probeLocalContextSnapshot",
+			localTypeText: "String",
+			expectedTypeText: "Bool"
 		});
 
 		var failure = "";
@@ -84,6 +91,16 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_BOOL") == "Bool", "expected runtime bool type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_NULL") == "Null<String>", "expected runtime null type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_LITERAL") == "Int", "expected runtime literal type define");
+
+			final localContextOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()");
+			assertContains("local context module", localContextOutput, "module=hxhxmacros.RuntimeContextApiMacros");
+			assertContains("local context method", localContextOutput, "method=probeLocalContextSnapshot");
+			assertContains("local context local type", localContextOutput, "localType=String");
+			assertContains("local context expected type", localContextOutput, "expectedType=Bool");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_MODULE") == "hxhxmacros.RuntimeContextApiMacros", "expected local module define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_METHOD") == "probeLocalContextSnapshot", "expected local method define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_TYPE") == "String", "expected local type define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_EXPECTED_TYPE") == "Bool", "expected expected type define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {
@@ -92,6 +109,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 
 		Sys.putEnv("HXHX_MACRO_HOST_EXE", originalHostExe);
 		MacroState.clearCurrentPos();
+		MacroState.clearLocalContext();
 
 		if (failure.length > 0)
 			fail(failure);

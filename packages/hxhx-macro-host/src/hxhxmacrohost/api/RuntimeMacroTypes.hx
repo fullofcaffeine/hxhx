@@ -65,6 +65,25 @@ class RuntimeMacroTypes {
 		}
 	}
 
+	/**
+		Parse a narrow Haxe type-text snapshot into the runtime type model.
+
+		Why
+		- Compiler-side snapshots for `Context.getLocalType()` and `getExpectedType()` are easiest to
+		  exchange over RPC as small Haxe type strings.
+		- Reusing the same builtin-only model keeps the runtime query surface honest.
+	**/
+	public static function parseTypeText(text:String):Null<Type> {
+		final trimmed = StringTools.trim(text == null ? "" : text);
+		if (trimmed.length == 0)
+			return null;
+		if (StringTools.startsWith(trimmed, "Null<") && StringTools.endsWith(trimmed, ">"))
+			return nullType(requireInnerType("Null", trimmed));
+		if (StringTools.startsWith(trimmed, "Dynamic<") && StringTools.endsWith(trimmed, ">"))
+			return TDynamic(requireInnerType("Dynamic", trimmed));
+		return getTypeByName(trimmed);
+	}
+
 	public static function resolveComplexType(t:ComplexType):Type {
 		return switch (t) {
 			case null:
@@ -197,6 +216,15 @@ class RuntimeMacroTypes {
 		}
 	}
 
+	public static function classRefOf(t:Type):Null<Ref<ClassType>> {
+		return switch (t) {
+			case TInst(c, _):
+				c;
+			case _:
+				null;
+		}
+	}
+
 	static function renderNamedType(pack:Array<String>, name:String, params:Array<Type>):String {
 		final fullName = fullPath(pack, name);
 		if (params == null || params.length == 0)
@@ -266,6 +294,15 @@ class RuntimeMacroTypes {
 			return "";
 		final parts = trimmed.split(".");
 		return parts[parts.length - 1];
+	}
+
+	static function requireInnerType(wrapper:String, text:String):Type {
+		final start = wrapper.length + 1;
+		final innerText = text.substr(start, text.length - start - 1);
+		final inner = parseTypeText(innerText);
+		if (inner == null)
+			throw "runtime macro type text: " + wrapper + " requires a non-empty inner type";
+		return inner;
 	}
 
 	static function fullPath(pack:Array<String>, name:String):String {

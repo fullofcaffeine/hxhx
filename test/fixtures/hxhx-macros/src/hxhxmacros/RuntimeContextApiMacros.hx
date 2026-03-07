@@ -19,6 +19,8 @@ import haxe.macro.TypeTools;
 	  - `Context.getDisplayMode()`
 	  - `Context.getPosInfos()` / `Context.makePosition()`
 	  - `PositionTools.getInfos()` / `PositionTools.make()`
+	  - compiler-seeded local-context queries (`getLocalModule`, `getLocalMethod`,
+		`getLocalType`, `getExpectedType`, `getLocalClass`)
 
 	What
 	- Validates the slice and returns a stable summary string for external-host integration tests.
@@ -96,5 +98,42 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_TYPE_LITERAL", literalIntText);
 
 		return "getType=String;resolveType=" + boolTypeString + ";nullType=" + nullStringText + ";typeof=Int";
+	}
+
+	public static function probeLocalContextSnapshot():String {
+		final pos = Context.currentPos();
+
+		final localModule = Context.getLocalModule();
+		if (localModule != "hxhxmacros.RuntimeContextApiMacros")
+			Context.fatalError("runtime macro local context probe: expected local module snapshot", pos);
+
+		final localMethod = Context.getLocalMethod();
+		if (localMethod != "probeLocalContextSnapshot")
+			Context.fatalError("runtime macro local context probe: expected local method snapshot", pos);
+
+		final localType = Context.getLocalType();
+		if (localType == null)
+			Context.fatalError("runtime macro local context probe: expected local type snapshot", pos);
+		final localTypeText = TypeTools.toString(localType);
+		if (localTypeText != "String")
+			Context.fatalError("runtime macro local context probe: expected local type String", pos);
+
+		final expectedType = Context.getExpectedType();
+		if (expectedType == null)
+			Context.fatalError("runtime macro local context probe: expected expected-type snapshot", pos);
+		final expectedTypeText = TypeTools.toString(expectedType);
+		if (expectedTypeText != "Bool")
+			Context.fatalError("runtime macro local context probe: expected expected type Bool", pos);
+
+		final localClass = Context.getLocalClass();
+		if (localClass == null || localClass.get().name != "String")
+			Context.fatalError("runtime macro local context probe: expected local class String", pos);
+
+		Compiler.define("HXHX_RUNTIME_LOCAL_MODULE", localModule);
+		Compiler.define("HXHX_RUNTIME_LOCAL_METHOD", localMethod);
+		Compiler.define("HXHX_RUNTIME_LOCAL_TYPE", localTypeText);
+		Compiler.define("HXHX_RUNTIME_EXPECTED_TYPE", expectedTypeText);
+
+		return "module=" + localModule + ";method=" + localMethod + ";localType=" + localTypeText + ";expectedType=" + expectedTypeText;
 	}
 }

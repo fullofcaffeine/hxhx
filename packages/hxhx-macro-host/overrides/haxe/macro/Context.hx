@@ -9,6 +9,7 @@ import haxe.macro.Type.TypedExpr;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import hxhxmacrohost.api.Context as HostContext;
+import hxhxmacrohost.api.RuntimeMacroTypes;
 import hxhxmacrohost.MacroError;
 #end
 
@@ -342,6 +343,26 @@ class Context {
 
 	public static function currentPos():Position {
 		return HostContext.currentPos();
+	}
+
+	public static function getExpectedType():Null<Type> {
+		return HostContext.getExpectedType();
+	}
+
+	public static function getLocalClass():Null<Type.Ref<Type.ClassType>> {
+		return RuntimeMacroTypes.classRefOf(HostContext.getLocalType());
+	}
+
+	public static function getLocalModule():String {
+		return HostContext.getLocalModule();
+	}
+
+	public static function getLocalType():Null<Type> {
+		return HostContext.getLocalType();
+	}
+
+	public static function getLocalMethod():Null<String> {
+		return HostContext.getLocalMethod();
 	}
 
 	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {

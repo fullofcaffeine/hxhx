@@ -21,6 +21,8 @@ import hxhxmacrohost.Protocol;
 	- `defined(name)` / `definedValue(name)` query the compiler’s define store (reverse RPC).
 	- `getType(name)`, `resolveType(t, pos)`, and `typeof(expr)` expose a tiny builtin-only type
 	  model for runtime macro code that needs basic type plumbing without upstream eval.
+	- `getLocalModule()`, `getLocalMethod()`, `getLocalType()`, and `getExpectedType()` expose a
+	  compiler-seeded local-context snapshot through the same builtin-only type model.
 
 	How
 	- Backed by the compiler define store for `defined*`.
@@ -167,6 +169,27 @@ class Context {
 		return RuntimeMacroTypes.toComplexType(t);
 	}
 
+	public static function getExpectedType():Null<Type> {
+		return parseOptionalTypeSnapshot("context.getExpectedType");
+	}
+
+	public static function getLocalModule():String {
+		final payload = HostToCompilerRpc.call("context.getLocalModule", "");
+		return payload == null ? "" : payload;
+	}
+
+	public static function getLocalType():Null<Type> {
+		return parseOptionalTypeSnapshot("context.getLocalType");
+	}
+
+	public static function getLocalMethod():Null<String> {
+		final payload = HostToCompilerRpc.call("context.getLocalMethod", "");
+		if (payload == null)
+			return null;
+		final trimmed = StringTools.trim(payload);
+		return trimmed.length == 0 ? null : trimmed;
+	}
+
 	/**
 		Return the compiler-provided current macro position.
 
@@ -218,6 +241,13 @@ class Context {
 			file: inf == null || inf.file == null || inf.file.length == 0 ? DEFAULT_MACRO_FILE : inf.file,
 			min: inf == null || inf.min < 0 ? 0 : inf.min,
 			max: inf == null || inf.max < 0 ? 0 : inf.max};
+	}
+
+	static function parseOptionalTypeSnapshot(method:String):Null<Type> {
+		final payload = HostToCompilerRpc.call(method, "");
+		if (payload == null)
+			return null;
+		return RuntimeMacroTypes.parseTypeText(payload);
 	}
 
 	/**

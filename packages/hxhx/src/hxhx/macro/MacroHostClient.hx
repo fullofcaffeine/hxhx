@@ -565,6 +565,14 @@ private class MacroClient {
 					final payload = MacroProtocol.encodeLen("f", pos.file) + " " + MacroProtocol.encodeLen("mi", Std.string(pos.min)) + " "
 						+ MacroProtocol.encodeLen("ma", Std.string(pos.max));
 					replyOk(id, MacroProtocol.encodeLen("v", payload));
+				case "context.getExpectedType":
+					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getExpectedTypeText())));
+				case "context.getLocalModule":
+					replyOk(id, MacroProtocol.encodeLen("v", MacroState.getLocalModule()));
+				case "context.getLocalType":
+					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalTypeText())));
+				case "context.getLocalMethod":
+					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalMethod())));
 				case "context.getBuildFields":
 					// Stage4 bring-up: expose the compiler-side build-field snapshot for the current
 					// `@:build(...)` expansion context.
@@ -595,6 +603,10 @@ private class MacroClient {
 	inline function replyOk(id:Int, tail:String):Void {
 		proc.stdin.writeString("res " + id + " ok " + tail + "\n", null);
 		proc.stdin.flush();
+	}
+
+	static inline function optionalText(value:Null<String>):String {
+		return value == null ? "" : value;
 	}
 
 	inline function replyErr(id:Int, msg:String):Void {
