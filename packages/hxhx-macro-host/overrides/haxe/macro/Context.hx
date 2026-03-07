@@ -353,10 +353,19 @@ class Context {
 	}
 
 	public static function getType(name:String):Type {
-		// Bring-up rung: we don't have real type reflection at runtime yet.
-		// Return a conservative placeholder that keeps library initializers alive while we evolve the ABI.
-		if (name != null && name.length > 0) {}
-		return TDynamic(null);
+		return HostContext.getType(name);
+	}
+
+	public static function typeof(e:Expr):Type {
+		return HostContext.typeof(e);
+	}
+
+	public static function resolveType(t:ComplexType, p:Position):Type {
+		return HostContext.resolveType(t, p);
+	}
+
+	public static function toComplexType(t:Type):Null<ComplexType> {
+		return HostContext.toComplexType(t);
 	}
 
 	public static function onGenerate(callback:Array<Dynamic>->Void, persistent:Bool = true):Void {

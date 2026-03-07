@@ -15,11 +15,13 @@ package hxhxmacrohost;
 
 	What
 	- `defines`: a name → string map that models compiler defines at macro-time.
-	- `builtinTypes`: a tiny allowlist used by `Context.getType` during bring-up.
+	- hook registries and build-field snapshots used by the Stage4 runtime API bring-up.
 
 	How
 	- Initialized once at macro host startup by `hxhxmacrohost.Main`.
 	- Accessed by the OCaml-native “macro API” shims under `hxhxmacrohost.api.*`.
+	- Builtin type modeling now lives in `hxhxmacrohost.api.RuntimeMacroTypes` so the runtime
+	  type subset stays separate from hook/define state.
 
 	Portability note
 	- This is macro-host-internal code (Haxe compiled to OCaml). It intentionally does not rely

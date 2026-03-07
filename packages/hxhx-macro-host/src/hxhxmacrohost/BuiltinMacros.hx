@@ -1,7 +1,9 @@
 package hxhxmacrohost;
 
+import haxe.macro.TypeTools;
 import hxhxmacrohost.api.Compiler;
 import hxhxmacrohost.api.Context;
+import hxhxmacrohost.api.RuntimeMacroTypes;
 
 /**
 	Builtin macro entrypoints compiled into the Stage 4 macro host.
@@ -28,7 +30,7 @@ class BuiltinMacros {
 	public static function smoke():String {
 		final t = Context.getType("String");
 		Compiler.define("HXHX_SMOKE", "1");
-		return "smoke:type=" + t + ";define=" + (Context.defined("HXHX_SMOKE") ? "yes" : "no");
+		return "smoke:type=" + RuntimeMacroTypes.describe(t) + ";define=" + (Context.defined("HXHX_SMOKE") ? "yes" : "no");
 	}
 
 	/**
@@ -45,7 +47,7 @@ class BuiltinMacros {
 	**/
 	public static function genModule():String {
 		final t = Context.getType("String");
-		final src = "let generated : string = \"" + t + "\"";
+		final src = "let generated : string = \"" + TypeTools.toString(t) + "\"";
 		Compiler.emitOcamlModule("HxHxGen", src);
 		Compiler.define("HXHX_GEN", "1");
 		return "genModule=ok";

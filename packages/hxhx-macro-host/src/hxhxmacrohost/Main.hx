@@ -2,6 +2,7 @@ package hxhxmacrohost;
 
 import hxhxmacrohost.api.Compiler;
 import hxhxmacrohost.api.Context;
+import hxhxmacrohost.api.RuntimeMacroTypes;
 
 /**
 	`hxhx-macro-host` (Stage 4) — a minimal out-of-process macro host.
@@ -179,15 +180,15 @@ class Main {
 					MacroRuntime.runHook(kind, hid);
 					replyOk(id, Protocol.encodeLen("v", "ok"));
 				case "context.getType":
-					// Stage 4 bring-up rung: a minimal `Context.getType`-shaped call.
-					// Upstream returns a typed representation; for bring-up we return a deterministic descriptor.
+					// Stage 4 bring-up rung: keep the legacy string probe stable for smoke tests while
+					// the runtime API itself now exposes a real builtin-only `Type` model.
 					final parsed = parseKV(tail);
 					final name = parsed.exists("n") ? parsed.get("n") : "";
 					if (name.length == 0) {
 						replyErr(id, method + ": missing name");
 						return;
 					}
-					replyOk(id, Protocol.encodeLen("v", Context.getType(name)));
+					replyOk(id, Protocol.encodeLen("v", RuntimeMacroTypes.describe(Context.getType(name))));
 				case _:
 					replyErr(id, "unknown method: " + method);
 			}

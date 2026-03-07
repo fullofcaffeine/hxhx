@@ -4,6 +4,8 @@ import haxe.macro.Compiler;
 import haxe.macro.Context;
 import haxe.macro.DisplayMode;
 import haxe.macro.PositionTools;
+import haxe.macro.Type;
+import haxe.macro.TypeTools;
 
 /**
 	Runtime macro probe for the external-host `haxe.macro.*` override slice.
@@ -62,5 +64,37 @@ class RuntimeContextApiMacros {
 
 		return "cfg.version=" + config.version + ";args=" + config.args.length + ";std=" + config.stdPath.length + ";unicode="
 			+ (supportsUnicode ? "1" : "0") + ";file=" + info.file + ";display=None";
+	}
+
+	public static function probeBuiltinTypePlumbing():String {
+		final pos = Context.currentPos();
+
+		final stringType = Context.getType("String");
+		if (TypeTools.toString(stringType) != "String")
+			Context.fatalError("runtime macro type probe: expected getType(String) -> String", pos);
+
+		final boolType = Context.resolveType(macro :Bool, pos);
+		final boolTypeString = TypeTools.toString(boolType);
+		if (boolTypeString != "Bool")
+			Context.fatalError("runtime macro type probe: expected Bool resolveType result", pos);
+
+		final nullStringType = Context.resolveType(macro :Null<String>, pos);
+		final nullStringComplex = TypeTools.toComplexType(nullStringType);
+		if (nullStringComplex == null)
+			Context.fatalError("runtime macro type probe: expected Null<String> complex type to exist", pos);
+		final nullStringText = TypeTools.toString(nullStringType);
+		if (nullStringText != "Null<String>")
+			Context.fatalError("runtime macro type probe: expected Null<String> complex type", pos);
+
+		final literalIntType:Type = Context.typeof(macro 1 + 2);
+		final literalIntText = TypeTools.toString(literalIntType);
+		if (literalIntText != "Int")
+			Context.fatalError("runtime macro type probe: expected typeof integer add -> Int but got " + literalIntText, pos);
+
+		Compiler.define("HXHX_RUNTIME_TYPE_BOOL", boolTypeString);
+		Compiler.define("HXHX_RUNTIME_TYPE_NULL", nullStringText);
+		Compiler.define("HXHX_RUNTIME_TYPE_LITERAL", literalIntText);
+
+		return "getType=String;resolveType=" + boolTypeString + ";nullType=" + nullStringText + ";typeof=Int";
 	}
 }

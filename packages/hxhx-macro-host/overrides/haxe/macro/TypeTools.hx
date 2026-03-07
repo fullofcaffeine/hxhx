@@ -2,6 +2,7 @@ package haxe.macro;
 
 import haxe.macro.Type;
 import haxe.macro.Expr.ComplexType;
+import hxhxmacrohost.api.RuntimeMacroTypes;
 
 /**
 	Macro-host override for `haxe.macro.TypeTools`.
@@ -90,8 +91,22 @@ class TypeTools {
 		#if macro
 		return Context.toComplexType(type);
 		#else
-		if (type != null) {}
-		return null;
+		return Context.toComplexType(type);
+		#end
+	}
+
+	/**
+		Convert `Type` to a human-readable string.
+
+		Bring-up behavior
+		- Macro-eval: delegates to the compiler macro API through `Context.load`.
+		- Runtime: stringifies the builtin-only local type model via `toComplexType`.
+	**/
+	public static function toString(t:Type):String {
+		#if macro
+		return @:privateAccess haxe.macro.Context.load("s_type", 1)(t);
+		#else
+		return RuntimeMacroTypes.toString(t);
 		#end
 	}
 

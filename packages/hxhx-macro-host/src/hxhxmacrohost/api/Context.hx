@@ -2,6 +2,7 @@ package hxhxmacrohost.api;
 
 import haxe.macro.Expr;
 import haxe.macro.DisplayMode;
+import haxe.macro.Type;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.MacroRuntime;
 import hxhxmacrohost.Protocol;
@@ -18,11 +19,13 @@ import hxhxmacrohost.Protocol;
 
 	What
 	- `defined(name)` / `definedValue(name)` query the compiler’s define store (reverse RPC).
-	- `getType(name)` is a deliberately small allowlist-backed lookup used to prove the request path.
+	- `getType(name)`, `resolveType(t, pos)`, and `typeof(expr)` expose a tiny builtin-only type
+	  model for runtime macro code that needs basic type plumbing without upstream eval.
 
 	How
-	- Backed by the compiler define store for `defined*` and `MacroRuntime.builtinTypes` for `getType`.
-	- Later stages will replace the allowlist with real typed representations and a macro<->compiler ABI.
+	- Backed by the compiler define store for `defined*`.
+	- Builtin type plumbing is implemented locally through `RuntimeMacroTypes`.
+	- Later stages may replace or augment the local model with richer compiler-provided typed data.
 **/
 class Context {
 	static inline final DEFAULT_MACRO_FILE:String = "<macro>";
@@ -145,10 +148,23 @@ class Context {
 		return out;
 	}
 
-	public static function getType(name:String):String {
+	public static function getType(name:String):Type {
 		if (name == null || name.length == 0)
-			return "missing";
-		return MacroRuntime.builtinTypeDesc(name);
+			throw "runtime macro getType: missing name";
+		return RuntimeMacroTypes.getTypeByName(name);
+	}
+
+	public static function resolveType(t:ComplexType, p:Position):Type {
+		if (p != null) {}
+		return RuntimeMacroTypes.resolveComplexType(t);
+	}
+
+	public static function typeof(e:Expr):Type {
+		return RuntimeMacroTypes.typeofExpr(e);
+	}
+
+	public static function toComplexType(t:Type):Null<ComplexType> {
+		return RuntimeMacroTypes.toComplexType(t);
 	}
 
 	/**
