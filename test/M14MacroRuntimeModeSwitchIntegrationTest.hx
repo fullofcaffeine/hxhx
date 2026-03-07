@@ -18,6 +18,12 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		fail(label + ': expected "' + expected + '" in "' + actual + '"');
 	}
 
+	static function assertIntEq(label:String, actual:Int, expected:Int):Void {
+		if (actual == expected)
+			return;
+		fail(label + ': expected ' + expected + ' but got ' + actual);
+	}
+
 	static function expectThrow(label:String, run:() -> Void, expected:String):Void {
 		var caught = "";
 		try {
@@ -65,6 +71,78 @@ class M14MacroRuntimeModeSwitchIntegrationTest {
 		assertContains("generated module name", MacroState.listOcamlModuleNames().join(","), "HxHxHook");
 
 		session.close();
+
+		MacroState.reset();
+		MacroState.seedFromCliDefines(["HXHX_FLAG=ok"]);
+		MacroState.setGeneratedHxDir(".tmp/m14_macro_runtime_generated_entrypoints");
+
+		final generated = MacroRuntimeMode.openSession(MacroRuntimeMode.INPROC);
+		assertEq("expr macro expansion", generated.expandExpr("hxhxmacros.ExprMacroShim.hello()"), "\"HELLO\"");
+		assertEq("args entrypoint", generated.run('hxhxmacros.ArgsMacros.setArg("ok")'), "ok");
+		assertEq("arg define", MacroState.definedValue("HXHX_ARG"), "ok");
+		assertEq("external entrypoint", generated.run("hxhxmacros.ExternalMacros.external()"), "external=ok");
+		assertEq("external define", MacroState.definedValue("HXHX_EXTERNAL"), "1");
+		assertContains("external module", MacroState.listOcamlModuleNames().join(","), "HxHxExternal");
+
+		final onGenerateBefore = MacroState.listOnGenerateHookIds().length;
+		assertEq("macro init", generated.run("Macro.init()"), "ok");
+		assertIntEq("macro init onGenerate hook count", MacroState.listOnGenerateHookIds().length, onGenerateBefore + 1);
+
+		assertEq("haxelib init", generated.run("hxhxmacros.HaxelibInitMacros.init()"), "ok");
+		assertEq("haxelib define", MacroState.definedValue("HXHX_HAXELIB_INIT"), "1");
+
+		Sys.putEnv("HXHX_PLUGIN_FIXTURE_CP", ".tmp/m14_macro_runtime_plugin_cp");
+		assertEq("plugin init", generated.run("hxhxmacros.PluginFixtureMacros.init()"), "ok");
+		assertEq("plugin define", MacroState.definedValue("HXHX_PLUGIN_FIXTURE"), "1");
+		assertContains("plugin cp", MacroState.listClassPaths().join(","), ".tmp/m14_macro_runtime_plugin_cp");
+		Sys.putEnv("HXHX_PLUGIN_FIXTURE_CP", null);
+
+		for (id in MacroState.listAfterTypingHookIds())
+			generated.runHook("afterTyping", id);
+		for (id in MacroState.listOnGenerateHookIds())
+			generated.runHook("onGenerate", id);
+		for (id in MacroState.listAfterGenerateHookIds())
+			generated.runHook("afterGenerate", id);
+
+		assertEq("haxelib afterTyping define", MacroState.definedValue("HXHX_HAXELIB_INIT_AFTER_TYPING"), "1");
+		assertEq("haxelib onGenerate define", MacroState.definedValue("HXHX_HAXELIB_INIT_ON_GENERATE"), "1");
+		assertEq("haxelib afterGenerate define", MacroState.definedValue("HXHX_HAXELIB_INIT_AFTER_GENERATE"), "1");
+		assertEq("plugin afterTyping define", MacroState.definedValue("HXHX_PLUGIN_FIXTURE_AFTER_TYPING"), "1");
+		assertEq("plugin onGenerate define", MacroState.definedValue("HXHX_PLUGIN_FIXTURE_ON_GENERATE"), "1");
+		final generatedModules = MacroState.listOcamlModuleNames().join(",");
+		assertContains("haxelib generated module", generatedModules, "HxHxHaxelibInitGen");
+		assertContains("plugin generated module", generatedModules, "HxHxPluginFixtureGen");
+
+		MacroState.setDefine("HXHX_BUILD_MODULE", "Main");
+		MacroState.clearBuildFields("Main");
+		assertEq("build field macro", generated.run("hxhxmacros.BuildFieldMacros.addGeneratedField()"), "ok");
+		final buildFields = MacroState.listBuildFields("Main");
+		assertIntEq("build field count", buildFields.length, 1);
+		assertContains("build field snippet", buildFields[0], "from_hxhx_build_macro");
+
+		MacroState.clearBuildFields("Main");
+		assertEq("return build field macro", generated.run("hxhxmacros.ReturnFieldMacros.addGeneratedFieldReturn()"), "ok");
+		final returnFields = MacroState.listBuildFields("Main");
+		assertIntEq("return build field count", returnFields.length, 1);
+		assertContains("return build field snippet", returnFields[0], "generated_return");
+		assertContains("return build field trace", returnFields[0], "from_hxhx_build_macro_return");
+
+		MacroState.clearBuildFields("Main");
+		assertEq("replace build field macro", generated.run("hxhxmacros.ReturnFieldMacros.replaceGeneratedFieldReturn()"), "ok");
+		final replaceFields = MacroState.listBuildFields("Main");
+		assertIntEq("replace build field count", replaceFields.length, 1);
+		assertContains("replace build field snippet", replaceFields[0], "generated_replace");
+		assertContains("replace build field trace", replaceFields[0], "from_hxhx_build_macro_replaced");
+
+		MacroState.clearBuildFields("Main");
+		assertEq("field printer macro", generated.run("hxhxmacros.FieldPrinterMacros.addArgFunctionAndVar()"), "ok");
+		final printedFields = MacroState.listBuildFields("Main");
+		assertIntEq("field printer count", printedFields.length, 1);
+		assertContains("field printer function", printedFields[0], "generated_with_args");
+		assertContains("field printer var", printedFields[0], "generated_var = 123");
+		assertContains("field printer trace", printedFields[0], "from_hxhx_field_printer");
+
+		generated.close();
 		Sys.putEnv("HXHX_MACRO_RUNTIME_MODE", null);
 		Sys.println("OK m14 macro runtime mode switch");
 	}

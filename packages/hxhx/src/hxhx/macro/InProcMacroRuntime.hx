@@ -9,8 +9,10 @@ package hxhx.macro;
 	  the external `hxhx-macro-host` process.
 
 	Scope
-	- Supports the current builtin macro entrypoint subset used by Stage4 bring-up.
-	- Does not yet support generated external entrypoints (`EntryPointsGen`) in-process.
+	- Supports builtin macro entrypoints plus the current exact-string generated entrypoint
+	  set used by the Stage4 bring-up fixtures.
+	- Does not yet provide generic runtime `haxe.macro.*` parity for arbitrary macro modules;
+	  that remains tracked by the macro API closure work.
 **/
 class InProcMacroRuntime {
 	public static function openSession():MacroRuntimeSession {
@@ -57,7 +59,7 @@ class InProcMacroRuntime {
 	}
 }
 
-private class InProcMacroSession implements MacroRuntimeSession {
+private class InProcMacroSession implements MacroRuntimeSession implements InProcMacroEffectSink {
 	final afterTypingHooks:Array<Void->Void> = [];
 	final onGenerateHooks:Array<Void->Void> = [];
 	final afterGenerateHooks:Array<Void->Void> = [];
@@ -77,6 +79,10 @@ private class InProcMacroSession implements MacroRuntimeSession {
 				return "include=ok";
 			}
 		}
+
+		final generated = InProcGeneratedEntrypoints.run(e, this);
+		if (generated != null)
+			return generated;
 
 		if (!InProcMacroRuntime.isBuiltin(e))
 			return "ran:" + e;
@@ -167,12 +173,53 @@ private class InProcMacroSession implements MacroRuntimeSession {
 		final e = StringTools.trim(expr == null ? "" : expr);
 		if (e.length == 0)
 			throw "macro.expandExpr: empty expr";
+		final generated = InProcGeneratedEntrypoints.expandExpr(e);
+		if (generated != null)
+			return generated;
 		return switch (e) {
 			case "unit.HelperMacros.getCompilationDate()", "HelperMacros.getCompilationDate()":
 				"\"<compilation-date>\"";
 			case _:
 				throw "macro.expandExpr: expr not registered: " + e;
 		}
+	}
+
+	public function setDefine(name:String, value:String):Void {
+		MacroState.setDefine(name, value);
+	}
+
+	public function definedValue(name:String):String {
+		return MacroState.definedValue(name);
+	}
+
+	public function addClassPath(path:String):Void {
+		MacroState.addClassPath(path);
+	}
+
+	public function emitOcamlModule(name:String, source:String):Void {
+		MacroState.emitOcamlModule(name, source);
+	}
+
+	public function emitBuildFields(modulePath:String, membersSource:String):Void {
+		MacroState.emitBuildFields(modulePath, membersSource);
+	}
+
+	public function registerAfterTypingHook(cb:Void->Void):Void {
+		final id = afterTypingHooks.length;
+		afterTypingHooks.push(cb);
+		MacroState.registerHook("afterTyping", id);
+	}
+
+	public function registerOnGenerateHook(cb:Void->Void):Void {
+		final id = onGenerateHooks.length;
+		onGenerateHooks.push(cb);
+		MacroState.registerHook("onGenerate", id);
+	}
+
+	public function registerAfterGenerateHook(cb:Void->Void):Void {
+		final id = afterGenerateHooks.length;
+		afterGenerateHooks.push(cb);
+		MacroState.registerHook("afterGenerate", id);
 	}
 
 	public function close():Void {}
