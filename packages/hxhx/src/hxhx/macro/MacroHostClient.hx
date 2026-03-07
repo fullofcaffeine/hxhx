@@ -567,6 +567,19 @@ private class MacroClient {
 					}
 					MacroState.addResource(name, haxe.io.Bytes.ofHex(hex));
 					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "context.addMessage":
+					final kind = MacroProtocol.kvGet(tail, "k");
+					final msg = MacroProtocol.kvGet(tail, "m");
+					final file = MacroProtocol.kvGet(tail, "f");
+					final minRaw = MacroProtocol.kvGet(tail, "mi");
+					final maxRaw = MacroProtocol.kvGet(tail, "ma");
+					final min = Std.parseInt(minRaw);
+					final max = Std.parseInt(maxRaw);
+					MacroState.addMessage(kind, msg, {
+						file: file == null || file.length == 0 ? "<macro>" : file,
+						min: min == null || min < 0 ? 0 : min,
+						max: max == null || max < 0 ? 0 : max});
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case "context.defined":
 					final name = MacroProtocol.kvGet(tail, "n");
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));
@@ -645,6 +658,19 @@ private class MacroClient {
 						final kv = pairs[i];
 						parts.push(MacroProtocol.encodeLen("k" + i, kv.name));
 						parts.push(MacroProtocol.encodeLen("d" + i, kv.data.toHex()));
+					}
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
+				case "context.getMessages":
+					final snapshots = MacroState.listMessages();
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("c", Std.string(snapshots.length)));
+					for (i in 0...snapshots.length) {
+						final snapshot = snapshots[i];
+						parts.push(MacroProtocol.encodeLen("k" + i, snapshot.kind));
+						parts.push(MacroProtocol.encodeLen("m" + i, snapshot.msg));
+						parts.push(MacroProtocol.encodeLen("f" + i, snapshot.pos.file));
+						parts.push(MacroProtocol.encodeLen("mi" + i, Std.string(snapshot.pos.min)));
+						parts.push(MacroProtocol.encodeLen("ma" + i, Std.string(snapshot.pos.max)));
 					}
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case _:

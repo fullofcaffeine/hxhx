@@ -197,6 +197,61 @@ class Context {
 		HostToCompilerRpc.call("context.addResource", tail);
 	}
 
+	static function encodePosition(pos:Position):{file:String, min:Int, max:Int} {
+		if (pos == null)
+			return {file: DEFAULT_MACRO_FILE, min: 0, max: 0};
+		final info = getPosInfos(pos);
+		return {
+			file: info.file == null || info.file.length == 0 ? DEFAULT_MACRO_FILE : info.file,
+			min: info.min < 0 ? 0 : info.min,
+			max: info.max < 0 ? 0 : info.max
+		};
+	}
+
+	public static function warning(msg:String, pos:Position, ?depth:Int = 0):Void {
+		if (msg == null || msg.length == 0)
+			return;
+		if (depth != 0) {}
+		final info = encodePosition(pos);
+		final tail = Protocol.encodeLen("k", "warning") + " " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("f", info.file) + " "
+			+ Protocol.encodeLen("mi", Std.string(info.min)) + " " + Protocol.encodeLen("ma", Std.string(info.max));
+		HostToCompilerRpc.call("context.addMessage", tail);
+	}
+
+	public static function info(msg:String, pos:Position, ?depth:Int = 0):Void {
+		if (msg == null || msg.length == 0)
+			return;
+		if (depth != 0) {}
+		final infoPos = encodePosition(pos);
+		final tail = Protocol.encodeLen("k", "info") + " " + Protocol.encodeLen("m", msg) + " " + Protocol.encodeLen("f", infoPos.file) + " "
+			+ Protocol.encodeLen("mi", Std.string(infoPos.min)) + " " + Protocol.encodeLen("ma", Std.string(infoPos.max));
+		HostToCompilerRpc.call("context.addMessage", tail);
+	}
+
+	public static function getMessages():Array<{kind:String, msg:String, pos:Position}> {
+		final out = new Array<{kind:String, msg:String, pos:Position}>();
+		final payload = HostToCompilerRpc.call("context.getMessages", "");
+		if (payload == null || payload.length == 0)
+			return out;
+		final parts = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final kindKey = "k" + i;
+			final msgKey = "m" + i;
+			if (!parts.exists(kindKey) || !parts.exists(msgKey))
+				continue;
+			final file = parts.exists("f" + i) && parts.get("f" + i).length > 0 ? parts.get("f" + i) : DEFAULT_MACRO_FILE;
+			final min = parseNonNegativeInt(parts.exists("mi" + i) ? parts.get("mi" + i) : "", 0);
+			final max = parseNonNegativeInt(parts.exists("ma" + i) ? parts.get("ma" + i) : "", min);
+			out.push({
+				kind: parts.get(kindKey),
+				msg: parts.get(msgKey),
+				pos: {file: file, min: min, max: max < min ? min : max}
+			});
+		}
+		return out;
+	}
+
 	public static function getType(name:String):Type {
 		if (name == null || name.length == 0)
 			throw "runtime macro getType: missing name";

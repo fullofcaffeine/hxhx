@@ -33,6 +33,7 @@ import haxe.macro.TypeTools;
 	  - `PositionTools.getInfos()` / `PositionTools.make()`
 	  - compiler-seeded local-context queries (`getLocalModule`, `getLocalMethod`,
 		`getLocalType`, `getExpectedType`, `getLocalClass`, `getLocalTVars`)
+	  - compiler-owned warning/info message snapshots
 
 	What
 	- Validates the slice and returns a stable summary string for external-host integration tests.
@@ -348,5 +349,33 @@ class RuntimeContextApiMacros {
 
 		Compiler.define("HXHX_RUNTIME_RESOURCE", text);
 		return "resource=" + text;
+	}
+
+	public static function probeMessages():String {
+		final pos = Context.currentPos();
+		Context.warning("runtime-warning", pos);
+		Context.info("runtime-info", pos);
+
+		final messages = Context.getMessages();
+		if (messages == null || messages.length < 2)
+			Context.fatalError("runtime macro message probe: expected warning/info snapshot", pos);
+
+		final rendered = [
+			for (message in messages)
+				switch (message) {
+					case Warning(msg, p):
+						"warning:" + msg + "@" + PositionTools.getInfos(p).file;
+					case Info(msg, p):
+						"info:" + msg + "@" + PositionTools.getInfos(p).file;
+				}
+		];
+		final summary = rendered.join(";");
+		if (summary.indexOf("warning:runtime-warning@") < 0)
+			Context.fatalError("runtime macro message probe: missing warning in " + summary, pos);
+		if (summary.indexOf("info:runtime-info@") < 0)
+			Context.fatalError("runtime macro message probe: missing info in " + summary, pos);
+
+		Compiler.define("HXHX_RUNTIME_MESSAGES", summary);
+		return summary;
 	}
 }

@@ -325,16 +325,11 @@ class Context {
 	}
 
 	public static function warning(msg:String, pos:Position, ?depth:Int = 0):Void {
-		// Bring-up rung: warnings are currently ignored at runtime.
-		if (msg != null) {}
-		if (pos != null) {}
-		if (depth != 0) {}
+		HostContext.warning(msg, pos, depth);
 	}
 
 	public static function info(msg:String, pos:Position, ?depth:Int = 0):Void {
-		if (msg != null) {}
-		if (pos != null) {}
-		if (depth != 0) {}
+		HostContext.info(msg, pos, depth);
 	}
 
 	public static function getDisplayMode():DisplayMode {
@@ -442,7 +437,18 @@ class Context {
 	}
 
 	public static function getMessages():Array<Message> {
-		return [];
+		final snapshots = HostContext.getMessages();
+		final out = new Array<Message>();
+		for (snapshot in snapshots) {
+			switch (snapshot.kind) {
+				case "warning":
+					out.push(Warning(snapshot.msg, snapshot.pos));
+				case "info":
+					out.push(Info(snapshot.msg, snapshot.pos));
+				case _:
+			}
+		}
+		return out;
 	}
 
 	public static function filterMessages(predicate:Message->Bool):Void {

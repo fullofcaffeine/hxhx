@@ -8,6 +8,12 @@ typedef MacroPositionInfo = {
 	final max:Int;
 }
 
+typedef MacroMessageSnapshot = {
+	final kind:String;
+	final msg:String;
+	final pos:MacroPositionInfo;
+}
+
 typedef MacroCompilerConfigurationSnapshot = {
 	final version:Int;
 	final args:Array<String>;
@@ -77,6 +83,7 @@ class MacroState {
 	static final afterTypingHookIds:Array<Int> = [];
 	static final onGenerateHookIds:Array<Int> = [];
 	static final afterGenerateHookIds:Array<Int> = [];
+	static final messages:Array<MacroMessageSnapshot> = [];
 	static var compilerVersion:Int = DEFAULT_COMPILER_VERSION;
 	static var debugEnabled:Bool = false;
 	static var verboseEnabled:Bool = false;
@@ -172,6 +179,7 @@ class MacroState {
 		afterTypingHookIds.resize(0);
 		onGenerateHookIds.resize(0);
 		afterGenerateHookIds.resize(0);
+		messages.resize(0);
 		compilerVersion = DEFAULT_COMPILER_VERSION;
 		debugEnabled = false;
 		verboseEnabled = false;
@@ -467,6 +475,38 @@ class MacroState {
 			};
 		}
 		return {file: "<macro>", min: 0, max: 0};
+	}
+
+	public static function addMessage(kind:String, msg:String, pos:MacroPositionInfo):Void {
+		final trimmedKind = kind == null ? "" : StringTools.trim(kind);
+		final trimmedMsg = msg == null ? "" : msg;
+		if (trimmedKind.length == 0 || trimmedMsg.length == 0)
+			return;
+		final snapshotPos:MacroPositionInfo = pos == null ? getCurrentPos() : {
+			file: pos.file == null || pos.file.length == 0 ? "<macro>" : pos.file,
+			min: pos.min < 0 ? 0 : pos.min,
+			max: pos.max < 0 ? 0 : pos.max
+		};
+		messages.push({
+			kind: trimmedKind,
+			msg: trimmedMsg,
+			pos: snapshotPos
+		});
+	}
+
+	public static function listMessages():Array<MacroMessageSnapshot> {
+		return [
+			for (message in messages)
+				{
+					kind: message.kind,
+					msg: message.msg,
+					pos: {
+						file: message.pos.file,
+						min: message.pos.min,
+						max: message.pos.max
+					}
+				}
+		];
 	}
 
 	public static function getLocalModule():String {
