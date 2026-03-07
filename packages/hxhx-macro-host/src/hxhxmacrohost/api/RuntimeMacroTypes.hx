@@ -5,6 +5,7 @@ import haxe.macro.Expr.Metadata;
 import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
+import hxhxmacrohost.OcamlInjection;
 
 /**
 	Minimal runtime `haxe.macro.Type` model for external-host bring-up.
@@ -81,6 +82,33 @@ class RuntimeMacroTypes {
 	}
 
 	/**
+		Create a synthetic abstract instance inside the runtime type model.
+
+		Why
+		- External-host macro probes and backend helpers need a real `TAbstract`
+		  wrapper for parity-sensitive lookup and substitution behavior.
+		- Generated OCaml cannot construct `TAbstract(...)` safely by itself because
+		  the generated `haxe_macro_Type.ml` also defines
+		  `haxe.macro.ModuleType.TAbstract`.
+
+		How
+		- Routes construction through the local typed `OcamlInjection.__ocaml__(...)`
+		  shim plus placeholder-aware backend lowering.
+		- The injected OCaml expression pins the result type to
+		  `Haxe_macro_Type.hx_type`, which disambiguates the constructor even though
+		  the generated module also contains `haxe.macro.ModuleType.TAbstract`.
+	**/
+	public static function abstractType(abstractRefValue:Ref<AbstractType>, ?params:Array<Type>):Type {
+		final safeParams = params == null ? [] : params.copy();
+		#if ocaml_output
+		return cast(OcamlInjection.__ocaml__("((Haxe_macro_Type.TAbstract ((Obj.magic {0}), (Obj.magic {1}))) : Haxe_macro_Type.hx_type)", abstractRefValue,
+			safeParams));
+		#else
+		return TAbstract(abstractRefValue, safeParams);
+		#end
+	}
+
+	/**
 		Wrap a runtime type in the synthetic `Null<T>` instance form.
 	**/
 	public static function nullWrapped(inner:Type):Type {
@@ -118,9 +146,9 @@ class RuntimeMacroTypes {
 	}
 
 	public static function followWithAbstracts(t:Type, once:Bool = false):Type {
-		// Current runtime model still does not preserve synthetic abstract wrapper fidelity well
-		// enough to follow them honestly in generated OCaml. Keep the external-host behavior
-		// equivalent to `follow(...)` until the richer runtime Type model lands.
+		// Upstream `followWithAbstracts(...)` follows abstracts to their underlying implementation.
+		// The external-host runtime now preserves synthetic abstract wrappers for lookup and
+		// substitution rungs, but following still intentionally unwraps them.
 		return follow(t, once);
 	}
 
@@ -162,7 +190,7 @@ class RuntimeMacroTypes {
 		- Real backend code uses `TypeTools.applyTypeParameters(...)` when following typedef and
 		  abstract payloads.
 		- Returning identity here makes runtime macro code lie about `TType` / `TAbstract`
-		  semantics, which is now the main remaining `bxlg.9.5` fidelity gap.
+		  semantics.
 
 		What
 		- Recursively substitutes synthetic `KTypeParameter` instances by name through the supported
@@ -652,10 +680,7 @@ class RuntimeMacroTypes {
 			case "typedef":
 				TType(defTypeRef(pack, name, module, [], TDynamic(null), metadataEntries), []);
 			case "abstract":
-				// Keep the external-host OCaml path honest: synthetic abstract wrappers still trip
-				// generated-constructor shape issues in the macro-host build. Preserve the path/metadata
-				// through a class-shaped synthetic ref until the abstract-wrapper seam is fixed.
-				classType(pack, module, name, metadataEntries);
+				abstractType(abstractRef(pack, name, module, [], TDynamic(null), metadataEntries), []);
 			case _:
 				classType(pack, module, name, metadataEntries);
 		}
@@ -683,10 +708,8 @@ class RuntimeMacroTypes {
 				final rebuilt:Type = TType(td, mappedParams);
 				rebuilt;
 			case TAbstract(a, params):
-				// Keep the runtime OCaml path honest: generated code still cannot safely reconstruct the
-				// `haxe.macro.Type.TAbstract` wrapper because of the upstream constructor-name collision
-				// with `haxe.macro.ModuleType.TAbstract`. Return the substituted underlying type instead.
-				applyTypeParameters(a.get().type, a.get().params, params);
+				final mappedParams = [for (param in params) substituteTypeParameters(param, substitutions)];
+				abstractType(a, mappedParams);
 			case TFun(args, ret):
 				TFun([
 					for (arg in args)

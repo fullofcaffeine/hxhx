@@ -196,8 +196,22 @@ class RuntimeContextApiMacros {
 		if (TypeTools.toString(followedAlias) != "Bool")
 			Context.fatalError("runtime macro type-parameter probe: typedef follow mismatch", pos);
 
-		Compiler.define("HXHX_RUNTIME_TYPE_PARAMS", appliedSummary + ";" + iterSummary + ";Bool");
-		return "typeParams=" + appliedSummary + ";iter=" + iterSummary + ";typedef=Bool";
+		final abstractRef = RuntimeMacroTypes.syntheticAbstractRef(["synthetic"], "AbstractBox", "AbstractBox", [tParam], tParam.t);
+		final abstractTemplate = RuntimeMacroTypes.abstractType(abstractRef, [tParam.t]);
+		final appliedAbstract = TypeTools.applyTypeParameters(abstractTemplate, [tParam], [Context.getType("String")]);
+		final abstractSummary = TypeTools.toString(appliedAbstract);
+		if (abstractSummary != "synthetic.AbstractBox<String>")
+			Context.fatalError("runtime macro type-parameter probe: abstract substitution mismatch " + abstractSummary, pos);
+		switch (appliedAbstract) {
+			case TAbstract(_, params):
+				if (params.length != 1 || TypeTools.toString(params[0]) != "String")
+					Context.fatalError("runtime macro type-parameter probe: abstract params mismatch", pos);
+			case _:
+				Context.fatalError("runtime macro type-parameter probe: expected substituted abstract wrapper", pos);
+		}
+
+		Compiler.define("HXHX_RUNTIME_TYPE_PARAMS", appliedSummary + ";" + iterSummary + ";Bool;" + abstractSummary);
+		return "typeParams=" + appliedSummary + ";iter=" + iterSummary + ";typedef=Bool;abstract=" + abstractSummary;
 	}
 
 	public static function probeLocalContextSnapshot():String {

@@ -20,6 +20,7 @@ import reflaxe.ocaml.ast.OcamlExpr;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlBinop;
 import reflaxe.ocaml.ast.OcamlExpr.OcamlUnop;
 import reflaxe.ocaml.ast.OcamlApplyArg;
+import reflaxe.ocaml.ast.OcamlASTPrinter;
 import reflaxe.ocaml.ast.OcamlMatchCase;
 import reflaxe.ocaml.ast.OcamlPat;
 import reflaxe.ocaml.ast.OcamlTypeExpr;
@@ -33,6 +34,8 @@ import reflaxe.ocaml.ast.OcamlDebugPos;
  * - Local vars declared with `TVar` are treated as `ref` (mutable-by-default) for now; M3 will infer mutability.
  */
 class OcamlBuilder {
+	static final injectionPrinter = new OcamlASTPrinter();
+
 	public final ctx:CompilationContext;
 	public final typeExprFromHaxeType:Type->OcamlTypeExpr;
 	public final emitSourceMap:Bool;
@@ -177,6 +180,38 @@ class OcamlBuilder {
 	inline function freshTmp(prefix:String):String {
 		tmpId += 1;
 		return "__" + prefix + "_" + tmpId;
+	}
+
+	static function renderInjectionExpr(expr:OcamlExpr):String {
+		return injectionPrinter.printExpr(expr);
+	}
+
+	static function expandRawInjection(template:String, args:Array<OcamlExpr>):String {
+		if (template == null)
+			return "";
+		var lastMatchPosition:Null<{pos:Int, len:Int}> = null;
+		final rendered = new StringBuf();
+		~/{(\d+)}/g.map(template, function(ereg) {
+			final lastPos = lastMatchPosition == null ? 0 : lastMatchPosition.pos + lastMatchPosition.len;
+			lastMatchPosition = ereg.matchedPos();
+			if (lastMatchPosition.pos != lastPos) {
+				rendered.add(template.substring(lastPos, lastMatchPosition.pos));
+			}
+
+			final expressionIndex = Std.parseInt(ereg.matched(1));
+			if (expressionIndex != null && expressionIndex >= 0 && expressionIndex < args.length) {
+				rendered.add(renderInjectionExpr(args[expressionIndex]));
+			} else {
+				rendered.add(ereg.matched(0));
+			}
+			return "";
+		});
+
+		if (lastMatchPosition == null) {
+			return template;
+		}
+		rendered.add(template.substring(lastMatchPosition.pos + lastMatchPosition.len));
+		return rendered.toString();
 	}
 
 	#if macro
@@ -1118,16 +1153,24 @@ class OcamlBuilder {
 					// Escape hatch: raw OCaml injection.
 					final injected:Null<OcamlExpr> = switch (unwrap(fn).expr) {
 						case TIdent("__ocaml__"):
-							if (args.length != 1) {
+							if (args.length < 1) {
 								#if macro
-								guardrailError("reflaxe.ocaml: __ocaml__ expects exactly one string argument.", e.pos);
+								guardrailError("reflaxe.ocaml: __ocaml__ expects at least one string argument.", e.pos);
 								#end
 								OcamlExpr.EConst(OcamlConst.CUnit);
 							} else {
 								final a = unwrap(args[0]);
 								switch (a.expr) {
 									case TConst(TString(s)):
-										OcamlExpr.ERaw(s);
+										if (args.length == 1) {
+											OcamlExpr.ERaw(s);
+										} else {
+											final compiledArgs = new Array<OcamlExpr>();
+											for (i in 1...args.length) {
+												compiledArgs.push(buildExpr(args[i]));
+											}
+											OcamlExpr.ERaw(expandRawInjection(s, compiledArgs));
+										}
 									case _:
 										#if macro
 										guardrailError("reflaxe.ocaml: __ocaml__ argument must be a constant string.", e.pos);

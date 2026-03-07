@@ -178,7 +178,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("type param output", typeParamOutput, "typeParams=(String) -> Null<String>");
 			assertContains("type param output", typeParamOutput, "iter=String|Null<String>");
 			assertContains("type param output", typeParamOutput, "typedef=Bool");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_PARAMS") == "(String) -> Null<String>;String|Null<String>;Bool",
+			assertContains("type param output", typeParamOutput, "abstract=synthetic.AbstractBox<String>");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_PARAMS") == "(String) -> Null<String>;String|Null<String>;Bool;synthetic.AbstractBox<String>",
 				"expected runtime type-parameter define");
 
 			final localContextOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()");

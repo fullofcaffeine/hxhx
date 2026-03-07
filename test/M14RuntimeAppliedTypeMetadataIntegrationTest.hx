@@ -43,6 +43,16 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		}
 	}
 
+	static function expectAbstract(t:Type):Ref<AbstractType> {
+		return switch (t) {
+			case TAbstract(a, _):
+				a;
+			case _:
+				fail("expected synthetic TAbstract module entry but got " + RuntimeMacroTypes.toString(t));
+				null;
+		}
+	}
+
 	static function assertMetadataHas(meta:MetaAccess, name:String):Array<MetadataEntry> {
 		assertTrue(meta.has(name), "expected metadata " + name);
 		final entries = meta.extract(name);
@@ -89,7 +99,7 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		assertTrue(syntheticEnum.meta.has(":enumProbeMeta"), "expected enum metadata on synthetic runtime type");
 		final syntheticTypedef = expectTypeDef(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied)).get();
 		assertTrue(syntheticTypedef.meta.has(":typedefProbeMeta"), "expected typedef metadata on synthetic runtime type");
-		final syntheticAbstract = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied)).get();
+		final syntheticAbstract = expectAbstract(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied)).get();
 		assertTrue(syntheticAbstract.meta.has(":abstractProbeMeta"), "expected abstract metadata on synthetic runtime type");
 
 		final moduleEntries = RuntimeMacroTypes.moduleTypesForModule("hxhxmacros.RuntimeModuleMembers", [
@@ -102,7 +112,7 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		expectInst(moduleEntries[0]);
 		assertTrue(expectEnum(moduleEntries[1]).get().meta.has(":enumProbeMeta"), "expected per-type enum metadata");
 		assertTrue(expectTypeDef(moduleEntries[2]).get().meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
-		assertTrue(expectInst(moduleEntries[3]).get().meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
+		assertTrue(expectAbstract(moduleEntries[3]).get().meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
 
 		MacroState.reset();
 	}
