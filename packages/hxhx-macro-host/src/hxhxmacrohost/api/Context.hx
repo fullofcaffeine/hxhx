@@ -23,6 +23,8 @@ import hxhxmacrohost.Protocol;
 	  model for runtime macro code that needs basic type plumbing without upstream eval.
 	- `getLocalModule()`, `getLocalMethod()`, `getLocalType()`, and `getExpectedType()` expose a
 	  compiler-seeded local-context snapshot through the same builtin-only type model.
+	- `getModule(name)` exposes an existence-only module lookup rung backed by compiler-side classpath
+	  resolution and a synthetic named-type payload.
 
 	How
 	- Backed by the compiler define store for `defined*`.
@@ -154,6 +156,15 @@ class Context {
 		if (name == null || name.length == 0)
 			throw "runtime macro getType: missing name";
 		return RuntimeMacroTypes.getTypeByName(name);
+	}
+
+	public static function getModule(name:String):Array<Type> {
+		if (name == null || name.length == 0)
+			return [];
+		final payload = HostToCompilerRpc.call("context.getModule", Protocol.encodeLen("n", name));
+		if (payload == null || payload.length == 0)
+			return [];
+		return RuntimeMacroTypes.moduleTypesForPath(name);
 	}
 
 	public static function resolveType(t:ComplexType, p:Position):Type {

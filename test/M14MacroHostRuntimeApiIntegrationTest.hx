@@ -32,7 +32,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		final exprs = [
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()"
+			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
+			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -54,6 +55,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		MacroState.reset();
 		MacroState.seedFromCliDefines(["reflaxe-target=ocaml", "target.name=ocaml"]);
 		MacroState.seedCompilerConfiguration(["--ocaml", "-main", "Main", "--no-output"], ["/virtual/haxe/std"], "ocaml");
+		MacroState.addClassPath("test/fixtures/hxhx-macros/src");
 		MacroState.setCurrentPos({
 			file: Path.normalize("test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeContextApiMacros.hx"),
 			min: 12,
@@ -101,6 +103,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_METHOD") == "probeLocalContextSnapshot", "expected local method define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_TYPE") == "String", "expected local type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_EXPECTED_TYPE") == "Bool", "expected expected type define");
+
+			final moduleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()");
+			assertContains("module lookup output", moduleOutput, "moduleLookup=hxhxmacros.RuntimeContextApiMacros");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_LOOKUP") == "hxhxmacros.RuntimeContextApiMacros", "expected module lookup define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

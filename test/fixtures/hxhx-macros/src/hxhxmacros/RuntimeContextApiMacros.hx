@@ -26,8 +26,8 @@ import haxe.macro.TypeTools;
 	- Validates the slice and returns a stable summary string for external-host integration tests.
 
 	Gotchas
-	- This intentionally does **not** touch typed APIs like `Context.getModule()` or `Context.typeExpr()`.
-	  Those remain separate parity work.
+	- This intentionally does **not** touch richer typed APIs like `Context.typeExpr()`.
+	  `Context.getModule()` is covered only as an existence-only lookup rung, not typed module metadata.
 **/
 class RuntimeContextApiMacros {
 	public static function probeConfigAndPosition():String {
@@ -135,5 +135,19 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_EXPECTED_TYPE", expectedTypeText);
 
 		return "module=" + localModule + ";method=" + localMethod + ";localType=" + localTypeText + ";expectedType=" + expectedTypeText;
+	}
+
+	public static function probeModuleLookup():String {
+		final pos = Context.currentPos();
+		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
+		final moduleTypes = Context.getModule(modulePath);
+		if (moduleTypes == null || moduleTypes.length == 0)
+			Context.fatalError("runtime macro module probe: expected module lookup to resolve " + modulePath, pos);
+		final typeText = TypeTools.toString(moduleTypes[0]);
+		if (typeText != modulePath)
+			Context.fatalError("runtime macro module probe: expected synthetic module type " + modulePath + " but got " + typeText, pos);
+
+		Compiler.define("HXHX_RUNTIME_MODULE_LOOKUP", modulePath);
+		return "moduleLookup=" + modulePath;
 	}
 }

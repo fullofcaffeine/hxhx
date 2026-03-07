@@ -365,6 +365,10 @@ class Context {
 		return HostContext.getLocalMethod();
 	}
 
+	public static function getModule(name:String):Array<Type> {
+		return HostContext.getModule(name);
+	}
+
 	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {
 		return HostContext.getPosInfos(p);
 	}

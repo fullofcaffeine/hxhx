@@ -573,6 +573,19 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalTypeText())));
 				case "context.getLocalMethod":
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalMethod())));
+				case "context.getModule":
+					final name = MacroProtocol.kvGet(tail, "n");
+					if (name == null || name.length == 0) {
+						replyErr(id, method + ": missing module name");
+						return;
+					}
+					final classPaths = MacroState.listClassPaths();
+					final cfg = MacroState.getCompilerConfigurationSnapshot();
+					for (cp in cfg.stdPath)
+						if (classPaths.indexOf(cp) == -1)
+							classPaths.push(cp);
+					final resolved = hxhx.Stage1Compiler.Stage1Resolver.resolveModule(classPaths, name, Sys.getCwd());
+					replyOk(id, MacroProtocol.encodeLen("v", resolved == null ? "" : "1"));
 				case "context.getBuildFields":
 					// Stage4 bring-up: expose the compiler-side build-field snapshot for the current
 					// `@:build(...)` expansion context.

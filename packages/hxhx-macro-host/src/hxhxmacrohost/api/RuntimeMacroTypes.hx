@@ -84,6 +84,24 @@ class RuntimeMacroTypes {
 		return getTypeByName(trimmed);
 	}
 
+	/**
+		Create a conservative synthetic module payload for `Context.getModule()`.
+
+		Why
+		- Some macro probes only need to know that a module resolved to something non-empty.
+		- Returning a deterministic synthetic named type is sufficient for this existence-only rung.
+	**/
+	public static function moduleTypesForPath(modulePath:String):Array<Type> {
+		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
+		if (trimmed.length == 0)
+			return [];
+		final parts = trimmed.split(".");
+		if (parts.length == 0)
+			return [];
+		final name = parts.pop();
+		return [TInst(classRef(parts, name, name), [])];
+	}
+
 	public static function resolveComplexType(t:ComplexType):Type {
 		return switch (t) {
 			case null:
