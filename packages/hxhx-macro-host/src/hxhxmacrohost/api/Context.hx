@@ -1,6 +1,7 @@
 package hxhxmacrohost.api;
 
 import haxe.macro.Expr;
+import haxe.macro.DisplayMode;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.MacroRuntime;
 import hxhxmacrohost.Protocol;
@@ -24,6 +25,13 @@ import hxhxmacrohost.Protocol;
 	- Later stages will replace the allowlist with real typed representations and a macro<->compiler ABI.
 **/
 class Context {
+	static inline final DEFAULT_MACRO_FILE:String = "<macro>";
+
+	static function parseNonNegativeInt(raw:String, fallback:Int):Int {
+		final parsed = Std.parseInt(raw);
+		return parsed == null || parsed < 0 ? fallback : parsed;
+	}
+
 	public static function defined(name:String):Bool {
 		if (name == null)
 			return false;
@@ -141,6 +149,59 @@ class Context {
 		if (name == null || name.length == 0)
 			return "missing";
 		return MacroRuntime.builtinTypeDesc(name);
+	}
+
+	/**
+		Return the compiler-provided current macro position.
+
+		Why
+		- Runtime macro modules use `Context.currentPos()` for diagnostics and for position helper APIs.
+		- In the external-host model, only the compiler process knows the best current callsite fallback.
+
+		What
+		- Returns a deterministic `{file,min,max}` position.
+		- Falls back to `<macro>:0-0` if the compiler has not seeded a more specific location yet.
+	**/
+	public static function currentPos():Position {
+		final payload = HostToCompilerRpc.call("context.currentPos", "");
+		if (payload == null || payload.length == 0)
+			return {file: DEFAULT_MACRO_FILE, min: 0, max: 0};
+		final parts = Protocol.kvParse(payload);
+		return {
+			file: parts.exists("f") && parts.get("f").length > 0 ? parts.get("f") : DEFAULT_MACRO_FILE,
+			min: parseNonNegativeInt(parts.exists("mi") ? parts.get("mi") : "", 0),
+			max: parseNonNegativeInt(parts.exists("ma") ? parts.get("ma") : "", 0)
+		};
+	}
+
+	/**
+		Return the current display mode for runtime macro code.
+
+		Why
+		- Some upstream-ish helper code probes `Context.getDisplayMode()` to branch between display
+		  and normal compilation behavior.
+		- The current external-host bring-up does not execute real display requests, so `None` is the
+		  only honest answer today.
+	**/
+	public static function getDisplayMode():DisplayMode {
+		return DisplayMode.None;
+	}
+
+	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {
+		if (p == null)
+			return currentPos();
+		return {
+			file: p.file == null || p.file.length == 0 ? DEFAULT_MACRO_FILE : p.file,
+			min: p.min < 0 ? 0 : p.min,
+			max: p.max < 0 ? 0 : p.max
+		};
+	}
+
+	public static function makePosition(inf:{min:Int, max:Int, file:String}):Position {
+		return {
+			file: inf == null || inf.file == null || inf.file.length == 0 ? DEFAULT_MACRO_FILE : inf.file,
+			min: inf == null || inf.min < 0 ? 0 : inf.min,
+			max: inf == null || inf.max < 0 ? 0 : inf.max};
 	}
 
 	/**

@@ -3,6 +3,17 @@ package hxhxmacrohost.api;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.Protocol;
 
+typedef RuntimeCompilerConfiguration = {
+	final version:Int;
+	final args:Array<String>;
+	final debug:Bool;
+	final verbose:Bool;
+	final foptimize:Bool;
+	final platformConfig:haxe.macro.PlatformConfig;
+	final stdPath:Array<String>;
+	@:optional final platform:Dynamic;
+}
+
 /**
 	Minimal “Compiler-like” API surface for Stage 4 macro bring-up.
 
@@ -21,6 +32,56 @@ import hxhxmacrohost.Protocol;
 	  - the compiler owns the define store and replies with `res ... ok ...`
 **/
 class Compiler {
+	static inline final DEFAULT_COMPILER_VERSION:Int = 40307;
+
+	static function parseNonNegativeInt(raw:String, fallback:Int):Int {
+		final parsed = Std.parseInt(raw);
+		return parsed == null || parsed < 0 ? fallback : parsed;
+	}
+
+	static function defaultPlatformConfig():haxe.macro.PlatformConfig {
+		return {
+			staticTypeSystem: true,
+			sys: true,
+			capturePolicy: haxe.macro.PlatformConfig.CapturePolicy.None,
+			padNulls: false,
+			addFinalReturn: false,
+			overloadFunctions: false,
+			canSkipNonNullableArgument: false,
+			reservedTypePaths: [],
+			supportsFunctionEquality: true,
+			usesUtf16: false,
+			thisBeforeSuper: false,
+			supportsThreads: true,
+			supportsUnicode: true,
+			supportsRestArgs: true,
+			exceptions: {
+				nativeThrows: [],
+				nativeCatches: [],
+				avoidWrapping: false,
+				wildcardCatch: null,
+				baseThrow: null
+			},
+			scoping: {
+				scope: haxe.macro.PlatformConfig.VarScope.FunctionScope,
+				flags: []
+			},
+			supportsAtomics: false
+		};
+	}
+
+	static function defaultConfiguration():RuntimeCompilerConfiguration {
+		return {
+			version: DEFAULT_COMPILER_VERSION,
+			args: [],
+			debug: false,
+			verbose: false,
+			foptimize: true,
+			platformConfig: defaultPlatformConfig(),
+			stdPath: []
+		};
+	}
+
 	/**
 		Get a compiler define value.
 
@@ -57,6 +118,89 @@ class Compiler {
 		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("v", value == null ? "" : value);
 		// Ignore return payload; errors propagate as exceptions.
 		HostToCompilerRpc.call("compiler.define", tail);
+	}
+
+	/**
+		Return a conservative compiler-configuration snapshot.
+
+		Why
+		- Real initialization macros and parity probes read `Compiler.getConfiguration()` to decide
+		  which target/runtime assumptions are active.
+		- The external macro host therefore needs a compiler-owned snapshot instead of a host-local guess.
+
+		What
+		- Returns the bring-up subset we currently model:
+		  - version
+		  - raw args
+		  - debug/verbose/no-opt flags
+		  - std roots
+		  - a conservative `PlatformConfig`
+
+		Gotchas
+		- This is not upstream's full internal configuration object yet.
+		  Typed backend/display internals remain outside the current ABI slice.
+	**/
+	public static function getConfiguration():RuntimeCompilerConfiguration {
+		final payload = HostToCompilerRpc.call("compiler.getConfiguration", "");
+		if (payload == null || payload.length == 0)
+			return defaultConfiguration();
+
+		final parts = Protocol.kvParse(payload);
+		final args = new Array<String>();
+		final argsCount = parseNonNegativeInt(parts.exists("ac") ? parts.get("ac") : "", 0);
+		for (i in 0...argsCount) {
+			final key = "a" + i;
+			if (parts.exists(key))
+				args.push(parts.get(key));
+		}
+
+		final stdPath = new Array<String>();
+		final stdCount = parseNonNegativeInt(parts.exists("sc") ? parts.get("sc") : "", 0);
+		for (i in 0...stdCount) {
+			final key = "s" + i;
+			if (parts.exists(key))
+				stdPath.push(parts.get(key));
+		}
+
+		final supportsUnicode = !parts.exists("uni") || parts.get("uni") == "1";
+		final platformConfig:haxe.macro.PlatformConfig = {
+			staticTypeSystem: true,
+			sys: true,
+			capturePolicy: haxe.macro.PlatformConfig.CapturePolicy.None,
+			padNulls: false,
+			addFinalReturn: false,
+			overloadFunctions: false,
+			canSkipNonNullableArgument: false,
+			reservedTypePaths: [],
+			supportsFunctionEquality: true,
+			usesUtf16: false,
+			thisBeforeSuper: false,
+			supportsThreads: true,
+			supportsUnicode: supportsUnicode,
+			supportsRestArgs: true,
+			exceptions: {
+				nativeThrows: [],
+				nativeCatches: [],
+				avoidWrapping: false,
+				wildcardCatch: null,
+				baseThrow: null
+			},
+			scoping: {
+				scope: haxe.macro.PlatformConfig.VarScope.FunctionScope,
+				flags: []
+			},
+			supportsAtomics: false
+		};
+
+		return {
+			version: parseNonNegativeInt(parts.exists("ver") ? parts.get("ver") : "", DEFAULT_COMPILER_VERSION),
+			args: args,
+			debug: parts.exists("dbg") && parts.get("dbg") == "1",
+			verbose: parts.exists("vrb") && parts.get("vrb") == "1",
+			foptimize: !parts.exists("opt") || parts.get("opt") == "1",
+			platformConfig: platformConfig,
+			stdPath: stdPath
+		};
 	}
 
 	/**

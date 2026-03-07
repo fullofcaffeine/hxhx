@@ -48,6 +48,11 @@ typedef DefineDescription = {
 typedef CompilerConfiguration = {
 	final version:Int;
 	final args:Array<String>;
+	@:optional final debug:Bool;
+	@:optional final verbose:Bool;
+	@:optional final foptimize:Bool;
+	@:optional final platform:Dynamic;
+	final platformConfig:haxe.macro.PlatformConfig;
 	final stdPath:Array<String>;
 }
 
@@ -93,6 +98,10 @@ class Compiler {
 
 	public static function getDefine(key:String):Null<String> {
 		return HostCompiler.getDefine(key);
+	}
+
+	public static function getConfiguration():CompilerConfiguration {
+		return HostCompiler.getConfiguration();
 	}
 
 	public static function addClassPath(path:String):Void {

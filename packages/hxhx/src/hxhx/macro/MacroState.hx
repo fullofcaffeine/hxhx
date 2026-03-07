@@ -1,5 +1,22 @@
 package hxhx.macro;
 
+typedef MacroPositionInfo = {
+	final file:String;
+	final min:Int;
+	final max:Int;
+}
+
+typedef MacroCompilerConfigurationSnapshot = {
+	final version:Int;
+	final args:Array<String>;
+	final debug:Bool;
+	final verbose:Bool;
+	final foptimize:Bool;
+	final stdPath:Array<String>;
+	final targetName:String;
+	final supportsUnicode:Bool;
+}
+
 /**
 	Compiler-side macro state (Stage 4 bring-up).
 
@@ -27,10 +44,13 @@ package hxhx.macro;
 	  execute macros (Stage 3 bring-up, Stage 4 selftests, upstream gate runners).
 **/
 class MacroState {
+	static inline final DEFAULT_COMPILER_VERSION:Int = 40307;
 	static final defines:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final ocamlModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final classPaths:Array<String> = [];
 	static final includedModules:Array<String> = [];
+	static final compilerArgs:Array<String> = [];
+	static final stdPaths:Array<String> = [];
 	static var generatedHxDir:String = "";
 	static final generatedHxModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final buildFieldsByModule:haxe.ds.StringMap<Array<String>> = new haxe.ds.StringMap();
@@ -38,6 +58,13 @@ class MacroState {
 	static final afterTypingHookIds:Array<Int> = [];
 	static final onGenerateHookIds:Array<Int> = [];
 	static final afterGenerateHookIds:Array<Int> = [];
+	static var compilerVersion:Int = DEFAULT_COMPILER_VERSION;
+	static var debugEnabled:Bool = false;
+	static var verboseEnabled:Bool = false;
+	static var optimizeEnabled:Bool = true;
+	static var compilerTargetName:String = "ocaml";
+	static var supportsUnicode:Bool = true;
+	static var explicitCurrentPos:Null<MacroPositionInfo> = null;
 
 	static function sortStringsInPlace(arr:Array<String>):Void {
 		// Avoid `Array.sort(fn)` during bring-up.
@@ -70,11 +97,52 @@ class MacroState {
 		}
 	}
 
+	static function hasArg(args:Array<String>, flag:String):Bool {
+		if (args == null || flag == null || flag.length == 0)
+			return false;
+		for (arg in args)
+			if (arg == flag)
+				return true;
+		return false;
+	}
+
+	static function parseCompilerVersionFromDefines():Int {
+		final raw = definedValue("haxe_ver");
+		if (raw.length == 0)
+			return DEFAULT_COMPILER_VERSION;
+		final parts = raw.split(".");
+		if (parts.length == 0)
+			return DEFAULT_COMPILER_VERSION;
+		final major = Std.parseInt(parts[0]);
+		final minor = parts.length > 1 ? Std.parseInt(parts[1]) : 0;
+		final patch = parts.length > 2 ? Std.parseInt(parts[2]) : 0;
+		if (major == null || minor == null || patch == null)
+			return DEFAULT_COMPILER_VERSION;
+		return (major * 10000) + (minor * 100) + patch;
+	}
+
+	static function copyUniqueTrimmedStrings(out:Array<String>, values:Array<String>):Void {
+		out.resize(0);
+		if (values == null || values.length == 0)
+			return;
+		for (value in values) {
+			if (value == null)
+				continue;
+			final trimmed = StringTools.trim(value);
+			if (trimmed.length == 0)
+				continue;
+			if (out.indexOf(trimmed) == -1)
+				out.push(trimmed);
+		}
+	}
+
 	public static function reset():Void {
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);
 		includedModules.resize(0);
+		compilerArgs.resize(0);
+		stdPaths.resize(0);
 		generatedHxDir = "";
 		generatedHxModules.clear();
 		buildFieldsByModule.clear();
@@ -82,6 +150,13 @@ class MacroState {
 		afterTypingHookIds.resize(0);
 		onGenerateHookIds.resize(0);
 		afterGenerateHookIds.resize(0);
+		compilerVersion = DEFAULT_COMPILER_VERSION;
+		debugEnabled = false;
+		verboseEnabled = false;
+		optimizeEnabled = true;
+		compilerTargetName = "ocaml";
+		supportsUnicode = true;
+		explicitCurrentPos = null;
 	}
 
 	public static function setDefine(name:String, value:String):Void {
@@ -171,6 +246,95 @@ class MacroState {
 			out.push([k, definedValue(k)]);
 		}
 		return out;
+	}
+
+	/**
+		Seed the macro-facing compiler configuration snapshot.
+
+		Why
+		- Runtime macro modules compiled into the external macro host can call
+		  `Compiler.getConfiguration()` even though they are not running inside upstream eval.
+		- We therefore need a compiler-owned snapshot that both external-host and future inproc
+		  paths can expose consistently.
+
+		What
+		- Stores a conservative configuration snapshot:
+		  - raw CLI args
+		  - resolved std roots
+		  - common flag booleans
+		  - pinned compiler version target (`4.3.7`)
+		  - coarse target identity
+
+		Gotchas
+		- This is intentionally smaller than upstream's full internal configuration object.
+		  Typed backend/display internals remain outside this bring-up slice.
+	**/
+	public static function seedCompilerConfiguration(args:Array<String>, stdPathRoots:Array<String>, targetName:String):Void {
+		copyUniqueTrimmedStrings(compilerArgs, args);
+		copyUniqueTrimmedStrings(stdPaths, stdPathRoots);
+		compilerVersion = parseCompilerVersionFromDefines();
+		debugEnabled = hasArg(compilerArgs, "--debug") || defined("debug");
+		verboseEnabled = hasArg(compilerArgs, "-v") || hasArg(compilerArgs, "--verbose") || defined("verbose");
+		optimizeEnabled = !hasArg(compilerArgs, "--no-opt");
+		final trimmedTarget = targetName == null ? "" : StringTools.trim(targetName);
+		compilerTargetName = trimmedTarget.length == 0 ? "ocaml" : trimmedTarget;
+		supportsUnicode = true;
+	}
+
+	public static function getCompilerConfigurationSnapshot():MacroCompilerConfigurationSnapshot {
+		return {
+			version: compilerVersion,
+			args: compilerArgs.copy(),
+			debug: debugEnabled,
+			verbose: verboseEnabled,
+			foptimize: optimizeEnabled,
+			stdPath: stdPaths.copy(),
+			targetName: compilerTargetName,
+			supportsUnicode: supportsUnicode
+		};
+	}
+
+	/**
+		Override the current macro position for the active compiler process.
+
+		Why
+		- External-host runtime macros need a stable `Context.currentPos()` result for diagnostics
+		  and position helper APIs.
+		- Tests also need a deterministic way to seed this position without running a full Stage3
+		  build-macro pipeline.
+	**/
+	public static function setCurrentPos(pos:MacroPositionInfo):Void {
+		if (pos == null) {
+			explicitCurrentPos = null;
+			return;
+		}
+		explicitCurrentPos = {
+			file: pos.file == null || pos.file.length == 0 ? "<macro>" : pos.file,
+			min: pos.min < 0 ? 0 : pos.min,
+			max: pos.max < 0 ? 0 : pos.max
+		};
+	}
+
+	public static function clearCurrentPos():Void {
+		explicitCurrentPos = null;
+	}
+
+	public static function getCurrentPos():MacroPositionInfo {
+		if (explicitCurrentPos != null)
+			return explicitCurrentPos;
+		final buildFile = definedValue("HXHX_BUILD_FILE");
+		if (buildFile.length > 0) {
+			return {file: buildFile, min: 0, max: 0};
+		}
+		final buildModule = definedValue("HXHX_BUILD_MODULE");
+		if (buildModule.length > 0) {
+			return {
+				file: StringTools.replace(buildModule, ".", "/") + ".hx",
+				min: 0,
+				max: 0
+			};
+		}
+		return {file: "<macro>", min: 0, max: 0};
 	}
 
 	/**

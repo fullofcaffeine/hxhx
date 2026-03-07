@@ -481,6 +481,22 @@ private class MacroClient {
 						+ " "
 						+ MacroProtocol.encodeLen("v", MacroState.definedValue(name));
 					replyOk(id, MacroProtocol.encodeLen("v", payload));
+				case "compiler.getConfiguration":
+					final config = MacroState.getCompilerConfigurationSnapshot();
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("ver", Std.string(config.version)));
+					parts.push(MacroProtocol.encodeLen("dbg", config.debug ? "1" : "0"));
+					parts.push(MacroProtocol.encodeLen("vrb", config.verbose ? "1" : "0"));
+					parts.push(MacroProtocol.encodeLen("opt", config.foptimize ? "1" : "0"));
+					parts.push(MacroProtocol.encodeLen("uni", config.supportsUnicode ? "1" : "0"));
+					parts.push(MacroProtocol.encodeLen("target", config.targetName));
+					parts.push(MacroProtocol.encodeLen("ac", Std.string(config.args.length)));
+					for (i in 0...config.args.length)
+						parts.push(MacroProtocol.encodeLen("a" + i, config.args[i]));
+					parts.push(MacroProtocol.encodeLen("sc", Std.string(config.stdPath.length)));
+					for (i in 0...config.stdPath.length)
+						parts.push(MacroProtocol.encodeLen("s" + i, config.stdPath[i]));
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "compiler.registerHook":
 					final kind = MacroProtocol.kvGet(tail, "k");
 					final idStr = MacroProtocol.kvGet(tail, "i");
@@ -544,6 +560,11 @@ private class MacroClient {
 				case "context.definedValue":
 					final name = MacroProtocol.kvGet(tail, "n");
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.definedValue(name)));
+				case "context.currentPos":
+					final pos = MacroState.getCurrentPos();
+					final payload = MacroProtocol.encodeLen("f", pos.file) + " " + MacroProtocol.encodeLen("mi", Std.string(pos.min)) + " "
+						+ MacroProtocol.encodeLen("ma", Std.string(pos.max));
+					replyOk(id, MacroProtocol.encodeLen("v", payload));
 				case "context.getBuildFields":
 					// Stage4 bring-up: expose the compiler-side build-field snapshot for the current
 					// `@:build(...)` expansion context.

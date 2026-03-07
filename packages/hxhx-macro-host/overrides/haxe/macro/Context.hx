@@ -96,6 +96,10 @@ class Context {
 		return load("contains_display_position", 1)(pos);
 	}
 
+	public static function getDisplayMode():DisplayMode {
+		return load("get_display_mode", 0)();
+	}
+
 	public static function currentPos():Position {
 		return load("current_pos", 0)();
 	}
@@ -332,8 +336,20 @@ class Context {
 		if (depth != 0) {}
 	}
 
+	public static function getDisplayMode():DisplayMode {
+		return HostContext.getDisplayMode();
+	}
+
 	public static function currentPos():Position {
-		return null;
+		return HostContext.currentPos();
+	}
+
+	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {
+		return HostContext.getPosInfos(p);
+	}
+
+	public static function makePosition(inf:{min:Int, max:Int, file:String}):Position {
+		return HostContext.makePosition(inf);
 	}
 
 	public static function getType(name:String):Type {

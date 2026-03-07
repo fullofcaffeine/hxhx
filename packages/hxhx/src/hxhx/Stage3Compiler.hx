@@ -1427,6 +1427,27 @@ class Stage3Compiler {
 		}
 		final allDefines = parsedDefines.concat(libDefines);
 		hxhx.macro.MacroState.seedFromCliDefines(allDefines);
+		final macroStdPaths = {
+			final out = new Array<String>();
+			final envStd = trim(Sys.getEnv("HAXE_STD_PATH"));
+			if (envStd.length > 0)
+				out.push(Path.normalize(envStd));
+			final inferredStd = Stage1Args.inferStdRootForCwd(cwd);
+			if (inferredStd.length > 0) {
+				final normalized = Path.normalize(inferredStd);
+				var seen = false;
+				for (cp in out) {
+					if (Path.normalize(cp) == normalized) {
+						seen = true;
+						break;
+					}
+				}
+				if (!seen)
+					out.push(inferredStd);
+			}
+			out;
+		}
+		hxhx.macro.MacroState.seedCompilerConfiguration(args, macroStdPaths, backendId == "js-native" ? "js" : "ocaml");
 		hxhx.macro.MacroState.setGeneratedHxDir(haxe.io.Path.join([outAbs, "_gen_hx"]));
 
 		final libMacros = {
