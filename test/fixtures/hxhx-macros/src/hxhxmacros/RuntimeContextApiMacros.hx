@@ -105,6 +105,18 @@ class RuntimeContextApiMacros {
 		final moduleTypeText = TypeTools.toString(moduleType);
 		if (moduleTypeText != "hxhxmacros.RuntimeContextApiMacros")
 			Context.fatalError("runtime macro type probe: expected qualified getType result but got " + moduleTypeText, pos);
+		final moduleEnumType = Context.getType("hxhxmacros.RuntimeModuleMembers.RuntimeModuleState");
+		final moduleEnumTypeText = TypeTools.toString(moduleEnumType);
+		if (moduleEnumTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState")
+			Context.fatalError("runtime macro type probe: expected module enum lookup result but got " + moduleEnumTypeText, pos);
+		final moduleTypedefType = Context.getType("hxhxmacros.RuntimeModuleMembers.RuntimeModuleData");
+		final moduleTypedefTypeText = TypeTools.toString(moduleTypedefType);
+		if (moduleTypedefTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleData")
+			Context.fatalError("runtime macro type probe: expected module typedef lookup result but got " + moduleTypedefTypeText, pos);
+		final moduleAbstractType = Context.getType("hxhxmacros.RuntimeModuleMembers.RuntimeModuleId");
+		final moduleAbstractTypeText = TypeTools.toString(moduleAbstractType);
+		if (moduleAbstractTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleId")
+			Context.fatalError("runtime macro type probe: expected module abstract lookup result but got " + moduleAbstractTypeText, pos);
 
 		final boolType = Context.resolveType(macro :Bool, pos);
 		final boolTypeString = TypeTools.toString(boolType);
@@ -146,9 +158,13 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_TYPE_FOLLOW", followedNullStringText);
 		Compiler.define("HXHX_RUNTIME_TYPE_UNIFY", "1");
 		Compiler.define("HXHX_RUNTIME_TYPE_MODULE", moduleTypeText);
+		Compiler.define("HXHX_RUNTIME_TYPE_MODULE_ENUM", moduleEnumTypeText);
+		Compiler.define("HXHX_RUNTIME_TYPE_MODULE_TYPEDEF", moduleTypedefTypeText);
+		Compiler.define("HXHX_RUNTIME_TYPE_MODULE_ABSTRACT", moduleAbstractTypeText);
 
 		return "getType=String;resolveType=" + boolTypeString + ";moduleType=" + moduleTypeText + ";nullType=" + nullStringText + ";typeof=Int;follow="
-			+ followedNullStringText + ";unify=1";
+			+ followedNullStringText + ";unify=1;moduleEnumType=" + moduleEnumTypeText + ";moduleTypedefType=" + moduleTypedefTypeText
+			+ ";moduleAbstractType=" + moduleAbstractTypeText;
 	}
 
 	public static function probeLocalContextSnapshot():String {
