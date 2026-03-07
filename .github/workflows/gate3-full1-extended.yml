@@ -42,6 +42,8 @@ jobs:
           fetch-depth: 0
 
       - name: Install host toolchains (extended Gate3 set)
+        env:
+          REQUESTED_TARGETS: ${{ inputs.targets || 'Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php' }}
         run: |
           set -euo pipefail
           retry_apt() {
@@ -63,6 +65,49 @@ jobs:
 
           retry_apt sudo apt-get update
 
+          normalize_targets() {
+            printf '%s' "${REQUESTED_TARGETS}" | tr ',' '\n' | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed '/^$/d'
+          }
+
+          target_requested() {
+            local needle="$1"
+            while IFS= read -r target; do
+              if [ "${target}" = "${needle}" ]; then
+                return 0
+              fi
+            done < <(normalize_targets)
+            return 1
+          }
+
+          need_java=0
+          need_pypy=0
+          need_php=0
+          need_lua=0
+          need_cs=0
+          need_hl=0
+
+          if target_requested "macro" || target_requested "java" || target_requested "jvm"; then
+            need_java=1
+          fi
+          if target_requested "python"; then
+            need_pypy=1
+          fi
+          if target_requested "php"; then
+            need_php=1
+          fi
+          if target_requested "lua"; then
+            need_lua=1
+          fi
+          if target_requested "cs"; then
+            need_cs=1
+          fi
+          if target_requested "hl"; then
+            need_hl=1
+          fi
+
+          echo "Requested Gate3 targets:"
+          normalize_targets | sed 's/^/  - /'
+
           dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
           if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
             dune_pkg="dune"
@@ -73,22 +118,39 @@ jobs:
           retry_apt sudo apt-get install -y \
             ocaml "${dune_pkg}" ocaml-findlib \
             neko \
-            python3 pypy3 \
-            default-jdk \
+            python3 \
             build-essential \
-            php \
-            lua5.4 \
-            mono-devel
+            git
 
-          if ! command -v dotnet >/dev/null 2>&1; then
+          if [ "${need_pypy}" = "1" ]; then
+            retry_apt sudo apt-get install -y pypy3
+          fi
+
+          if [ "${need_java}" = "1" ]; then
+            retry_apt sudo apt-get install -y default-jdk
+          fi
+
+          if [ "${need_php}" = "1" ]; then
+            retry_apt sudo apt-get install -y php
+          fi
+
+          if [ "${need_lua}" = "1" ]; then
+            retry_apt sudo apt-get install -y lua5.4
+          fi
+
+          if [ "${need_cs}" = "1" ]; then
+            retry_apt sudo apt-get install -y mono-devel
+          fi
+
+          if [ "${need_cs}" = "1" ] && ! command -v dotnet >/dev/null 2>&1; then
             retry_apt sudo apt-get install -y dotnet-sdk-8.0 || true
           fi
 
-          if ! command -v hl >/dev/null 2>&1; then
+          if [ "${need_hl}" = "1" ] && ! command -v hl >/dev/null 2>&1; then
             retry_apt sudo apt-get install -y hashlink || true
           fi
 
-          if ! command -v hl >/dev/null 2>&1; then
+          if [ "${need_hl}" = "1" ] && ! command -v hl >/dev/null 2>&1; then
             echo "hashlink apt package unavailable; building pinned HashLink from source..."
             retry_apt sudo apt-get install -y \
               libmbedtls-dev \
@@ -115,21 +177,33 @@ jobs:
           ocamlc -version
           neko -version || true
           node --version || true
-          javac -version
+          if [ "${need_java}" = "1" ]; then
+            javac -version
+          fi
           python3 --version
-          pypy3 --version
-          php --version | head -n 1
-          lua5.4 -v || true
-          dotnet --version || true
-          mono --version | head -n 1 || true
-          hl --version || true
+          if [ "${need_pypy}" = "1" ]; then
+            pypy3 --version
+          fi
+          if [ "${need_php}" = "1" ]; then
+            php --version | head -n 1
+          fi
+          if [ "${need_lua}" = "1" ]; then
+            lua5.4 -v || true
+          fi
+          if [ "${need_cs}" = "1" ]; then
+            dotnet --version || true
+            mono --version | head -n 1 || true
+          fi
+          if [ "${need_hl}" = "1" ]; then
+            hl --version || true
+          fi
 
-          if ! command -v dotnet >/dev/null 2>&1 && ! command -v mono >/dev/null 2>&1; then
+          if [ "${need_cs}" = "1" ] && ! command -v dotnet >/dev/null 2>&1 && ! command -v mono >/dev/null 2>&1; then
             echo "Missing dotnet and mono for C# target." >&2
             exit 1
           fi
 
-          if ! command -v hl >/dev/null 2>&1; then
+          if [ "${need_hl}" = "1" ] && ! command -v hl >/dev/null 2>&1; then
             echo "Missing HashLink runtime (hl) required for Hl target." >&2
             exit 1
           fi
