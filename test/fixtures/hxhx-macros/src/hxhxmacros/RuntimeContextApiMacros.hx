@@ -437,21 +437,69 @@ class RuntimeContextApiMacros {
 			}
 			sawCarrier = true;
 			final statics = classType.statics.get();
-			if (statics.length < 2)
+			if (statics.length < 5)
 				Context.fatalError("runtime macro module-field probe: expected synthetic module statics", pos);
 			var sawRouter = false;
 			var sawSchema = false;
+			var sawRouteTag = false;
+			var sawRetryCount = false;
+			var sawFeatureEnabled = false;
 			for (field in statics) {
 				rendered.push(field.name);
 				if (field.name == "routerMarker")
 					sawRouter = field.meta.has(":router");
 				if (field.name == "schemaMarker")
 					sawSchema = field.meta.has(":schema");
+				if (field.name == "routeTag") {
+					sawRouteTag = field.meta.has(":routeTag");
+					final expr = field.expr();
+					if (expr == null || TypedExprTools.toString(expr, false) != "\"router\"")
+						Context.fatalError("runtime macro module-field probe: expected routeTag string expr", pos);
+					if (TypeTools.toString(field.type) != "String")
+						Context.fatalError("runtime macro module-field probe: expected routeTag type String", pos);
+					switch (field.kind) {
+						case FVar(_, AccNever):
+						case _:
+							Context.fatalError("runtime macro module-field probe: expected routeTag final kind", pos);
+					}
+				}
+				if (field.name == "retryCount") {
+					sawRetryCount = field.meta.has(":retry");
+					final expr = field.expr();
+					if (expr == null || TypedExprTools.toString(expr, false) != "3")
+						Context.fatalError("runtime macro module-field probe: expected retryCount int expr", pos);
+					if (TypeTools.toString(field.type) != "Int")
+						Context.fatalError("runtime macro module-field probe: expected retryCount type Int", pos);
+					switch (field.kind) {
+						case FVar(_, AccNever):
+						case _:
+							Context.fatalError("runtime macro module-field probe: expected retryCount final kind", pos);
+					}
+				}
+				if (field.name == "featureEnabled") {
+					sawFeatureEnabled = field.meta.has(":enabled");
+					final expr = field.expr();
+					if (expr == null || TypedExprTools.toString(expr, false) != "true")
+						Context.fatalError("runtime macro module-field probe: expected featureEnabled bool expr", pos);
+					if (TypeTools.toString(field.type) != "Bool")
+						Context.fatalError("runtime macro module-field probe: expected featureEnabled type Bool", pos);
+					switch (field.kind) {
+						case FVar(_, AccNormal):
+						case _:
+							Context.fatalError("runtime macro module-field probe: expected featureEnabled var kind", pos);
+					}
+				}
 			}
 			if (!sawRouter)
 				Context.fatalError("runtime macro module-field probe: missing :router metadata", pos);
 			if (!sawSchema)
 				Context.fatalError("runtime macro module-field probe: missing :schema metadata", pos);
+			if (!sawRouteTag)
+				Context.fatalError("runtime macro module-field probe: missing :routeTag metadata", pos);
+			if (!sawRetryCount)
+				Context.fatalError("runtime macro module-field probe: missing :retry metadata", pos);
+			if (!sawFeatureEnabled)
+				Context.fatalError("runtime macro module-field probe: missing :enabled metadata", pos);
 		}
 
 		if (!sawCarrier)

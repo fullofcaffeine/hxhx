@@ -10,6 +10,7 @@ private typedef RuntimeResolvedModuleFieldSnapshot = {
 	final name:String;
 	final kind:String;
 	final metadata:Array<String>;
+	final initExpr:Null<String>;
 }
 
 private enum MacroHostReadResult {
@@ -319,11 +320,13 @@ class MacroHostClient {
 		  - `function foo(...)`
 		  - `var foo`
 		  - `final foo`
+		- Carries a narrow initializer-text snapshot for `var` / `final` declarations when the
+		  initializer is present on the declaration line.
 
 		Gotchas
 		- This is intentionally narrower than full parser fidelity.
-		- It only records field names, declaration kind, and metadata, because that is the actual
-		  consumer contract for the current `KModuleFields` seam.
+		- Initializer capture is still a one-line subset; unsupported or multiline initializers are
+		  left empty and the runtime carrier falls back to `expr() == null` / `Dynamic`.
 	**/
 	public static function scanResolvedModuleFields(path:String):Array<RuntimeResolvedModuleFieldSnapshot> {
 		final out = new Array<RuntimeResolvedModuleFieldSnapshot>();
@@ -385,7 +388,28 @@ class MacroHostClient {
 			return match.match(rest) ? match.matched(1) : "";
 		}
 
-		function push(kind:String, name:String):Void {
+		function extractInitializer(prefix:String, keyword:String):Null<String> {
+			final rest = StringTools.trim(prefix.substr(keyword.length));
+			if (rest.length == 0)
+				return null;
+			final nameMatch = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+			if (!nameMatch.match(rest))
+				return null;
+			final afterName = StringTools.trim(rest.substr(nameMatch.matchedPos().pos + nameMatch.matchedPos().len));
+			if (afterName.length == 0)
+				return null;
+			final eqIndex = afterName.indexOf("=");
+			if (eqIndex < 0)
+				return null;
+			var exprText = StringTools.trim(afterName.substr(eqIndex + 1));
+			if (exprText.length == 0)
+				return null;
+			if (StringTools.endsWith(exprText, ";"))
+				exprText = StringTools.trim(exprText.substr(0, exprText.length - 1));
+			return exprText.length == 0 ? null : exprText;
+		}
+
+		function push(kind:String, name:String, ?initExpr:Null<String>):Void {
 			final trimmed = StringTools.trim(name == null ? "" : name);
 			if (trimmed.length == 0 || seen.exists(trimmed))
 				return;
@@ -393,7 +417,8 @@ class MacroHostClient {
 			out.push({
 				name: trimmed,
 				kind: kind,
-				metadata: pendingMetadata.copy()
+				metadata: pendingMetadata.copy(),
+				initExpr: initExpr
 			});
 			pendingMetadata = [];
 		}
@@ -436,9 +461,9 @@ class MacroHostClient {
 				} else if (StringTools.startsWith(trimmed, "function ")) {
 					push("method", extractName(trimmed, "function"));
 				} else if (StringTools.startsWith(trimmed, "var ")) {
-					push("var", extractName(trimmed, "var"));
+					push("var", extractName(trimmed, "var"), extractInitializer(trimmed, "var"));
 				} else if (StringTools.startsWith(trimmed, "final ")) {
-					push("var", extractName(trimmed, "final"));
+					push("final", extractName(trimmed, "final"), extractInitializer(trimmed, "final"));
 				} else if (!StringTools.startsWith(trimmed, "package ")
 					&& !StringTools.startsWith(trimmed, "import ")
 					&& !StringTools.startsWith(trimmed, "using ")
@@ -964,6 +989,8 @@ private class MacroClient {
 						final entry = resolvedFields[i];
 						parts.push(MacroProtocol.encodeLen("fn" + i, entry.name));
 						parts.push(MacroProtocol.encodeLen("fk" + i, entry.kind));
+						if (entry.initExpr != null && entry.initExpr.length > 0)
+							parts.push(MacroProtocol.encodeLen("fe" + i, entry.initExpr));
 						parts.push(MacroProtocol.encodeLen("fmc" + i, Std.string(entry.metadata.length)));
 						for (j in 0...entry.metadata.length)
 							parts.push(MacroProtocol.encodeLen("fmd" + i + "_" + j, entry.metadata[j]));

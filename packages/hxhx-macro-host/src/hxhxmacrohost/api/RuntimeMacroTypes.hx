@@ -305,8 +305,12 @@ class RuntimeMacroTypes {
 		return [typeForResolvedDecl(trimmed, "class", metadataEntries)];
 	}
 
-	public static function moduleTypesForModule(modulePath:String, entries:Array<{name:String, kind:String, metadata:Array<String>}>,
-			?moduleFields:Array<{name:String, kind:String, metadata:Array<String>}>):Array<Type> {
+	public static function moduleTypesForModule(modulePath:String, entries:Array<{name:String, kind:String, metadata:Array<String>}>, ?moduleFields:Array<{
+		name:String,
+		kind:String,
+		metadata:Array<String>,
+		initExpr:Null<String>
+	}>):Array<Type> {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
 			return [];
@@ -783,11 +787,15 @@ class RuntimeMacroTypes {
 		return value;
 	}
 
-	static function moduleFieldsCarrier(pack:Array<String>, module:String, modulePath:String,
-			entries:Array<{name:String, kind:String, metadata:Array<String>}>):Ref<ClassType> {
+	static function moduleFieldsCarrier(pack:Array<String>, module:String, modulePath:String, entries:Array<{
+		name:String,
+		kind:String,
+		metadata:Array<String>,
+		initExpr:Null<String>
+	}>):Ref<ClassType> {
 		final statics = [
 			for (entry in entries)
-				classField(entry.name, entry.kind, entry.metadata)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr)
 		];
 		return classRef(pack, module, module, null, KModuleFields(modulePath), statics);
 	}
@@ -820,24 +828,92 @@ class RuntimeMacroTypes {
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function classField(name:String, kind:String, ?metadataEntries:Array<String>):ClassField {
+	static function classField(name:String, kind:String, ?metadataEntries:Array<String>, ?initExpr:Null<String>):ClassField {
 		final lowered = kind == null ? "" : StringTools.trim(kind).toLowerCase();
+		final typedExpr = buildFieldExpr(initExpr);
+		final fieldType = switch (lowered) {
+			case "method":
+				TFun([], TDynamic(null));
+			case _ if (typedExpr != null):
+				typedExpr.t;
+			case _:
+				TDynamic(null);
+		};
+		final fieldKind = switch (lowered) {
+			case "method":
+				FMethod(MethNormal);
+			case "final":
+				FVar(AccNormal, AccNever);
+			case _:
+				FVar(AccNormal, AccNormal);
+		};
 		return {
 			name: name,
-			type: lowered == "method" ? TFun([], TDynamic(null)) : TDynamic(null),
+			type: fieldType,
 			isPublic: true,
 			isExtern: true,
-			isFinal: false,
+			isFinal: lowered == "final",
 			isAbstract: false,
 			params: [],
 			meta: metadataAccess(metadataEntries),
-			kind: lowered == "method" ? FMethod(MethNormal) : FVar(AccNormal, AccNormal),
+			kind: fieldKind,
 			expr: function():Null<TypedExpr> {
-				return null;
+				return typedExpr;
 			},
 			pos: defaultPos(),
 			doc: null,
 			overloads: makeRef([], name + ".overloads")
+		};
+	}
+
+	static function buildFieldExpr(exprText:Null<String>):Null<TypedExpr> {
+		final trimmed = StringTools.trim(exprText == null ? "" : exprText);
+		if (trimmed.length == 0)
+			return null;
+		return try {
+			buildFieldTypedExpr(RuntimeMacroExprs.parseInlineString(trimmed, defaultPos()));
+		} catch (_:String) {
+			null;
+		}
+	}
+
+	static function buildFieldTypedExpr(expr:Expr):TypedExpr {
+		if (expr == null)
+			throw "runtime macro module field expr: null expr";
+		return switch (expr.expr) {
+			case EConst(CInt(raw, suffix)):
+				if (suffix != null) {}
+				makeTypedExpr(expr.pos, TConst(TInt(Std.parseInt(raw))), intType());
+			case EConst(CFloat(raw)):
+				makeTypedExpr(expr.pos, TConst(TFloat(raw)), floatType());
+			case EConst(CString(text, kind)):
+				if (kind != null) {}
+				makeTypedExpr(expr.pos, TConst(TString(text)), stringType());
+			case EConst(CIdent("true")):
+				makeTypedExpr(expr.pos, TConst(TBool(true)), boolType());
+			case EConst(CIdent("false")):
+				makeTypedExpr(expr.pos, TConst(TBool(false)), boolType());
+			case EConst(CIdent("null")):
+				makeTypedExpr(expr.pos, TConst(TNull), TDynamic(null));
+			case EParenthesis(inner):
+				final typedInner = buildFieldTypedExpr(inner);
+				makeTypedExpr(expr.pos, TParenthesis(typedInner), typedInner.t);
+			case ECast(inner, _):
+				final typedInner = buildFieldTypedExpr(inner);
+				makeTypedExpr(expr.pos, TCast(typedInner, null), typedInner.t);
+			case EMeta(meta, inner):
+				final typedInner = buildFieldTypedExpr(inner);
+				makeTypedExpr(expr.pos, TMeta(meta, typedInner), typedInner.t);
+			case _:
+				throw "runtime macro module field expr: unsupported expr shape";
+		}
+	}
+
+	static function makeTypedExpr(pos:Position, expr:TypedExprDef, t:Type):TypedExpr {
+		return {
+			expr: expr,
+			pos: pos == null ? defaultPos() : pos,
+			t: t
 		};
 	}
 

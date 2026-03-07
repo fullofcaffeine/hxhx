@@ -375,7 +375,12 @@ class Context {
 				metadata: metadata
 			});
 		}
-		final fields = new Array<{name:String, kind:String, metadata:Array<String>}>();
+		final fields = new Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>
+		}>();
 		final fieldCount = parseNonNegativeInt(parts.exists("fc") ? parts.get("fc") : "", 0);
 		for (i in 0...fieldCount) {
 			final nameKey = "fn" + i;
@@ -391,7 +396,8 @@ class Context {
 			fields.push({
 				name: parts.get(nameKey),
 				kind: parts.exists("fk" + i) ? parts.get("fk" + i) : "var",
-				metadata: metadata
+				metadata: metadata,
+				initExpr: parts.exists("fe" + i) ? parts.get("fe" + i) : null
 			});
 		}
 		final modulePath = parts.exists("m") ? parts.get("m") : name;
