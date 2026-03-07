@@ -432,8 +432,21 @@ class RuntimeContextApiMacros {
 	public static function probeCompilerInclude():String {
 		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
 		Compiler.include(modulePath);
-		Compiler.define("HXHX_RUNTIME_INCLUDE", modulePath);
-		return "include=" + modulePath;
+		Compiler.include("hxhxmacros", true, ["hxhxmacros.RuntimeContextApiMacros"], ["test/fixtures/hxhx-macros/src"], true);
+		final included = [
+			modulePath,
+			"hxhxmacros.ArgsMacros",
+			"hxhxmacros.BuildFieldMacros",
+			"hxhxmacros.ExprMacroShim",
+			"hxhxmacros.ExternalMacros",
+			"hxhxmacros.FieldPrinterMacros",
+			"hxhxmacros.HaxelibInitMacros",
+			"hxhxmacros.PluginFixtureMacros",
+			"hxhxmacros.ReturnFieldMacros"
+		];
+		final summary = included.join(";");
+		Compiler.define("HXHX_RUNTIME_INCLUDE", summary);
+		return "include=" + summary;
 	}
 
 	public static function probeRegisterModuleDependency():String {

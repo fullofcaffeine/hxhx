@@ -190,8 +190,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 
 			final includeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()");
 			assertContains("include output", includeOutput, "include=hxhxmacros.RuntimeContextApiMacros");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_INCLUDE") == "hxhxmacros.RuntimeContextApiMacros", "expected runtime include define");
+			assertContains("include output recursive", includeOutput, "hxhxmacros.ArgsMacros");
+			assertContains("include output recursive", includeOutput, "hxhxmacros.ReturnFieldMacros");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_INCLUDE").indexOf("hxhxmacros.ArgsMacros") >= 0, "expected recursive include define");
 			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.RuntimeContextApiMacros") >= 0, "expected included module snapshot");
+			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.ArgsMacros") >= 0, "expected recursive package include");
+			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.RuntimeContextApiMacros") >= 0, "expected exact module include");
 
 			MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_DEP") == "hxhxmacros.RuntimeContextApiMacros->runtime/macro-probe.txt",
