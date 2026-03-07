@@ -309,7 +309,10 @@ class RuntimeMacroTypes {
 		name:String,
 		kind:String,
 		metadata:Array<String>,
-		initExpr:Null<String>
+		initExpr:Null<String>,
+		file:String,
+		min:Int,
+		max:Int
 	}>):Array<Type> {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
@@ -791,11 +794,14 @@ class RuntimeMacroTypes {
 		name:String,
 		kind:String,
 		metadata:Array<String>,
-		initExpr:Null<String>
+		initExpr:Null<String>,
+		file:String,
+		min:Int,
+		max:Int
 	}>):Ref<ClassType> {
 		final statics = [
 			for (entry in entries)
-				classField(entry.name, entry.kind, entry.metadata, entry.initExpr)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.file, entry.min, entry.max)
 		];
 		return classRef(pack, module, module, null, KModuleFields(modulePath), statics);
 	}
@@ -828,9 +834,10 @@ class RuntimeMacroTypes {
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function classField(name:String, kind:String, ?metadataEntries:Array<String>, ?initExpr:Null<String>):ClassField {
+	static function classField(name:String, kind:String, ?metadataEntries:Array<String>, ?initExpr:Null<String>, ?file:String, ?min:Int, ?max:Int):ClassField {
 		final lowered = kind == null ? "" : StringTools.trim(kind).toLowerCase();
-		final typedExpr = buildFieldExpr(initExpr);
+		final pos = position(file, min, max);
+		final typedExpr = buildFieldExpr(initExpr, pos);
 		final fieldType = switch (lowered) {
 			case "method":
 				TFun([], TDynamic(null));
@@ -860,18 +867,18 @@ class RuntimeMacroTypes {
 			expr: function():Null<TypedExpr> {
 				return typedExpr;
 			},
-			pos: defaultPos(),
+			pos: pos,
 			doc: null,
 			overloads: makeRef([], name + ".overloads")
 		};
 	}
 
-	static function buildFieldExpr(exprText:Null<String>):Null<TypedExpr> {
+	static function buildFieldExpr(exprText:Null<String>, pos:Position):Null<TypedExpr> {
 		final trimmed = StringTools.trim(exprText == null ? "" : exprText);
 		if (trimmed.length == 0)
 			return null;
 		return try {
-			buildFieldTypedExpr(RuntimeMacroExprs.parseInlineString(trimmed, defaultPos()));
+			buildFieldTypedExpr(RuntimeMacroExprs.parseInlineString(trimmed, pos == null ? defaultPos() : pos));
 		} catch (_:String) {
 			null;
 		}
@@ -1088,6 +1095,17 @@ class RuntimeMacroTypes {
 			file: DEFAULT_FILE,
 			min: 0,
 			max: 0
+		};
+	}
+
+	static function position(file:Null<String>, min:Null<Int>, max:Null<Int>):Position {
+		final resolvedFile = file == null || StringTools.trim(file).length == 0 ? DEFAULT_FILE : StringTools.trim(file);
+		final resolvedMin = min == null || min < 0 ? 0 : min;
+		final resolvedMax = max == null || max < resolvedMin ? resolvedMin : max;
+		return cast {
+			file: resolvedFile,
+			min: resolvedMin,
+			max: resolvedMax
 		};
 	}
 }

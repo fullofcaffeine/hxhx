@@ -11,6 +11,9 @@ private typedef RuntimeResolvedModuleFieldSnapshot = {
 	final kind:String;
 	final metadata:Array<String>;
 	final initExpr:Null<String>;
+	final file:String;
+	final min:Int;
+	final max:Int;
 }
 
 private enum MacroHostReadResult {
@@ -243,6 +246,24 @@ class MacroHostClient {
 		return HxConditionalCompilation.filterSource(source, defines);
 	}
 
+	static function splitLinesPreserveNewlines(source:String):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var i = 0;
+		while (i < source.length) {
+			if (source.charCodeAt(i) == "\n".code) {
+				out.push(source.substr(start, i - start + 1));
+				i += 1;
+				start = i;
+				continue;
+			}
+			i += 1;
+		}
+		if (start < source.length)
+			out.push(source.substr(start));
+		return out;
+	}
+
 	public static function scanResolvedModuleTypes(modulePath:String, path:String, fallbackMainName:String,
 			?includeFallbackMain:Bool = true):Array<RuntimeResolvedTypeSnapshot> {
 		final out = new Array<RuntimeResolvedTypeSnapshot>();
@@ -337,8 +358,9 @@ class MacroHostClient {
 		var braceDepth = 0;
 		var blockCommentDepth = 0;
 		var pendingMetadata = new Array<String>();
+		var lineOffset = 0;
 		final seen = new Map<String, Bool>();
-		final lines = filtered.split("\n");
+		final lines = splitLinesPreserveNewlines(filtered);
 
 		function countChar(text:String, ch:String):Int {
 			var count = 0;
@@ -409,7 +431,30 @@ class MacroHostClient {
 			return exprText.length == 0 ? null : exprText;
 		}
 
-		function push(kind:String, name:String, ?initExpr:Null<String>):Void {
+		function lineSpan(rawLine:String, start:Int):{min:Int, max:Int} {
+			var min = 0;
+			while (min < rawLine.length) {
+				final c = rawLine.charCodeAt(min);
+				if (c == " ".code || c == "\t".code)
+					min += 1;
+				else
+					break;
+			}
+			var max = rawLine.length;
+			while (max > min) {
+				final c = rawLine.charCodeAt(max - 1);
+				if (c == "\n".code || c == "\r".code)
+					max -= 1;
+				else
+					break;
+			}
+			return {
+				min: start + min,
+				max: start + max
+			};
+		}
+
+		function push(kind:String, name:String, span:{min:Int, max:Int}, ?initExpr:Null<String>):Void {
 			final trimmed = StringTools.trim(name == null ? "" : name);
 			if (trimmed.length == 0 || seen.exists(trimmed))
 				return;
@@ -418,12 +463,17 @@ class MacroHostClient {
 				name: trimmed,
 				kind: kind,
 				metadata: pendingMetadata.copy(),
-				initExpr: initExpr
+				initExpr: initExpr,
+				file: path,
+				min: span.min,
+				max: span.max
 			});
 			pendingMetadata = [];
 		}
 
 		for (rawLine in lines) {
+			final currentLineOffset = lineOffset;
+			lineOffset += rawLine.length;
 			var line = rawLine;
 			if (blockCommentDepth > 0) {
 				while (line.length > 0 && blockCommentDepth > 0) {
@@ -456,14 +506,15 @@ class MacroHostClient {
 				continue;
 
 			if (braceDepth == 0) {
+				final span = lineSpan(rawLine, currentLineOffset);
 				if (StringTools.startsWith(trimmed, "@:")) {
 					pendingMetadata.push(trimmed);
 				} else if (StringTools.startsWith(trimmed, "function ")) {
-					push("method", extractName(trimmed, "function"));
+					push("method", extractName(trimmed, "function"), span);
 				} else if (StringTools.startsWith(trimmed, "var ")) {
-					push("var", extractName(trimmed, "var"), extractInitializer(trimmed, "var"));
+					push("var", extractName(trimmed, "var"), span, extractInitializer(trimmed, "var"));
 				} else if (StringTools.startsWith(trimmed, "final ")) {
-					push("final", extractName(trimmed, "final"), extractInitializer(trimmed, "final"));
+					push("final", extractName(trimmed, "final"), span, extractInitializer(trimmed, "final"));
 				} else if (!StringTools.startsWith(trimmed, "package ")
 					&& !StringTools.startsWith(trimmed, "import ")
 					&& !StringTools.startsWith(trimmed, "using ")
@@ -989,6 +1040,9 @@ private class MacroClient {
 						final entry = resolvedFields[i];
 						parts.push(MacroProtocol.encodeLen("fn" + i, entry.name));
 						parts.push(MacroProtocol.encodeLen("fk" + i, entry.kind));
+						parts.push(MacroProtocol.encodeLen("ff" + i, entry.file));
+						parts.push(MacroProtocol.encodeLen("fmin" + i, Std.string(entry.min)));
+						parts.push(MacroProtocol.encodeLen("fmax" + i, Std.string(entry.max)));
 						if (entry.initExpr != null && entry.initExpr.length > 0)
 							parts.push(MacroProtocol.encodeLen("fe" + i, entry.initExpr));
 						parts.push(MacroProtocol.encodeLen("fmc" + i, Std.string(entry.metadata.length)));

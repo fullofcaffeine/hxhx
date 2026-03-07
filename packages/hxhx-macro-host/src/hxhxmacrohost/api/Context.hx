@@ -379,7 +379,10 @@ class Context {
 			name:String,
 			kind:String,
 			metadata:Array<String>,
-			initExpr:Null<String>
+			initExpr:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
 		}>();
 		final fieldCount = parseNonNegativeInt(parts.exists("fc") ? parts.get("fc") : "", 0);
 		for (i in 0...fieldCount) {
@@ -397,7 +400,10 @@ class Context {
 				name: parts.get(nameKey),
 				kind: parts.exists("fk" + i) ? parts.get("fk" + i) : "var",
 				metadata: metadata,
-				initExpr: parts.exists("fe" + i) ? parts.get("fe" + i) : null
+				initExpr: parts.exists("fe" + i) ? parts.get("fe" + i) : null,
+				file: parts.exists("ff" + i) ? parts.get("ff" + i) : DEFAULT_MACRO_FILE,
+				min: parseNonNegativeInt(parts.exists("fmin" + i) ? parts.get("fmin" + i) : "", 0),
+				max: parseNonNegativeInt(parts.exists("fmax" + i) ? parts.get("fmax" + i) : "", 0)
 			});
 		}
 		final modulePath = parts.exists("m") ? parts.get("m") : name;

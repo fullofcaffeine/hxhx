@@ -18,3 +18,6 @@ final retryCount = 3;
 
 @:enabled
 var featureEnabled = true;
+
+@:sourceTag
+final sourceTag = "from-source".toUpperCase();

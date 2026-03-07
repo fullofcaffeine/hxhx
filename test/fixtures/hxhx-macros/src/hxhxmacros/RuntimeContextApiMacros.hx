@@ -3,6 +3,7 @@ package hxhxmacros;
 import String;
 import haxe.Template as T;
 import haxe.io.Bytes;
+import sys.io.File;
 
 using StringTools;
 using haxe.io.Path;
@@ -437,13 +438,14 @@ class RuntimeContextApiMacros {
 			}
 			sawCarrier = true;
 			final statics = classType.statics.get();
-			if (statics.length < 5)
+			if (statics.length < 6)
 				Context.fatalError("runtime macro module-field probe: expected synthetic module statics", pos);
 			var sawRouter = false;
 			var sawSchema = false;
 			var sawRouteTag = false;
 			var sawRetryCount = false;
 			var sawFeatureEnabled = false;
+			var sawSourceTag = false;
 			for (field in statics) {
 				rendered.push(field.name);
 				if (field.name == "routerMarker")
@@ -489,6 +491,26 @@ class RuntimeContextApiMacros {
 							Context.fatalError("runtime macro module-field probe: expected featureEnabled var kind", pos);
 					}
 				}
+				if (field.name == "sourceTag") {
+					sawSourceTag = field.meta.has(":sourceTag");
+					if (field.expr() != null)
+						Context.fatalError("runtime macro module-field probe: expected sourceTag expr fallback path", pos);
+					if (TypeTools.toString(field.type) != "Dynamic")
+						Context.fatalError("runtime macro module-field probe: expected sourceTag type Dynamic", pos);
+					final fromSource = extractStringConstFromSource(field);
+					if (fromSource != "from-source")
+						Context.fatalError("runtime macro module-field probe: expected source fallback string but got " + Std.string(fromSource), pos);
+					final posInfo = Context.getPosInfos(field.pos);
+					if (posInfo.file == null || posInfo.file.indexOf("RuntimeModuleFieldCarrier.hx") < 0)
+						Context.fatalError("runtime macro module-field probe: expected real source file position", pos);
+					if (posInfo.min >= posInfo.max)
+						Context.fatalError("runtime macro module-field probe: expected non-empty source position range", pos);
+					switch (field.kind) {
+						case FVar(_, AccNever):
+						case _:
+							Context.fatalError("runtime macro module-field probe: expected sourceTag final kind", pos);
+					}
+				}
 			}
 			if (!sawRouter)
 				Context.fatalError("runtime macro module-field probe: missing :router metadata", pos);
@@ -500,6 +522,8 @@ class RuntimeContextApiMacros {
 				Context.fatalError("runtime macro module-field probe: missing :retry metadata", pos);
 			if (!sawFeatureEnabled)
 				Context.fatalError("runtime macro module-field probe: missing :enabled metadata", pos);
+			if (!sawSourceTag)
+				Context.fatalError("runtime macro module-field probe: missing :sourceTag metadata", pos);
 		}
 
 		if (!sawCarrier)
@@ -511,6 +535,59 @@ class RuntimeContextApiMacros {
 		final summary = rendered.join(";");
 		Compiler.define("HXHX_RUNTIME_MODULE_FIELDS", summary);
 		return "moduleFields=" + summary;
+	}
+
+	static function extractStringConstFromSource(field:haxe.macro.Type.ClassField):Null<String> {
+		if (field == null)
+			return null;
+		final posInfos = Context.getPosInfos(field.pos);
+		if (posInfos == null || posInfos.file == null || posInfos.file.length == 0)
+			return null;
+		final content = try File.getContent(posInfos.file) catch (_:haxe.io.Error) {
+			null;
+		} catch (_:String) {
+			null;
+		}
+		if (content == null)
+			return null;
+		var min = posInfos.min;
+		var max = posInfos.max;
+		if (min < 0)
+			min = 0;
+		if (max > content.length)
+			max = content.length;
+		if (min >= max)
+			return null;
+		final eq = content.indexOf("=", min);
+		if (eq == -1 || eq >= max)
+			return null;
+		var i = eq + 1;
+		while (i < max && content.charCodeAt(i) != '"'.code)
+			i += 1;
+		if (i >= max)
+			return null;
+		i += 1;
+		final out = new StringBuf();
+		var escaping = false;
+		while (i < max) {
+			final c = content.charCodeAt(i);
+			if (escaping) {
+				escaping = false;
+				out.addChar(c);
+				i += 1;
+				continue;
+			}
+			if (c == "\\".code) {
+				escaping = true;
+				i += 1;
+				continue;
+			}
+			if (c == '"'.code)
+				return out.toString();
+			out.addChar(c);
+			i += 1;
+		}
+		return null;
 	}
 
 	public static function probeTypedExprPlumbing():String {
