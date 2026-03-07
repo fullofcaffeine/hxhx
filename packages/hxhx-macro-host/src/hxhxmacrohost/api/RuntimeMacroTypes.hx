@@ -42,6 +42,70 @@ import haxe.macro.Type;
 class RuntimeMacroTypes {
 	static inline final DEFAULT_FILE:String = "<macro>";
 
+	/**
+		Follow the small runtime type model to a more concrete type.
+
+		Why
+		- Runtime `TypeTools.follow(...)` and `Context.follow(...)` are exercised by Reflaxe-style
+		  backend code, but the external host only has a builtin subset of `Type`.
+
+		What
+		- Resolves `TMono` and `TLazy` wrappers inside that subset.
+		- Leaves named builtin instances unchanged because the runtime model does not currently
+		  synthesize typedef/abstract wrappers beyond those shells.
+	**/
+	public static function follow(t:Type, once:Bool = false):Type {
+		if (t == null)
+			return null;
+		return switch (t) {
+			case TMono(tm):
+				final inner = tm.get();
+				if (inner == null) t else if (once) inner else follow(inner, false);
+			case TLazy(f):
+				final inner = f();
+				if (inner == null) t else if (once) inner else follow(inner, false);
+			case _:
+				t;
+		}
+	}
+
+	public static function followWithAbstracts(t:Type, once:Bool = false):Type {
+		// Current runtime model does not synthesize real abstract wrappers yet, so this is the same
+		// narrow behavior as `follow(...)`.
+		return follow(t, once);
+	}
+
+	/**
+		Check unification inside the builtin runtime type model.
+
+		Why
+		- Some backend helpers ask `Context.unify(...)` or `TypeTools.unify(...)` to compare builtin
+		  types while running in the external host.
+
+		What
+		- Supports equality, `Dynamic` wildcard behavior, and `Null<T>` vs `T` within the builtin
+		  runtime model.
+
+		Gotchas
+		- This is intentionally narrower than upstream typer unification.
+		- Rich abstract/typedef/module-type semantics remain outside the current runtime rung.
+	**/
+	public static function unify(t1:Type, t2:Type):Bool {
+		final left = follow(t1);
+		final right = follow(t2);
+		if (left == null || right == null)
+			return false;
+		if (toString(left) == toString(right))
+			return true;
+		if (isDynamicType(left) || isDynamicType(right))
+			return true;
+		if (isNullWrapper(left))
+			return unify(extractNullInner(left), right);
+		if (isNullWrapper(right))
+			return unify(left, extractNullInner(right));
+		return false;
+	}
+
 	public static function describe(t:Type):String {
 		return "builtin:" + toString(t);
 	}
@@ -248,6 +312,32 @@ class RuntimeMacroTypes {
 		if (params == null || params.length == 0)
 			return fullName;
 		return fullName + "<" + [for (param in params) toString(param)].join(", ") + ">";
+	}
+
+	static function isDynamicType(t:Type):Bool {
+		return switch (t) {
+			case TDynamic(_):
+				true;
+			case _:
+				false;
+		}
+	}
+
+	static function isNullWrapper(t:Type):Bool {
+		return switch (t) {
+			case TInst(c, params): c.get().name == "Null" && params.length == 1;
+			case _:
+				false;
+		}
+	}
+
+	static function extractNullInner(t:Type):Type {
+		return switch (t) {
+			case TInst(_, params):
+				params[0];
+			case _:
+				t;
+		}
 	}
 
 	static function resolveAddType(left:Type, right:Type):Type {

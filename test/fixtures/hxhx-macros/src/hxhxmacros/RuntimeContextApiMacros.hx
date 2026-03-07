@@ -104,11 +104,35 @@ class RuntimeContextApiMacros {
 		if (literalIntText != "Int")
 			Context.fatalError("runtime macro type probe: expected typeof integer add -> Int but got " + literalIntText, pos);
 
+		final followedNullString = Context.follow(nullStringType);
+		final followedNullStringText = TypeTools.toString(followedNullString);
+		if (followedNullStringText != "Null<String>")
+			Context.fatalError("runtime macro type probe: expected follow(Null<String>) to stay Null<String>", pos);
+
+		final followedBool = TypeTools.follow(boolType);
+		if (TypeTools.toString(followedBool) != "Bool")
+			Context.fatalError("runtime macro type probe: expected TypeTools.follow(Bool) -> Bool", pos);
+
+		if (!Context.unify(boolType, Context.resolveType(macro :Bool, pos)))
+			Context.fatalError("runtime macro type probe: expected Bool to unify with Bool", pos);
+		if (!Context.unify(nullStringType, stringType))
+			Context.fatalError("runtime macro type probe: expected Null<String> to unify with String in builtin runtime model", pos);
+		if (Context.unify(boolType, stringType))
+			Context.fatalError("runtime macro type probe: unexpected Bool/String unification", pos);
+
 		Compiler.define("HXHX_RUNTIME_TYPE_BOOL", boolTypeString);
 		Compiler.define("HXHX_RUNTIME_TYPE_NULL", nullStringText);
 		Compiler.define("HXHX_RUNTIME_TYPE_LITERAL", literalIntText);
+		Compiler.define("HXHX_RUNTIME_TYPE_FOLLOW", followedNullStringText);
+		Compiler.define("HXHX_RUNTIME_TYPE_UNIFY", "1");
 
-		return "getType=String;resolveType=" + boolTypeString + ";nullType=" + nullStringText + ";typeof=Int";
+		return "getType=String;resolveType="
+			+ boolTypeString
+			+ ";nullType="
+			+ nullStringText
+			+ ";typeof=Int;follow="
+			+ followedNullStringText
+			+ ";unify=1";
 	}
 
 	public static function probeLocalContextSnapshot():String {

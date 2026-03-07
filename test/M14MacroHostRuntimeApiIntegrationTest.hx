@@ -96,9 +96,13 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("type probe resolveType", typeOutput, "resolveType=Bool");
 			assertContains("type probe nullType", typeOutput, "nullType=Null<String>");
 			assertContains("type probe typeof", typeOutput, "typeof=Int");
+			assertContains("type probe follow", typeOutput, "follow=Null<String>");
+			assertContains("type probe unify", typeOutput, "unify=1");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_BOOL") == "Bool", "expected runtime bool type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_NULL") == "Null<String>", "expected runtime null type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_LITERAL") == "Int", "expected runtime literal type define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_FOLLOW") == "Null<String>", "expected runtime follow define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_UNIFY") == "1", "expected runtime unify define");
 
 			final localContextOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()");
 			assertContains("local context module", localContextOutput, "module=hxhxmacros.RuntimeContextApiMacros");

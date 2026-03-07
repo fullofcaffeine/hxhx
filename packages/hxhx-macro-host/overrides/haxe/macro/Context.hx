@@ -405,6 +405,18 @@ class Context {
 		return HostContext.toComplexType(t);
 	}
 
+	public static function unify(t1:Type, t2:Type):Bool {
+		return HostContext.unify(t1, t2);
+	}
+
+	public static function follow(t:Type, once:Bool = false):Type {
+		return HostContext.follow(t, once);
+	}
+
+	public static function followWithAbstracts(t:Type, once:Bool = false):Type {
+		return HostContext.followWithAbstracts(t, once);
+	}
+
 	public static function onGenerate(callback:Array<Dynamic>->Void, persistent:Bool = true):Void {
 		HostContext.onGenerate(callback, persistent);
 	}

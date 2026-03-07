@@ -35,16 +35,10 @@ class TypeTools {
 
 		Bring-up behavior
 		- In macro-eval contexts, delegates to `Context.follow` (compiler-defined semantics).
-		- In runtime macro-host contexts, returns the input unchanged.
+		- In runtime macro-host contexts, delegates to the builtin-only runtime type model.
 	**/
 	public static inline function follow(t:Type, ?once:Bool = false):Type {
-		#if macro
 		return Context.follow(t, once);
-		#else
-		// Runtime stub: we do not yet have a real `Type` model in the host.
-		if (once != false) {}
-		return t;
-		#end
 	}
 
 	/**
@@ -52,15 +46,10 @@ class TypeTools {
 
 		Bring-up behavior
 		- Macro-eval: delegates to `Context.followWithAbstracts`.
-		- Runtime: identity.
+		- Runtime: delegates to the builtin-only runtime type model.
 	**/
 	public static inline function followWithAbstracts(t:Type, once:Bool = false):Type {
-		#if macro
 		return Context.followWithAbstracts(t, once);
-		#else
-		if (once != false) {}
-		return t;
-		#end
 	}
 
 	/**
@@ -68,16 +57,10 @@ class TypeTools {
 
 		Bring-up behavior
 		- Macro-eval: delegates to `Context.unify`.
-		- Runtime: conservatively returns false (until we have a real type model).
+		- Runtime: delegates to the builtin-only runtime type model.
 	**/
 	public static inline function unify(t1:Type, t2:Type):Bool {
-		#if macro
 		return Context.unify(t1, t2);
-		#else
-		if (t1 != null) {}
-		if (t2 != null) {}
-		return false;
-		#end
 	}
 
 	/**

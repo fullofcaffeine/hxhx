@@ -188,6 +188,18 @@ class Context {
 		return RuntimeMacroTypes.toComplexType(t);
 	}
 
+	public static function unify(t1:Type, t2:Type):Bool {
+		return RuntimeMacroTypes.unify(t1, t2);
+	}
+
+	public static function follow(t:Type, once:Bool = false):Type {
+		return RuntimeMacroTypes.follow(t, once);
+	}
+
+	public static function followWithAbstracts(t:Type, once:Bool = false):Type {
+		return RuntimeMacroTypes.followWithAbstracts(t, once);
+	}
+
 	public static function getClassPath():Array<String> {
 		final payload = HostToCompilerRpc.call("context.getClassPath", "");
 		final out = new Array<String>();
