@@ -7058,7 +7058,15 @@ class OcamlBuilder {
 							if (isBoolType(cf.type)) {
 								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxRuntime"), "unbox_bool_or_obj"), [fieldObj]);
 							} else {
-								OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [fieldObj]);
+								final nullableEnumName = isNullableEnumType(cf.type);
+								final enumName = nullableEnumName != null ? nullableEnumName : fullNameOfTypeEnum(cf.type);
+								if (enumName != null) {
+									final unboxed = OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("HxEnum"), "unbox_or_obj"),
+										[OcamlExpr.EConst(OcamlConst.CString(enumName)), fieldObj]);
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [unboxed]);
+								} else {
+									OcamlExpr.EApp(OcamlExpr.EField(OcamlExpr.EIdent("Obj"), "obj"), [fieldObj]);
+								}
 							}
 						}
 				}

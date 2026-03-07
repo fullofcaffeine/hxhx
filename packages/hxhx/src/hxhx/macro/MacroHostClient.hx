@@ -573,6 +573,8 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalTypeText())));
 				case "context.getLocalMethod":
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getLocalMethod())));
+				case "context.getLocalImports":
+					replyOk(id, MacroProtocol.encodeLen("v", encodeLocalImportsPayload()));
 				case "context.getModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					if (name == null || name.length == 0) {
@@ -646,6 +648,28 @@ private class MacroClient {
 		return out;
 	}
 
+	static function encodeLocalImportsPayload():String {
+		final buildFile = resolveMacroContextBuildFile();
+		if (buildFile == null || buildFile.length == 0)
+			return MacroProtocol.encodeLen("c", "0");
+		return MacroLocalImports.encodePayloadFromSourceFile(buildFile);
+	}
+
+	static function resolveMacroContextBuildFile():Null<String> {
+		final explicitBuildFile = MacroState.definedValue("HXHX_BUILD_FILE");
+		if (explicitBuildFile != null && explicitBuildFile.length > 0) {
+			final resolved = resolveMacroContextPath(explicitBuildFile);
+			if (resolved != null && resolved.length > 0)
+				return resolved;
+		}
+
+		final pos = MacroState.getCurrentPos();
+		final posFile = pos == null ? "" : pos.file;
+		if (posFile == null || posFile.length == 0 || posFile == "<macro>")
+			return null;
+		return resolveMacroContextPath(posFile);
+	}
+
 	static function resolveMacroContextPath(file:String):Null<String> {
 		final trimmed = StringTools.trim(file == null ? "" : file);
 		if (trimmed.length == 0)
@@ -658,6 +682,12 @@ private class MacroClient {
 		} catch (_:String) {}
 
 		final cwd = Sys.getCwd();
+		final repoRelative = haxe.io.Path.normalize(haxe.io.Path.join([cwd, normalized]));
+		try {
+			if (sys.FileSystem.exists(repoRelative) && !sys.FileSystem.isDirectory(repoRelative))
+				return sys.FileSystem.fullPath(repoRelative);
+		} catch (_:String) {}
+
 		for (cp in gatherMacroContextClassPaths()) {
 			final cp0 = StringTools.replace(cp == null ? "" : cp, "\\", "/");
 			final base = haxe.io.Path.isAbsolute(cp0) ? cp0 : haxe.io.Path.normalize(haxe.io.Path.join([cwd, cp0]));

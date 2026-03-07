@@ -33,6 +33,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
+			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()"
@@ -113,6 +114,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_METHOD") == "probeLocalContextSnapshot", "expected local method define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_TYPE") == "String", "expected local type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_EXPECTED_TYPE") == "Bool", "expected expected type define");
+
+			final localImportsOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalImports()");
+			assertContains("local imports String", localImportsOutput, "INormal:String");
+			assertContains("local imports Template alias", localImportsOutput, "IAsName(T):haxe.Template");
+			assertContains("local imports wildcard", localImportsOutput, "IAll:haxe.macro");
+			assertContains("local imports define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_IMPORTS"), "IAsName(T):haxe.Template");
 
 			final moduleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()");
 			assertContains("module lookup output", moduleOutput, "moduleLookup=hxhxmacros.RuntimeContextApiMacros");

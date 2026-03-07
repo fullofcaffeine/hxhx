@@ -1,8 +1,13 @@
 package hxhxmacros;
 
+import String;
+import haxe.Template as T;
+import haxe.macro.*;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
 import haxe.macro.DisplayMode;
+import haxe.macro.Expr.ImportExpr;
+import haxe.macro.Expr.ImportMode;
 import haxe.macro.PositionTools;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
@@ -170,6 +175,42 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_EXPECTED_TYPE", expectedTypeText);
 
 		return "module=" + localModule + ";method=" + localMethod + ";localType=" + localTypeText + ";expectedType=" + expectedTypeText;
+	}
+
+	static function renderImportMode(mode:ImportMode):String {
+		return switch (mode) {
+			case INormal: "INormal";
+			case IAll: "IAll";
+			case IAsName(alias): "IAsName(" + alias + ")";
+		};
+	}
+
+	static function renderImport(expr:ImportExpr):String {
+		final path = expr.path == null ? "" : [for (segment in expr.path) segment.name].join(".");
+		return renderImportMode(expr.mode) + ":" + path;
+	}
+
+	public static function probeLocalImports():String {
+		final pos = Context.currentPos();
+		final imports = Context.getLocalImports();
+		if (imports == null || imports.length == 0)
+			Context.fatalError("runtime macro local-import probe: expected local imports snapshot", pos);
+
+		final rendered = [for (expr in imports) renderImport(expr)];
+		rendered.sort(function(a:String, b:String):Int {
+			return Reflect.compare(a, b);
+		});
+		final summary = rendered.join(";");
+
+		if (rendered.indexOf("INormal:String") < 0)
+			Context.fatalError("runtime macro local-import probe: missing String import in " + summary, pos);
+		if (rendered.indexOf("IAsName(T):haxe.Template") < 0)
+			Context.fatalError("runtime macro local-import probe: missing aliased Template import in " + summary, pos);
+		if (rendered.indexOf("IAll:haxe.macro") < 0)
+			Context.fatalError("runtime macro local-import probe: missing wildcard haxe.macro import in " + summary, pos);
+
+		Compiler.define("HXHX_RUNTIME_LOCAL_IMPORTS", summary);
+		return summary;
 	}
 
 	public static function probeModuleLookup():String {

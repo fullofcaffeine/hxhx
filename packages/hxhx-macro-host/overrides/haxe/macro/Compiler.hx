@@ -141,13 +141,16 @@ class Compiler {
 	public static function include(pack:String, ?rec:Bool = true, ?ignoredModules:Array<String>, ?classPaths:Array<String>, strict:Bool = false):Void {
 		if (pack == null || pack.length == 0)
 			return;
-		if (rec != true)
+		// Optional runtime calls can arrive as `null` when callers omit the argument.
+		// Treat that the same as the upstream default `true`; only an explicit `false`
+		// is outside this bring-up rung today.
+		if (rec == false)
 			throw "runtime Compiler.include: rec=false is not implemented yet";
 		if (ignoredModules != null && ignoredModules.length > 0)
 			throw "runtime Compiler.include: ignore rules are not implemented yet";
 		if (classPaths != null && classPaths.length > 0)
 			throw "runtime Compiler.include: explicit classPaths are not implemented yet";
-		if (strict != false)
+		if (strict == true)
 			throw "runtime Compiler.include: strict mode is not implemented yet";
 		HostCompiler.includeModule(pack);
 	}

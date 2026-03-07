@@ -365,6 +365,10 @@ class Context {
 		return HostContext.getLocalMethod();
 	}
 
+	public static function getLocalImports():Array<ImportExpr> {
+		return HostContext.getLocalImports();
+	}
+
 	public static function getModule(name:String):Array<Type> {
 		return HostContext.getModule(name);
 	}

@@ -243,6 +243,75 @@ class Context {
 	}
 
 	/**
+		Return the compiler-provided local import list for the active module.
+
+		Why
+		- Real target macros use `Context.getLocalImports()` to resolve aliases and wildcard imports
+		  against the module currently being typed.
+		- The external-host runtime does not own the parsed module, so the compiler must provide a
+		  conservative snapshot.
+
+		What
+		- Returns `ImportExpr` values with:
+		  - real `path` segment names
+		  - preserved import modes (`INormal`, `IAsName`, `IAll`)
+		  - synthetic positions derived from the source file snapshot
+
+		How
+		- Reverse RPC `context.getLocalImports` returns a length-prefixed fragment list containing
+		  the path, mode, alias, and synthetic source span for each import.
+	**/
+	public static function getLocalImports():Array<ImportExpr> {
+		final payload = HostToCompilerRpc.call("context.getLocalImports", "");
+		final out = new Array<ImportExpr>();
+		if (payload == null || payload.length == 0)
+			return out;
+
+		final parts = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final pathKey = "p" + i;
+			if (!parts.exists(pathKey))
+				continue;
+			final pathText = StringTools.trim(parts.get(pathKey));
+			if (pathText.length == 0)
+				continue;
+
+			final file = parts.exists("f" + i) && parts.get("f" + i).length > 0 ? parts.get("f" + i) : DEFAULT_MACRO_FILE;
+			final min = parseNonNegativeInt(parts.exists("mi" + i) ? parts.get("mi" + i) : "", 0);
+			final max = parseNonNegativeInt(parts.exists("ma" + i) ? parts.get("ma" + i) : "", min);
+			final pos:Position = {file: file, min: min, max: max < min ? min : max};
+
+			final path = new Array<{pos:Position, name:String}>();
+			for (segment in pathText.split(".")) {
+				final trimmed = StringTools.trim(segment);
+				if (trimmed.length == 0)
+					continue;
+				path.push({pos: pos, name: trimmed});
+			}
+			if (path.length == 0)
+				continue;
+
+			final modeKey = "m" + i;
+			final aliasKey = "a" + i;
+			final modeText = parts.exists(modeKey) ? parts.get(modeKey) : "";
+			final aliasText = parts.exists(aliasKey) ? parts.get(aliasKey) : "";
+			final entry:ImportExpr = cast {
+				path: path,
+				mode: if (modeText == "all") {
+					IAll;
+				} else if (modeText == "alias") {
+					IAsName(aliasText);
+				} else {
+					INormal;
+				}
+			};
+			out.push(entry);
+		}
+		return out;
+	}
+
+	/**
 		Return the compiler-provided current macro position.
 
 		Why
