@@ -33,7 +33,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
-			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()"
+			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
+			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -107,6 +108,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final moduleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()");
 			assertContains("module lookup output", moduleOutput, "moduleLookup=hxhxmacros.RuntimeContextApiMacros");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_LOOKUP") == "hxhxmacros.RuntimeContextApiMacros", "expected module lookup define");
+
+			final typedExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()");
+			assertContains("typed expr output", typedExprOutput, "typedExpr=");
+			assertContains("typed expr type", typedExprOutput, "typedType=Int");
+			assertTrue(Std.parseInt(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR_VISITS")) > 0, "expected typed expr visits define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR").indexOf("+") >= 0, "expected typed expr string define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

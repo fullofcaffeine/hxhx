@@ -5,6 +5,7 @@ import haxe.macro.Context;
 import haxe.macro.DisplayMode;
 import haxe.macro.PositionTools;
 import haxe.macro.Type;
+import haxe.macro.TypedExprTools;
 import haxe.macro.TypeTools;
 
 /**
@@ -26,8 +27,9 @@ import haxe.macro.TypeTools;
 	- Validates the slice and returns a stable summary string for external-host integration tests.
 
 	Gotchas
-	- This intentionally does **not** touch richer typed APIs like `Context.typeExpr()`.
-	  `Context.getModule()` is covered only as an existence-only lookup rung, not typed module metadata.
+	- Typed-expression support is still deliberately narrow:
+	  `Context.typeExpr()` only covers the synthetic literal/parenthesized/simple-binop rung exercised
+	  here, and `Context.getModule()` is still only an existence-only lookup.
 **/
 class RuntimeContextApiMacros {
 	public static function probeConfigAndPosition():String {
@@ -149,5 +151,35 @@ class RuntimeContextApiMacros {
 
 		Compiler.define("HXHX_RUNTIME_MODULE_LOOKUP", modulePath);
 		return "moduleLookup=" + modulePath;
+	}
+
+	public static function probeTypedExprPlumbing():String {
+		final pos = Context.currentPos();
+		final typedExpr = Context.typeExpr(macro 1 + 2);
+		final typedExprType = TypeTools.toString(typedExpr.t);
+		if (typedExprType != "Int")
+			Context.fatalError("runtime macro typed-expr probe: expected Int typed expr type", pos);
+
+		var visitedNodes = 0;
+		TypedExprTools.iter(typedExpr, function(_:haxe.macro.Type.TypedExpr):Void {
+			visitedNodes++;
+		});
+		if (visitedNodes <= 0)
+			Context.fatalError("runtime macro typed-expr probe: TypedExprTools.iter did not visit child nodes", pos);
+
+		final typedExprString = TypedExprTools.toString(typedExpr, false);
+		if (typedExprString.indexOf("+") < 0)
+			Context.fatalError("runtime macro typed-expr probe: expected stringified binop expression", pos);
+
+		final typedExprMapped = TypedExprTools.map(typedExpr, function(node:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+			return node;
+		});
+		if (TypeTools.toString(typedExprMapped.t) != "Int")
+			Context.fatalError("runtime macro typed-expr probe: identity map changed expression type", pos);
+
+		Compiler.define("HXHX_RUNTIME_TYPED_EXPR", typedExprString);
+		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_VISITS", Std.string(visitedNodes));
+
+		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes;
 	}
 }

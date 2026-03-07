@@ -21,6 +21,8 @@ import hxhxmacrohost.Protocol;
 	- `defined(name)` / `definedValue(name)` query the compiler’s define store (reverse RPC).
 	- `getType(name)`, `resolveType(t, pos)`, and `typeof(expr)` expose a tiny builtin-only type
 	  model for runtime macro code that needs basic type plumbing without upstream eval.
+	- `typeExpr(expr)` exposes a synthetic typed-expression rung for literal, parenthesized,
+	  `check-type`, and simple `+` expressions so runtime probes can exercise `TypedExprTools`.
 	- `getLocalModule()`, `getLocalMethod()`, `getLocalType()`, and `getExpectedType()` expose a
 	  compiler-seeded local-context snapshot through the same builtin-only type model.
 	- `getModule(name)` exposes an existence-only module lookup rung backed by compiler-side classpath
@@ -174,6 +176,10 @@ class Context {
 
 	public static function typeof(e:Expr):Type {
 		return RuntimeMacroTypes.typeofExpr(e);
+	}
+
+	public static function typeExpr(e:Expr):TypedExpr {
+		return RuntimeTypedExprs.typeExpr(e);
 	}
 
 	public static function toComplexType(t:Type):Null<ComplexType> {

@@ -385,6 +385,10 @@ class Context {
 		return HostContext.typeof(e);
 	}
 
+	public static function typeExpr(e:Expr):TypedExpr {
+		return HostContext.typeExpr(e);
+	}
+
 	public static function resolveType(t:ComplexType, p:Position):Type {
 		return HostContext.resolveType(t, p);
 	}

@@ -1,0 +1,161 @@
+package hxhxmacrohost.api;
+
+import haxe.macro.Expr;
+import haxe.macro.Type;
+
+/**
+	Minimal runtime `TypedExpr` model for external-host macro bring-up.
+
+	Why
+	- `Context.typeExpr()` and `TypedExprTools.*` are exercised by the macro bucket fixtures, but the
+	  external host does not have upstream's full typer available at runtime.
+	- We still need a deterministic, testable rung for a tiny typed-expression subset.
+
+	What
+	- Builds synthetic `TypedExpr` values for:
+	  - literal constants
+	  - parenthesized expressions
+	  - simple `+` binary expressions
+	  - `check-type` wrappers
+	- Renders that subset back to deterministic Haxe-like text.
+
+	Gotchas
+	- This is intentionally not a general typed AST builder.
+	- Unsupported expression shapes fail fast so future slices stay explicit.
+**/
+class RuntimeTypedExprs {
+	public static function typeExpr(e:Expr):TypedExpr {
+		if (e == null)
+			throw "runtime macro typeExpr: null expr";
+		return switch (e.expr) {
+			case EConst(CInt(raw, suffix)):
+				if (suffix != null) {}
+				makeTyped(e.pos, TConst(TInt(Std.parseInt(raw))), RuntimeMacroTypes.typeofExpr(e));
+			case EConst(CFloat(raw)):
+				makeTyped(e.pos, TConst(TFloat(raw)), RuntimeMacroTypes.typeofExpr(e));
+			case EConst(CString(text, kind)):
+				if (kind != null) {}
+				makeTyped(e.pos, TConst(TString(text)), RuntimeMacroTypes.typeofExpr(e));
+			case EConst(CIdent("true")):
+				makeTyped(e.pos, TConst(TBool(true)), RuntimeMacroTypes.typeofExpr(e));
+			case EConst(CIdent("false")):
+				makeTyped(e.pos, TConst(TBool(false)), RuntimeMacroTypes.typeofExpr(e));
+			case EConst(CIdent("null")):
+				makeTyped(e.pos, TConst(TNull), RuntimeMacroTypes.typeofExpr(e));
+			case EParenthesis(inner):
+				final typedInner = typeExpr(inner);
+				makeTyped(e.pos, TParenthesis(typedInner), typedInner.t);
+			case ECheckType(inner, ct):
+				final typedInner = typeExpr(inner);
+				makeTyped(e.pos, TParenthesis(typedInner), RuntimeMacroTypes.resolveComplexType(ct));
+			case EBinop(op, e1, e2):
+				final left = typeExpr(e1);
+				final right = typeExpr(e2);
+				makeTyped(e.pos, TBinop(op, left, right), RuntimeMacroTypes.typeofExpr(e));
+			case _:
+				throw "runtime macro typeExpr: unsupported expr shape";
+		}
+	}
+
+	public static function toString(e:TypedExpr):String {
+		if (e == null)
+			throw "runtime typed expr -> string: null typed expr";
+		return switch (e.expr) {
+			case TConst(TInt(i)):
+				Std.string(i);
+			case TConst(TFloat(s)):
+				s;
+			case TConst(TString(s)):
+				quoteString(s);
+			case TConst(TBool(true)):
+				"true";
+			case TConst(TBool(false)):
+				"false";
+			case TConst(TNull):
+				"null";
+			case TParenthesis(inner):
+				"(" + toString(inner) + ")";
+			case TBinop(op, e1, e2):
+				toString(e1) + " " + renderBinop(op) + " " + toString(e2);
+			case _:
+				throw "runtime typed expr -> string: unsupported typed expr shape";
+		};
+	}
+
+	static function makeTyped(pos:Position, expr:TypedExprDef, t:Type):TypedExpr {
+		return {
+			expr: expr,
+			pos: pos == null ? defaultPosition() : pos,
+			t: t
+		};
+	}
+
+	static function defaultPosition():Position {
+		return cast {
+			file: "<macro>",
+			min: 0,
+			max: 0
+		};
+	}
+
+	static function renderBinop(op:Binop):String {
+		return switch (op) {
+			case OpAdd:
+				"+";
+			case OpSub:
+				"-";
+			case OpMult:
+				"*";
+			case OpDiv:
+				"/";
+			case OpMod:
+				"%";
+			case OpAssign:
+				"=";
+			case OpEq:
+				"==";
+			case OpNotEq:
+				"!=";
+			case OpGt:
+				">";
+			case OpGte:
+				">=";
+			case OpLt:
+				"<";
+			case OpLte:
+				"<=";
+			case OpAnd:
+				"&";
+			case OpOr:
+				"|";
+			case OpXor:
+				"^";
+			case OpBoolAnd:
+				"&&";
+			case OpBoolOr:
+				"||";
+			case OpShl:
+				"<<";
+			case OpShr:
+				">>";
+			case OpUShr:
+				">>>";
+			case OpInterval:
+				"...";
+			case OpArrow:
+				"=>";
+			case OpAssignOp(inner):
+				renderBinop(inner) + "=";
+			case OpIn:
+				"in";
+			case OpNullCoal:
+				"??";
+		};
+	}
+
+	static function quoteString(value:String):String {
+		final escapedBackslashes = StringTools.replace(value, "\\", "\\\\");
+		final escapedQuotes = StringTools.replace(escapedBackslashes, "\"", "\\\"");
+		return "\"" + escapedQuotes + "\"";
+	}
+}
