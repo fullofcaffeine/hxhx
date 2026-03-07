@@ -33,6 +33,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
+			"hxhxmacros.RuntimeContextApiMacros.probeCallArguments()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
@@ -74,6 +75,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			methodName: "probeLocalContextSnapshot",
 			localTypeText: "String",
 			expectedTypeText: "Bool",
+			callArgumentExprTexts: ["1", "2 + 3", "{ ok: true }"],
 			localTVars: [
 				{
 					name: "count",
@@ -135,6 +137,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_METHOD") == "probeLocalContextSnapshot", "expected local method define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_LOCAL_TYPE") == "String", "expected local type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_EXPECTED_TYPE") == "Bool", "expected expected type define");
+
+			final callArgumentsOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeCallArguments()");
+			assertContains("call arguments summary", callArgumentsOutput, "callArgs=1;(2+3);{ok:true}");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_CALL_ARGUMENTS") == "1;(2+3);{ok:true}", "expected call arguments define");
 
 			final localImportsOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalImports()");
 			assertContains("local imports String", localImportsOutput, "INormal:String");

@@ -593,6 +593,8 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", payload));
 				case "context.getExpectedType":
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getExpectedTypeText())));
+				case "context.getCallArguments":
+					replyOk(id, MacroProtocol.encodeLen("v", encodeCallArgumentsPayload()));
 				case "context.getLocalModule":
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.getLocalModule()));
 				case "context.getLocalType":
@@ -760,6 +762,17 @@ private class MacroClient {
 			parts.push(MacroProtocol.encodeLen("cap" + i, entry.capture == true ? "1" : "0"));
 			parts.push(MacroProtocol.encodeLen("st" + i, entry.isStatic == true ? "1" : "0"));
 		}
+		return parts.join(" ");
+	}
+
+	static function encodeCallArgumentsPayload():String {
+		final exprs = MacroState.listCallArgumentExprTexts();
+		if (exprs.length == 0)
+			return MacroProtocol.encodeLen("c", "0");
+		final parts = new Array<String>();
+		parts.push(MacroProtocol.encodeLen("c", Std.string(exprs.length)));
+		for (i in 0...exprs.length)
+			parts.push(MacroProtocol.encodeLen("e" + i, exprs[i]));
 		return parts.join(" ");
 	}
 

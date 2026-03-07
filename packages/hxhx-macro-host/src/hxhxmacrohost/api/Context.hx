@@ -352,6 +352,40 @@ class Context {
 		return parseOptionalTypeSnapshot("context.getExpectedType");
 	}
 
+	/**
+		Return the compiler-provided current macro call arguments.
+
+		Why
+		- Some macro helpers inspect `Context.getCallArguments()` to understand the immediate callsite
+		  without needing full live typer access.
+		- In the external-host runtime, the compiler is the only honest place to seed that snapshot.
+
+		What
+		- Returns `null` when no callsite snapshot has been seeded.
+		- Otherwise returns parsed `Expr` values reconstructed from compiler-seeded expression text.
+
+		Gotchas
+		- This is a seeded snapshot rung, not full live callsite parity.
+		- Expression coverage is limited by `RuntimeMacroExprs.parseInlineString(...)`.
+	**/
+	public static function getCallArguments():Null<Array<Expr>> {
+		final payload = HostToCompilerRpc.call("context.getCallArguments", "");
+		if (payload == null || payload.length == 0)
+			return null;
+		final parts = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", -1);
+		if (count < 0)
+			return null;
+		final out = new Array<Expr>();
+		for (i in 0...count) {
+			final key = "e" + i;
+			if (!parts.exists(key))
+				continue;
+			out.push(RuntimeMacroExprs.parseInlineString(parts.get(key), currentPos()));
+		}
+		return out;
+	}
+
 	public static function getLocalModule():String {
 		final payload = HostToCompilerRpc.call("context.getLocalModule", "");
 		return payload == null ? "" : payload;

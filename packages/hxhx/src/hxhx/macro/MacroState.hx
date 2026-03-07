@@ -30,6 +30,7 @@ typedef MacroLocalContextSnapshot = {
 	@:optional final methodName:Null<String>;
 	@:optional final localTypeText:Null<String>;
 	@:optional final expectedTypeText:Null<String>;
+	@:optional final callArgumentExprTexts:Array<String>;
 	@:optional final localTVars:Array<MacroLocalTVarSnapshot>;
 }
 
@@ -399,7 +400,7 @@ class MacroState {
 
 		Why
 		- Runtime macro code may query `Context.getLocalModule()`, `getLocalMethod()`,
-		  `getLocalType()`, or `getExpectedType()` even though the external-host runtime does not
+		  `getLocalType()`, `getExpectedType()`, or `getCallArguments()` even though the external-host runtime does not
 		  have direct access to upstream's live typer structures.
 		- A compiler-owned snapshot keeps this surface deterministic without over-claiming general
 		  typed reflection support.
@@ -409,6 +410,8 @@ class MacroState {
 		- Type text is intentionally narrow and currently expected to match the runtime builtin type
 		  helper subset (for example `String`, `Bool`, `Null<String>`, `Dynamic`).
 		- Optional local TVars can be seeded for runtime `Context.getLocalTVars()` probes.
+		- Optional call-argument expression texts can be seeded for runtime `Context.getCallArguments()`
+		  probes and are parsed back through the narrow runtime parser rung.
 	**/
 	public static function setLocalContext(context:MacroLocalContextSnapshot):Void {
 		if (context == null) {
@@ -421,6 +424,7 @@ class MacroState {
 			methodName: normalizeOptionalText(context.methodName),
 			localTypeText: normalizeOptionalText(context.localTypeText),
 			expectedTypeText: normalizeOptionalText(context.expectedTypeText),
+			callArgumentExprTexts: normalizeExprTexts(context.callArgumentExprTexts),
 			localTVars: normalizeLocalTVars(context.localTVars)
 		};
 	}
@@ -455,6 +459,21 @@ class MacroState {
 				capture: value.capture == true,
 				isStatic: value.isStatic == true
 			});
+		}
+		return out;
+	}
+
+	static function normalizeExprTexts(values:Array<String>):Array<String> {
+		final out = new Array<String>();
+		if (values == null || values.length == 0)
+			return out;
+		for (value in values) {
+			if (value == null)
+				continue;
+			final trimmed = StringTools.trim(value);
+			if (trimmed.length == 0)
+				continue;
+			out.push(trimmed);
 		}
 		return out;
 	}
@@ -562,6 +581,14 @@ class MacroState {
 					isStatic: entry.isStatic
 				}
 		];
+	}
+
+	public static function listCallArgumentExprTexts():Array<String> {
+		if (explicitLocalContext == null
+			|| explicitLocalContext.callArgumentExprTexts == null
+			|| explicitLocalContext.callArgumentExprTexts.length == 0)
+			return [];
+		return explicitLocalContext.callArgumentExprTexts.copy();
 	}
 
 	/**

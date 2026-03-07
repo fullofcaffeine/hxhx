@@ -344,6 +344,10 @@ class Context {
 		return HostContext.getExpectedType();
 	}
 
+	public static function getCallArguments():Null<Array<Expr>> {
+		return HostContext.getCallArguments();
+	}
+
 	public static function getLocalClass():Null<Type.Ref<Type.ClassType>> {
 		return RuntimeMacroTypes.classRefOf(HostContext.getLocalType());
 	}

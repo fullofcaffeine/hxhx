@@ -183,6 +183,42 @@ class RuntimeContextApiMacros {
 		return "module=" + localModule + ";method=" + localMethod + ";localType=" + localTypeText + ";expectedType=" + expectedTypeText;
 	}
 
+	public static function probeCallArguments():String {
+		final pos = Context.currentPos();
+		final args = Context.getCallArguments();
+		if (args == null || args.length != 3)
+			Context.fatalError("runtime macro call-arguments probe: expected three call arguments", pos);
+
+		switch (args[0].expr) {
+			case EConst(CInt("1", _)):
+			case _:
+				Context.fatalError("runtime macro call-arguments probe: expected integer first arg", pos);
+		}
+
+		switch (args[1].expr) {
+			case EBinop(OpAdd, left, right):
+				switch ([left.expr, right.expr]) {
+					case [EConst(CInt("2", _)), EConst(CInt("3", _))]:
+					case _:
+						Context.fatalError("runtime macro call-arguments probe: expected 2 + 3 second arg", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro call-arguments probe: expected binop second arg", pos);
+		}
+
+		switch (args[2].expr) {
+			case EObjectDecl(fields):
+				if (fields.length != 1 || fields[0].field != "ok")
+					Context.fatalError("runtime macro call-arguments probe: expected object third arg", pos);
+			case _:
+				Context.fatalError("runtime macro call-arguments probe: expected object third arg", pos);
+		}
+
+		final summary = "1;(2+3);{ok:true}";
+		Compiler.define("HXHX_RUNTIME_CALL_ARGUMENTS", summary);
+		return "callArgs=" + summary;
+	}
+
 	static function renderImportMode(mode:ImportMode):String {
 		return switch (mode) {
 			case INormal: "INormal";
