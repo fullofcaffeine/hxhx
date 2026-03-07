@@ -23,6 +23,16 @@ Upstream usage is intentionally narrow:
    - Checked-in stdlib sync destination is:
      - `packages/reflaxe.ocaml/std/_std/**`
 
+Important distinction:
+
+- If a candidate dependency lives under `vendor/haxe/std/**`, the repo treats it as a **stdlib provenance/technical evaluation** question, not as a forbidden compiler-source question.
+- Technical caution is still valid:
+  - dependency weight
+  - bootstrapping/stage constraints
+  - macro-host/runtime suitability
+  - unwanted fan-out into broader stdlib surfaces
+- But those are engineering tradeoffs, not license/provenance prohibitions.
+
 ## Forbidden upstream reuse
 
 The following upstream paths are never allowed to be vendored or copied into this repository:

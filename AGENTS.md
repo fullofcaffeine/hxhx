@@ -167,6 +167,12 @@ To avoid copyleft obligations and preserve the ability to embed/bundle `hxhx` in
   - Reading upstream as a behavioral/architectural reference is fine; copying code is the risk.
 - **Do not vendor upstream Haxe tests** into this repo.
   - Run upstream suites from a local checkout (`vendor/haxe`, ignored by git) as an oracle.
+- **Do not overgeneralize this prohibition to upstream stdlib code.**
+  - Upstream Haxe **stdlib** code under `vendor/haxe/std/**` is permissive and is eligible for selective reuse/sync under the repo stdlib policy.
+  - When evaluating a dependency from upstream stdlib (for example `haxe.macro.Printer`), separate:
+    - **provenance/licensing:** allowed for stdlib code, subject to notices/provenance tracking
+    - **technical suitability:** build weight, runtime surface, dependency fan-out, or stage/bootstrapping constraints
+  - Do not reject upstream stdlib usage on provenance grounds unless the path is outside `vendor/haxe/std/**`.
 - Keep the upstream checkout **untracked** (`vendor/haxe` via `scripts/vendor/fetch-haxe-upstream.sh` or a symlink).
 - Any OCaml shims (`*.ml`) must be **written from scratch** (no copy/paste from upstream compiler sources).
 - Be cautious about bundling a stage0 `haxe` binary in distributions: if you ship it, you must comply with its license.
@@ -212,6 +218,10 @@ These are hard constraints for all contributors and all Codex changes in this re
   - run upstream tests from an untracked checkout (`vendor/haxe`) and compare behavior/output,
   - use upstream CLI behavior as a reference point,
   - use upstream architecture as inspiration at the concept level.
+- Use upstream Haxe **stdlib** selectively under the stdlib policy:
+  - `vendor/haxe/std/**` is the only upstream code area eligible for checked-in reuse/sync.
+  - Keep provenance artifacts current when doing so (`docs/00-project/STD_LIB_POLICY.md`, `THIRD_PARTY_NOTICES.md`, provenance ledger).
+  - Do not blur “allowed stdlib reuse” into “allowed compiler/test vendoring”; those remain forbidden.
 - Write fresh implementations from:
   - behavior-level specs,
   - repo-local fixtures,
