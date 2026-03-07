@@ -191,4 +191,11 @@ class RuntimeContextApiMacros {
 
 		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes;
 	}
+
+	public static function probeCompilerInclude():String {
+		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
+		Compiler.include(modulePath);
+		Compiler.define("HXHX_RUNTIME_INCLUDE", modulePath);
+		return "include=" + modulePath;
+	}
 }

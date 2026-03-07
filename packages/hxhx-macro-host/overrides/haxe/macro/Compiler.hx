@@ -70,6 +70,10 @@ class Compiler {
 		load("add_class_path", 1)(path);
 	}
 
+	public static function include(pack:String, ?rec:Bool = true, ?ignoredModules:Array<String>, ?classPaths:Array<String>, strict:Bool = false):Void {
+		load("include", 5)(pack, rec, ignoredModules, classPaths, strict);
+	}
+
 	public static function getConfiguration():CompilerConfiguration {
 		return load("get_configuration", 0)();
 	}
@@ -114,6 +118,38 @@ class Compiler {
 
 	public static function emitHxModule(name:String, source:String):Void {
 		HostCompiler.emitHxModule(name, source);
+	}
+
+	/**
+		Runtime bring-up `Compiler.include(...)`.
+
+		Why
+		- Real initialization macros often use `Compiler.include(...)` instead of custom helper entrypoints.
+		- The compiler side already has an exact-module inclusion rung; exposing it here lets runtime
+		  macro code reach that effect through the normal `haxe.macro.Compiler` surface.
+
+		What
+		- Supports only the conservative bring-up subset:
+		  - `pack` must be a single exact module path
+		  - recursive package walking, ignore rules, alternative classpaths, and `strict` behavior
+			are not modeled yet
+
+		Gotchas
+		- This is intentionally narrower than upstream package-recursive `Compiler.include(...)`.
+		- Unsupported advanced arguments fail fast so later parity work stays explicit.
+	**/
+	public static function include(pack:String, ?rec:Bool = true, ?ignoredModules:Array<String>, ?classPaths:Array<String>, strict:Bool = false):Void {
+		if (pack == null || pack.length == 0)
+			return;
+		if (rec != true)
+			throw "runtime Compiler.include: rec=false is not implemented yet";
+		if (ignoredModules != null && ignoredModules.length > 0)
+			throw "runtime Compiler.include: ignore rules are not implemented yet";
+		if (classPaths != null && classPaths.length > 0)
+			throw "runtime Compiler.include: explicit classPaths are not implemented yet";
+		if (strict != false)
+			throw "runtime Compiler.include: strict mode is not implemented yet";
+		HostCompiler.includeModule(pack);
 	}
 }
 #end
