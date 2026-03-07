@@ -155,7 +155,7 @@ class RuntimeMacroTypes {
 		- Some macro probes only need to know that a module resolved to something non-empty.
 		- Returning a deterministic synthetic named type is sufficient for this existence-only rung.
 	**/
-	public static function moduleTypesForPath(modulePath:String):Array<Type> {
+	public static function moduleTypesForPath(modulePath:String, ?metadataEntries:Array<String>):Array<Type> {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
 			return [];
@@ -163,7 +163,7 @@ class RuntimeMacroTypes {
 		if (parts.length == 0)
 			return [];
 		final name = parts.pop();
-		return [TInst(classRef(parts, name, name), [])];
+		return [TInst(classRef(parts, name, name, metadataEntries), [])];
 	}
 
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
@@ -470,7 +470,7 @@ class RuntimeMacroTypes {
 		return TInst(classRef([], "Null", "Null"), [inner]);
 	}
 
-	static function classRef(pack:Array<String>, name:String, module:String):Ref<ClassType> {
+	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<ClassType> {
 		final value:ClassType = {
 			pack: pack.copy(),
 			name: name,
@@ -479,7 +479,7 @@ class RuntimeMacroTypes {
 			isPrivate: false,
 			isExtern: true,
 			params: [],
-			meta: emptyMetaAccess(),
+			meta: metadataAccess(metadataEntries),
 			doc: null,
 			exclude: function():Void {},
 			kind: KNormal,
@@ -534,6 +534,71 @@ class RuntimeMacroTypes {
 				return false;
 			}
 		};
+	}
+
+	static function metadataAccess(metadataEntries:Array<String>):MetaAccess {
+		final access = emptyMetaAccess();
+		if (metadataEntries == null || metadataEntries.length == 0)
+			return access;
+		for (raw in metadataEntries) {
+			final entry = parseMetadataEntry(raw);
+			if (entry != null)
+				access.add(entry.name, entry.params, entry.pos);
+		}
+		return access;
+	}
+
+	static function parseMetadataEntry(raw:String):Null<MetadataEntry> {
+		final text = StringTools.trim(raw == null ? "" : raw);
+		if (!StringTools.startsWith(text, "@:"))
+			return null;
+		final open = text.indexOf("(");
+		final close = text.lastIndexOf(")");
+		final name = if (open == -1) text.substr(1) else text.substr(1, open - 1);
+		if (name.length == 0)
+			return null;
+		final params = new Array<Expr>();
+		if (open != -1 && close > open) {
+			for (argText in splitMetadataArgs(text.substr(open + 1, close - open - 1))) {
+				final trimmed = StringTools.trim(argText);
+				if (trimmed.length == 0)
+					continue;
+				params.push(RuntimeMacroExprs.parseInlineString(trimmed, defaultPos()));
+			}
+		}
+		return {
+			name: name,
+			params: params,
+			pos: defaultPos()
+		};
+	}
+
+	static function splitMetadataArgs(raw:String):Array<String> {
+		final out = new Array<String>();
+		if (raw == null || raw.length == 0)
+			return out;
+		var depth = 0;
+		var start = 0;
+		var i = 0;
+		while (i < raw.length) {
+			final ch = raw.charAt(i);
+			switch (ch) {
+				case "(" | "[" | "{":
+					depth += 1;
+				case ")" | "]" | "}":
+					if (depth > 0)
+						depth -= 1;
+				case ",":
+					if (depth == 0) {
+						out.push(raw.substr(start, i - start));
+						start = i + 1;
+					}
+				case _:
+			}
+			i += 1;
+		}
+		out.push(raw.substr(start));
+		return out;
 	}
 
 	static function defaultPos():Position {

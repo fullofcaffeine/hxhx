@@ -436,6 +436,63 @@ class MacroState {
 	}
 
 	/**
+		Return the registered non-build type-level metadata strings that apply to `modulePath`.
+
+		Why
+		- Stage3 already feeds registered global `@:build(...)` / `@:autoBuild(...)` metadata into the
+		  build-macro queue.
+		- External-host runtime queries such as `Context.getModule()` still need an honest, observable
+		  semantic bridge for registered non-build type metadata, even before the compiler stores rich
+		  source metadata in the AST.
+
+		What
+		- Matches registered global metadata rules against the provided module path using the same
+		  path-filter semantics as the build-macro bridge.
+		- Returns only:
+		  - type-level rules (`toTypes=true`)
+		  - non-build metadata payloads (plain metadata like `@:demoMeta`, `@:nullSafety(Strict)`)
+
+		Gotchas
+		- This does not claim field-level metadata application.
+		- This does not claim full upstream metadata semantics; it is a narrow bridge for runtime
+		  metadata visibility on synthetic type/module refs.
+	**/
+	public static function listAppliedTypeMetadata(modulePath:String):Array<String> {
+		final moduleName = modulePath == null ? "" : StringTools.trim(modulePath);
+		if (moduleName.length == 0)
+			return [];
+		final out = new Array<String>();
+		for (rule in globalMetadataRules) {
+			if (!rule.toTypes)
+				continue;
+			if (!matchesMetadataPathFilter(moduleName, rule.pathFilter, rule.recursive))
+				continue;
+			if (isBuildMetadata(rule.metadata))
+				continue;
+			if (out.indexOf(rule.metadata) == -1)
+				out.push(rule.metadata);
+		}
+		return out;
+	}
+
+	static function matchesMetadataPathFilter(modulePath:String, pathFilter:String, recursive:Bool):Bool {
+		final moduleName = modulePath == null ? "" : StringTools.trim(modulePath);
+		final filter = pathFilter == null ? "" : StringTools.trim(pathFilter);
+		if (moduleName.length == 0)
+			return false;
+		if (filter.length == 0)
+			return true;
+		if (recursive)
+			return moduleName == filter || StringTools.startsWith(moduleName, filter + ".");
+		return moduleName == filter;
+	}
+
+	static function isBuildMetadata(metadata:String):Bool {
+		final raw = metadata == null ? "" : StringTools.trim(metadata);
+		return StringTools.startsWith(raw, "@:build(") || StringTools.startsWith(raw, "@:autoBuild(");
+	}
+
+	/**
 		Register a compiler-owned custom metadata descriptor snapshot.
 
 		Why

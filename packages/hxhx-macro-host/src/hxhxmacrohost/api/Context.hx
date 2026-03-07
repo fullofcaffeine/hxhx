@@ -333,7 +333,18 @@ class Context {
 		final payload = HostToCompilerRpc.call("context.getModule", Protocol.encodeLen("n", name));
 		if (payload == null || payload.length == 0)
 			return [];
-		return RuntimeMacroTypes.moduleTypesForPath(name);
+		final parts = Protocol.kvParse(payload);
+		if (!parts.exists("ok") || parts.get("ok") != "1")
+			return [];
+		final metadata = new Array<String>();
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final key = "md" + i;
+			if (parts.exists(key))
+				metadata.push(parts.get(key));
+		}
+		final modulePath = parts.exists("m") ? parts.get("m") : name;
+		return RuntimeMacroTypes.moduleTypesForPath(modulePath, metadata);
 	}
 
 	public static function parse(expr:String, pos:Position):Expr {

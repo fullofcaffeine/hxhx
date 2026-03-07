@@ -640,7 +640,18 @@ private class MacroClient {
 						if (classPaths.indexOf(cp) == -1)
 							classPaths.push(cp);
 					final resolved = hxhx.Stage1Compiler.Stage1Resolver.resolveModule(classPaths, name, Sys.getCwd());
-					replyOk(id, MacroProtocol.encodeLen("v", resolved == null ? "" : "1"));
+					if (resolved == null) {
+						replyOk(id, MacroProtocol.encodeLen("v", ""));
+						return;
+					}
+					final metadata = MacroState.listAppliedTypeMetadata(name);
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("ok", "1"));
+					parts.push(MacroProtocol.encodeLen("m", name));
+					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
+					for (i in 0...metadata.length)
+						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "context.getClassPath":
 					final classPaths = gatherMacroContextClassPaths();
 					final parts = new Array<String>();
