@@ -36,7 +36,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
-			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()"
+			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
+			"hxhxmacros.RuntimeContextApiMacros.probeResources()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -135,6 +136,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("include output", includeOutput, "include=hxhxmacros.RuntimeContextApiMacros");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_INCLUDE") == "hxhxmacros.RuntimeContextApiMacros", "expected runtime include define");
 			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.RuntimeContextApiMacros") >= 0, "expected included module snapshot");
+
+			final resourceOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeResources()");
+			assertContains("resource output", resourceOutput, "resource=resource=ok");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_RESOURCE") == "resource=ok", "expected runtime resource define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

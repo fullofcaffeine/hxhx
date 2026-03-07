@@ -554,6 +554,19 @@ private class MacroClient {
 					}
 					MacroState.emitBuildFields(modulePath, source);
 					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "context.addResource":
+					final name = MacroProtocol.kvGet(tail, "n");
+					final hex = MacroProtocol.kvGet(tail, "d");
+					if (name == null || name.length == 0) {
+						replyErr(id, method + ": missing resource name");
+						return;
+					}
+					if (hex == null || (hex.length & 1) != 0) {
+						replyErr(id, method + ": invalid resource payload");
+						return;
+					}
+					MacroState.addResource(name, haxe.io.Bytes.ofHex(hex));
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case "context.defined":
 					final name = MacroProtocol.kvGet(tail, "n");
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.defined(name) ? "1" : "0"));
@@ -618,6 +631,16 @@ private class MacroClient {
 						final kv = pairs[i];
 						parts.push(MacroProtocol.encodeLen("k" + i, kv[0]));
 						parts.push(MacroProtocol.encodeLen("v" + i, kv[1]));
+					}
+					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
+				case "context.getResources":
+					final pairs = MacroState.listResourcesPairsSorted();
+					final parts = new Array<String>();
+					parts.push(MacroProtocol.encodeLen("c", Std.string(pairs.length)));
+					for (i in 0...pairs.length) {
+						final kv = pairs[i];
+						parts.push(MacroProtocol.encodeLen("k" + i, kv.name));
+						parts.push(MacroProtocol.encodeLen("d" + i, kv.data.toHex()));
 					}
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case _:

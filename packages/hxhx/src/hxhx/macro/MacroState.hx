@@ -1,5 +1,7 @@
 package hxhx.macro;
 
+import haxe.io.Bytes;
+
 typedef MacroPositionInfo = {
 	final file:String;
 	final min:Int;
@@ -56,6 +58,7 @@ class MacroState {
 	static final ocamlModules:haxe.ds.StringMap<String> = new haxe.ds.StringMap();
 	static final classPaths:Array<String> = [];
 	static final includedModules:Array<String> = [];
+	static final resources:haxe.ds.StringMap<Bytes> = new haxe.ds.StringMap();
 	static final compilerArgs:Array<String> = [];
 	static final stdPaths:Array<String> = [];
 	static var generatedHxDir:String = "";
@@ -149,6 +152,7 @@ class MacroState {
 		ocamlModules.clear();
 		classPaths.resize(0);
 		includedModules.resize(0);
+		resources.clear();
 		compilerArgs.resize(0);
 		stdPaths.resize(0);
 		generatedHxDir = "";
@@ -253,6 +257,49 @@ class MacroState {
 		final out = new Array<Array<String>>();
 		for (k in listDefineNames()) {
 			out.push([k, definedValue(k)]);
+		}
+		return out;
+	}
+
+	/**
+		Store a macro resource in the compiler-owned state.
+
+		Why
+		- Runtime external-host macros may call `Context.addResource(...)` to publish generated
+		  resource payloads for later compiler/runtime consumption.
+		- The external host cannot own those resources because they must survive after the RPC call.
+
+		What
+		- Stores a copy of `data` by `name`.
+		- Later writes replace earlier values, matching upstream overwrite behavior.
+	**/
+	public static function addResource(name:String, data:Bytes):Void {
+		if (name == null || name.length == 0 || data == null)
+			return;
+		resources.set(name, data.sub(0, data.length));
+	}
+
+	public static function getResource(name:String):Null<Bytes> {
+		if (name == null || name.length == 0)
+			return null;
+		final value = resources.get(name);
+		return value == null ? null : value.sub(0, value.length);
+	}
+
+	public static function listResourceNames():Array<String> {
+		final out = new Array<String>();
+		for (k in resources.keys())
+			out.push(k);
+		sortStringsInPlace(out);
+		return out;
+	}
+
+	public static function listResourcesPairsSorted():Array<{name:String, data:Bytes}> {
+		final out = new Array<{name:String, data:Bytes}>();
+		for (name in listResourceNames()) {
+			final data = resources.get(name);
+			if (data != null)
+				out.push({name: name, data: data.sub(0, data.length)});
 		}
 		return out;
 	}

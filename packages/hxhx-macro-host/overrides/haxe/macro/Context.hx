@@ -443,5 +443,13 @@ class Context {
 		if (predicate == null)
 			return;
 	}
+
+	public static function getResources():Map<String, haxe.io.Bytes> {
+		return HostContext.getResources();
+	}
+
+	public static function addResource(name:String, data:haxe.io.Bytes):Void {
+		HostContext.addResource(name, data);
+	}
 }
 #end

@@ -1,5 +1,6 @@
 package hxhxmacrohost.api;
 
+import haxe.io.Bytes;
 import haxe.macro.Expr;
 import haxe.macro.DisplayMode;
 import haxe.macro.Type;
@@ -154,6 +155,46 @@ class Context {
 			out.set(m.get(kKey), m.exists(vKey) ? m.get(vKey) : "");
 		}
 		return out;
+	}
+
+	/**
+		Return a snapshot of compiler-owned resources.
+
+		Why
+		- Real macro libraries may publish binary/text assets through `Context.addResource(...)` and
+		  then inspect them through `Context.getResources()`.
+		- The external host needs a stable snapshot because resources are compiler-owned effects, not
+		  process-local host state.
+
+		What
+		- Returns a detached `Map<String, Bytes>` copy of the currently registered resources.
+	**/
+	public static function getResources():Map<String, Bytes> {
+		final out:Map<String, Bytes> = [];
+		final payload = HostToCompilerRpc.call("context.getResources", "");
+		if (payload == null || payload.length == 0)
+			return out;
+
+		final m = Protocol.kvParse(payload);
+		final count = parseNonNegativeInt(m.exists("c") ? m.get("c") : "", 0);
+		for (i in 0...count) {
+			final kKey = "k" + i;
+			final dKey = "d" + i;
+			if (!m.exists(kKey) || !m.exists(dKey))
+				continue;
+			final hex = m.get(dKey);
+			if (hex == null || (hex.length & 1) != 0)
+				continue;
+			out.set(m.get(kKey), Bytes.ofHex(hex));
+		}
+		return out;
+	}
+
+	public static function addResource(name:String, data:Bytes):Void {
+		if (name == null || name.length == 0 || data == null)
+			return;
+		final tail = Protocol.encodeLen("n", name) + " " + Protocol.encodeLen("d", data.toHex());
+		HostToCompilerRpc.call("context.addResource", tail);
 	}
 
 	public static function getType(name:String):Type {

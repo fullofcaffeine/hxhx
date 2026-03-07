@@ -2,6 +2,7 @@ package hxhxmacros;
 
 import String;
 import haxe.Template as T;
+import haxe.io.Bytes;
 import haxe.macro.*;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
@@ -262,5 +263,27 @@ class RuntimeContextApiMacros {
 		Compiler.include(modulePath);
 		Compiler.define("HXHX_RUNTIME_INCLUDE", modulePath);
 		return "include=" + modulePath;
+	}
+
+	public static function probeResources():String {
+		final pos = Context.currentPos();
+		final key = "runtime-macro-resource";
+		final payload = Bytes.ofString("resource=ok");
+		Context.addResource(key, payload);
+
+		final resources = Context.getResources();
+		if (resources == null || !resources.exists(key))
+			Context.fatalError("runtime macro resource probe: missing resource " + key, pos);
+
+		final roundTripped = resources.get(key);
+		if (roundTripped == null)
+			Context.fatalError("runtime macro resource probe: null resource payload", pos);
+
+		final text = roundTripped.toString();
+		if (text != "resource=ok")
+			Context.fatalError("runtime macro resource probe: payload mismatch " + text, pos);
+
+		Compiler.define("HXHX_RUNTIME_RESOURCE", text);
+		return "resource=" + text;
 	}
 }
