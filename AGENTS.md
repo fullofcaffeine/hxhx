@@ -33,6 +33,10 @@ Agent policy:
   - Preferred: an Oracle checkpoint/review.
   - Acceptable fallback: an explicit written second-pass design review recorded in the bead comments.
 - Oracle is a review/escalation tool for `thinking:xhigh`; it is not a substitute for implementation, tests, or CI evidence.
+- Do not escalate to extended reasoning or Oracle review by default.
+  - Use the current bead thinking level first.
+  - Escalate only when the task crosses the documented threshold, usually `thinking:xhigh`, or when a `thinking:high` task turns into scope, release, or provenance policy work.
+  - When escalation becomes necessary, state that explicitly in the session hand-off or work log so the threshold is visible instead of assumed.
 
 ## Compatibility Policy
 
