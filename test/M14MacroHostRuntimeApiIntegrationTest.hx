@@ -53,6 +53,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalUsing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
+			"hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
@@ -221,6 +222,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final moduleLookupDefine = MacroState.definedValue("HXHX_RUNTIME_MODULE_LOOKUP");
 			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleMembers");
 			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleState");
+
+			final moduleFieldOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()");
+			assertContains("module field output", moduleFieldOutput, "moduleFields=routerMarker;schemaMarker");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_FIELDS") == "routerMarker;schemaMarker", "expected runtime module field define");
 
 			final typedExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()");
 			assertContains("typed expr output", typedExprOutput, "typedExpr=");

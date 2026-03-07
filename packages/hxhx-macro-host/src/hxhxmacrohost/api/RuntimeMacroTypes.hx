@@ -305,7 +305,8 @@ class RuntimeMacroTypes {
 		return [typeForResolvedDecl(trimmed, "class", metadataEntries)];
 	}
 
-	public static function moduleTypesForModule(modulePath:String, entries:Array<{name:String, kind:String, metadata:Array<String>}>):Array<Type> {
+	public static function moduleTypesForModule(modulePath:String, entries:Array<{name:String, kind:String, metadata:Array<String>}>,
+			?moduleFields:Array<{name:String, kind:String, metadata:Array<String>}>):Array<Type> {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
 			return [];
@@ -315,6 +316,9 @@ class RuntimeMacroTypes {
 		final moduleName = parts.pop();
 		final out = new Array<Type>();
 		final seen = new Map<String, Bool>();
+		final resolvedFields = moduleFields == null ? [] : moduleFields;
+		if (resolvedFields.length > 0)
+			out.push(TInst(moduleFieldsCarrier(parts, moduleName, trimmed, resolvedFields), []));
 		final resolvedEntries = (entries == null || entries.length == 0) ? [{name: moduleName, kind: "class", metadata: []}] : entries;
 		for (entry in resolvedEntries) {
 			final trimmedName = StringTools.trim(entry == null || entry.name == null ? "" : entry.name);
@@ -517,6 +521,28 @@ class RuntimeMacroTypes {
 		return switch (t) {
 			case TInst(c, _):
 				c;
+			case _:
+				null;
+		}
+	}
+
+	/**
+		Return the synthetic `KModuleFields(...)` carrier for `t`, if it exists.
+
+		Why
+		- External-host probes and sibling Reflaxe macros need to inspect synthetic module-field
+		  carriers, but matching on `haxe.macro.Type` directly inside generated macro-host modules
+		  still trips the current generated-OCaml `TAbstract(...)` seam.
+		- Keeping the pattern match in this shared runtime helper avoids duplicating that unstable
+		  match shape in user-side macro probes.
+	**/
+	public static function moduleFieldsCarrierOf(t:Type):Null<Ref<ClassType>> {
+		final cls = classRefOf(t);
+		if (cls == null)
+			return null;
+		return switch (cls.get().kind) {
+			case KModuleFields(_):
+				cls;
 			case _:
 				null;
 		}
@@ -757,7 +783,17 @@ class RuntimeMacroTypes {
 		return value;
 	}
 
-	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>, ?kind:ClassKind):Ref<ClassType> {
+	static function moduleFieldsCarrier(pack:Array<String>, module:String, modulePath:String,
+			entries:Array<{name:String, kind:String, metadata:Array<String>}>):Ref<ClassType> {
+		final statics = [
+			for (entry in entries)
+				classField(entry.name, entry.kind, entry.metadata)
+		];
+		return classRef(pack, module, module, null, KModuleFields(modulePath), statics);
+	}
+
+	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>, ?kind:ClassKind,
+			?staticFields:Array<ClassField>):Ref<ClassType> {
 		final value:ClassType = {
 			pack: pack.copy(),
 			name: name,
@@ -776,12 +812,33 @@ class RuntimeMacroTypes {
 			superClass: null,
 			interfaces: [],
 			fields: makeRef([], fullPath(pack, name) + ".fields"),
-			statics: makeRef([], fullPath(pack, name) + ".statics"),
+			statics: makeRef(staticFields == null ? [] : staticFields.copy(), fullPath(pack, name) + ".statics"),
 			constructor: null,
 			init: null,
 			overrides: []
 		};
 		return makeRef(value, fullPath(pack, name));
+	}
+
+	static function classField(name:String, kind:String, ?metadataEntries:Array<String>):ClassField {
+		final lowered = kind == null ? "" : StringTools.trim(kind).toLowerCase();
+		return {
+			name: name,
+			type: lowered == "method" ? TFun([], TDynamic(null)) : TDynamic(null),
+			isPublic: true,
+			isExtern: true,
+			isFinal: false,
+			isAbstract: false,
+			params: [],
+			meta: metadataAccess(metadataEntries),
+			kind: lowered == "method" ? FMethod(MethNormal) : FVar(AccNormal, AccNormal),
+			expr: function():Null<TypedExpr> {
+				return null;
+			},
+			pos: defaultPos(),
+			doc: null,
+			overloads: makeRef([], name + ".overloads")
+		};
 	}
 
 	static function enumRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<EnumType> {

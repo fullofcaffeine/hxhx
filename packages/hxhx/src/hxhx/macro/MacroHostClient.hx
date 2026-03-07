@@ -6,6 +6,12 @@ private typedef RuntimeResolvedTypeSnapshot = {
 	final metadata:Array<String>;
 }
 
+private typedef RuntimeResolvedModuleFieldSnapshot = {
+	final name:String;
+	final kind:String;
+	final metadata:Array<String>;
+}
+
 private enum MacroHostReadResult {
 	ReadLine(line:String);
 	ReadEof;
@@ -236,7 +242,8 @@ class MacroHostClient {
 		return HxConditionalCompilation.filterSource(source, defines);
 	}
 
-	public static function scanResolvedModuleTypes(modulePath:String, path:String, fallbackMainName:String):Array<RuntimeResolvedTypeSnapshot> {
+	public static function scanResolvedModuleTypes(modulePath:String, path:String, fallbackMainName:String,
+			?includeFallbackMain:Bool = true):Array<RuntimeResolvedTypeSnapshot> {
 		final out = new Array<RuntimeResolvedTypeSnapshot>();
 		final seen = new Map<String, Bool>();
 		final modulePack = modulePath == null ? [] : modulePath.split(".");
@@ -270,7 +277,7 @@ class MacroHostClient {
 		}
 
 		final mainName = fallbackMainName == null ? "" : StringTools.trim(fallbackMainName);
-		if (mainName.length > 0) {
+		if (includeFallbackMain && mainName.length > 0) {
 			final mainMetadata = MacroState.listAppliedTypeMetadata(fullTypePath(mainName));
 			var existingIndex = -1;
 			for (i in 0...out.length)
@@ -292,6 +299,161 @@ class MacroHostClient {
 					metadata: mainMetadata
 				});
 			}
+		}
+
+		return out;
+	}
+
+	/**
+		Scan a narrow top-level module-field subset from filtered source.
+
+		Why
+		- Some real macro consumers fall back to `Context.getModule(...)` specifically to inspect a
+		  synthetic `KModuleFields(module)` carrier and metadata on its static fields.
+		- The external-host runtime already preserves top-level type declarations, but without a
+		  module-field carrier those consumers still see an incomplete module model.
+
+		What
+		- Detects top-level declarations at brace depth zero after `#if` filtering:
+		  - metadata lines (`@:meta`, `@:meta(args)`)
+		  - `function foo(...)`
+		  - `var foo`
+		  - `final foo`
+
+		Gotchas
+		- This is intentionally narrower than full parser fidelity.
+		- It only records field names, declaration kind, and metadata, because that is the actual
+		  consumer contract for the current `KModuleFields` seam.
+	**/
+	public static function scanResolvedModuleFields(path:String):Array<RuntimeResolvedModuleFieldSnapshot> {
+		final out = new Array<RuntimeResolvedModuleFieldSnapshot>();
+		final filtered = readFilteredResolvedModuleSource(path);
+		if (filtered.length == 0)
+			return out;
+
+		var braceDepth = 0;
+		var blockCommentDepth = 0;
+		var pendingMetadata = new Array<String>();
+		final seen = new Map<String, Bool>();
+		final lines = filtered.split("\n");
+
+		function countChar(text:String, ch:String):Int {
+			var count = 0;
+			var i = 0;
+			while (i < text.length) {
+				if (text.charAt(i) == ch)
+					count += 1;
+				i += 1;
+			}
+			return count;
+		}
+
+		function stripLineComments(text:String):String {
+			var inString = false;
+			var quote = "";
+			var i = 0;
+			while (i < text.length - 1) {
+				final ch = text.charAt(i);
+				if (inString) {
+					if (ch == "\\") {
+						i += 2;
+						continue;
+					}
+					if (ch == quote)
+						inString = false;
+					i += 1;
+					continue;
+				}
+				if (ch == "\"" || ch == "'") {
+					inString = true;
+					quote = ch;
+					i += 1;
+					continue;
+				}
+				if (ch == "/" && text.charAt(i + 1) == "/")
+					return text.substr(0, i);
+				i += 1;
+			}
+			return text;
+		}
+
+		function extractName(prefix:String, keyword:String):String {
+			final rest = StringTools.trim(prefix.substr(keyword.length));
+			if (rest.length == 0)
+				return "";
+			final match = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+			return match.match(rest) ? match.matched(1) : "";
+		}
+
+		function push(kind:String, name:String):Void {
+			final trimmed = StringTools.trim(name == null ? "" : name);
+			if (trimmed.length == 0 || seen.exists(trimmed))
+				return;
+			seen.set(trimmed, true);
+			out.push({
+				name: trimmed,
+				kind: kind,
+				metadata: pendingMetadata.copy()
+			});
+			pendingMetadata = [];
+		}
+
+		for (rawLine in lines) {
+			var line = rawLine;
+			if (blockCommentDepth > 0) {
+				while (line.length > 0 && blockCommentDepth > 0) {
+					final close = line.indexOf("*/");
+					if (close == -1) {
+						line = "";
+					} else {
+						blockCommentDepth -= 1;
+						line = line.substr(close + 2);
+					}
+				}
+			}
+
+			while (true) {
+				final open = line.indexOf("/*");
+				if (open == -1)
+					break;
+				final close = line.indexOf("*/", open + 2);
+				if (close == -1) {
+					blockCommentDepth += 1;
+					line = line.substr(0, open);
+					break;
+				}
+				line = line.substr(0, open) + line.substr(close + 2);
+			}
+
+			line = stripLineComments(line);
+			final trimmed = StringTools.trim(line);
+			if (trimmed.length == 0)
+				continue;
+
+			if (braceDepth == 0) {
+				if (StringTools.startsWith(trimmed, "@:")) {
+					pendingMetadata.push(trimmed);
+				} else if (StringTools.startsWith(trimmed, "function ")) {
+					push("method", extractName(trimmed, "function"));
+				} else if (StringTools.startsWith(trimmed, "var ")) {
+					push("var", extractName(trimmed, "var"));
+				} else if (StringTools.startsWith(trimmed, "final ")) {
+					push("var", extractName(trimmed, "final"));
+				} else if (!StringTools.startsWith(trimmed, "package ")
+					&& !StringTools.startsWith(trimmed, "import ")
+					&& !StringTools.startsWith(trimmed, "using ")
+					&& !StringTools.startsWith(trimmed, "#if")
+					&& !StringTools.startsWith(trimmed, "#elseif")
+					&& !StringTools.startsWith(trimmed, "#else")
+					&& !StringTools.startsWith(trimmed, "#end")) {
+					pendingMetadata = [];
+				}
+			}
+
+			braceDepth += countChar(line, "{");
+			braceDepth -= countChar(line, "}");
+			if (braceDepth < 0)
+				braceDepth = 0;
 		}
 
 		return out;
@@ -783,7 +945,8 @@ private class MacroClient {
 						replyOk(id, MacroProtocol.encodeLen("v", ""));
 						return;
 					}
-					final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className);
+					final resolvedFields = MacroHostClient.scanResolvedModuleFields(resolved.path);
+					final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className, resolvedFields.length == 0);
 					final parts = new Array<String>();
 					parts.push(MacroProtocol.encodeLen("ok", "1"));
 					parts.push(MacroProtocol.encodeLen("m", name));
@@ -795,6 +958,15 @@ private class MacroClient {
 						parts.push(MacroProtocol.encodeLen("tmc" + i, Std.string(entry.metadata.length)));
 						for (j in 0...entry.metadata.length)
 							parts.push(MacroProtocol.encodeLen("tmd" + i + "_" + j, entry.metadata[j]));
+					}
+					parts.push(MacroProtocol.encodeLen("fc", Std.string(resolvedFields.length)));
+					for (i in 0...resolvedFields.length) {
+						final entry = resolvedFields[i];
+						parts.push(MacroProtocol.encodeLen("fn" + i, entry.name));
+						parts.push(MacroProtocol.encodeLen("fk" + i, entry.kind));
+						parts.push(MacroProtocol.encodeLen("fmc" + i, Std.string(entry.metadata.length)));
+						for (j in 0...entry.metadata.length)
+							parts.push(MacroProtocol.encodeLen("fmd" + i + "_" + j, entry.metadata[j]));
 					}
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "context.getClassPath":

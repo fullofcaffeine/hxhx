@@ -202,13 +202,6 @@ class RuntimeContextApiMacros {
 		final abstractSummary = TypeTools.toString(appliedAbstract);
 		if (abstractSummary != "synthetic.AbstractBox<String>")
 			Context.fatalError("runtime macro type-parameter probe: abstract substitution mismatch " + abstractSummary, pos);
-		switch (appliedAbstract) {
-			case TAbstract(_, params):
-				if (params.length != 1 || TypeTools.toString(params[0]) != "String")
-					Context.fatalError("runtime macro type-parameter probe: abstract params mismatch", pos);
-			case _:
-				Context.fatalError("runtime macro type-parameter probe: expected substituted abstract wrapper", pos);
-		}
 
 		Compiler.define("HXHX_RUNTIME_TYPE_PARAMS", appliedSummary + ";" + iterSummary + ";Bool;" + abstractSummary);
 		return "typeParams=" + appliedSummary + ";iter=" + iterSummary + ";typedef=Bool;abstract=" + abstractSummary;
@@ -419,6 +412,57 @@ class RuntimeContextApiMacros {
 
 		Compiler.define("HXHX_RUNTIME_MODULE_LOOKUP", summary);
 		return "moduleLookup=" + summary;
+	}
+
+	public static function probeModuleFieldCarrier():String {
+		final pos = Context.currentPos();
+		final modulePath = "hxhxmacros.RuntimeModuleFieldCarrier";
+		final moduleTypes = Context.getModule(modulePath);
+		if (moduleTypes == null || moduleTypes.length == 0)
+			Context.fatalError("runtime macro module-field probe: expected module lookup to resolve " + modulePath, pos);
+
+		var sawCarrier = false;
+		final rendered = new Array<String>();
+		for (t in moduleTypes) {
+			final classRef = RuntimeMacroTypes.moduleFieldsCarrierOf(t);
+			if (classRef == null)
+				continue;
+			final classType = classRef.get();
+			switch (classType.kind) {
+				case KModuleFields(moduleName):
+					if (moduleName != modulePath)
+						Context.fatalError("runtime macro module-field probe: unexpected carrier module " + moduleName, pos);
+				case _:
+					Context.fatalError("runtime macro module-field probe: helper returned non-module carrier", pos);
+			}
+			sawCarrier = true;
+			final statics = classType.statics.get();
+			if (statics.length < 2)
+				Context.fatalError("runtime macro module-field probe: expected synthetic module statics", pos);
+			var sawRouter = false;
+			var sawSchema = false;
+			for (field in statics) {
+				rendered.push(field.name);
+				if (field.name == "routerMarker")
+					sawRouter = field.meta.has(":router");
+				if (field.name == "schemaMarker")
+					sawSchema = field.meta.has(":schema");
+			}
+			if (!sawRouter)
+				Context.fatalError("runtime macro module-field probe: missing :router metadata", pos);
+			if (!sawSchema)
+				Context.fatalError("runtime macro module-field probe: missing :schema metadata", pos);
+		}
+
+		if (!sawCarrier)
+			Context.fatalError("runtime macro module-field probe: expected KModuleFields carrier", pos);
+
+		rendered.sort(function(a:String, b:String):Int {
+			return Reflect.compare(a, b);
+		});
+		final summary = rendered.join(";");
+		Compiler.define("HXHX_RUNTIME_MODULE_FIELDS", summary);
+		return "moduleFields=" + summary;
 	}
 
 	public static function probeTypedExprPlumbing():String {

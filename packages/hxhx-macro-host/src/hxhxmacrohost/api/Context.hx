@@ -375,8 +375,27 @@ class Context {
 				metadata: metadata
 			});
 		}
+		final fields = new Array<{name:String, kind:String, metadata:Array<String>}>();
+		final fieldCount = parseNonNegativeInt(parts.exists("fc") ? parts.get("fc") : "", 0);
+		for (i in 0...fieldCount) {
+			final nameKey = "fn" + i;
+			if (!parts.exists(nameKey))
+				continue;
+			final metadata = new Array<String>();
+			final metadataCount = parseNonNegativeInt(parts.exists("fmc" + i) ? parts.get("fmc" + i) : "", 0);
+			for (j in 0...metadataCount) {
+				final key = "fmd" + i + "_" + j;
+				if (parts.exists(key))
+					metadata.push(parts.get(key));
+			}
+			fields.push({
+				name: parts.get(nameKey),
+				kind: parts.exists("fk" + i) ? parts.get("fk" + i) : "var",
+				metadata: metadata
+			});
+		}
 		final modulePath = parts.exists("m") ? parts.get("m") : name;
-		return RuntimeMacroTypes.moduleTypesForModule(modulePath, entries);
+		return RuntimeMacroTypes.moduleTypesForModule(modulePath, entries, fields);
 	}
 
 	public static function parse(expr:String, pos:Position):Expr {
