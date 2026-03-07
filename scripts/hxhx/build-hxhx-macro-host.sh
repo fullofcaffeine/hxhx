@@ -331,6 +331,7 @@ trim_ws() {
       --std "$STD_ROOT"
       -cp src
       -cp overrides
+      -cp ../hxhx-core/src
       -main hxhxmacrohost.Stage3Main
     )
     if [ "${#extra[@]}" -gt 0 ]; then

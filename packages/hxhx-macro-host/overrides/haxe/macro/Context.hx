@@ -376,6 +376,14 @@ class Context {
 		return HostContext.getModule(name);
 	}
 
+	public static function parse(expr:String, pos:Position):Expr {
+		return HostContext.parse(expr, pos);
+	}
+
+	public static function parseInlineString(expr:String, pos:Position):Expr {
+		return HostContext.parseInlineString(expr, pos);
+	}
+
 	public static function resolvePath(file:String):String {
 		return HostContext.resolvePath(file);
 	}

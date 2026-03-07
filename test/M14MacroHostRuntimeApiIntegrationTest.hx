@@ -40,7 +40,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
-			"hxhxmacros.RuntimeContextApiMacros.probeMessages()"
+			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
+			"hxhxmacros.RuntimeContextApiMacros.probeParse()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -174,6 +175,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("messages output warning", messagesOutput, "warning:runtime-warning@");
 			assertContains("messages output info", messagesOutput, "info:runtime-info@");
 			assertContains("messages define", MacroState.definedValue("HXHX_RUNTIME_MESSAGES"), "info:runtime-info@");
+
+			final parseOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeParse()");
+			assertContains("parse output", parseOutput, "parse=call+inline");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_PARSE") == "call+inline", "expected runtime parse define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

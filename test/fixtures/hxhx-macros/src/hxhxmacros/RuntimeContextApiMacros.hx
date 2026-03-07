@@ -351,6 +351,93 @@ class RuntimeContextApiMacros {
 		return "resource=" + text;
 	}
 
+	public static function probeParse():String {
+		final pos = Context.currentPos();
+		final parsed = Context.parse("demo.call(1 + 2, new js.lib.ArrayBuffer(8), cast value, [1, 2], { ok: true })", pos);
+		final inlineParsed = Context.parseInlineString("items[0] ? \"yes\" : \"no\"", pos);
+
+		switch (parsed.expr) {
+			case ECall(target, args):
+				switch (target.expr) {
+					case EField(owner, "call"):
+						switch (owner.expr) {
+							case EConst(CIdent("demo")):
+							case _:
+								Context.fatalError("runtime macro parse probe: expected demo.call target owner", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro parse probe: expected field call target", pos);
+				}
+				if (args.length != 5)
+					Context.fatalError("runtime macro parse probe: expected five call args", pos);
+				switch (args[0].expr) {
+					case EBinop(OpAdd, left, right):
+						switch ([left.expr, right.expr]) {
+							case [EConst(CInt("1", _)), EConst(CInt("2", _))]:
+							case _:
+								Context.fatalError("runtime macro parse probe: expected integer add", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro parse probe: expected binop arg", pos);
+				}
+				switch (args[1].expr) {
+					case ENew(tp, ctorArgs):
+						if (tp.pack.join(".") != "js.lib" || tp.name != "ArrayBuffer" || ctorArgs.length != 1)
+							Context.fatalError("runtime macro parse probe: expected ArrayBuffer ctor", pos);
+					case _:
+						Context.fatalError("runtime macro parse probe: expected new expr arg", pos);
+				}
+				switch (args[2].expr) {
+					case ECast(inner, null):
+						switch (inner.expr) {
+							case EConst(CIdent("value")):
+							case _:
+								Context.fatalError("runtime macro parse probe: expected cast value", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro parse probe: expected cast expr arg", pos);
+				}
+				switch (args[3].expr) {
+					case EArrayDecl(values):
+						if (values.length != 2) Context.fatalError("runtime macro parse probe: expected array decl arg", pos);
+					case _:
+						Context.fatalError("runtime macro parse probe: expected array decl", pos);
+				}
+				switch (args[4].expr) {
+					case EObjectDecl(fields):
+						if (fields.length != 1 || fields[0].field != "ok") Context.fatalError("runtime macro parse probe: expected object field", pos);
+					case _:
+						Context.fatalError("runtime macro parse probe: expected object decl", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro parse probe: expected call root", pos);
+		}
+
+		switch (inlineParsed.expr) {
+			case ETernary(cond, thenExpr, elseExpr):
+				switch (cond.expr) {
+					case EArray(base, index):
+						switch ([base.expr, index.expr]) {
+							case [EConst(CIdent("items")), EConst(CInt("0", _))]:
+							case _:
+								Context.fatalError("runtime macro parse probe: expected array access ternary condition", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro parse probe: expected array access condition", pos);
+				}
+				switch ([thenExpr.expr, elseExpr.expr]) {
+					case [EConst(CString("yes", _)), EConst(CString("no", _))]:
+					case _:
+						Context.fatalError("runtime macro parse probe: expected ternary string branches", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro parse probe: expected inline ternary", pos);
+		}
+
+		Compiler.define("HXHX_RUNTIME_PARSE", "call+inline");
+		return "parse=call+inline";
+	}
+
 	public static function probeMessages():String {
 		final pos = Context.currentPos();
 		Context.warning("runtime-warning", pos);

@@ -1,5 +1,6 @@
 -cp src
 -cp overrides
+-cp ../hxhx-core/src
 -main hxhxmacrohost.Main
 --no-output
 -lib reflaxe.ocaml

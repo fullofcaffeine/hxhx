@@ -4,6 +4,7 @@ import haxe.io.Bytes;
 import haxe.macro.Expr;
 import haxe.macro.DisplayMode;
 import haxe.macro.Type;
+import hxhxmacrohost.api.RuntimeMacroExprs;
 import hxhxmacrohost.HostToCompilerRpc;
 import hxhxmacrohost.MacroRuntime;
 import hxhxmacrohost.Protocol;
@@ -265,6 +266,14 @@ class Context {
 		if (payload == null || payload.length == 0)
 			return [];
 		return RuntimeMacroTypes.moduleTypesForPath(name);
+	}
+
+	public static function parse(expr:String, pos:Position):Expr {
+		return RuntimeMacroExprs.parse(expr, pos);
+	}
+
+	public static function parseInlineString(expr:String, pos:Position):Expr {
+		return RuntimeMacroExprs.parseInlineString(expr, pos);
 	}
 
 	public static function resolveType(t:ComplexType, p:Position):Type {
