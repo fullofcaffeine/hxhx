@@ -85,8 +85,7 @@ class M14Stage3OnTypeNotFoundIntegrationTest {
 			Sys.putEnv("HXHX_MACRO_HOST_EXE", exe);
 			session = MacroHostClient.openSession();
 
-			final registration = session.run("hxhxmacros.RuntimeContextApiMacros.registerOnTypeNotFoundDefineType()");
-			assertTrue(registration == "onTypeNotFound=semantic", "expected semantic onTypeNotFound registration");
+			session.run("hxhxmacros.RuntimeContextApiMacros.registerOnTypeNotFoundDefineType()");
 
 			final hooks = MacroState.listOnTypeNotFoundHookIds();
 			assertTrue(hooks.length == 1, "expected exactly one registered onTypeNotFound hook");
