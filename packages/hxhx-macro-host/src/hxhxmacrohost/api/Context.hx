@@ -31,8 +31,9 @@ import hxhxmacrohost.Protocol;
 	  code can find target resources without reimplementing file search inside the host.
 	- `getLocalModule()`, `getLocalMethod()`, `getLocalType()`, and `getExpectedType()` expose a
 	  compiler-seeded local-context snapshot through the same builtin-only type model.
-	- `getModule(name)` exposes an existence-only module lookup rung backed by compiler-side classpath
-	  resolution and a synthetic named-type payload.
+	- `getModule(name)` exposes a narrow compiler-backed synthetic module lookup rung: it resolves
+	  the file on the compiler side, scans top-level type names from the filtered source, and
+	  returns synthetic named types for those declarations.
 
 	How
 	- Backed by the compiler define store for `defined*`.
@@ -360,8 +361,15 @@ class Context {
 			if (parts.exists(key))
 				metadata.push(parts.get(key));
 		}
+		final typeNames = new Array<String>();
+		final typeCount = parseNonNegativeInt(parts.exists("tc") ? parts.get("tc") : "", 0);
+		for (i in 0...typeCount) {
+			final key = "tn" + i;
+			if (parts.exists(key))
+				typeNames.push(parts.get(key));
+		}
 		final modulePath = parts.exists("m") ? parts.get("m") : name;
-		return RuntimeMacroTypes.moduleTypesForPath(modulePath, metadata);
+		return RuntimeMacroTypes.moduleTypesForModule(modulePath, typeNames, metadata);
 	}
 
 	public static function parse(expr:String, pos:Position):Expr {

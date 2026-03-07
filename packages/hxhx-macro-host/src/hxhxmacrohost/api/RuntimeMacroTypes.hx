@@ -166,6 +166,27 @@ class RuntimeMacroTypes {
 		return [TInst(classRef(parts, name, name, metadataEntries), [])];
 	}
 
+	public static function moduleTypesForModule(modulePath:String, typeNames:Array<String>, ?metadataEntries:Array<String>):Array<Type> {
+		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
+		if (trimmed.length == 0)
+			return [];
+		final parts = trimmed.split(".");
+		if (parts.length == 0)
+			return [];
+		final moduleName = parts.pop();
+		final out = new Array<Type>();
+		final seen = new Map<String, Bool>();
+		final names = (typeNames == null || typeNames.length == 0) ? [moduleName] : typeNames;
+		for (typeName in names) {
+			final trimmedName = StringTools.trim(typeName == null ? "" : typeName);
+			if (trimmedName.length == 0 || seen.exists(trimmedName))
+				continue;
+			seen.set(trimmedName, true);
+			out.push(TInst(classRef(parts, trimmedName, moduleName, metadataEntries), []));
+		}
+		return out;
+	}
+
 	public static function typeForPath(typePath:String, ?metadataEntries:Array<String>):Type {
 		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
 		if (trimmed.length == 0)

@@ -187,8 +187,14 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("local tvars define", MacroState.definedValue("HXHX_RUNTIME_LOCAL_TVARS"), "label:String:2:capture");
 
 			final moduleOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()");
-			assertContains("module lookup output", moduleOutput, "moduleLookup=hxhxmacros.RuntimeContextApiMacros");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_LOOKUP") == "hxhxmacros.RuntimeContextApiMacros", "expected module lookup define");
+			assertContains("module lookup output", moduleOutput, "hxhxmacros.RuntimeModuleMembers");
+			assertContains("module lookup output", moduleOutput, "hxhxmacros.RuntimeModuleHelper");
+			assertContains("module lookup output", moduleOutput, "hxhxmacros.RuntimeModuleState");
+			assertContains("module lookup output", moduleOutput, "hxhxmacros.RuntimeModuleData");
+			assertContains("module lookup output", moduleOutput, "hxhxmacros.RuntimeModuleId");
+			final moduleLookupDefine = MacroState.definedValue("HXHX_RUNTIME_MODULE_LOOKUP");
+			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleMembers");
+			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleHelper");
 
 			final typedExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()");
 			assertContains("typed expr output", typedExprOutput, "typedExpr=");

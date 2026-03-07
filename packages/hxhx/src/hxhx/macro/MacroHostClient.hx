@@ -204,6 +204,68 @@ class MacroHostClient {
 		return "";
 	}
 
+	static function gatherCurrentDefines():Array<String> {
+		final out = new Array<String>();
+		for (pair in MacroState.listDefinesPairsSorted()) {
+			if (pair == null || pair.length == 0)
+				continue;
+			final key = pair[0];
+			if (key == null || key.length == 0)
+				continue;
+			final value = pair.length > 1 ? pair[1] : "1";
+			out.push(value == "1" ? key : (key + "=" + value));
+		}
+		return out;
+	}
+
+	static function readFilteredResolvedModuleSource(path:String):String {
+		final source = try sys.io.File.getContent(path) catch (_:haxe.io.Error) {
+			null;
+		} catch (_:String) {
+			null;
+		}
+		if (source == null || source.length == 0)
+			return "";
+		final defines = HxDefineMap.fromRawDefines(gatherCurrentDefines());
+		return HxConditionalCompilation.filterSource(source, defines);
+	}
+
+	public static function scanResolvedModuleTypeNames(path:String, fallbackMainName:String):Array<String> {
+		final out = new Array<String>();
+		final seen = new Map<String, Bool>();
+		inline function push(name:String):Void {
+			final trimmed = name == null ? "" : StringTools.trim(name);
+			if (trimmed.length == 0 || seen.exists(trimmed))
+				return;
+			seen.set(trimmed, true);
+			out.push(trimmed);
+		}
+
+		final filtered = readFilteredResolvedModuleSource(path);
+		if (filtered.length > 0) {
+			for (c in ParserStageScanHelpers.scanModuleLocalHelperClasses(filtered, null))
+				push(HxClassDecl.getName(c));
+			for (c in ParserStageScanHelpers.scanModuleLocalHelperEnums(filtered, null))
+				push(HxClassDecl.getName(c));
+			for (c in ParserStageScanHelpers.scanModuleLocalHelperTypedefs(filtered, null))
+				push(HxClassDecl.getName(c));
+			for (c in ParserStageScanHelpers.scanModuleLocalHelperAbstracts(filtered, null))
+				push(HxClassDecl.getName(c));
+		}
+
+		final mainName = fallbackMainName == null ? "" : StringTools.trim(fallbackMainName);
+		if (mainName.length > 0) {
+			if (seen.exists(mainName)) {
+				out.remove(mainName);
+				out.unshift(mainName);
+			} else {
+				out.unshift(mainName);
+			}
+		}
+
+		return out;
+	}
+
 	static function connect():MacroClient {
 		final exe = resolveMacroHostExe();
 		if (exe == null || exe.length == 0) {
@@ -669,12 +731,16 @@ private class MacroClient {
 						return;
 					}
 					final metadata = MacroState.listAppliedTypeMetadata(name);
+					final typeNames = MacroHostClient.scanResolvedModuleTypeNames(resolved.path, resolved.className);
 					final parts = new Array<String>();
 					parts.push(MacroProtocol.encodeLen("ok", "1"));
 					parts.push(MacroProtocol.encodeLen("m", name));
 					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
+					parts.push(MacroProtocol.encodeLen("tc", Std.string(typeNames.length)));
 					for (i in 0...metadata.length)
 						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
+					for (i in 0...typeNames.length)
+						parts.push(MacroProtocol.encodeLen("tn" + i, typeNames[i]));
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "context.getClassPath":
 					final classPaths = gatherMacroContextClassPaths();

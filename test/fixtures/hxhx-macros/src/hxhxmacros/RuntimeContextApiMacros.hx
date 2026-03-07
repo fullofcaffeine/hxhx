@@ -321,16 +321,28 @@ class RuntimeContextApiMacros {
 
 	public static function probeModuleLookup():String {
 		final pos = Context.currentPos();
-		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
+		final modulePath = "hxhxmacros.RuntimeModuleMembers";
 		final moduleTypes = Context.getModule(modulePath);
-		if (moduleTypes == null || moduleTypes.length == 0)
+		if (moduleTypes == null || moduleTypes.length < 5)
 			Context.fatalError("runtime macro module probe: expected module lookup to resolve " + modulePath, pos);
-		final typeText = TypeTools.toString(moduleTypes[0]);
-		if (typeText != modulePath)
-			Context.fatalError("runtime macro module probe: expected synthetic module type " + modulePath + " but got " + typeText, pos);
+		final rendered = [for (t in moduleTypes) TypeTools.toString(t)];
+		rendered.sort(function(a:String, b:String):Int {
+			return Reflect.compare(a, b);
+		});
+		final summary = rendered.join(";");
+		for (expected in [
+			"hxhxmacros.RuntimeModuleMembers",
+			"hxhxmacros.RuntimeModuleHelper",
+			"hxhxmacros.RuntimeModuleState",
+			"hxhxmacros.RuntimeModuleData",
+			"hxhxmacros.RuntimeModuleId"
+		]) {
+			if (rendered.indexOf(expected) < 0)
+				Context.fatalError("runtime macro module probe: missing module member " + expected + " in " + summary, pos);
+		}
 
-		Compiler.define("HXHX_RUNTIME_MODULE_LOOKUP", modulePath);
-		return "moduleLookup=" + modulePath;
+		Compiler.define("HXHX_RUNTIME_MODULE_LOOKUP", summary);
+		return "moduleLookup=" + summary;
 	}
 
 	public static function probeTypedExprPlumbing():String {
