@@ -449,6 +449,18 @@ class RuntimeContextApiMacros {
 		return "include=" + summary;
 	}
 
+	public static function probeCompilerMetadataRegistration():String {
+		Compiler.addGlobalMetadata("", "@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())", true, true, false);
+		Compiler.addGlobalMetadata("demo.Target", "@:demoMeta", false, true, true);
+		Compiler.nullSafety("demo.strict", Strict, true);
+		Compiler.registerCustomMetadata({
+			metadata: ":demoCustom",
+			doc: "runtime metadata probe"
+		}, "runtime-probe");
+		Compiler.define("HXHX_RUNTIME_METADATA", "ok");
+		return "metadata=ok";
+	}
+
 	public static function probeRegisterModuleDependency():String {
 		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
 		final externFile = "runtime/macro-probe.txt";

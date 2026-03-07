@@ -99,6 +99,14 @@ class Compiler {
 }
 #else
 class Compiler {
+	static function renderNullSafetyMode(mode:NullSafetyMode):String {
+		return switch (mode) {
+			case Loose: "Loose";
+			case Strict: "Strict";
+			case StrictThreaded: "StrictThreaded";
+		};
+	}
+
 	static function normalizedModulePath(path:String):String {
 		return path == null ? "" : StringTools.trim(StringTools.replace(path, "/", "."));
 	}
@@ -175,6 +183,32 @@ class Compiler {
 
 	public static function emitHxModule(name:String, source:String):Void {
 		HostCompiler.emitHxModule(name, source);
+	}
+
+	/**
+		Runtime bring-up `Compiler.addGlobalMetadata(...)`.
+
+		Why
+		- Real target/compiler initialization code commonly registers global annotations and build
+		  macros through this surface.
+		- The external-host runtime needs to preserve those requests in compiler-owned state even
+		  before Stage3 applies metadata with upstream-equivalent semantics.
+
+		What
+		- Records the requested metadata rule in the compiler-owned runtime ledger.
+	**/
+	public static function addGlobalMetadata(pathFilter:String, meta:String, recursive:Bool = true, toTypes:Bool = true, toFields:Bool = false):Void {
+		HostCompiler.addGlobalMetadata(pathFilter, meta, recursive, toTypes, toFields);
+	}
+
+	public static function nullSafety(path:String, mode:NullSafetyMode = Loose, recursive:Bool = true):Void {
+		addGlobalMetadata(path, '@:nullSafety(${renderNullSafetyMode(mode)})', recursive, true, false);
+	}
+
+	public static function registerCustomMetadata(meta:MetadataDescription, ?source:String):Void {
+		if (meta == null)
+			return;
+		HostCompiler.registerCustomMetadata(meta.metadata, meta.doc, source);
 	}
 
 	/**

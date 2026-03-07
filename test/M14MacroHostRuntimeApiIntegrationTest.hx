@@ -42,6 +42,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
+			"hxhxmacros.RuntimeContextApiMacros.probeCompilerMetadataRegistration()",
 			"hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
 			"hxhxmacros.RuntimeContextApiMacros.probeDefineType()",
 			"hxhxmacros.RuntimeContextApiMacros.probeDefineModule()",
@@ -196,6 +197,50 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.RuntimeContextApiMacros") >= 0, "expected included module snapshot");
 			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.ArgsMacros") >= 0, "expected recursive package include");
 			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.RuntimeContextApiMacros") >= 0, "expected exact module include");
+
+			final metadataOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeCompilerMetadataRegistration()");
+			assertContains("metadata output", metadataOutput, "metadata=ok");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_METADATA") == "ok", "expected runtime metadata define");
+			final metadataRules = MacroState.listGlobalMetadataRules();
+			assertTrue(metadataRules.length >= 3, "expected global metadata rules snapshot");
+			final metadataRuleSummary = [
+				for (rule in metadataRules)
+					rule.pathFilter
+					+ "|"
+					+ rule.metadata
+					+ "|r="
+					+ rule.recursive
+					+ "|t="
+					+ rule.toTypes
+					+ "|f="
+					+ rule.toFields].join(" ; ");
+			var sawBuildRule = false;
+			var sawDemoRule = false;
+			var sawNullSafetyRule = false;
+			for (rule in metadataRules) {
+				if (rule.pathFilter == ""
+					&& rule.metadata == "@:build(hxhxmacros.BuildFieldMacros.addGeneratedField())"
+					&& rule.recursive
+					&& rule.toTypes
+					&& !rule.toFields)
+					sawBuildRule = true;
+				if (rule.pathFilter == "demo.Target" && rule.metadata == "@:demoMeta" && !rule.recursive && rule.toTypes && rule.toFields)
+					sawDemoRule = true;
+				if (rule.pathFilter == "demo.strict"
+					&& rule.metadata == "@:nullSafety(Strict)"
+					&& rule.recursive
+					&& rule.toTypes
+					&& !rule.toFields)
+					sawNullSafetyRule = true;
+			}
+			assertTrue(sawBuildRule, "expected build metadata rule, got: " + metadataRuleSummary);
+			assertTrue(sawDemoRule, "expected demo metadata rule, got: " + metadataRuleSummary);
+			assertTrue(sawNullSafetyRule, "expected nullSafety metadata rule, got: " + metadataRuleSummary);
+			final customMetadata = MacroState.listCustomMetadataEntries();
+			assertTrue(customMetadata.length > 0, "expected custom metadata snapshot");
+			assertTrue(customMetadata[customMetadata.length - 1].metadata == ":demoCustom", "expected custom metadata name");
+			assertTrue(customMetadata[customMetadata.length - 1].doc == "runtime metadata probe", "expected custom metadata doc");
+			assertTrue(customMetadata[customMetadata.length - 1].source == "runtime-probe", "expected custom metadata source");
 
 			MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_DEP") == "hxhxmacros.RuntimeContextApiMacros->runtime/macro-probe.txt",

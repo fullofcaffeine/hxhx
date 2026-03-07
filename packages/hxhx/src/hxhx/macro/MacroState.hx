@@ -47,6 +47,20 @@ typedef MacroModuleDependencySnapshot = {
 	final externFile:String;
 }
 
+typedef MacroGlobalMetadataSnapshot = {
+	final pathFilter:String;
+	final metadata:String;
+	final recursive:Bool;
+	final toTypes:Bool;
+	final toFields:Bool;
+}
+
+typedef MacroCustomMetadataSnapshot = {
+	final metadata:String;
+	final doc:String;
+	@:optional final source:Null<String>;
+}
+
 /**
 	Compiler-side macro state (Stage 4 bring-up).
 
@@ -81,6 +95,8 @@ class MacroState {
 	static final includedModules:Array<String> = [];
 	static final resources:haxe.ds.StringMap<Bytes> = new haxe.ds.StringMap();
 	static final moduleDependencies:Array<MacroModuleDependencySnapshot> = [];
+	static final globalMetadataRules:Array<MacroGlobalMetadataSnapshot> = [];
+	static final customMetadataEntries:Array<MacroCustomMetadataSnapshot> = [];
 	static final compilerArgs:Array<String> = [];
 	static final stdPaths:Array<String> = [];
 	static var generatedHxDir:String = "";
@@ -179,6 +195,8 @@ class MacroState {
 		includedModules.resize(0);
 		resources.clear();
 		moduleDependencies.resize(0);
+		globalMetadataRules.resize(0);
+		customMetadataEntries.resize(0);
 		compilerArgs.resize(0);
 		stdPaths.resize(0);
 		generatedHxDir = "";
@@ -365,6 +383,90 @@ class MacroState {
 		final out = new Array<MacroModuleDependencySnapshot>();
 		for (entry in moduleDependencies)
 			out.push({modulePath: entry.modulePath, externFile: entry.externFile});
+		return out;
+	}
+
+	/**
+		Register a compiler-owned global metadata rule snapshot.
+
+		Why
+		- Reflaxe-style compiler initialization commonly uses `Compiler.addGlobalMetadata(...)` to
+		  attach target annotations and global `@:build(...)` hooks before the rest of compilation runs.
+		- The external-host runtime needs a stable compiler-owned record even before full metadata
+		  application semantics are wired through the typer.
+
+		What
+		- Stores distinct `(pathFilter, metadata, recursive, toTypes, toFields)` rules in registration
+		  order.
+
+		Gotchas
+		- This is currently a compatibility ledger rung. It does not yet claim full upstream semantic
+		  application of metadata to typed modules.
+	**/
+	public static function registerGlobalMetadata(pathFilter:String, metadata:String, recursive:Bool, toTypes:Bool, toFields:Bool):Void {
+		final pf = pathFilter == null ? "" : StringTools.trim(pathFilter);
+		final md = metadata == null ? "" : StringTools.trim(metadata);
+		if (md.length == 0)
+			return;
+		for (entry in globalMetadataRules)
+			if (entry.pathFilter == pf && entry.metadata == md && entry.recursive == recursive && entry.toTypes == toTypes && entry.toFields == toFields)
+				return;
+		globalMetadataRules.push({
+			pathFilter: pf,
+			metadata: md,
+			recursive: recursive,
+			toTypes: toTypes,
+			toFields: toFields
+		});
+	}
+
+	public static function listGlobalMetadataRules():Array<MacroGlobalMetadataSnapshot> {
+		final out = new Array<MacroGlobalMetadataSnapshot>();
+		for (entry in globalMetadataRules)
+			out.push({
+				pathFilter: entry.pathFilter,
+				metadata: entry.metadata,
+				recursive: entry.recursive,
+				toTypes: entry.toTypes,
+				toFields: entry.toFields
+			});
+		return out;
+	}
+
+	/**
+		Register a compiler-owned custom metadata descriptor snapshot.
+
+		Why
+		- Reflaxe reflection helpers can register custom metadata descriptions for display/editor
+		  consumers.
+		- The compiler must retain a stable description ledger even before richer display integration
+		  is available.
+
+		What
+		- Stores distinct metadata names with their documentation and optional source label.
+	**/
+	public static function registerCustomMetadata(metadata:String, doc:String, ?source:String):Void {
+		final md = metadata == null ? "" : StringTools.trim(metadata);
+		if (md.length == 0)
+			return;
+		for (entry in customMetadataEntries)
+			if (entry.metadata == md)
+				return;
+		customMetadataEntries.push({
+			metadata: md,
+			doc: doc == null ? "" : doc,
+			source: source == null ? null : StringTools.trim(source)
+		});
+	}
+
+	public static function listCustomMetadataEntries():Array<MacroCustomMetadataSnapshot> {
+		final out = new Array<MacroCustomMetadataSnapshot>();
+		for (entry in customMetadataEntries)
+			out.push({
+				metadata: entry.metadata,
+				doc: entry.doc,
+				source: entry.source
+			});
 		return out;
 	}
 

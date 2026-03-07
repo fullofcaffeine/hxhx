@@ -536,6 +536,20 @@ private class MacroClient {
 					}
 					MacroState.includeModule(modulePath);
 					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "compiler.addGlobalMetadata":
+					final pathFilter = MacroProtocol.kvGet(tail, "p");
+					final metadata = MacroProtocol.kvGet(tail, "m");
+					final recursive = MacroProtocol.kvGet(tail, "r") == "1";
+					final toTypes = MacroProtocol.kvGet(tail, "t") != "0";
+					final toFields = MacroProtocol.kvGet(tail, "f") == "1";
+					MacroState.registerGlobalMetadata(pathFilter, metadata, recursive, toTypes, toFields);
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
+				case "compiler.registerCustomMetadata":
+					final metadata = MacroProtocol.kvGet(tail, "m");
+					final doc = MacroProtocol.kvGet(tail, "d");
+					final source = MacroProtocol.kvGet(tail, "s");
+					MacroState.registerCustomMetadata(metadata, doc, source);
+					replyOk(id, MacroProtocol.encodeLen("v", "ok"));
 				case "compiler.emitHxModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					final source = MacroProtocol.kvGet(tail, "s");

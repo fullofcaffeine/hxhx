@@ -244,6 +244,60 @@ class Compiler {
 	}
 
 	/**
+		Register global metadata rules in the compiler-owned runtime ledger.
+
+		Why
+		- Reflaxe-style compiler initialization uses `Compiler.addGlobalMetadata(...)` heavily to
+		  register target annotations and global `@:build(...)` hooks.
+		- The external-host runtime needs a stable compiler-owned record even before full metadata
+		  application semantics are wired through Stage3 typing.
+
+		What
+		- Sends reverse RPC `compiler.addGlobalMetadata` with the narrow bring-up subset:
+		  - `p`: path filter
+		  - `m`: metadata string
+		  - `r`: recursive flag
+		  - `t`: toTypes flag
+		  - `f`: toFields flag
+	**/
+	public static function addGlobalMetadata(pathFilter:String, metadata:String, recursive:Bool = true, toTypes:Bool = true, toFields:Bool = false):Void {
+		if (metadata == null || metadata.length == 0)
+			return;
+		final tail = Protocol.encodeLen("p", pathFilter == null ? "" : pathFilter)
+			+ " "
+			+ Protocol.encodeLen("m", metadata)
+			+ " "
+			+ Protocol.encodeLen("r", recursive ? "1" : "0")
+			+ " "
+			+ Protocol.encodeLen("t", toTypes ? "1" : "0")
+			+ " "
+			+ Protocol.encodeLen("f", toFields ? "1" : "0");
+		HostToCompilerRpc.call("compiler.addGlobalMetadata", tail);
+	}
+
+	/**
+		Register custom metadata descriptions in the compiler-owned runtime ledger.
+
+		Why
+		- Reflaxe reflection helpers register custom metadata descriptions for editor/display flows.
+		- The compiler should retain a deterministic ledger even before richer display integration is
+		  implemented.
+
+		What
+		- Sends reverse RPC `compiler.registerCustomMetadata` with the narrow bring-up subset:
+		  - `m`: metadata name
+		  - `d`: doc string
+		  - `s`: optional source label
+	**/
+	public static function registerCustomMetadata(metadata:String, doc:String, ?source:String):Void {
+		if (metadata == null || metadata.length == 0)
+			return;
+		final tail = Protocol.encodeLen("m", metadata) + " " + Protocol.encodeLen("d", doc == null ? "" : doc) + " "
+			+ Protocol.encodeLen("s", source == null ? "" : source);
+		HostToCompilerRpc.call("compiler.registerCustomMetadata", tail);
+	}
+
+	/**
 		Force-include a module in the compilation universe (bring-up rung).
 
 		Why
