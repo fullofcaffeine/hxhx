@@ -388,6 +388,14 @@ class Context {
 		return HostContext.parseInlineString(expr, pos);
 	}
 
+	public static function makeExpr(v:Dynamic, pos:Position):Expr {
+		return HostContext.makeExpr(v, pos);
+	}
+
+	public static function signature(v:Dynamic):String {
+		return HostContext.signature(v);
+	}
+
 	public static function resolvePath(file:String):String {
 		return HostContext.resolvePath(file);
 	}

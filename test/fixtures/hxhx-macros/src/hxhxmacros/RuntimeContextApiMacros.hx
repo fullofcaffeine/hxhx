@@ -519,4 +519,32 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_MESSAGES", summary + ";filtered=warning");
 		return summary + ";filtered=warning";
 	}
+
+	public static function probeMakeExprAndSignature():String {
+		final pos = Context.currentPos();
+		final expr = Context.makeExpr({
+			ok: true,
+			items: [1, 2],
+			label: "demo"
+		}, pos);
+
+		switch (expr.expr) {
+			case EObjectDecl(fields):
+				if (fields.length != 3)
+					Context.fatalError("runtime macro makeExpr probe: expected three object fields", pos);
+			case _:
+				Context.fatalError("runtime macro makeExpr probe: expected object decl", pos);
+		}
+
+		final sigA = Context.signature({ok: true, items: [1, 2], label: "demo"});
+		final sigB = Context.signature({ok: true, items: [1, 2], label: "demo"});
+		if (sigA == null || sigA.length != 32)
+			Context.fatalError("runtime macro signature probe: expected md5-sized signature", pos);
+		if (sigA != sigB)
+			Context.fatalError("runtime macro signature probe: expected deterministic signature", pos);
+
+		Compiler.define("HXHX_RUNTIME_MAKE_EXPR", "object");
+		Compiler.define("HXHX_RUNTIME_SIGNATURE", sigA);
+		return "makeExpr=object;signature=" + sigA;
+	}
 }

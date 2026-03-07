@@ -42,7 +42,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
-			"hxhxmacros.RuntimeContextApiMacros.probeParse()"
+			"hxhxmacros.RuntimeContextApiMacros.probeParse()",
+			"hxhxmacros.RuntimeContextApiMacros.probeMakeExprAndSignature()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -185,6 +186,11 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final parseOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeParse()");
 			assertContains("parse output", parseOutput, "parse=call+inline");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_PARSE") == "call+inline", "expected runtime parse define");
+
+			final makeExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeMakeExprAndSignature()");
+			assertContains("makeExpr output", makeExprOutput, "makeExpr=object;signature=");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MAKE_EXPR") == "object", "expected runtime makeExpr define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_SIGNATURE").length == 32, "expected runtime signature define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

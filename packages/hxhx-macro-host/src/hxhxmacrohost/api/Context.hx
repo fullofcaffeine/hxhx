@@ -298,6 +298,14 @@ class Context {
 		return RuntimeMacroExprs.parseInlineString(expr, pos);
 	}
 
+	public static function makeExpr(v:Dynamic, pos:Position):Expr {
+		return RuntimeMacroExprs.makeExpr(v, pos);
+	}
+
+	public static function signature(v:Dynamic):String {
+		return RuntimeMacroExprs.signature(v);
+	}
+
 	public static function resolveType(t:ComplexType, p:Position):Type {
 		if (p != null) {}
 		return RuntimeMacroTypes.resolveComplexType(t);

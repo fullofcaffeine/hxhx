@@ -51,6 +51,36 @@ class RuntimeMacroExprs {
 		return parse(expr, pos);
 	}
 
+	/**
+		Build a narrow runtime `Expr` value from a macro-runtime value.
+
+		Why
+		- Real macro helpers use `Context.makeExpr(...)` to turn plain runtime values into AST.
+		- The external-host runtime does not have upstream's full dynamic-to-AST bridge, but it can
+		  still support the conservative subset that appears in bring-up probes and common helpers.
+
+		What
+		- Supports:
+		  - `null`
+		  - `Bool`
+		  - `String`
+		  - `Int`
+		  - `Float`
+		  - `Array<Dynamic>` recursively
+		  - anonymous structures recursively
+
+		Gotchas
+		- Enums and richer object graphs are intentionally not implemented yet.
+		- Unsupported values fail fast so later parity work stays explicit.
+	**/
+	public static function makeExpr(value:Dynamic, pos:Position):Expr {
+		return convertValue(value, pos == null ? defaultPos() : pos);
+	}
+
+	public static function signature(value:Dynamic):String {
+		return haxe.crypto.Md5.encode(haxe.Serializer.run(value));
+	}
+
 	static function convert(expr:HxExpr, pos:Position):Expr {
 		return {
 			expr: convertDef(expr, pos),
@@ -209,6 +239,54 @@ class RuntimeMacroExprs {
 			file: "<macro>",
 			min: 0,
 			max: 0
+		};
+	}
+
+	static function convertValue(value:Dynamic, pos:Position):Expr {
+		if (value == null)
+			return makeConstExpr(CIdent("null"), pos);
+		if (Std.isOfType(value, Bool))
+			return makeConstExpr(CIdent(value ? "true" : "false"), pos);
+		if (Std.isOfType(value, String))
+			return makeConstExpr(CString(cast value, DoubleQuotes), pos);
+		if (Std.isOfType(value, Int))
+			return makeConstExpr(CInt(Std.string(value), null), pos);
+		if (Std.isOfType(value, Float))
+			return makeConstExpr(CFloat(Std.string(value)), pos);
+		if (Std.isOfType(value, Array)) {
+			final items:Array<Dynamic> = cast value;
+			return {
+				expr: EArrayDecl([for (item in items) convertValue(item, pos)]),
+				pos: pos
+			};
+		}
+
+		return switch (Type.typeof(value)) {
+			case TObject:
+				final fields = Reflect.fields(value);
+				fields.sort(function(a:String, b:String):Int {
+					return Reflect.compare(a, b);
+				});
+				{
+					expr: EObjectDecl([
+						for (field in fields)
+							{
+								field: field,
+								expr: convertValue(Reflect.field(value, field), pos),
+								quotes: null
+							}
+					]),
+					pos: pos
+				};
+			case _:
+				throw "runtime macro makeExpr: unsupported value";
+		};
+	}
+
+	static function makeConstExpr(c:Constant, pos:Position):Expr {
+		return {
+			expr: EConst(c),
+			pos: pos
 		};
 	}
 }
