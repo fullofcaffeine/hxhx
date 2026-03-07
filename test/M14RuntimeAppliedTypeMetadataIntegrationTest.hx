@@ -18,7 +18,27 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 			case TInst(c, _):
 				c;
 			case _:
-				fail("expected synthetic TInst module entry but got " + Std.string(t));
+				fail("expected synthetic TInst module entry but got " + RuntimeMacroTypes.toString(t));
+				null;
+		}
+	}
+
+	static function expectEnum(t:Type):Ref<EnumType> {
+		return switch (t) {
+			case TEnum(e, _):
+				e;
+			case _:
+				fail("expected synthetic TEnum module entry but got " + RuntimeMacroTypes.toString(t));
+				null;
+		}
+	}
+
+	static function expectTypeDef(t:Type):Ref<DefType> {
+		return switch (t) {
+			case TType(td, _):
+				td;
+			case _:
+				fail("expected synthetic TType module entry but got " + RuntimeMacroTypes.toString(t));
 				null;
 		}
 	}
@@ -65,9 +85,9 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		final enumApplied = ["@:enumProbeMeta"];
 		final typedefApplied = ["@:typedefProbeMeta"];
 		final abstractApplied = ["@:abstractProbeMeta"];
-		final syntheticEnum = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleState", "enum", enumApplied)).get();
+		final syntheticEnum = expectEnum(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleState", "enum", enumApplied)).get();
 		assertTrue(syntheticEnum.meta.has(":enumProbeMeta"), "expected enum metadata on synthetic runtime type");
-		final syntheticTypedef = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied)).get();
+		final syntheticTypedef = expectTypeDef(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied)).get();
 		assertTrue(syntheticTypedef.meta.has(":typedefProbeMeta"), "expected typedef metadata on synthetic runtime type");
 		final syntheticAbstract = expectInst(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied)).get();
 		assertTrue(syntheticAbstract.meta.has(":abstractProbeMeta"), "expected abstract metadata on synthetic runtime type");
@@ -80,8 +100,8 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		]);
 		assertTrue(moduleEntries.length == 4, "expected four synthetic module members");
 		expectInst(moduleEntries[0]);
-		assertTrue(expectInst(moduleEntries[1]).get().meta.has(":enumProbeMeta"), "expected per-type enum metadata");
-		assertTrue(expectInst(moduleEntries[2]).get().meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
+		assertTrue(expectEnum(moduleEntries[1]).get().meta.has(":enumProbeMeta"), "expected per-type enum metadata");
+		assertTrue(expectTypeDef(moduleEntries[2]).get().meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
 		assertTrue(expectInst(moduleEntries[3]).get().meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
 
 		MacroState.reset();

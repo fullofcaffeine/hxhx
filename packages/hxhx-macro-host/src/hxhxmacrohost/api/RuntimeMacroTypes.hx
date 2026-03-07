@@ -646,7 +646,19 @@ class RuntimeMacroTypes {
 	}
 
 	static function typeFromResolvedDecl(pack:Array<String>, module:String, name:String, kind:String, ?metadataEntries:Array<String>):Type {
-		return classType(pack, module, name, metadataEntries);
+		return switch (kind == null ? "" : StringTools.trim(kind).toLowerCase()) {
+			case "enum":
+				TEnum(enumRef(pack, name, module, metadataEntries), []);
+			case "typedef":
+				TType(defTypeRef(pack, name, module, [], TDynamic(null), metadataEntries), []);
+			case "abstract":
+				// Keep the external-host OCaml path honest: synthetic abstract wrappers still trip
+				// generated-constructor shape issues in the macro-host build. Preserve the path/metadata
+				// through a class-shaped synthetic ref until the abstract-wrapper seam is fixed.
+				classType(pack, module, name, metadataEntries);
+			case _:
+				classType(pack, module, name, metadataEntries);
+		}
 	}
 
 	static function substituteTypeParameters(t:Type, substitutions:Map<String, Type>):Type {
