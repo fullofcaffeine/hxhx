@@ -19,6 +19,7 @@ import haxe.macro.PositionTools;
 import haxe.macro.Type;
 import haxe.macro.TypedExprTools;
 import haxe.macro.TypeTools;
+import hxhxmacrohost.api.RuntimeMacroTypes;
 
 /**
 	Runtime macro probe for the external-host `haxe.macro.*` override slice.
@@ -165,6 +166,38 @@ class RuntimeContextApiMacros {
 		return "getType=String;resolveType=" + boolTypeString + ";moduleType=" + moduleTypeText + ";nullType=" + nullStringText + ";typeof=Int;follow="
 			+ followedNullStringText + ";unify=1;moduleEnumType=" + moduleEnumTypeText + ";moduleTypedefType=" + moduleTypedefTypeText
 			+ ";moduleAbstractType=" + moduleAbstractTypeText;
+	}
+
+	public static function probeTypeParameterSubstitution():String {
+		final pos = Context.currentPos();
+		final tParam = RuntimeMacroTypes.typeParameter("T", [Context.getType("String")]);
+		final funcType:Type = TFun([
+			{
+				name: "value",
+				opt: false,
+				t: tParam.t
+			}
+		], RuntimeMacroTypes.nullWrapped(tParam.t));
+		final appliedFunc = TypeTools.applyTypeParameters(funcType, [tParam], [Context.getType("String")]);
+		final appliedSummary = TypeTools.toString(appliedFunc);
+		if (appliedSummary != "(String) -> Null<String>")
+			Context.fatalError("runtime macro type-parameter probe: unexpected substituted summary " + appliedSummary, pos);
+
+		final iterVisited = new Array<String>();
+		TypeTools.iter(appliedFunc, function(inner:Type):Void {
+			iterVisited.push(TypeTools.toString(inner));
+		});
+		final iterSummary = iterVisited.join("|");
+		if (iterSummary != "String|Null<String>")
+			Context.fatalError("runtime macro type-parameter probe: unexpected iter summary " + iterSummary, pos);
+
+		final aliasRef = RuntimeMacroTypes.syntheticDefTypeRef(["synthetic"], "AliasBox", "AliasBox", [tParam], tParam.t);
+		final followedAlias = TypeTools.follow(TType(aliasRef, [Context.getType("Bool")]));
+		if (TypeTools.toString(followedAlias) != "Bool")
+			Context.fatalError("runtime macro type-parameter probe: typedef follow mismatch", pos);
+
+		Compiler.define("HXHX_RUNTIME_TYPE_PARAMS", appliedSummary + ";" + iterSummary + ";Bool");
+		return "typeParams=" + appliedSummary + ";iter=" + iterSummary + ";typedef=Bool";
 	}
 
 	public static function probeLocalContextSnapshot():String {

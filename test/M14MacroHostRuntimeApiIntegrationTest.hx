@@ -46,6 +46,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 		final exprs = [
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
+			"hxhxmacros.RuntimeContextApiMacros.probeTypeParameterSubstitution()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCallArguments()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalImports()",
@@ -172,6 +173,13 @@ class M14MacroHostRuntimeApiIntegrationTest {
 				"expected runtime module typedef type define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_ABSTRACT") == "hxhxmacros.RuntimeModuleMembers.RuntimeModuleId",
 				"expected runtime module abstract type define");
+
+			final typeParamOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypeParameterSubstitution()");
+			assertContains("type param output", typeParamOutput, "typeParams=(String) -> Null<String>");
+			assertContains("type param output", typeParamOutput, "iter=String|Null<String>");
+			assertContains("type param output", typeParamOutput, "typedef=Bool");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_PARAMS") == "(String) -> Null<String>;String|Null<String>;Bool",
+				"expected runtime type-parameter define");
 
 			final localContextOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()");
 			assertContains("local context module", localContextOutput, "module=hxhxmacros.RuntimeContextApiMacros");

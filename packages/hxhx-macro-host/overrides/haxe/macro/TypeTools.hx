@@ -98,7 +98,7 @@ class TypeTools {
 
 		Bring-up behavior
 		- Macro-eval: best-effort traversal (mirrors the upstream helper).
-		- Runtime: no-op (until we have a real `Type` model).
+		- Runtime: traverses the direct children of the current synthetic runtime type model.
 	**/
 	public static function iter(t:Type, f:Type->Void):Void {
 		#if macro
@@ -124,8 +124,7 @@ class TypeTools {
 				f(ret);
 		}
 		#else
-		if (t != null) {}
-		if (f == null) {}
+		RuntimeMacroTypes.iter(t, f);
 		#end
 	}
 
@@ -134,7 +133,8 @@ class TypeTools {
 
 		Bring-up behavior
 		- Macro-eval: best-effort identity (callers that need real behavior should use macro-eval-only paths).
-		- Runtime: identity.
+		- Runtime: recursively substitutes synthetic `KTypeParameter` instances by name through the
+		  current runtime `Type` model.
 	**/
 	public static inline function applyTypeParameters(t:Type, typeParameters:Array<TypeParameter>, concreteTypes:Array<Type>):Type {
 		// Keep signature compatible with upstream `TypeTools.applyTypeParameters`.
@@ -144,7 +144,7 @@ class TypeTools {
 		#if macro
 		return t;
 		#else
-		return t;
+		return RuntimeMacroTypes.applyTypeParameters(t, typeParameters, concreteTypes);
 		#end
 	}
 }

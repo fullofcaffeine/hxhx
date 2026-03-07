@@ -43,6 +43,51 @@ class RuntimeMacroTypes {
 	static inline final DEFAULT_FILE:String = "<macro>";
 
 	/**
+		Create a synthetic runtime type parameter declaration.
+
+		Why
+		- External-host runtime tests and bring-up helpers sometimes need to model typedef/abstract
+		  parameter substitution without access to upstream compiler-internal `TypeParameter` values.
+		- Reusing the same synthetic `KTypeParameter` shape keeps the runtime `TypeTools`
+		  substitution/follow logic honest.
+
+		What
+		- Produces a `TypeParameter` whose `t` is a synthetic `TInst` carrying a `KTypeParameter`
+		  class-kind with the supplied constraints.
+	**/
+	public static function typeParameter(name:String, ?constraints:Array<Type>, ?defaultType:Null<Type>):TypeParameter {
+		final safeConstraints = constraints == null ? [] : constraints.copy();
+		return {
+			name: name == null ? "" : name,
+			t: TInst(classRef([], name == null ? "" : name, name == null ? "" : name, null, KTypeParameter(safeConstraints)), []),
+			defaultType: defaultType
+		};
+	}
+
+	/**
+		Create a synthetic typedef reference for runtime substitution/follow probes.
+	**/
+	public static function syntheticDefTypeRef(pack:Array<String>, name:String, module:String, params:Array<TypeParameter>, type:Type,
+			?metadataEntries:Array<String>):Ref<DefType> {
+		return defTypeRef(pack, name, module, params, type, metadataEntries);
+	}
+
+	/**
+		Create a synthetic abstract reference for runtime substitution/follow probes.
+	**/
+	public static function syntheticAbstractRef(pack:Array<String>, name:String, module:String, params:Array<TypeParameter>, type:Type,
+			?metadataEntries:Array<String>):Ref<AbstractType> {
+		return abstractRef(pack, name, module, params, type, metadataEntries);
+	}
+
+	/**
+		Wrap a runtime type in the synthetic `Null<T>` instance form.
+	**/
+	public static function nullWrapped(inner:Type):Type {
+		return nullType(inner);
+	}
+
+	/**
 		Follow the small runtime type model to a more concrete type.
 
 		Why
@@ -64,14 +109,18 @@ class RuntimeMacroTypes {
 			case TLazy(f):
 				final inner = f();
 				if (inner == null) t else if (once) inner else follow(inner, false);
+			case TType(td, params):
+				final inner = applyTypeParameters(td.get().type, td.get().params, params);
+				if (once) inner else follow(inner, false);
 			case _:
 				t;
 		}
 	}
 
 	public static function followWithAbstracts(t:Type, once:Bool = false):Type {
-		// Current runtime model does not synthesize real abstract wrappers yet, so this is the same
-		// narrow behavior as `follow(...)`.
+		// Current runtime model still does not preserve synthetic abstract wrapper fidelity well
+		// enough to follow them honestly in generated OCaml. Keep the external-host behavior
+		// equivalent to `follow(...)` until the richer runtime Type model lands.
 		return follow(t, once);
 	}
 
@@ -104,6 +153,72 @@ class RuntimeMacroTypes {
 		if (isNullWrapper(right))
 			return unify(left, extractNullInner(right));
 		return false;
+	}
+
+	/**
+		Apply type-parameter substitutions inside the synthetic runtime type model.
+
+		Why
+		- Real backend code uses `TypeTools.applyTypeParameters(...)` when following typedef and
+		  abstract payloads.
+		- Returning identity here makes runtime macro code lie about `TType` / `TAbstract`
+		  semantics, which is now the main remaining `bxlg.9.5` fidelity gap.
+
+		What
+		- Recursively substitutes synthetic `KTypeParameter` instances by name through the supported
+		  runtime `Type` subset.
+		- Preserves wrapper kinds (`TType`, `TAbstract`, `TFun`, etc.) while mapping their children.
+
+		Gotchas
+		- This still operates on the synthetic runtime model, not full upstream typer state.
+		- Parameter matching is by type-parameter name, which is sufficient for the current runtime
+		  bring-up model because synthetic parameter refs are uniquely named within a single apply.
+	**/
+	public static function applyTypeParameters(t:Type, typeParameters:Array<TypeParameter>, concreteTypes:Array<Type>):Type {
+		final params = typeParameters == null ? [] : typeParameters;
+		final concretes = concreteTypes == null ? [] : concreteTypes;
+		if (params.length != concretes.length)
+			throw "typeParameters and concreteTypes must have the same length";
+		if (params.length == 0 || t == null)
+			return t;
+
+		final substitutions = new Map<String, Type>();
+		for (i in 0...params.length) {
+			final param = params[i];
+			if (param == null || param.name == null)
+				continue;
+			substitutions.set(param.name, concretes[i]);
+		}
+		return substituteTypeParameters(t, substitutions);
+	}
+
+	/**
+		Call `f` on each direct subtype of `t` inside the synthetic runtime model.
+	**/
+	public static function iter(t:Type, f:Type->Void):Void {
+		if (t == null || f == null)
+			return;
+		switch (t) {
+			case TMono(tm):
+				final inner = tm.get();
+				if (inner != null)
+					f(inner);
+			case TEnum(_, tl) | TInst(_, tl) | TType(_, tl) | TAbstract(_, tl):
+				for (tt in tl)
+					f(tt);
+			case TDynamic(t2):
+				if (t2 != null)
+					f(t2);
+			case TLazy(ft):
+				f(ft());
+			case TAnonymous(an):
+				for (field in an.get().fields)
+					f(field.type);
+			case TFun(args, ret):
+				for (arg in args)
+					f(arg.t);
+				f(ret);
+		}
 	}
 
 	public static function describe(t:Type):String {
@@ -290,12 +405,22 @@ class RuntimeMacroTypes {
 				null;
 			case TInst(c, params):
 				final base = c.get();
-				TPath({
-					pack: base.pack.copy(),
-					name: base.module,
-					sub: base.name == base.module ? null : base.name,
-					params: [for (param in params) TPType(toComplexType(param))]
-				});
+				switch (base.kind) {
+					case KTypeParameter(_):
+						TPath({
+							pack: [],
+							name: base.name,
+							sub: null,
+							params: []
+						});
+					case _:
+						TPath({
+							pack: base.pack.copy(),
+							name: base.module,
+							sub: base.name == base.module ? null : base.name,
+							params: [for (param in params) TPType(toComplexType(param))]
+						});
+				}
 			case TEnum(e, params):
 				final base = e.get();
 				TPath({
@@ -524,12 +649,80 @@ class RuntimeMacroTypes {
 		return classType(pack, module, name, metadataEntries);
 	}
 
+	static function substituteTypeParameters(t:Type, substitutions:Map<String, Type>):Type {
+		return switch (t) {
+			case TInst(c, params):
+				final cls = c.get();
+				switch (cls.kind) {
+					case KTypeParameter(_):
+						final replacement = substitutions.get(cls.name);
+						replacement == null ? t : replacement;
+					case _:
+						final mappedParams = [for (param in params) substituteTypeParameters(param, substitutions)];
+						final rebuilt:Type = TInst(c, mappedParams);
+						rebuilt;
+				}
+			case TEnum(e, params):
+				final mappedParams = [for (param in params) substituteTypeParameters(param, substitutions)];
+				final rebuilt:Type = TEnum(e, mappedParams);
+				rebuilt;
+			case TType(td, params):
+				final mappedParams = [for (param in params) substituteTypeParameters(param, substitutions)];
+				final rebuilt:Type = TType(td, mappedParams);
+				rebuilt;
+			case TAbstract(a, params):
+				// Keep the runtime OCaml path honest: generated code still cannot safely reconstruct the
+				// `haxe.macro.Type.TAbstract` wrapper because of the upstream constructor-name collision
+				// with `haxe.macro.ModuleType.TAbstract`. Return the substituted underlying type instead.
+				applyTypeParameters(a.get().type, a.get().params, params);
+			case TFun(args, ret):
+				TFun([
+					for (arg in args)
+						{
+							name: arg.name,
+							opt: arg.opt,
+							t: substituteTypeParameters(arg.t, substitutions)
+						}
+				], substituteTypeParameters(ret, substitutions));
+			case TAnonymous(an):
+				final source = an.get();
+				TAnonymous(makeRef({
+					fields: [
+						for (field in source.fields)
+							{
+								name: field.name,
+								type: substituteTypeParameters(field.type, substitutions),
+								isPublic: field.isPublic,
+								isExtern: field.isExtern,
+								isFinal: field.isFinal,
+								isAbstract: field.isAbstract,
+								params: field.params,
+								meta: field.meta,
+								kind: field.kind,
+								expr: field.expr,
+								pos: field.pos,
+								doc: field.doc,
+								overloads: field.overloads
+							}
+					],
+					status: source.status
+				}, "anon"));
+			case TDynamic(inner):
+				TDynamic(inner == null ? null : substituteTypeParameters(inner, substitutions));
+			case TMono(tm):
+				final inner = tm.get();
+				inner == null ? t : substituteTypeParameters(inner, substitutions);
+			case TLazy(f):
+				substituteTypeParameters(f(), substitutions);
+		}
+	}
+
 	static function classType(pack:Array<String>, module:String, name:String, ?metadataEntries:Array<String>):Type {
 		final value:Type = TInst(classRef(pack, name, module, metadataEntries), []);
 		return value;
 	}
 
-	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<ClassType> {
+	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>, ?kind:ClassKind):Ref<ClassType> {
 		final value:ClassType = {
 			pack: pack.copy(),
 			name: name,
@@ -541,7 +734,7 @@ class RuntimeMacroTypes {
 			meta: metadataAccess(metadataEntries),
 			doc: null,
 			exclude: function():Void {},
-			kind: KNormal,
+			kind: kind == null ? KNormal : kind,
 			isInterface: false,
 			isFinal: false,
 			isAbstract: false,
@@ -574,7 +767,8 @@ class RuntimeMacroTypes {
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function defTypeRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<DefType> {
+	static function defTypeRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type,
+			?metadataEntries:Array<String>):Ref<DefType> {
 		final value:DefType = {
 			pack: pack.copy(),
 			name: name,
@@ -582,16 +776,17 @@ class RuntimeMacroTypes {
 			pos: defaultPos(),
 			isPrivate: false,
 			isExtern: true,
-			params: [],
+			params: params == null ? [] : params.copy(),
 			meta: metadataAccess(metadataEntries),
 			doc: null,
 			exclude: function():Void {},
-			type: TDynamic(null)
+			type: type == null ? TDynamic(null) : type
 		};
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function abstractRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<AbstractType> {
+	static function abstractRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type,
+			?metadataEntries:Array<String>):Ref<AbstractType> {
 		final value:AbstractType = {
 			pack: pack.copy(),
 			name: name,
@@ -599,11 +794,11 @@ class RuntimeMacroTypes {
 			pos: defaultPos(),
 			isPrivate: false,
 			isExtern: true,
-			params: [],
+			params: params == null ? [] : params.copy(),
 			meta: metadataAccess(metadataEntries),
 			doc: null,
 			exclude: function():Void {},
-			type: TDynamic(null),
+			type: type == null ? TDynamic(null) : type,
 			impl: null,
 			binops: [],
 			unops: [],
