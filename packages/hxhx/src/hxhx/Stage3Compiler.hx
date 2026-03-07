@@ -1259,6 +1259,72 @@ class Stage3Compiler {
 		return parts.join(" ");
 	}
 
+	/**
+		Collect all build-macro expressions that should apply to a module.
+
+		Why
+		- Stage3 initially only looked for source-local `@:build(...)` / `@:autoBuild(...)` metadata.
+		- Reflaxe-style macro initialization also registers global metadata through
+		  `Compiler.addGlobalMetadata(...)`, and the current compiler already preserves those rules in
+		  `MacroState`.
+		- We need a narrow semantic bridge that lets registered global build metadata feed the existing
+		  build-macro execution queue without pretending we support full upstream metadata semantics yet.
+
+		What
+		- Starts with source-local `@:build(...)` / `@:autoBuild(...)` expressions.
+		- Appends matching registered global metadata rules when:
+		  - the rule targets types (`toTypes=true`)
+		  - the rule path filter matches the module path
+		  - the metadata payload itself is a build/autoBuild form
+		- Deduplicates exact expression strings to keep deterministic execution order.
+
+		Gotchas
+		- This is still a narrow rung:
+		  - no field-level metadata application
+		  - no arbitrary metadata semantics
+		  - no richer metadata AST storage yet
+	**/
+	static function collectBuildMacroExprs(source:String, modulePath:String):Array<String> {
+		final out = new Array<String>();
+		final seen:Map<String, Bool> = new Map();
+
+		inline function addExpr(expr:String):Void {
+			if (expr == null)
+				return;
+			final normalized = StringTools.trim(expr);
+			if (normalized.length == 0 || seen.exists(normalized))
+				return;
+			seen.set(normalized, true);
+			out.push(normalized);
+		}
+
+		for (expr in findBuildMacroExprs(source))
+			addExpr(expr);
+
+		for (rule in hxhx.macro.MacroState.listGlobalMetadataRules()) {
+			if (!rule.toTypes)
+				continue;
+			if (!matchesMetadataPathFilter(modulePath, rule.pathFilter, rule.recursive))
+				continue;
+			for (expr in findBuildMacroExprs(rule.metadata))
+				addExpr(expr);
+		}
+
+		return out;
+	}
+
+	static function matchesMetadataPathFilter(modulePath:String, pathFilter:String, recursive:Bool):Bool {
+		final moduleName = modulePath == null ? "" : StringTools.trim(modulePath);
+		final filter = pathFilter == null ? "" : StringTools.trim(pathFilter);
+		if (moduleName.length == 0)
+			return false;
+		if (filter.length == 0)
+			return true;
+		if (recursive)
+			return moduleName == filter || StringTools.startsWith(moduleName, filter + ".");
+		return moduleName == filter;
+	}
+
 	static function runOne(args:Array<String>):Int {
 		// Extract stage3-only flags before passing the remainder to `Stage1Args`.
 		final g = try {
@@ -1629,7 +1695,7 @@ class Stage3Compiler {
 		final buildExprsAll = new Array<String>();
 		for (m in resolved) {
 			final pm = ResolvedModule.getParsed(m);
-			final exprs = findBuildMacroExprs(pm.getSource());
+			final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
 			if (exprs.length > 0) {
 				anyBuildMacros = true;
 				for (e in exprs)
@@ -1671,7 +1737,7 @@ class Stage3Compiler {
 			final out2 = new Array<ResolvedModule>();
 			for (m in resolved) {
 				final pm = ResolvedModule.getParsed(m);
-				final exprs = findBuildMacroExprs(pm.getSource());
+				final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
 				if (exprs.length == 0) {
 					out2.push(m);
 					continue;
@@ -1770,7 +1836,7 @@ class Stage3Compiler {
 			var i = 0;
 			for (m in resolved) {
 				final pm = ResolvedModule.getParsed(m);
-				final exprs = findBuildMacroExprs(pm.getSource());
+				final exprs = collectBuildMacroExprs(pm.getSource(), ResolvedModule.getModulePath(m));
 				for (e in exprs) {
 					Sys.println("build_macro_skipped[" + i + "]=" + ResolvedModule.getModulePath(m) + ":" + e);
 					i += 1;

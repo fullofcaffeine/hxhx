@@ -1,0 +1,5 @@
+-cp packages/hxhx/src
+-cp packages/hxhx-core/src
+-cp test
+-main M14Stage3GlobalBuildMetadataIntegrationTest
+-neko .tmp/m14_stage3_global_build_metadata_integration_test.n
