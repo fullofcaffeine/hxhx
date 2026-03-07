@@ -446,6 +446,10 @@ class Context {
 		return HostContext.storeExpr(e);
 	}
 
+	public static function registerModuleDependency(modulePath:String, externFile:String):Void {
+		HostContext.registerModuleDependency(modulePath, externFile);
+	}
+
 	public static function resolveType(t:ComplexType, p:Position):Type {
 		return HostContext.resolveType(t, p);
 	}

@@ -597,6 +597,11 @@ private class MacroClient {
 					replyOk(id, MacroProtocol.encodeLen("v", encodeCallArgumentsPayload()));
 				case "context.getMainExpr":
 					replyOk(id, MacroProtocol.encodeLen("v", optionalText(MacroState.getMainExprText())));
+				case "context.registerModuleDependency":
+					final modulePath = MacroProtocol.kvGet(tail, "m");
+					final externFile = MacroProtocol.kvGet(tail, "f");
+					MacroState.registerModuleDependency(modulePath, externFile);
+					replyOk(id, "");
 				case "context.getLocalModule":
 					replyOk(id, MacroProtocol.encodeLen("v", MacroState.getLocalModule()));
 				case "context.getLocalType":

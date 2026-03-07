@@ -42,6 +42,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
+			"hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()",
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
 			"hxhxmacros.RuntimeContextApiMacros.probeParse()",
@@ -187,6 +188,15 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("include output", includeOutput, "include=hxhxmacros.RuntimeContextApiMacros");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_INCLUDE") == "hxhxmacros.RuntimeContextApiMacros", "expected runtime include define");
 			assertTrue(MacroState.listIncludedModules().indexOf("hxhxmacros.RuntimeContextApiMacros") >= 0, "expected included module snapshot");
+
+			MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeRegisterModuleDependency()");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_DEP") == "hxhxmacros.RuntimeContextApiMacros->runtime/macro-probe.txt",
+				"expected runtime module dependency define");
+			final moduleDependencies = MacroState.listModuleDependencies();
+			assertTrue(moduleDependencies.length > 0, "expected module dependency snapshot");
+			assertTrue(moduleDependencies[moduleDependencies.length - 1].modulePath == "hxhxmacros.RuntimeContextApiMacros",
+				"expected module dependency module path");
+			assertTrue(moduleDependencies[moduleDependencies.length - 1].externFile == "runtime/macro-probe.txt", "expected module dependency extern file");
 
 			final resourceOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeResources()");
 			assertContains("resource output", resourceOutput, "resource=resource=ok");

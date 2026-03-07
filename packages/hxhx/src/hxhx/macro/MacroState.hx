@@ -42,6 +42,11 @@ typedef MacroLocalTVarSnapshot = {
 	@:optional final isStatic:Null<Bool>;
 }
 
+typedef MacroModuleDependencySnapshot = {
+	final modulePath:String;
+	final externFile:String;
+}
+
 /**
 	Compiler-side macro state (Stage 4 bring-up).
 
@@ -75,6 +80,7 @@ class MacroState {
 	static final classPaths:Array<String> = [];
 	static final includedModules:Array<String> = [];
 	static final resources:haxe.ds.StringMap<Bytes> = new haxe.ds.StringMap();
+	static final moduleDependencies:Array<MacroModuleDependencySnapshot> = [];
 	static final compilerArgs:Array<String> = [];
 	static final stdPaths:Array<String> = [];
 	static var generatedHxDir:String = "";
@@ -172,6 +178,7 @@ class MacroState {
 		classPaths.resize(0);
 		includedModules.resize(0);
 		resources.clear();
+		moduleDependencies.resize(0);
 		compilerArgs.resize(0);
 		stdPaths.resize(0);
 		generatedHxDir = "";
@@ -323,6 +330,41 @@ class MacroState {
 			if (data != null)
 				out.push({name: name, data: data.sub(0, data.length)});
 		}
+		return out;
+	}
+
+	/**
+		Register a compiler-owned module dependency snapshot.
+
+		Why
+		- Reflaxe-style helper layers may call `Context.registerModuleDependency(...)` to announce
+		  that a module depends on an external file.
+		- The compiler, not the host process, must retain that information after the RPC call returns.
+
+		What
+		- Stores distinct `(modulePath, externFile)` pairs in registration order.
+
+		Gotchas
+		- This is a compatibility ledger rung only. It does not yet change code generation, DCE, or
+		  module graph semantics by itself.
+	**/
+	public static function registerModuleDependency(modulePath:String, externFile:String):Void {
+		if (modulePath == null || externFile == null)
+			return;
+		final mp = StringTools.trim(modulePath);
+		final ef = StringTools.trim(externFile);
+		if (mp.length == 0 || ef.length == 0)
+			return;
+		for (entry in moduleDependencies)
+			if (entry.modulePath == mp && entry.externFile == ef)
+				return;
+		moduleDependencies.push({modulePath: mp, externFile: ef});
+	}
+
+	public static function listModuleDependencies():Array<MacroModuleDependencySnapshot> {
+		final out = new Array<MacroModuleDependencySnapshot>();
+		for (entry in moduleDependencies)
+			out.push({modulePath: entry.modulePath, externFile: entry.externFile});
 		return out;
 	}
 

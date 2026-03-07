@@ -408,6 +408,32 @@ class Context {
 		return RuntimeTypedExprs.toExpr(t);
 	}
 
+	/**
+		Register a module dependency in the compiler-owned runtime ledger.
+
+		Why
+		- Reflaxe-style helper layers may announce that a module depends on an external file even when
+		  the external-host runtime does not own the final generation pipeline.
+		- The compiler, not the host process, must keep that information.
+
+		What
+		- Sends the `(modulePath, externFile)` pair to the compiler-owned `MacroState` ledger.
+
+		Gotchas
+		- This is a compatibility ledger rung only. It does not yet imply upstream-equivalent module
+		  graph semantics.
+	**/
+	public static function registerModuleDependency(modulePath:String, externFile:String):Void {
+		if (modulePath == null || externFile == null)
+			return;
+		final mp = StringTools.trim(modulePath);
+		final ef = StringTools.trim(externFile);
+		if (mp.length == 0 || ef.length == 0)
+			return;
+		final tail = Protocol.encodeLen("m", mp) + " " + Protocol.encodeLen("f", ef);
+		HostToCompilerRpc.call("context.registerModuleDependency", tail);
+	}
+
 	public static function toComplexType(t:Type):Null<ComplexType> {
 		return RuntimeMacroTypes.toComplexType(t);
 	}

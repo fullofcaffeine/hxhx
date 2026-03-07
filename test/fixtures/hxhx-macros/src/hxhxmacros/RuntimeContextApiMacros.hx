@@ -434,6 +434,14 @@ class RuntimeContextApiMacros {
 		return "include=" + modulePath;
 	}
 
+	public static function probeRegisterModuleDependency():String {
+		final modulePath = "hxhxmacros.RuntimeContextApiMacros";
+		final externFile = "runtime/macro-probe.txt";
+		Context.registerModuleDependency(modulePath, externFile);
+		Compiler.define("HXHX_RUNTIME_MODULE_DEP", modulePath + "->" + externFile);
+		return "moduleDependency=" + modulePath + "->" + externFile;
+	}
+
 	public static function probeResources():String {
 		final pos = Context.currentPos();
 		final key = "runtime-macro-resource";
