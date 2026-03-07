@@ -198,6 +198,26 @@ class Context {
 		HostToCompilerRpc.call("context.addResource", tail);
 	}
 
+	/**
+		Return a no-op timer end-function for runtime macro code.
+
+		Why
+		- Reflaxe-adjacent helper code and code generators often wrap work in `Context.timer("id")`
+		  purely for optional instrumentation.
+		- The external-host bring-up has no real compiler timing channel yet, but missing the method
+		  entirely causes avoidable runtime-API breakage.
+
+		What
+		- Returns a closure that does nothing.
+
+		Gotchas
+		- This is compatibility plumbing only. It does not claim timing/reporting parity.
+	**/
+	public static function timer(id:String):Void->Void {
+		if (id != null) {}
+		return function():Void {};
+	}
+
 	static function encodePosition(pos:Position):{file:String, min:Int, max:Int} {
 		if (pos == null)
 			return {file: DEFAULT_MACRO_FILE, min: 0, max: 0};

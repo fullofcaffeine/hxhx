@@ -43,7 +43,8 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeResources()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMessages()",
 			"hxhxmacros.RuntimeContextApiMacros.probeParse()",
-			"hxhxmacros.RuntimeContextApiMacros.probeMakeExprAndSignature()"
+			"hxhxmacros.RuntimeContextApiMacros.probeMakeExprAndSignature()",
+			"hxhxmacros.RuntimeContextApiMacros.probeTimer()"
 		];
 		final command = [
 			'HXHX_MACRO_HOST_FORCE_STAGE0=1',
@@ -191,6 +192,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("makeExpr output", makeExprOutput, "makeExpr=object;signature=");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MAKE_EXPR") == "object", "expected runtime makeExpr define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_SIGNATURE").length == 32, "expected runtime signature define");
+
+			final timerOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTimer()");
+			assertContains("timer output", timerOutput, "timer=ok");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TIMER") == "ok", "expected runtime timer define");
 		} catch (e:String) {
 			failure = e;
 		} catch (e:haxe.Exception) {

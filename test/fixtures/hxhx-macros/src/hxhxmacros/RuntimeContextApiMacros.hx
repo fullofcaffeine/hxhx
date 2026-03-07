@@ -561,4 +561,13 @@ class RuntimeContextApiMacros {
 		Compiler.define("HXHX_RUNTIME_SIGNATURE", sigA);
 		return "makeExpr=object;signature=" + sigA;
 	}
+
+	public static function probeTimer():String {
+		final end = Context.timer("runtime-probe");
+		if (end == null)
+			Context.fatalError("runtime macro timer probe: expected non-null timer closure", Context.currentPos());
+		end();
+		Compiler.define("HXHX_RUNTIME_TIMER", "ok");
+		return "timer=ok";
+	}
 }

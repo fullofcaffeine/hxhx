@@ -499,5 +499,9 @@ class Context {
 	public static function addResource(name:String, data:haxe.io.Bytes):Void {
 		HostContext.addResource(name, data);
 	}
+
+	public static function timer(id:String):Void->Void {
+		return HostContext.timer(id);
+	}
 }
 #end
