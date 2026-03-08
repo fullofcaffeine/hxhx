@@ -57,6 +57,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()",
 			"hxhxmacros.RuntimeContextApiMacros.probeSyntheticTypeStatics()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
+			"hxhxmacros.RuntimeContextApiMacros.probeTypedVarExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeCompilerInclude()",
@@ -245,6 +246,13 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("typed expr type", typedExprOutput, "typedType=Int");
 			assertTrue(Std.parseInt(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR_VISITS")) > 0, "expected typed expr visits define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR").indexOf("+") >= 0, "expected typed expr string define");
+
+			final typedVarExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedVarExprPlumbing()");
+			assertContains("typed var expr output", typedVarExprOutput, "typedVarExpr=");
+			assertContains("typed var expr outer type", typedVarExprOutput, "typedVarType=Void");
+			assertContains("typed var inner type", typedVarExprOutput, "varType=String");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_VAR_EXPR").indexOf("var prefix") >= 0, "expected typed var string define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_VAR_TYPE") == "String", "expected typed var type define");
 
 			final mainExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeMainExpr()");
 			assertContains("main expr output", mainExprOutput, "mainExpr=");

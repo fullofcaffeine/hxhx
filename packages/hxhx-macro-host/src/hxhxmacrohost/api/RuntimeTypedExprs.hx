@@ -16,6 +16,7 @@ import haxe.macro.Type;
 	  - literal constants
 	  - parenthesized expressions
 	  - simple `+` binary expressions
+	  - single-variable `var` declarations
 	  - `check-type` wrappers
 	- Renders that subset back to deterministic Haxe-like text.
 
@@ -45,6 +46,8 @@ class RuntimeTypedExprs {
 			case EParenthesis(inner):
 				final typedInner = typeExpr(inner);
 				makeTyped(e.pos, TParenthesis(typedInner), typedInner.t);
+			case EVars(vars):
+				typeVarsExpr(e.pos, vars);
 			case ECheckType(inner, ct):
 				final typedInner = typeExpr(inner);
 				makeTyped(e.pos, TParenthesis(typedInner), RuntimeMacroTypes.resolveComplexType(ct));
@@ -75,6 +78,9 @@ class RuntimeTypedExprs {
 				"null";
 			case TParenthesis(inner):
 				"(" + toString(inner) + ")";
+			case TVar(v, expr):
+				final prefix = v.isStatic ? "static var " : "var ";
+				prefix + v.name + (expr == null ? "" : " = " + toString(expr));
 			case TBinop(op, e1, e2):
 				toString(e1) + " " + renderBinop(op) + " " + toString(e2);
 			case _:
@@ -100,6 +106,17 @@ class RuntimeTypedExprs {
 				makeExpr(e.pos, EConst(CIdent("null")));
 			case TParenthesis(inner):
 				makeExpr(e.pos, EParenthesis(toExpr(inner)));
+			case TVar(v, expr):
+				makeExpr(e.pos, EVars([
+					{
+						name: v.name,
+						type: RuntimeMacroTypes.toComplexType(v.t),
+						expr: expr == null ? null : toExpr(expr),
+						isFinal: false,
+						isStatic: v.isStatic,
+						meta: []
+					}
+				]));
 			case TBinop(op, e1, e2):
 				makeExpr(e.pos, EBinop(op, toExpr(e1), toExpr(e2)));
 			case _:
@@ -128,6 +145,45 @@ class RuntimeTypedExprs {
 			expr: expr,
 			pos: pos == null ? defaultPosition() : pos
 		};
+	}
+
+	/**
+		Build the narrow runtime `TVar` rung used by real Reflaxe consumers.
+
+		Why
+		- Vendored sibling code currently calls `Context.typeExpr(macro var name:T = ...)` and then
+		  switches directly on `typedExpr.expr` being `TVar(...)`.
+		- Returning "unsupported expr shape" there would keep the runtime macro API technically wide
+		  but behaviorally dishonest for a real consumer seam.
+
+		What
+		- Supports exactly one declared variable at a time.
+		- Preserves the variable type from the explicit hint when present, otherwise from the typed
+		  initializer, otherwise falls back to `Dynamic`.
+		- Uses `Void` as the outer typed-expression type, matching upstream typed var declarations.
+
+		How
+		- The initializer is typed through the existing narrow runtime `typeExpr(...)` bridge.
+		- The variable record is synthetic and compiler-agnostic; we only claim the TVar shape and the
+		  observable type information, not full upstream local-var identity semantics.
+	**/
+	static function typeVarsExpr(pos:Position, vars:Array<Var>):TypedExpr {
+		if (vars == null || vars.length != 1)
+			throw "runtime macro typeExpr: only single-variable declarations are supported";
+		final v = vars[0];
+		final typedInit = v.expr == null ? null : typeExpr(v.expr);
+		final varType = if (v.type != null) RuntimeMacroTypes.resolveComplexType(v.type); else if (typedInit != null) typedInit.t; else
+			RuntimeMacroTypes.getTypeByName("Dynamic");
+		final tvar:TVar = {
+			id: 1,
+			name: v.name == null ? "" : v.name,
+			t: varType,
+			capture: false,
+			extra: null,
+			meta: null,
+			isStatic: v.isStatic == true
+		};
+		return makeTyped(pos, TVar(tvar, typedInit), RuntimeMacroTypes.getTypeByName("Void"));
 	}
 
 	static function renderBinop(op:Binop):String {

@@ -886,6 +886,65 @@ class RuntimeContextApiMacros {
 		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes;
 	}
 
+	public static function probeTypedVarExprPlumbing():String {
+		final pos = Context.currentPos();
+		final typedExpr = Context.typeExpr(macro var prefix:String = "ready");
+		final typedExprType = TypeTools.toString(typedExpr.t);
+		if (typedExprType != "Void")
+			Context.fatalError("runtime macro typed-var probe: expected Void typed expr type", pos);
+
+		final varType = switch (typedExpr.expr) {
+			case TVar(tvar, initExpr):
+				if (TypeTools.toString(tvar.t) != "String")
+					Context.fatalError("runtime macro typed-var probe: expected String TVar type", pos);
+				switch (initExpr == null ? null : initExpr.expr) {
+					case TConst(TString("ready")):
+					case _:
+						Context.fatalError("runtime macro typed-var probe: expected string initializer", pos);
+				}
+				TypeTools.toString(tvar.t);
+			case _:
+				Context.fatalError("runtime macro typed-var probe: expected TVar typed expr", pos);
+				"";
+		}
+
+		var visitedNodes = 0;
+		TypedExprTools.iter(typedExpr, function(_:haxe.macro.Type.TypedExpr):Void {
+			visitedNodes++;
+		});
+		if (visitedNodes <= 0)
+			Context.fatalError("runtime macro typed-var probe: TypedExprTools.iter did not visit initializer", pos);
+
+		final typedExprString = TypedExprTools.toString(typedExpr, false);
+		if (typedExprString.indexOf("var prefix") < 0)
+			Context.fatalError("runtime macro typed-var probe: expected stringified var declaration", pos);
+
+		final typedExprMapped = TypedExprTools.map(typedExpr, function(node:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+			return node;
+		});
+		if (TypeTools.toString(typedExprMapped.t) != "Void")
+			Context.fatalError("runtime macro typed-var probe: identity map changed outer expression type", pos);
+
+		final roundTrippedExpr = Context.getTypedExpr(typedExpr);
+		switch (roundTrippedExpr.expr) {
+			case EVars(vars) if (vars.length == 1 && vars[0].name == "prefix"):
+				if (vars[0].type == null)
+					Context.fatalError("runtime macro typed-var probe: expected roundtrip type hint", pos);
+				switch (vars[0].expr == null ? null : vars[0].expr.expr) {
+					case EConst(CString("ready", _)):
+					case _:
+						Context.fatalError("runtime macro typed-var probe: roundtrip initializer mismatch", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-var probe: expected EVars roundtrip", pos);
+		}
+
+		Compiler.define("HXHX_RUNTIME_TYPED_VAR_EXPR", typedExprString);
+		Compiler.define("HXHX_RUNTIME_TYPED_VAR_TYPE", varType);
+
+		return "typedVarExpr=" + typedExprString + ";typedVarType=" + typedExprType + ";varType=" + varType + ";visits=" + visitedNodes;
+	}
+
 	public static function probeMainExpr():String {
 		final pos = Context.currentPos();
 		final mainExpr = Context.getMainExpr();
