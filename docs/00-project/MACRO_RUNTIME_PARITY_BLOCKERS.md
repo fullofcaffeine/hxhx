@@ -29,7 +29,6 @@ Beginner summary:
 - `MRP-B2` is still open for honest reasons.
 - The remaining gaps are no longer generic bring-up plumbing; they are semantic fidelity gaps still exercised by real sibling consumer code.
 - In particular, the current external-host runtime subset is still narrower than the vendored `reflaxe-elixir` usage of:
-  - semantic typedef reconstruction for `Context.getType(...)` in assign-key extraction flows
   - `Context.getModule()` field-type reconstruction plus `TypeTools.followWithAbstracts()` in component/slot linter flows
   - the remaining `Context.parseInlineString()` / `Context.typeExpr()` seams in balanced inline-markup / HEEx TSX splice bodies
 - Sibling Reflaxe repos remain pressure tests, not semantic authorities. Upstream Haxe 4.3.7 behavior is the compatibility oracle; sibling snapshots only justify which remaining seams still matter in real code.

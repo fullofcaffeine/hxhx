@@ -113,14 +113,28 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 40, 50)).get();
 		assertTrue(syntheticEnum.meta.has(":enumProbeMeta"), "expected enum metadata on synthetic runtime type");
 		assertPosFile(syntheticEnum.pos, "RuntimeModuleMembers.hx", 40, 50);
-		final syntheticTypedef = expectTypeDef(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied, null,
-			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 60, 75)).get();
+		final syntheticTypedefType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied, null,
+			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 60, 75, null, [], "{ final name:String; }");
+		final syntheticTypedef = expectTypeDef(syntheticTypedefType).get();
 		assertTrue(syntheticTypedef.meta.has(":typedefProbeMeta"), "expected typedef metadata on synthetic runtime type");
 		assertPosFile(syntheticTypedef.pos, "RuntimeModuleMembers.hx", 60, 75);
-		final syntheticAbstract = expectAbstract(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied, null,
-			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 80, 95)).get();
+		final followedTypedef = RuntimeMacroTypes.follow(syntheticTypedefType);
+		switch (followedTypedef) {
+			case TAnonymous(ref):
+				final fields = ref.get().fields;
+				assertTrue(fields.length == 1, "expected one anonymous typedef field");
+				assertTrue(fields[0].name == "name", "expected typedef field name");
+				assertTrue(RuntimeMacroTypes.toString(fields[0].type) == "String", "expected typedef field type String");
+			case _:
+				fail("expected typedef payload to follow to anonymous structure");
+		}
+		final syntheticAbstractType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied, null,
+			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 80, 95, null, [], "String");
+		final syntheticAbstract = expectAbstract(syntheticAbstractType).get();
 		assertTrue(syntheticAbstract.meta.has(":abstractProbeMeta"), "expected abstract metadata on synthetic runtime type");
 		assertPosFile(syntheticAbstract.pos, "RuntimeModuleMembers.hx", 80, 95);
+		assertTrue(RuntimeMacroTypes.toString(RuntimeMacroTypes.followWithAbstracts(syntheticAbstractType)) == "String",
+			"expected abstract payload to followWithAbstracts() to String");
 
 		final moduleScopedEnumType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleMembers.RuntimeModuleState", "enum", enumApplied,
 			"RuntimeModuleMembers", "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 121, 140);
@@ -134,6 +148,8 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleMembers",
 				kind: "class",
 				metadata: [],
+				typeParamNames: [],
+				underlyingTypeText: null,
 				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 100,
@@ -143,6 +159,8 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleState",
 				kind: "enum",
 				metadata: enumApplied,
+				typeParamNames: [],
+				underlyingTypeText: null,
 				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 121,
@@ -152,6 +170,8 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleData",
 				kind: "typedef",
 				metadata: typedefApplied,
+				typeParamNames: [],
+				underlyingTypeText: "{ final name:String; }",
 				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 141,
@@ -161,6 +181,8 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleId",
 				kind: "abstract",
 				metadata: abstractApplied,
+				typeParamNames: [],
+				underlyingTypeText: "String",
 				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 161,
@@ -175,9 +197,19 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		final typedefEntry = expectTypeDef(moduleEntries[2]).get();
 		assertTrue(typedefEntry.meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
 		assertPosFile(typedefEntry.pos, "RuntimeModuleMembers.hx", 141, 160);
+		switch (RuntimeMacroTypes.follow(moduleEntries[2])) {
+			case TAnonymous(ref):
+				final fields = ref.get().fields;
+				assertTrue(fields.length == 1 && fields[0].name == "name", "expected typedef entry anonymous payload");
+				assertTrue(RuntimeMacroTypes.toString(fields[0].type) == "String", "expected typedef entry field type String");
+			case _:
+				fail("expected module typedef entry to follow to anonymous structure");
+		}
 		final abstractEntry = expectAbstract(moduleEntries[3]).get();
 		assertTrue(abstractEntry.meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
 		assertPosFile(abstractEntry.pos, "RuntimeModuleMembers.hx", 161, 180);
+		assertTrue(RuntimeMacroTypes.toString(RuntimeMacroTypes.followWithAbstracts(moduleEntries[3])) == "String",
+			"expected module abstract entry to followWithAbstracts() to String");
 
 		MacroState.reset();
 	}

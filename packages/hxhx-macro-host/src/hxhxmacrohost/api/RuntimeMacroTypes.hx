@@ -146,10 +146,15 @@ class RuntimeMacroTypes {
 	}
 
 	public static function followWithAbstracts(t:Type, once:Bool = false):Type {
-		// Upstream `followWithAbstracts(...)` follows abstracts to their underlying implementation.
-		// The external-host runtime now preserves synthetic abstract wrappers for lookup and
-		// substitution rungs, but following still intentionally unwraps them.
-		return follow(t, once);
+		if (t == null)
+			return null;
+		return switch (t) {
+			case TAbstract(a, params):
+				final inner = applyTypeParameters(a.get().type, a.get().params, params);
+				if (once) inner else followWithAbstracts(inner, false);
+			case _:
+				follow(t, once);
+		}
 	}
 
 	/**
@@ -281,14 +286,153 @@ class RuntimeMacroTypes {
 		- Reusing the same builtin-only model keeps the runtime query surface honest.
 	**/
 	public static function parseTypeText(text:String):Null<Type> {
+		return parseTypeTextWithParameters(text, []);
+	}
+
+	static function parseTypeTextWithParameters(text:String, params:Array<TypeParameter>):Null<Type> {
 		final trimmed = StringTools.trim(text == null ? "" : text);
 		if (trimmed.length == 0)
 			return null;
+		final scope = new Map<String, Type>();
+		if (params != null)
+			for (param in params)
+				if (param != null && param.name != null && param.t != null)
+					scope.set(param.name, param.t);
+		return parseTypeTextWithScope(trimmed, scope);
+	}
+
+	static function parseTypeTextWithScope(text:String, scope:Map<String, Type>):Type {
+		final trimmed = StringTools.trim(text == null ? "" : text);
+		if (trimmed.length == 0)
+			throw "runtime macro type text: empty type";
+		if (scope != null && scope.exists(trimmed))
+			return scope.get(trimmed);
+		if (StringTools.startsWith(trimmed, "{") && StringTools.endsWith(trimmed, "}"))
+			return parseAnonymousTypeText(trimmed, scope);
 		if (StringTools.startsWith(trimmed, "Null<") && StringTools.endsWith(trimmed, ">"))
-			return nullType(requireInnerType("Null", trimmed));
+			return nullType(parseTypeTextWithScope(extractWrappedInnerText("Null", trimmed), scope));
 		if (StringTools.startsWith(trimmed, "Dynamic<") && StringTools.endsWith(trimmed, ">"))
-			return TDynamic(requireInnerType("Dynamic", trimmed));
-		return getTypeByName(trimmed);
+			return TDynamic(parseTypeTextWithScope(extractWrappedInnerText("Dynamic", trimmed), scope));
+		return parsePathTypeText(trimmed, scope);
+	}
+
+	static function parseAnonymousTypeText(text:String, scope:Map<String, Type>):Type {
+		final body = StringTools.trim(text.substr(1, text.length - 2));
+		if (body.length == 0)
+			return TAnonymous(makeRef({
+				fields: [],
+				status: AClosed
+			}, "anon"));
+		final fields = new Array<ClassField>();
+		for (part in splitTopLevelTypePartsMulti(body, [",", ";"])) {
+			final trimmed = StringTools.trim(part);
+			if (trimmed.length == 0)
+				continue;
+			final field = parseAnonymousField(trimmed, scope);
+			if (field != null)
+				fields.push(field);
+		}
+		return TAnonymous(makeRef({
+			fields: fields,
+			status: AClosed
+		}, "anon"));
+	}
+
+	static function parseAnonymousField(text:String, scope:Map<String, Type>):Null<ClassField> {
+		var trimmed = StringTools.trim(text);
+		if (trimmed.length == 0)
+			return null;
+		var isFinalField = false;
+		var changed = true;
+		while (changed) {
+			changed = false;
+			for (prefix in ["public ", "private ", "inline ", "static "]) {
+				if (StringTools.startsWith(trimmed, prefix)) {
+					trimmed = StringTools.ltrim(trimmed.substr(prefix.length));
+					changed = true;
+				}
+			}
+		}
+		if (StringTools.startsWith(trimmed, "final ")) {
+			isFinalField = true;
+			trimmed = StringTools.ltrim(trimmed.substr("final ".length));
+		} else if (StringTools.startsWith(trimmed, "var ")) {
+			trimmed = StringTools.ltrim(trimmed.substr("var ".length));
+		}
+		final colon = topLevelIndexOf(trimmed, ":");
+		if (colon < 0)
+			return null;
+		var fieldName = StringTools.trim(trimmed.substr(0, colon));
+		if (fieldName.length == 0)
+			return null;
+		if (StringTools.endsWith(fieldName, "?"))
+			fieldName = StringTools.rtrim(fieldName.substr(0, fieldName.length - 1));
+		final fieldTypeText = StringTools.trim(trimmed.substr(colon + 1));
+		final fieldType = fieldTypeText.length == 0 ? TDynamic(null) : parseTypeTextWithScope(fieldTypeText, scope);
+		return {
+			name: fieldName,
+			type: fieldType,
+			isPublic: true,
+			isExtern: true,
+			isFinal: isFinalField,
+			isAbstract: false,
+			params: [],
+			meta: metadataAccess(null),
+			kind: FVar(AccNormal, AccNormal),
+			expr: function() return null,
+			pos: defaultPos(),
+			doc: null,
+			overloads: makeRef([], fieldName + ".overloads")
+		};
+	}
+
+	static function parsePathTypeText(text:String, scope:Map<String, Type>):Type {
+		final trimmed = StringTools.trim(text);
+		final lt = topLevelIndexOf(trimmed, "<");
+		var base = trimmed;
+		var paramTypes = new Array<Type>();
+		if (lt >= 0) {
+			if (!StringTools.endsWith(trimmed, ">"))
+				throw "runtime macro type text: malformed generic path " + trimmed;
+			base = StringTools.trim(trimmed.substr(0, lt));
+			final inner = StringTools.trim(trimmed.substr(lt + 1, trimmed.length - lt - 2));
+			if (inner.length > 0)
+				for (part in splitTopLevelTypeParts(inner, ","))
+					paramTypes.push(parseTypeTextWithScope(part, scope));
+		}
+		if (scope != null && scope.exists(base))
+			return scope.get(base);
+		final simple = normalizeName(base);
+		return switch (simple) {
+			case "String":
+				ensureNoRuntimeParams(base, paramTypes);
+				stringType();
+			case "Int":
+				ensureNoRuntimeParams(base, paramTypes);
+				intType();
+			case "Float":
+				ensureNoRuntimeParams(base, paramTypes);
+				floatType();
+			case "Bool":
+				ensureNoRuntimeParams(base, paramTypes);
+				boolType();
+			case "Void":
+				ensureNoRuntimeParams(base, paramTypes);
+				voidType();
+			case "Dynamic":
+				paramTypes.length == 0 ? TDynamic(null) : TDynamic(paramTypes[0]);
+			case _:
+				final parts = base.split(".");
+				final name = parts.pop();
+				TInst(classRef(parts, name, name), paramTypes);
+		}
+	}
+
+	static function extractWrappedInnerText(wrapper:String, text:String):String {
+		final trimmed = StringTools.trim(text == null ? "" : text);
+		if (!StringTools.startsWith(trimmed, wrapper + "<") || !StringTools.endsWith(trimmed, ">"))
+			throw "runtime macro type text: expected wrapped " + wrapper + " type";
+		return StringTools.trim(trimmed.substr(wrapper.length + 1, trimmed.length - wrapper.length - 2));
 	}
 
 	/**
@@ -309,6 +453,8 @@ class RuntimeMacroTypes {
 		name:String,
 		kind:String,
 		metadata:Array<String>,
+		typeParamNames:Array<String>,
+		underlyingTypeText:Null<String>,
 		staticFields:Array<{
 			name:String,
 			kind:String,
@@ -359,6 +505,8 @@ class RuntimeMacroTypes {
 				name: moduleName,
 				kind: "class",
 				metadata: [],
+				typeParamNames: [],
+				underlyingTypeText: null,
 				staticFields: [],
 				file: DEFAULT_FILE,
 				min: 0,
@@ -370,7 +518,8 @@ class RuntimeMacroTypes {
 			if (trimmedName.length == 0 || seen.exists(trimmedName))
 				continue;
 			seen.set(trimmedName, true);
-			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata, entry.file, entry.min, entry.max, entry.staticFields));
+			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata, entry.file, entry.min, entry.max, entry.staticFields,
+				entry.typeParamNames, entry.underlyingTypeText));
 		}
 		return out;
 	}
@@ -394,7 +543,7 @@ class RuntimeMacroTypes {
 			file:String,
 			min:Int,
 			max:Int
-		}>):Type {
+		}>, ?typeParamNames:Array<String>, ?underlyingTypeText:Null<String>):Type {
 		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
 		if (trimmed.length == 0)
 			throw "runtime macro type path lookup: empty type path";
@@ -405,7 +554,7 @@ class RuntimeMacroTypes {
 		final moduleName = moduleNameOverride == null || moduleNameOverride.length == 0 ? name : moduleNameOverride;
 		if (moduleNameOverride != null && moduleNameOverride.length > 0 && name != moduleName && parts.length > 0 && parts[parts.length - 1] == moduleName)
 			parts.pop();
-		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max, staticFields);
+		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max, staticFields, typeParamNames, underlyingTypeText);
 		}
 
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
@@ -722,6 +871,23 @@ class RuntimeMacroTypes {
 		}
 	}
 
+	/**
+		Return a compact `name:type` summary for a followed anonymous structure, if present.
+
+		Why
+		- External-host probes need to assert typedef payload fidelity without pattern matching on
+		  `haxe.macro.Type` directly in generated macro-host user modules, which still trips the
+		  current generated-OCaml constructor seam.
+	**/
+	public static function followedAnonymousFieldSummary(t:Type):Null<String> {
+		return switch (follow(t)) {
+			case TAnonymous(ref):
+				[for (field in ref.get().fields) field.name + ":" + toString(field.type)].join("|");
+			case _:
+				null;
+		}
+	}
+
 	static function renderNamedType(pack:Array<String>, name:String, params:Array<Type>):String {
 		final fullName = fullPath(pack, name);
 		if (params == null || params.length == 0)
@@ -765,6 +931,11 @@ class RuntimeMacroTypes {
 		if (leftName == "Int" && rightName == "Int")
 			return intType();
 		throw "runtime macro typeof: unsupported add operands " + leftName + " + " + rightName;
+	}
+
+	static function ensureNoRuntimeParams(label:String, params:Array<Type>):Void {
+		if (params != null && params.length > 0)
+			throw "runtime macro type text: " + label + " does not accept type parameters";
 	}
 
 	static function resolveTypePath(path:TypePath):Type {
@@ -897,19 +1068,183 @@ class RuntimeMacroTypes {
 			file:String,
 			min:Int,
 			max:Int
-		}>):Type {
+		}>, ?typeParamNames:Array<String>, ?underlyingTypeText:Null<String>):Type {
 		final pos = position(file, min, max);
+		final params = typeParameterRefs(typeParamNames);
+		final payload = parseDeclaredTypePayload(underlyingTypeText, params);
 		return switch (kind == null ? "" : StringTools.trim(kind).toLowerCase()) {
 			case "enum":
 				TEnum(enumRef(pack, name, module, metadataEntries, pos), []);
 			case "typedef":
-				TType(defTypeRef(pack, name, module, [], TDynamic(null), metadataEntries, pos), []);
+				TType(defTypeRef(pack, name, module, params, payload, metadataEntries, pos), []);
 			case "abstract":
-				abstractType(abstractRef(pack, name, module, [], TDynamic(null), metadataEntries, pos, staticFields), []);
+				abstractType(abstractRef(pack, name, module, params, payload, metadataEntries, pos, staticFields), []);
 			case _:
 				classType(pack, module, name, metadataEntries, file, min, max, staticFields);
 		}
 		}
+
+	static function typeParameterRefs(names:Null<Array<String>>):Array<TypeParameter> {
+		if (names == null || names.length == 0)
+			return [];
+		return [for (name in names) typeParameter(name)];
+	}
+
+	static function parseDeclaredTypePayload(typeText:Null<String>, params:Array<TypeParameter>):Type {
+		final trimmed = StringTools.trim(typeText == null ? "" : typeText);
+		if (trimmed.length == 0)
+			return TDynamic(null);
+		return try {
+			parseTypeTextWithParameters(trimmed, params);
+		} catch (_:Dynamic) {
+			TDynamic(null);
+		}
+	}
+
+	static function splitTopLevelTypeParts(text:String, separator:String):Array<String> {
+		return splitTopLevelTypePartsMulti(text, [separator]);
+	}
+
+	static function splitTopLevelTypePartsMulti(text:String, separators:Array<String>):Array<String> {
+		final out = new Array<String>();
+		if (text == null)
+			return out;
+		var start = 0;
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		var i = 0;
+		while (i < text.length) {
+			final ch = text.charAt(i);
+			switch (ch) {
+				case "\"", "'":
+					i = skipQuotedText(text, i);
+				case "/":
+					if (i + 1 < text.length && text.charAt(i + 1) == "/") {
+						i = skipLineComment(text, i);
+					} else if (i + 1 < text.length && text.charAt(i + 1) == "*") {
+						i = skipBlockComment(text, i);
+					}
+				case "<":
+					angleDepth += 1;
+				case ">":
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case "(":
+					parenDepth += 1;
+				case ")":
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "{":
+					braceDepth += 1;
+				case "}":
+					if (braceDepth > 0)
+						braceDepth -= 1;
+				case "[":
+					bracketDepth += 1;
+				case "]":
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case _:
+			}
+			if (angleDepth == 0 && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+				for (separator in separators) {
+					if (separator.length > 0 && text.substr(i, separator.length) == separator) {
+						out.push(StringTools.trim(text.substr(start, i - start)));
+						i += separator.length;
+						start = i;
+						i -= 1;
+						break;
+					}
+				}
+			}
+			i += 1;
+		}
+		out.push(StringTools.trim(text.substr(start)));
+		return out;
+	}
+
+	static function topLevelIndexOf(text:String, token:String):Int {
+		if (text == null || token == null || token.length == 0)
+			return -1;
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		var i = 0;
+		while (i < text.length) {
+			final ch = text.charAt(i);
+			switch (ch) {
+				case "\"", "'":
+					i = skipQuotedText(text, i);
+				case "/":
+					if (i + 1 < text.length && text.charAt(i + 1) == "/") {
+						i = skipLineComment(text, i);
+					} else if (i + 1 < text.length && text.charAt(i + 1) == "*") {
+						i = skipBlockComment(text, i);
+					}
+				case "<":
+					angleDepth += 1;
+				case ">":
+					if (angleDepth > 0)
+						angleDepth -= 1;
+				case "(":
+					parenDepth += 1;
+				case ")":
+					if (parenDepth > 0)
+						parenDepth -= 1;
+				case "{":
+					braceDepth += 1;
+				case "}":
+					if (braceDepth > 0)
+						braceDepth -= 1;
+				case "[":
+					bracketDepth += 1;
+				case "]":
+					if (bracketDepth > 0)
+						bracketDepth -= 1;
+				case _:
+			}
+			if (angleDepth == 0 && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0 && text.substr(i, token.length) == token)
+				return i;
+			i += 1;
+		}
+		return -1;
+	}
+
+	static function skipQuotedText(text:String, start:Int):Int {
+		final quote = text.charAt(start);
+		var i = start + 1;
+		while (i < text.length) {
+			final ch = text.charAt(i);
+			if (ch == "\\") {
+				i += 2;
+				continue;
+			}
+			if (ch == quote)
+				return i;
+			i += 1;
+		}
+		return text.length - 1;
+	}
+
+	static function skipLineComment(text:String, start:Int):Int {
+		var i = start + 2;
+		while (i < text.length && text.charAt(i) != "\n")
+			i += 1;
+		return i;
+	}
+
+	static function skipBlockComment(text:String, start:Int):Int {
+		var i = start + 2;
+		while (i + 1 < text.length) {
+			if (text.charAt(i) == "*" && text.charAt(i + 1) == "/")
+				return i + 1;
+			i += 1;
+		}
+		return text.length - 1;
+	}
 
 	static function substituteTypeParameters(t:Type, substitutions:Map<String, Type>):Type {
 		return switch (t) {

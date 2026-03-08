@@ -370,6 +370,13 @@ class Context {
 			if (parts.exists(key))
 				metadata.push(parts.get(key));
 		}
+		final typeParamNames = new Array<String>();
+		final typeParamCount = parseNonNegativeInt(parts.exists("pc") ? parts.get("pc") : "", 0);
+		for (i in 0...typeParamCount) {
+			final key = "pn" + i;
+			if (parts.exists(key))
+				typeParamNames.push(parts.get(key));
+		}
 		final staticFields = new Array<{
 			name:String,
 			kind:String,
@@ -430,7 +437,7 @@ class Context {
 		final kind = parts.exists("k") ? parts.get("k") : "class";
 		return RuntimeMacroTypes.typeForResolvedDecl(typePath, kind, metadata, moduleName, parts.exists("f") ? parts.get("f") : DEFAULT_MACRO_FILE,
 			parseNonNegativeInt(parts.exists("min") ? parts.get("min") : "", 0), parseNonNegativeInt(parts.exists("max") ? parts.get("max") : "", 0),
-			staticFields);
+			staticFields, typeParamNames, parts.exists("ut") ? parts.get("ut") : null);
 	}
 
 	public static function getModule(name:String):Array<Type> {
@@ -446,6 +453,8 @@ class Context {
 			name:String,
 			kind:String,
 			metadata:Array<String>,
+			typeParamNames:Array<String>,
+			underlyingTypeText:Null<String>,
 			staticFields:Array<{
 				name:String,
 				kind:String,
@@ -536,6 +545,11 @@ class Context {
 				name: parts.get(nameKey),
 				kind: parts.exists("tk" + i) ? parts.get("tk" + i) : "class",
 				metadata: metadata,
+				typeParamNames: [
+					for (j in 0...parseNonNegativeInt(parts.exists("tpc" + i) ? parts.get("tpc" + i) : "", 0))
+						if (parts.exists("tpn" + i + "_" + j)) parts.get("tpn" + i + "_" + j)
+				],
+				underlyingTypeText: parts.exists("tut" + i) ? parts.get("tut" + i) : null,
 				staticFields: staticFields,
 				file: parts.exists("tf" + i) ? parts.get("tf" + i) : DEFAULT_MACRO_FILE,
 				min: parseNonNegativeInt(parts.exists("tmin" + i) ? parts.get("tmin" + i) : "", 0),

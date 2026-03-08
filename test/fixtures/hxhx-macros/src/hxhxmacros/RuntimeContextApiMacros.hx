@@ -204,6 +204,11 @@ class RuntimeContextApiMacros {
 		assertTypePos("module enum type", moduleEnumType, "RuntimeModuleMembers.hx");
 		assertTypePos("module typedef type", moduleTypedefType, "RuntimeModuleMembers.hx");
 		assertTypePos("module abstract type", moduleAbstractType, "RuntimeModuleMembers.hx");
+		final moduleTypedefSummary = RuntimeMacroTypes.followedAnonymousFieldSummary(moduleTypedefType);
+		if (moduleTypedefSummary != "name:String")
+			Context.fatalError("runtime macro type probe: expected typedef payload { name:String }", pos);
+		if (TypeTools.toString(TypeTools.followWithAbstracts(moduleAbstractType)) != "String")
+			Context.fatalError("runtime macro type probe: expected abstract payload to followWithAbstracts() to String", pos);
 
 		final boolType = Context.resolveType(macro :Bool, pos);
 		final boolTypeString = TypeTools.toString(boolType);

@@ -4,10 +4,17 @@ private typedef RuntimeResolvedTypeSnapshot = {
 	final name:String;
 	final kind:String;
 	final metadata:Array<String>;
+	final typeParamNames:Array<String>;
+	final underlyingTypeText:Null<String>;
 	final staticFields:Array<RuntimeResolvedModuleFieldSnapshot>;
 	final file:String;
 	final min:Int;
 	final max:Int;
+}
+
+private typedef RuntimeResolvedTypeSemantics = {
+	final typeParamNames:Array<String>;
+	final underlyingTypeText:Null<String>;
 }
 
 private typedef RuntimeResolvedModuleFieldSnapshot = {
@@ -698,6 +705,7 @@ class MacroHostClient {
 		if (modulePack.length > 0)
 			modulePack.pop();
 		final typeSpans = scanResolvedModuleTypeSpans(path);
+		final typeSemantics = scanResolvedTypeSemantics(path);
 		inline function fullTypePath(name:String):String {
 			return modulePack.length == 0 ? name : modulePack.join(".") + "." + name;
 		}
@@ -711,11 +719,17 @@ class MacroHostClient {
 				min: 0,
 				max: 0
 			};
+			final semantics:RuntimeResolvedTypeSemantics = typeSemantics.exists(trimmed) ? typeSemantics.get(trimmed) : {
+				typeParamNames: [],
+				underlyingTypeText: null
+			};
 			final staticFields = scanResolvedTypeStaticFields(path, trimmed, kind);
 			out.push({
 				name: trimmed,
 				kind: kind,
 				metadata: MacroState.listAppliedTypeMetadata(fullTypePath(trimmed)),
+				typeParamNames: semantics.typeParamNames,
+				underlyingTypeText: semantics.underlyingTypeText,
 				staticFields: staticFields,
 				file: span.file,
 				min: span.min,
@@ -750,6 +764,8 @@ class MacroHostClient {
 					name: existing.name,
 					kind: existing.kind,
 					metadata: mainMetadata,
+					typeParamNames: existing.typeParamNames,
+					underlyingTypeText: existing.underlyingTypeText,
 					staticFields: existing.staticFields,
 					file: existing.file,
 					min: existing.min,
@@ -760,6 +776,8 @@ class MacroHostClient {
 					name: mainName,
 					kind: "class",
 					metadata: mainMetadata,
+					typeParamNames: [],
+					underlyingTypeText: null,
 					staticFields: scanResolvedTypeStaticFields(path, mainName, "class"),
 					file: path,
 					min: 0,
@@ -769,6 +787,371 @@ class MacroHostClient {
 		}
 
 		return out;
+	}
+
+	static function scanResolvedTypeSemantics(path:String):Map<String, RuntimeResolvedTypeSemantics> {
+		final out = new Map<String, RuntimeResolvedTypeSemantics>();
+		final source = readFilteredResolvedModuleSource(path);
+		if (source.length == 0)
+			return out;
+
+		var braceDepth = 0;
+		var i = 0;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedText(source, i);
+				continue;
+			}
+			if (c == "/".code && i + 1 < source.length) {
+				final next = source.charCodeAt(i + 1);
+				if (next == "/".code) {
+					i = skipLineComment(source, i);
+					continue;
+				}
+				if (next == "*".code) {
+					i = skipBlockComment(source, i);
+					continue;
+				}
+			}
+			if (c == "{".code) {
+				braceDepth++;
+				i++;
+				continue;
+			}
+			if (c == "}".code) {
+				if (braceDepth > 0)
+					braceDepth--;
+				i++;
+				continue;
+			}
+			if (braceDepth == 0) {
+				if (hasKeywordAt(source, i, "typedef")) {
+					final parsed = parseTypedefSemantics(source, i);
+					if (parsed != null) {
+						out.set(parsed.name, {
+							typeParamNames: parsed.typeParamNames,
+							underlyingTypeText: parsed.underlyingTypeText
+						});
+						i = parsed.nextIndex;
+						continue;
+					}
+				}
+				if (hasKeywordAt(source, i, "abstract")) {
+					final prevWord = previousWord(source, i);
+					if (prevWord != "enum") {
+						final parsed = parseAbstractSemantics(source, i);
+						if (parsed != null) {
+							out.set(parsed.name, {
+								typeParamNames: parsed.typeParamNames,
+								underlyingTypeText: parsed.underlyingTypeText
+							});
+							i = parsed.nextIndex;
+							continue;
+						}
+					}
+				}
+			}
+			i++;
+		}
+
+		return out;
+	}
+
+	static function parseTypedefSemantics(source:String, start:Int):Null<{
+		name:String,
+		typeParamNames:Array<String>,
+		underlyingTypeText:String,
+		nextIndex:Int
+	}> {
+		var i = skipWhitespaceText(source, start + "typedef".length);
+		final name = readIdent(source, i);
+		if (name == null)
+			return null;
+		i += name.length;
+		var typeParamNames = [];
+		i = skipWhitespaceText(source, i);
+		if (i < source.length && source.charCodeAt(i) == "<".code) {
+			final angleEnd = scanBalancedText(source, i, "<".code, ">".code);
+			if (angleEnd < 0)
+				return null;
+			typeParamNames = parseTypeParamNames(source.substr(i + 1, angleEnd - i - 2));
+			i = angleEnd;
+		}
+		i = skipWhitespaceText(source, i);
+		if (i >= source.length || source.charCodeAt(i) != "=".code)
+			return null;
+		final bodyStart = skipWhitespaceText(source, i + 1);
+		final bodyEnd = scanTopLevelTypeTerminator(source, bodyStart, ";".code);
+		if (bodyEnd < 0)
+			return null;
+		return {
+			name: name,
+			typeParamNames: typeParamNames,
+			underlyingTypeText: StringTools.trim(source.substr(bodyStart, bodyEnd - bodyStart)),
+			nextIndex: bodyEnd + 1
+		};
+	}
+
+	static function parseAbstractSemantics(source:String, start:Int):Null<{
+		name:String,
+		typeParamNames:Array<String>,
+		underlyingTypeText:String,
+		nextIndex:Int
+	}> {
+		var i = skipWhitespaceText(source, start + "abstract".length);
+		final name = readIdent(source, i);
+		if (name == null)
+			return null;
+		i += name.length;
+		var typeParamNames = [];
+		i = skipWhitespaceText(source, i);
+		if (i < source.length && source.charCodeAt(i) == "<".code) {
+			final angleEnd = scanBalancedText(source, i, "<".code, ">".code);
+			if (angleEnd < 0)
+				return null;
+			typeParamNames = parseTypeParamNames(source.substr(i + 1, angleEnd - i - 2));
+			i = angleEnd;
+		}
+		i = skipWhitespaceText(source, i);
+		if (i >= source.length || source.charCodeAt(i) != "(".code)
+			return null;
+		final parenEnd = scanBalancedText(source, i, "(".code, ")".code);
+		if (parenEnd < 0)
+			return null;
+		return {
+			name: name,
+			typeParamNames: typeParamNames,
+			underlyingTypeText: StringTools.trim(source.substr(i + 1, parenEnd - i - 2)),
+			nextIndex: parenEnd
+		};
+	}
+
+	static function parseTypeParamNames(source:String):Array<String> {
+		final out = new Array<String>();
+		for (part in splitTopLevelTypeParts(source, ",".code)) {
+			final trimmed = StringTools.trim(part);
+			if (trimmed.length == 0)
+				continue;
+			final name = readIdent(trimmed, 0);
+			if (name != null && name.length > 0)
+				out.push(name);
+		}
+		return out;
+	}
+
+	static function splitTopLevelTypeParts(source:String, separator:Int):Array<String> {
+		final out = new Array<String>();
+		var start = 0;
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		var i = 0;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedText(source, i);
+				continue;
+			}
+			switch (c) {
+				case "<".code:
+					angleDepth++;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth--;
+				case "(".code:
+					parenDepth++;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth--;
+				case "{".code:
+					braceDepth++;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth--;
+				case "[".code:
+					bracketDepth++;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case _:
+					if (c == separator && angleDepth == 0 && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+						out.push(source.substr(start, i - start));
+						start = i + 1;
+					}
+			}
+			i++;
+		}
+		out.push(source.substr(start));
+		return out;
+	}
+
+	static function scanTopLevelTypeTerminator(source:String, start:Int, terminator:Int):Int {
+		var angleDepth = 0;
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var bracketDepth = 0;
+		var i = start;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedText(source, i);
+				continue;
+			}
+			switch (c) {
+				case "<".code:
+					angleDepth++;
+				case ">".code:
+					if (angleDepth > 0)
+						angleDepth--;
+				case "(".code:
+					parenDepth++;
+				case ")".code:
+					if (parenDepth > 0)
+						parenDepth--;
+				case "{".code:
+					braceDepth++;
+				case "}".code:
+					if (braceDepth > 0)
+						braceDepth--;
+				case "[".code:
+					bracketDepth++;
+				case "]".code:
+					if (bracketDepth > 0)
+						bracketDepth--;
+				case _:
+					if (c == terminator && angleDepth == 0 && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0)
+						return i;
+			}
+			i++;
+		}
+		return -1;
+	}
+
+	static function previousWord(source:String, index:Int):String {
+		var i = index - 1;
+		while (i >= 0) {
+			final c = source.charCodeAt(i);
+			if (c == " ".code || c == "\t".code || c == "\n".code || c == "\r".code)
+				i--;
+			else
+				break;
+		}
+		if (i < 0)
+			return "";
+		var end = i + 1;
+		while (i >= 0) {
+			final c = source.charCodeAt(i);
+			if (isIdentChar(c))
+				i--;
+			else
+				break;
+		}
+		return source.substr(i + 1, end - i - 1);
+	}
+
+	static function readIdent(source:String, index:Int):Null<String> {
+		if (index < 0 || index >= source.length)
+			return null;
+		final first = source.charCodeAt(index);
+		final firstOk = first == "_".code || (first >= "A".code && first <= "Z".code) || (first >= "a".code && first <= "z".code);
+		if (!firstOk)
+			return null;
+		var i = index + 1;
+		while (i < source.length && isIdentChar(source.charCodeAt(i)))
+			i++;
+		return source.substr(index, i - index);
+	}
+
+	static function hasKeywordAt(source:String, index:Int, keyword:String):Bool {
+		if (index < 0 || index + keyword.length > source.length)
+			return false;
+		if (source.substr(index, keyword.length) != keyword)
+			return false;
+		final beforeOk = index == 0 || !isIdentChar(source.charCodeAt(index - 1));
+		final afterIndex = index + keyword.length;
+		final afterOk = afterIndex >= source.length || !isIdentChar(source.charCodeAt(afterIndex));
+		return beforeOk && afterOk;
+	}
+
+	static function isIdentChar(c:Int):Bool {
+		return c == "_".code
+			|| (c >= "A".code && c <= "Z".code)
+			|| (c >= "a".code && c <= "z".code)
+			|| (c >= "0".code && c <= "9".code);
+	}
+
+	static function skipWhitespaceText(source:String, index:Int):Int {
+		var i = index;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == " ".code || c == "\t".code || c == "\n".code || c == "\r".code)
+				i++;
+			else
+				break;
+		}
+		return i;
+	}
+
+	static function scanBalancedText(source:String, start:Int, open:Int, close:Int):Int {
+		if (start < 0 || start >= source.length || source.charCodeAt(start) != open)
+			return -1;
+		var depth = 0;
+		var i = start;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\"".code || c == "'".code) {
+				i = skipQuotedText(source, i);
+				continue;
+			}
+			if (c == open)
+				depth++;
+			else if (c == close) {
+				depth--;
+				if (depth == 0)
+					return i + 1;
+			}
+			i++;
+		}
+		return -1;
+	}
+
+	static function skipQuotedText(source:String, start:Int):Int {
+		final quote = source.charCodeAt(start);
+		var i = start + 1;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			if (c == "\\".code) {
+				i += 2;
+				continue;
+			}
+			if (c == quote)
+				return i + 1;
+			i++;
+		}
+		return source.length;
+	}
+
+	static function skipLineComment(source:String, start:Int):Int {
+		var i = start;
+		while (i < source.length) {
+			final c = source.charCodeAt(i);
+			i++;
+			if (c == "\n".code)
+				break;
+		}
+		return i;
+	}
+
+	static function skipBlockComment(source:String, start:Int):Int {
+		var i = start + 2;
+		while (i < source.length - 1) {
+			if (source.charCodeAt(i) == "*".code && source.charCodeAt(i + 1) == "/".code)
+				return i + 2;
+			i++;
+		}
+		return source.length;
 	}
 
 	static function scanResolvedModuleTypeSpans(path:String):Map<String, {file:String, min:Int, max:Int}> {
@@ -1805,6 +2188,29 @@ private class MacroClient {
 					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
 					for (i in 0...metadata.length)
 						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
+					parts.push(MacroProtocol.encodeLen("pc", Std.string({
+						var matched:Null<RuntimeResolvedTypeSnapshot> = null;
+						for (entry in resolvedTypes)
+							if (entry.name == targetTypeName) {
+								matched = entry;
+								break;
+							}
+						matched == null ? 0 : matched.typeParamNames.length;
+					})));
+					{
+						var matched:Null<RuntimeResolvedTypeSnapshot> = null;
+						for (entry in resolvedTypes)
+							if (entry.name == targetTypeName) {
+								matched = entry;
+								break;
+							}
+						if (matched != null) {
+							for (i in 0...matched.typeParamNames.length)
+								parts.push(MacroProtocol.encodeLen("pn" + i, matched.typeParamNames[i]));
+							if (matched.underlyingTypeText != null && matched.underlyingTypeText.length > 0)
+								parts.push(MacroProtocol.encodeLen("ut", matched.underlyingTypeText));
+						}
+					}
 					parts.push(MacroProtocol.encodeLen("sc", Std.string(staticFields.length)));
 					for (i in 0...staticFields.length) {
 						final entry = staticFields[i];
@@ -1859,8 +2265,13 @@ private class MacroClient {
 						parts.push(MacroProtocol.encodeLen("tmin" + i, Std.string(entry.min)));
 						parts.push(MacroProtocol.encodeLen("tmax" + i, Std.string(entry.max)));
 						parts.push(MacroProtocol.encodeLen("tmc" + i, Std.string(entry.metadata.length)));
+						parts.push(MacroProtocol.encodeLen("tpc" + i, Std.string(entry.typeParamNames.length)));
 						for (j in 0...entry.metadata.length)
 							parts.push(MacroProtocol.encodeLen("tmd" + i + "_" + j, entry.metadata[j]));
+						for (j in 0...entry.typeParamNames.length)
+							parts.push(MacroProtocol.encodeLen("tpn" + i + "_" + j, entry.typeParamNames[j]));
+						if (entry.underlyingTypeText != null && entry.underlyingTypeText.length > 0)
+							parts.push(MacroProtocol.encodeLen("tut" + i, entry.underlyingTypeText));
 						parts.push(MacroProtocol.encodeLen("tsc" + i, Std.string(entry.staticFields.length)));
 						for (j in 0...entry.staticFields.length) {
 							final field = entry.staticFields[j];
