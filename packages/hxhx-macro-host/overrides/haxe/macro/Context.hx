@@ -195,6 +195,10 @@ class Context {
 		load("on_after_typing", 1)(callback);
 	}
 
+	public static function onAfterInitMacros(callback:Void->Void):Void {
+		load("on_after_init_macros", 1)(callback);
+	}
+
 	public static function onTypeNotFound(callback:String->TypeDefinition):Void {
 		load("on_type_not_found", 1)(callback);
 	}
@@ -488,6 +492,10 @@ class Context {
 
 	public static function onAfterTyping(callback:Array<Dynamic>->Void):Void {
 		HostContext.onAfterTyping(callback);
+	}
+
+	public static function onAfterInitMacros(callback:Void->Void):Void {
+		HostContext.onAfterInitMacros(callback);
 	}
 
 	public static function onTypeNotFound(callback:String->TypeDefinition):Void {

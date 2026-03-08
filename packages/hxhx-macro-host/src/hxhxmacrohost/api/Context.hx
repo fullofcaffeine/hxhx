@@ -86,6 +86,32 @@ class Context {
 	}
 
 	/**
+		Runtime bring-up `Context.onAfterInitMacros(...)`.
+
+		Why
+		- Upstream exposes this as the safe seam for typer-dependent work that should run after
+		  initialization macros complete.
+		- Real sibling consumers such as vendored `reflaxe-elixir` use it directly.
+
+		What
+		- Executes `cb` immediately in external-host runtime mode.
+
+		How
+		- The Stage4 runtime host is only entered once compiler-owned macro configuration and classpath
+		  snapshots already exist, so the honest bring-up behavior is "init macros are done".
+
+		Gotchas
+		- This does not model a separate pending-registration queue yet.
+		- If we later introduce a true "before init macros complete" runtime phase, this seam will
+		  need real phase tracking in compiler-owned state.
+	**/
+	public static function onAfterInitMacros(cb:Void->Void):Void {
+		if (cb == null)
+			return;
+		cb();
+	}
+
+	/**
 		Register an "on generate" hook.
 
 		See `onAfterTyping` for bring-up rationale and mechanics.

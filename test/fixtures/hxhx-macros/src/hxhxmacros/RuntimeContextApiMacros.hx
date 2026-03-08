@@ -97,6 +97,20 @@ class RuntimeContextApiMacros {
 			+ (supportsUnicode ? "1" : "0") + ";cp=" + classPath.length + ";file=" + info.file + ";display=None";
 	}
 
+	public static function probeAfterInitMacros():String {
+		final pos = Context.currentPos();
+		final order = new Array<String>();
+		Context.onAfterInitMacros(function():Void {
+			order.push("callback");
+			Compiler.define("HXHX_RUNTIME_AFTER_INIT", "ok");
+		});
+		order.push("after");
+		final summary = order.join(";");
+		if (summary != "callback;after")
+			Context.fatalError("runtime macro after-init probe: expected immediate callback but got " + summary, pos);
+		return "afterInit=" + summary;
+	}
+
 	public static function probeBuiltinTypePlumbing():String {
 		final pos = Context.currentPos();
 		function assertTypePos(label:String, t:Type, expectedSuffix:String):Void {

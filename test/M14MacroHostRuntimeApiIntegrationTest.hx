@@ -45,6 +45,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 	static function buildMacroHostWithProbe():String {
 		final exprs = [
 			"hxhxmacros.RuntimeContextApiMacros.probeConfigAndPosition()",
+			"hxhxmacros.RuntimeContextApiMacros.probeAfterInitMacros()",
 			"hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypeParameterSubstitution()",
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalContextSnapshot()",
@@ -151,6 +152,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(Std.parseInt(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_CP")) > 0, "expected runtime classpath define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_CONTEXT_RESOLVED").indexOf("RuntimeContextApiMacros.hx") >= 0,
 				"expected resolved fixture path define");
+
+			final afterInitOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeAfterInitMacros()");
+			assertContains("after init output", afterInitOutput, "afterInit=callback;after");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_AFTER_INIT") == "ok", "expected runtime after-init define");
 
 			final typeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()");
 			assertContains("type probe getType", typeOutput, "getType=String");
