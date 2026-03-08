@@ -22,7 +22,32 @@ import haxe.macro.Expr;
 **/
 class OcamlInjection {
 	public static macro function __ocaml__(code:String, args:Array<Expr>):Expr {
-		final callArgs = [macro $v{code}].concat(args);
-		return macro untyped __ocaml__($a{callArgs});
+		final pos = haxe.macro.Context.currentPos();
+		if (!haxe.macro.Context.defined("ocaml_output")) {
+			return {
+				expr: EThrow({
+					expr: EConst(CString("OcamlInjection.__ocaml__ requires ocaml_output", DoubleQuotes)),
+					pos: pos
+				}),
+				pos: pos
+			};
+		}
+		final callArgs = [
+			{
+				expr: EConst(CString(code, DoubleQuotes)),
+				pos: pos
+			}
+		].concat(args == null ? [] : args);
+		final rawCall:Expr = {
+			expr: ECall({
+				expr: EConst(CIdent("__ocaml__")),
+				pos: pos
+			}, callArgs),
+			pos: pos
+		};
+		return {
+			expr: EUntyped(rawCall),
+			pos: pos
+		};
 	}
 }

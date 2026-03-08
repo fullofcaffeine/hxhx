@@ -89,6 +89,7 @@
     "test:m14:native-macro-module-host-abi": "haxe test/m14_native_macro_module_host_abi_integration_test.hxml",
     "test:m14:macro-runtime-mode-switch": "haxe test/m14_macro_runtime_mode_switch_integration_test.hxml",
     "test:m14:macro-host-runtime-api": "haxe test/m14_macro_host_runtime_api_integration_test.hxml",
+    "test:m14:runtime-typed-lambda": "haxe test/m14_runtime_typed_lambda_integration_test.hxml",
     "test:m14:runtime-build-fields": "haxe test/m14_runtime_build_fields_integration_test.hxml",
     "test:m14:runtime-applied-type-metadata": "haxe test/m14_runtime_applied_type_metadata_integration_test.hxml",
     "test:m14:stage3-global-build-metadata": "haxe test/m14_stage3_global_build_metadata_integration_test.hxml && neko .tmp/m14_stage3_global_build_metadata_integration_test.n",

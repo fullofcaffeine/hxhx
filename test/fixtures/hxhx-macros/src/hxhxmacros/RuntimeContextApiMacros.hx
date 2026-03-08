@@ -990,13 +990,67 @@ class RuntimeContextApiMacros {
 				Context.fatalError("runtime macro typed-expr probe: expected module-qualified roundtrip type path", pos);
 		}
 
+		final parsedLambda = Context.parseInlineString("(item) -> item.name", pos);
+		final typedLambdaExpr = Context.typeExpr(parsedLambda);
+		final typedLambdaType = TypeTools.toString(typedLambdaExpr.t);
+		if (typedLambdaType != "(Dynamic) -> Dynamic")
+			Context.fatalError("runtime macro typed-expr probe: expected Dynamic arrow function type but got " + typedLambdaType, pos);
+		final typedLambdaString = TypedExprTools.toString(typedLambdaExpr, false);
+		if (typedLambdaString.indexOf("item") < 0 || typedLambdaString.indexOf("->") < 0 || typedLambdaString.indexOf(".name") < 0)
+			Context.fatalError("runtime macro typed-expr probe: expected stringified arrow function", pos);
+		switch (typedLambdaExpr.expr) {
+			case TFunction(fun):
+				if (fun.args == null || fun.args.length != 1)
+					Context.fatalError("runtime macro typed-expr probe: expected one arrow arg", pos);
+				if (fun.args[0].v.name != "item")
+					Context.fatalError("runtime macro typed-expr probe: expected arrow arg name item", pos);
+				if (TypeTools.toString(fun.args[0].v.t) != "Dynamic")
+					Context.fatalError("runtime macro typed-expr probe: expected Dynamic arrow arg type", pos);
+				if (TypeTools.toString(fun.t) != "Dynamic")
+					Context.fatalError("runtime macro typed-expr probe: expected Dynamic arrow return type", pos);
+				switch (fun.expr.expr) {
+					case TField(owner, FDynamic("name")):
+						switch (owner.expr) {
+							case TIdent("item"):
+							case _:
+								Context.fatalError("runtime macro typed-expr probe: expected arrow body owner item", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro typed-expr probe: expected arrow body field access", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected TFunction for arrow function", pos);
+		}
+		final typedLambdaRoundTrip = Context.getTypedExpr(typedLambdaExpr);
+		switch (typedLambdaRoundTrip.expr) {
+			case EFunction(FArrow, fn):
+				if (fn.args == null || fn.args.length != 1)
+					Context.fatalError("runtime macro typed-expr probe: expected one roundtrip arrow arg", pos);
+				if (fn.args[0].name != "item")
+					Context.fatalError("runtime macro typed-expr probe: expected roundtrip arrow arg name item", pos);
+				switch (fn.expr.expr) {
+					case EField(owner, "name", _):
+						switch (owner.expr) {
+							case EConst(CIdent("item")):
+							case _:
+								Context.fatalError("runtime macro typed-expr probe: expected roundtrip arrow owner item", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro typed-expr probe: expected roundtrip arrow body field access", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected roundtrip arrow function expr", pos);
+		}
+
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR", typedExprString);
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_VISITS", Std.string(visitedNodes));
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_DYNAMIC", typedCallType + ";" + typedObjectType + ";" + typedArrayType);
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_TYPE_PATH", typedTypeExprPath);
+		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_LAMBDA", typedLambdaType + ";" + typedLambdaString);
 
 		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes + ";typedCallType=" + typedCallType
-			+ ";typedObjectType=" + typedObjectType + ";typedArrayType=" + typedArrayType + ";typedTypeExprPath=" + typedTypeExprPath;
+			+ ";typedObjectType=" + typedObjectType + ";typedArrayType=" + typedArrayType + ";typedTypeExprPath=" + typedTypeExprPath + ";typedLambdaType="
+			+ typedLambdaType;
 	}
 
 	public static function probeTypedVarExprPlumbing():String {

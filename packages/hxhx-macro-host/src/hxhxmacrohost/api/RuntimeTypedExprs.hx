@@ -19,6 +19,7 @@ import hxhxmacrohost.Protocol;
 		`Context.getType(...)` rung
 	  - literal constants
 	  - generic identifiers
+	  - narrow arrow functions
 	  - dynamic field and call chains
 	  - object and array literals
 	  - array access
@@ -82,6 +83,8 @@ class RuntimeTypedExprs {
 			case ECast(inner, ct):
 				final typedInner = typeExpr(inner);
 				makeTyped(e.pos, TCast(typedInner, null), ct == null ? typedInner.t : RuntimeMacroTypes.resolveComplexType(ct));
+			case EFunction(FArrow, fn):
+				typeArrowFunctionExpr(e.pos, fn);
 			case EUnop(op, postFix, inner):
 				makeTyped(e.pos, TUnop(op, postFix, typeExpr(inner)), dynamicType());
 			case EBlock(items):
@@ -151,6 +154,8 @@ class RuntimeTypedExprs {
 				expr == null ? "return" : ("return " + toString(expr));
 			case TBinop(op, e1, e2):
 				toString(e1) + " " + renderBinop(op) + " " + toString(e2);
+			case TFunction(fun):
+				renderTypedArrowFunction(fun);
 			case _:
 				throw "runtime typed expr -> string: unsupported typed expr shape";
 		};
@@ -216,6 +221,22 @@ class RuntimeTypedExprs {
 				makeExpr(e.pos, EReturn(expr == null ? null : toExpr(expr)));
 			case TBinop(op, e1, e2):
 				makeExpr(e.pos, EBinop(op, toExpr(e1), toExpr(e2)));
+			case TFunction(fun):
+				makeExpr(e.pos, EFunction(FArrow, {
+					args: [
+						for (arg in fun.args)
+							{
+								name: arg.v.name,
+								type: RuntimeMacroTypes.toComplexType(arg.v.t),
+								opt: false,
+								value: arg.value == null ? null : toExpr(arg.value),
+								meta: null
+							}
+					],
+					ret: RuntimeMacroTypes.toComplexType(fun.t),
+					expr: unwrapArrowBody(fun.expr),
+					params: []
+				}));
 			case _:
 				throw "runtime typed expr -> expr: unsupported typed expr shape";
 		};
@@ -449,6 +470,43 @@ class RuntimeTypedExprs {
 		return makeTyped(pos, TVar(tvar, typedInit), RuntimeMacroTypes.getTypeByName("Void"));
 	}
 
+	static function typeArrowFunctionExpr(pos:Position, fn:Function):TypedExpr {
+		if (fn == null)
+			throw "runtime macro typeExpr: null arrow function";
+		final typedArgs = new Array<{v:TVar, value:Null<TypedExpr>}>();
+		final argTypes = new Array<{name:String, opt:Bool, t:Type}>();
+		final rawArgs = fn.args == null ? [] : fn.args;
+		for (i in 0...rawArgs.length) {
+			final arg = rawArgs[i];
+			final argType = arg == null || arg.type == null ? dynamicType() : RuntimeMacroTypes.resolveComplexType(arg.type);
+			final typedDefault = arg == null || arg.value == null ? null : typeExpr(arg.value);
+			typedArgs.push({
+				v: RuntimeMacroTypes.localTVar(arg == null ? ("arg" + i) : arg.name, RuntimeMacroTypes.toString(argType), i + 1, false, false),
+				value: typedDefault
+			});
+			argTypes.push({
+				name: arg == null ? ("arg" + i) : arg.name,
+				opt: arg != null && arg.opt == true,
+				t: argType
+			});
+		}
+		final typedBody = typeExpr(fn.expr);
+		final returnType = fn.ret == null ? typedBody.t : RuntimeMacroTypes.resolveComplexType(fn.ret);
+		final functionType:Type = TFun([
+			for (arg in argTypes)
+				{
+					name: arg.name == null ? "" : arg.name,
+					opt: arg.opt,
+					t: arg.t
+				}
+		], returnType);
+		return makeTyped(pos, TFunction({
+			args: typedArgs,
+			t: returnType,
+			expr: typedBody
+		}), functionType);
+	}
+
 	static function typeBlockExpr(pos:Position, items:Array<Expr>):TypedExpr {
 		final typedItems = items == null ? [] : [for (item in items) typeExpr(item)];
 		final resultType = typedItems.length == 0 ? RuntimeMacroTypes.getTypeByName("Void") : typedItems[typedItems.length - 1].t;
@@ -521,6 +579,27 @@ class RuntimeTypedExprs {
 			case OpSpread: "...";
 		};
 		return postFix ? (renderedInner + renderedOp) : (renderedOp + renderedInner);
+	}
+
+	static function renderTypedArrowFunction(fun:TFunc):String {
+		final args = fun == null || fun.args == null ? [] : fun.args;
+		final body = fun == null ? null : fun.expr;
+		return "(" + [for (arg in args) arg.v.name].join(", ") + ") -> " + toString(stripArrowReturn(body));
+	}
+
+	static function stripArrowReturn(body:TypedExpr):TypedExpr {
+		if (body == null)
+			return makeTyped(defaultPosition(), TConst(TNull), RuntimeMacroTypes.getTypeByName("Dynamic"));
+		return switch (body.expr) {
+			case TReturn(inner):
+				inner == null ? body : inner;
+			case _:
+				body;
+		};
+	}
+
+	static function unwrapArrowBody(body:TypedExpr):Expr {
+		return toExpr(stripArrowReturn(body));
 	}
 
 	static function renderMetadata(meta:MetadataEntry):String {

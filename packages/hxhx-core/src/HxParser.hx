@@ -1413,10 +1413,21 @@ class HxParser {
 		//   parser drifts into `EUnsupported("->")` placeholders.
 		//
 		// Bring-up scope
-		// - Only supports the simplest form: a single identifier parameter.
-		// - More complex forms (`(a, b) -> ...`, blocks, pattern args) are future work.
+		// - Supports:
+		//   - `name -> expr`
+		//   - `(a) -> expr`
+		//   - `(a, b) -> expr`
+		//   - `() -> expr`
+		// - Parameter forms remain identifier-only. Typed/default/pattern args are future work.
 		if (!stop()) {
 			switch (cur.kind) {
+				case TLParen:
+					final parenLambda = tryReadParenthesizedLambdaArgs();
+					if (parenLambda != null) {
+						consumeUntilIndex(parenLambda.endIndex);
+						final body = parseExpr(stop);
+						return ELambda(parenLambda.args, body);
+					}
 				case TIdent(name):
 					if (peekKind().match(TOther("-".code)) && peekKind2().match(TOther(">".code))) {
 						// Consume `name ->`.
@@ -1505,6 +1516,77 @@ class HxParser {
 			}
 		}
 		return e;
+	}
+
+	function tryReadParenthesizedLambdaArgs():Null<{args:Array<String>, endIndex:Int}> {
+		if (!cur.kind.match(TLParen))
+			return null;
+		final start = currentIndex();
+		if (start < 0 || start >= source.length || source.charCodeAt(start) != "(".code)
+			return null;
+		var i = start + 1;
+		var depth = 1;
+		while (i < source.length && depth > 0) {
+			final c = source.charCodeAt(i);
+			switch (c) {
+				case "(".code:
+					// Keep this narrow: parenthesized lambda params stay flat.
+					return null;
+				case ")".code:
+					depth -= 1;
+					if (depth == 0)
+						break;
+				case _:
+			}
+			i += 1;
+		}
+		if (depth != 0)
+			return null;
+		final closeIndex = i;
+		var j = closeIndex + 1;
+		while (j < source.length) {
+			final code = source.charCodeAt(j);
+			if (code == " ".code || code == "\t".code || code == "\n".code || code == "\r".code) {
+				j += 1;
+				continue;
+			}
+			break;
+		}
+		if (j + 1 >= source.length || source.charCodeAt(j) != "-".code || source.charCodeAt(j + 1) != ">".code)
+			return null;
+
+		final rawArgs = StringTools.trim(source.substring(start + 1, closeIndex));
+		final args = new Array<String>();
+		if (rawArgs.length > 0) {
+			for (part in rawArgs.split(",")) {
+				final arg = StringTools.trim(part);
+				if (!isValidLambdaArgName(arg))
+					return null;
+				args.push(arg);
+			}
+		}
+		return {args: args, endIndex: j + 2};
+	}
+
+	function isValidLambdaArgName(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		final first = name.charCodeAt(0);
+		final firstOk = (first >= "A".code && first <= "Z".code) || (first >= "a".code && first <= "z".code) || first == "_".code;
+		if (!firstOk)
+			return false;
+		for (i in 1...name.length) {
+			final c = name.charCodeAt(i);
+			final ok = (c >= "A".code && c <= "Z".code) || (c >= "a".code && c <= "z".code) || (c >= "0".code && c <= "9".code) || c == "_".code;
+			if (!ok)
+				return false;
+		}
+		return true;
+	}
+
+	function consumeUntilIndex(target:Int):Void {
+		while (!cur.kind.match(TEof) && currentIndex() < target)
+			bump();
 	}
 
 	function parseSwitchExpr(stop:() -> Bool):HxExpr {

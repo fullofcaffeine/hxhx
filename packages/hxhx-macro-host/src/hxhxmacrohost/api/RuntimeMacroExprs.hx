@@ -22,6 +22,7 @@ import haxe.macro.Expr;
 	  - literals (`null`, booleans, strings, ints, floats)
 	  - identifiers / bare enum-like values / `this` / `super`
 	  - field access and call chains
+	  - narrow arrow lambdas (`(arg0, arg1) -> expr`)
 	  - unary / binary / ternary expressions
 	  - `new TypePath(...)`
 	  - array literals and array access
@@ -36,7 +37,7 @@ import haxe.macro.Expr;
 
 	Gotchas
 	- This is not a full Haxe parser bridge.
-	- Structured switch/try/lambda/comprehension/range nodes remain unsupported at runtime.
+	- Structured switch/try/comprehension/range nodes remain unsupported at runtime.
 	- Type-hint parsing for `cast(..., T)` is intentionally narrow and only supports simple path-like
 	  forms plus `Null<T>` / `Dynamic<T>` wrappers.
 **/
@@ -148,11 +149,27 @@ class RuntimeMacroExprs {
 				ECast(convert(inner, pos), parseOptionalComplexType(typeHint));
 			case EUntyped(inner):
 				EUntyped(convert(inner, pos));
+			case ELambda(args, body):
+				EFunction(FArrow, {
+					args: [
+						for (arg in args)
+							{
+								name: arg,
+								type: null,
+								opt: false,
+								value: null,
+								meta: null
+							}
+					],
+					ret: null,
+					expr: convert(body, pos),
+					params: []
+				});
 			case EUnop(op, inner):
 				EUnop(parseUnop(op), false, convert(inner, pos));
 			case EBinop(op, left, right):
 				EBinop(parseBinop(op), convert(left, pos), convert(right, pos));
-			case ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | ELambda(_, _) | EArrayComprehension(_, _, _) | ERange(_, _) | EUnsupported(_):
+			case ETryCatchRaw(_) | ESwitchRaw(_) | ESwitch(_, _, _) | EArrayComprehension(_, _, _) | ERange(_, _) | EUnsupported(_):
 				throw "runtime macro parse: unsupported parsed expression shape";
 		};
 	}
