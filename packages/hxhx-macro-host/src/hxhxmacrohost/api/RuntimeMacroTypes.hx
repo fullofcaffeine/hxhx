@@ -309,6 +309,21 @@ class RuntimeMacroTypes {
 		name:String,
 		kind:String,
 		metadata:Array<String>,
+		staticFields:Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>,
 		file:String,
 		min:Int,
 		max:Int
@@ -344,6 +359,7 @@ class RuntimeMacroTypes {
 				name: moduleName,
 				kind: "class",
 				metadata: [],
+				staticFields: [],
 				file: DEFAULT_FILE,
 				min: 0,
 				max: 0
@@ -354,7 +370,7 @@ class RuntimeMacroTypes {
 			if (trimmedName.length == 0 || seen.exists(trimmedName))
 				continue;
 			seen.set(trimmedName, true);
-			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata, entry.file, entry.min, entry.max));
+			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata, entry.file, entry.min, entry.max, entry.staticFields));
 		}
 		return out;
 	}
@@ -364,7 +380,21 @@ class RuntimeMacroTypes {
 	}
 
 	public static function typeForResolvedDecl(typePath:String, kind:String, ?metadataEntries:Array<String>, ?moduleNameOverride:String, ?file:String,
-			?min:Int, ?max:Int):Type {
+			?min:Int, ?max:Int, ?staticFields:Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>):Type {
 		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
 		if (trimmed.length == 0)
 			throw "runtime macro type path lookup: empty type path";
@@ -373,8 +403,8 @@ class RuntimeMacroTypes {
 			throw "runtime macro type path lookup: invalid type path";
 		final name = parts.pop();
 		final moduleName = moduleNameOverride == null || moduleNameOverride.length == 0 ? name : moduleNameOverride;
-		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max);
-	}
+		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max, staticFields);
+		}
 
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
 		final out = new Array<Ref<ClassType>>();
@@ -551,6 +581,26 @@ class RuntimeMacroTypes {
 		return switch (t) {
 			case TInst(c, _):
 				c;
+			case _:
+				null;
+		}
+	}
+
+	/**
+		Return the synthetic implementation class carrier for a runtime abstract ref.
+
+		Why
+		- Real sibling consumers inspect `abs.impl.get().statics.get()` when an abstract exposes
+		  compile-time helper constants/functions.
+		- Matching on `haxe.macro.Type` directly inside generated macro-host code is still the easiest
+		  place to trip backend constructor-name seams, so the runtime helper layer should own that
+		  pattern match.
+	**/
+	public static function abstractImplClassRefOf(t:Type):Null<Ref<ClassType>> {
+		return switch (t) {
+			case TAbstract(a, _):
+				final abs = a.get();
+				abs == null ? null : abs.impl;
 			case _:
 				null;
 		}
@@ -754,7 +804,21 @@ class RuntimeMacroTypes {
 	}
 
 	static function typeFromResolvedDecl(pack:Array<String>, module:String, name:String, kind:String, ?metadataEntries:Array<String>, ?file:String, ?min:Int,
-			?max:Int):Type {
+			?max:Int, ?staticFields:Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>):Type {
 		final pos = position(file, min, max);
 		return switch (kind == null ? "" : StringTools.trim(kind).toLowerCase()) {
 			case "enum":
@@ -762,11 +826,11 @@ class RuntimeMacroTypes {
 			case "typedef":
 				TType(defTypeRef(pack, name, module, [], TDynamic(null), metadataEntries, pos), []);
 			case "abstract":
-				abstractType(abstractRef(pack, name, module, [], TDynamic(null), metadataEntries, pos), []);
+				abstractType(abstractRef(pack, name, module, [], TDynamic(null), metadataEntries, pos, staticFields), []);
 			case _:
-				classType(pack, module, name, metadataEntries, file, min, max);
+				classType(pack, module, name, metadataEntries, file, min, max, staticFields);
 		}
-	}
+		}
 
 	static function substituteTypeParameters(t:Type, substitutions:Map<String, Type>):Type {
 		return switch (t) {
@@ -834,10 +898,29 @@ class RuntimeMacroTypes {
 		}
 	}
 
-	static function classType(pack:Array<String>, module:String, name:String, ?metadataEntries:Array<String>, ?file:String, ?min:Int, ?max:Int):Type {
-		final value:Type = TInst(classRef(pack, name, module, metadataEntries, null, null, position(file, min, max)), []);
+	static function classType(pack:Array<String>, module:String, name:String, ?metadataEntries:Array<String>, ?file:String, ?min:Int, ?max:Int,
+			?staticFieldEntries:Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>):Type {
+		final staticFields = staticFieldEntries == null ? [] : [
+			for (entry in staticFieldEntries)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max)
+		];
+		final value:Type = TInst(classRef(pack, name, module, metadataEntries, null, staticFields, position(file, min, max)), []);
 		return value;
-	}
+		}
 
 	static function moduleFieldsCarrier(pack:Array<String>, module:String, modulePath:String, entries:Array<{
 		name:String,
@@ -1041,7 +1124,26 @@ class RuntimeMacroTypes {
 	}
 
 	static function abstractRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type, ?metadataEntries:Array<String>,
-			?pos:Position):Ref<AbstractType> {
+			?pos:Position, ?staticFieldEntries:Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>):Ref<AbstractType> {
+		final implStatics = staticFieldEntries == null ? [] : [
+			for (entry in staticFieldEntries)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max)
+		];
+		final implRef = implStatics.length == 0 ? null : classRef(pack, name + "_Impl_", module, null, null, implStatics, pos);
 		final value:AbstractType = {
 			pack: pack.copy(),
 			name: name,
@@ -1054,7 +1156,7 @@ class RuntimeMacroTypes {
 			doc: null,
 			exclude: function():Void {},
 			type: type == null ? TDynamic(null) : type,
-			impl: null,
+			impl: implRef,
 			binops: [],
 			unops: [],
 			from: [],
@@ -1064,7 +1166,7 @@ class RuntimeMacroTypes {
 			resolveWrite: null
 		};
 		return makeRef(value, fullPath(pack, name));
-	}
+		}
 
 	static function makeRef<T>(value:T, label:String):Ref<T> {
 		return {

@@ -4,6 +4,7 @@ private typedef RuntimeResolvedTypeSnapshot = {
 	final name:String;
 	final kind:String;
 	final metadata:Array<String>;
+	final staticFields:Array<RuntimeResolvedModuleFieldSnapshot>;
 	final file:String;
 	final min:Int;
 	final max:Int;
@@ -273,6 +274,422 @@ class MacroHostClient {
 		return out;
 	}
 
+	static function scanResolvedTypeStaticFields(path:String, typeName:String, kind:String):Array<RuntimeResolvedModuleFieldSnapshot> {
+		final filtered = readFilteredResolvedModuleSource(path);
+		if (filtered.length == 0)
+			return [];
+
+		final normalizedKind = StringTools.trim(kind == null ? "" : kind).toLowerCase();
+		if (normalizedKind != "class" && normalizedKind != "abstract")
+			return [];
+
+		function lineSpan(rawLine:String, start:Int):{min:Int, max:Int} {
+			var min = 0;
+			while (min < rawLine.length) {
+				final c = rawLine.charCodeAt(min);
+				if (c == " ".code || c == "\t".code)
+					min += 1;
+				else
+					break;
+			}
+			var max = rawLine.length;
+			while (max > min) {
+				final c = rawLine.charCodeAt(max - 1);
+				if (c == "\n".code || c == "\r".code)
+					max -= 1;
+				else
+					break;
+			}
+			return {
+				min: start + min,
+				max: start + max
+			};
+		}
+
+		function stripLineComments(text:String):String {
+			var inString = false;
+			var quote = "";
+			var i = 0;
+			while (i < text.length - 1) {
+				final ch = text.charAt(i);
+				if (inString) {
+					if (ch == "\\") {
+						i += 2;
+						continue;
+					}
+					if (ch == quote)
+						inString = false;
+					i += 1;
+					continue;
+				}
+				if (ch == "\"" || ch == "'") {
+					inString = true;
+					quote = ch;
+					i += 1;
+					continue;
+				}
+				if (ch == "/" && text.charAt(i + 1) == "/")
+					return text.substr(0, i);
+				i += 1;
+			}
+			return text;
+		}
+
+		function extractName(prefix:String, keyword:String):String {
+			final rest = StringTools.trim(prefix.substr(keyword.length));
+			if (rest.length == 0)
+				return "";
+			final match = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+			return match.match(rest) ? match.matched(1) : "";
+		}
+
+		function extractInitializer(prefix:String, keyword:String):Null<String> {
+			final rest = StringTools.trim(prefix.substr(keyword.length));
+			if (rest.length == 0)
+				return null;
+			final nameMatch = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+			if (!nameMatch.match(rest))
+				return null;
+			final afterName = StringTools.trim(rest.substr(nameMatch.matchedPos().pos + nameMatch.matchedPos().len));
+			if (afterName.length == 0)
+				return null;
+			final eqIndex = afterName.indexOf("=");
+			if (eqIndex < 0)
+				return null;
+			var exprText = StringTools.trim(afterName.substr(eqIndex + 1));
+			if (exprText.length == 0)
+				return null;
+			if (StringTools.endsWith(exprText, ";"))
+				exprText = StringTools.trim(exprText.substr(0, exprText.length - 1));
+			return exprText.length == 0 ? null : exprText;
+		}
+
+		function splitTopLevelComma(text:String):Array<String> {
+			final out = new Array<String>();
+			if (text == null)
+				return out;
+			var start = 0;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			var angleDepth = 0;
+			var inString = false;
+			var quote = "";
+			var i = 0;
+			while (i < text.length) {
+				final ch = text.charAt(i);
+				if (inString) {
+					if (ch == "\\") {
+						i += 2;
+						continue;
+					}
+					if (ch == quote)
+						inString = false;
+					i += 1;
+					continue;
+				}
+				switch (ch) {
+					case "\"" | "'":
+						inString = true;
+						quote = ch;
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case ",":
+						if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0) {
+							out.push(text.substr(start, i - start));
+							start = i + 1;
+						}
+					case _:
+				}
+				i += 1;
+			}
+			out.push(text.substr(start));
+			return out;
+		}
+
+		function parseFunctionArgs(text:String):Array<{name:String, opt:Bool, typeText:String}> {
+			final out = new Array<{name:String, opt:Bool, typeText:String}>();
+			for (segment in splitTopLevelComma(text)) {
+				final trimmed = StringTools.trim(segment);
+				if (trimmed.length == 0)
+					continue;
+				var working = trimmed;
+				var optional = false;
+				if (StringTools.startsWith(working, "?")) {
+					optional = true;
+					working = StringTools.trim(working.substr(1));
+				}
+				final nameMatch = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+				if (!nameMatch.match(working))
+					continue;
+				final name = nameMatch.matched(1);
+				var afterName = StringTools.trim(working.substr(nameMatch.matchedPos().pos + nameMatch.matchedPos().len));
+				var typeText = "Dynamic";
+				final eqIndex = afterName.indexOf("=");
+				if (eqIndex >= 0) {
+					optional = true;
+					afterName = StringTools.trim(afterName.substr(0, eqIndex));
+				}
+				if (StringTools.startsWith(afterName, ":")) {
+					final parsedType = StringTools.trim(afterName.substr(1));
+					if (parsedType.length > 0)
+						typeText = parsedType;
+				}
+				out.push({
+					name: name,
+					opt: optional,
+					typeText: typeText
+				});
+			}
+			return out;
+		}
+
+		function parseFunctionSignature(prefix:String):{
+			args:Array<{name:String, opt:Bool, typeText:String}>,
+			returnTypeText:Null<String>
+		} {
+			final signature = StringTools.trim(prefix.substr("function".length));
+			final openParen = signature.indexOf("(");
+			final closeParen = signature.lastIndexOf(")");
+			if (openParen < 0 || closeParen < openParen)
+				return {
+					args: [],
+					returnTypeText: null
+				};
+			final argsText = signature.substr(openParen + 1, closeParen - openParen - 1);
+			var tail = StringTools.trim(signature.substr(closeParen + 1));
+			var returnTypeText:Null<String> = null;
+			if (StringTools.startsWith(tail, ":")) {
+				tail = StringTools.trim(tail.substr(1));
+				final braceIndex = tail.indexOf("{");
+				if (braceIndex >= 0)
+					tail = StringTools.trim(tail.substr(0, braceIndex));
+				if (StringTools.endsWith(tail, ";"))
+					tail = StringTools.trim(tail.substr(0, tail.length - 1));
+				if (tail.length > 0)
+					returnTypeText = tail;
+			}
+			return {
+				args: parseFunctionArgs(argsText),
+				returnTypeText: returnTypeText
+			};
+		}
+
+		function countChar(text:String, ch:String):Int {
+			var count = 0;
+			var i = 0;
+			while (i < text.length) {
+				if (text.charAt(i) == ch)
+					count += 1;
+				i += 1;
+			}
+			return count;
+		}
+
+		function findTypeBodyStart():Int {
+			var braceDepth = 0;
+			var i = 0;
+			while (true) {
+				final t = ParserStageScanHelpers.scanNextToken(filtered, i);
+				i = t.nextPos;
+				if (t.text.length == 0)
+					return -1;
+
+				if (!t.isIdent) {
+					if (t.text == "{")
+						braceDepth += 1;
+					else if (t.text == "}")
+						braceDepth = braceDepth > 0 ? (braceDepth - 1) : 0;
+					continue;
+				}
+
+				if (braceDepth != 0)
+					continue;
+
+				if (t.text == "enum") {
+					var enumNameTok = ParserStageScanHelpers.scanNextToken(filtered, i);
+					while (enumNameTok.text.length > 0 && !enumNameTok.isIdent)
+						enumNameTok = ParserStageScanHelpers.scanNextToken(filtered, enumNameTok.nextPos);
+					if (!enumNameTok.isIdent || enumNameTok.text.length == 0)
+						continue;
+
+					if (enumNameTok.text == "abstract") {
+						enumNameTok = ParserStageScanHelpers.scanNextToken(filtered, enumNameTok.nextPos);
+						while (enumNameTok.text.length > 0 && !enumNameTok.isIdent)
+							enumNameTok = ParserStageScanHelpers.scanNextToken(filtered, enumNameTok.nextPos);
+						if (!enumNameTok.isIdent || enumNameTok.text.length == 0)
+							continue;
+					}
+					i = enumNameTok.nextPos;
+
+					var enumHeaderTok = ParserStageScanHelpers.scanNextToken(filtered, i);
+					while (enumHeaderTok.text.length > 0 && enumHeaderTok.text != "{" && enumHeaderTok.text != ";")
+						enumHeaderTok = ParserStageScanHelpers.scanNextToken(filtered, enumHeaderTok.nextPos);
+					if (enumHeaderTok.text == "{") {
+						final scanned = ParserStageScanHelpers.scanEnumBodyForCtors(filtered, enumHeaderTok.nextPos);
+						i = scanned.nextPos;
+					} else if (enumHeaderTok.text.length > 0) {
+						i = enumHeaderTok.nextPos;
+					}
+					continue;
+				}
+
+				if (t.text != normalizedKind)
+					continue;
+
+				var nameTok = ParserStageScanHelpers.scanNextToken(filtered, i);
+				while (nameTok.text.length > 0 && !nameTok.isIdent)
+					nameTok = ParserStageScanHelpers.scanNextToken(filtered, nameTok.nextPos);
+				if (!nameTok.isIdent || nameTok.text.length == 0)
+					continue;
+				if (nameTok.text != typeName)
+					continue;
+
+				var headerTok = ParserStageScanHelpers.scanNextToken(filtered, nameTok.nextPos);
+				while (headerTok.text.length > 0 && headerTok.text != "{" && headerTok.text != ";")
+					headerTok = ParserStageScanHelpers.scanNextToken(filtered, headerTok.nextPos);
+				return headerTok.text == "{" ? headerTok.nextPos : -1;
+			}
+			return -1;
+		}
+
+		final bodyStart = findTypeBodyStart();
+		if (bodyStart < 0)
+			return [];
+
+		final out = new Array<RuntimeResolvedModuleFieldSnapshot>();
+		final seen = new Map<String, Bool>();
+		final lines = splitLinesPreserveNewlines(filtered.substr(bodyStart));
+		var braceDepth = 1;
+		var blockCommentDepth = 0;
+		var lineOffset = bodyStart;
+		var pendingMetadata = new Array<String>();
+
+		function push(kind:String, name:String, span:{min:Int, max:Int}, ?initExpr:Null<String>, ?args:Array<{name:String, opt:Bool, typeText:String}>,
+				?returnTypeText:Null<String>):Void {
+			final trimmed = StringTools.trim(name == null ? "" : name);
+			if (trimmed.length == 0 || seen.exists(trimmed))
+				return;
+			seen.set(trimmed, true);
+			out.push({
+				name: trimmed,
+				kind: kind,
+				metadata: pendingMetadata.copy(),
+				initExpr: initExpr,
+				args: args == null ? [] : args.copy(),
+				returnTypeText: returnTypeText,
+				file: path,
+				min: span.min,
+				max: span.max
+			});
+			pendingMetadata = [];
+		}
+
+		function hasStaticBefore(text:String, keywordIndex:Int):Bool {
+			if (keywordIndex < 0)
+				return false;
+			return text.substr(0, keywordIndex).indexOf("static") >= 0;
+		}
+
+		for (rawLine in lines) {
+			final currentLineOffset = lineOffset;
+			lineOffset += rawLine.length;
+			var line = rawLine;
+			if (blockCommentDepth > 0) {
+				while (line.length > 0 && blockCommentDepth > 0) {
+					final close = line.indexOf("*/");
+					if (close == -1) {
+						line = "";
+					} else {
+						blockCommentDepth -= 1;
+						line = line.substr(close + 2);
+					}
+				}
+			}
+
+			while (true) {
+				final open = line.indexOf("/*");
+				if (open == -1)
+					break;
+				final close = line.indexOf("*/", open + 2);
+				if (close == -1) {
+					blockCommentDepth += 1;
+					line = line.substr(0, open);
+					break;
+				}
+				line = line.substr(0, open) + line.substr(close + 2);
+			}
+
+			line = stripLineComments(line);
+			final trimmed = StringTools.trim(line);
+			if (trimmed.length == 0) {
+				braceDepth += countChar(line, "{");
+				braceDepth -= countChar(line, "}");
+				if (braceDepth < 0)
+					braceDepth = 0;
+				if (braceDepth <= 1)
+					pendingMetadata = [];
+				continue;
+			}
+
+			if (braceDepth == 1) {
+				final span = lineSpan(rawLine, currentLineOffset);
+				if (StringTools.startsWith(trimmed, "@:")) {
+					pendingMetadata.push(trimmed);
+				} else {
+					final functionIndex = trimmed.indexOf("function ");
+					final varIndex = trimmed.indexOf("var ");
+					final finalIndex = trimmed.indexOf("final ");
+					if (functionIndex >= 0 && hasStaticBefore(trimmed, functionIndex)) {
+						final signature = trimmed.substr(functionIndex);
+						final parsed = parseFunctionSignature(signature);
+						push("method", extractName(signature, "function"), span, null, parsed.args, parsed.returnTypeText);
+					} else if (varIndex >= 0 && hasStaticBefore(trimmed, varIndex)) {
+						final fieldDecl = trimmed.substr(varIndex);
+						push("var", extractName(fieldDecl, "var"), span, extractInitializer(fieldDecl, "var"));
+					} else if (finalIndex >= 0
+						&& hasStaticBefore(trimmed, finalIndex)
+						&& (functionIndex < 0 || finalIndex < functionIndex)) {
+						final fieldDecl = trimmed.substr(finalIndex);
+						push("final", extractName(fieldDecl, "final"), span, extractInitializer(fieldDecl, "final"));
+					} else if (!StringTools.startsWith(trimmed, "#if")
+						&& !StringTools.startsWith(trimmed, "#elseif")
+						&& !StringTools.startsWith(trimmed, "#else")
+						&& !StringTools.startsWith(trimmed, "#end")) {
+						pendingMetadata = [];
+					}
+				}
+			}
+
+			braceDepth += countChar(line, "{");
+			braceDepth -= countChar(line, "}");
+			if (braceDepth < 0)
+				braceDepth = 0;
+			if (braceDepth <= 0)
+				break;
+		}
+
+		return out;
+	}
+
 	public static function scanResolvedModuleTypes(modulePath:String, path:String, fallbackMainName:String,
 			?includeFallbackMain:Bool = true):Array<RuntimeResolvedTypeSnapshot> {
 		final out = new Array<RuntimeResolvedTypeSnapshot>();
@@ -294,10 +711,12 @@ class MacroHostClient {
 				min: 0,
 				max: 0
 			};
+			final staticFields = scanResolvedTypeStaticFields(path, trimmed, kind);
 			out.push({
 				name: trimmed,
 				kind: kind,
 				metadata: MacroState.listAppliedTypeMetadata(fullTypePath(trimmed)),
+				staticFields: staticFields,
 				file: span.file,
 				min: span.min,
 				max: span.max
@@ -331,6 +750,7 @@ class MacroHostClient {
 					name: existing.name,
 					kind: existing.kind,
 					metadata: mainMetadata,
+					staticFields: existing.staticFields,
 					file: existing.file,
 					min: existing.min,
 					max: existing.max
@@ -340,6 +760,7 @@ class MacroHostClient {
 					name: mainName,
 					kind: "class",
 					metadata: mainMetadata,
+					staticFields: scanResolvedTypeStaticFields(path, mainName, "class"),
 					file: path,
 					min: 0,
 					max: 0
@@ -1372,9 +1793,41 @@ private class MacroClient {
 							}
 						value;
 					})));
+					final staticFields = {
+						var matched:Null<RuntimeResolvedTypeSnapshot> = null;
+						for (entry in resolvedTypes)
+							if (entry.name == targetTypeName) {
+								matched = entry;
+								break;
+							}
+						matched == null ? [] : matched.staticFields;
+					};
 					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
 					for (i in 0...metadata.length)
 						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
+					parts.push(MacroProtocol.encodeLen("sc", Std.string(staticFields.length)));
+					for (i in 0...staticFields.length) {
+						final entry = staticFields[i];
+						parts.push(MacroProtocol.encodeLen("sn" + i, entry.name));
+						parts.push(MacroProtocol.encodeLen("sk" + i, entry.kind));
+						parts.push(MacroProtocol.encodeLen("sf" + i, entry.file));
+						parts.push(MacroProtocol.encodeLen("smin" + i, Std.string(entry.min)));
+						parts.push(MacroProtocol.encodeLen("smax" + i, Std.string(entry.max)));
+						if (entry.initExpr != null && entry.initExpr.length > 0)
+							parts.push(MacroProtocol.encodeLen("se" + i, entry.initExpr));
+						if (entry.returnTypeText != null && entry.returnTypeText.length > 0)
+							parts.push(MacroProtocol.encodeLen("sr" + i, entry.returnTypeText));
+						parts.push(MacroProtocol.encodeLen("sac" + i, Std.string(entry.args.length)));
+						for (j in 0...entry.args.length) {
+							final arg = entry.args[j];
+							parts.push(MacroProtocol.encodeLen("san" + i + "_" + j, arg.name));
+							parts.push(MacroProtocol.encodeLen("sao" + i + "_" + j, arg.opt ? "1" : "0"));
+							parts.push(MacroProtocol.encodeLen("sat" + i + "_" + j, arg.typeText));
+						}
+						parts.push(MacroProtocol.encodeLen("smc" + i, Std.string(entry.metadata.length)));
+						for (j in 0...entry.metadata.length)
+							parts.push(MacroProtocol.encodeLen("smd" + i + "_" + j, entry.metadata[j]));
+					}
 					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
 				case "context.getModule":
 					final name = MacroProtocol.kvGet(tail, "n");
@@ -1408,6 +1861,29 @@ private class MacroClient {
 						parts.push(MacroProtocol.encodeLen("tmc" + i, Std.string(entry.metadata.length)));
 						for (j in 0...entry.metadata.length)
 							parts.push(MacroProtocol.encodeLen("tmd" + i + "_" + j, entry.metadata[j]));
+						parts.push(MacroProtocol.encodeLen("tsc" + i, Std.string(entry.staticFields.length)));
+						for (j in 0...entry.staticFields.length) {
+							final field = entry.staticFields[j];
+							parts.push(MacroProtocol.encodeLen("tsn" + i + "_" + j, field.name));
+							parts.push(MacroProtocol.encodeLen("tsk" + i + "_" + j, field.kind));
+							parts.push(MacroProtocol.encodeLen("tsf" + i + "_" + j, field.file));
+							parts.push(MacroProtocol.encodeLen("tsmin" + i + "_" + j, Std.string(field.min)));
+							parts.push(MacroProtocol.encodeLen("tsmax" + i + "_" + j, Std.string(field.max)));
+							if (field.initExpr != null && field.initExpr.length > 0)
+								parts.push(MacroProtocol.encodeLen("tse" + i + "_" + j, field.initExpr));
+							if (field.returnTypeText != null && field.returnTypeText.length > 0)
+								parts.push(MacroProtocol.encodeLen("tsr" + i + "_" + j, field.returnTypeText));
+							parts.push(MacroProtocol.encodeLen("tsac" + i + "_" + j, Std.string(field.args.length)));
+							for (k in 0...field.args.length) {
+								final arg = field.args[k];
+								parts.push(MacroProtocol.encodeLen("tsan" + i + "_" + j + "_" + k, arg.name));
+								parts.push(MacroProtocol.encodeLen("tsao" + i + "_" + j + "_" + k, arg.opt ? "1" : "0"));
+								parts.push(MacroProtocol.encodeLen("tsat" + i + "_" + j + "_" + k, arg.typeText));
+							}
+							parts.push(MacroProtocol.encodeLen("tsmc" + i + "_" + j, Std.string(field.metadata.length)));
+							for (k in 0...field.metadata.length)
+								parts.push(MacroProtocol.encodeLen("tsmd" + i + "_" + j + "_" + k, field.metadata[k]));
+						}
 					}
 					parts.push(MacroProtocol.encodeLen("fc", Std.string(resolvedFields.length)));
 					for (i in 0...resolvedFields.length) {

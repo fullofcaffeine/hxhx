@@ -54,6 +54,7 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			"hxhxmacros.RuntimeContextApiMacros.probeLocalTVars()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleLookup()",
 			"hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()",
+			"hxhxmacros.RuntimeContextApiMacros.probeSyntheticTypeStatics()",
 			"hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()",
 			"hxhxmacros.RuntimeContextApiMacros.probeMainExpr()",
 			"hxhxmacros.RuntimeContextApiMacros.probeStoreExprPlumbing()",
@@ -228,6 +229,11 @@ class M14MacroHostRuntimeApiIntegrationTest {
 				"moduleFields=featureEnabled;renderSummary;retryCount;routeTag;routerMarker;schemaMarker;sourceTag");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_FIELDS") == "featureEnabled;renderSummary;retryCount;routeTag;routerMarker;schemaMarker;sourceTag",
 				"expected runtime module field define");
+
+			final typeStaticsOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeSyntheticTypeStatics()");
+			assertContains("type statics output", typeStaticsOutput, "typeStatics=class=buildTag,classLabel;abstract=abstractLabel,renderTag");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_STATICS") == "class=buildTag,classLabel;abstract=abstractLabel,renderTag",
+				"expected runtime type statics define");
 
 			final typedExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()");
 			assertContains("typed expr output", typedExprOutput, "typedExpr=");

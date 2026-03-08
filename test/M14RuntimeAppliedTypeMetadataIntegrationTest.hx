@@ -127,6 +127,7 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleMembers",
 				kind: "class",
 				metadata: [],
+				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 100,
 				max: 120
@@ -135,6 +136,7 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleState",
 				kind: "enum",
 				metadata: enumApplied,
+				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 121,
 				max: 140
@@ -143,6 +145,7 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleData",
 				kind: "typedef",
 				metadata: typedefApplied,
+				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 141,
 				max: 160
@@ -151,6 +154,7 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				name: "RuntimeModuleId",
 				kind: "abstract",
 				metadata: abstractApplied,
+				staticFields: [],
 				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
 				min: 161,
 				max: 180

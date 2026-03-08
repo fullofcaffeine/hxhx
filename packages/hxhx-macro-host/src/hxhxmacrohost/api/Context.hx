@@ -341,11 +341,67 @@ class Context {
 			if (parts.exists(key))
 				metadata.push(parts.get(key));
 		}
+		final staticFields = new Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>();
+		final staticCount = parseNonNegativeInt(parts.exists("sc") ? parts.get("sc") : "", 0);
+		for (i in 0...staticCount) {
+			final nameKey = "sn" + i;
+			if (!parts.exists(nameKey))
+				continue;
+			final fieldMetadata = new Array<String>();
+			final fieldMetadataCount = parseNonNegativeInt(parts.exists("smc" + i) ? parts.get("smc" + i) : "", 0);
+			for (j in 0...fieldMetadataCount) {
+				final key = "smd" + i + "_" + j;
+				if (parts.exists(key))
+					fieldMetadata.push(parts.get(key));
+			}
+			final args = new Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>();
+			final argCount = parseNonNegativeInt(parts.exists("sac" + i) ? parts.get("sac" + i) : "", 0);
+			for (j in 0...argCount) {
+				final argNameKey = "san" + i + "_" + j;
+				if (!parts.exists(argNameKey))
+					continue;
+				args.push({
+					name: parts.get(argNameKey),
+					opt: parts.exists("sao" + i + "_" + j) && parts.get("sao" + i + "_" + j) == "1",
+					typeText: parts.exists("sat" + i + "_" + j) ? parts.get("sat" + i + "_" + j) : "Dynamic"
+				});
+			}
+			staticFields.push({
+				name: parts.get(nameKey),
+				kind: parts.exists("sk" + i) ? parts.get("sk" + i) : "var",
+				metadata: fieldMetadata,
+				initExpr: parts.exists("se" + i) ? parts.get("se" + i) : null,
+				args: args,
+				returnTypeText: parts.exists("sr" + i) ? parts.get("sr" + i) : null,
+				file: parts.exists("sf" + i) ? parts.get("sf" + i) : DEFAULT_MACRO_FILE,
+				min: parseNonNegativeInt(parts.exists("smin" + i) ? parts.get("smin" + i) : "", 0),
+				max: parseNonNegativeInt(parts.exists("smax" + i) ? parts.get("smax" + i) : "", 0)
+			});
+		}
 		final typePath = parts.exists("t") ? parts.get("t") : name;
 		final moduleName = parts.exists("m") ? parts.get("m") : null;
 		final kind = parts.exists("k") ? parts.get("k") : "class";
 		return RuntimeMacroTypes.typeForResolvedDecl(typePath, kind, metadata, moduleName, parts.exists("f") ? parts.get("f") : DEFAULT_MACRO_FILE,
-			parseNonNegativeInt(parts.exists("min") ? parts.get("min") : "", 0), parseNonNegativeInt(parts.exists("max") ? parts.get("max") : "", 0));
+			parseNonNegativeInt(parts.exists("min") ? parts.get("min") : "", 0), parseNonNegativeInt(parts.exists("max") ? parts.get("max") : "", 0),
+			staticFields);
 	}
 
 	public static function getModule(name:String):Array<Type> {
@@ -361,6 +417,21 @@ class Context {
 			name:String,
 			kind:String,
 			metadata:Array<String>,
+			staticFields:Array<{
+				name:String,
+				kind:String,
+				metadata:Array<String>,
+				initExpr:Null<String>,
+				args:Array<{
+					name:String,
+					opt:Bool,
+					typeText:String
+				}>,
+				returnTypeText:Null<String>,
+				file:String,
+				min:Int,
+				max:Int
+			}>,
 			file:String,
 			min:Int,
 			max:Int
@@ -377,10 +448,66 @@ class Context {
 				if (parts.exists(key))
 					metadata.push(parts.get(key));
 			}
+			final staticFields = new Array<{
+				name:String,
+				kind:String,
+				metadata:Array<String>,
+				initExpr:Null<String>,
+				args:Array<{
+					name:String,
+					opt:Bool,
+					typeText:String
+				}>,
+				returnTypeText:Null<String>,
+				file:String,
+				min:Int,
+				max:Int
+			}>();
+			final staticCount = parseNonNegativeInt(parts.exists("tsc" + i) ? parts.get("tsc" + i) : "", 0);
+			for (j in 0...staticCount) {
+				final fieldNameKey = "tsn" + i + "_" + j;
+				if (!parts.exists(fieldNameKey))
+					continue;
+				final fieldMetadata = new Array<String>();
+				final fieldMetadataCount = parseNonNegativeInt(parts.exists("tsmc" + i + "_" + j) ? parts.get("tsmc" + i + "_" + j) : "", 0);
+				for (k in 0...fieldMetadataCount) {
+					final key = "tsmd" + i + "_" + j + "_" + k;
+					if (parts.exists(key))
+						fieldMetadata.push(parts.get(key));
+				}
+				final args = new Array<{
+					name:String,
+					opt:Bool,
+					typeText:String
+				}>();
+				final argCount = parseNonNegativeInt(parts.exists("tsac" + i + "_" + j) ? parts.get("tsac" + i + "_" + j) : "", 0);
+				for (k in 0...argCount) {
+					final argNameKey = "tsan" + i + "_" + j + "_" + k;
+					if (!parts.exists(argNameKey))
+						continue;
+					args.push({
+						name: parts.get(argNameKey),
+						opt: parts.exists("tsao" + i + "_" + j + "_" + k) && parts.get("tsao" + i + "_" + j + "_" + k) == "1",
+						typeText: parts.exists("tsat" + i + "_" + j + "_" + k) ? parts.get("tsat" + i + "_" + j + "_" + k) : "Dynamic"
+					});
+				}
+				staticFields.push({
+					name: parts.get(fieldNameKey),
+					kind: parts.exists("tsk" + i + "_" + j) ? parts.get("tsk" + i + "_" + j) : "var",
+					metadata: fieldMetadata,
+					initExpr: parts.exists("tse" + i + "_" + j) ? parts.get("tse" + i + "_" + j) : null,
+					args: args,
+					returnTypeText: parts.exists("tsr" + i + "_" + j) ? parts.get("tsr" + i + "_" + j) : null,
+					file: parts.exists("tsf" + i + "_" + j) ? parts.get("tsf" + i + "_" + j) : DEFAULT_MACRO_FILE,
+					min: parseNonNegativeInt(parts.exists("tsmin" + i + "_" + j) ? parts.get("tsmin" + i + "_" + j) : "", 0),
+					max: parseNonNegativeInt(parts.exists("tsmax" + i + "_" + j) ? parts.get("tsmax" + i + "_" + j) : "", 0)
+				});
+			}
 			entries.push({
 				name: parts.get(nameKey),
 				kind: parts.exists("tk" + i) ? parts.get("tk" + i) : "class",
 				metadata: metadata,
+				staticFields: staticFields,
 				file: parts.exists("tf" + i) ? parts.get("tf" + i) : DEFAULT_MACRO_FILE,
 				min: parseNonNegativeInt(parts.exists("tmin" + i) ? parts.get("tmin" + i) : "", 0),
 				max: parseNonNegativeInt(parts.exists("tmax" + i) ? parts.get("tmax" + i) : "", 0)

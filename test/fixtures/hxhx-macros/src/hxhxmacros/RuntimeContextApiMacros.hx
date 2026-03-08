@@ -572,6 +572,74 @@ class RuntimeContextApiMacros {
 		return "moduleFields=" + summary;
 	}
 
+	static function findField(fields:Array<haxe.macro.Type.ClassField>, name:String):Null<haxe.macro.Type.ClassField> {
+		if (fields == null || name == null)
+			return null;
+		for (field in fields)
+			if (field != null && field.name == name)
+				return field;
+		return null;
+	}
+
+	public static function probeSyntheticTypeStatics():String {
+		final pos = Context.currentPos();
+		final classType = Context.getType("hxhxmacros.RuntimeSyntheticStatics");
+		final classRef = RuntimeMacroTypes.classRefOf(classType);
+		if (classRef == null)
+			Context.fatalError("runtime macro synthetic statics probe: expected class ref", pos);
+		final classStatics = classRef.get().statics.get();
+		final classLabel = findField(classStatics, "classLabel");
+		final classBuilder = findField(classStatics, "buildTag");
+		if (classLabel == null || classBuilder == null)
+			Context.fatalError("runtime macro synthetic statics probe: missing class statics", pos);
+		if (!classLabel.meta.has(":classLabel"))
+			Context.fatalError("runtime macro synthetic statics probe: missing :classLabel metadata", pos);
+		if (!classBuilder.meta.has(":classSummary"))
+			Context.fatalError("runtime macro synthetic statics probe: missing :classSummary metadata", pos);
+		final classLabelExpr = classLabel.expr();
+		if (classLabelExpr == null || TypedExprTools.toString(classLabelExpr, false) != "\"class-label\"")
+			Context.fatalError("runtime macro synthetic statics probe: expected classLabel expr", pos);
+		if (TypeTools.toString(classLabel.type) != "String")
+			Context.fatalError("runtime macro synthetic statics probe: expected classLabel type String", pos);
+		if (classBuilder.expr() != null)
+			Context.fatalError("runtime macro synthetic statics probe: expected buildTag expr to remain null", pos);
+		if (TypeTools.toString(classBuilder.type) != "(String, Int) -> String")
+			Context.fatalError("runtime macro synthetic statics probe: expected buildTag function type", pos);
+		final classPos = Context.getPosInfos(classLabel.pos);
+		if (classPos.file == null || classPos.file.indexOf("RuntimeSyntheticStatics.hx") < 0 || classPos.min >= classPos.max)
+			Context.fatalError("runtime macro synthetic statics probe: expected real class static position", pos);
+
+		final abstractType = Context.getType("hxhxmacros.RuntimeSyntheticStatics.RuntimeSyntheticAbstract");
+		final abstractImpl = RuntimeMacroTypes.abstractImplClassRefOf(abstractType);
+		if (abstractImpl == null)
+			Context.fatalError("runtime macro synthetic statics probe: expected abstract impl statics carrier", pos);
+		final abstractStatics = abstractImpl.get().statics.get();
+		final abstractLabel = findField(abstractStatics, "abstractLabel");
+		final abstractRender = findField(abstractStatics, "renderTag");
+		if (abstractLabel == null || abstractRender == null)
+			Context.fatalError("runtime macro synthetic statics probe: missing abstract statics", pos);
+		if (!abstractLabel.meta.has(":abstractLabel"))
+			Context.fatalError("runtime macro synthetic statics probe: missing :abstractLabel metadata", pos);
+		if (!abstractRender.meta.has(":abstractSummary"))
+			Context.fatalError("runtime macro synthetic statics probe: missing :abstractSummary metadata", pos);
+		final abstractLabelExpr = abstractLabel.expr();
+		if (abstractLabelExpr == null || TypedExprTools.toString(abstractLabelExpr, false) != "\"abstract-label\"")
+			Context.fatalError("runtime macro synthetic statics probe: expected abstractLabel expr", pos);
+		if (TypeTools.toString(abstractLabel.type) != "String")
+			Context.fatalError("runtime macro synthetic statics probe: expected abstractLabel type String", pos);
+		if (abstractRender.expr() != null)
+			Context.fatalError("runtime macro synthetic statics probe: expected renderTag expr to remain null", pos);
+		if (TypeTools.toString(abstractRender.type) != "(String, Bool) -> String")
+			Context.fatalError("runtime macro synthetic statics probe: expected renderTag function type", pos);
+		final abstractPos = Context.getPosInfos(abstractLabel.pos);
+		if (abstractPos.file == null || abstractPos.file.indexOf("RuntimeSyntheticStatics.hx") < 0 || abstractPos.min >= abstractPos.max)
+			Context.fatalError("runtime macro synthetic statics probe: expected real abstract static position", pos);
+
+		final summary = "class=buildTag,classLabel;abstract=abstractLabel,renderTag";
+		Compiler.define("HXHX_RUNTIME_TYPE_STATICS", summary);
+		return "typeStatics=" + summary;
+	}
+
 	static function extractStringConstFromSource(field:haxe.macro.Type.ClassField):Null<String> {
 		if (field == null)
 			return null;
