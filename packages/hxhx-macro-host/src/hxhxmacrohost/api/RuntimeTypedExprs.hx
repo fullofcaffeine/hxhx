@@ -14,15 +14,23 @@ import haxe.macro.Type;
 	What
 	- Builds synthetic `TypedExpr` values for:
 	  - literal constants
+	  - generic identifiers
+	  - dynamic field and call chains
+	  - object and array literals
+	  - array access
+	  - unary/cast/meta wrappers
 	  - parenthesized expressions
 	  - simple `+` binary expressions
+	  - simple block/return wrappers
 	  - single-variable `var` declarations
 	  - `check-type` wrappers
 	- Renders that subset back to deterministic Haxe-like text.
 
 	Gotchas
 	- This is intentionally not a general typed AST builder.
-	- Unsupported expression shapes fail fast so future slices stay explicit.
+	- Newly supported non-constant expression bodies still use conservative `Dynamic`
+	  result types unless a more specific runtime type is justified locally.
+	- Unsupported expression shapes still fail fast so future slices stay explicit.
 **/
 class RuntimeTypedExprs {
 	public static function typeExpr(e:Expr):TypedExpr {
@@ -43,9 +51,33 @@ class RuntimeTypedExprs {
 				makeTyped(e.pos, TConst(TBool(false)), RuntimeMacroTypes.typeofExpr(e));
 			case EConst(CIdent("null")):
 				makeTyped(e.pos, TConst(TNull), RuntimeMacroTypes.typeofExpr(e));
+			case EConst(CIdent(name)):
+				makeTyped(e.pos, TIdent(name), dynamicType());
 			case EParenthesis(inner):
 				final typedInner = typeExpr(inner);
 				makeTyped(e.pos, TParenthesis(typedInner), typedInner.t);
+			case EField(owner, field, _):
+				makeTyped(e.pos, TField(typeExpr(owner), FDynamic(field)), dynamicType());
+			case ECall(callee, args):
+				makeTyped(e.pos, TCall(typeExpr(callee), [for (arg in args) typeExpr(arg)]), dynamicType());
+			case EObjectDecl(fields):
+				makeTyped(e.pos, TObjectDecl([for (field in fields) {name: field.field, expr: typeExpr(field.expr)}]), dynamicType());
+			case EArrayDecl(items):
+				makeTyped(e.pos, TArrayDecl([for (item in items) typeExpr(item)]), dynamicType());
+			case EArray(arrayExpr, indexExpr):
+				makeTyped(e.pos, TArray(typeExpr(arrayExpr), typeExpr(indexExpr)), dynamicType());
+			case EMeta(meta, inner):
+				final typedInner = typeExpr(inner);
+				makeTyped(e.pos, TMeta(meta, typedInner), typedInner.t);
+			case ECast(inner, ct):
+				final typedInner = typeExpr(inner);
+				makeTyped(e.pos, TCast(typedInner, null), ct == null ? typedInner.t : RuntimeMacroTypes.resolveComplexType(ct));
+			case EUnop(op, postFix, inner):
+				makeTyped(e.pos, TUnop(op, postFix, typeExpr(inner)), dynamicType());
+			case EBlock(items):
+				typeBlockExpr(e.pos, items);
+			case EReturn(value):
+				makeTyped(e.pos, TReturn(value == null ? null : typeExpr(value)), RuntimeMacroTypes.getTypeByName("Void"));
 			case EVars(vars):
 				typeVarsExpr(e.pos, vars);
 			case ECheckType(inner, ct):
@@ -76,11 +108,35 @@ class RuntimeTypedExprs {
 				"false";
 			case TConst(TNull):
 				"null";
+			case TIdent(name):
+				name;
 			case TParenthesis(inner):
 				"(" + toString(inner) + ")";
+			case TField(owner, FDynamic(field)):
+				toString(owner) + "." + field;
+			case TField(_, _):
+				throw "runtime typed expr -> string: unsupported non-dynamic field access";
+			case TCall(callee, args):
+				toString(callee) + "(" + [for (arg in args) toString(arg)].join(", ") + ")";
+			case TObjectDecl(fields):
+				"{" + [for (field in fields) field.name + ": " + toString(field.expr)].join(", ") + "}";
+			case TArrayDecl(items):
+				"[" + [for (item in items) toString(item)].join(", ") + "]";
+			case TArray(arrayExpr, indexExpr):
+				toString(arrayExpr) + "[" + toString(indexExpr) + "]";
+			case TCast(inner, _):
+				"cast " + toString(inner);
+			case TMeta(meta, inner):
+				renderMetadata(meta) + " " + toString(inner);
+			case TUnop(op, postFix, inner):
+				renderUnop(op, postFix, inner);
 			case TVar(v, expr):
 				final prefix = v.isStatic ? "static var " : "var ";
 				prefix + v.name + (expr == null ? "" : " = " + toString(expr));
+			case TBlock(items):
+				"{ " + [for (item in items) toString(item)].join("; ") + " }";
+			case TReturn(expr):
+				expr == null ? "return" : ("return " + toString(expr));
 			case TBinop(op, e1, e2):
 				toString(e1) + " " + renderBinop(op) + " " + toString(e2);
 			case _:
@@ -104,8 +160,31 @@ class RuntimeTypedExprs {
 				makeExpr(e.pos, EConst(CIdent("false")));
 			case TConst(TNull):
 				makeExpr(e.pos, EConst(CIdent("null")));
+			case TIdent(name):
+				makeExpr(e.pos, EConst(CIdent(name)));
 			case TParenthesis(inner):
 				makeExpr(e.pos, EParenthesis(toExpr(inner)));
+			case TField(owner, FDynamic(field)):
+				makeExpr(e.pos, EField(toExpr(owner), field));
+			case TField(_, _):
+				throw "runtime typed expr -> expr: unsupported non-dynamic field access";
+			case TCall(callee, args):
+				makeExpr(e.pos, ECall(toExpr(callee), [for (arg in args) toExpr(arg)]));
+			case TObjectDecl(fields):
+				makeExpr(e.pos, EObjectDecl([
+					for (field in fields)
+						{field: field.name, expr: toExpr(field.expr), quotes: null}
+				]));
+			case TArrayDecl(items):
+				makeExpr(e.pos, EArrayDecl([for (item in items) toExpr(item)]));
+			case TArray(arrayExpr, indexExpr):
+				makeExpr(e.pos, EArray(toExpr(arrayExpr), toExpr(indexExpr)));
+			case TCast(inner, _):
+				makeExpr(e.pos, ECast(toExpr(inner), null));
+			case TMeta(meta, inner):
+				makeExpr(e.pos, EMeta(meta, toExpr(inner)));
+			case TUnop(op, postFix, inner):
+				makeExpr(e.pos, EUnop(op, postFix, toExpr(inner)));
 			case TVar(v, expr):
 				makeExpr(e.pos, EVars([
 					{
@@ -117,6 +196,10 @@ class RuntimeTypedExprs {
 						meta: []
 					}
 				]));
+			case TBlock(items):
+				makeExpr(e.pos, EBlock([for (item in items) toExpr(item)]));
+			case TReturn(expr):
+				makeExpr(e.pos, EReturn(expr == null ? null : toExpr(expr)));
 			case TBinop(op, e1, e2):
 				makeExpr(e.pos, EBinop(op, toExpr(e1), toExpr(e2)));
 			case _:
@@ -138,6 +221,10 @@ class RuntimeTypedExprs {
 			min: 0,
 			max: 0
 		};
+	}
+
+	static inline function dynamicType():Type {
+		return RuntimeMacroTypes.getTypeByName("Dynamic");
 	}
 
 	static function makeExpr(pos:Position, expr:ExprDef):Expr {
@@ -184,6 +271,12 @@ class RuntimeTypedExprs {
 			isStatic: v.isStatic == true
 		};
 		return makeTyped(pos, TVar(tvar, typedInit), RuntimeMacroTypes.getTypeByName("Void"));
+	}
+
+	static function typeBlockExpr(pos:Position, items:Array<Expr>):TypedExpr {
+		final typedItems = items == null ? [] : [for (item in items) typeExpr(item)];
+		final resultType = typedItems.length == 0 ? RuntimeMacroTypes.getTypeByName("Void") : typedItems[typedItems.length - 1].t;
+		return makeTyped(pos, TBlock(typedItems), resultType);
 	}
 
 	static function renderBinop(op:Binop):String {
@@ -238,6 +331,131 @@ class RuntimeTypedExprs {
 				"in";
 			case OpNullCoal:
 				"??";
+		};
+	}
+
+	static function renderUnop(op:Unop, postFix:Bool, inner:TypedExpr):String {
+		final renderedInner = toString(inner);
+		final renderedOp = switch (op) {
+			case OpIncrement: "++";
+			case OpDecrement: "--";
+			case OpNot: "!";
+			case OpNeg: "-";
+			case OpNegBits: "~";
+			case OpSpread: "...";
+		};
+		return postFix ? (renderedInner + renderedOp) : (renderedOp + renderedInner);
+	}
+
+	static function renderMetadata(meta:MetadataEntry):String {
+		final params = meta == null
+			|| meta.params == null
+			|| meta.params.length == 0 ? "" : ("(" + [for (param in meta.params) renderRawExpr(param)].join(", ") + ")");
+		return (meta == null ? "@:unknown" : meta.name) + params;
+	}
+
+	static function renderRawExpr(e:Expr):String {
+		if (e == null)
+			return "null";
+		return switch (e.expr) {
+			case EConst(CInt(raw, suffix)):
+				suffix == null ? raw : (raw + suffix);
+			case EConst(CFloat(raw)):
+				raw;
+			case EConst(CString(text, _)):
+				quoteString(text);
+			case EConst(CIdent(name)):
+				name;
+			case EParenthesis(inner):
+				"(" + renderRawExpr(inner) + ")";
+			case EField(owner, field, _):
+				renderRawExpr(owner) + "." + field;
+			case ECall(callee, args):
+				renderRawExpr(callee) + "(" + [for (arg in args) renderRawExpr(arg)].join(", ") + ")";
+			case EObjectDecl(fields):
+				"{" + [for (field in fields) field.field + ": " + renderRawExpr(field.expr)].join(", ") + "}";
+			case EArrayDecl(items):
+				"[" + [for (item in items) renderRawExpr(item)].join(", ") + "]";
+			case EArray(arrayExpr, indexExpr):
+				renderRawExpr(arrayExpr) + "[" + renderRawExpr(indexExpr) + "]";
+			case EMeta(meta, inner):
+				renderMetadata(meta) + " " + renderRawExpr(inner);
+			case ECast(inner, ct):
+				ct == null ? ("cast " + renderRawExpr(inner)) : ("cast(" + renderRawExpr(inner) + ", " + renderComplexType(ct) + ")");
+			case EUnop(op, postFix, inner):
+				renderRawUnop(op, postFix, inner);
+			case EBinop(op, left, right):
+				renderRawExpr(left) + " " + renderBinop(op) + " " + renderRawExpr(right);
+			case EBlock(items):
+				"{ " + [for (item in items) renderRawExpr(item)].join("; ") + " }";
+			case EReturn(value):
+				value == null ? "return" : ("return " + renderRawExpr(value));
+			case EVars(vars):
+				final pieces = [
+					for (v in vars) {
+						final typeText = v.type == null ? "" : (":" + renderComplexType(v.type));
+						final exprText = v.expr == null ? "" : (" = " + renderRawExpr(v.expr));
+						v.name + typeText + exprText;
+					}
+				];
+				"var " + pieces.join(", ");
+			case _:
+				"<expr>";
+		};
+	}
+
+	static function renderRawUnop(op:Unop, postFix:Bool, inner:Expr):String {
+		final renderedInner = renderRawExpr(inner);
+		final renderedOp = switch (op) {
+			case OpIncrement: "++";
+			case OpDecrement: "--";
+			case OpNot: "!";
+			case OpNeg: "-";
+			case OpNegBits: "~";
+			case OpSpread: "...";
+		};
+		return postFix ? (renderedInner + renderedOp) : (renderedOp + renderedInner);
+	}
+
+	static function renderComplexType(ct:ComplexType):String {
+		return switch (ct) {
+			case null:
+				"Dynamic";
+			case TPath(tp):
+				renderTypePath(tp);
+			case TParent(inner):
+				"(" + renderComplexType(inner) + ")";
+			case TOptional(inner):
+				"?" + renderComplexType(inner);
+			case TNamed(name, inner):
+				name + ":" + renderComplexType(inner);
+			case TFunction(args, ret):
+				[for (arg in args) renderComplexType(arg)].join(" -> ") + " -> " + renderComplexType(ret);
+			case TAnonymous(_):
+				"{...}";
+			case TExtend(_, _):
+				"{...}";
+			case TIntersection(_):
+				"Dynamic";
+		};
+	}
+
+	static function renderTypePath(tp:TypePath):String {
+		if (tp == null)
+			return "Dynamic";
+		final fullName = ((tp.pack == null || tp.pack.length == 0) ? [] : tp.pack).concat([tp.name]).join(".");
+		final subName = tp.sub == null ? "" : ("." + tp.sub);
+		final params = tp.params == null
+			|| tp.params.length == 0 ? "" : ("<" + [for (param in tp.params) renderTypeParam(param)].join(", ") + ">");
+		return fullName + subName + params;
+	}
+
+	static function renderTypeParam(param:TypeParam):String {
+		return switch (param) {
+			case TPType(inner):
+				renderComplexType(inner);
+			case TPExpr(expr):
+				renderRawExpr(expr);
 		};
 	}
 

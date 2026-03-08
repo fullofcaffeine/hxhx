@@ -880,10 +880,92 @@ class RuntimeContextApiMacros {
 				Context.fatalError("runtime macro typed-expr probe: expected binop from getTypedExpr", pos);
 		}
 
+		final typedCallExpr = Context.typeExpr(macro "ready".toUpperCase());
+		final typedCallType = TypeTools.toString(typedCallExpr.t);
+		if (typedCallType != "Dynamic")
+			Context.fatalError("runtime macro typed-expr probe: expected Dynamic call type", pos);
+		switch (typedCallExpr.expr) {
+			case TCall(fn, args):
+				if (args.length != 0)
+					Context.fatalError("runtime macro typed-expr probe: expected zero-arg call", pos);
+				switch (fn.expr) {
+					case TField(owner, FDynamic("toUpperCase")):
+						switch (owner.expr) {
+							case TConst(TString("ready")):
+							case _:
+								Context.fatalError("runtime macro typed-expr probe: expected string call owner", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro typed-expr probe: expected dynamic field call target", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected call typed expr", pos);
+		}
+		final callRoundTrip = Context.getTypedExpr(typedCallExpr);
+		switch (callRoundTrip.expr) {
+			case ECall(fn, args):
+				if (args.length != 0)
+					Context.fatalError("runtime macro typed-expr probe: expected zero-arg call roundtrip", pos);
+				switch (fn.expr) {
+					case EField(owner, "toUpperCase", _):
+						switch (owner.expr) {
+							case EConst(CString("ready", _)):
+							case _:
+								Context.fatalError("runtime macro typed-expr probe: expected roundtrip string call owner", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro typed-expr probe: expected roundtrip field call", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected call roundtrip expr", pos);
+		}
+
+		final typedObjectExpr = Context.typeExpr(macro {label: "ok", count: 2});
+		final typedObjectType = TypeTools.toString(typedObjectExpr.t);
+		if (typedObjectType != "Dynamic")
+			Context.fatalError("runtime macro typed-expr probe: expected Dynamic object type", pos);
+		switch (typedObjectExpr.expr) {
+			case TObjectDecl(fields):
+				if (fields.length != 2)
+					Context.fatalError("runtime macro typed-expr probe: expected two object fields", pos);
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected object typed expr", pos);
+		}
+		final objectRoundTrip = Context.getTypedExpr(typedObjectExpr);
+		switch (objectRoundTrip.expr) {
+			case EObjectDecl(fields):
+				if (fields.length != 2)
+					Context.fatalError("runtime macro typed-expr probe: expected two roundtrip object fields", pos);
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected object roundtrip expr", pos);
+		}
+
+		final typedArrayExpr = Context.typeExpr(macro ["ok", 2]);
+		final typedArrayType = TypeTools.toString(typedArrayExpr.t);
+		if (typedArrayType != "Dynamic")
+			Context.fatalError("runtime macro typed-expr probe: expected Dynamic array type", pos);
+		switch (typedArrayExpr.expr) {
+			case TArrayDecl(items):
+				if (items.length != 2)
+					Context.fatalError("runtime macro typed-expr probe: expected two array items", pos);
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected array typed expr", pos);
+		}
+		final arrayRoundTrip = Context.getTypedExpr(typedArrayExpr);
+		switch (arrayRoundTrip.expr) {
+			case EArrayDecl(items):
+				if (items.length != 2)
+					Context.fatalError("runtime macro typed-expr probe: expected two roundtrip array items", pos);
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected array roundtrip expr", pos);
+		}
+
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR", typedExprString);
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_VISITS", Std.string(visitedNodes));
+		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_DYNAMIC", typedCallType + ";" + typedObjectType + ";" + typedArrayType);
 
-		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes;
+		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes + ";typedCallType=" + typedCallType
+			+ ";typedObjectType=" + typedObjectType + ";typedArrayType=" + typedArrayType;
 	}
 
 	public static function probeTypedVarExprPlumbing():String {
