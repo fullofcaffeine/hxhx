@@ -24,9 +24,13 @@ class HxFunctionDecl {
 	public final returnTypeHint:String;
 	public final body:Array<HxStmt>;
 	public final returnStringLiteral:String;
+	public final metadata:Array<String>;
+	public final pos:HxPos;
+	public final endPos:HxPos;
+	public final bodyText:String;
 
 	public function new(name:String, visibility:HxVisibility, isStatic:Bool, args:Array<HxFunctionArg>, returnTypeHint:String, body:Array<HxStmt>,
-			returnStringLiteral:String) {
+			returnStringLiteral:String, ?metadata:Array<String>, ?pos:HxPos, ?endPos:HxPos, ?bodyText:String) {
 		this.name = name;
 		this.visibility = visibility;
 		this.isStatic = isStatic;
@@ -34,6 +38,10 @@ class HxFunctionDecl {
 		this.returnTypeHint = returnTypeHint;
 		this.body = body;
 		this.returnStringLiteral = returnStringLiteral;
+		this.metadata = metadata == null ? [] : metadata;
+		this.pos = pos == null ? HxPos.unknown() : pos;
+		this.endPos = endPos == null ? this.pos : endPos;
+		this.bodyText = bodyText == null ? "" : bodyText;
 	}
 
 	public function getFirstReturnExpr():HxExpr {
@@ -118,4 +126,16 @@ class HxFunctionDecl {
 
 	public static function getReturnStringLiteral(fn:HxFunctionDecl):String
 		return fn.returnStringLiteral;
+
+	public static function getMetadata(fn:HxFunctionDecl):Array<String>
+		return fn.metadata;
+
+	public static function getPos(fn:HxFunctionDecl):HxPos
+		return fn.pos;
+
+	public static function getEndPos(fn:HxFunctionDecl):HxPos
+		return fn.endPos;
+
+	public static function getBodyText(fn:HxFunctionDecl):String
+		return fn.bodyText;
 }

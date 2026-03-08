@@ -1,6 +1,7 @@
 package hxhxmacrohost.api;
 
 import HxExpr;
+import HxStmt;
 import HxParser;
 import StringTools;
 import haxe.macro.Expr;
@@ -49,6 +50,18 @@ class RuntimeMacroExprs {
 
 	public static function parseInlineString(expr:String, pos:Position):Expr {
 		return parse(expr, pos);
+	}
+
+	public static function parseOptionalComplexTypeText(typeHint:String):Null<ComplexType> {
+		return parseOptionalComplexType(typeHint);
+	}
+
+	public static function parseFunctionBodyText(bodySource:String, pos:Position):Expr {
+		final statements = HxParser.parseFunctionBodyText(bodySource);
+		return {
+			expr: EBlock([for (stmt in statements) convertStmt(stmt, pos == null ? defaultPos() : pos)]),
+			pos: pos == null ? defaultPos() : pos
+		};
 	}
 
 	/**
@@ -287,6 +300,35 @@ class RuntimeMacroExprs {
 		return {
 			expr: EConst(c),
 			pos: pos
+		};
+	}
+
+	static function convertStmt(stmt:HxStmt, pos:Position):Expr {
+		final usePos = pos == null ? defaultPos() : pos;
+		return switch (stmt) {
+			case SBlock(stmts, _):
+				{expr: EBlock([for (inner in stmts) convertStmt(inner, usePos)]), pos: usePos};
+			case SExpr(expr, _):
+				convert(expr, usePos);
+			case SReturn(expr, _):
+				{expr: EReturn(convert(expr, usePos)), pos: usePos};
+			case SReturnVoid(_):
+				{expr: EReturn(null), pos: usePos};
+			case SVar(name, typeHint, init, _):
+				{
+					expr: EVars([
+						{
+							name: name == null ? "" : name,
+							type: parseOptionalComplexType(typeHint),
+							expr: init == null ? null : convert(init, usePos),
+							isFinal: false,
+							meta: []
+						}
+					]),
+					pos: usePos
+				};
+			case _:
+				throw "runtime macro parse: unsupported function body statement shape";
 		};
 	}
 }

@@ -1135,28 +1135,35 @@ class MacroState {
 	}
 
 	/**
-		Stage4 bring-up: provide a minimal `Context.getBuildFields()` payload to the macro host.
+			Stage4 bring-up: provide a minimal `Context.getBuildFields()` payload to the macro host.
 
-		Why
-		- Upstream build macros often start with `Context.getBuildFields()` and then either:
-		  - return the same fields (possibly modified), or
-		  - push new fields and return the extended list.
-		- Our earliest Stage4 `@:build(...)` rung transported *only new members* as raw Haxe snippets via
-		  `compiler.emitBuildFields`, which is enough for "add a field" demos but breaks many upstream
-		  macros that expect `getBuildFields` to exist.
+			Why
+			- Upstream build macros often start with `Context.getBuildFields()` and then either:
+			  - return the same fields (possibly modified), or
+			  - push new fields and return the extended list.
+			- Our earliest Stage4 `@:build(...)` rung transported *only new members* as raw Haxe snippets via
+			  `compiler.emitBuildFields`, which is enough for "add a field" demos but breaks many upstream
+			  macros that expect `getBuildFields` to exist.
 
 		What
-		- This stores a JSON payload describing the fields of the class currently being built.
+		- This stores a length-prefixed payload describing the fields of the class currently being built.
+		- The current bridge now carries parser-backed:
+		  - metadata
+		  - source-backed positions
+		  - property accessors
+		  - field initializers
+		  - function args/defaults
+		  - function return hints and supported body slices
 		- The macro host retrieves it via reverse RPC `context.getBuildFields`.
 
-		How
-		- Stored as a length-prefixed fragment list (so the macro host can parse it with `Protocol.kvParse`):
-		  - `c=<count>`
-		  - then `n<i>`/`k<i>`/`s<i>`/`v<i>` fragments for each field.
+			How
+			- Stored as a length-prefixed fragment list (so the macro host can parse it with `Protocol.kvParse`):
+			  - `c=<count>`
+			  - then `n<i>`/`k<i>`/`s<i>`/`v<i>` fragments for each field.
 
 		Gotchas
-		- This payload does **not** include full expression bodies or types yet.
-		  Stage4 currently uses it to support macros that return *new* fields (delta emission).
+		- This is still a parser-backed bring-up snapshot, not full typed field transport.
+		- Unsupported initializer/body shapes still need honest fallback handling on the runtime side.
 	**/
 	public static function setBuildFieldsPayload(payload:String):Void {
 		buildFieldsPayload = payload == null ? "" : payload;

@@ -85,7 +85,8 @@ class ExprMacroExpander {
 				if (rewritten != init)
 					changed = true;
 				newFields.push(new HxFieldDecl(HxFieldDecl.getName(f), HxFieldDecl.getVisibility(f), HxFieldDecl.getIsStatic(f), HxFieldDecl.getTypeHint(f),
-					rewritten));
+					rewritten, HxFieldDecl.getMetadata(f), HxFieldDecl.getPos(f), HxFieldDecl.getEndPos(f), HxFieldDecl.getIsFinal(f),
+					HxFieldDecl.getPropertyGet(f), HxFieldDecl.getPropertySet(f), HxFieldDecl.getInitText(f)));
 			}
 
 			// Rewrite function bodies.
@@ -103,7 +104,8 @@ class ExprMacroExpander {
 				if (bodyChanged)
 					changed = true;
 				newFns.push(new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn),
-					HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), newBody, HxFunctionDecl.getReturnStringLiteral(fn)));
+					HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn), newBody, HxFunctionDecl.getReturnStringLiteral(fn),
+					HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn)));
 			}
 
 			if (!changed) {

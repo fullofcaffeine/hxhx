@@ -40,36 +40,6 @@ private typedef WaitStdioReply = {
 	final isError:Bool;
 };
 
-private class BuildFieldPayloadItem {
-	public final name:String;
-	public final kind:String;
-	public final isStatic:Bool;
-	public final visibility:String;
-
-	public function new(name:String, kind:String, isStatic:Bool, visibility:String) {
-		this.name = name;
-		this.kind = kind;
-		this.isStatic = isStatic;
-		this.visibility = visibility;
-	}
-
-	public function getName():String {
-		return name;
-	}
-
-	public function getKind():String {
-		return kind;
-	}
-
-	public function getIsStatic():Bool {
-		return isStatic;
-	}
-
-	public function getVisibility():String {
-		return visibility;
-	}
-}
-
 /**
 	Stage 3 native compiler lane (`--hxhx-stage3`).
 
@@ -1234,29 +1204,7 @@ class Stage3Compiler {
 	}
 
 	static function buildFieldsPayloadForParsed(pm:ParsedModule):String {
-		final decl = pm.getDecl();
-		final cls = HxModuleDecl.getMainClass(decl);
-		final items = new Array<BuildFieldPayloadItem>();
-
-		for (fn in HxClassDecl.getFunctions(cls)) {
-			items.push(new BuildFieldPayloadItem(HxFunctionDecl.getName(fn), "fun", HxFunctionDecl.getIsStatic(fn),
-				Std.string(HxFunctionDecl.getVisibility(fn))));
-		}
-		for (f in HxClassDecl.getFields(cls)) {
-			items.push(new BuildFieldPayloadItem(HxFieldDecl.getName(f), "var", HxFieldDecl.getIsStatic(f), Std.string(HxFieldDecl.getVisibility(f))));
-		}
-
-		// Encode as a length-prefixed fragment list so the macro host can parse it with `Protocol.kvParse`.
-		final parts = new Array<String>();
-		parts.push(hxhx.macro.MacroProtocol.encodeLen("c", Std.string(items.length)));
-		for (i in 0...items.length) {
-			final it = items[i];
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("n" + i, it.getName()));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("k" + i, it.getKind()));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("s" + i, it.getIsStatic() ? "1" : "0"));
-			parts.push(hxhx.macro.MacroProtocol.encodeLen("v" + i, it.getVisibility()));
-		}
-		return parts.join(" ");
+		return hxhx.macro.BuildFieldSnapshotPayload.encodeParsedModule(pm);
 	}
 
 	/**

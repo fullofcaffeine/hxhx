@@ -106,7 +106,8 @@ class ParserStage {
 								existingFnNames.set(fnName, true);
 							patchedFns.push(isStatic == HxFunctionDecl.getIsStatic(fn) ? fn : new HxFunctionDecl(HxFunctionDecl.getName(fn),
 								HxFunctionDecl.getVisibility(fn), isStatic, HxFunctionDecl.getArgs(fn), HxFunctionDecl.getReturnTypeHint(fn),
-								HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn)));
+								HxFunctionDecl.getBody(fn), HxFunctionDecl.getReturnStringLiteral(fn), HxFunctionDecl.getMetadata(fn),
+								HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), HxFunctionDecl.getBodyText(fn)));
 						}
 						for (fn in HxClassDecl.getFunctions(scanned)) {
 							final fnName = HxFunctionDecl.getName(fn);

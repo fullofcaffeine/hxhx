@@ -20,13 +20,15 @@ class HxFunctionArg {
 	public final defaultValue:HxDefaultValue;
 	public final isOptional:Bool;
 	public final isRest:Bool;
+	public final defaultValueText:String;
 
-	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue, isOptional:Bool = false, isRest:Bool = false) {
+	public function new(name:String, typeHint:String, defaultValue:HxDefaultValue, isOptional:Bool = false, isRest:Bool = false, ?defaultValueText:String) {
 		this.name = name;
 		this.typeHint = typeHint;
 		this.defaultValue = defaultValue;
 		this.isOptional = isOptional;
 		this.isRest = isRest;
+		this.defaultValueText = defaultValueText == null ? "" : defaultValueText;
 	}
 
 	/**
@@ -48,4 +50,7 @@ class HxFunctionArg {
 
 	public static function getIsRest(a:HxFunctionArg):Bool
 		return a.isRest;
+
+	public static function getDefaultValueText(a:HxFunctionArg):String
+		return a.defaultValueText;
 }

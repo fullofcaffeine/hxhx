@@ -1090,23 +1090,29 @@ class Context {
 	}
 
 	/**
-		Return the fields of the class currently being built (Stage4 bring-up subset).
+			Return the fields of the class currently being built (Stage4 bring-up subset).
 
-		Why
-		- Many upstream build macros begin by calling `Context.getBuildFields()` and then either
-		  return the same list or push additional fields.
-		- Our bring-up ABI does not transport full typed AST yet, but we can still provide a
-		  minimal field list so these macros can run.
+			Why
+			- Many upstream build macros begin by calling `Context.getBuildFields()` and then either
+			  return the same list or push additional fields.
+			- Our bring-up ABI does not transport full typed AST yet, but we can still provide a
+			  minimal field list so these macros can run.
 
 		What
 		- Returns `Array<haxe.macro.Expr.Field>` values with:
-		  - `name`, `access`, `kind`, and `pos`
-		  - `FFun` bodies are stubbed with a trivial `null` expression so `ExprTools.map`-style
-			traversals do not crash on `null` bodies.
+		  - `name`, `access`, `kind`, `meta`, and `pos`
+		  - parser-backed field/property type hints and initializer expressions
+		  - parser-backed function args, arg defaults, return types, and function bodies for the
+			current supported statement subset
 
 		How
 		- Reverse RPC `context.getBuildFields` returns a length-prefixed fragment list:
-		  `c=<count> n0=<name> k0=<kind> s0=<0|1> v0=<visibility> ...`
+		  `f=<file> c=<count> n0=<name> k0=<kind> s0=<0|1> v0=<visibility> ...`
+
+		Gotchas
+		- This is still a parser-backed bring-up bridge, not a typed field transport.
+		- Unsupported initializer/body shapes still fall back honestly instead of fabricating more
+		  fidelity than the current runtime parser can support.
 	**/
 	public static function getBuildFields():Array<Field> {
 		final payload = HostToCompilerRpc.call("context.getBuildFields", "");
@@ -1126,7 +1132,48 @@ class Context {
 			return out;
 		}
 
-		final nullExpr:Expr = {expr: EConst(CIdent("null")), pos: null};
+		final file = m.exists("f") ? m.get("f") : "";
+
+		function parseIntField(key:String, fallback:Int):Int {
+			if (!m.exists(key))
+				return fallback;
+			final value = Std.parseInt(m.get(key));
+			return value == null ? fallback : value;
+		}
+
+		function parseMetadataFor(i:Int):Metadata {
+			final count = parseIntField("mc" + i, 0);
+			final entries = new Array<String>();
+			for (j in 0...count) {
+				final key = "m" + i + "_" + j;
+				if (m.exists(key))
+					entries.push(m.get(key));
+			}
+			return RuntimeMacroTypes.parseMetadataEntries(entries);
+		}
+
+		function parseFunctionArgsFor(i:Int):Array<FunctionArg> {
+			final args = new Array<FunctionArg>();
+			final count = parseIntField("ac" + i, 0);
+			for (j in 0...count) {
+				final nameKey = "an" + i + "_" + j;
+				if (!m.exists(nameKey))
+					continue;
+				final typeKey = "at" + i + "_" + j;
+				final defaultKey = "ad" + i + "_" + j;
+				final defaultText = m.exists(defaultKey) ? m.get(defaultKey) : "";
+				args.push({
+					name: m.get(nameKey),
+					opt: m.exists("ao" + i + "_" + j) && m.get("ao" + i + "_" + j) == "1",
+					type: RuntimeMacroExprs.parseOptionalComplexTypeText(m.exists(typeKey) ? m.get(typeKey) : ""),
+					value: StringTools.trim(defaultText)
+						.length == 0 ? null : RuntimeMacroExprs.parseInlineString(defaultText,
+							RuntimeMacroTypes.position(file, parseIntField("mn" + i, 0), parseIntField("mx" + i, 0))),
+					meta: []
+				});
+			}
+			return args;
+		}
 
 		for (i in 0...count) {
 			final nKey = "n" + i;
@@ -1143,6 +1190,15 @@ class Context {
 			final kind = m.exists(kKey) ? m.get(kKey) : "";
 			final isStatic = m.exists(sKey) && m.get(sKey) == "1";
 			final vis = m.exists(vKey) ? m.get(vKey) : "";
+			final pos = RuntimeMacroTypes.position(file, parseIntField("mn" + i, 0), parseIntField("mx" + i, 0));
+			final metadata = parseMetadataFor(i);
+			final typeHint = m.exists("th" + i) ? m.get("th" + i) : "";
+			final initText = m.exists("ie" + i) ? m.get("ie" + i) : "";
+			final propertyGet = m.exists("pg" + i) ? m.get("pg" + i) : "";
+			final propertySet = m.exists("ps" + i) ? m.get("ps" + i) : "";
+			final returnType = m.exists("rt" + i) ? m.get("rt" + i) : "";
+			final bodyText = m.exists("bd" + i) ? m.get("bd" + i) : "";
+			final isFinal = m.exists("fi" + i) && m.get("fi" + i) == "1";
 
 			final access = new Array<Access>();
 			if (vis == "Public")
@@ -1151,12 +1207,31 @@ class Context {
 				access.push(APrivate);
 			if (isStatic)
 				access.push(AStatic);
+			if (isFinal)
+				access.push(AFinal);
+
+			final fieldKind:FieldType = switch (kind) {
+				case "fun":
+					FFun({
+						args: parseFunctionArgsFor(i),
+						ret: RuntimeMacroExprs.parseOptionalComplexTypeText(returnType),
+						expr: StringTools.trim(bodyText).length == 0 ? null : RuntimeMacroExprs.parseFunctionBodyText(bodyText, pos),
+						params: []
+					});
+				case "prop":
+					FProp(propertyGet, propertySet, RuntimeMacroExprs.parseOptionalComplexTypeText(typeHint),
+						StringTools.trim(initText).length == 0 ? null : RuntimeMacroExprs.parseInlineString(initText, pos));
+				case _:
+					FVar(RuntimeMacroExprs.parseOptionalComplexTypeText(typeHint),
+						StringTools.trim(initText).length == 0 ? null : RuntimeMacroExprs.parseInlineString(initText, pos));
+			};
 
 			final field:Field = {
 				name: name,
 				access: access,
-				kind: (kind == "var") ? FVar(null, null) : FFun({args: [], expr: nullExpr}),
-				pos: null
+				kind: fieldKind,
+				pos: pos,
+				meta: metadata
 			};
 			out.push(field);
 			names.push(name);

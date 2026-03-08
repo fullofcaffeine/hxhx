@@ -37,6 +37,7 @@ class HxParser {
 	**/
 	public static var debugBodyLabel:String = "";
 
+	final source:String;
 	final lex:HxLexer;
 	var cur:HxToken;
 	var peeked1:Null<HxToken> = null;
@@ -98,8 +99,69 @@ class HxParser {
 	}
 
 	public function new(source:String) {
+		this.source = source == null ? "" : source;
 		lex = new HxLexer(source);
 		cur = lex.next();
+	}
+
+	inline function posIndex(pos:Null<HxPos>):Int {
+		return pos == null ? 0 : pos.getIndex();
+	}
+
+	inline function currentIndex():Int {
+		return posIndex(cur.getPos());
+	}
+
+	function sliceSource(start:Int, end:Int):String {
+		final safeStart = start < 0 ? 0 : start;
+		final safeEnd = end < safeStart ? safeStart : (end > source.length ? source.length : end);
+		return source.substring(safeStart, safeEnd);
+	}
+
+	function parseMetadataText():String {
+		if (!isOtherChar("@"))
+			fail("Expected metadata");
+		final start = currentIndex();
+		bump(); // '@'
+		if (cur.kind.match(TColon))
+			bump();
+		switch (cur.kind) {
+			case TIdent(_) | TKeyword(_):
+				bump();
+			case _:
+				fail("Expected metadata name");
+		}
+		while (cur.kind.match(TDot)) {
+			bump();
+			switch (cur.kind) {
+				case TIdent(_) | TKeyword(_):
+					bump();
+				case _:
+					fail("Expected metadata path segment");
+			}
+		}
+		if (cur.kind.match(TLParen)) {
+			bump();
+			skipBalancedParens();
+		}
+		return StringTools.trim(sliceSource(start, currentIndex()));
+	}
+
+	function readPropertyAccessorText():String {
+		return switch (cur.kind) {
+			case TIdent(name):
+				bump();
+				name;
+			case TKeyword(k):
+				final value = keywordText(k);
+				bump();
+				value;
+			case TOther(c) if (c == "*".code):
+				bump();
+				"*";
+			case _:
+				fail("Expected property accessor");
+		}
 	}
 
 	/**
@@ -2227,7 +2289,7 @@ class HxParser {
 		}
 	}
 
-	function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool):HxFunctionDecl {
+	function parseFunctionDecl(visibility:HxVisibility, isStatic:Bool, metadata:Array<String>, startPos:HxPos):HxFunctionDecl {
 		capturedReturnStringLiteral = "";
 		final name = switch (cur.kind) {
 			case TKeyword(KNew):
@@ -2257,6 +2319,7 @@ class HxParser {
 				final argName = readIdent("argument name");
 				var argType = "";
 				var defaultValue:HxDefaultValue = HxDefaultValue.NoDefault;
+				var defaultValueText = "";
 
 				if (cur.kind.match(TColon)) {
 					bump();
@@ -2264,7 +2327,9 @@ class HxParser {
 				}
 
 				if (acceptOtherChar("=")) {
+					final defaultStart = currentIndex();
 					defaultValue = HxDefaultValue.Default(parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TRParen) || cur.kind.match(TEof)));
+					defaultValueText = StringTools.trim(sliceSource(defaultStart, currentIndex()));
 				}
 
 				if (isRest) {
@@ -2275,7 +2340,7 @@ class HxParser {
 					isOptional = true;
 				}
 
-				args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional, isRest));
+				args.push(new HxFunctionArg(argName, argType, defaultValue, isOptional, isRest, defaultValueText));
 				if (cur.kind.match(TComma)) {
 					bump();
 					continue;
@@ -2293,26 +2358,37 @@ class HxParser {
 		}
 
 		final body = new Array<HxStmt>();
+		var bodyText = "";
 		switch (cur.kind) {
 			case TSemicolon:
 				bump();
 			case TLBrace:
 				bump();
+				final bodyStart = currentIndex();
 				for (s in parseFunctionBodyStatements())
 					body.push(s);
+				final endIndex = currentIndex();
+				var capturedBodyText = StringTools.trim(sliceSource(bodyStart, endIndex));
+				if (StringTools.endsWith(capturedBodyText, "}"))
+					capturedBodyText = StringTools.rtrim(capturedBodyText.substr(0, capturedBodyText.length - 1));
+				bodyText = capturedBodyText;
 			case _:
 				// Expression-bodied function: `function f() return expr;`
 				if (acceptKeyword(KReturn)) {
+					final bodyStart = currentIndex();
 					body.push(parseReturnStmt(HxPos.unknown()));
+					bodyText = "return " + StringTools.trim(sliceSource(bodyStart, currentIndex()));
 				} else {
+					final bodyStart = currentIndex();
 					final expr = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof));
 					if (cur.kind.match(TSemicolon))
 						bump();
 					body.push(SExpr(expr, HxPos.unknown()));
+					bodyText = StringTools.trim(sliceSource(bodyStart, currentIndex()));
 				}
 		}
 
-		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral);
+		return new HxFunctionDecl(name, visibility, isStatic, args, returnType, body, capturedReturnStringLiteral, metadata, startPos, cur.getPos(), bodyText);
 	}
 
 	function parseClassMembers():{functions:Array<HxFunctionDecl>, fields:Array<HxFieldDecl>} {
@@ -2326,15 +2402,20 @@ class HxParser {
 				case TEof:
 					fail("Unexpected end of input in class body");
 				case _:
+					final memberStart = cur.getPos();
 					var visibility:HxVisibility = Public;
 					var isStatic = false;
 					var sawFinal = false;
+					final metadata = new Array<String>();
 
 					// Modifiers (subset).
 					var keep = true;
 					while (keep) {
 						keep = false;
-						if (acceptKeyword(KPublic)) {
+						if (isOtherChar("@")) {
+							metadata.push(parseMetadataText());
+							keep = true;
+						} else if (acceptKeyword(KPublic)) {
 							visibility = Public;
 							keep = true;
 						} else if (acceptKeyword(KPrivate)) {
@@ -2365,24 +2446,37 @@ class HxParser {
 					}
 
 					if (acceptKeyword(KFunction)) {
-						funcs.push(parseFunctionDecl(visibility, isStatic));
+						funcs.push(parseFunctionDecl(visibility, isStatic, metadata, memberStart));
 						continue;
 					}
 
 					if (acceptKeyword(KVar) || sawFinal) {
-						// Class field: `var name[:Type] [= expr];` (subset; no properties yet).
+						// Class field: `var name[(get,set)][:Type] [= expr];` (subset).
 						final name = readIdent("field name");
+						var propertyGet = "";
+						var propertySet = "";
 						var typeHint = "";
 						var init:Null<HxExpr> = null;
+						var initText = "";
+						if (cur.kind.match(TLParen)) {
+							bump();
+							propertyGet = readPropertyAccessorText();
+							expect(TComma, "','");
+							propertySet = readPropertyAccessorText();
+							expect(TRParen, "')'");
+						}
 						if (cur.kind.match(TColon)) {
 							bump();
 							typeHint = readTypeHintText(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || isOtherChar("="));
 						}
 						if (acceptOtherChar("=")) {
+							final initStart = currentIndex();
 							init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
+							initText = StringTools.trim(sliceSource(initStart, currentIndex()));
 						}
 						expect(TSemicolon, "';'");
-						fields.push(new HxFieldDecl(name, visibility, isStatic, typeHint, init));
+						fields.push(new HxFieldDecl(name, visibility, isStatic, typeHint, init, metadata, memberStart, cur.getPos(), sawFinal, propertyGet,
+							propertySet, initText));
 						continue;
 					}
 

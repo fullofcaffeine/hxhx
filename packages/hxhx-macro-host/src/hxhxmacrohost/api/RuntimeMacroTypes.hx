@@ -1219,6 +1219,10 @@ class RuntimeMacroTypes {
 		return access;
 	}
 
+	public static function parseMetadataEntries(metadataEntries:Array<String>):Metadata {
+		return metadataAccess(metadataEntries).get();
+	}
+
 	static function parseMetadataEntry(raw:String):Null<MetadataEntry> {
 		final text = StringTools.trim(raw == null ? "" : raw);
 		if (!StringTools.startsWith(text, "@:"))
@@ -1280,7 +1284,7 @@ class RuntimeMacroTypes {
 		};
 	}
 
-	static function position(file:Null<String>, min:Null<Int>, max:Null<Int>):Position {
+	public static function position(file:Null<String>, min:Null<Int>, max:Null<Int>):Position {
 		final resolvedFile = file == null || StringTools.trim(file).length == 0 ? DEFAULT_FILE : StringTools.trim(file);
 		final resolvedMin = min == null || min < 0 ? 0 : min;
 		final resolvedMax = max == null || max < resolvedMin ? resolvedMin : max;

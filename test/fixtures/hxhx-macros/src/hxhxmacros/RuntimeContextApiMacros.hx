@@ -14,6 +14,9 @@ import haxe.macro.Context;
 import haxe.macro.DisplayMode;
 import haxe.macro.Expr.ImportExpr;
 import haxe.macro.Expr.ImportMode;
+import haxe.macro.Expr.ExprDef;
+import haxe.macro.Expr.Constant;
+import haxe.macro.Expr.Binop;
 import haxe.macro.Expr.TypeDefinition;
 import haxe.macro.Expr.TypePath;
 import haxe.macro.PositionTools;
@@ -49,6 +52,63 @@ import hxhxmacrohost.api.RuntimeMacroTypes;
 	  only resolves builtins plus exact qualified type paths.
 **/
 class RuntimeContextApiMacros {
+	static function exprIsIntLiteral(e:Null<Expr>, expected:String):Bool {
+		if (e == null)
+			return false;
+		return switch (e.expr) {
+			case EConst(CInt(value, _)): value == expected;
+			case _: false;
+		}
+	}
+
+	static function exprIsStringLiteral(e:Null<Expr>, expected:String):Bool {
+		if (e == null)
+			return false;
+		return switch (e.expr) {
+			case EConst(CString(value, _)): value == expected;
+			case _: false;
+		}
+	}
+
+	static function exprIsIdent(e:Null<Expr>, expected:String):Bool {
+		if (e == null)
+			return false;
+		return switch (e.expr) {
+			case EConst(CIdent(value)): value == expected;
+			case _: false;
+		}
+	}
+
+	static function exprHasRenderBodyShape(e:Null<Expr>):Bool {
+		if (e == null)
+			return false;
+		return switch (e.expr) {
+			case EBlock(stmts) if (stmts.length == 2):
+				switch (stmts[0].expr) {
+					case EVars(vars) if (vars.length == 1 && vars[0].name == "prefix"):
+						if (!exprIsIdent(vars[0].expr, "label")) false; else switch (stmts[1].expr) {
+							case EReturn(ret):
+								if (ret == null) false; else switch (ret.expr) {
+									case EBinop(OpAdd, left, right):
+										if (!exprIsIdent(right, "count")) false; else switch (left.expr) {
+											case EBinop(OpAdd, prefixExpr, colonExpr): exprIsIdent(prefixExpr, "prefix") && exprIsStringLiteral(colonExpr, ":");
+											case _:
+												false;
+										}
+									case _:
+										false;
+								}
+							case _:
+								false;
+						}
+					case _:
+						false;
+				}
+			case _:
+				false;
+		}
+	}
+
 	public static function probeConfigAndPosition():String {
 		final config = Compiler.getConfiguration();
 		if (config == null)
@@ -584,6 +644,83 @@ class RuntimeContextApiMacros {
 		final summary = rendered.join(";");
 		Compiler.define("HXHX_RUNTIME_MODULE_FIELDS", summary);
 		return "moduleFields=" + summary;
+	}
+
+	public static function probeBuildFieldsSnapshot():String {
+		final pos = Context.currentPos();
+		final fields = Context.getBuildFields();
+		if (fields == null || fields.length != 3)
+			Context.fatalError("runtime macro build-fields probe: expected three fields", pos);
+		final rendered = new Array<String>();
+		for (field in fields) {
+			final info = Context.getPosInfos(field.pos);
+			if (info.file == null || info.file.indexOf("RuntimeBuildFieldCarrier.hx") < 0)
+				Context.fatalError("runtime macro build-fields probe: expected real source file for " + field.name, pos);
+			if (info.min >= info.max)
+				Context.fatalError("runtime macro build-fields probe: expected non-empty source range for " + field.name, pos);
+			final metaNames = [for (entry in (field.meta == null ? [] : field.meta)) entry.name];
+			final metaSummary = metaNames.join("|");
+			switch (field.name) {
+				case "answer":
+					if (field.access == null || field.access.indexOf(AFinal) < 0)
+						Context.fatalError("runtime macro build-fields probe: expected final access for answer", pos);
+					switch (field.kind) {
+						case FVar(t, e):
+							if (TypeTools.toString(Context.resolveType(t, pos)) != "Int")
+								Context.fatalError("runtime macro build-fields probe: expected Int type for answer", pos);
+							if (!exprIsIntLiteral(e, "7")) Context.fatalError("runtime macro build-fields probe: expected answer expr 7", pos);
+						case _:
+							Context.fatalError("runtime macro build-fields probe: expected FVar for answer", pos);
+					}
+					if (metaSummary.indexOf(":fieldMeta") < 0)
+						Context.fatalError("runtime macro build-fields probe: missing :fieldMeta on answer", pos);
+				case "routeTag":
+					switch (field.kind) {
+						case FProp(get, set, t, e):
+							if (get != "default" || set != "null")
+								Context.fatalError("runtime macro build-fields probe: expected default/null property accessors", pos);
+							if (TypeTools.toString(Context.resolveType(t, pos)) != "String")
+								Context.fatalError("runtime macro build-fields probe: expected String type for routeTag", pos);
+							if (!exprIsStringLiteral(e, "ready")) Context.fatalError("runtime macro build-fields probe: expected routeTag expr \"ready\"", pos);
+						case _:
+							Context.fatalError("runtime macro build-fields probe: expected FProp for routeTag", pos);
+					}
+					if (metaSummary.indexOf(":propMeta") < 0)
+						Context.fatalError("runtime macro build-fields probe: missing :propMeta on routeTag", pos);
+				case "render":
+					switch (field.kind) {
+						case FFun(fn):
+							if (fn == null || fn.args == null || fn.args.length != 2)
+								Context.fatalError("runtime macro build-fields probe: expected two render args", pos);
+							if (fn.args[0].name != "label" || TypeTools.toString(Context.resolveType(fn.args[0].type, pos)) != "String")
+								Context.fatalError("runtime macro build-fields probe: expected label:String arg", pos);
+							if (fn.args[1].name != "count" || !fn.args[1].opt)
+								Context.fatalError("runtime macro build-fields probe: expected optional count arg", pos);
+							if (TypeTools.toString(Context.resolveType(fn.args[1].type, pos)) != "Int")
+								Context.fatalError("runtime macro build-fields probe: expected count:Int arg", pos);
+							if (!exprIsIntLiteral(fn.args[1].value, "3"))
+								Context.fatalError("runtime macro build-fields probe: expected count default 3", pos);
+							if (fn.ret == null || TypeTools.toString(Context.resolveType(fn.ret, pos)) != "String")
+								Context.fatalError("runtime macro build-fields probe: expected render return String", pos);
+							if (fn.expr == null)
+								Context.fatalError("runtime macro build-fields probe: expected render body expr", pos);
+							if (!exprHasRenderBodyShape(fn.expr)) Context.fatalError("runtime macro build-fields probe: expected render body snapshot", pos);
+						case _:
+							Context.fatalError("runtime macro build-fields probe: expected FFun for render", pos);
+					}
+					if (metaSummary.indexOf(":funMeta") < 0)
+						Context.fatalError("runtime macro build-fields probe: missing :funMeta on render", pos);
+				case _:
+					Context.fatalError("runtime macro build-fields probe: unexpected field " + field.name, pos);
+			}
+			rendered.push(field.name + "=" + metaSummary);
+		}
+		rendered.sort(function(a:String, b:String):Int {
+			return Reflect.compare(a, b);
+		});
+		final summary = rendered.join(";");
+		Compiler.define("HXHX_RUNTIME_BUILD_FIELDS", summary);
+		return "buildFields=" + summary;
 	}
 
 	static function findField(fields:Array<haxe.macro.Type.ClassField>, name:String):Null<haxe.macro.Type.ClassField> {
