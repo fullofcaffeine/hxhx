@@ -190,15 +190,15 @@ class RuntimeContextApiMacros {
 			Context.fatalError("runtime macro type probe: expected qualified getType result but got " + moduleTypeText, pos);
 		final moduleEnumType = Context.getType("hxhxmacros.RuntimeModuleMembers.RuntimeModuleState");
 		final moduleEnumTypeText = TypeTools.toString(moduleEnumType);
-		if (moduleEnumTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState")
+		if (moduleEnumTypeText != "hxhxmacros.RuntimeModuleState")
 			Context.fatalError("runtime macro type probe: expected module enum lookup result but got " + moduleEnumTypeText, pos);
 		final moduleTypedefType = Context.getType("hxhxmacros.RuntimeModuleMembers.RuntimeModuleData");
 		final moduleTypedefTypeText = TypeTools.toString(moduleTypedefType);
-		if (moduleTypedefTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleData")
+		if (moduleTypedefTypeText != "hxhxmacros.RuntimeModuleData")
 			Context.fatalError("runtime macro type probe: expected module typedef lookup result but got " + moduleTypedefTypeText, pos);
 		final moduleAbstractType = Context.getType("hxhxmacros.RuntimeModuleMembers.RuntimeModuleId");
 		final moduleAbstractTypeText = TypeTools.toString(moduleAbstractType);
-		if (moduleAbstractTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleId")
+		if (moduleAbstractTypeText != "hxhxmacros.RuntimeModuleId")
 			Context.fatalError("runtime macro type probe: expected module abstract lookup result but got " + moduleAbstractTypeText, pos);
 		assertTypePos("module type", moduleType, "RuntimeContextApiMacros.hx");
 		assertTypePos("module enum type", moduleEnumType, "RuntimeModuleMembers.hx");
@@ -962,8 +962,8 @@ class RuntimeContextApiMacros {
 
 		final typedTypeExpr = Context.typeExpr(macro hxhxmacros.RuntimeModuleMembers.RuntimeModuleState);
 		final typedTypeExprType = TypeTools.toString(typedTypeExpr.t);
-		if (typedTypeExprType != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState")
-			Context.fatalError("runtime macro typed-expr probe: expected module-qualified type path type", pos);
+		if (typedTypeExprType != "hxhxmacros.RuntimeModuleState")
+			Context.fatalError("runtime macro typed-expr probe: expected current synthetic type-path enum type but got " + typedTypeExprType, pos);
 		final typedTypeExprPath = switch (typedTypeExpr.expr) {
 			case TTypeExpr(moduleType):
 				RuntimeMacroTypes.moduleTypePath(moduleType);

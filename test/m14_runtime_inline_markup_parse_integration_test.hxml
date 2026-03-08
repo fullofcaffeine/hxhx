@@ -1,0 +1,5 @@
+-cp packages/hxhx-core/src
+-cp packages/hxhx-macro-host/src
+-cp test
+-main M14RuntimeInlineMarkupParseIntegrationTest
+--interp

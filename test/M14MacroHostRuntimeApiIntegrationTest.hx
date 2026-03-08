@@ -161,9 +161,9 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			final typeOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeBuiltinTypePlumbing()");
 			assertContains("type probe getType", typeOutput, "getType=String");
 			assertContains("type probe module getType", typeOutput, "moduleType=hxhxmacros.RuntimeContextApiMacros");
-			assertContains("type probe module enum getType", typeOutput, "moduleEnumType=hxhxmacros.RuntimeModuleMembers.RuntimeModuleState");
-			assertContains("type probe module typedef getType", typeOutput, "moduleTypedefType=hxhxmacros.RuntimeModuleMembers.RuntimeModuleData");
-			assertContains("type probe module abstract getType", typeOutput, "moduleAbstractType=hxhxmacros.RuntimeModuleMembers.RuntimeModuleId");
+			assertContains("type probe module enum getType", typeOutput, "moduleEnumType=hxhxmacros.RuntimeModuleState");
+			assertContains("type probe module typedef getType", typeOutput, "moduleTypedefType=hxhxmacros.RuntimeModuleData");
+			assertContains("type probe module abstract getType", typeOutput, "moduleAbstractType=hxhxmacros.RuntimeModuleId");
 			assertContains("type probe resolveType", typeOutput, "resolveType=Bool");
 			assertContains("type probe nullType", typeOutput, "nullType=Null<String>");
 			assertContains("type probe typeof", typeOutput, "typeof=Int");
@@ -175,11 +175,10 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_FOLLOW") == "Null<String>", "expected runtime follow define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_UNIFY") == "1", "expected runtime unify define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE") == "hxhxmacros.RuntimeContextApiMacros", "expected runtime module type define");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_ENUM") == "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState",
-				"expected runtime module enum type define");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_TYPEDEF") == "hxhxmacros.RuntimeModuleMembers.RuntimeModuleData",
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_ENUM") == "hxhxmacros.RuntimeModuleState", "expected runtime module enum type define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_TYPEDEF") == "hxhxmacros.RuntimeModuleData",
 				"expected runtime module typedef type define");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_ABSTRACT") == "hxhxmacros.RuntimeModuleMembers.RuntimeModuleId",
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPE_MODULE_ABSTRACT") == "hxhxmacros.RuntimeModuleId",
 				"expected runtime module abstract type define");
 
 			final typeParamOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypeParameterSubstitution()");

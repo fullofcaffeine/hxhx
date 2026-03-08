@@ -32,6 +32,7 @@ Beginner summary:
   - semantic typedef reconstruction for `Context.getType(...)` in assign-key extraction flows
   - `Context.getModule()` field-type reconstruction plus `TypeTools.followWithAbstracts()` in component/slot linter flows
   - the remaining `Context.parseInlineString()` / `Context.typeExpr()` seams in balanced inline-markup / HEEx TSX splice bodies
+- Sibling Reflaxe repos remain pressure tests, not semantic authorities. Upstream Haxe 4.3.7 behavior is the compatibility oracle; sibling snapshots only justify which remaining seams still matter in real code.
 - That means `haxe.ocaml-bxlg.9.5` should stay open until either:
   - those semantic gaps are narrowed further, or
   - Full1 explicitly scopes them out.

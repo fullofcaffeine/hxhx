@@ -337,6 +337,29 @@ Vendoring policy:
   - Override path with `HAXE_UPSTREAM_DIR=/path/to/haxe` when needed.
 - Local convenience: you may symlink `vendor/haxe` to an existing checkout (for example, `<path-to-haxe-reference>/haxe`) for faster iteration.
 
+## Sibling Reflaxe Repos Are Pressure Tests, Not Semantic Authorities
+
+When checking macro/target compatibility against sibling Reflaxe compilers (for example `reflaxe-elixir`, `haxe.go`, `haxe.rust`):
+
+- Use sibling repos to identify **real consumer pressure** and non-theoretical seams.
+- Do **not** treat sibling behavior as the semantic source of truth for `hxhx` or `reflaxe.ocaml`.
+- Upstream Haxe 4.3.7 remains the authority for compiler/macro semantics.
+- If a sibling repo uses behavior that upstream Haxe 4.3.7 does **not** support, do **not** add that behavior here just to satisfy the sibling repo.
+- In those cases, either:
+  - keep the gap open only if it is still required for declared Haxe compatibility scope, or
+  - explicitly scope the sibling-specific behavior out.
+
+Practical rule:
+
+- `upstream Haxe first`
+- `sibling repos second`
+
+Sibling repos are valid for:
+- proving a seam is exercised by real code
+- helping prioritize which Haxe-compatibility gaps matter first
+
+They are **not** valid as a reason to introduce compiler semantics that upstream Haxe does not have.
+
 ## Long-Term Acceptance Example: Haxe-in-Haxe (Production-Grade)
 
 We want a potentially **production-ready** Haxe-in-Haxe compiler example under `examples/` over time:
