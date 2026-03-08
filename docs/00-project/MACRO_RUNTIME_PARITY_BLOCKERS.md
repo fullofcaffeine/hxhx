@@ -29,9 +29,9 @@ Beginner summary:
 - `MRP-B2` is still open for honest reasons.
 - The remaining gaps are no longer generic bring-up plumbing; they are semantic fidelity gaps still exercised by real sibling consumer code.
 - In particular, the current external-host runtime subset is still narrower than the vendored `reflaxe-elixir` usage of:
-  - the remaining `Context.parseInlineString()` / `Context.typeExpr()` seams in inline markup / HEEx TSX flows
-  - `Context.getModule()` plus synthetic field/type/module metadata in registry and linter flows
-  - `TypeTools.applyTypeParameters()` / `TypeTools.followWithAbstracts()` in typedef/abstract-heavy transforms
+  - semantic typedef reconstruction for `Context.getType(...)` in assign-key extraction flows
+  - `Context.getModule()` field-type reconstruction plus `TypeTools.followWithAbstracts()` in component/slot linter flows
+  - the remaining `Context.parseInlineString()` / `Context.typeExpr()` seams in balanced inline-markup / HEEx TSX splice bodies
 - That means `haxe.ocaml-bxlg.9.5` should stay open until either:
   - those semantic gaps are narrowed further, or
   - Full1 explicitly scopes them out.
