@@ -305,7 +305,14 @@ class RuntimeMacroTypes {
 		return [typeForResolvedDecl(trimmed, "class", metadataEntries)];
 	}
 
-	public static function moduleTypesForModule(modulePath:String, entries:Array<{name:String, kind:String, metadata:Array<String>}>, ?moduleFields:Array<{
+	public static function moduleTypesForModule(modulePath:String, entries:Array<{
+		name:String,
+		kind:String,
+		metadata:Array<String>,
+		file:String,
+		min:Int,
+		max:Int
+	}>, ?moduleFields:Array<{
 		name:String,
 		kind:String,
 		metadata:Array<String>,
@@ -326,13 +333,22 @@ class RuntimeMacroTypes {
 		final resolvedFields = moduleFields == null ? [] : moduleFields;
 		if (resolvedFields.length > 0)
 			out.push(TInst(moduleFieldsCarrier(parts, moduleName, trimmed, resolvedFields), []));
-		final resolvedEntries = (entries == null || entries.length == 0) ? [{name: moduleName, kind: "class", metadata: []}] : entries;
+		final resolvedEntries = (entries == null || entries.length == 0) ? [
+			{
+				name: moduleName,
+				kind: "class",
+				metadata: [],
+				file: DEFAULT_FILE,
+				min: 0,
+				max: 0
+			}
+		] : entries;
 		for (entry in resolvedEntries) {
 			final trimmedName = StringTools.trim(entry == null || entry.name == null ? "" : entry.name);
 			if (trimmedName.length == 0 || seen.exists(trimmedName))
 				continue;
 			seen.set(trimmedName, true);
-			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata));
+			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata, entry.file, entry.min, entry.max));
 		}
 		return out;
 	}
@@ -341,7 +357,8 @@ class RuntimeMacroTypes {
 		return typeForResolvedDecl(typePath, "class", metadataEntries);
 	}
 
-	public static function typeForResolvedDecl(typePath:String, kind:String, ?metadataEntries:Array<String>, ?moduleNameOverride:String):Type {
+	public static function typeForResolvedDecl(typePath:String, kind:String, ?metadataEntries:Array<String>, ?moduleNameOverride:String, ?file:String,
+			?min:Int, ?max:Int):Type {
 		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
 		if (trimmed.length == 0)
 			throw "runtime macro type path lookup: empty type path";
@@ -350,7 +367,7 @@ class RuntimeMacroTypes {
 			throw "runtime macro type path lookup: invalid type path";
 		final name = parts.pop();
 		final moduleName = moduleNameOverride == null || moduleNameOverride.length == 0 ? name : moduleNameOverride;
-		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries);
+		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max);
 	}
 
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
@@ -555,6 +572,30 @@ class RuntimeMacroTypes {
 		}
 	}
 
+	/**
+		Return the declaration/source position carried by a synthetic runtime type reference.
+
+		Why
+		- External-host probes and sibling analyzers need to assert/use `type.pos`, but direct
+		  pattern matching on `haxe.macro.Type` inside generated macro-host code is still the most
+		  fragile place to hit backend constructor-name seams.
+		- Keeping the switch here centralizes that risk in the runtime helper layer.
+	**/
+	public static function typePos(t:Type):Position {
+		return switch (t) {
+			case TInst(c, _):
+				c.get().pos;
+			case TEnum(e, _):
+				e.get().pos;
+			case TType(td, _):
+				td.get().pos;
+			case TAbstract(a, _):
+				a.get().pos;
+			case _:
+				defaultPos();
+		}
+	}
+
 	public static function metaHas(t:Type, metadataName:String):Bool {
 		if (metadataName == null || metadataName.length == 0)
 			return false;
@@ -706,16 +747,18 @@ class RuntimeMacroTypes {
 		return TInst(classRef([], "Null", "Null"), [inner]);
 	}
 
-	static function typeFromResolvedDecl(pack:Array<String>, module:String, name:String, kind:String, ?metadataEntries:Array<String>):Type {
+	static function typeFromResolvedDecl(pack:Array<String>, module:String, name:String, kind:String, ?metadataEntries:Array<String>, ?file:String, ?min:Int,
+			?max:Int):Type {
+		final pos = position(file, min, max);
 		return switch (kind == null ? "" : StringTools.trim(kind).toLowerCase()) {
 			case "enum":
-				TEnum(enumRef(pack, name, module, metadataEntries), []);
+				TEnum(enumRef(pack, name, module, metadataEntries, pos), []);
 			case "typedef":
-				TType(defTypeRef(pack, name, module, [], TDynamic(null), metadataEntries), []);
+				TType(defTypeRef(pack, name, module, [], TDynamic(null), metadataEntries, pos), []);
 			case "abstract":
-				abstractType(abstractRef(pack, name, module, [], TDynamic(null), metadataEntries), []);
+				abstractType(abstractRef(pack, name, module, [], TDynamic(null), metadataEntries, pos), []);
 			case _:
-				classType(pack, module, name, metadataEntries);
+				classType(pack, module, name, metadataEntries, file, min, max);
 		}
 	}
 
@@ -785,8 +828,8 @@ class RuntimeMacroTypes {
 		}
 	}
 
-	static function classType(pack:Array<String>, module:String, name:String, ?metadataEntries:Array<String>):Type {
-		final value:Type = TInst(classRef(pack, name, module, metadataEntries), []);
+	static function classType(pack:Array<String>, module:String, name:String, ?metadataEntries:Array<String>, ?file:String, ?min:Int, ?max:Int):Type {
+		final value:Type = TInst(classRef(pack, name, module, metadataEntries, null, null, position(file, min, max)), []);
 		return value;
 	}
 
@@ -806,13 +849,13 @@ class RuntimeMacroTypes {
 		return classRef(pack, module, module, null, KModuleFields(modulePath), statics);
 	}
 
-	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>, ?kind:ClassKind,
-			?staticFields:Array<ClassField>):Ref<ClassType> {
+	static function classRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>, ?kind:ClassKind, ?staticFields:Array<ClassField>,
+			?pos:Position):Ref<ClassType> {
 		final value:ClassType = {
 			pack: pack.copy(),
 			name: name,
 			module: module,
-			pos: defaultPos(),
+			pos: pos == null ? defaultPos() : pos,
 			isPrivate: false,
 			isExtern: true,
 			params: [],
@@ -924,12 +967,12 @@ class RuntimeMacroTypes {
 		};
 	}
 
-	static function enumRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>):Ref<EnumType> {
+	static function enumRef(pack:Array<String>, name:String, module:String, ?metadataEntries:Array<String>, ?pos:Position):Ref<EnumType> {
 		final value:EnumType = {
 			pack: pack.copy(),
 			name: name,
 			module: module,
-			pos: defaultPos(),
+			pos: pos == null ? defaultPos() : pos,
 			isPrivate: false,
 			isExtern: true,
 			params: [],
@@ -942,13 +985,13 @@ class RuntimeMacroTypes {
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function defTypeRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type,
-			?metadataEntries:Array<String>):Ref<DefType> {
+	static function defTypeRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type, ?metadataEntries:Array<String>,
+			?pos:Position):Ref<DefType> {
 		final value:DefType = {
 			pack: pack.copy(),
 			name: name,
 			module: module,
-			pos: defaultPos(),
+			pos: pos == null ? defaultPos() : pos,
 			isPrivate: false,
 			isExtern: true,
 			params: params == null ? [] : params.copy(),
@@ -960,13 +1003,13 @@ class RuntimeMacroTypes {
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function abstractRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type,
-			?metadataEntries:Array<String>):Ref<AbstractType> {
+	static function abstractRef(pack:Array<String>, name:String, module:String, ?params:Array<TypeParameter>, ?type:Type, ?metadataEntries:Array<String>,
+			?pos:Position):Ref<AbstractType> {
 		final value:AbstractType = {
 			pack: pack.copy(),
 			name: name,
 			module: module,
-			pos: defaultPos(),
+			pos: pos == null ? defaultPos() : pos,
 			isPrivate: false,
 			isExtern: true,
 			params: params == null ? [] : params.copy(),

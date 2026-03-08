@@ -4,6 +4,9 @@ private typedef RuntimeResolvedTypeSnapshot = {
 	final name:String;
 	final kind:String;
 	final metadata:Array<String>;
+	final file:String;
+	final min:Int;
+	final max:Int;
 }
 
 private typedef RuntimeResolvedModuleFieldSnapshot = {
@@ -271,6 +274,7 @@ class MacroHostClient {
 		final modulePack = modulePath == null ? [] : modulePath.split(".");
 		if (modulePack.length > 0)
 			modulePack.pop();
+		final typeSpans = scanResolvedModuleTypeSpans(path);
 		inline function fullTypePath(name:String):String {
 			return modulePack.length == 0 ? name : modulePack.join(".") + "." + name;
 		}
@@ -279,10 +283,18 @@ class MacroHostClient {
 			if (trimmed.length == 0 || seen.exists(trimmed))
 				return;
 			seen.set(trimmed, true);
+			final span = typeSpans.exists(trimmed) ? typeSpans.get(trimmed) : {
+				file: path,
+				min: 0,
+				max: 0
+			};
 			out.push({
 				name: trimmed,
 				kind: kind,
-				metadata: MacroState.listAppliedTypeMetadata(fullTypePath(trimmed))
+				metadata: MacroState.listAppliedTypeMetadata(fullTypePath(trimmed)),
+				file: span.file,
+				min: span.min,
+				max: span.max
 			});
 		}
 
@@ -312,15 +324,201 @@ class MacroHostClient {
 				out.unshift({
 					name: existing.name,
 					kind: existing.kind,
-					metadata: mainMetadata
+					metadata: mainMetadata,
+					file: existing.file,
+					min: existing.min,
+					max: existing.max
 				});
 			} else {
 				out.unshift({
 					name: mainName,
 					kind: "class",
-					metadata: mainMetadata
+					metadata: mainMetadata,
+					file: path,
+					min: 0,
+					max: 0
 				});
 			}
+		}
+
+		return out;
+	}
+
+	static function scanResolvedModuleTypeSpans(path:String):Map<String, {file:String, min:Int, max:Int}> {
+		final out = new Map<String, {file:String, min:Int, max:Int}>();
+		final filtered = readFilteredResolvedModuleSource(path);
+		if (filtered.length == 0)
+			return out;
+
+		var braceDepth = 0;
+		var blockCommentDepth = 0;
+		var lineOffset = 0;
+		final lines = splitLinesPreserveNewlines(filtered);
+
+		function countChar(text:String, ch:String):Int {
+			var count = 0;
+			var i = 0;
+			while (i < text.length) {
+				if (text.charAt(i) == ch)
+					count += 1;
+				i += 1;
+			}
+			return count;
+		}
+
+		function stripLeadingTypeMetadata(text:String):String {
+			var outText = text;
+			while (true) {
+				final trimmed = StringTools.ltrim(outText);
+				if (!StringTools.startsWith(trimmed, "@:"))
+					return trimmed;
+				var i = 2;
+				var depth = 0;
+				while (i < trimmed.length) {
+					final ch = trimmed.charAt(i);
+					switch (ch) {
+						case "(":
+							depth += 1;
+						case ")":
+							if (depth > 0)
+								depth -= 1;
+						case " " | "\t":
+							if (depth == 0) {
+								outText = trimmed.substr(i + 1);
+								i = trimmed.length;
+							}
+						case _:
+					}
+					i += 1;
+				}
+				if (i >= trimmed.length)
+					return trimmed;
+			}
+			return outText;
+		}
+
+		function lineSpan(rawLine:String, start:Int):{min:Int, max:Int} {
+			var min = 0;
+			while (min < rawLine.length) {
+				final c = rawLine.charCodeAt(min);
+				if (c == " ".code || c == "\t".code)
+					min += 1;
+				else
+					break;
+			}
+			var max = rawLine.length;
+			while (max > min) {
+				final c = rawLine.charCodeAt(max - 1);
+				if (c == "\n".code || c == "\r".code)
+					max -= 1;
+				else
+					break;
+			}
+			return {
+				min: start + min,
+				max: start + max
+			};
+		}
+
+		function record(name:String, span:{min:Int, max:Int}):Void {
+			final trimmed = name == null ? "" : StringTools.trim(name);
+			if (trimmed.length == 0 || out.exists(trimmed))
+				return;
+			out.set(trimmed, {
+				file: path,
+				min: span.min,
+				max: span.max
+			});
+		}
+
+		for (rawLine in lines) {
+			final currentLineOffset = lineOffset;
+			lineOffset += rawLine.length;
+			var line = rawLine;
+			if (blockCommentDepth > 0) {
+				while (line.length > 0 && blockCommentDepth > 0) {
+					final close = line.indexOf("*/");
+					if (close == -1) {
+						line = "";
+					} else {
+						blockCommentDepth -= 1;
+						line = line.substr(close + 2);
+					}
+				}
+			}
+			while (true) {
+				final open = line.indexOf("/*");
+				if (open == -1)
+					break;
+				final close = line.indexOf("*/", open + 2);
+				if (close == -1) {
+					blockCommentDepth += 1;
+					line = line.substr(0, open);
+					break;
+				}
+				line = line.substr(0, open) + line.substr(close + 2);
+			}
+			line = {
+				var text = line;
+				var inString = false;
+				var quote = "";
+				var i = 0;
+				while (i < text.length - 1) {
+					final ch = text.charAt(i);
+					if (inString) {
+						if (ch == "\\") {
+							i += 2;
+							continue;
+						}
+						if (ch == quote)
+							inString = false;
+						i += 1;
+						continue;
+					}
+					if (ch == "\"" || ch == "'") {
+						inString = true;
+						quote = ch;
+						i += 1;
+						continue;
+					}
+					if (ch == "/" && text.charAt(i + 1) == "/") {
+						text = text.substr(0, i);
+						break;
+					}
+					i += 1;
+				}
+				text;
+			};
+			final trimmed = stripLeadingTypeMetadata(StringTools.trim(line));
+			if (trimmed.length == 0) {
+				braceDepth += countChar(line, "{");
+				braceDepth -= countChar(line, "}");
+				if (braceDepth < 0)
+					braceDepth = 0;
+				continue;
+			}
+			if (braceDepth == 0) {
+				final span = lineSpan(rawLine, currentLineOffset);
+				final enumAbstract = ~/^(?:private\s+|extern\s+|final\s+)?enum\s+abstract\s+([A-Za-z_][A-Za-z0-9_]*)/;
+				final classDecl = ~/^(?:private\s+|extern\s+|final\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)/;
+				final enumDecl = ~/^(?:private\s+|extern\s+|final\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)/;
+				final typedefDecl = ~/^(?:private\s+|extern\s+|final\s+)?typedef\s+([A-Za-z_][A-Za-z0-9_]*)/;
+				final abstractDecl = ~/^(?:private\s+|extern\s+|final\s+)?abstract\s+([A-Za-z_][A-Za-z0-9_]*)/;
+				if (enumAbstract.match(trimmed))
+					record(enumAbstract.matched(1), span);
+				else if (classDecl.match(trimmed))
+					record(classDecl.matched(1), span);
+				else if (enumDecl.match(trimmed))
+					record(enumDecl.matched(1), span);
+				else if (typedefDecl.match(trimmed))
+					record(typedefDecl.matched(1), span);
+				else if (abstractDecl.match(trimmed))
+					record(abstractDecl.matched(1), span);
+			}
+			braceDepth += countChar(line, "{");
+			braceDepth -= countChar(line, "}");
+			if (braceDepth < 0)
+				braceDepth = 0;
 		}
 
 		return out;
@@ -1001,6 +1199,33 @@ private class MacroClient {
 					parts.push(MacroProtocol.encodeLen("t", name));
 					parts.push(MacroProtocol.encodeLen("m", resolved.className));
 					parts.push(MacroProtocol.encodeLen("k", kind));
+					parts.push(MacroProtocol.encodeLen("f", {
+						var file = resolved.path;
+						for (entry in resolvedTypes)
+							if (entry.name == targetTypeName) {
+								file = entry.file;
+								break;
+							}
+						file;
+					}));
+					parts.push(MacroProtocol.encodeLen("min", Std.string({
+						var value = 0;
+						for (entry in resolvedTypes)
+							if (entry.name == targetTypeName) {
+								value = entry.min;
+								break;
+							}
+						value;
+					})));
+					parts.push(MacroProtocol.encodeLen("max", Std.string({
+						var value = 0;
+						for (entry in resolvedTypes)
+							if (entry.name == targetTypeName) {
+								value = entry.max;
+								break;
+							}
+						value;
+					})));
 					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
 					for (i in 0...metadata.length)
 						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
@@ -1031,6 +1256,9 @@ private class MacroClient {
 						final entry = resolvedTypes[i];
 						parts.push(MacroProtocol.encodeLen("tn" + i, entry.name));
 						parts.push(MacroProtocol.encodeLen("tk" + i, entry.kind));
+						parts.push(MacroProtocol.encodeLen("tf" + i, entry.file));
+						parts.push(MacroProtocol.encodeLen("tmin" + i, Std.string(entry.min)));
+						parts.push(MacroProtocol.encodeLen("tmax" + i, Std.string(entry.max)));
 						parts.push(MacroProtocol.encodeLen("tmc" + i, Std.string(entry.metadata.length)));
 						for (j in 0...entry.metadata.length)
 							parts.push(MacroProtocol.encodeLen("tmd" + i + "_" + j, entry.metadata[j]));

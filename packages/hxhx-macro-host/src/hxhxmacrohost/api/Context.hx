@@ -344,7 +344,8 @@ class Context {
 		final typePath = parts.exists("t") ? parts.get("t") : name;
 		final moduleName = parts.exists("m") ? parts.get("m") : null;
 		final kind = parts.exists("k") ? parts.get("k") : "class";
-		return RuntimeMacroTypes.typeForResolvedDecl(typePath, kind, metadata, moduleName);
+		return RuntimeMacroTypes.typeForResolvedDecl(typePath, kind, metadata, moduleName, parts.exists("f") ? parts.get("f") : DEFAULT_MACRO_FILE,
+			parseNonNegativeInt(parts.exists("min") ? parts.get("min") : "", 0), parseNonNegativeInt(parts.exists("max") ? parts.get("max") : "", 0));
 	}
 
 	public static function getModule(name:String):Array<Type> {
@@ -356,7 +357,14 @@ class Context {
 		final parts = Protocol.kvParse(payload);
 		if (!parts.exists("ok") || parts.get("ok") != "1")
 			return [];
-		final entries = new Array<{name:String, kind:String, metadata:Array<String>}>();
+		final entries = new Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>();
 		final typeCount = parseNonNegativeInt(parts.exists("tc") ? parts.get("tc") : "", 0);
 		for (i in 0...typeCount) {
 			final nameKey = "tn" + i;
@@ -372,7 +380,10 @@ class Context {
 			entries.push({
 				name: parts.get(nameKey),
 				kind: parts.exists("tk" + i) ? parts.get("tk" + i) : "class",
-				metadata: metadata
+				metadata: metadata,
+				file: parts.exists("tf" + i) ? parts.get("tf" + i) : DEFAULT_MACRO_FILE,
+				min: parseNonNegativeInt(parts.exists("tmin" + i) ? parts.get("tmin" + i) : "", 0),
+				max: parseNonNegativeInt(parts.exists("tmax" + i) ? parts.get("tmax" + i) : "", 0)
 			});
 		}
 		final fields = new Array<{

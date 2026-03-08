@@ -1,4 +1,5 @@
 import haxe.macro.Expr;
+import haxe.macro.PositionTools;
 import haxe.macro.Type;
 import hxhx.macro.MacroState;
 import hxhxmacrohost.api.RuntimeMacroTypes;
@@ -60,6 +61,17 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		return entries;
 	}
 
+	static function assertPosFile(pos:Position, expectedSuffix:String, expectedMin:Int, expectedMax:Int):Void {
+		final info = PositionTools.getInfos(pos);
+		assertTrue(info.file != null && StringTools.endsWith(info.file, expectedSuffix),
+			"expected position file suffix "
+			+ expectedSuffix
+			+ " but got "
+			+ info.file);
+		assertTrue(info.min == expectedMin, "expected position min " + expectedMin + " but got " + info.min);
+		assertTrue(info.max == expectedMax, "expected position max " + expectedMax + " but got " + info.max);
+	}
+
 	static function main():Void {
 		MacroState.reset();
 		MacroState.registerGlobalMetadata("hxhxmacros.RuntimeContextApiMacros", "@:demoMeta", false, true, false);
@@ -87,32 +99,74 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 				fail("expected nullSafety parameter Strict");
 		}
 
-		final syntheticType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeContextApiMacros", "class", applied);
+		final syntheticType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeContextApiMacros", "class", applied, null,
+			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeContextApiMacros.hx", 10, 30);
 		final syntheticClass = expectInst(syntheticType).get();
 		assertTrue(syntheticClass.meta.has(":demoMeta"), "expected demo metadata on synthetic type path");
 		assertTrue(syntheticClass.meta.has(":nullSafety"), "expected nullSafety metadata on synthetic type path");
+		assertPosFile(syntheticClass.pos, "RuntimeContextApiMacros.hx", 10, 30);
 
 		final enumApplied = ["@:enumProbeMeta"];
 		final typedefApplied = ["@:typedefProbeMeta"];
 		final abstractApplied = ["@:abstractProbeMeta"];
-		final syntheticEnum = expectEnum(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleState", "enum", enumApplied)).get();
+		final syntheticEnum = expectEnum(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleState", "enum", enumApplied, null,
+			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 40, 50)).get();
 		assertTrue(syntheticEnum.meta.has(":enumProbeMeta"), "expected enum metadata on synthetic runtime type");
-		final syntheticTypedef = expectTypeDef(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied)).get();
+		assertPosFile(syntheticEnum.pos, "RuntimeModuleMembers.hx", 40, 50);
+		final syntheticTypedef = expectTypeDef(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleData", "typedef", typedefApplied, null,
+			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 60, 75)).get();
 		assertTrue(syntheticTypedef.meta.has(":typedefProbeMeta"), "expected typedef metadata on synthetic runtime type");
-		final syntheticAbstract = expectAbstract(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied)).get();
+		assertPosFile(syntheticTypedef.pos, "RuntimeModuleMembers.hx", 60, 75);
+		final syntheticAbstract = expectAbstract(RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleId", "abstract", abstractApplied, null,
+			"test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 80, 95)).get();
 		assertTrue(syntheticAbstract.meta.has(":abstractProbeMeta"), "expected abstract metadata on synthetic runtime type");
+		assertPosFile(syntheticAbstract.pos, "RuntimeModuleMembers.hx", 80, 95);
 
 		final moduleEntries = RuntimeMacroTypes.moduleTypesForModule("hxhxmacros.RuntimeModuleMembers", [
-			{name: "RuntimeModuleMembers", kind: "class", metadata: []},
-			{name: "RuntimeModuleState", kind: "enum", metadata: enumApplied},
-			{name: "RuntimeModuleData", kind: "typedef", metadata: typedefApplied},
-			{name: "RuntimeModuleId", kind: "abstract", metadata: abstractApplied}
+			{
+				name: "RuntimeModuleMembers",
+				kind: "class",
+				metadata: [],
+				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
+				min: 100,
+				max: 120
+			},
+			{
+				name: "RuntimeModuleState",
+				kind: "enum",
+				metadata: enumApplied,
+				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
+				min: 121,
+				max: 140
+			},
+			{
+				name: "RuntimeModuleData",
+				kind: "typedef",
+				metadata: typedefApplied,
+				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
+				min: 141,
+				max: 160
+			},
+			{
+				name: "RuntimeModuleId",
+				kind: "abstract",
+				metadata: abstractApplied,
+				file: "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx",
+				min: 161,
+				max: 180
+			}
 		]);
 		assertTrue(moduleEntries.length == 4, "expected four synthetic module members");
-		expectInst(moduleEntries[0]);
-		assertTrue(expectEnum(moduleEntries[1]).get().meta.has(":enumProbeMeta"), "expected per-type enum metadata");
-		assertTrue(expectTypeDef(moduleEntries[2]).get().meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
-		assertTrue(expectAbstract(moduleEntries[3]).get().meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
+		assertPosFile(expectInst(moduleEntries[0]).get().pos, "RuntimeModuleMembers.hx", 100, 120);
+		final enumEntry = expectEnum(moduleEntries[1]).get();
+		assertTrue(enumEntry.meta.has(":enumProbeMeta"), "expected per-type enum metadata");
+		assertPosFile(enumEntry.pos, "RuntimeModuleMembers.hx", 121, 140);
+		final typedefEntry = expectTypeDef(moduleEntries[2]).get();
+		assertTrue(typedefEntry.meta.has(":typedefProbeMeta"), "expected per-type typedef metadata");
+		assertPosFile(typedefEntry.pos, "RuntimeModuleMembers.hx", 141, 160);
+		final abstractEntry = expectAbstract(moduleEntries[3]).get();
+		assertTrue(abstractEntry.meta.has(":abstractProbeMeta"), "expected per-type abstract metadata");
+		assertPosFile(abstractEntry.pos, "RuntimeModuleMembers.hx", 161, 180);
 
 		MacroState.reset();
 	}

@@ -99,6 +99,13 @@ class RuntimeContextApiMacros {
 
 	public static function probeBuiltinTypePlumbing():String {
 		final pos = Context.currentPos();
+		function assertTypePos(label:String, t:Type, expectedSuffix:String):Void {
+			final info = Context.getPosInfos(RuntimeMacroTypes.typePos(t));
+			if (info.file == null || info.file.indexOf(expectedSuffix) < 0)
+				Context.fatalError("runtime macro type probe: expected " + label + " source file " + expectedSuffix + " but got " + info.file, pos);
+			if (info.min >= info.max)
+				Context.fatalError("runtime macro type probe: expected non-empty source range for " + label, pos);
+		}
 
 		final stringType = Context.getType("String");
 		if (TypeTools.toString(stringType) != "String")
@@ -119,6 +126,10 @@ class RuntimeContextApiMacros {
 		final moduleAbstractTypeText = TypeTools.toString(moduleAbstractType);
 		if (moduleAbstractTypeText != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleId")
 			Context.fatalError("runtime macro type probe: expected module abstract lookup result but got " + moduleAbstractTypeText, pos);
+		assertTypePos("module type", moduleType, "RuntimeContextApiMacros.hx");
+		assertTypePos("module enum type", moduleEnumType, "RuntimeModuleMembers.hx");
+		assertTypePos("module typedef type", moduleTypedefType, "RuntimeModuleMembers.hx");
+		assertTypePos("module abstract type", moduleAbstractType, "RuntimeModuleMembers.hx");
 
 		final boolType = Context.resolveType(macro :Bool, pos);
 		final boolTypeString = TypeTools.toString(boolType);
