@@ -247,9 +247,12 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("typed expr call type", typedExprOutput, "typedCallType=Dynamic");
 			assertContains("typed expr object type", typedExprOutput, "typedObjectType=Dynamic");
 			assertContains("typed expr array type", typedExprOutput, "typedArrayType=Dynamic");
+			assertContains("typed expr type path", typedExprOutput, "typedTypeExprPath=hxhxmacros.RuntimeModuleMembers.RuntimeModuleState");
 			assertTrue(Std.parseInt(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR_VISITS")) > 0, "expected typed expr visits define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR").indexOf("+") >= 0, "expected typed expr string define");
 			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR_DYNAMIC") == "Dynamic;Dynamic;Dynamic", "expected dynamic typed expr define");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_TYPED_EXPR_TYPE_PATH") == "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState",
+				"expected typed type-path define");
 
 			final typedVarExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedVarExprPlumbing()");
 			assertContains("typed var expr output", typedVarExprOutput, "typedVarExpr=");

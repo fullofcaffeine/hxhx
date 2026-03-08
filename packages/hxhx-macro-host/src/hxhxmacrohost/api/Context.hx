@@ -25,8 +25,11 @@ import hxhxmacrohost.Protocol;
 	- `defined(name)` / `definedValue(name)` query the compiler’s define store (reverse RPC).
 	- `getType(name)`, `resolveType(t, pos)`, and `typeof(expr)` expose a tiny builtin type model
 	  plus a narrow compiler-backed synthetic named-type rung for qualified type paths.
-	- `typeExpr(expr)` exposes a synthetic typed-expression rung for literal, parenthesized,
-	  `check-type`, and simple `+` expressions so runtime probes can exercise `TypedExprTools`.
+	- `typeExpr(expr)` exposes a synthetic typed-expression rung for:
+	  - compiler-resolved type-path expressions (`TTypeExpr(...)`)
+	  - literal, parenthesized, `check-type`, and simple `+` expressions
+	  - the wider dynamic/value subset tracked in `RuntimeTypedExprs`
+	  so runtime probes can exercise `TypedExprTools`.
 	- `getClassPath()` / `resolvePath(path)` expose compiler-owned classpath lookup so runtime macro
 	  code can find target resources without reimplementing file search inside the host.
 	- `getLocalModule()`, `getLocalMethod()`, `getLocalType()`, and `getExpectedType()` expose a
@@ -320,7 +323,7 @@ class Context {
 			out.push({
 				kind: parts.get(kindKey),
 				msg: parts.get(msgKey),
-				pos: {file: file, min: min, max: max < min ? min : max}
+				pos: cast {file: file, min: min, max: max < min ? min : max}
 			});
 		}
 		return out;
@@ -338,12 +341,12 @@ class Context {
 		parts.push(Protocol.encodeLen("c", Std.string(kept.length)));
 		for (i in 0...kept.length) {
 			final snapshot = kept[i];
+			final info = snapshot.pos == null ? {file: DEFAULT_MACRO_FILE, min: 0, max: 0} : getPosInfos(snapshot.pos);
 			parts.push(Protocol.encodeLen("k" + i, snapshot.kind));
 			parts.push(Protocol.encodeLen("m" + i, snapshot.msg));
-			parts.push(Protocol.encodeLen("f" + i, snapshot.pos == null
-				|| snapshot.pos.file == null ? DEFAULT_MACRO_FILE : snapshot.pos.file));
-			parts.push(Protocol.encodeLen("mi" + i, Std.string(snapshot.pos == null ? 0 : (snapshot.pos.min < 0 ? 0 : snapshot.pos.min))));
-			parts.push(Protocol.encodeLen("ma" + i, Std.string(snapshot.pos == null ? 0 : (snapshot.pos.max < 0 ? 0 : snapshot.pos.max))));
+			parts.push(Protocol.encodeLen("f" + i, info.file == null || info.file.length == 0 ? DEFAULT_MACRO_FILE : info.file));
+			parts.push(Protocol.encodeLen("mi" + i, Std.string(info.min < 0 ? 0 : info.min)));
+			parts.push(Protocol.encodeLen("ma" + i, Std.string(info.max < 0 ? 0 : info.max)));
 		}
 		HostToCompilerRpc.call("context.replaceMessages", Protocol.encodeLen("p", parts.join(" ")));
 	}
@@ -979,7 +982,7 @@ class Context {
 			final file = parts.exists("f" + i) && parts.get("f" + i).length > 0 ? parts.get("f" + i) : DEFAULT_MACRO_FILE;
 			final min = parseNonNegativeInt(parts.exists("mi" + i) ? parts.get("mi" + i) : "", 0);
 			final max = parseNonNegativeInt(parts.exists("ma" + i) ? parts.get("ma" + i) : "", min);
-			final pos:Position = {file: file, min: min, max: max < min ? min : max};
+			final pos:Position = cast {file: file, min: min, max: max < min ? min : max};
 
 			final path = new Array<{pos:Position, name:String}>();
 			for (segment in pathText.split(".")) {
@@ -1024,9 +1027,9 @@ class Context {
 	public static function currentPos():Position {
 		final payload = HostToCompilerRpc.call("context.currentPos", "");
 		if (payload == null || payload.length == 0)
-			return {file: DEFAULT_MACRO_FILE, min: 0, max: 0};
+			return cast {file: DEFAULT_MACRO_FILE, min: 0, max: 0};
 		final parts = Protocol.kvParse(payload);
-		return {
+		return cast {
 			file: parts.exists("f") && parts.get("f").length > 0 ? parts.get("f") : DEFAULT_MACRO_FILE,
 			min: parseNonNegativeInt(parts.exists("mi") ? parts.get("mi") : "", 0),
 			max: parseNonNegativeInt(parts.exists("ma") ? parts.get("ma") : "", 0)
@@ -1067,16 +1070,17 @@ class Context {
 
 	public static function getPosInfos(p:Position):{min:Int, max:Int, file:String} {
 		if (p == null)
-			return currentPos();
+			return {file: DEFAULT_MACRO_FILE, min: 0, max: 0};
+		final info:{min:Int, max:Int, file:String} = cast p;
 		return {
-			file: p.file == null || p.file.length == 0 ? DEFAULT_MACRO_FILE : p.file,
-			min: p.min < 0 ? 0 : p.min,
-			max: p.max < 0 ? 0 : p.max
+			file: info.file == null || info.file.length == 0 ? DEFAULT_MACRO_FILE : info.file,
+			min: info.min < 0 ? 0 : info.min,
+			max: info.max < 0 ? 0 : info.max
 		};
 	}
 
 	public static function makePosition(inf:{min:Int, max:Int, file:String}):Position {
-		return {
+		return cast {
 			file: inf == null || inf.file == null || inf.file.length == 0 ? DEFAULT_MACRO_FILE : inf.file,
 			min: inf == null || inf.min < 0 ? 0 : inf.min,
 			max: inf == null || inf.max < 0 ? 0 : inf.max};

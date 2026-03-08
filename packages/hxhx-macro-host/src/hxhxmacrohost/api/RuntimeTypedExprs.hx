@@ -2,6 +2,8 @@ package hxhxmacrohost.api;
 
 import haxe.macro.Expr;
 import haxe.macro.Type;
+import hxhxmacrohost.HostToCompilerRpc;
+import hxhxmacrohost.Protocol;
 
 /**
 	Minimal runtime `TypedExpr` model for external-host macro bring-up.
@@ -13,6 +15,8 @@ import haxe.macro.Type;
 
 	What
 	- Builds synthetic `TypedExpr` values for:
+	  - type-path expressions that can be resolved through the existing compiler-backed
+		`Context.getType(...)` rung
 	  - literal constants
 	  - generic identifiers
 	  - dynamic field and call chains
@@ -36,6 +40,12 @@ class RuntimeTypedExprs {
 	public static function typeExpr(e:Expr):TypedExpr {
 		if (e == null)
 			throw "runtime macro typeExpr: null expr";
+		final typePath = extractTypePathCandidate(e);
+		if (typePath != null) {
+			final typedTypeExpr = tryTypeExprFromPath(typePath, e.pos);
+			if (typedTypeExpr != null)
+				return typedTypeExpr;
+		}
 		return switch (e.expr) {
 			case EConst(CInt(raw, suffix)):
 				if (suffix != null) {}
@@ -110,6 +120,8 @@ class RuntimeTypedExprs {
 				"null";
 			case TIdent(name):
 				name;
+			case TTypeExpr(moduleType):
+				RuntimeMacroTypes.moduleTypePath(moduleType);
 			case TParenthesis(inner):
 				"(" + toString(inner) + ")";
 			case TField(owner, FDynamic(field)):
@@ -162,6 +174,8 @@ class RuntimeTypedExprs {
 				makeExpr(e.pos, EConst(CIdent("null")));
 			case TIdent(name):
 				makeExpr(e.pos, EConst(CIdent(name)));
+			case TTypeExpr(moduleType):
+				RuntimeMacroTypes.moduleTypeExpr(moduleType, e.pos);
 			case TParenthesis(inner):
 				makeExpr(e.pos, EParenthesis(toExpr(inner)));
 			case TField(owner, FDynamic(field)):
@@ -225,6 +239,168 @@ class RuntimeTypedExprs {
 
 	static inline function dynamicType():Type {
 		return RuntimeMacroTypes.getTypeByName("Dynamic");
+	}
+
+	static function tryTypeExprFromPath(path:String, pos:Position):Null<TypedExpr> {
+		return try {
+			final resolved = resolveTypePathFromCompiler(path);
+			final moduleType = RuntimeMacroTypes.moduleTypeOfType(resolved);
+			if (moduleType == null)
+				null;
+			else
+				makeTyped(pos, TTypeExpr(moduleType), resolved);
+		} catch (_:Dynamic) {
+			null;
+		}
+	}
+
+	static function extractTypePathCandidate(e:Expr):Null<String> {
+		final stripped = stripTypePathWrappers(e);
+		if (stripped == null)
+			return null;
+		final parts = new Array<String>();
+		if (!collectTypePathParts(stripped, parts))
+			return null;
+		if (parts.length == 0)
+			return null;
+		final tail = parts[parts.length - 1];
+		if (!looksLikeTypeName(tail))
+			return null;
+		return parts.join(".");
+	}
+
+	static function stripTypePathWrappers(e:Expr):Expr {
+		if (e == null)
+			return null;
+		return switch (e.expr) {
+			case EParenthesis(inner):
+				stripTypePathWrappers(inner);
+			case ECheckType(inner, _):
+				stripTypePathWrappers(inner);
+			case EMeta(_, inner):
+				stripTypePathWrappers(inner);
+			case ECast(inner, _):
+				stripTypePathWrappers(inner);
+			case _:
+				e;
+		}
+	}
+
+	static function collectTypePathParts(e:Expr, out:Array<String>):Bool {
+		if (e == null)
+			return false;
+		return switch (e.expr) {
+			case EConst(CIdent(name)):
+				if (!isSimpleTypePathSegment(name)) false; else {
+					out.push(name);
+					true;
+				}
+			case EField(owner, field, _):
+				if (!collectTypePathParts(owner, out) || !isSimpleTypePathSegment(field)) false; else {
+					out.push(field);
+					true;
+				}
+			case _:
+				false;
+		}
+	}
+
+	static function isSimpleTypePathSegment(name:String):Bool {
+		if (name == null || name.length == 0)
+			return false;
+		return ~/^[A-Za-z_][A-Za-z0-9_]*$/.match(name);
+	}
+
+	static function looksLikeTypeName(name:String):Bool {
+		if (!isSimpleTypePathSegment(name))
+			return false;
+		final first = name.charCodeAt(0);
+		return first >= "A".code && first <= "Z".code;
+	}
+
+	static function resolveTypePathFromCompiler(name:String):Type {
+		try {
+			return RuntimeMacroTypes.getTypeByName(name);
+		} catch (_:Dynamic) {}
+		final payload = HostToCompilerRpc.call("context.getType", Protocol.encodeLen("n", name));
+		if (payload == null || payload.length == 0)
+			throw "runtime macro typeExpr: unresolved type path " + name;
+		final parts = Protocol.kvParse(payload);
+		if (!parts.exists("ok") || parts.get("ok") != "1")
+			throw "runtime macro typeExpr: unresolved type path " + name;
+		final metadata = new Array<String>();
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final key = "md" + i;
+			if (parts.exists(key))
+				metadata.push(parts.get(key));
+		}
+		final staticFields = new Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>();
+		final staticCount = parseNonNegativeInt(parts.exists("sc") ? parts.get("sc") : "", 0);
+		for (i in 0...staticCount) {
+			final nameKey = "sn" + i;
+			if (!parts.exists(nameKey))
+				continue;
+			final fieldMetadata = new Array<String>();
+			final fieldMetadataCount = parseNonNegativeInt(parts.exists("smc" + i) ? parts.get("smc" + i) : "", 0);
+			for (j in 0...fieldMetadataCount) {
+				final key = "smd" + i + "_" + j;
+				if (parts.exists(key))
+					fieldMetadata.push(parts.get(key));
+			}
+			final args = new Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>();
+			final argCount = parseNonNegativeInt(parts.exists("sac" + i) ? parts.get("sac" + i) : "", 0);
+			for (j in 0...argCount) {
+				final argNameKey = "san" + i + "_" + j;
+				if (!parts.exists(argNameKey))
+					continue;
+				args.push({
+					name: parts.get(argNameKey),
+					opt: parts.exists("sao" + i + "_" + j) && parts.get("sao" + i + "_" + j) == "1",
+					typeText: parts.exists("sat" + i + "_" + j) ? parts.get("sat" + i + "_" + j) : "Dynamic"
+				});
+			}
+			staticFields.push({
+				name: parts.get(nameKey),
+				kind: parts.exists("sk" + i) ? parts.get("sk" + i) : "var",
+				metadata: fieldMetadata,
+				initExpr: parts.exists("se" + i) ? parts.get("se" + i) : null,
+				args: args,
+				returnTypeText: parts.exists("sr" + i) ? parts.get("sr" + i) : null,
+				file: parts.exists("sf" + i) ? parts.get("sf" + i) : "<macro>",
+				min: parseNonNegativeInt(parts.exists("smin" + i) ? parts.get("smin" + i) : "", 0),
+				max: parseNonNegativeInt(parts.exists("smax" + i) ? parts.get("smax" + i) : "", 0)
+			});
+		}
+		final typePath = parts.exists("t") ? parts.get("t") : name;
+		final moduleName = parts.exists("m") ? parts.get("m") : null;
+		final kind = parts.exists("k") ? parts.get("k") : "class";
+		return RuntimeMacroTypes.typeForResolvedDecl(typePath, kind, metadata, moduleName, parts.exists("f") ? parts.get("f") : "<macro>",
+			parseNonNegativeInt(parts.exists("min") ? parts.get("min") : "", 0), parseNonNegativeInt(parts.exists("max") ? parts.get("max") : "", 0),
+			staticFields);
+	}
+
+	static function parseNonNegativeInt(raw:String, fallback:Int):Int {
+		final parsed = Std.parseInt(raw);
+		return parsed == null || parsed < 0 ? fallback : parsed;
 	}
 
 	static function makeExpr(pos:Position, expr:ExprDef):Expr {

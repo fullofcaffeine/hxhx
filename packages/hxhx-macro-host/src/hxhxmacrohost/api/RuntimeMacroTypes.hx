@@ -403,6 +403,8 @@ class RuntimeMacroTypes {
 			throw "runtime macro type path lookup: invalid type path";
 		final name = parts.pop();
 		final moduleName = moduleNameOverride == null || moduleNameOverride.length == 0 ? name : moduleNameOverride;
+		if (moduleNameOverride != null && moduleNameOverride.length > 0 && name != moduleName && parts.length > 0 && parts[parts.length - 1] == moduleName)
+			parts.pop();
 		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max, staticFields);
 		}
 
@@ -584,6 +586,57 @@ class RuntimeMacroTypes {
 			case _:
 				null;
 		}
+	}
+
+	/**
+		Convert a synthetic runtime `Type` into the corresponding `ModuleType`, when possible.
+
+		Why
+		- External-host `Context.typeExpr(...)` now needs a narrow `TTypeExpr(...)` rung for
+		  path-like expressions used by real sibling consumers.
+		- Those consumers care about `ModuleType` shape (`TClassDecl`, `TEnumDecl`, `TTypeDecl`,
+		  `TAbstract`) rather than just the wrapped `Type`.
+
+		What
+		- Returns `null` for non-module-bearing runtime types (`TFun`, `TDynamic`, anonymous, etc.).
+		- Preserves the actual synthetic declaration kind already carried by the runtime type model.
+	**/
+	public static function moduleTypeOfType(t:Type):Null<ModuleType> {
+		return switch (t) {
+			case TInst(c, _):
+				TClassDecl(c);
+			case TEnum(e, _):
+				TEnumDecl(e);
+			case TType(td, _):
+				TTypeDecl(td);
+			case TAbstract(a, _):
+				TAbstract(a);
+			case _:
+				null;
+		}
+	}
+
+	/**
+		Render a synthetic runtime `ModuleType` back to its full dotted Haxe path.
+	**/
+	public static function moduleTypePath(moduleType:ModuleType):String {
+		return switch (moduleType) {
+			case TClassDecl(c):
+				refPath(c.get().pack, c.get().module, c.get().name);
+			case TEnumDecl(e):
+				refPath(e.get().pack, e.get().module, e.get().name);
+			case TTypeDecl(td):
+				refPath(td.get().pack, td.get().module, td.get().name);
+			case TAbstract(a):
+				refPath(a.get().pack, a.get().module, a.get().name);
+		}
+	}
+
+	/**
+		Render a synthetic runtime `ModuleType` back to a plain path expression.
+	**/
+	public static function moduleTypeExpr(moduleType:ModuleType, ?pos:Position):Expr {
+		return pathExpr(moduleTypePath(moduleType), pos);
 	}
 
 	/**
@@ -777,6 +830,32 @@ class RuntimeMacroTypes {
 
 	static function fullPath(pack:Array<String>, name:String):String {
 		return (pack == null || pack.length == 0) ? name : (pack.join(".") + "." + name);
+	}
+
+	static function refPath(pack:Array<String>, module:String, name:String):String {
+		final base = fullPath(pack, module);
+		return module == name ? base : (base + "." + name);
+	}
+
+	static function pathExpr(path:String, ?pos:Position):Expr {
+		final trimmed = StringTools.trim(path == null ? "" : path);
+		if (trimmed.length == 0)
+			return {
+				expr: EConst(CIdent("null")),
+				pos: pos == null ? defaultPos() : pos
+			};
+		final parts = trimmed.split(".");
+		var out:Expr = {
+			expr: EConst(CIdent(parts.shift())),
+			pos: pos == null ? defaultPos() : pos
+		};
+		for (part in parts) {
+			out = {
+				expr: EField(out, part),
+				pos: pos == null ? defaultPos() : pos
+			};
+		}
+		return out;
 	}
 
 	static function stringType():Type {

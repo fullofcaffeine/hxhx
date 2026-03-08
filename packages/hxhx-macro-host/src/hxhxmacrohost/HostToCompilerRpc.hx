@@ -122,7 +122,7 @@ class HostToCompilerRpc {
 
 	static function safeReadLine():Null<String> {
 		try {
-			return cast(untyped __ocaml__("(try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null))"));
+			return cast(OcamlInjection.__ocaml__("(try input_line stdin with End_of_file -> Obj.magic (HxRuntime.hx_null))"));
 		} catch (_:Dynamic) {
 			return null;
 		}

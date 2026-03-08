@@ -960,12 +960,43 @@ class RuntimeContextApiMacros {
 				Context.fatalError("runtime macro typed-expr probe: expected array roundtrip expr", pos);
 		}
 
+		final typedTypeExpr = Context.typeExpr(macro hxhxmacros.RuntimeModuleMembers.RuntimeModuleState);
+		final typedTypeExprType = TypeTools.toString(typedTypeExpr.t);
+		if (typedTypeExprType != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState")
+			Context.fatalError("runtime macro typed-expr probe: expected module-qualified type path type", pos);
+		final typedTypeExprPath = switch (typedTypeExpr.expr) {
+			case TTypeExpr(moduleType):
+				RuntimeMacroTypes.moduleTypePath(moduleType);
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected TTypeExpr for module-qualified type path", pos);
+				"";
+		}
+		if (typedTypeExprPath != "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState")
+			Context.fatalError("runtime macro typed-expr probe: expected module-qualified type path but got " + typedTypeExprPath, pos);
+		final typedTypeRoundTrip = Context.getTypedExpr(typedTypeExpr);
+		switch (typedTypeRoundTrip.expr) {
+			case EField(owner, "RuntimeModuleState", _):
+				switch (owner.expr) {
+					case EField(owner2, "RuntimeModuleMembers", _):
+						switch (owner2.expr) {
+							case EConst(CIdent("hxhxmacros")):
+							case _:
+								Context.fatalError("runtime macro typed-expr probe: expected module-qualified roundtrip owner", pos);
+						}
+					case _:
+						Context.fatalError("runtime macro typed-expr probe: expected module-qualified roundtrip field owner", pos);
+				}
+			case _:
+				Context.fatalError("runtime macro typed-expr probe: expected module-qualified roundtrip type path", pos);
+		}
+
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR", typedExprString);
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_VISITS", Std.string(visitedNodes));
 		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_DYNAMIC", typedCallType + ";" + typedObjectType + ";" + typedArrayType);
+		Compiler.define("HXHX_RUNTIME_TYPED_EXPR_TYPE_PATH", typedTypeExprPath);
 
 		return "typedExpr=" + typedExprString + ";typedType=" + typedExprType + ";visits=" + visitedNodes + ";typedCallType=" + typedCallType
-			+ ";typedObjectType=" + typedObjectType + ";typedArrayType=" + typedArrayType;
+			+ ";typedObjectType=" + typedObjectType + ";typedArrayType=" + typedArrayType + ";typedTypeExprPath=" + typedTypeExprPath;
 	}
 
 	public static function probeTypedVarExprPlumbing():String {

@@ -122,6 +122,13 @@ class M14RuntimeAppliedTypeMetadataIntegrationTest {
 		assertTrue(syntheticAbstract.meta.has(":abstractProbeMeta"), "expected abstract metadata on synthetic runtime type");
 		assertPosFile(syntheticAbstract.pos, "RuntimeModuleMembers.hx", 80, 95);
 
+		final moduleScopedEnumType = RuntimeMacroTypes.typeForResolvedDecl("hxhxmacros.RuntimeModuleMembers.RuntimeModuleState", "enum", enumApplied,
+			"RuntimeModuleMembers", "test/fixtures/hxhx-macros/src/hxhxmacros/RuntimeModuleMembers.hx", 121, 140);
+		final moduleScopedEnumModuleType = RuntimeMacroTypes.moduleTypeOfType(moduleScopedEnumType);
+		assertTrue(moduleScopedEnumModuleType != null, "expected module-scoped enum module type");
+		assertTrue(RuntimeMacroTypes.moduleTypePath(moduleScopedEnumModuleType) == "hxhxmacros.RuntimeModuleMembers.RuntimeModuleState",
+			"expected module-scoped enum module type path without duplicated module segment");
+
 		final moduleEntries = RuntimeMacroTypes.moduleTypesForModule("hxhxmacros.RuntimeModuleMembers", [
 			{
 				name: "RuntimeModuleMembers",
