@@ -317,6 +317,12 @@ class RuntimeMacroTypes {
 		kind:String,
 		metadata:Array<String>,
 		initExpr:Null<String>,
+		args:Array<{
+			name:String,
+			opt:Bool,
+			typeText:String
+		}>,
+		returnTypeText:Null<String>,
 		file:String,
 		min:Int,
 		max:Int
@@ -838,13 +844,19 @@ class RuntimeMacroTypes {
 		kind:String,
 		metadata:Array<String>,
 		initExpr:Null<String>,
+		args:Array<{
+			name:String,
+			opt:Bool,
+			typeText:String
+		}>,
+		returnTypeText:Null<String>,
 		file:String,
 		min:Int,
 		max:Int
 	}>):Ref<ClassType> {
 		final statics = [
 			for (entry in entries)
-				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.file, entry.min, entry.max)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max)
 		];
 		return classRef(pack, module, module, null, KModuleFields(modulePath), statics);
 	}
@@ -877,13 +889,15 @@ class RuntimeMacroTypes {
 		return makeRef(value, fullPath(pack, name));
 	}
 
-	static function classField(name:String, kind:String, ?metadataEntries:Array<String>, ?initExpr:Null<String>, ?file:String, ?min:Int, ?max:Int):ClassField {
+	static function classField(name:String, kind:String, ?metadataEntries:Array<String>, ?initExpr:Null<String>,
+			?args:Array<{name:String, opt:Bool, typeText:String}>, ?returnTypeText:Null<String>, ?file:String, ?min:Int, ?max:Int):ClassField {
 		final lowered = kind == null ? "" : StringTools.trim(kind).toLowerCase();
 		final pos = position(file, min, max);
 		final typedExpr = buildFieldExpr(initExpr, pos);
+		final functionType = buildMethodType(args, returnTypeText);
 		final fieldType = switch (lowered) {
 			case "method":
-				TFun([], TDynamic(null));
+				functionType;
 			case _ if (typedExpr != null):
 				typedExpr.t;
 			case _:
@@ -914,6 +928,29 @@ class RuntimeMacroTypes {
 			doc: null,
 			overloads: makeRef([], name + ".overloads")
 		};
+	}
+
+	static function buildMethodType(args:Array<{name:String, opt:Bool, typeText:String}>, returnTypeText:Null<String>):Type {
+		final safeArgs = args == null ? [] : args;
+		return TFun([
+			for (arg in safeArgs)
+				{
+					name: arg == null || arg.name == null ? "" : arg.name,
+					opt: arg != null && arg.opt,
+					t: typeFromText(arg == null ? null : arg.typeText)
+				}
+		], typeFromText(returnTypeText));
+	}
+
+	static function typeFromText(text:Null<String>):Type {
+		final trimmed = StringTools.trim(text == null ? "" : text);
+		if (trimmed.length == 0)
+			return TDynamic(null);
+		return try {
+			parseTypeText(trimmed);
+		} catch (_:Dynamic) {
+			typeForPath(trimmed);
+		}
 	}
 
 	static function buildFieldExpr(exprText:Null<String>, pos:Position):Null<TypedExpr> {

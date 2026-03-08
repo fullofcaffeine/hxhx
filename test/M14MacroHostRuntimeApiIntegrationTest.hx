@@ -224,8 +224,9 @@ class M14MacroHostRuntimeApiIntegrationTest {
 			assertContains("module lookup define", moduleLookupDefine, "hxhxmacros.RuntimeModuleState");
 
 			final moduleFieldOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeModuleFieldCarrier()");
-			assertContains("module field output", moduleFieldOutput, "moduleFields=featureEnabled;retryCount;routeTag;routerMarker;schemaMarker;sourceTag");
-			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_FIELDS") == "featureEnabled;retryCount;routeTag;routerMarker;schemaMarker;sourceTag",
+			assertContains("module field output", moduleFieldOutput,
+				"moduleFields=featureEnabled;renderSummary;retryCount;routeTag;routerMarker;schemaMarker;sourceTag");
+			assertTrue(MacroState.definedValue("HXHX_RUNTIME_MODULE_FIELDS") == "featureEnabled;renderSummary;retryCount;routeTag;routerMarker;schemaMarker;sourceTag",
 				"expected runtime module field define");
 
 			final typedExprOutput = MacroHostClient.run("hxhxmacros.RuntimeContextApiMacros.probeTypedExprPlumbing()");

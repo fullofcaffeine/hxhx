@@ -19,5 +19,10 @@ final retryCount = 3;
 @:enabled
 var featureEnabled = true;
 
+@:summary
+function renderSummary(label:String, retryCount:Int):String {
+	return label + ":" + retryCount;
+}
+
 @:sourceTag
 final sourceTag = "from-source".toUpperCase();

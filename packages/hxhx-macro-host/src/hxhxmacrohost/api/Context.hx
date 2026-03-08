@@ -391,6 +391,12 @@ class Context {
 			kind:String,
 			metadata:Array<String>,
 			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
 			file:String,
 			min:Int,
 			max:Int
@@ -407,11 +413,29 @@ class Context {
 				if (parts.exists(key))
 					metadata.push(parts.get(key));
 			}
+			final args = new Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>();
+			final argCount = parseNonNegativeInt(parts.exists("fac" + i) ? parts.get("fac" + i) : "", 0);
+			for (j in 0...argCount) {
+				final nameKey = "fan" + i + "_" + j;
+				if (!parts.exists(nameKey))
+					continue;
+				args.push({
+					name: parts.get(nameKey),
+					opt: parts.exists("fao" + i + "_" + j) && parts.get("fao" + i + "_" + j) == "1",
+					typeText: parts.exists("fat" + i + "_" + j) ? parts.get("fat" + i + "_" + j) : "Dynamic"
+				});
+			}
 			fields.push({
 				name: parts.get(nameKey),
 				kind: parts.exists("fk" + i) ? parts.get("fk" + i) : "var",
 				metadata: metadata,
 				initExpr: parts.exists("fe" + i) ? parts.get("fe" + i) : null,
+				args: args,
+				returnTypeText: parts.exists("fr" + i) ? parts.get("fr" + i) : null,
 				file: parts.exists("ff" + i) ? parts.get("ff" + i) : DEFAULT_MACRO_FILE,
 				min: parseNonNegativeInt(parts.exists("fmin" + i) ? parts.get("fmin" + i) : "", 0),
 				max: parseNonNegativeInt(parts.exists("fmax" + i) ? parts.get("fmax" + i) : "", 0)

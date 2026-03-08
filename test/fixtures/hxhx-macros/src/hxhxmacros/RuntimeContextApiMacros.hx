@@ -449,13 +449,14 @@ class RuntimeContextApiMacros {
 			}
 			sawCarrier = true;
 			final statics = classType.statics.get();
-			if (statics.length < 6)
+			if (statics.length < 7)
 				Context.fatalError("runtime macro module-field probe: expected synthetic module statics", pos);
 			var sawRouter = false;
 			var sawSchema = false;
 			var sawRouteTag = false;
 			var sawRetryCount = false;
 			var sawFeatureEnabled = false;
+			var sawRenderSummary = false;
 			var sawSourceTag = false;
 			for (field in statics) {
 				rendered.push(field.name);
@@ -463,6 +464,14 @@ class RuntimeContextApiMacros {
 					sawRouter = field.meta.has(":router");
 				if (field.name == "schemaMarker")
 					sawSchema = field.meta.has(":schema");
+				if (field.name == "routerMarker" || field.name == "schemaMarker") {
+					final summary = TypeTools.toString(field.type);
+					if (summary != "() -> String")
+						Context.fatalError("runtime macro module-field probe: expected zero-arg String function type for "
+							+ field.name
+							+ " but got "
+							+ summary, pos);
+				}
 				if (field.name == "routeTag") {
 					sawRouteTag = field.meta.has(":routeTag");
 					final expr = field.expr();
@@ -502,6 +511,19 @@ class RuntimeContextApiMacros {
 							Context.fatalError("runtime macro module-field probe: expected featureEnabled var kind", pos);
 					}
 				}
+				if (field.name == "renderSummary") {
+					sawRenderSummary = field.meta.has(":summary");
+					if (field.expr() != null)
+						Context.fatalError("runtime macro module-field probe: expected renderSummary expr to remain null in synthetic carrier", pos);
+					switch (field.kind) {
+						case FMethod(MethNormal):
+						case _:
+							Context.fatalError("runtime macro module-field probe: expected renderSummary method kind", pos);
+					}
+					final signature = TypeTools.toString(field.type);
+					if (signature != "(String, Int) -> String")
+						Context.fatalError("runtime macro module-field probe: expected renderSummary function type but got " + signature, pos);
+				}
 				if (field.name == "sourceTag") {
 					sawSourceTag = field.meta.has(":sourceTag");
 					if (field.expr() != null)
@@ -533,6 +555,8 @@ class RuntimeContextApiMacros {
 				Context.fatalError("runtime macro module-field probe: missing :retry metadata", pos);
 			if (!sawFeatureEnabled)
 				Context.fatalError("runtime macro module-field probe: missing :enabled metadata", pos);
+			if (!sawRenderSummary)
+				Context.fatalError("runtime macro module-field probe: missing :summary metadata", pos);
 			if (!sawSourceTag)
 				Context.fatalError("runtime macro module-field probe: missing :sourceTag metadata", pos);
 		}

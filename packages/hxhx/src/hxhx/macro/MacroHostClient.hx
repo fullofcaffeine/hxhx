@@ -14,6 +14,12 @@ private typedef RuntimeResolvedModuleFieldSnapshot = {
 	final kind:String;
 	final metadata:Array<String>;
 	final initExpr:Null<String>;
+	final args:Array<{
+		final name:String;
+		final opt:Bool;
+		final typeText:String;
+	}>;
+	final returnTypeText:Null<String>;
 	final file:String;
 	final min:Int;
 	final max:Int;
@@ -541,11 +547,18 @@ class MacroHostClient {
 		  - `final foo`
 		- Carries a narrow initializer-text snapshot for `var` / `final` declarations when the
 		  initializer is present on the declaration line.
+		- Carries a narrow function-signature snapshot for top-level `function` declarations:
+		  - arg names
+		  - `opt` flags
+		  - arg type text
+		  - return type text
 
 		Gotchas
 		- This is intentionally narrower than full parser fidelity.
 		- Initializer capture is still a one-line subset; unsupported or multiline initializers are
 		  left empty and the runtime carrier falls back to `expr() == null` / `Dynamic`.
+		- Function bodies are not carried; runtime module-field carriers still expose `expr() == null`
+		  for methods and rely on `field.type` for the useful signature path.
 	**/
 	public static function scanResolvedModuleFields(path:String):Array<RuntimeResolvedModuleFieldSnapshot> {
 		final out = new Array<RuntimeResolvedModuleFieldSnapshot>();
@@ -629,6 +642,135 @@ class MacroHostClient {
 			return exprText.length == 0 ? null : exprText;
 		}
 
+		function splitTopLevelComma(text:String):Array<String> {
+			final out = new Array<String>();
+			if (text == null)
+				return out;
+			var start = 0;
+			var parenDepth = 0;
+			var bracketDepth = 0;
+			var braceDepth = 0;
+			var angleDepth = 0;
+			var inString = false;
+			var quote = "";
+			var i = 0;
+			while (i < text.length) {
+				final ch = text.charAt(i);
+				if (inString) {
+					if (ch == "\\") {
+						i += 2;
+						continue;
+					}
+					if (ch == quote)
+						inString = false;
+					i += 1;
+					continue;
+				}
+				switch (ch) {
+					case "\"" | "'":
+						inString = true;
+						quote = ch;
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case "[":
+						bracketDepth += 1;
+					case "]":
+						if (bracketDepth > 0)
+							bracketDepth -= 1;
+					case "{":
+						braceDepth += 1;
+					case "}":
+						if (braceDepth > 0)
+							braceDepth -= 1;
+					case "<":
+						angleDepth += 1;
+					case ">":
+						if (angleDepth > 0)
+							angleDepth -= 1;
+					case ",":
+						if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0) {
+							out.push(text.substr(start, i - start));
+							start = i + 1;
+						}
+					case _:
+				}
+				i += 1;
+			}
+			out.push(text.substr(start));
+			return out;
+		}
+
+		function parseFunctionArgs(text:String):Array<{name:String, opt:Bool, typeText:String}> {
+			final out = new Array<{name:String, opt:Bool, typeText:String}>();
+			for (segment in splitTopLevelComma(text)) {
+				final trimmed = StringTools.trim(segment);
+				if (trimmed.length == 0)
+					continue;
+				var working = trimmed;
+				var optional = false;
+				if (StringTools.startsWith(working, "?")) {
+					optional = true;
+					working = StringTools.trim(working.substr(1));
+				}
+				final nameMatch = ~/^([A-Za-z_][A-Za-z0-9_]*)/;
+				if (!nameMatch.match(working))
+					continue;
+				final name = nameMatch.matched(1);
+				var afterName = StringTools.trim(working.substr(nameMatch.matchedPos().pos + nameMatch.matchedPos().len));
+				var typeText = "Dynamic";
+				final eqIndex = afterName.indexOf("=");
+				if (eqIndex >= 0) {
+					optional = true;
+					afterName = StringTools.trim(afterName.substr(0, eqIndex));
+				}
+				if (StringTools.startsWith(afterName, ":")) {
+					final parsedType = StringTools.trim(afterName.substr(1));
+					if (parsedType.length > 0)
+						typeText = parsedType;
+				}
+				out.push({
+					name: name,
+					opt: optional,
+					typeText: typeText
+				});
+			}
+			return out;
+		}
+
+		function parseFunctionSignature(prefix:String):{
+			args:Array<{name:String, opt:Bool, typeText:String}>,
+			returnTypeText:Null<String>
+		} {
+			final signature = StringTools.trim(prefix.substr("function".length));
+			final openParen = signature.indexOf("(");
+			final closeParen = signature.lastIndexOf(")");
+			if (openParen < 0 || closeParen < openParen)
+				return {
+					args: [],
+					returnTypeText: null
+				};
+			final argsText = signature.substr(openParen + 1, closeParen - openParen - 1);
+			var tail = StringTools.trim(signature.substr(closeParen + 1));
+			var returnTypeText:Null<String> = null;
+			if (StringTools.startsWith(tail, ":")) {
+				tail = StringTools.trim(tail.substr(1));
+				final braceIndex = tail.indexOf("{");
+				if (braceIndex >= 0)
+					tail = StringTools.trim(tail.substr(0, braceIndex));
+				if (StringTools.endsWith(tail, ";"))
+					tail = StringTools.trim(tail.substr(0, tail.length - 1));
+				if (tail.length > 0)
+					returnTypeText = tail;
+			}
+			return {
+				args: parseFunctionArgs(argsText),
+				returnTypeText: returnTypeText
+			};
+		}
+
 		function lineSpan(rawLine:String, start:Int):{min:Int, max:Int} {
 			var min = 0;
 			while (min < rawLine.length) {
@@ -652,7 +794,8 @@ class MacroHostClient {
 			};
 		}
 
-		function push(kind:String, name:String, span:{min:Int, max:Int}, ?initExpr:Null<String>):Void {
+		function push(kind:String, name:String, span:{min:Int, max:Int}, ?initExpr:Null<String>, ?args:Array<{name:String, opt:Bool, typeText:String}>,
+				?returnTypeText:Null<String>):Void {
 			final trimmed = StringTools.trim(name == null ? "" : name);
 			if (trimmed.length == 0 || seen.exists(trimmed))
 				return;
@@ -662,6 +805,8 @@ class MacroHostClient {
 				kind: kind,
 				metadata: pendingMetadata.copy(),
 				initExpr: initExpr,
+				args: args == null ? [] : args.copy(),
+				returnTypeText: returnTypeText,
 				file: path,
 				min: span.min,
 				max: span.max
@@ -708,7 +853,8 @@ class MacroHostClient {
 				if (StringTools.startsWith(trimmed, "@:")) {
 					pendingMetadata.push(trimmed);
 				} else if (StringTools.startsWith(trimmed, "function ")) {
-					push("method", extractName(trimmed, "function"), span);
+					final parsed = parseFunctionSignature(trimmed);
+					push("method", extractName(trimmed, "function"), span, null, parsed.args, parsed.returnTypeText);
 				} else if (StringTools.startsWith(trimmed, "var ")) {
 					push("var", extractName(trimmed, "var"), span, extractInitializer(trimmed, "var"));
 				} else if (StringTools.startsWith(trimmed, "final ")) {
@@ -1273,6 +1419,15 @@ private class MacroClient {
 						parts.push(MacroProtocol.encodeLen("fmax" + i, Std.string(entry.max)));
 						if (entry.initExpr != null && entry.initExpr.length > 0)
 							parts.push(MacroProtocol.encodeLen("fe" + i, entry.initExpr));
+						if (entry.returnTypeText != null && entry.returnTypeText.length > 0)
+							parts.push(MacroProtocol.encodeLen("fr" + i, entry.returnTypeText));
+						parts.push(MacroProtocol.encodeLen("fac" + i, Std.string(entry.args.length)));
+						for (j in 0...entry.args.length) {
+							final arg = entry.args[j];
+							parts.push(MacroProtocol.encodeLen("fan" + i + "_" + j, arg.name));
+							parts.push(MacroProtocol.encodeLen("fao" + i + "_" + j, arg.opt ? "1" : "0"));
+							parts.push(MacroProtocol.encodeLen("fat" + i + "_" + j, arg.typeText));
+						}
 						parts.push(MacroProtocol.encodeLen("fmc" + i, Std.string(entry.metadata.length)));
 						for (j in 0...entry.metadata.length)
 							parts.push(MacroProtocol.encodeLen("fmd" + i + "_" + j, entry.metadata[j]));
