@@ -133,7 +133,7 @@ let parse_ymd (s : string) : (int * int * int) option =
   | _ -> None
 
 let fromString (s_raw : string) : t =
-  let s = String.trim s_raw in
+  let s = Stdlib.String.trim s_raw in
   if String.length s = 0 then invalid_date_format s_raw
   else if String.contains s '-' then
     (* Local date, optionally with local time. *)

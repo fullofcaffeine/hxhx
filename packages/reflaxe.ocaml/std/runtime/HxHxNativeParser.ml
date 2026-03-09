@@ -333,7 +333,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           cur_default_hint := None;
           reading_type := false
       | Some name ->
-          let ty_raw = String.concat "" !cur_type_parts |> String.trim in
+          let ty_raw = String.concat "" !cur_type_parts |> Stdlib.String.trim in
           let ty =
             if ty_raw <> "" then ty_raw
             else match !cur_default_hint with Some h -> h | None -> ""
@@ -451,7 +451,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
             Buffer.add_string parts (tok_to_text tok);
             bump ()
       done;
-      let txt = Buffer.contents parts |> String.trim in
+      let txt = Buffer.contents parts |> Stdlib.String.trim in
       if txt = "" then None else Some txt)
     else None
   in
@@ -546,7 +546,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
             Buffer.add_string parts (tok_to_text tok);
             bump ()
       done;
-      let s = Buffer.contents parts |> String.trim in
+      let s = Buffer.contents parts |> Stdlib.String.trim in
       if s = "" then None else Some s
     in
     match cur () with
@@ -685,7 +685,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           Buffer.add_string parts (tok_to_text tok);
           bump ()
     done;
-    let s = Buffer.contents parts |> String.trim in
+    let s = Buffer.contents parts |> Stdlib.String.trim in
     if s = "" then None else Some s
   in
 
@@ -832,7 +832,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
                     do
                       ()
                     done;
-                    let s = Buffer.contents parts |> String.trim in
+                    let s = Buffer.contents parts |> Stdlib.String.trim in
                     if s = "" then None else Some s)
                   else None
                 in
@@ -915,7 +915,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
                     do
                       ()
                     done;
-                    let s = Buffer.contents parts |> String.trim in
+                    let s = Buffer.contents parts |> Stdlib.String.trim in
                     if s = "" then None else Some s)
                   else None
                 in
@@ -1376,7 +1376,7 @@ let parse_module_decl (src : string) : string = parse_module_decl_common src Non
 let parse_module_decl_with_expected (src : string) (expected_main_class : string) :
     string =
   let expected =
-    let s = String.trim expected_main_class in
+    let s = Stdlib.String.trim expected_main_class in
     if s = "" then None else Some s
   in
   parse_module_decl_common src expected

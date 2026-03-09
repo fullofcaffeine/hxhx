@@ -4,29 +4,27 @@ package hxhx.macro;
 	Runtime effect sink used by in-process generated macro entrypoints.
 
 	Why
-	- The inproc macro runtime needs to mirror the observable effects of the current
-	  exact-string entrypoint registry without pulling in the external-host RPC layer.
-	- Keeping those effects behind a tiny interface lets the registry stay deterministic
-	  while the concrete session owns hook storage and `MacroState` mutation.
+	- The generated-entrypoint registry needs a tiny compiler-effect surface without
+	  depending on the external-host RPC client.
+	- On the OCaml backend, this sink must also avoid interface record casts for the
+	  same reason as `MacroRuntimeSession`: concrete stateful classes cannot be
+	  exposed safely as smaller record-shaped interfaces.
 
 	What
-	- Defines the compiler-side effects generated entrypoints are allowed to perform in
-	  the current bring-up rung: defines, classpaths, emitted OCaml modules, build-field
-	  snippets, and hook registration.
+	- Defines the current bring-up effect surface: defines, classpaths, emitted
+	  OCaml modules, build-field snippets, and hook registration.
 
 	How
-	- `InProcMacroSession` implements this interface and forwards each effect into
-	  `MacroState` or its local hook arrays.
-	- `InProcGeneratedEntrypoints` depends only on this interface, so its dispatch logic
-	  stays small and easy to audit.
+	- Inproc runtime code builds an exact-shape anonymous sink object that forwards
+	  into `MacroState` and local hook arrays.
 **/
-interface InProcMacroEffectSink {
-	public function setDefine(name:String, value:String):Void;
-	public function definedValue(name:String):String;
-	public function addClassPath(path:String):Void;
-	public function emitOcamlModule(name:String, source:String):Void;
-	public function emitBuildFields(modulePath:String, membersSource:String):Void;
-	public function registerAfterTypingHook(cb:Void->Void):Void;
-	public function registerOnGenerateHook(cb:Void->Void):Void;
-	public function registerAfterGenerateHook(cb:Void->Void):Void;
+typedef InProcMacroEffectSink = {
+	function setDefine(name:String, value:String):Void;
+	function definedValue(name:String):String;
+	function addClassPath(path:String):Void;
+	function emitOcamlModule(name:String, source:String):Void;
+	function emitBuildFields(modulePath:String, membersSource:String):Void;
+	function registerAfterTypingHook(cb:Void->Void):Void;
+	function registerOnGenerateHook(cb:Void->Void):Void;
+	function registerAfterGenerateHook(cb:Void->Void):Void;
 }

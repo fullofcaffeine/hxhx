@@ -1,5 +1,9 @@
 import haxe.io.Path;
 
+private typedef MissingTypeHook = {
+	function invoke(modulePath:String):Bool;
+}
+
 /**
 	Stage3 module loader: type-driven, on-demand module parsing and indexing.
 
@@ -39,7 +43,7 @@ class ModuleLoader extends LazyTypeLoader {
 	final classPaths:Array<String>;
 	final defines:haxe.ds.StringMap<String>;
 	final index:TyperIndex;
-	final onMissingType:Null<String->Bool>;
+	final onMissingType:Null<MissingTypeHook>;
 
 	// Directory listing cache used for exact-case path checks on case-insensitive filesystems.
 	final dirEntryCache:haxe.ds.StringMap<haxe.ds.StringMap<Bool>>;
@@ -56,7 +60,7 @@ class ModuleLoader extends LazyTypeLoader {
 		this.classPaths = classPaths == null ? [] : classPaths;
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
 		this.index = index;
-		this.onMissingType = onMissingType;
+		this.onMissingType = onMissingType == null ? null : {invoke: onMissingType};
 		this.dirEntryCache = new haxe.ds.StringMap<haxe.ds.StringMap<Bool>>();
 		this.visited = new haxe.ds.StringMap<Bool>();
 		this.typeNotFoundTried = new haxe.ds.StringMap<Bool>();
@@ -64,7 +68,7 @@ class ModuleLoader extends LazyTypeLoader {
 	}
 
 	inline function invokeOnMissingType(mp:String):Bool {
-		return onMissingType == null ? false : onMissingType(mp);
+		return onMissingType == null ? false : onMissingType.invoke(mp);
 	}
 
 	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {

@@ -37,6 +37,9 @@ Agent policy:
   - Use the current bead thinking level first.
   - Escalate only when the task crosses the documented threshold, usually `thinking:xhigh`, or when a `thinking:high` task turns into scope, release, or provenance policy work.
   - When escalation becomes necessary, state that explicitly in the session hand-off or work log so the threshold is visible instead of assumed.
+- If implementation/debugging gets stuck for too long without a credible local next step, escalate to Oracle explicitly instead of grinding indefinitely.
+  - Use Oracle to unblock strategy, seam selection, or closure criteria.
+  - Do not use Oracle as a substitute for implementation, tests, or CI evidence once the next step is clear.
 - If the user says to stop on `thinking:xhigh`, stop immediately when that threshold is reached and ask the user before continuing.
   - Do not silently continue `thinking:xhigh` implementation work.
   - Do not substitute Oracle or extended reasoning for that approval; ask first.

@@ -16,7 +16,14 @@ package hxhx.macro;
 **/
 class InProcMacroRuntime {
 	public static function openSession():MacroRuntimeSession {
-		return new InProcMacroSession();
+		final impl = new InProcMacroSession();
+		return {
+			run: impl.run,
+			runHook: impl.runHook,
+			runTypeNotFoundHook: impl.runTypeNotFoundHook,
+			expandExpr: impl.expandExpr,
+			close: impl.close
+		};
 	}
 
 	public static function parseOneStringLiteralArg(s:String):Null<String> {
@@ -59,15 +66,26 @@ class InProcMacroRuntime {
 	}
 }
 
-private class InProcMacroSession implements MacroRuntimeSession implements InProcMacroEffectSink {
+private class InProcMacroSession {
 	final afterTypingHooks:Array<Void->Void>;
 	final onGenerateHooks:Array<Void->Void>;
 	final afterGenerateHooks:Array<Void->Void>;
+	final effectSink:InProcMacroEffectSink;
 
 	public function new() {
 		afterTypingHooks = [];
 		onGenerateHooks = [];
 		afterGenerateHooks = [];
+		effectSink = {
+			setDefine: setDefine,
+			definedValue: definedValue,
+			addClassPath: addClassPath,
+			emitOcamlModule: emitOcamlModule,
+			emitBuildFields: emitBuildFields,
+			registerAfterTypingHook: registerAfterTypingHook,
+			registerOnGenerateHook: registerOnGenerateHook,
+			registerAfterGenerateHook: registerAfterGenerateHook
+		};
 	}
 
 	public function run(expr:String):String {
@@ -84,7 +102,7 @@ private class InProcMacroSession implements MacroRuntimeSession implements InPro
 			}
 		}
 
-		final generated = InProcGeneratedEntrypoints.run(e, this);
+		final generated = InProcGeneratedEntrypoints.run(e, effectSink);
 		if (generated != null)
 			return generated;
 

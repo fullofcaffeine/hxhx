@@ -16,16 +16,16 @@
 *)
 
 let split_host_port (mode : string) : string * int =
-  let trimmed = String.trim mode in
+  let trimmed = Stdlib.String.trim mode in
   if trimmed = "" then failwith "missing host/port value";
   let host, port_s =
     match String.rindex_opt trimmed ':' with
     | None -> ("127.0.0.1", trimmed)
     | Some idx ->
-        let h = String.sub trimmed 0 idx |> String.trim in
+        let h = String.sub trimmed 0 idx |> Stdlib.String.trim in
         let p =
           String.sub trimmed (idx + 1) (String.length trimmed - idx - 1)
-          |> String.trim
+          |> Stdlib.String.trim
         in
         let h = if h = "" then "127.0.0.1" else h in
         (h, p)

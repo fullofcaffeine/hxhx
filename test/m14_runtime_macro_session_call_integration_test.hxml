@@ -1,0 +1,3 @@
+-cp test
+-main M14RuntimeMacroSessionCallIntegrationTest
+--interp

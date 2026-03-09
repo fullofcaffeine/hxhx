@@ -1811,11 +1811,11 @@ class EmitterStage {
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ") ()";
 					case EField(obj, "trim") if (args.length == 0):
-						return "String.trim ("
+						return "Stdlib.String.trim ("
 							+ exprToOcaml(obj, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
 					case EField(EIdent("StringTools"), "trim") if (args.length == 1):
-						return "String.trim ("
+						return "Stdlib.String.trim ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
 					case EField(obj, "substr") if (args.length == 2):
@@ -4809,6 +4809,25 @@ class EmitterStage {
 				if (arr.indexOf(short) == -1)
 					arr.push(short);
 			}
+
+			// Keep exact-import alias stubs visible to the package-local fallback resolver.
+			//
+			// Why
+			// - Stage3 later falls back from `Assert.contains(...)` to `Unit_Assert.contains(...)`
+			//   whenever `Assert` is not recognized as a known emitted module.
+			// - That is correct for true same-package helper types, but wrong when we also emit an
+			//   exact-import alias stub such as `Assert.ml -> Utest_Assert`.
+			// - Some upstream unit modules reach expression lowering without the module-local import
+			//   alias map populated for that exact body, so the alias stub must also count as a
+			//   "known module" to avoid bad package-local qualification.
+			//
+			// Non-goal
+			// - This does not change import precedence. It only prevents the later same-package
+			//   fallback from rewriting an already-valid short alias into a bogus package-local path.
+			for (short in currentGlobalImportAliasByIdent.keys())
+				currentKnownModuleNames.set(short, true);
+			for (short in aliasByShort.keys())
+				currentKnownModuleNames.set(short, true);
 		}
 
 		// Call signature index used by `exprToOcaml` to avoid OCaml partial application when the

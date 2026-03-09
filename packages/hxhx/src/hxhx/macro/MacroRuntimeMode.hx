@@ -32,7 +32,14 @@ class MacroRuntimeMode {
 				#if hxhx_stage0_no_external_macro_host
 				throw "invalid macro runtime mode `" + mode + "` (external-host disabled in stage0 profiling lane; expected inproc)";
 				#else
-				return MacroHostClient.openSession();
+				final impl = MacroHostClient.openSession();
+				return {
+					run: impl.run,
+					runHook: impl.runHook,
+					runTypeNotFoundHook: impl.runTypeNotFoundHook,
+					expandExpr: impl.expandExpr,
+					close: impl.close
+				};
 				#end
 			case _:
 				throw "invalid macro runtime mode `" + mode + "` (expected inproc|external-host)";
