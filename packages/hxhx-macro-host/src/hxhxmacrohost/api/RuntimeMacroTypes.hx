@@ -446,12 +446,113 @@ class RuntimeMacroTypes {
 			isAbstract: false,
 			params: [],
 			meta: metadataAccess(null),
-			kind: FVar(AccNormal, AccNormal),
+			kind: FVar(AccNormal, isFinalField ? AccNever : AccNormal),
 			expr: function() return null,
 			pos: defaultPos(),
 			doc: null,
 			overloads: makeRef([], fieldName + ".overloads")
 		};
+	}
+
+	static function resolveAnonymousComplexType(fields:Array<Field>):Type {
+		final runtimeFields = new Array<ClassField>();
+		if (fields != null)
+			for (field in fields) {
+				final converted = resolveAnonymousComplexField(field);
+				if (converted != null)
+					runtimeFields.push(converted);
+			}
+		return TAnonymous(makeRef({
+			fields: runtimeFields,
+			status: AClosed
+		}, "anon"));
+	}
+
+	static function resolveAnonymousComplexField(field:Field):Null<ClassField> {
+		if (field == null || field.name == null)
+			return null;
+		final fieldType = switch (field.kind) {
+			case FVar(t, _):
+				t == null ? TDynamic(null) : resolveComplexType(t);
+			case FProp(_, _, t, _):
+				t == null ? TDynamic(null) : resolveComplexType(t);
+			case FFun(fn):
+				final args = fn == null || fn.args == null ? [] : [
+					for (arg in fn.args)
+						{
+							name: arg == null || arg.name == null ? "" : arg.name,
+							opt: arg != null && arg.opt,
+							t: arg == null || arg.type == null ? TDynamic(null) : resolveComplexType(arg.type)
+						}
+				];
+				final ret = fn == null || fn.ret == null ? TDynamic(null) : resolveComplexType(fn.ret);
+				TFun(args, ret);
+			case _:
+				TDynamic(null);
+		};
+		final isFinalField = switch (field.kind) {
+			case FProp(_, "never", _, _):
+				true;
+			case _:
+				false;
+		};
+		return {
+			name: field.name,
+			type: fieldType,
+			isPublic: true,
+			isExtern: true,
+			isFinal: isFinalField,
+			isAbstract: false,
+			params: [],
+			meta: metadataAccess(null),
+			kind: FVar(AccNormal, isFinalField ? AccNever : AccNormal),
+			expr: function() return null,
+			pos: field.pos == null ? defaultPos() : field.pos,
+			doc: field.doc,
+			overloads: makeRef([], field.name + ".overloads")
+		};
+	}
+
+	static function anonymousComplexField(field:ClassField):Field {
+		final fieldType = field == null ? null : toComplexType(field.type);
+		final fieldKind:FieldType = switch (field == null ? null : field.kind) {
+			case FMethod(_):
+				FFun({
+					args: switch (field.type) {
+						case TFun(args, _):
+							[
+								for (arg in args)
+									{
+										name: arg.name,
+										opt: arg.opt,
+										type: toComplexType(arg.t),
+										value: null
+									}
+							];
+						case _:
+							[];
+					},
+					expr: null,
+					params: [],
+					ret: switch (field.type) {
+						case TFun(_, ret):
+							toComplexType(ret);
+						case _:
+							null;
+					}
+				});
+			case FVar(_, write):
+				write == AccNever ? FProp("default", "never", fieldType, null) : FVar(fieldType, null);
+			case _:
+				FVar(fieldType, null);
+		};
+		return {
+			name: field == null || field.name == null ? "" : field.name,
+			doc: field == null ? null : field.doc,
+			meta: [],
+			access: [],
+			kind: fieldKind,
+			pos: field == null || field.pos == null ? defaultPos() : field.pos};
 	}
 
 	static function stripLeadingMetadataEntries(text:String):String {
@@ -835,8 +936,8 @@ class RuntimeMacroTypes {
 				], resolveComplexType(ret));
 			case TPath(path):
 				resolveTypePath(path);
-			case TAnonymous(_):
-				throw "runtime macro resolveType: anonymous structures are not implemented yet";
+			case TAnonymous(fields):
+				resolveAnonymousComplexType(fields);
 			case TExtend(_, _):
 				throw "runtime macro resolveType: extends anonymous types are not implemented yet";
 			case TIntersection(_):
@@ -928,8 +1029,11 @@ class RuntimeMacroTypes {
 				inner == null ? null : toComplexType(inner);
 			case TLazy(f):
 				toComplexType(f());
-			case TAnonymous(_):
-				null;
+			case TAnonymous(anonRef):
+				TAnonymous([
+					for (field in anonRef.get().fields)
+						anonymousComplexField(field)
+				]);
 		}
 	}
 

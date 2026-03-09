@@ -46,6 +46,10 @@ Beginner summary:
     `test:m14:runtime-component-signature`
   - `Context.parseInlineString()` for balanced inline-markup splice bodies:
     `test:m14:runtime-inline-markup-parse`
+- Additional synthetic type-fidelity work now has a focused direct regression too:
+  - anonymous-structure `resolveComplexType()` / `toComplexType()` roundtrip, including
+    typedef-backed `final` field preservation:
+    `test:m14:runtime-anonymous-complex`
 - Those proofs are now green on the current tree.
 - `haxe.ocaml-bxlg.9.5` still stays open until the next sufficiency review decides whether the
   remaining synthetic runtime type/module fidelity gaps are still Full1-critical.
