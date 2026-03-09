@@ -17,6 +17,8 @@ For lane/profile context, use the canonical beginner truth table:
   `docs/00-project/WEEKLY_CI_EVIDENCE.md`
 - Full vs scoped release contract:
   `docs/00-project/FULL_1_0_CONTRACT.md`
+- Public `Scoped 1.0` vs `Full 1.0` claim checklist:
+  `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 
 ## Gate purpose by lane (quick map)
 
@@ -47,6 +49,7 @@ For lane/profile context, use the canonical beginner truth table:
 For Full 1.0 claims, use the strict Full contract and markers in:
 
 - `docs/00-project/FULL_1_0_CONTRACT.md`
+- `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 
 ## PR-required fast lanes
 

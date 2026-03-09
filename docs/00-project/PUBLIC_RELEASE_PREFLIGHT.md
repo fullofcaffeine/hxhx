@@ -2,6 +2,10 @@
 
 Use this checklist before a public release or major public PR.
 
+For whether you may say `Scoped 1.0` or `Full 1.0` publicly at all, use:
+
+- `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+
 ## 1) Secret scan (full history)
 
 ```bash

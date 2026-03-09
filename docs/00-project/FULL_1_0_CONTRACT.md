@@ -7,6 +7,10 @@ This page is the canonical definition boundary for release claims:
 - **Scoped 1.0**: the currently declared replacement-ready scope.
 - **Full 1.0**: strict Haxe 4.3.7-equivalent claim with explicit parity/perf/release gates.
 
+Public-claim checklist:
+
+- `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+
 Machine-readable scope source of truth:
 
 - `docs/02-user-guide/compat/full-1.0-scope.json`
@@ -62,3 +66,11 @@ Ambiguous wording is guard-checked by:
 Success marker:
 
 - `FULL1_SCOPE_CONTRACT:PASS`
+
+## Public claim rule
+
+Before making a public `Scoped 1.0` or `Full 1.0` claim, use the explicit checklist:
+
+- `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
+
+Do not use an unlabeled public version claim by itself.
