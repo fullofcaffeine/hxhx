@@ -1,4 +1,4 @@
-name: Gate Full1 / Strict Matrix + Macro Parity
+name: Gate Full1 / Strict Matrix + Macro Eval Parity
 
 on:
   workflow_dispatch:
@@ -31,6 +31,11 @@ jobs:
     uses: ./.github/workflows/macro-runtime-parity-weekly.yml
     secrets: inherit
 
+  full1_eval_native:
+    name: Full1 native eval/interp
+    uses: ./.github/workflows/full1-eval-native.yml
+    secrets: inherit
+
   full1_aggregate:
     name: Full1 aggregate marker
     runs-on: ubuntu-latest
@@ -38,6 +43,7 @@ jobs:
       - full1_gate3_extended
       - full1_suite_runners
       - full1_macro_parity
+      - full1_eval_native
     if: always()
     steps:
       - name: Write Full1 summary artifact
@@ -47,11 +53,13 @@ jobs:
           gate3_result='${{ needs.full1_gate3_extended.result }}'
           suites_result='${{ needs.full1_suite_runners.result }}'
           macro_result='${{ needs.full1_macro_parity.result }}'
+          eval_result='${{ needs.full1_eval_native.result }}'
           jq -n \
             --arg gate3_result "$gate3_result" \
             --arg suites_result "$suites_result" \
             --arg macro_result "$macro_result" \
-            --arg workflow "Gate Full1 / Strict Matrix + Macro Parity" \
+            --arg eval_result "$eval_result" \
+            --arg workflow "Gate Full1 / Strict Matrix + Macro Eval Parity" \
             --arg run_id "${{ github.run_id }}" \
             --arg run_attempt "${{ github.run_attempt }}" \
             '{
@@ -62,9 +70,13 @@ jobs:
               jobs: {
                 full1_gate3_extended: { result: $gate3_result },
                 full1_suite_runners: { result: $suites_result },
-                full1_macro_parity: { result: $macro_result }
+                full1_macro_parity: { result: $macro_result },
+                full1_eval_native: { result: $eval_result }
               },
-              aggregate_marker: "FULL1_SUITE_MATRIX:PASS"
+              aggregate_markers: [
+                "FULL1_SUITE_MATRIX:PASS",
+                "FULL1_MACRO_EVAL_PARITY:PASS"
+              ]
             }' > .artifacts/full1/full1.summary.json
 
       - name: Upload Full1 aggregate artifact
@@ -81,12 +93,26 @@ jobs:
           gate3_result='${{ needs.full1_gate3_extended.result }}'
           suites_result='${{ needs.full1_suite_runners.result }}'
           macro_result='${{ needs.full1_macro_parity.result }}'
+          eval_result='${{ needs.full1_eval_native.result }}'
           echo "full1_gate3_extended=${gate3_result}"
           echo "full1_suite_runners=${suites_result}"
           echo "full1_macro_parity=${macro_result}"
-          if [ "$gate3_result" = "success" ] && [ "$suites_result" = "success" ] && [ "$macro_result" = "success" ]; then
+          echo "full1_eval_native=${eval_result}"
+          suite_matrix_ok=0
+          macro_eval_ok=0
+          if [ "$gate3_result" = "success" ] && [ "$suites_result" = "success" ]; then
+            suite_matrix_ok=1
             echo "FULL1_SUITE_MATRIX:PASS"
+          else
+            echo "FULL1_SUITE_MATRIX:FAIL" >&2
+          fi
+          if [ "$macro_result" = "success" ] && [ "$eval_result" = "success" ]; then
+            macro_eval_ok=1
+            echo "FULL1_MACRO_EVAL_PARITY:PASS"
+          else
+            echo "FULL1_MACRO_EVAL_PARITY:FAIL" >&2
+          fi
+          if [ "$suite_matrix_ok" -eq 1 ] && [ "$macro_eval_ok" -eq 1 ]; then
             exit 0
           fi
-          echo "FULL1_SUITE_MATRIX:FAIL" >&2
           exit 1

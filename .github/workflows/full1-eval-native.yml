@@ -1,0 +1,117 @@
+name: Full1 / Eval Native
+
+on:
+  workflow_call:
+    outputs:
+      full1_eval_native_marker:
+        description: "Strict native eval marker emitted when the upstream-aligned eval lane passes."
+        value: ${{ jobs.full1_eval_native.outputs.full1_eval_native_marker }}
+  workflow_dispatch:
+  release:
+    types: [published]
+
+concurrency:
+  group: full1-eval-native-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  HAXE_VERSION: "4.3.7"
+
+jobs:
+  full1_eval_native:
+    name: Full1 native eval/interp
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      full1_eval_native_marker: ${{ steps.emit.outputs.full1_eval_native_marker }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install host toolchains (Full1 eval native)
+        run: |
+          set -euo pipefail
+          retry_apt() {
+            local max_attempts=4
+            local attempt=1
+            while true; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "APT command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "APT command failed (attempt ${attempt}/${max_attempts}): $*" >&2
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          }
+          retry_apt sudo apt-get update
+          dune_candidate="$(apt-cache policy dune | awk '/Candidate:/ { print $2; exit }')"
+          if [ -n "${dune_candidate:-}" ] && [ "${dune_candidate}" != "(none)" ]; then
+            dune_pkg="dune"
+          else
+            dune_pkg="ocaml-dune"
+          fi
+          retry_apt sudo apt-get install -y \
+            ocaml "${dune_pkg}" ocaml-findlib \
+            python3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Cache Haxe toolchain (lix)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/haxe
+          key: ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-${{ hashFiles('.haxerc', 'haxe_libraries/*.hxml', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-lix-haxe-${{ env.HAXE_VERSION }}-
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Haxe (pinned via lix)
+        run: |
+          set -euo pipefail
+          npx lix download
+          npx lix download haxe "${{ env.HAXE_VERSION }}"
+          npx lix use haxe "${{ env.HAXE_VERSION }}"
+          echo "$(pwd)/node_modules/.bin" >> "$GITHUB_PATH"
+          export PATH="$(pwd)/node_modules/.bin:$PATH"
+          haxe -version
+
+      - name: Download Haxe libraries (lix)
+        run: npx lix download
+
+      - name: Fetch upstream Haxe checkout (vendor/haxe)
+        run: bash scripts/vendor/fetch-haxe-upstream.sh
+
+      - name: Run Full1 native eval/interp runner
+        run: node scripts/ci/run-full1-eval-native.js
+
+      - name: Upload Full1 eval native artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full1-eval-native-${{ github.run_id }}
+          path: .artifacts/full1/eval-native
+          if-no-files-found: error
+
+      - name: Emit Full1 eval native marker
+        id: emit
+        run: |
+          set -euo pipefail
+          echo "FULL1_EVAL_NATIVE:PASS"
+          echo "full1_eval_native_marker=FULL1_EVAL_NATIVE:PASS" >> "$GITHUB_OUTPUT"

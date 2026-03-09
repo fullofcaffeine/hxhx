@@ -87,6 +87,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Gate 1 / Upstream Macro Unit Compatibility` | `.github/workflows/gate1.yml` | Full upstream unit macro compatibility baseline. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 2 / Upstream Macro Workloads` | `.github/workflows/gate2.yml` | Wider upstream `runci` macro workload checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Macro Runtime Parity (Weekly)` | `.github/workflows/macro-runtime-parity-weekly.yml` | Runs upstream macro + display checks in both macro runtime modes (`external-host`, `inproc`) with mode-tagged artifacts, reusable outputs, and aggregate macro parity markers. | **Nightly/scheduled + Release + Reusable** | weekly schedule, manual, `release`, `workflow_call` |
+| `Full1 / Eval Native` | `.github/workflows/full1-eval-native.yml` | Runs the upstream-aligned native eval/interp baseline (`tests/unit/compile-macro.hxml`) in strict stage0-forbidden mode and emits a structured eval marker/artifact. | **Release + Manual + Reusable** | manual, `release`, `workflow_call` |
 | `Gate 3 / Upstream Target Matrix` | `.github/workflows/gate3.yml` | Upstream target/workflow compatibility matrix checks. | **Nightly/scheduled** | weekly schedule, manual |
 | `Gate 3 Full1 / Extended Targets Strict` | `.github/workflows/gate3-full1-extended.yml` | Full1 strict extended target matrix (`Macro,Js,Neko,Hl,Python,Java,Cs,Cpp,Lua,Php`) with no-skip enforcement and JSON summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
 | `Full1 / Suite Runners Strict` | `.github/workflows/full1-suite-runners.yml` | Full1 strict suite runners for `misc`, `server`, `threads`, `optimization`, `display` with per-suite log + summary artifacts. | **Nightly/scheduled** | weekly schedule, manual |
@@ -94,7 +95,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 
 Heavy Full1 workflows use event+ref scoped concurrency and cancel stale in-progress reruns so manual retries and scheduled evidence runs do not pile up behind obsolete work.
-| `Gate Full1 / Strict Matrix + Macro Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, and reusable macro runtime parity; it emits `FULL1_SUITE_MATRIX:PASS` only when all three succeed. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
+| `Gate Full1 / Strict Matrix + Macro Eval Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, reusable macro runtime parity, and reusable native eval. It emits `FULL1_SUITE_MATRIX:PASS` for strict matrix success and `FULL1_MACRO_EVAL_PARITY:PASS` for macro+eval closure. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
@@ -144,7 +145,18 @@ Full1 aggregate matrix marker:
 
 - `FULL1_SUITE_MATRIX:PASS` (`.github/workflows/gate-full1.yml`)
 
-Gate Full1 also requires a green reusable macro parity job from `.github/workflows/macro-runtime-parity-weekly.yml`; mode-specific failure details remain in that called workflow output.
+Full1 native eval marker:
+
+- `FULL1_EVAL_NATIVE:PASS` (`.github/workflows/full1-eval-native.yml`)
+
+Full1 macro/eval aggregate marker:
+
+- `FULL1_MACRO_EVAL_PARITY:PASS` (`.github/workflows/gate-full1.yml`)
+
+Gate Full1 also requires green reusable jobs from:
+
+- `.github/workflows/macro-runtime-parity-weekly.yml`
+- `.github/workflows/full1-eval-native.yml`
 
 Full1 source-build probe marker (non-blocking diagnostic lane):
 

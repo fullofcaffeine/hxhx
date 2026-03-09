@@ -160,6 +160,18 @@
       "enforcement": "planned"
     },
     {
+      "id": "F1-PM-10A",
+      "suite": "full1-eval-native",
+      "lane": "full",
+      "targets": [
+        "Eval"
+      ],
+      "profile": "scheduled-release",
+      "marker": "FULL1_EVAL_NATIVE:PASS",
+      "workflow": ".github/workflows/full1-eval-native.yml",
+      "enforcement": "planned"
+    },
+    {
       "id": "F1-PM-11",
       "suite": "full-plugin-parity",
       "lane": "full",

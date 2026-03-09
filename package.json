@@ -165,6 +165,7 @@
     "test:full1:suite:optimization": "node scripts/ci/run-upstream-suite.js --suite optimization --strict",
     "test:full1:suite:display": "node scripts/ci/run-upstream-suite.js --suite display --strict",
     "test:full1:suites:strict": "npm run -s test:full1:suite:misc && npm run -s test:full1:suite:server && npm run -s test:full1:suite:threads && npm run -s test:full1:suite:optimization && npm run -s test:full1:suite:display",
+    "test:full1:eval-native": "node scripts/ci/run-full1-eval-native.js",
     "test:full1:source-probe": "node scripts/ci/full1-source-probe.js",
     "test:full1:bootstrap-source-reconcile": "node scripts/ci/full1-bootstrap-source-reconcile.js",
     "hxhx:dist": "bash scripts/hxhx/build-dist.sh",

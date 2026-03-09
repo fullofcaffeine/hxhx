@@ -21,7 +21,7 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | Gate 2 / Upstream Macro Workloads | `.github/workflows/gate2.yml` | Weekly schedule | `GATE2_MACRO:PASS` | Workflow run logs (marker in log output) |
 | Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS`, `FULL1_MACRO_PARITY:PASS`, plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`) | Artifacts `macro-runtime-parity-external-host-<run_id>`, `macro-runtime-parity-inproc-<run_id>`, and `macro-runtime-parity-summary-<run_id>` |
 | Gate M7 / Replacement Bundle | `.github/workflows/gate-m7.yml` | Weekly schedule | `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` | Artifact `gate-m7-logs-<run_id>` + run logs |
-| Gate Full1 / Strict Matrix + Macro Parity | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS` | Artifact `full1-summary-<run_id>` + logs from called Full1 workflows (`gate3-full1-extended`, `full1-suite-runners`, `macro-runtime-parity-weekly`) |
+| Gate Full1 / Strict Matrix + Macro Eval Parity | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS` and `FULL1_MACRO_EVAL_PARITY:PASS` | Artifact `full1-summary-<run_id>` + logs from called Full1 workflows (`gate3-full1-extended`, `full1-suite-runners`, `macro-runtime-parity-weekly`, `full1-eval-native`) |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
 | Perf / HXHX KPI (Report Only) | `.github/workflows/hxhx-kpi-report.yml` | Manual weekly dispatch | job completes and emits `report.json` | Artifact `hxhx-kpi-report-<run_id>` (contains `report.json`) |
 
@@ -42,14 +42,17 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
    - `macro-runtime-parity-blockers.md`
    - suite logs (`unit`, `runci`, `display/protocol`)
 5. For Gate M7, Gate Full1, and semantic-diff, download artifacts and confirm expected files are present.
-6. Check `Full1 / Source-Build Probe`:
+6. For Gate Full1, confirm both aggregate markers appear:
+   - `FULL1_SUITE_MATRIX:PASS`
+   - `FULL1_MACRO_EVAL_PARITY:PASS`
+7. Check `Full1 / Source-Build Probe`:
    - `PASS`: source-build probe agrees with current strict matrix behavior.
    - `WARN`: do not block release by this alone; open/update a bead with artifact links and classify as bootstrap-lag, source-build instability, or parity bug.
-7. Manually dispatch `Perf / HXHX KPI (Report Only)`.
-8. Download KPI artifact and compare `report.json` against:
+8. Manually dispatch `Perf / HXHX KPI (Report Only)`.
+9. Download KPI artifact and compare `report.json` against:
    - `docs/benchmarks/kpi/hxhx-kpi-thresholds.v1.json`
    - `docs/benchmarks/HXHX_KPI_THRESHOLDS.md`
-9. Record evidence links and outcomes in the weekly ops note/bead comment.
+10. Record evidence links and outcomes in the weekly ops note/bead comment.
 
 ## Triage matrix
 
