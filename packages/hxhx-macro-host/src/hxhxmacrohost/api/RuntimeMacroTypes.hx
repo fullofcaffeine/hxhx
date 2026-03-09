@@ -6,6 +6,8 @@ import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import hxhxmacrohost.OcamlInjection;
+import hxhxmacrohost.HostToCompilerRpc;
+import hxhxmacrohost.Protocol;
 
 /**
 	Minimal runtime `haxe.macro.Type` model for external-host bring-up.
@@ -211,7 +213,16 @@ class RuntimeMacroTypes {
 		final params = typeParameters == null ? [] : typeParameters;
 		final concretes = concreteTypes == null ? [] : concreteTypes;
 		if (params.length != concretes.length)
-			throw "typeParameters and concreteTypes must have the same length";
+			throw "typeParameters and concreteTypes must have the same length: params=" + [
+				for (param in params)
+					param == null || param.name == null ? "<null>" : param.name
+			].join(",")
+				+ " concretes="
+				+ Std.string(concretes.length)
+				+ " kind="
+				+ mismatchKind(t)
+				+ " type="
+				+ toString(t);
 		if (params.length == 0 || t == null)
 			return t;
 
@@ -223,6 +234,29 @@ class RuntimeMacroTypes {
 			substitutions.set(param.name, concretes[i]);
 		}
 		return substituteTypeParameters(t, substitutions);
+	}
+
+	static function mismatchKind(t:Type):String {
+		return switch (t) {
+			case TInst(c, _):
+				"inst:" + c.get().name;
+			case TEnum(e, _):
+				"enum:" + e.get().name;
+			case TType(td, _):
+				"typedef:" + td.get().name;
+			case TAbstract(a, _):
+				"abstract:" + a.get().name;
+			case TFun(_, _):
+				"fun";
+			case TAnonymous(_):
+				"anon";
+			case TDynamic(_):
+				"dynamic";
+			case TMono(_):
+				"mono";
+			case TLazy(_):
+				"lazy";
+		}
 	}
 
 	/**
@@ -258,6 +292,31 @@ class RuntimeMacroTypes {
 		return "builtin:" + toString(t);
 	}
 
+	/**
+		Render a bounded structural summary of the synthetic runtime type model.
+
+		Why
+		- Focused runtime integration tests need to assert semantic kind fidelity
+		  (`TAbstract` vs `TType` vs `TInst`) without fragile user-side pattern matches
+		  in generated macro-host OCaml.
+		- The remaining `bxlg.9.5` work is about semantic sufficiency, not just API
+		  presence, so a deterministic summary is a better proof tool than raw `toString()`.
+
+		What
+		- Produces a compact recursive summary with explicit kind tags.
+		- Stops after a small depth limit to avoid runaway recursive payloads.
+
+		Gotchas
+		- This is diagnostic/test-facing output, not a serialized contract.
+	**/
+	public static function describeTypeShape(t:Type, maxDepth:Int = 4):String {
+		return describeTypeShapeInner(t, maxDepth);
+	}
+
+	public static function firstTypeParameterArityMismatch(t:Type):Null<String> {
+		return firstTypeParameterArityMismatchInner(t, "type");
+	}
+
 	public static function getTypeByName(name:String):Type {
 		return switch (normalizeName(name)) {
 			case "String":
@@ -290,6 +349,10 @@ class RuntimeMacroTypes {
 	}
 
 	static function parseTypeTextWithParameters(text:String, params:Array<TypeParameter>):Null<Type> {
+		return parseTypeTextWithParametersAndNamedPaths(text, params, emptyNamedPathScope());
+	}
+
+	static function parseTypeTextWithParametersAndNamedPaths(text:String, params:Array<TypeParameter>, namedPaths:haxe.ds.StringMap<String>):Null<Type> {
 		final trimmed = StringTools.trim(text == null ? "" : text);
 		if (trimmed.length == 0)
 			return null;
@@ -298,25 +361,27 @@ class RuntimeMacroTypes {
 			for (param in params)
 				if (param != null && param.name != null && param.t != null)
 					scope.set(param.name, param.t);
-		return parseTypeTextWithScope(trimmed, scope);
+		return parseTypeTextWithScope(trimmed, scope, namedPaths);
 	}
 
-	static function parseTypeTextWithScope(text:String, scope:Map<String, Type>):Type {
+	static function parseTypeTextWithScope(text:String, scope:Map<String, Type>, namedPaths:haxe.ds.StringMap<String>):Type {
 		final trimmed = StringTools.trim(text == null ? "" : text);
 		if (trimmed.length == 0)
 			throw "runtime macro type text: empty type";
 		if (scope != null && scope.exists(trimmed))
 			return scope.get(trimmed);
+		if (namedPaths != null && namedPaths.exists(trimmed))
+			return resolveNamedPathType(namedPaths.get(trimmed), [], namedPaths);
 		if (StringTools.startsWith(trimmed, "{") && StringTools.endsWith(trimmed, "}"))
-			return parseAnonymousTypeText(trimmed, scope);
+			return parseAnonymousTypeText(trimmed, scope, namedPaths);
 		if (StringTools.startsWith(trimmed, "Null<") && StringTools.endsWith(trimmed, ">"))
-			return nullType(parseTypeTextWithScope(extractWrappedInnerText("Null", trimmed), scope));
+			return nullType(parseTypeTextWithScope(extractWrappedInnerText("Null", trimmed), scope, namedPaths));
 		if (StringTools.startsWith(trimmed, "Dynamic<") && StringTools.endsWith(trimmed, ">"))
-			return TDynamic(parseTypeTextWithScope(extractWrappedInnerText("Dynamic", trimmed), scope));
-		return parsePathTypeText(trimmed, scope);
+			return TDynamic(parseTypeTextWithScope(extractWrappedInnerText("Dynamic", trimmed), scope, namedPaths));
+		return parsePathTypeText(trimmed, scope, namedPaths);
 	}
 
-	static function parseAnonymousTypeText(text:String, scope:Map<String, Type>):Type {
+	static function parseAnonymousTypeText(text:String, scope:Map<String, Type>, namedPaths:haxe.ds.StringMap<String>):Type {
 		final body = StringTools.trim(text.substr(1, text.length - 2));
 		if (body.length == 0)
 			return TAnonymous(makeRef({
@@ -328,7 +393,7 @@ class RuntimeMacroTypes {
 			final trimmed = StringTools.trim(part);
 			if (trimmed.length == 0)
 				continue;
-			final field = parseAnonymousField(trimmed, scope);
+			final field = parseAnonymousField(trimmed, scope, namedPaths);
 			if (field != null)
 				fields.push(field);
 		}
@@ -338,8 +403,11 @@ class RuntimeMacroTypes {
 		}, "anon"));
 	}
 
-	static function parseAnonymousField(text:String, scope:Map<String, Type>):Null<ClassField> {
+	static function parseAnonymousField(text:String, scope:Map<String, Type>, namedPaths:haxe.ds.StringMap<String>):Null<ClassField> {
 		var trimmed = StringTools.trim(text);
+		if (trimmed.length == 0)
+			return null;
+		trimmed = stripLeadingMetadataEntries(trimmed);
 		if (trimmed.length == 0)
 			return null;
 		var isFinalField = false;
@@ -368,7 +436,7 @@ class RuntimeMacroTypes {
 		if (StringTools.endsWith(fieldName, "?"))
 			fieldName = StringTools.rtrim(fieldName.substr(0, fieldName.length - 1));
 		final fieldTypeText = StringTools.trim(trimmed.substr(colon + 1));
-		final fieldType = fieldTypeText.length == 0 ? TDynamic(null) : parseTypeTextWithScope(fieldTypeText, scope);
+		final fieldType = fieldTypeText.length == 0 ? TDynamic(null) : parseTypeTextWithScope(fieldTypeText, scope, namedPaths);
 		return {
 			name: fieldName,
 			type: fieldType,
@@ -386,7 +454,36 @@ class RuntimeMacroTypes {
 		};
 	}
 
-	static function parsePathTypeText(text:String, scope:Map<String, Type>):Type {
+	static function stripLeadingMetadataEntries(text:String):String {
+		var out = StringTools.ltrim(text == null ? "" : text);
+		while (StringTools.startsWith(out, "@:")) {
+			var i = 2;
+			var parenDepth = 0;
+			while (i < out.length) {
+				final ch = out.charAt(i);
+				switch (ch) {
+					case "(":
+						parenDepth += 1;
+					case ")":
+						if (parenDepth > 0)
+							parenDepth -= 1;
+					case " " | "\t" | "\n" | "\r":
+						if (parenDepth == 0) {
+							out = StringTools.ltrim(out.substr(i + 1));
+							i = out.length;
+						}
+					case _:
+				}
+				i += 1;
+			}
+			if (i < out.length)
+				continue;
+			break;
+		}
+		return out;
+	}
+
+	static function parsePathTypeText(text:String, scope:Map<String, Type>, namedPaths:haxe.ds.StringMap<String>):Type {
 		final trimmed = StringTools.trim(text);
 		final lt = topLevelIndexOf(trimmed, "<");
 		var base = trimmed;
@@ -398,7 +495,7 @@ class RuntimeMacroTypes {
 			final inner = StringTools.trim(trimmed.substr(lt + 1, trimmed.length - lt - 2));
 			if (inner.length > 0)
 				for (part in splitTopLevelTypeParts(inner, ","))
-					paramTypes.push(parseTypeTextWithScope(part, scope));
+					paramTypes.push(parseTypeTextWithScope(part, scope, namedPaths));
 		}
 		if (scope != null && scope.exists(base))
 			return scope.get(base);
@@ -422,10 +519,135 @@ class RuntimeMacroTypes {
 			case "Dynamic":
 				paramTypes.length == 0 ? TDynamic(null) : TDynamic(paramTypes[0]);
 			case _:
-				final parts = base.split(".");
-				final name = parts.pop();
-				TInst(classRef(parts, name, name), paramTypes);
+				resolveNamedPathType(base, paramTypes, namedPaths);
 		}
+	}
+
+	static function resolveNamedPathType(base:String, paramTypes:Array<Type>, namedPaths:haxe.ds.StringMap<String>):Type {
+		final trimmed = StringTools.trim(base == null ? "" : base);
+		if (trimmed.length == 0)
+			return TDynamic(null);
+		final scopedPath = if (namedPaths != null && namedPaths.exists(trimmed)) namedPaths.get(trimmed) else trimmed;
+
+		try {
+			final resolved:Type = cast resolveNamedPathTypeFromCompiler(scopedPath, namedPaths);
+			return rebuildResolvedPathType(resolved, paramTypes);
+		} catch (_:Dynamic) {
+			final parts = scopedPath.split(".");
+			final name = parts.pop();
+			return TInst(classRef(parts, name, name), paramTypes);
+		}
+	}
+
+	static function rebuildResolvedPathType(resolved:Type, paramTypes:Array<Type>):Type {
+		return switch (resolved) {
+			case TInst(c, _):
+				TInst(c, paramTypes);
+			case TEnum(e, _):
+				TEnum(e, paramTypes);
+			case TType(td, _):
+				TType(td, paramTypes);
+			case TAbstract(a, _):
+				abstractType(a, paramTypes);
+			case _:
+				resolved;
+		}
+	}
+
+	static function resolveNamedPathTypeFromCompiler(name:String, namedPaths:haxe.ds.StringMap<String>):Type {
+		try {
+			return getTypeByName(name);
+		} catch (_:Dynamic) {}
+		final payload = HostToCompilerRpc.call("context.getType", Protocol.encodeLen("n", name));
+		if (payload == null || payload.length == 0)
+			throw "runtime macro type text: unresolved type path " + name;
+		final parts = Protocol.kvParse(payload);
+		if (!parts.exists("ok") || parts.get("ok") != "1")
+			throw "runtime macro type text: unresolved type path " + name;
+
+		final metadata = new Array<String>();
+		final count = parseNonNegativeInt(parts.exists("c") ? parts.get("c") : "", 0);
+		for (i in 0...count) {
+			final key = "md" + i;
+			if (parts.exists(key))
+				metadata.push(parts.get(key));
+		}
+
+		final typeParamNames = new Array<String>();
+		final typeParamCount = parseNonNegativeInt(parts.exists("pc") ? parts.get("pc") : "", 0);
+		for (i in 0...typeParamCount) {
+			final key = "pn" + i;
+			if (parts.exists(key))
+				typeParamNames.push(parts.get(key));
+		}
+
+		final staticFields = new Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>();
+		final staticCount = parseNonNegativeInt(parts.exists("sc") ? parts.get("sc") : "", 0);
+		for (i in 0...staticCount) {
+			final nameKey = "sn" + i;
+			if (!parts.exists(nameKey))
+				continue;
+			final fieldMetadata = new Array<String>();
+			final fieldMetadataCount = parseNonNegativeInt(parts.exists("smc" + i) ? parts.get("smc" + i) : "", 0);
+			for (j in 0...fieldMetadataCount) {
+				final key = "smd" + i + "_" + j;
+				if (parts.exists(key))
+					fieldMetadata.push(parts.get(key));
+			}
+			final args = new Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>();
+			final argCount = parseNonNegativeInt(parts.exists("sac" + i) ? parts.get("sac" + i) : "", 0);
+			for (j in 0...argCount) {
+				final argNameKey = "san" + i + "_" + j;
+				if (!parts.exists(argNameKey))
+					continue;
+				args.push({
+					name: parts.get(argNameKey),
+					opt: parts.exists("sao" + i + "_" + j) && parts.get("sao" + i + "_" + j) == "1",
+					typeText: parts.exists("sat" + i + "_" + j) ? parts.get("sat" + i + "_" + j) : "Dynamic"
+				});
+			}
+			staticFields.push({
+				name: parts.get(nameKey),
+				kind: parts.exists("sk" + i) ? parts.get("sk" + i) : "var",
+				metadata: fieldMetadata,
+				initExpr: parts.exists("se" + i) ? parts.get("se" + i) : null,
+				args: args,
+				returnTypeText: parts.exists("sr" + i) ? parts.get("sr" + i) : null,
+				file: parts.exists("sf" + i) ? parts.get("sf" + i) : DEFAULT_FILE,
+				min: parseNonNegativeInt(parts.exists("smin" + i) ? parts.get("smin" + i) : "", 0),
+				max: parseNonNegativeInt(parts.exists("smax" + i) ? parts.get("smax" + i) : "", 0)
+			});
+		}
+
+		final typePath = parts.exists("t") ? parts.get("t") : name;
+		final moduleName = parts.exists("m") ? parts.get("m") : null;
+		final kind = parts.exists("k") ? parts.get("k") : "class";
+		return typeForResolvedDecl(typePath, kind, metadata, moduleName, parts.exists("f") ? parts.get("f") : DEFAULT_FILE,
+			parseNonNegativeInt(parts.exists("min") ? parts.get("min") : "", 0), parseNonNegativeInt(parts.exists("max") ? parts.get("max") : "", 0),
+			staticFields, typeParamNames, parts.exists("ut") ? parts.get("ut") : null, namedPaths);
+	}
+
+	static function parseNonNegativeInt(raw:String, fallback:Int):Int {
+		final parsed = Std.parseInt(raw);
+		return parsed == null || parsed < 0 ? fallback : parsed;
 	}
 
 	static function extractWrappedInnerText(wrapper:String, text:String):String {
@@ -487,6 +709,9 @@ class RuntimeMacroTypes {
 		file:String,
 		min:Int,
 		max:Int
+	}>, ?imports:Array<{
+		path:String,
+		localName:String
 	}>):Array<Type> {
 		final trimmed = StringTools.trim(modulePath == null ? "" : modulePath);
 		if (trimmed.length == 0)
@@ -495,11 +720,12 @@ class RuntimeMacroTypes {
 		if (parts.length == 0)
 			return [];
 		final moduleName = parts.pop();
+		final namedPaths = buildNamedPathScope(trimmed, entries, imports);
 		final out = new Array<Type>();
 		final seen = new Map<String, Bool>();
 		final resolvedFields = moduleFields == null ? [] : moduleFields;
 		if (resolvedFields.length > 0)
-			out.push(TInst(moduleFieldsCarrier(parts, moduleName, trimmed, resolvedFields), []));
+			out.push(TInst(moduleFieldsCarrier(parts, moduleName, trimmed, resolvedFields, namedPaths), []));
 		final resolvedEntries = (entries == null || entries.length == 0) ? [
 			{
 				name: moduleName,
@@ -519,7 +745,7 @@ class RuntimeMacroTypes {
 				continue;
 			seen.set(trimmedName, true);
 			out.push(typeFromResolvedDecl(parts, moduleName, trimmedName, entry.kind, entry.metadata, entry.file, entry.min, entry.max, entry.staticFields,
-				entry.typeParamNames, entry.underlyingTypeText));
+				entry.typeParamNames, entry.underlyingTypeText, namedPaths));
 		}
 		return out;
 	}
@@ -543,7 +769,8 @@ class RuntimeMacroTypes {
 			file:String,
 			min:Int,
 			max:Int
-		}>, ?typeParamNames:Array<String>, ?underlyingTypeText:Null<String>):Type {
+		}>, ?typeParamNames:Array<String>,
+			?underlyingTypeText:Null<String>, ?namedPaths:haxe.ds.StringMap<String>):Type {
 		final trimmed = StringTools.trim(typePath == null ? "" : typePath);
 		if (trimmed.length == 0)
 			throw "runtime macro type path lookup: empty type path";
@@ -554,8 +781,9 @@ class RuntimeMacroTypes {
 		final moduleName = moduleNameOverride == null || moduleNameOverride.length == 0 ? name : moduleNameOverride;
 		if (moduleNameOverride != null && moduleNameOverride.length > 0 && name != moduleName && parts.length > 0 && parts[parts.length - 1] == moduleName)
 			parts.pop();
-		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max, staticFields, typeParamNames, underlyingTypeText);
-		}
+		return typeFromResolvedDecl(parts, moduleName, name, kind, metadataEntries, file, min, max, staticFields, typeParamNames, underlyingTypeText,
+			namedPaths);
+	}
 
 	public static function localUsingRefsForPaths(paths:Array<String>):Array<Ref<ClassType>> {
 		final out = new Array<Ref<ClassType>>();
@@ -880,9 +1108,26 @@ class RuntimeMacroTypes {
 		  current generated-OCaml constructor seam.
 	**/
 	public static function followedAnonymousFieldSummary(t:Type):Null<String> {
-		return switch (follow(t)) {
-			case TAnonymous(ref):
-				[for (field in ref.get().fields) field.name + ":" + toString(field.type)].join("|");
+		return anonymousFieldSummaryOfType(follow(t));
+	}
+
+	/**
+		Summarize the anonymous payload produced by `followWithAbstracts(...)`.
+
+		Why
+		- The remaining `bxlg.9.5` component/slot seam depends on real abstract unwrapping, not just
+		  typedef following.
+		- Tests need a stable proof surface without direct user-side `haxe.macro.Type` pattern matches
+		  in generated OCaml.
+	**/
+	public static function followedAnonymousFieldSummaryWithAbstracts(t:Type):Null<String> {
+		return anonymousFieldSummaryOfType(followWithAbstracts(t));
+	}
+
+	static function anonymousFieldSummaryOfType(t:Type):Null<String> {
+		return switch (t) {
+			case TAnonymous(anonRef):
+				[for (field in anonRef.get().fields) field.name + ":" + toString(field.type)].join("|");
 			case _:
 				null;
 		}
@@ -893,6 +1138,97 @@ class RuntimeMacroTypes {
 		if (params == null || params.length == 0)
 			return fullName;
 		return fullName + "<" + [for (param in params) toString(param)].join(", ") + ">";
+	}
+
+	static function describeTypeShapeInner(t:Type, depth:Int):String {
+		if (t == null)
+			return "null";
+		if (depth <= 0)
+			return "...";
+		return switch (t) {
+			case TInst(c, params): final base = c.get(); final head = switch (base.kind) {
+					case KModuleFields(modulePath):
+						'carrier:${modulePath}';
+					case _:
+						'inst:${refPath(base.pack, base.module, base.name)}';
+				} params == null || params.length == 0 ? head : head + "<" + [for (param in params) describeTypeShapeInner(param, depth - 1)].join(",") + ">";
+			case TEnum(e, params): final base = e.get(); final head = 'enum:${refPath(base.pack, base.module, base.name)}'; params == null || params.length == 0 ? head : head + "<" + [
+					for (param in params)
+						describeTypeShapeInner(param, depth - 1)
+				].join(",") + ">";
+			case TType(td, params):
+				final base = td.get();
+				final head = 'typedef:${refPath(base.pack, base.module, base.name)}'
+					+ ((params == null || params.length == 0) ? "" : ("<" + [for (param in params) describeTypeShapeInner(param, depth - 1)].join(",") + ">"));
+				head + "=>" + describeTypeShapeInner(applyTypeParameters(base.type, base.params, params), depth - 1);
+			case TAbstract(a, params):
+				final base = a.get();
+				final head = 'abstract:${refPath(base.pack, base.module, base.name)}'
+					+ ((params == null || params.length == 0) ? "" : ("<" + [for (param in params) describeTypeShapeInner(param, depth - 1)].join(",") + ">"));
+				head + "=>" + describeTypeShapeInner(applyTypeParameters(base.type, base.params, params), depth - 1);
+			case TAnonymous(anonRef):
+				final fields = anonRef.get().fields;
+				'anon{' + [
+					for (field in fields)
+						field.name + ":" + describeTypeShapeInner(field.type, depth - 1)
+				].join(",") + "}";
+			case TFun(args, ret):
+				'fun(' + [
+					for (arg in args)
+						arg.name + ":" + describeTypeShapeInner(arg.t, depth - 1)
+				].join(",") + ')->' + describeTypeShapeInner(ret, depth - 1);
+			case TDynamic(inner):
+				inner == null ? "dynamic" : ('dynamic<' + describeTypeShapeInner(inner, depth - 1) + ">");
+			case TMono(tm):
+				final inner = tm.get();
+				inner == null ? "mono" : ('mono<' + describeTypeShapeInner(inner, depth - 1) + ">");
+			case TLazy(f):
+				'lazy<' + describeTypeShapeInner(f(), depth - 1) + ">";
+		}
+	}
+
+	static function firstTypeParameterArityMismatchInner(t:Type, path:String):Null<String> {
+		if (t == null)
+			return null;
+		return switch (t) {
+			case TType(td, params):
+				final base = td.get();
+				if (base.params.length != params.length) path + ":typedef:" + refPath(base.pack, base.module, base.name) + ":expected=" + base.params.length
+					+ ":actual=" + params.length; else firstTypeParameterArityMismatchInner(base.type, path + ".typedef(" + base.name + ")");
+			case TAbstract(a, params):
+				final base = a.get();
+				if (base.params.length != params.length) path + ":abstract:" + refPath(base.pack, base.module, base.name) + ":expected="
+					+ base.params.length + ":actual=" + params.length; else
+					firstTypeParameterArityMismatchInner(base.type, path + ".abstract(" + base.name + ")");
+			case TFun(args, ret):
+				for (i in 0...args.length) {
+					final found = firstTypeParameterArityMismatchInner(args[i].t, path + ".arg(" + args[i].name + ")");
+					if (found != null)
+						return found;
+				}
+				firstTypeParameterArityMismatchInner(ret, path + ".ret");
+			case TInst(_, params) | TEnum(_, params):
+				for (i in 0...params.length) {
+					final found = firstTypeParameterArityMismatchInner(params[i], path + ".param(" + i + ")");
+					if (found != null)
+						return found;
+				}
+				null;
+			case TAnonymous(a):
+				for (field in a.get().fields) {
+					final found = firstTypeParameterArityMismatchInner(field.type, path + ".field(" + field.name + ")");
+					if (found != null)
+						return found;
+				}
+				null;
+			case TDynamic(inner):
+				inner == null ? null : firstTypeParameterArityMismatchInner(inner, path + ".dynamic");
+			case TLazy(f):
+				firstTypeParameterArityMismatchInner(f(), path + ".lazy");
+			case TMono(tm):
+				final inner = tm.get();
+				inner == null ? null : firstTypeParameterArityMismatchInner(inner, path + ".mono");
+		};
 	}
 
 	static function isDynamicType(t:Type):Bool {
@@ -1068,21 +1404,24 @@ class RuntimeMacroTypes {
 			file:String,
 			min:Int,
 			max:Int
-		}>, ?typeParamNames:Array<String>, ?underlyingTypeText:Null<String>):Type {
+		}>, ?typeParamNames:Array<String>,
+			?underlyingTypeText:Null<String>, ?namedPaths:haxe.ds.StringMap<String>):Type {
 		final pos = position(file, min, max);
 		final params = typeParameterRefs(typeParamNames);
-		final payload = parseDeclaredTypePayload(underlyingTypeText, params);
+		final paramRefs = [for (param in params) param.t];
+		final resolvedNamedPaths = namedPaths == null ? emptyNamedPathScope() : namedPaths;
+		final payload = parseDeclaredTypePayload(underlyingTypeText, params, resolvedNamedPaths);
 		return switch (kind == null ? "" : StringTools.trim(kind).toLowerCase()) {
 			case "enum":
 				TEnum(enumRef(pack, name, module, metadataEntries, pos), []);
 			case "typedef":
-				TType(defTypeRef(pack, name, module, params, payload, metadataEntries, pos), []);
+				TType(defTypeRef(pack, name, module, params, payload, metadataEntries, pos), paramRefs);
 			case "abstract":
-				abstractType(abstractRef(pack, name, module, params, payload, metadataEntries, pos, staticFields), []);
+				abstractType(abstractRef(pack, name, module, params, payload, metadataEntries, pos, staticFields, resolvedNamedPaths), paramRefs);
 			case _:
-				classType(pack, module, name, metadataEntries, file, min, max, staticFields);
+				classType(pack, module, name, metadataEntries, file, min, max, staticFields, resolvedNamedPaths);
 		}
-		}
+	}
 
 	static function typeParameterRefs(names:Null<Array<String>>):Array<TypeParameter> {
 		if (names == null || names.length == 0)
@@ -1090,15 +1429,74 @@ class RuntimeMacroTypes {
 		return [for (name in names) typeParameter(name)];
 	}
 
-	static function parseDeclaredTypePayload(typeText:Null<String>, params:Array<TypeParameter>):Type {
+	static function parseDeclaredTypePayload(typeText:Null<String>, params:Array<TypeParameter>, namedPaths:haxe.ds.StringMap<String>):Type {
 		final trimmed = StringTools.trim(typeText == null ? "" : typeText);
 		if (trimmed.length == 0)
 			return TDynamic(null);
 		return try {
-			parseTypeTextWithParameters(trimmed, params);
+			parseTypeTextWithParametersAndNamedPaths(trimmed, params, namedPaths);
 		} catch (_:Dynamic) {
 			TDynamic(null);
 		}
+	}
+
+	static function buildNamedPathScope(modulePath:String, entries:Array<{
+		name:String,
+		kind:String,
+		metadata:Array<String>,
+		typeParamNames:Array<String>,
+		underlyingTypeText:Null<String>,
+		staticFields:Array<{
+			name:String,
+			kind:String,
+			metadata:Array<String>,
+			initExpr:Null<String>,
+			args:Array<{
+				name:String,
+				opt:Bool,
+				typeText:String
+			}>,
+			returnTypeText:Null<String>,
+			file:String,
+			min:Int,
+			max:Int
+		}>,
+		file:String,
+		min:Int,
+		max:Int
+	}>, imports:Null<Array<{
+		path:String,
+		localName:String
+	}>>):haxe.ds.StringMap<String> {
+		final out = emptyNamedPathScope();
+		if (imports != null)
+			for (entry in imports) {
+				if (entry == null || entry.path == null)
+					continue;
+				final path = StringTools.trim(entry.path);
+				if (path.length == 0)
+					continue;
+				final localName = {
+					final alias = StringTools.trim(entry.localName == null ? "" : entry.localName);
+					if (alias.length > 0)
+						alias
+					else {
+						final parts = path.split(".");
+						parts.length == 0 ? path : parts[parts.length - 1];
+					}
+				};
+				out.set(localName, path);
+			}
+		if (entries != null)
+			for (entry in entries) {
+				if (entry == null || entry.name == null)
+					continue;
+				final localName = StringTools.trim(entry.name);
+				if (localName.length == 0)
+					continue;
+				out.set(localName, modulePath + "." + localName);
+			}
+		return out;
 	}
 
 	static function splitTopLevelTypeParts(text:String, separator:String):Array<String> {
@@ -1174,6 +1572,8 @@ class RuntimeMacroTypes {
 		var bracketDepth = 0;
 		var i = 0;
 		while (i < text.length) {
+			if (angleDepth == 0 && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0 && text.substr(i, token.length) == token)
+				return i;
 			final ch = text.charAt(i);
 			switch (ch) {
 				case "\"", "'":
@@ -1327,10 +1727,11 @@ class RuntimeMacroTypes {
 			file:String,
 			min:Int,
 			max:Int
-		}>):Type {
+		}>, ?namedPaths:haxe.ds.StringMap<String>):Type {
 		final staticFields = staticFieldEntries == null ? [] : [
 			for (entry in staticFieldEntries)
-				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max,
+					namedPaths)
 		];
 		final value:Type = TInst(classRef(pack, name, module, metadataEntries, null, staticFields, position(file, min, max)), []);
 		return value;
@@ -1350,10 +1751,11 @@ class RuntimeMacroTypes {
 		file:String,
 		min:Int,
 		max:Int
-	}>):Ref<ClassType> {
+	}>, namedPaths:haxe.ds.StringMap<String>):Ref<ClassType> {
 		final statics = [
 			for (entry in entries)
-				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max,
+					namedPaths)
 		];
 		return classRef(pack, module, module, null, KModuleFields(modulePath), statics);
 	}
@@ -1387,11 +1789,12 @@ class RuntimeMacroTypes {
 	}
 
 	static function classField(name:String, kind:String, ?metadataEntries:Array<String>, ?initExpr:Null<String>,
-			?args:Array<{name:String, opt:Bool, typeText:String}>, ?returnTypeText:Null<String>, ?file:String, ?min:Int, ?max:Int):ClassField {
+			?args:Array<{name:String, opt:Bool, typeText:String}>, ?returnTypeText:Null<String>, ?file:String, ?min:Int, ?max:Int,
+			?namedPaths:haxe.ds.StringMap<String>):ClassField {
 		final lowered = kind == null ? "" : StringTools.trim(kind).toLowerCase();
 		final pos = position(file, min, max);
 		final typedExpr = buildFieldExpr(initExpr, pos);
-		final functionType = buildMethodType(args, returnTypeText);
+		final functionType = buildMethodType(args, returnTypeText, namedPaths);
 		final fieldType = switch (lowered) {
 			case "method":
 				functionType;
@@ -1427,24 +1830,31 @@ class RuntimeMacroTypes {
 		};
 	}
 
-	static function buildMethodType(args:Array<{name:String, opt:Bool, typeText:String}>, returnTypeText:Null<String>):Type {
+	static function buildMethodType(args:Array<{name:String, opt:Bool, typeText:String}>, returnTypeText:Null<String>,
+			namedPaths:haxe.ds.StringMap<String>):Type {
 		final safeArgs = args == null ? [] : args;
-		return TFun([
+		final builtArgs = [
 			for (arg in safeArgs)
 				{
 					name: arg == null || arg.name == null ? "" : arg.name,
 					opt: arg != null && arg.opt,
-					t: typeFromText(arg == null ? null : arg.typeText)
+					t: typeFromText(arg == null ? null : arg.typeText, namedPaths)
 				}
-		], typeFromText(returnTypeText));
+		];
+		final ret = typeFromText(returnTypeText, namedPaths);
+		return TFun(builtArgs, ret);
 	}
 
-	static function typeFromText(text:Null<String>):Type {
+	static function emptyNamedPathScope():haxe.ds.StringMap<String> {
+		return cast new haxe.ds.StringMap<String>();
+	}
+
+	static function typeFromText(text:Null<String>, namedPaths:haxe.ds.StringMap<String>):Type {
 		final trimmed = StringTools.trim(text == null ? "" : text);
 		if (trimmed.length == 0)
 			return TDynamic(null);
 		return try {
-			parseTypeText(trimmed);
+			parseTypeTextWithParametersAndNamedPaths(trimmed, [], namedPaths);
 		} catch (_:Dynamic) {
 			typeForPath(trimmed);
 		}
@@ -1552,10 +1962,11 @@ class RuntimeMacroTypes {
 			file:String,
 			min:Int,
 			max:Int
-		}>):Ref<AbstractType> {
+		}>, ?namedPaths:haxe.ds.StringMap<String>):Ref<AbstractType> {
 		final implStatics = staticFieldEntries == null ? [] : [
 			for (entry in staticFieldEntries)
-				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max)
+				classField(entry.name, entry.kind, entry.metadata, entry.initExpr, entry.args, entry.returnTypeText, entry.file, entry.min, entry.max,
+					namedPaths)
 		];
 		final implRef = implStatics.length == 0 ? null : classRef(pack, name + "_Impl_", module, null, null, implStatics, pos);
 		final value:AbstractType = {

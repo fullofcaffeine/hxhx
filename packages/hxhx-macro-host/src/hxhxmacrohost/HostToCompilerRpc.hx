@@ -27,6 +27,7 @@ package hxhxmacrohost;
 **/
 class HostToCompilerRpc {
 	static var nextId:Int = -1;
+	static var localHandler:Null<(method:String, tail:String) -> String> = null;
 
 	static inline function isTrueEnv(name:String):Bool {
 		final v = Sys.getEnv(name);
@@ -72,7 +73,30 @@ class HostToCompilerRpc {
 		}
 	}
 
+	/**
+		Install a local reverse-RPC handler.
+
+		Why
+		- Focused `--interp` integration tests sometimes need to exercise the external-host runtime
+		  decode path without paying for a full source-built macro-host process.
+		- Reusing the same payload builders keeps those tests semantically aligned with the real
+		  compiler/runtime boundary instead of falling back to fake path reconstruction.
+
+		Gotchas
+		- This is test/support plumbing. Real external-host runs should leave the handler unset so the
+		  RPC still goes over stdio.
+	**/
+	public static function setLocalHandler(handler:(method:String, tail:String) -> String):Void {
+		localHandler = handler;
+	}
+
+	public static function clearLocalHandler():Void {
+		localHandler = null;
+	}
+
 	public static function call(method:String, tail:String):String {
+		if (localHandler != null)
+			return localHandler(method, tail);
 		final id = nextId--;
 		if (traceEnabled())
 			writeTraceLine("[hxhx macro host rpc] -> " + method + (tail == null || tail.length == 0 ? "" : (" " + summarizeTail(tail))));

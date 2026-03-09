@@ -36,6 +36,20 @@ Beginner summary:
   - those semantic gaps are narrowed further, or
   - Full1 explicitly scopes them out.
 
+2026-03-08 follow-up evidence:
+
+- The three Oracle-identified semantic seams now have focused direct regressions:
+  - `Context.getType()` typedef/abstract payload reconstruction:
+    `test:m14:runtime-applied-type-metadata`
+  - `Context.getModule()` field-type reconstruction plus `followWithAbstracts()` for
+    component/slot-style flows:
+    `test:m14:runtime-component-signature`
+  - `Context.parseInlineString()` for balanced inline-markup splice bodies:
+    `test:m14:runtime-inline-markup-parse`
+- Those proofs are now green on the current tree.
+- `haxe.ocaml-bxlg.9.5` still stays open until the next sufficiency review decides whether the
+  remaining synthetic runtime type/module fidelity gaps are still Full1-critical.
+
 ## Recently resolved
 
 | Blocker ID | Resolution | Landed in |

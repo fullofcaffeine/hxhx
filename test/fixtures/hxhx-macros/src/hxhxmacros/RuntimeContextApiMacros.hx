@@ -651,6 +651,58 @@ class RuntimeContextApiMacros {
 		return "moduleFields=" + summary;
 	}
 
+	public static function probeComponentSignatureCarrier():String {
+		final pos = Context.currentPos();
+		final modulePath = "hxhxmacros.RuntimeComponentModule";
+		final moduleTypes = Context.getModule(modulePath);
+		if (moduleTypes == null || moduleTypes.length == 0)
+			Context.fatalError("runtime macro component-signature probe: expected module lookup to resolve " + modulePath, pos);
+
+		var componentType:Null<Type> = null;
+		for (t in moduleTypes) {
+			final clsRef = RuntimeMacroTypes.classRefOf(t);
+			if (clsRef == null)
+				continue;
+			final cls = clsRef.get();
+			if (cls.name == "Components") {
+				componentType = t;
+				break;
+			}
+		}
+		if (componentType == null)
+			Context.fatalError("runtime macro component-signature probe: missing Components type", pos);
+
+		final componentRef = RuntimeMacroTypes.classRefOf(componentType);
+		if (componentRef == null)
+			Context.fatalError("runtime macro component-signature probe: expected Components class ref", pos);
+		final card = findField(componentRef.get().statics.get(), "card");
+		if (card == null)
+			Context.fatalError("runtime macro component-signature probe: missing Components.card", pos);
+		final directAssigns = Context.getType("hxhxmacros.RuntimeComponentSupport.Assigns");
+		final directMismatch = RuntimeMacroTypes.firstTypeParameterArityMismatch(directAssigns);
+		final directTypeString = TypeTools.toString(directAssigns);
+		final arityMismatch = RuntimeMacroTypes.firstTypeParameterArityMismatch(card.type);
+		final typeString = TypeTools.toString(card.type);
+		if (arityMismatch != null || directMismatch != null)
+			return "componentSignature:directMismatch=" + Std.string(directMismatch) + " directType=" + directTypeString + " fieldMismatch="
+				+ Std.string(arityMismatch) + " fieldType=" + typeString;
+		final summary = RuntimeMacroTypes.describeTypeShape(card.type, 10);
+		if (summary.indexOf("abstract:hxhxmacros.RuntimeComponentSupport.Assigns<") < 0)
+			Context.fatalError("runtime macro component-signature probe: expected Assigns abstract arg but got " + summary, pos);
+		if (summary.indexOf("typedef:hxhxmacros.RuntimeComponentModule.CardAssigns=>anon{") < 0)
+			Context.fatalError("runtime macro component-signature probe: expected CardAssigns typedef payload but got " + summary, pos);
+		if (summary.indexOf("header:abstract:hxhxmacros.RuntimeComponentSupport.Slot<") < 0)
+			Context.fatalError("runtime macro component-signature probe: expected Slot abstract field but got " + summary, pos);
+		if (summary.indexOf("typedef:hxhxmacros.RuntimeComponentModule.HeaderSlotProps=>anon{label:inst:String}") < 0)
+			Context.fatalError("runtime macro component-signature probe: expected HeaderSlotProps typedef payload but got " + summary, pos);
+		if (summary.indexOf("typedef:hxhxmacros.RuntimeComponentModule.HeaderLet=>anon{count:inst:Int,userName:inst:String}") < 0)
+			Context.fatalError("runtime macro component-signature probe: expected HeaderLet typedef payload but got " + summary, pos);
+		if (summary.indexOf(")->inst:String") < 0)
+			Context.fatalError("runtime macro component-signature probe: expected String return type but got " + summary, pos);
+		Compiler.define("HXHX_RUNTIME_COMPONENT_SIGNATURE", summary);
+		return "componentSignature=" + summary;
+	}
+
 	public static function probeBuildFieldsSnapshot():String {
 		final pos = Context.currentPos();
 		final fields = Context.getBuildFields();

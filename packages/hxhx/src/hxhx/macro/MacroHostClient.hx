@@ -33,6 +33,11 @@ private typedef RuntimeResolvedModuleFieldSnapshot = {
 	final max:Int;
 }
 
+private typedef RuntimeResolvedModuleImportSnapshot = {
+	final path:String;
+	final localName:String;
+}
+
 private enum MacroHostReadResult {
 	ReadLine(line:String);
 	ReadEof;
@@ -882,15 +887,16 @@ class MacroHostClient {
 		if (i >= source.length || source.charCodeAt(i) != "=".code)
 			return null;
 		final bodyStart = skipWhitespaceText(source, i + 1);
-		final bodyEnd = scanTopLevelTypeTerminator(source, bodyStart, ";".code);
+		var bodyEnd = scanTopLevelTypeTerminator(source, bodyStart, ";".code);
+		if (bodyEnd < 0 && bodyStart < source.length && source.charCodeAt(bodyStart) == "{".code)
+			bodyEnd = scanBalancedText(source, bodyStart, "{".code, "}".code);
 		if (bodyEnd < 0)
 			return null;
 		return {
 			name: name,
 			typeParamNames: typeParamNames,
 			underlyingTypeText: StringTools.trim(source.substr(bodyStart, bodyEnd - bodyStart)),
-			nextIndex: bodyEnd + 1
-		};
+			nextIndex: bodyEnd < source.length && source.charCodeAt(bodyEnd) == ";".code ? bodyEnd + 1 : bodyEnd};
 	}
 
 	static function parseAbstractSemantics(source:String, start:Int):Null<{
@@ -1683,6 +1689,283 @@ class MacroHostClient {
 		return out;
 	}
 
+	/**
+		Scan narrow top-level imports/usings from filtered source.
+
+		Why
+		- Runtime `Context.getModule(...)` field-signature reconstruction needs the module's local
+		  import scope so bare names like `Assigns<CardAssigns>` can resolve semantically instead of
+		  degrading to fake bare paths.
+
+		What
+		- Captures top-level `import` / `using` statements before/alongside type declarations.
+		- Preserves `as Alias` local names when present.
+
+		Gotchas
+		- Wildcards are ignored.
+		- This is still a narrow scanner, not full import semantics.
+	**/
+	public static function scanResolvedModuleImports(path:String):Array<RuntimeResolvedModuleImportSnapshot> {
+		final out = new Array<RuntimeResolvedModuleImportSnapshot>();
+		final filtered = readFilteredResolvedModuleSource(path);
+		if (filtered.length == 0)
+			return out;
+
+		final seen = new Map<String, Bool>();
+		var braceDepth = 0;
+		var blockCommentDepth = 0;
+		final lines = splitLinesPreserveNewlines(filtered);
+
+		function countChar(text:String, ch:String):Int {
+			var count = 0;
+			var i = 0;
+			while (i < text.length) {
+				if (text.charAt(i) == ch)
+					count += 1;
+				i += 1;
+			}
+			return count;
+		}
+
+		function stripLineComments(text:String):String {
+			var inString = false;
+			var quote = "";
+			var i = 0;
+			while (i < text.length - 1) {
+				final ch = text.charAt(i);
+				if (inString) {
+					if (ch == "\\") {
+						i += 2;
+						continue;
+					}
+					if (ch == quote)
+						inString = false;
+					i += 1;
+					continue;
+				}
+				if (ch == "\"" || ch == "'") {
+					inString = true;
+					quote = ch;
+					i += 1;
+					continue;
+				}
+				if (ch == "/" && text.charAt(i + 1) == "/")
+					return text.substr(0, i);
+				i += 1;
+			}
+			return text;
+		}
+
+		function push(pathText:String, ?alias:Null<String>):Void {
+			final trimmedPath = StringTools.trim(pathText == null ? "" : pathText);
+			if (trimmedPath.length == 0 || StringTools.endsWith(trimmedPath, ".*"))
+				return;
+			final parts = trimmedPath.split(".");
+			final localName = {
+				final trimmedAlias = StringTools.trim(alias == null ? "" : alias);
+				trimmedAlias.length > 0 ? trimmedAlias : (parts.length == 0 ? trimmedPath : parts[parts.length - 1]);
+			}
+			final key = trimmedPath + "=>" + localName;
+			if (seen.exists(key))
+				return;
+			seen.set(key, true);
+			out.push({
+				path: trimmedPath,
+				localName: localName
+			});
+		}
+
+		for (rawLine in lines) {
+			var line = rawLine;
+			if (blockCommentDepth > 0) {
+				while (line.length > 0 && blockCommentDepth > 0) {
+					final close = line.indexOf("*/");
+					if (close == -1) {
+						line = "";
+					} else {
+						blockCommentDepth -= 1;
+						line = line.substr(close + 2);
+					}
+				}
+			}
+
+			while (true) {
+				final open = line.indexOf("/*");
+				if (open == -1)
+					break;
+				final close = line.indexOf("*/", open + 2);
+				if (close == -1) {
+					blockCommentDepth += 1;
+					line = line.substr(0, open);
+					break;
+				}
+				line = line.substr(0, open) + line.substr(close + 2);
+			}
+
+			line = stripLineComments(line);
+			final trimmed = StringTools.trim(line);
+			if (trimmed.length == 0) {
+				braceDepth += countChar(line, "{");
+				braceDepth -= countChar(line, "}");
+				if (braceDepth < 0)
+					braceDepth = 0;
+				continue;
+			}
+
+			if (braceDepth == 0) {
+				if (StringTools.startsWith(trimmed, "import ")) {
+					var body = StringTools.trim(trimmed.substr("import ".length));
+					if (StringTools.endsWith(body, ";"))
+						body = StringTools.trim(body.substr(0, body.length - 1));
+					final asIndex = body.indexOf(" as ");
+					if (asIndex >= 0)
+						push(body.substr(0, asIndex), body.substr(asIndex + 4));
+					else
+						push(body);
+				} else if (StringTools.startsWith(trimmed, "using ")) {
+					var body = StringTools.trim(trimmed.substr("using ".length));
+					if (StringTools.endsWith(body, ";"))
+						body = StringTools.trim(body.substr(0, body.length - 1));
+					push(body);
+				}
+			}
+
+			braceDepth += countChar(line, "{");
+			braceDepth -= countChar(line, "}");
+			if (braceDepth < 0)
+				braceDepth = 0;
+		}
+
+		return out;
+	}
+
+	/**
+		Encode the compiler-side `context.getType` payload for a runtime macro lookup.
+
+		Why
+		- The external-host runtime reconstructs synthetic `Type` values from this payload, so focused
+		  direct integration tests should be able to reuse the exact same encoder instead of drifting
+		  into a fake path-only fallback.
+		- Keeping the encoder in one place avoids semantic skew between the live RPC handler and
+		  test-local reverse-RPC shims.
+	**/
+	public static function encodeContextGetTypePayload(name:String):String {
+		if (name == null || name.length == 0)
+			return "";
+		final classPaths = MacroState.listClassPaths();
+		final cfg = MacroState.getCompilerConfigurationSnapshot();
+		for (cp in cfg.stdPath)
+			if (classPaths.indexOf(cp) == -1)
+				classPaths.push(cp);
+		final resolved = hxhx.Stage1Compiler.Stage1Resolver.resolveModule(classPaths, name, Sys.getCwd());
+		if (resolved == null)
+			return "";
+		final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className);
+		final targetTypeName = {
+			final parts = name.split(".");
+			parts.length == 0 ? name : parts[parts.length - 1];
+		}
+		var kind = "class";
+		var metadata = MacroState.listAppliedTypeMetadata(name);
+		for (entry in resolvedTypes)
+			if (entry.name == targetTypeName) {
+				kind = entry.kind;
+				metadata = entry.metadata;
+				break;
+			}
+		final parts = new Array<String>();
+		parts.push(MacroProtocol.encodeLen("ok", "1"));
+		parts.push(MacroProtocol.encodeLen("t", name));
+		parts.push(MacroProtocol.encodeLen("m", resolved.className));
+		parts.push(MacroProtocol.encodeLen("k", kind));
+		parts.push(MacroProtocol.encodeLen("f", {
+			var file = resolved.path;
+			for (entry in resolvedTypes)
+				if (entry.name == targetTypeName) {
+					file = entry.file;
+					break;
+				}
+			file;
+		}));
+		parts.push(MacroProtocol.encodeLen("min", Std.string({
+			var value = 0;
+			for (entry in resolvedTypes)
+				if (entry.name == targetTypeName) {
+					value = entry.min;
+					break;
+				}
+			value;
+		})));
+		parts.push(MacroProtocol.encodeLen("max", Std.string({
+			var value = 0;
+			for (entry in resolvedTypes)
+				if (entry.name == targetTypeName) {
+					value = entry.max;
+					break;
+				}
+			value;
+		})));
+		final staticFields = {
+			var matched:Null<RuntimeResolvedTypeSnapshot> = null;
+			for (entry in resolvedTypes)
+				if (entry.name == targetTypeName) {
+					matched = entry;
+					break;
+				}
+			matched == null ? [] : matched.staticFields;
+		};
+		parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
+		for (i in 0...metadata.length)
+			parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
+		parts.push(MacroProtocol.encodeLen("pc", Std.string({
+			var matched:Null<RuntimeResolvedTypeSnapshot> = null;
+			for (entry in resolvedTypes)
+				if (entry.name == targetTypeName) {
+					matched = entry;
+					break;
+				}
+			matched == null ? 0 : matched.typeParamNames.length;
+		})));
+		{
+			var matched:Null<RuntimeResolvedTypeSnapshot> = null;
+			for (entry in resolvedTypes)
+				if (entry.name == targetTypeName) {
+					matched = entry;
+					break;
+				}
+			if (matched != null) {
+				for (i in 0...matched.typeParamNames.length)
+					parts.push(MacroProtocol.encodeLen("pn" + i, matched.typeParamNames[i]));
+				if (matched.underlyingTypeText != null && matched.underlyingTypeText.length > 0)
+					parts.push(MacroProtocol.encodeLen("ut", matched.underlyingTypeText));
+			}
+		}
+		parts.push(MacroProtocol.encodeLen("sc", Std.string(staticFields.length)));
+		for (i in 0...staticFields.length) {
+			final entry = staticFields[i];
+			parts.push(MacroProtocol.encodeLen("sn" + i, entry.name));
+			parts.push(MacroProtocol.encodeLen("sk" + i, entry.kind));
+			parts.push(MacroProtocol.encodeLen("sf" + i, entry.file));
+			parts.push(MacroProtocol.encodeLen("smin" + i, Std.string(entry.min)));
+			parts.push(MacroProtocol.encodeLen("smax" + i, Std.string(entry.max)));
+			if (entry.initExpr != null && entry.initExpr.length > 0)
+				parts.push(MacroProtocol.encodeLen("se" + i, entry.initExpr));
+			if (entry.returnTypeText != null && entry.returnTypeText.length > 0)
+				parts.push(MacroProtocol.encodeLen("sr" + i, entry.returnTypeText));
+			parts.push(MacroProtocol.encodeLen("sac" + i, Std.string(entry.args.length)));
+			for (j in 0...entry.args.length) {
+				final arg = entry.args[j];
+				parts.push(MacroProtocol.encodeLen("san" + i + "_" + j, arg.name));
+				parts.push(MacroProtocol.encodeLen("sao" + i + "_" + j, arg.opt ? "1" : "0"));
+				parts.push(MacroProtocol.encodeLen("sat" + i + "_" + j, arg.typeText));
+			}
+			parts.push(MacroProtocol.encodeLen("smc" + i, Std.string(entry.metadata.length)));
+			for (j in 0...entry.metadata.length)
+				parts.push(MacroProtocol.encodeLen("smd" + i + "_" + j, entry.metadata[j]));
+		}
+		return parts.join(" ");
+	}
+
 	static function connect():MacroClient {
 		final exe = resolveMacroHostExe();
 		if (exe == null || exe.length == 0) {
@@ -2121,120 +2404,12 @@ private class MacroClient {
 						replyErr(id, method + ": missing type name");
 						return;
 					}
-					final classPaths = MacroState.listClassPaths();
-					final cfg = MacroState.getCompilerConfigurationSnapshot();
-					for (cp in cfg.stdPath)
-						if (classPaths.indexOf(cp) == -1)
-							classPaths.push(cp);
-					final resolved = hxhx.Stage1Compiler.Stage1Resolver.resolveModule(classPaths, name, Sys.getCwd());
-					if (resolved == null) {
+					final payload = MacroHostClient.encodeContextGetTypePayload(name);
+					if (payload.length == 0) {
 						replyOk(id, MacroProtocol.encodeLen("v", ""));
 						return;
 					}
-					final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className);
-					final targetTypeName = {
-						final parts = name.split(".");
-						parts.length == 0 ? name : parts[parts.length - 1];
-					}
-					var kind = "class";
-					var metadata = MacroState.listAppliedTypeMetadata(name);
-					for (entry in resolvedTypes)
-						if (entry.name == targetTypeName) {
-							kind = entry.kind;
-							metadata = entry.metadata;
-							break;
-						}
-					final parts = new Array<String>();
-					parts.push(MacroProtocol.encodeLen("ok", "1"));
-					parts.push(MacroProtocol.encodeLen("t", name));
-					parts.push(MacroProtocol.encodeLen("m", resolved.className));
-					parts.push(MacroProtocol.encodeLen("k", kind));
-					parts.push(MacroProtocol.encodeLen("f", {
-						var file = resolved.path;
-						for (entry in resolvedTypes)
-							if (entry.name == targetTypeName) {
-								file = entry.file;
-								break;
-							}
-						file;
-					}));
-					parts.push(MacroProtocol.encodeLen("min", Std.string({
-						var value = 0;
-						for (entry in resolvedTypes)
-							if (entry.name == targetTypeName) {
-								value = entry.min;
-								break;
-							}
-						value;
-					})));
-					parts.push(MacroProtocol.encodeLen("max", Std.string({
-						var value = 0;
-						for (entry in resolvedTypes)
-							if (entry.name == targetTypeName) {
-								value = entry.max;
-								break;
-							}
-						value;
-					})));
-					final staticFields = {
-						var matched:Null<RuntimeResolvedTypeSnapshot> = null;
-						for (entry in resolvedTypes)
-							if (entry.name == targetTypeName) {
-								matched = entry;
-								break;
-							}
-						matched == null ? [] : matched.staticFields;
-					};
-					parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
-					for (i in 0...metadata.length)
-						parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
-					parts.push(MacroProtocol.encodeLen("pc", Std.string({
-						var matched:Null<RuntimeResolvedTypeSnapshot> = null;
-						for (entry in resolvedTypes)
-							if (entry.name == targetTypeName) {
-								matched = entry;
-								break;
-							}
-						matched == null ? 0 : matched.typeParamNames.length;
-					})));
-					{
-						var matched:Null<RuntimeResolvedTypeSnapshot> = null;
-						for (entry in resolvedTypes)
-							if (entry.name == targetTypeName) {
-								matched = entry;
-								break;
-							}
-						if (matched != null) {
-							for (i in 0...matched.typeParamNames.length)
-								parts.push(MacroProtocol.encodeLen("pn" + i, matched.typeParamNames[i]));
-							if (matched.underlyingTypeText != null && matched.underlyingTypeText.length > 0)
-								parts.push(MacroProtocol.encodeLen("ut", matched.underlyingTypeText));
-						}
-					}
-					parts.push(MacroProtocol.encodeLen("sc", Std.string(staticFields.length)));
-					for (i in 0...staticFields.length) {
-						final entry = staticFields[i];
-						parts.push(MacroProtocol.encodeLen("sn" + i, entry.name));
-						parts.push(MacroProtocol.encodeLen("sk" + i, entry.kind));
-						parts.push(MacroProtocol.encodeLen("sf" + i, entry.file));
-						parts.push(MacroProtocol.encodeLen("smin" + i, Std.string(entry.min)));
-						parts.push(MacroProtocol.encodeLen("smax" + i, Std.string(entry.max)));
-						if (entry.initExpr != null && entry.initExpr.length > 0)
-							parts.push(MacroProtocol.encodeLen("se" + i, entry.initExpr));
-						if (entry.returnTypeText != null && entry.returnTypeText.length > 0)
-							parts.push(MacroProtocol.encodeLen("sr" + i, entry.returnTypeText));
-						parts.push(MacroProtocol.encodeLen("sac" + i, Std.string(entry.args.length)));
-						for (j in 0...entry.args.length) {
-							final arg = entry.args[j];
-							parts.push(MacroProtocol.encodeLen("san" + i + "_" + j, arg.name));
-							parts.push(MacroProtocol.encodeLen("sao" + i + "_" + j, arg.opt ? "1" : "0"));
-							parts.push(MacroProtocol.encodeLen("sat" + i + "_" + j, arg.typeText));
-						}
-						parts.push(MacroProtocol.encodeLen("smc" + i, Std.string(entry.metadata.length)));
-						for (j in 0...entry.metadata.length)
-							parts.push(MacroProtocol.encodeLen("smd" + i + "_" + j, entry.metadata[j]));
-					}
-					replyOk(id, MacroProtocol.encodeLen("v", parts.join(" ")));
+					replyOk(id, MacroProtocol.encodeLen("v", payload));
 				case "context.getModule":
 					final name = MacroProtocol.kvGet(tail, "n");
 					if (name == null || name.length == 0) {
@@ -2252,10 +2427,17 @@ private class MacroClient {
 						return;
 					}
 					final resolvedFields = MacroHostClient.scanResolvedModuleFields(resolved.path);
+					final resolvedImports = MacroHostClient.scanResolvedModuleImports(resolved.path);
 					final resolvedTypes = MacroHostClient.scanResolvedModuleTypes(name, resolved.path, resolved.className, resolvedFields.length == 0);
 					final parts = new Array<String>();
 					parts.push(MacroProtocol.encodeLen("ok", "1"));
 					parts.push(MacroProtocol.encodeLen("m", name));
+					parts.push(MacroProtocol.encodeLen("ic", Std.string(resolvedImports.length)));
+					for (i in 0...resolvedImports.length) {
+						final entry = resolvedImports[i];
+						parts.push(MacroProtocol.encodeLen("ip" + i, entry.path));
+						parts.push(MacroProtocol.encodeLen("il" + i, entry.localName));
+					}
 					parts.push(MacroProtocol.encodeLen("tc", Std.string(resolvedTypes.length)));
 					for (i in 0...resolvedTypes.length) {
 						final entry = resolvedTypes[i];

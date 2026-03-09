@@ -449,6 +449,20 @@ class Context {
 		final parts = Protocol.kvParse(payload);
 		if (!parts.exists("ok") || parts.get("ok") != "1")
 			return [];
+		final imports = new Array<{
+			path:String,
+			localName:String
+		}>();
+		final importCount = parseNonNegativeInt(parts.exists("ic") ? parts.get("ic") : "", 0);
+		for (i in 0...importCount) {
+			final pathKey = "ip" + i;
+			if (!parts.exists(pathKey))
+				continue;
+			imports.push({
+				path: parts.get(pathKey),
+				localName: parts.exists("il" + i) ? parts.get("il" + i) : parts.get(pathKey)
+			});
+		}
 		final entries = new Array<{
 			name:String,
 			kind:String,
@@ -612,7 +626,7 @@ class Context {
 			});
 		}
 		final modulePath = parts.exists("m") ? parts.get("m") : name;
-		return RuntimeMacroTypes.moduleTypesForModule(modulePath, entries, fields);
+		return RuntimeMacroTypes.moduleTypesForModule(modulePath, entries, fields, imports);
 	}
 
 	public static function parse(expr:String, pos:Position):Expr {
