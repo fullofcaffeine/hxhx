@@ -25,7 +25,7 @@ Scope manifests used by this map:
 | PM-10 | Strict stage0-forbidden bundle gate | Native strict replacement scope | `Macro,Js,Neko` + native compile lanes `ocaml,js` | strict M7 (`HXHX_M7_STRICT=1`) | `.github/workflows/gate-m7.yml` / `npm run test:upstream:replacement-ready:strict` | `M7_STRICT_STAGE0:PASS` |
 | PM-11 | Replacement-ready bundle gate (scoped 1.0) | Oracle replacement scope | scope-defined (`Macro,Js,Neko`; policy includes native lanes `ocaml`,`js` plus delegated compat lanes `ocaml-eval`,`compat`) | M7 full profile | `.github/workflows/gate-m7.yml` / `npm run test:upstream:replacement-ready` | `M7_REPLACEMENT_READY:PASS` |
 | PM-12 | Stdlib semantic-diff scoped PR canary / nightly expanded | Portable oracle diff lane | generated stdlib-focused programs | `portable` | `.github/workflows/semantic-diff.yml` jobs `Semantic diff (PR smoke)` and `Semantic diff (nightly expanded)` | `SEMANTIC_DIFF_LITE_SCOPE:RUN` or `SEMANTIC_DIFF_LITE_SCOPE:SKIP_NO_RELEVANT_CHANGES` (PR scope), `SEMANTIC_DIFF_LITE:PASS` (when scoped run executes), `SEMANTIC_DIFF_NIGHTLY:PASS` (nightly) |
-| PM-13 | Macro runtime parity matrix (unit macro + runci macro + display/protocol checks) | Native Stage3 macro runtime parity | `Macro` | runtime mode matrix (`external-host`,`inproc`) | `.github/workflows/macro-runtime-parity-weekly.yml` | `MACRO_RUNTIME_PARITY_UNIT_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_UNIT_INPROC:PASS`, `MACRO_RUNTIME_PARITY_RUNCI_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_RUNCI_INPROC:PASS`, `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_INPROC:PASS`, `MACRO_RUNTIME_PARITY_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_INPROC:PASS`, `MACRO_RUNTIME_PARITY_WEEKLY:PASS` |
+| PM-13 | Macro runtime parity matrix (unit macro + runci macro + display/protocol checks) | Native Stage3 macro runtime parity | `Macro` | runtime mode matrix (`external-host`,`inproc`) | `.github/workflows/macro-runtime-parity-weekly.yml` | `MACRO_RUNTIME_PARITY_UNIT_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_UNIT_INPROC:PASS`, `MACRO_RUNTIME_PARITY_RUNCI_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_RUNCI_INPROC:PASS`, `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_DISPLAY_PROTOCOL_INPROC:PASS`, `MACRO_RUNTIME_PARITY_EXTERNAL_HOST:PASS`, `MACRO_RUNTIME_PARITY_INPROC:PASS`, `MACRO_RUNTIME_PARITY_WEEKLY:PASS`, `FULL1_MACRO_PARITY:PASS` |
 
 ## Marker Registry
 
@@ -55,10 +55,11 @@ These are the canonical marker strings used for parity statements in logs:
 - `MACRO_RUNTIME_PARITY_EXTERNAL_HOST:PASS`
 - `MACRO_RUNTIME_PARITY_INPROC:PASS`
 - `MACRO_RUNTIME_PARITY_WEEKLY:PASS`
+- `FULL1_MACRO_PARITY:PASS`
 
 ## Claim Rules
 
 - Use `M7_REPLACEMENT_READY:PASS` for scoped oracle replacement-readiness statements.
 - Use both `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` for stage0-forbidden/native replacement statements.
 - For semantic-diff-lite PR canary claims, include scope marker (`RUN` or `SKIP`), pass marker when present, and `semantic-diff-pr-artifacts`.
-- For macro runtime parity claims, include mode-specific pass markers and the mode-tagged artifact bundle from `macro-runtime-parity-weekly.yml`.
+- For macro runtime parity claims, include mode-specific pass markers, `FULL1_MACRO_PARITY:PASS`, and the mode-tagged artifact bundle plus summary artifact from `macro-runtime-parity-weekly.yml`.

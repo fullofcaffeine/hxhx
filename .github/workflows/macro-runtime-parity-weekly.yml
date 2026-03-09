@@ -1,9 +1,23 @@
 name: Macro Runtime Parity (Weekly)
 
 on:
+  workflow_call:
+    outputs:
+      macro_runtime_parity_weekly_marker:
+        description: "Weekly parity marker emitted when both runtime modes pass."
+        value: ${{ jobs.macro-runtime-parity-summary.outputs.macro_runtime_parity_weekly_marker }}
+      full1_macro_parity_marker:
+        description: "Full1 macro parity marker emitted when both runtime modes pass."
+        value: ${{ jobs.macro-runtime-parity-summary.outputs.full1_macro_parity_marker }}
   schedule:
     - cron: '40 7 * * 1'
   workflow_dispatch:
+  release:
+    types: [published]
+
+concurrency:
+  group: macro-runtime-parity-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -163,6 +177,59 @@ jobs:
     name: Macro runtime parity summary
     runs-on: ubuntu-latest
     needs: [macro-runtime-parity]
+    if: always()
+    outputs:
+      macro_runtime_parity_weekly_marker: ${{ steps.emit.outputs.macro_runtime_parity_weekly_marker }}
+      full1_macro_parity_marker: ${{ steps.emit.outputs.full1_macro_parity_marker }}
     steps:
-      - name: Emit parity weekly marker
-        run: echo "MACRO_RUNTIME_PARITY_WEEKLY:PASS"
+      - name: Write macro parity summary artifact
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/macro-runtime-parity
+          matrix_result='${{ needs.macro-runtime-parity.result }}'
+          trigger='${{ github.event_name }}'
+          jq -n \
+            --arg workflow "Macro Runtime Parity (Weekly)" \
+            --arg run_id "${{ github.run_id }}" \
+            --arg run_attempt "${{ github.run_attempt }}" \
+            --arg matrix_result "$matrix_result" \
+            --arg trigger "$trigger" \
+            '{
+              schema: "macro-runtime-parity-summary.v1",
+              workflow: $workflow,
+              run_id: $run_id,
+              run_attempt: $run_attempt,
+              trigger: $trigger,
+              jobs: {
+                macro_runtime_parity: { result: $matrix_result }
+              },
+              aggregate_markers: [
+                "MACRO_RUNTIME_PARITY_WEEKLY:PASS",
+                "FULL1_MACRO_PARITY:PASS"
+              ]
+            }' > .artifacts/macro-runtime-parity/summary.json
+
+      - name: Upload parity summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macro-runtime-parity-summary-${{ github.run_id }}
+          path: .artifacts/macro-runtime-parity/summary.json
+          if-no-files-found: error
+
+      - name: Emit parity markers
+        id: emit
+        run: |
+          set -euo pipefail
+          matrix_result='${{ needs.macro-runtime-parity.result }}'
+          echo "macro_runtime_parity=${matrix_result}"
+          if [ "$matrix_result" = "success" ]; then
+            echo "MACRO_RUNTIME_PARITY_WEEKLY:PASS"
+            echo "FULL1_MACRO_PARITY:PASS"
+            echo "macro_runtime_parity_weekly_marker=MACRO_RUNTIME_PARITY_WEEKLY:PASS" >> "$GITHUB_OUTPUT"
+            echo "full1_macro_parity_marker=FULL1_MACRO_PARITY:PASS" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "MACRO_RUNTIME_PARITY_WEEKLY:FAIL" >&2
+          echo "FULL1_MACRO_PARITY:FAIL" >&2
+          exit 1

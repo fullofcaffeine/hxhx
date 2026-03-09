@@ -19,7 +19,7 @@ This runbook defines how maintainers audit scheduled CI health each week and wha
 | --- | --- | --- | --- | --- |
 | Gate 1 / Upstream Macro Unit Compatibility | `.github/workflows/gate1.yml` | Weekly schedule | `GATE1_MACRO:PASS` | Workflow run logs (marker in log output) |
 | Gate 2 / Upstream Macro Workloads | `.github/workflows/gate2.yml` | Weekly schedule | `GATE2_MACRO:PASS` | Workflow run logs (marker in log output) |
-| Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS` plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`) | Artifacts `macro-runtime-parity-external-host-<run_id>` and `macro-runtime-parity-inproc-<run_id>` |
+| Macro Runtime Parity (Weekly) | `.github/workflows/macro-runtime-parity-weekly.yml` | Weekly schedule | `MACRO_RUNTIME_PARITY_WEEKLY:PASS`, `FULL1_MACRO_PARITY:PASS`, plus mode markers (`..._EXTERNAL_HOST:PASS`, `..._INPROC:PASS`) | Artifacts `macro-runtime-parity-external-host-<run_id>`, `macro-runtime-parity-inproc-<run_id>`, and `macro-runtime-parity-summary-<run_id>` |
 | Gate M7 / Replacement Bundle | `.github/workflows/gate-m7.yml` | Weekly schedule | `M7_STRICT_STAGE0:PASS` and `M7_REPLACEMENT_READY:PASS` | Artifact `gate-m7-logs-<run_id>` + run logs |
 | Gate Full1 / Strict Suite Matrix | `.github/workflows/gate-full1.yml` | Weekly schedule | `FULL1_SUITE_MATRIX:PASS` | Artifact `full1-summary-<run_id>` + logs from called Full1 workflows |
 | Stdlib / Semantic Diff (nightly expanded job) | `.github/workflows/semantic-diff.yml` | Weekly schedule | `SEMANTIC_DIFF_NIGHTLY:PASS` | Artifact `semantic-diff-nightly-artifacts` |
