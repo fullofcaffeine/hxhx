@@ -51,6 +51,9 @@ For Full 1.0 claims, use the strict Full contract and markers in:
 - `docs/00-project/FULL_1_0_CONTRACT.md`
 - `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 
+For strict `Full 1.0` / `Haxe 4.3.7-equivalent` claims, the primary proof is the relevant upstream Haxe 4.3.7 suite matrix running under `hxhx`.
+Repo-local focused regressions and bridge tests are supporting evidence for diagnosis and closure work; they do not replace upstream-suite proof.
+
 ## PR-required fast lanes
 
 | Workflow | File | Purpose | Trigger class | Triggers |

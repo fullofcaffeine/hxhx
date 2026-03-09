@@ -44,12 +44,14 @@ You may say `Full 1.0` publicly only when all of the following are true:
 7. `FULL1_RELEASE_GO:PASS`
 8. The Full1 RC workflow is the actual release source of truth.
 9. The release workflow blocks `>=1.0.0` claims without that RC result.
+10. Relevant upstream Haxe 4.3.7 suites are treated as the primary proof of equivalence; local focused regressions are only supporting evidence.
 
 The current strict public-claim baseline is:
 
 - `docs/00-project/FULL_1_0_CONTRACT.md`
 - `docs/00-project/PARITY_MAP_FULL_1_0.md`
 - `docs/02-user-guide/compat/full-1.0-scope.json`
+- relevant upstream Haxe 4.3.7 suite results produced by the Full1 gate stack
 
 ## Public wording rule
 

@@ -39,11 +39,15 @@ Scoped 1.0 sign-off uses M7 strict markers:
 
 Full 1.0 is a stricter claim than Scoped 1.0. It requires:
 
+- relevant upstream Haxe 4.3.7 suites to pass under `hxhx` as the primary proof of equivalence,
 - strict non-delegating parity coverage against the contract matrix,
 - macro/eval closure markers,
 - plugin parity markers,
 - upstream-relative performance parity gate,
 - release RC aggregation marker.
+
+For Full 1.0, repo-local focused regressions and bridge-specific tests are supporting evidence only.
+They are valuable for fast diagnosis and iteration, but they do not replace upstream-suite proof.
 
 Planned Full 1.0 markers are listed in `full-1.0-scope.json` under `full.requiredMarkersPlanned`.
 

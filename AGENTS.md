@@ -44,6 +44,9 @@ Agent policy:
 ## Compatibility Policy
 
 - Use a hard cutover approach and never implement backward compatibility.
+- For `Full 1.0` / `Haxe 4.3.7-equivalent` claims, relevant upstream Haxe 4.3.7 suite results are the primary proof.
+  - Repo-local tests, focused regressions, and bridge-specific M14 tests are supporting evidence for diagnosis and iteration speed.
+  - They do not substitute for upstream-suite parity when making a strict public equivalence claim.
 
 ## Beginner-Friendly Terms (Read This First)
 
