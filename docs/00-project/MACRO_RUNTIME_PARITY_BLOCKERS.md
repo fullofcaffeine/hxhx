@@ -14,8 +14,7 @@ Beginner summary:
 
 | Blocker ID | Gap | Why it matters | Tracking |
 | --- | --- | --- | --- |
-| MRP-B2 | Macro API surface is still incomplete (`haxe.macro.Context` / `haxe.macro.Compiler` methods are partially implemented in bring-up layers). Recent slices now cover `Compiler.getConfiguration()`, a narrow runtime `Compiler.include(...)` subset with exact-module include plus recursive package walking / ignore rules / explicit classpaths / strict "nothing matched" behavior, compiler-owned metadata ledgers for `Compiler.addGlobalMetadata()` / `Compiler.nullSafety()` / `Compiler.registerCustomMetadata()` plus Stage3 semantic application of registered global `@:build(...)` / `@:autoBuild(...)` rules into the existing build-macro queue, compiler-owned resource storage through `Context.addResource()` / `Context.getResources()`, compiler-owned message snapshots through `Context.warning()` / `Context.info()` / `Context.getMessages()` / `Context.filterMessages()`, an immediate runtime `Context.onAfterInitMacros()` rung for the already-initialized external-host phase, `Context.getClassPath()`, `Context.resolvePath()`, `Context.currentPos()`, `Context.getDisplayMode()`, `Context.containsDisplayPosition()`, `Context.getPosInfos()`, `Context.makePosition()`, a no-op compatibility rung for `Context.timer()`, compiler-seeded local-context queries (`getLocalModule()`, `getLocalMethod()`, `getLocalType()`, `getExpectedType()`, `getCallArguments()`, `getMainExpr()`, `getLocalClass()`, `getLocalImports()`, `getLocalUsing()`, `getLocalTVars()`), a narrow `Context.onTypeNotFound()` semantic rung that now dispatches unresolved-type callbacks once and retries resolution when the callback returns a non-null `TypeDefinition`, synthetic module/type lookup through real classpath resolution (`Context.getType()` plus `Context.getModule()` scanning top-level classes/enums/typedefs/abstracts from `#if`-filtered source, with per-type applied metadata preserved on the synthetic runtime refs, real source-backed declaration positions on synthetic class/enum/typedef/abstract refs, synthetic class statics preserved on `Context.getType(...)` / `Context.getModule(...)` results, synthetic abstract implementation statics preserved on `abs.impl.get().statics.get()`, and a narrow `KModuleFields(module)` carrier exposing metadata-bearing synthetic `statics.get()` entries for top-level module fields, including narrow initializer-backed `expr()` / inferred `type` support for supported `var` / `final` declarations, signature-backed `field.type` support for top-level `function` declarations, real source-backed `field.pos` spans for source-fallback consumers, and a focused build-fields snapshot payload for `Context.getBuildFields()`), a narrow runtime `Context.makeExpr()` / `Context.signature()` slice for basic values, identity/narrow storage rungs for `Context.storeExpr()` / `Context.storeTypedExpr()`, a compiler-owned compatibility ledger rung for `Context.registerModuleDependency()`, and source-emission-backed `Context.defineType()` / `Context.defineModule()` rungs through generated `_gen_hx` modules that now also apply registered non-build type metadata to the emitted source for matching generated types. A builtin-plus-synthetic runtime type slice now covers `Context.getType()`, `Context.resolveType()`, `Context.typeof()`, `Context.toComplexType()`, `Context.follow()`, `Context.followWithAbstracts()`, `Context.unify()`, and `TypeTools.toString()` / `TypeTools.toComplexType()` / `TypeTools.follow()` / `TypeTools.followWithAbstracts()` / `TypeTools.unify()` in external-host mode, plus narrow runtime substitution/traversal semantics for `TypeTools.applyTypeParameters()` and `TypeTools.iter()` over the current synthetic type model. A wider but still synthetic typed-expression rung is now present for `Context.typeExpr()` / `Context.getTypedExpr()` plus `TypedExprTools.map()` / `iter()` / `mapWithType()` / `toString()` over literals, generic identifiers, compiler-resolved type-path expressions (`TTypeExpr(...)`) for builtin and qualified module/type references, dynamic field/call chains, object/array literals, array access, unary/cast/meta wrappers, parenthesized expressions, simple block/return wrappers, single-variable `var` declarations, simple arrow lambdas, and simple-binop forms, with conservative `Dynamic` result types outside the already-proven literal/binop/typed-var/type-path/lambda subset. Parser-backed `Context.parse()` / `Context.parseInlineString()` now cover a narrow local-expression subset (literals, idents, field/call chains, parenthesized arrow lambdas, unary/binops, ternary, `new`, arrays, anon objects, `cast`, `untyped`). Honest limits remain: semantic application of registered non-build global/custom metadata is still only partial (direct generated-source emission plus synthetic runtime refs, not full upstream metadata semantics); `defineModule()` still covers only the current source-backed subset; typed-expression/parse coverage is still narrow; and richer runtime `Type` fidelity still remains below Full1 expectations (especially fuller upstream-like typed metadata/module fidelity beyond the current synthetic model). These are still material in real sibling consumer code, not just parity probes: vendored `reflaxe-elixir` currently relies on `Context.parseInlineString()` in `reflaxe.elixir.macros.heex_tsx.HeexTsxParser` / `reflaxe.elixir.macros.InlineMarkup`, `Context.typeExpr()` in `genes.Genes`, `EverythingIsExprSanitizer`, `ChildSpecModuleResolver`, and several Phoenix/markup flows, and `Context.getModule()` + `TypeTools.applyTypeParameters()` + `TypeTools.followWithAbstracts()` in `HeexAssignsTypeLinterTransforms` / `HxxRegistryIndex`. | Upstream macro compatibility claims are limited until API coverage expands. | `haxe.ocaml-bxlg.9.5` |
-| MRP-B3 | Full upstream macro workloads and display checks are scheduled, not PR-required. | Regressions can land between scheduled runs and be detected later. | `haxe.ocaml-bxlg.9.2` |
+| MRP-B3 | Macro runtime parity is not yet a release-blocking Full1 input. Current parity evidence exists, but Gate/RC wiring still does not require the final macro parity markers. | Regressions can still hide between scheduled parity runs unless Full1 gate and release enforcement consume macro parity explicitly. | `haxe.ocaml-bxlg.9.6` |
 ## Exit criteria to clear this list
 
 1. `inproc` runs the same macro surfaces as `external-host` for the scoped compatibility matrix.
@@ -24,21 +23,10 @@ Beginner summary:
 
 ## Current xhigh review
 
-2026-03-08 review outcome:
+2026-03-08 closure review outcome:
 
-- `MRP-B2` is still open for honest reasons.
-- The remaining gaps are no longer generic bring-up plumbing; they are semantic fidelity gaps still exercised by real sibling consumer code.
-- In particular, the current external-host runtime subset is still narrower than the vendored `reflaxe-elixir` usage of:
-  - `Context.getModule()` field-type reconstruction plus `TypeTools.followWithAbstracts()` in component/slot linter flows
-  - the remaining `Context.parseInlineString()` / `Context.typeExpr()` seams in balanced inline-markup / HEEx TSX splice bodies
-- Sibling Reflaxe repos remain pressure tests, not semantic authorities. Upstream Haxe 4.3.7 behavior is the compatibility oracle; sibling snapshots only justify which remaining seams still matter in real code.
-- That means `haxe.ocaml-bxlg.9.5` should stay open until either:
-  - those semantic gaps are narrowed further, or
-  - Full1 explicitly scopes them out.
-
-2026-03-08 follow-up evidence:
-
-- The three Oracle-identified semantic seams now have focused direct regressions:
+- `MRP-B2` is now functionally sufficient for the declared Full1 scope.
+- The previously material semantic seams now have focused direct green regressions:
   - `Context.getType()` typedef/abstract payload reconstruction:
     `test:m14:runtime-applied-type-metadata`
   - `Context.getModule()` field-type reconstruction plus `followWithAbstracts()` for
@@ -46,17 +34,21 @@ Beginner summary:
     `test:m14:runtime-component-signature`
   - `Context.parseInlineString()` for balanced inline-markup splice bodies:
     `test:m14:runtime-inline-markup-parse`
-- Additional synthetic type-fidelity work now has a focused direct regression too:
   - anonymous-structure `resolveComplexType()` / `toComplexType()` roundtrip, including
     typedef-backed `final` field preservation:
     `test:m14:runtime-anonymous-complex`
-- Those proofs are now green on the current tree.
-- `haxe.ocaml-bxlg.9.5` still stays open until the next sufficiency review decides whether the
-  remaining synthetic runtime type/module fidelity gaps are still Full1-critical.
+  - parser/typeExpr lambda seam:
+    `test:m14:runtime-typed-lambda`
+  - build-field snapshot fidelity:
+    `test:m14:runtime-build-fields`
+- Upstream Haxe 4.3.7 remains the compatibility oracle. Sibling Reflaxe repos remain pressure tests only.
+- Residual synthetic-fidelity improvements that are not required for honest Full1 closure are now tracked as post-1.0 work in `haxe.ocaml-8nv.11.6`.
+- The next real blocker is `MRP-B3` release/gate wiring under `haxe.ocaml-bxlg.9.6`.
 
 ## Recently resolved
 
 | Blocker ID | Resolution | Landed in |
 | --- | --- | --- |
 | MRP-B1 | Inproc runtime now mirrors the current exact-string generated entrypoint set used by the Stage4 bring-up fixtures instead of stopping at builtin macros only. | `haxe.ocaml-bxlg.9.4` |
+| MRP-B2 | External-host/runtime macro API coverage is now sufficient for the declared Full1 scope. The remaining previously material seams (typedef/abstract payload reconstruction, component/slot signature introspection, balanced inline-markup parsing, anonymous complex-type roundtrip, typed lambda parsing, and build-field snapshot fidelity) all have focused direct regressions and no longer require keeping the semantic closure bead open. Residual synthetic-fidelity polish moved to post-1.0 follow-up `haxe.ocaml-8nv.11.6`. | `haxe.ocaml-bxlg.9.5` |
 | MRP-B4 | Default runtime mode flipped to `inproc`; fallback/rollback policy documented (`HXHX_MACRO_RUNTIME_MODE=external-host` or `--hxhx-macro-runtime external-host`). | `haxe.ocaml-bxlg.9.3` |
