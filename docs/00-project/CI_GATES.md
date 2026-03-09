@@ -94,7 +94,7 @@ Semantic-diff PR artifacts are uploaded as `semantic-diff-pr-artifacts` and incl
 | `Full1 / Bootstrap-Source Reconciliation` | `.github/workflows/full1-bootstrap-source-reconcile.yml` | Diagnostic evidence lane that runs `server` + `optimization` in both bootstrap-built and source-built lanes on the same commit, then classifies each blocker as bootstrap lag vs source-build instability vs real parity bug. | **Nightly/scheduled diagnostic** | weekly schedule, manual |
 
 Heavy Full1 workflows use event+ref scoped concurrency and cancel stale in-progress reruns so manual retries and scheduled evidence runs do not pile up behind obsolete work.
-| `Gate Full1 / Strict Suite Matrix` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners + strict extended Gate3 and emits `FULL1_SUITE_MATRIX:PASS` only when both succeed. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
+| `Gate Full1 / Strict Matrix + Macro Parity` | `.github/workflows/gate-full1.yml` | Full1 aggregate gate that composes strict suite runners, strict extended Gate3, and reusable macro runtime parity; it emits `FULL1_SUITE_MATRIX:PASS` only when all three succeed. | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Gate M7 / Replacement Bundle` | `.github/workflows/gate-m7.yml` | Strict replacement-readiness lane (scheduled/manual + release-event verification). | **Nightly/scheduled + Release** | weekly schedule, `release`, manual |
 | `Stdlib Portable / Full` | `.github/workflows/stdlib-portable-full.yml` | Full portable stdlib conformance lane. | **Nightly/scheduled** | weekly schedule, manual |
 | `Smoke / Stage0 Source Build` | `.github/workflows/stage0-source-smoke.yml` | Source-only stage0 smoke path integrity check. | **Nightly/scheduled** | daily schedule, manual |
@@ -143,6 +143,8 @@ Full1 strict suite runner markers:
 Full1 aggregate matrix marker:
 
 - `FULL1_SUITE_MATRIX:PASS` (`.github/workflows/gate-full1.yml`)
+
+Gate Full1 also requires a green reusable macro parity job from `.github/workflows/macro-runtime-parity-weekly.yml`; mode-specific failure details remain in that called workflow output.
 
 Full1 source-build probe marker (non-blocking diagnostic lane):
 
