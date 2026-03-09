@@ -78,6 +78,7 @@
     "test:m14:hih-dynamic-array-iterator-runtime": "haxe test/m14_hih_dynamic_array_iterator_runtime_integration_test.hxml",
     "test:m14:hih-optional-int-null-padding-runtime": "haxe test/m14_optional_int_null_padding_runtime_integration_test.hxml",
     "test:m14:hih-qualified-call-receiver-padding": "haxe test/m14_hih_qualified_call_receiver_padding_integration_test.hxml",
+    "test:m14:stage3-import-root-resolution": "haxe test/m14_stage3_import_and_root_type_resolution_integration_test.hxml",
     "test:m14:hih-compound-assign": "haxe test/m14_hih_compound_assign_integration_test.hxml",
     "test:m14:hih-try-throw-stmt": "haxe test/m14_hih_try_throw_stmt_integration_test.hxml",
     "test:m14:hih-nullable-enum-branch-emit": "haxe test/m14_hih_nullable_enum_branch_emit_integration_test.hxml",

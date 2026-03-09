@@ -1198,7 +1198,7 @@ let inferReturnType = fun fn scope ctx -> let out = ref (Obj.magic (Obj.magic (H
             __new_51
           ));
           ignore (TyFunctionEnv.declareLocal (Obj.magic scope) (Obj.obj (HxAnon.get c "name") : string) (Obj.magic (TyType.fromHintText ("Dynamic" : string))));
-          (!typeStmt) (Obj.magic (Obj.obj (HxAnon.get c "body")))
+          (!typeStmt) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body"))))
         )) done
       )
     ))

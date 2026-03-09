@@ -60,11 +60,15 @@ class InProcMacroRuntime {
 }
 
 private class InProcMacroSession implements MacroRuntimeSession implements InProcMacroEffectSink {
-	final afterTypingHooks:Array<Void->Void> = [];
-	final onGenerateHooks:Array<Void->Void> = [];
-	final afterGenerateHooks:Array<Void->Void> = [];
+	final afterTypingHooks:Array<Void->Void>;
+	final onGenerateHooks:Array<Void->Void>;
+	final afterGenerateHooks:Array<Void->Void>;
 
-	public function new() {}
+	public function new() {
+		afterTypingHooks = [];
+		onGenerateHooks = [];
+		afterGenerateHooks = [];
+	}
 
 	public function run(expr:String):String {
 		final e = StringTools.trim(expr == null ? "" : expr);
@@ -73,7 +77,7 @@ private class InProcMacroSession implements MacroRuntimeSession implements InPro
 
 		if (StringTools.startsWith(e, "include(") && StringTools.endsWith(e, ")")) {
 			final inside = StringTools.trim(e.substr("include(".length, e.length - "include(".length - 1));
-			final moduleName = InProcMacroRuntime.parseOneStringLiteralArg(inside);
+			final moduleName = parseIncludeStringLiteralArg(inside);
 			if (moduleName != null && moduleName.length > 0) {
 				MacroState.includeModule(moduleName);
 				return "include=ok";
@@ -84,19 +88,16 @@ private class InProcMacroSession implements MacroRuntimeSession implements InPro
 		if (generated != null)
 			return generated;
 
-		if (!InProcMacroRuntime.isBuiltin(e))
+		if (!isBuiltinExpr(e))
 			return "ran:" + e;
 
-		final builtin = InProcMacroRuntime.withoutBuiltinPrefix(e);
+		final builtin = withoutBuiltinPrefixExpr(e);
 		return switch (builtin) {
 			case "smoke()":
 				MacroState.setDefine("HXHX_SMOKE", "1");
-				"smoke:type="
-				+ InProcMacroRuntime.builtinTypeDesc("String")
-				+ ";define="
-				+ (MacroState.defined("HXHX_SMOKE") ? "yes" : "no");
+				"smoke:type=" + builtinTypeDescExpr("String") + ";define=" + (MacroState.defined("HXHX_SMOKE") ? "yes" : "no");
 			case "genModule()":
-				MacroState.emitOcamlModule("HxHxGen", "let generated : string = \"" + InProcMacroRuntime.builtinTypeDesc("String") + "\"");
+				MacroState.emitOcamlModule("HxHxGen", "let generated : string = \"" + builtinTypeDescExpr("String") + "\"");
 				MacroState.setDefine("HXHX_GEN", "1");
 				"genModule=ok";
 			case "addCpFromEnv()":
@@ -229,4 +230,43 @@ private class InProcMacroSession implements MacroRuntimeSession implements InPro
 	}
 
 	public function close():Void {}
+
+	static function parseIncludeStringLiteralArg(s:String):Null<String> {
+		if (s == null)
+			return null;
+		final t = StringTools.trim(s);
+		if (t.length < 2)
+			return null;
+		final q = t.charCodeAt(0);
+		if (q != "\"".code && q != "'".code)
+			return null;
+		if (t.charCodeAt(t.length - 1) != q)
+			return null;
+		var body = t.substr(1, t.length - 2);
+		body = StringTools.replace(body, "\\\\", "\\");
+		body = StringTools.replace(body, "\\\"", "\"");
+		body = StringTools.replace(body, "\\'", "'");
+		return body;
+	}
+
+	static function isBuiltinExpr(expr:String):Bool {
+		return StringTools.startsWith(expr, "BuiltinMacros.") || StringTools.startsWith(expr, "hxhxmacrohost.BuiltinMacros.");
+	}
+
+	static function withoutBuiltinPrefixExpr(expr:String):String {
+		if (StringTools.startsWith(expr, "BuiltinMacros."))
+			return expr.substr("BuiltinMacros.".length);
+		if (StringTools.startsWith(expr, "hxhxmacrohost.BuiltinMacros."))
+			return expr.substr("hxhxmacrohost.BuiltinMacros.".length);
+		return expr;
+	}
+
+	static function builtinTypeDescExpr(name:String):String {
+		return switch (name) {
+			case "Int", "Float", "Bool", "String", "Void":
+				"builtin:" + name;
+			case _:
+				"unknown:" + name;
+		}
+	}
 }

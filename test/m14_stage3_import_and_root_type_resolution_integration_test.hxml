@@ -1,0 +1,7 @@
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/hxhx-macro-host/src
+-cp test
+--main M14Stage3ImportAndRootTypeResolutionIntegrationTest
+--interp

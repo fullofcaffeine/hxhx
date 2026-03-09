@@ -156,6 +156,9 @@ class EmitterStage {
 	**/
 	static var currentModuleNameEntries:Array<_ModuleNameEntry> = [];
 
+	static var currentKnownModuleNames:Map<String, Bool> = new Map();
+	static var currentGlobalImportAliasByIdent:Map<String, String> = new Map();
+
 	/**
 		Per-module instance-field metadata used by Stage3 full-body emission.
 
@@ -755,7 +758,14 @@ class EmitterStage {
 
 		inline function staticImportModule(name:String):String {
 			final resolved = mapGetRaw(cast staticImportByIdentRaw, name);
-			return resolved == null ? null : cast resolved;
+			if (resolved != null)
+				return cast resolved;
+			final globalResolved = mapGetRaw(cast currentGlobalImportAliasByIdent, name);
+			return globalResolved == null ? null : cast globalResolved;
+		}
+
+		inline function isKnownModuleName(name:String):Bool {
+			return currentKnownModuleNames != null && currentKnownModuleNames.exists(name);
 		}
 
 		function moduleNameForKey(key:String):String {
@@ -1506,6 +1516,7 @@ class EmitterStage {
 				final parts = tryExtractTypePathPartsFromExpr(obj);
 				if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
 					var modName = ocamlModuleNameFromTypePathParts(parts);
+					var resolvedByModuleIndex = false;
 					// If the type path is relative to the current package, prefer resolving it within the
 					// current package (or its parent packages) when we know a matching emitted module exists.
 					//
@@ -1529,6 +1540,7 @@ class EmitterStage {
 							final local = moduleNameForKey(key);
 							if (local != null && local.length > 0) {
 								modName = local;
+								resolvedByModuleIndex = true;
 								break;
 							}
 							if (cur.length == 0)
@@ -1546,7 +1558,10 @@ class EmitterStage {
 						//
 						// Without this fallback we can emit bare `FPHelper.*`, which fails to link
 						// because the emitted provider module is package-qualified.
-						if (modName == ocamlModuleNameFromTypePathParts(parts) && parts.length == 1) {
+						if (!resolvedByModuleIndex
+							&& !isKnownModuleName(modName)
+							&& modName == ocamlModuleNameFromTypePathParts(parts)
+							&& parts.length == 1) {
 							final curPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
 							if (curPkg.length > 0) {
 								final qualifiedParts = curPkg.split(".");
@@ -4498,6 +4513,25 @@ class EmitterStage {
 		final runtimeModuleNames:Map<String, Bool> = new Map();
 		for (p0 in runtimePaths)
 			runtimeModuleNames.set(runtimeModuleNameFromPath(p0), true);
+		/**
+			Known root provider units that Stage3 emits or relies on during bootstrap.
+
+			Why
+			- The expression emitter has a same-package fallback for unresolved single-part type paths
+			  like `Util.ping()`, which rewrites them to the current package (for example `Unit_Util`).
+			- Some upstream-facing std providers intentionally stay as root units instead:
+			  `Type`, `Lambda`, import shims like `CallStack`, and small bootstrap helpers like `Xml`.
+			- If these root units are not treated as "known modules", the fallback misqualifies them as
+			  package-local providers (`Unit_Type`, `Unit_Lambda`) and the generated OCaml no longer links.
+
+			How
+			- Seed the known-runtime module map with the safe root provider names that the emitter already
+			  generates or preserves elsewhere in this stage.
+			- This keeps the resolver narrow: we only exempt known root providers, not arbitrary
+			  uppercase identifiers.
+		**/
+		for (rootProvider in ["Type", "Lambda", "CallStack", "Xml"])
+			runtimeModuleNames.set(rootProvider, true);
 		// Stage 3 bring-up: keep the `Haxe_Int64.ml` shim authoritative.
 		//
 		// Why
@@ -4601,6 +4635,59 @@ class EmitterStage {
 				moduleNameEntries.push(new _ModuleNameEntry(key, moduleName));
 		}
 		currentModuleNameEntries = moduleNameEntries;
+		final knownModuleNames:Map<String, Bool> = new Map();
+		for (k in runtimeModuleNames.keys())
+			knownModuleNames.set(k, true);
+		for (entry in moduleNameEntries)
+			knownModuleNames.set(entry.moduleName, true);
+		currentKnownModuleNames = knownModuleNames;
+		/**
+			Global exact-import aliases that are unique across the current typed graph.
+
+			Why
+			- Per-module import rewrites are the correct first choice, but Stage3 bring-up still has
+			  a few paths where an explicitly imported short name can reach expression lowering without
+			  the module-local import map being populated for that exact emission context.
+			- When that happens inside a packaged module, the package-local fallback rewrites
+			  `Assert.contains` to `Unit_Assert.contains`, which is wrong if the real import is
+			  `utest.Assert`.
+
+			How
+			- Build a conservative global map only for exact (non-wildcard) uppercase imports whose
+			  short name resolves to a single unique target across the typed graph.
+			- Ambiguous short names are dropped entirely, so this remains a narrow compatibility
+			  fallback rather than a broad “first match wins” resolver.
+		**/
+		final uniqueImportAliasByIdent:Map<String, String> = new Map();
+		final ambiguousImportAliasIdents:Map<String, Bool> = new Map();
+		for (tm in typedModules) {
+			for (rawImport in tm.getEnv().getImports()) {
+				if (rawImport == null)
+					continue;
+				final imp = StringTools.trim(rawImport);
+				if (imp.length == 0 || StringTools.endsWith(imp, ".*"))
+					continue;
+				final parts = imp.split(".");
+				if (parts.length == 0)
+					continue;
+				final short = parts[parts.length - 1];
+				if (short == null || short.length == 0 || !isUpperStart(short))
+					continue;
+				final importModName = ocamlModuleNameFromTypePath(imp);
+				if (importModName.length == 0 || importModName == short)
+					continue;
+				if (ambiguousImportAliasIdents.exists(short))
+					continue;
+				final existing = uniqueImportAliasByIdent.get(short);
+				if (existing == null) {
+					uniqueImportAliasByIdent.set(short, importModName);
+				} else if (existing != importModName) {
+					uniqueImportAliasByIdent.remove(short);
+					ambiguousImportAliasIdents.set(short, true);
+				}
+			}
+		}
+		currentGlobalImportAliasByIdent = uniqueImportAliasByIdent;
 
 		// Index static members by module name so we can approximate `import Foo.Bar.*` static wildcard imports.
 		//
@@ -5177,6 +5264,20 @@ class EmitterStage {
 						if (rawImport == null)
 							continue;
 						final imp = StringTools.trim(rawImport);
+						if (!StringTools.endsWith(imp, ".*")) {
+							final parts = imp.split(".");
+							if (parts.length == 0)
+								continue;
+							final short = parts[parts.length - 1];
+							if (short == null || short.length == 0 || !isUpperStart(short))
+								continue;
+							final importModName = ocamlModuleNameFromTypePath(imp);
+							if (importModName.length == 0 || importModName == short)
+								continue;
+							if (!staticImportByIdent.exists(short))
+								staticImportByIdent.set(short, importModName);
+							continue;
+						}
 						if (!StringTools.endsWith(imp, ".*"))
 							continue;
 

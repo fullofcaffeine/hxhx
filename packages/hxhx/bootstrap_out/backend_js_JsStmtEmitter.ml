@@ -235,7 +235,7 @@ and emitTry = fun writer tryBody catches scope -> ignore ((
         ignore (Backend_js_JsWriter.pushIndent (Obj.magic writer) ());
         let bind = (Backend_js_JsFunctionScope.declareLocal (Obj.magic scope) (Obj.obj (HxAnon.get c "name") : string) : string) in (
           ignore (Backend_js_JsWriter.writeln (Obj.magic writer) (("var " ^ HxString.toStdString bind) ^ " = __hx_err;" : string));
-          ignore (emitStmtBlockContent (Obj.magic writer) (Obj.magic (Obj.obj (HxAnon.get c "body"))) (Obj.magic scope));
+          ignore (emitStmtBlockContent (Obj.magic writer) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (Obj.magic scope));
           ignore (Backend_js_JsWriter.popIndent (Obj.magic writer) ());
           Backend_js_JsWriter.writeln (Obj.magic writer) ("}" : string)
         )

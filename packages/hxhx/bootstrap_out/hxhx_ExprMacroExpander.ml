@@ -476,7 +476,7 @@ let rec rewriteExpr = fun e session allowed allowKeys importMap modulePkg trace 
             ));
             let matched = (!tempMaybeString1 : string) in if matched != Obj.magic (HxRuntime.hx_null) then (
               ignore (if trace then ignore (print_endline ("expr_macro_expand call=" ^ HxString.toStdString matched)) else ());
-              let expandedText = (Hxhx_macro_MacroHostClient.macrohostsession_expandExpr (Obj.magic session) (matched : string) : string) in let parsed = Obj.magic (HxParser.parseExprText (expandedText : string)) in (
+              let expandedText = ((Obj.magic session : Hxhx_macro_MacroRuntimeSession.t).expandExpr (Obj.magic session) (matched : string) : string) in let parsed = Obj.magic (HxParser.parseExprText (expandedText : string)) in (
                 ignore (onExpand ());
                 let nested = Obj.magic (rewriteExpr (Obj.magic parsed) (Obj.magic session) (Obj.magic allowed) (Obj.magic allowKeys) (Obj.magic importMap) (modulePkg : string) trace (HxInt.add depth 1) onExpand) in let __assign_85 = Obj.magic nested in (
                   tempResult := __assign_85;
@@ -725,8 +725,8 @@ let rec rewriteStmt = fun s session allowed allowKeys importMap modulePkg trace 
           ignore (_g3 := __new_57);
           __new_57
         ));
-        let rBody = Obj.magic (rewriteStmt (Obj.magic (Obj.obj (HxAnon.get c "body"))) (Obj.magic session) (Obj.magic allowed) (Obj.magic allowKeys) (Obj.magic importMap) (modulePkg : string) trace onExpand) in (
-          ignore (if rBody <> Obj.obj (HxAnon.get c "body") then ignore (let __assign_58 = true in (
+        let rBody = Obj.magic (rewriteStmt (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (Obj.magic session) (Obj.magic allowed) (Obj.magic allowKeys) (Obj.magic importMap) (modulePkg : string) trace onExpand) in (
+          ignore (if rBody <> Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")) then ignore (let __assign_58 = true in (
             changed := __assign_58;
             __assign_58
           )) else ());
@@ -864,7 +864,7 @@ let expandResolvedModules = fun modules session allowlist -> try let __fallback_
                 changed := __assign_18;
                 __assign_18
               )) else ());
-              HxArray.push newFields (HxFieldDecl.create (HxFieldDecl.getName (Obj.magic f) : string) (Obj.magic (HxFieldDecl.getVisibility (Obj.magic f))) (HxFieldDecl.getIsStatic (Obj.magic f)) (HxFieldDecl.getTypeHint (Obj.magic f) : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (!rewritten)))))
+              HxArray.push newFields (HxFieldDecl.create (HxFieldDecl.getName (Obj.magic f) : string) (Obj.magic (HxFieldDecl.getVisibility (Obj.magic f))) (HxFieldDecl.getIsStatic (Obj.magic f)) (HxFieldDecl.getTypeHint (Obj.magic f) : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" (Obj.magic (!rewritten)))) (Obj.magic (HxFieldDecl.getMetadata (Obj.magic f))) (Obj.magic (HxFieldDecl.getPos (Obj.magic f))) (Obj.magic (HxFieldDecl.getEndPos (Obj.magic f))) (HxRuntime.box_bool (HxFieldDecl.getIsFinal (Obj.magic f))) (HxFieldDecl.getPropertyGet (Obj.magic f) : string) (HxFieldDecl.getPropertySet (Obj.magic f) : string) (HxFieldDecl.getInitText (Obj.magic f) : string))
             )
           )) done);
           let newFns = Obj.magic (HxArray.create ()) in (
@@ -894,7 +894,7 @@ let expandResolvedModules = fun modules session allowlist -> try let __fallback_
                   changed := __assign_26;
                   __assign_26
                 )) else ());
-                HxArray.push newFns (HxFunctionDecl.create (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn))) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (Obj.magic newBody) (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string))
+                HxArray.push newFns (HxFunctionDecl.create (HxFunctionDecl.getName (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getVisibility (Obj.magic fn))) (HxFunctionDecl.getIsStatic (Obj.magic fn)) (Obj.magic (HxFunctionDecl.getArgs (Obj.magic fn))) (HxFunctionDecl.getReturnTypeHint (Obj.magic fn) : string) (Obj.magic newBody) (HxFunctionDecl.getReturnStringLiteral (Obj.magic fn) : string) (Obj.magic (HxFunctionDecl.getMetadata (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getPos (Obj.magic fn))) (Obj.magic (HxFunctionDecl.getEndPos (Obj.magic fn))) (HxFunctionDecl.getBodyText (Obj.magic fn) : string))
               )
             )) done);
             ignore (if not (!changed) then ignore ((

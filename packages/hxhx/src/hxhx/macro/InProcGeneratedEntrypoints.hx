@@ -125,7 +125,21 @@ class InProcGeneratedEntrypoints {
 		if (!StringTools.endsWith(expr, ")"))
 			return null;
 		final inside = expr.substr(callPrefix.length + 1, expr.length - callPrefix.length - 2);
-		return InProcMacroRuntime.parseOneStringLiteralArg(inside);
+		if (inside == null)
+			return null;
+		final t = StringTools.trim(inside);
+		if (t.length < 2)
+			return null;
+		final q = t.charCodeAt(0);
+		if (q != "\"".code && q != "'".code)
+			return null;
+		if (t.charCodeAt(t.length - 1) != q)
+			return null;
+		var body = t.substr(1, t.length - 2);
+		body = StringTools.replace(body, "\\\\", "\\");
+		body = StringTools.replace(body, "\\\"", "\"");
+		body = StringTools.replace(body, "\\'", "'");
+		return body;
 	}
 
 	static function emitBuildFunction(sink:InProcMacroEffectSink, name:String, traceValue:String):Void {

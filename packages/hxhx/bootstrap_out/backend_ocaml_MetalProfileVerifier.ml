@@ -364,7 +364,7 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
         ));
         let catchHint = (normalizeTypeHint (Obj.obj (HxAnon.get c "typeHint") : string) : string) in (
           ignore (if HxString.length catchHint = 0 || isDynamicTypeHint (Obj.obj (HxAnon.get c "typeHint") : string) then ignore (addViolation (Obj.magic violations) (filePath : string) (className : string) (fnName : string) (Obj.magic (HxPos.unknown ())) ("dynamic_type_hint" : string) (("catch variable `" ^ HxString.toStdString (Obj.obj (HxAnon.get c "name"))) ^ "` type" : string) ("metal catch typing must stay concrete to preserve deterministic native exception matching" : string) ("use a concrete catch type in metal profile (for example, `haxe.Exception` or a specific error type)" : string)) else ());
-          verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic (Obj.obj (HxAnon.get c "body"))) (Obj.magic violations)
+          verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get c "body")))) (Obj.magic violations)
         )
       )) done
     )

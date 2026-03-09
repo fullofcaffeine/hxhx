@@ -4,9 +4,9 @@
 
 let __reflaxe_ocaml__ = ()
 
-type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue; mutable isOptional : bool; mutable isRest : bool }
+type t = { __hx_type : Obj.t; mutable name : string; mutable typeHint : string; mutable defaultValue : HxDefaultValue.hxdefaultvalue; mutable isOptional : bool; mutable isRest : bool; mutable defaultValueText : string }
 
-let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false } : t) in (
+let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 defaultValueText2 -> let self = ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = "" } : t) in (
   ignore (ignore ((
     ignore (let __assign_1 = (name2 : string) in (
       (Obj.magic self : t).name <- __assign_1;
@@ -24,15 +24,28 @@ let create = fun name2 typeHint2 defaultValue2 isOptional2 isRest2 -> let self =
       (Obj.magic self : t).isOptional <- __assign_4;
       __assign_4
     ));
-    let __assign_5 = isRest2 in (
+    ignore (let __assign_5 = isRest2 in (
       (Obj.magic self : t).isRest <- __assign_5;
       __assign_5
+    ));
+    let tempRight = ref ("" : string) in (
+      ignore (if defaultValueText2 == Obj.magic (HxRuntime.hx_null) then let __assign_6 = ("" : string) in (
+        tempRight := __assign_6;
+        __assign_6
+      ) else let __assign_7 = (defaultValueText2 : string) in (
+        tempRight := __assign_7;
+        __assign_7
+      ));
+      let __assign_8 = (!tempRight : string) in (
+        (Obj.magic self : t).defaultValueText <- __assign_8;
+        __assign_8
+      )
     )
   )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "HxFunctionArg"; name = ""; typeHint = ""; defaultValue = Obj.magic (HxRuntime.hx_null); isOptional = false; isRest = false; defaultValueText = "" } : t)
 
 let getName = fun a -> (Obj.magic a : t).name
 
@@ -43,3 +56,5 @@ let getDefaultValue = fun a -> (Obj.magic a : t).defaultValue
 let getIsOptional = fun a -> (Obj.magic a : t).isOptional
 
 let getIsRest = fun a -> (Obj.magic a : t).isRest
+
+let getDefaultValueText = fun a -> (Obj.magic a : t).defaultValueText

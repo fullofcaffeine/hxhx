@@ -63,6 +63,10 @@ class ModuleLoader extends LazyTypeLoader {
 		this.pending = [];
 	}
 
+	inline function invokeOnMissingType(mp:String):Bool {
+		return onMissingType == null ? false : onMissingType(mp);
+	}
+
 	public function markResolvedAlready(resolved:Array<ResolvedModule>):Void {
 		if (resolved == null)
 			return;
@@ -120,7 +124,7 @@ class ModuleLoader extends LazyTypeLoader {
 				if (mp == null || mp.length == 0 || typeNotFoundTried.exists(mp))
 					continue;
 				typeNotFoundTried.set(mp, true);
-				if (!onMissingType(mp))
+				if (!invokeOnMissingType(mp))
 					continue;
 				loadModuleByPath(mp);
 				final hit = index == null ? null : index.resolveTypePath(raw, pkg, imports);
