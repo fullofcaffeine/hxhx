@@ -1,5 +1,6 @@
 package hxhx.macro;
 
+import hxhx.runtime.NullableRuntimeString;
 #if !hxhx_stage0_no_external_macro_host
 import hxhx.macro.MacroHostClient;
 #end
@@ -51,9 +52,10 @@ class MacroRuntimeMode {
 	}
 
 	static function normalize(raw:Null<String>):Null<String> {
-		if (raw == null)
+		final normalized = NullableRuntimeString.normalize(raw);
+		if (normalized == null)
 			return null;
-		final trimmed = StringTools.trim(raw);
+		final trimmed = StringTools.trim(normalized);
 		if (trimmed.length == 0)
 			return null;
 		final lower = trimmed.toLowerCase();

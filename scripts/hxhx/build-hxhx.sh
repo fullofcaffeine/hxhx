@@ -33,13 +33,32 @@ HXHX_DUNE_JOBS="${HXHX_DUNE_JOBS:-auto}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HXHX_DIR="$ROOT/packages/hxhx"
 BOOTSTRAP_DIR="$HXHX_DIR/bootstrap_out"
-BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-$HXHX_DIR/bootstrap_work}"
+BOOTSTRAP_BUILD_DIR="${HXHX_BOOTSTRAP_BUILD_DIR:-}"
 HAXE_SERVER_HELPER="$ROOT/scripts/hxhx/haxe-server.sh"
 
 is_true() {
   local v="${1:-}"
   [[ "$v" == "1" || "$v" == "true" || "$v" == "yes" || "$v" == "on" ]]
 }
+
+resolve_bootstrap_build_dir() {
+  if [ -n "$BOOTSTRAP_BUILD_DIR" ]; then
+    if [[ "$BOOTSTRAP_BUILD_DIR" != /* ]]; then
+      echo "$ROOT/$BOOTSTRAP_BUILD_DIR"
+    else
+      echo "$BOOTSTRAP_BUILD_DIR"
+    fi
+    return 0
+  fi
+
+  # Default bootstrap builds should not contend on a single shared `bootstrap_work`
+  # workspace. Interrupted or concurrent dune builds can otherwise leave stale locks
+  # or mutate the same copied snapshot under later callers.
+  mkdir -p "$ROOT/.tmp"
+  mktemp -d "$ROOT/.tmp/hxhx-bootstrap-build.XXXXXX"
+}
+
+BOOTSTRAP_BUILD_DIR="$(resolve_bootstrap_build_dir)"
 
 create_stage0_log_file() {
   local prefix="$1"

@@ -93,7 +93,7 @@ class InProcGeneratedEntrypoints {
 				"ok";
 			case "hxhxmacros.PluginFixtureMacros.init()":
 				sink.setDefine("HXHX_PLUGIN_FIXTURE", "1");
-				final cp = StringTools.trim(Sys.getEnv("HXHX_PLUGIN_FIXTURE_CP"));
+				final cp = NullableRuntimeString.trimToEmpty(Sys.getEnv("HXHX_PLUGIN_FIXTURE_CP"));
 				if (cp.length > 0)
 					sink.addClassPath(cp);
 				sink.registerAfterTypingHook(() -> sink.setDefine("HXHX_PLUGIN_FIXTURE_AFTER_TYPING", "1"));

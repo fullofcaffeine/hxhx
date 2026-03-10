@@ -1,6 +1,7 @@
 package hxhx;
 
 import haxe.io.Eof;
+import hxhx.runtime.NullableRuntimeString;
 
 typedef LibrarySpec = {
 	/**
@@ -43,12 +44,12 @@ class LibraryResolver {
 	}
 
 	static function haxelibBin():String {
-		final v = Sys.getEnv("HAXELIB_BIN");
+		final v = NullableRuntimeString.normalize(Sys.getEnv("HAXELIB_BIN"));
 		return (v == null || v.length == 0) ? "haxelib" : v;
 	}
 
 	static function lixBin():String {
-		final v = Sys.getEnv("LIX_BIN");
+		final v = NullableRuntimeString.normalize(Sys.getEnv("LIX_BIN"));
 		return (v == null || v.length == 0) ? "lix" : v;
 	}
 

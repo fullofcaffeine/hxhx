@@ -1,6 +1,7 @@
 package hxhx;
 
 import haxe.io.Path;
+import hxhx.runtime.NullableRuntimeString;
 import haxe.io.Eof;
 import haxe.io.Bytes;
 import hxhx.Stage1Compiler.Stage1Args;
@@ -896,14 +897,15 @@ class Stage3Compiler {
 	}
 
 	static function trim(s:String):String {
-		return s == null ? "" : StringTools.trim(s);
+		return NullableRuntimeString.trimToEmpty(s);
 	}
 
 	static function parseDelimitedList(raw:String):Array<String> {
 		final out = new Array<String>();
-		if (raw == null)
+		final normalized = NullableRuntimeString.normalize(raw);
+		if (normalized == null)
 			return out;
-		final s = StringTools.trim(raw);
+		final s = StringTools.trim(normalized);
 		if (s.length == 0)
 			return out;
 

@@ -1,6 +1,7 @@
 package hxhx;
 
 import hxhx.macro.MacroRuntimeSession;
+import hxhx.runtime.NullableRuntimeString;
 
 /**
 	Expression macro expansion (Gate1 bring-up).
@@ -137,8 +138,7 @@ class ExprMacroExpander {
 	}
 
 	static function isTrueEnv(name:String):Bool {
-		final v = Sys.getEnv(name);
-		final t = v == null ? "" : StringTools.trim(v);
+		final t = NullableRuntimeString.trimToEmpty(Sys.getEnv(name));
 		return t == "1" || t == "true" || t == "yes";
 	}
 

@@ -43,8 +43,10 @@ HXHX_BOOTSTRAP_PREFER_NATIVE=1 HXHX_STAGE0_PREFER_NATIVE=1 bash scripts/hxhx/bui
 By default, `scripts/hxhx/build-hxhx.sh` builds from the committed OCaml snapshot under
 `packages/hxhx/bootstrap_out/` so CI can build `hxhx` without requiring a stage0 `haxe`
 binary on PATH.
-During this path, the script copies `bootstrap_out` into `packages/hxhx/bootstrap_work/`,
-rehydrates any sharded modules there, and runs `dune` in that workspace.
+During this path, the script copies `bootstrap_out` into an isolated temporary bootstrap
+workspace under `.tmp/`, rehydrates any sharded modules there, and runs `dune` in that
+workspace. Set `HXHX_BOOTSTRAP_BUILD_DIR=/absolute/or/relative/path` if you explicitly
+want a persistent bootstrap work directory.
 
 
 To regenerate the snapshot (requires stage0 `haxe`):

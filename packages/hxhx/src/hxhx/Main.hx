@@ -102,7 +102,7 @@ class Main {
 	}
 
 	static function isTrueEnv(name:String):Bool {
-		final raw = Sys.getEnv(name);
+		final raw = NullableRuntimeString.normalize(Sys.getEnv(name));
 		if (raw == null)
 			return false;
 		switch (raw.toLowerCase()) {

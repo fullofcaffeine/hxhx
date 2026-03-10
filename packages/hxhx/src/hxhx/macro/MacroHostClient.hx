@@ -1999,13 +1999,13 @@ private class MacroClient {
 	var timeoutTriggered:Bool = false;
 
 	static final TRACE:Bool = {
-		final v = Sys.getEnv("HXHX_MACRO_TRACE");
+		final v = NullableRuntimeString.trimToEmpty(Sys.getEnv("HXHX_MACRO_TRACE"));
 		v == "1"
 		|| v == "true"
 		|| v == "yes";
 	};
 	static final TRACE_HOST:Bool = {
-		final v = Sys.getEnv("HXHX_MACRO_HOST_TRACE");
+		final v = NullableRuntimeString.trimToEmpty(Sys.getEnv("HXHX_MACRO_HOST_TRACE"));
 		v == "1"
 		|| v == "true"
 		|| v == "yes";
@@ -2087,7 +2087,7 @@ private class MacroClient {
 	}
 
 	static function parseTimeoutSeconds(name:String, defaultValue:Int):Int {
-		final raw = Sys.getEnv(name);
+		final raw = NullableRuntimeString.normalize(Sys.getEnv(name));
 		if (raw == null)
 			return defaultValue;
 		final text = StringTools.trim(raw);
