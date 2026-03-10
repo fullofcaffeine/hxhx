@@ -161,6 +161,28 @@ function buildCachedHxhxBin(root, env, buildDir) {
   return resolved
 }
 
+function assertBootstrapSnapshotFresh(root, explicitHxhxBin) {
+  if (explicitHxhxBin) return
+
+  const bootstrapRoot = path.join(root, 'packages/hxhx/bootstrap_out')
+  const bootstrapMtime = latestMtimeMs(bootstrapRoot)
+  const sourceMtime = latestMtimeMsMany([
+    path.join(root, 'packages/hxhx/src'),
+    path.join(root, 'packages/hxhx-core/src'),
+    path.join(root, 'packages/reflaxe.ocaml/src'),
+    path.join(root, 'packages/reflaxe.ocaml/std'),
+    path.join(root, 'scripts/hxhx/build-hxhx.sh'),
+  ])
+
+  if (bootstrapMtime === 0) return
+  if (sourceMtime <= bootstrapMtime) return
+
+  fail(
+    'packages/hxhx/bootstrap_out is older than current source; refusing to test strict eval against a stale snapshot build. ' +
+      'Regenerate the bootstrap snapshot or provide an explicit current-source HXHX_BIN.'
+  )
+}
+
 function main() {
   const startedAt = new Date()
   const parsed = parseArgs(process.argv.slice(2))
@@ -179,6 +201,7 @@ function main() {
   env.HXHX_FORBID_STAGE0 = env.HXHX_FORBID_STAGE0 || '1'
   delete env.HXHX_ALLOW_STAGE0
   let hxhxBin = resolveExecutable(parsed.root, env.HXHX_BIN || '')
+  assertBootstrapSnapshotFresh(parsed.root, hxhxBin)
   if (hxhxBin.length === 0) {
     const cached = resolveCachedHxhxBin(parsed.root)
     hxhxBin = cached.bin || buildCachedHxhxBin(parsed.root, env, cached.buildDir)
