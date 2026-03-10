@@ -76,6 +76,7 @@ Matrix status taxonomy:
 | `haxe.io.Bytes` | ✅ | Runtime-backed (lowered in codegen) |
 | `Date` | ✅ | `packages/reflaxe.ocaml/std/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml` |
 | `Sys` | ✅ | `packages/reflaxe.ocaml/std/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml` |
+| `haxe.CallStack` / `haxe.NativeStackTrace` | ✅ | target-owned stack surface via `packages/reflaxe.ocaml/std/_std/haxe/CallStack.hx` + `packages/reflaxe.ocaml/src/haxe/NativeStackTrace.cross.hx` + `packages/reflaxe.ocaml/std/runtime/HxBacktrace.ml` |
 | `sys.FileSystem` | ✅ | `packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml` |
 | `sys.io.File` | ✅ | Runtime subset exercised by fixtures/examples |
 | `haxe.ds.Map` / `haxe.ds.*` | ✅ | Runtime `HxMap.ml` + codegen lowering |

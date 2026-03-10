@@ -56,6 +56,7 @@ Evidence source for non-override statuses:
 - `Bytes`: runtime-backed via `packages/reflaxe.ocaml/std/runtime/HxBytes.ml` (lowered in codegen)
 - `Date`: `packages/reflaxe.ocaml/std/_std/Date.hx` + `packages/reflaxe.ocaml/std/runtime/Date.ml`
 - `Sys`: `packages/reflaxe.ocaml/std/_std/Sys.hx` + `packages/reflaxe.ocaml/std/runtime/HxSys.ml`
+- `haxe.CallStack` / `haxe.NativeStackTrace`: `packages/reflaxe.ocaml/std/_std/haxe/CallStack.hx` + `packages/reflaxe.ocaml/src/haxe/NativeStackTrace.cross.hx` + `packages/reflaxe.ocaml/std/runtime/HxBacktrace.ml`
 - `sys.FileSystem`: `packages/reflaxe.ocaml/std/_std/sys/FileSystem.hx` + `packages/reflaxe.ocaml/std/runtime/HxFileSystem.ml`
 
 ### Maps (`haxe.ds.*`, `haxe.ds.Map`, `haxe.Constraints.IMap`)

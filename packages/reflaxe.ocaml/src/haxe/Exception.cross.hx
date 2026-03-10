@@ -68,7 +68,22 @@ class Exception {
 	}
 
 	public function details():String {
-		return inline CallStack.exceptionToString(this);
+		if (previous == null)
+			return 'Exception: ${toString()}${stack}';
+		var result = '';
+		var current:Null<Exception> = this;
+		var prev:Null<Exception> = null;
+		while (current != null) {
+			if (prev == null) {
+				result = 'Exception: ${current.message}${current.stack}' + result;
+			} else {
+				final prevStack = @:privateAccess current.stack.subtract(prev.stack);
+				result = 'Exception: ${current.message}${prevStack}\n\nNext ' + result;
+			}
+			prev = current;
+			current = current.previous;
+		}
+		return result;
 	}
 
 	@:noCompletion
