@@ -1870,6 +1870,10 @@ class EmitterStage {
 						return "HxSys.getEnv ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
+					case EField(EIdent("Sys"), "time") if (args.length == 0):
+						return "(HxSys.time ())";
+					case EField(EIdent("Haxe_Sys"), "time") if (args.length == 0):
+						return "(HxSys.time ())";
 					case EField(EIdent("Sys"), "environment") if (args.length == 0):
 						return "(HxSys.environment ())";
 					case EField(EIdent("Sys"), "args") if (args.length == 0):
@@ -4530,7 +4534,7 @@ class EmitterStage {
 			- This keeps the resolver narrow: we only exempt known root providers, not arbitrary
 			  uppercase identifiers.
 		**/
-		for (rootProvider in ["Type", "Lambda", "CallStack", "Xml"])
+		for (rootProvider in ["Type", "Lambda", "CallStack", "Xml", "Sys"])
 			runtimeModuleNames.set(rootProvider, true);
 		// Stage 3 bring-up: keep the `Haxe_Int64.ml` shim authoritative.
 		//

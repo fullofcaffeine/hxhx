@@ -48,12 +48,16 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function render():String {',
 			'    return CallStack.toString([]);',
 			'  }',
+			'  static function stamp():Float {',
+			'    return Sys.time();',
+			'  }',
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
 			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n);',
 			'  }',
 			'  static function main() {',
 			'    check(Main, "main");',
 			'    render();',
+			'    stamp();',
 			'  }',
 			'}',
 		].join("\n");
@@ -75,10 +79,12 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'Expected explicit imported short name `Assert` to resolve to the imported provider.');
 			assertTrue(ocaml.indexOf('Lambda.has') >= 0, 'Expected root stdlib short name to remain `Lambda.has`.');
 			assertTrue(ocaml.indexOf('Type.getClassFields') >= 0, 'Expected root stdlib short name to remain `Type.getClassFields`.');
+			assertTrue(ocaml.indexOf('HxSys.time') >= 0, 'Expected `Sys.time()` to lower to the HxSys runtime seam.');
 			assertTrue(ocaml.indexOf('Unit_CallStack.') < 0, 'Found bad package-local qualification `Unit_CallStack`.');
 			assertTrue(ocaml.indexOf('Unit_Assert.') < 0, 'Found bad package-local qualification `Unit_Assert`.');
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');
 			assertTrue(ocaml.indexOf('Unit_Type.') < 0, 'Found bad package-local qualification `Unit_Type`.');
+			assertTrue(ocaml.indexOf('Haxe_Sys.') < 0, 'Found bad same-package qualification `Haxe_Sys`.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}
