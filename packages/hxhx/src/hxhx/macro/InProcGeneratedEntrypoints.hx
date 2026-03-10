@@ -1,5 +1,7 @@
 package hxhx.macro;
 
+import hxhx.runtime.NullableRuntimeString;
+
 /**
 	Exact-string generated entrypoint registry for the in-process macro runtime.
 

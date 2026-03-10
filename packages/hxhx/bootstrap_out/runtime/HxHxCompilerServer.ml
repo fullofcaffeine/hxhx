@@ -16,16 +16,16 @@
 *)
 
 let split_host_port (mode : string) : string * int =
-  let trimmed = String.trim mode in
+  let trimmed = Stdlib.String.trim mode in
   if trimmed = "" then failwith "missing host/port value";
   let host, port_s =
-    match String.rindex_opt trimmed ':' with
+    match Stdlib.String.rindex_opt trimmed ':' with
     | None -> ("127.0.0.1", trimmed)
     | Some idx ->
-        let h = String.sub trimmed 0 idx |> String.trim in
+        let h = Stdlib.String.sub trimmed 0 idx |> Stdlib.String.trim in
         let p =
-          String.sub trimmed (idx + 1) (String.length trimmed - idx - 1)
-          |> String.trim
+          Stdlib.String.sub trimmed (idx + 1) (Stdlib.String.length trimmed - idx - 1)
+          |> Stdlib.String.trim
         in
         let h = if h = "" then "127.0.0.1" else h in
         (h, p)
@@ -84,17 +84,17 @@ let read_all (sock : Unix.file_descr) : string =
   loop ()
 
 let trim_cr (s : string) : string =
-  let len = String.length s in
-  if len > 0 && s.[len - 1] = '\r' then String.sub s 0 (len - 1) else s
+  let len = Stdlib.String.length s in
+  if len > 0 && (Stdlib.String.get s (len - 1)) = '\r' then Stdlib.String.sub s 0 (len - 1) else s
 
 let parse_args (request : string) : string list =
   let before_stdin =
-    match String.index_opt request '\001' with
+    match Stdlib.String.index_opt request '\001' with
     | None -> request
-    | Some idx -> String.sub request 0 idx
+    | Some idx -> Stdlib.String.sub request 0 idx
   in
   request |> (fun _ -> before_stdin)
-  |> String.split_on_char '\n'
+  |> Stdlib.String.split_on_char '\n'
   |> List.map trim_cr
   |> List.filter (fun s -> s <> "")
 
@@ -105,9 +105,9 @@ let rec find_display_arg = function
 
 let synthesize_display_response (display_request : string) : string =
   let ends_with suffix =
-    let sl = String.length suffix in
-    let dl = String.length display_request in
-    dl >= sl && String.sub display_request (dl - sl) sl = suffix
+    let sl = Stdlib.String.length suffix in
+    let dl = Stdlib.String.length display_request in
+    dl >= sl && Stdlib.String.sub display_request (dl - sl) sl = suffix
   in
   if ends_with "@diagnostics" then "[{\"diagnostics\":[]}]"
   else if ends_with "@module-symbols" then "[{\"symbols\":[]}]"

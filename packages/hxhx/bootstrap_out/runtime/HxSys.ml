@@ -9,7 +9,7 @@
    Null strings
    - Haxe `String` is nullable (unless using strict null safety).
    - OCaml strings cannot be `null`, so we represent Haxe `null` as an unsafe
-     `Obj.magic HxRuntime.hx_null` value when a function returns a nullable String.
+     `Obj.magic HxRuntime.hx_null` value when a function returns a nullable Stdlib.String.
 
    Env var removal
    - OCaml 4.13's Unix module does not provide `Unix.unsetenv`.
@@ -47,10 +47,10 @@ let env_array_filtered () : string array =
   let keep = ref [] in
   Stdlib.Array.iter
     (fun entry ->
-      match String.index_opt entry '=' with
+      match Stdlib.String.index_opt entry '=' with
       | None -> keep := entry :: !keep
       | Some idx ->
-          let v = String.sub entry (idx + 1) (String.length entry - (idx + 1)) in
+          let v = Stdlib.String.sub entry (idx + 1) (Stdlib.String.length entry - (idx + 1)) in
           if v = hx_unset_sentinel then () else keep := entry :: !keep)
     raw;
   Stdlib.Array.of_list (List.rev !keep)
@@ -59,11 +59,11 @@ let environment () : string HxMap.string_map =
   let out = HxMap.create_string () in
   Stdlib.Array.iter
     (fun entry ->
-      match String.index_opt entry '=' with
+      match Stdlib.String.index_opt entry '=' with
       | None -> ()
       | Some idx ->
-          let k = String.sub entry 0 idx in
-          let v = String.sub entry (idx + 1) (String.length entry - (idx + 1)) in
+          let k = Stdlib.String.sub entry 0 idx in
+          let v = Stdlib.String.sub entry (idx + 1) (Stdlib.String.length entry - (idx + 1)) in
           if v = hx_unset_sentinel then ()
           else HxMap.set_string out k v)
     (env_array_filtered ());

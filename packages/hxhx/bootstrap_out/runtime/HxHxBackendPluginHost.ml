@@ -21,13 +21,13 @@ type provider_registration = {
 let registrations : provider_registration list ref = ref []
 
 let normalize_token ~(field : string) (value : string) : string =
-  let token = String.trim value in
+  let token = Stdlib.String.trim value in
   if token = "" then
     invalid_arg ("HxHxBackendPluginHost." ^ field ^ " is required");
-  if String.contains token '\n' || String.contains token '\r' then
+  if Stdlib.String.contains token '\n' || Stdlib.String.contains token '\r' then
     invalid_arg
       ("HxHxBackendPluginHost." ^ field ^ " must not contain newline characters");
-  if String.contains token '\t' then
+  if Stdlib.String.contains token '\t' then
     invalid_arg ("HxHxBackendPluginHost." ^ field ^ " must not contain tabs");
   token
 

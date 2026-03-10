@@ -30,8 +30,8 @@ let proto_version = 1
 let banner = "hxhx_macro_rpc_v=" ^ string_of_int proto_version
 
 let escape_payload (s : string) : string =
-  let b = Buffer.create (String.length s) in
-  String.iter
+  let b = Buffer.create (Stdlib.String.length s) in
+  Stdlib.String.iter
     (fun c ->
       match c with
       | '\\' -> Buffer.add_string b "\\\\"
@@ -43,16 +43,16 @@ let escape_payload (s : string) : string =
   Buffer.contents b
 
 let unescape_payload (s : string) : string =
-  let b = Buffer.create (String.length s) in
+  let b = Buffer.create (Stdlib.String.length s) in
   let i = ref 0 in
-  while !i < String.length s do
-    match s.[!i] with
+  while !i < Stdlib.String.length s do
+    match (Stdlib.String.get s (!i)) with
     | '\\' ->
-        if !i + 1 >= String.length s then (
+        if !i + 1 >= Stdlib.String.length s then (
           Buffer.add_char b '\\';
           i := !i + 1)
         else (
-          match s.[!i + 1] with
+          match (Stdlib.String.get s (!i + 1)) with
           | 'n' ->
               Buffer.add_char b '\n';
               i := !i + 2
@@ -76,37 +76,37 @@ let unescape_payload (s : string) : string =
 
 let encode_len (label : string) (value : string) : string =
   let enc = escape_payload value in
-  Printf.sprintf "%s=%d:%s" label (String.length enc) enc
+  Printf.sprintf "%s=%d:%s" label (Stdlib.String.length enc) enc
 
 let decode_len_value (part : string) : string =
   (* part is `<label>=<len>:<payload...>` *)
-  match String.index_opt part '=' with
+  match Stdlib.String.index_opt part '=' with
   | None -> ""
   | Some eq -> (
       let rest =
-        String.sub part (eq + 1) (String.length part - eq - 1)
+        Stdlib.String.sub part (eq + 1) (Stdlib.String.length part - eq - 1)
       in
-      match String.index_opt rest ':' with
+      match Stdlib.String.index_opt rest ':' with
       | None -> ""
       | Some colon ->
-          let len_s = String.sub rest 0 colon in
+          let len_s = Stdlib.String.sub rest 0 colon in
           let payload =
-            String.sub rest (colon + 1) (String.length rest - colon - 1)
+            Stdlib.String.sub rest (colon + 1) (Stdlib.String.length rest - colon - 1)
           in
           let len =
             try int_of_string len_s with _ -> -1
           in
-          if len < 0 || String.length payload < len then ""
-          else unescape_payload (String.sub payload 0 len))
+          if len < 0 || Stdlib.String.length payload < len then ""
+          else unescape_payload (Stdlib.String.sub payload 0 len))
 
 let split_spaces (s : string) : string list =
   s
-  |> String.split_on_char ' '
+  |> Stdlib.String.split_on_char ' '
   |> List.filter (fun x -> x <> "")
 
 let kv_get (tail : string) (key : string) : string =
   tail |> split_spaces
-  |> List.find_opt (fun p -> String.length p >= String.length key + 1 && String.sub p 0 (String.length key + 1) = key ^ "=")
+  |> List.find_opt (fun p -> Stdlib.String.length p >= Stdlib.String.length key + 1 && Stdlib.String.sub p 0 (Stdlib.String.length key + 1) = key ^ "=")
   |> function
   | None -> ""
   | Some part -> decode_len_value part
@@ -134,7 +134,7 @@ let call (ic : in_channel) (oc : out_channel) (id : int) (meth : string)
           let rid = try int_of_string rid_s with _ -> -1 in
           if rid <> id then Error ("macro host: response id mismatch: " ^ line)
           else
-            let tail = String.concat " " rest in
+            let tail = Stdlib.String.concat " " rest in
             if status = "ok" then Ok (kv_get tail "v")
             else Error (kv_get tail "m")
       | _ -> Error ("macro host: invalid response: " ^ line))
@@ -185,7 +185,7 @@ let selftest (host_exe : string) : string =
 
     write_line oc "quit";
     cleanup ();
-    String.concat "\n" !lines
+    Stdlib.String.concat "\n" !lines
   with
   | Failure msg ->
       cleanup ();

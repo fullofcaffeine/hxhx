@@ -13,41 +13,51 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroRuntimeMode" } : t)
 
-let openSession = fun mode -> try let __fallback_result_6 = match mode with
+let openSession = fun mode -> try let __fallback_result_7 = match mode with
   | "external-host" -> ignore (let impl = Obj.magic (Hxhx_macro_MacroHostClient.openSession ()) in raise (HxRuntime.Hx_return (Obj.repr (let __anon_5 = HxAnon.create () in (
-    ignore (HxAnon.set __anon_5 "run" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_run__impl impl a0)));
-    ignore (HxAnon.set __anon_5 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runHook__impl impl a0 a1)));
-    ignore (HxAnon.set __anon_5 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runTypeNotFoundHook__impl impl a0 a1)));
-    ignore (HxAnon.set __anon_5 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_expandExpr__impl impl a0)));
-    ignore (HxAnon.set __anon_5 "close" (Obj.repr (fun () -> Hxhx_macro_MacroHostClient.macrohostsession_close__impl impl ())));
+    ignore (HxAnon.set __anon_5 "run" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_run impl a0)));
+    ignore (HxAnon.set __anon_5 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runHook impl a0 a1)));
+    ignore (HxAnon.set __anon_5 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runTypeNotFoundHook impl a0 a1)));
+    ignore (HxAnon.set __anon_5 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_expandExpr impl a0)));
+    ignore (HxAnon.set __anon_5 "close" (Obj.repr (fun () -> Hxhx_macro_MacroHostClient.macrohostsession_close impl ())));
     __anon_5
   )))))
   | "inproc" -> raise (HxRuntime.Hx_return (Obj.repr (Hxhx_macro_InProcMacroRuntime.openSession ())))
-  | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (("invalid macro runtime mode `" ^ HxString.toStdString mode) ^ "` (expected inproc|external-host)")) ["Dynamic"; "String"]) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.magic __ret_5
+  | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (("invalid macro runtime mode `" ^ HxString.toStdString mode) ^ "` (expected inproc|external-host)")) ["Dynamic"; "String"]) in Obj.magic __fallback_result_7 with
+  | HxRuntime.Hx_return __ret_6 -> Obj.magic __ret_6
 
 let emitMarker = fun mode -> ignore (print_endline ("hxhx_macro_runtime_mode=" ^ HxString.toStdString mode))
 
-let normalize = fun raw -> try let __fallback_result_10 = (
-  ignore (if raw == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let trimmed = (StringTools.trim (raw : string) : string) in (
+let normalize = fun raw -> try let __fallback_result_14 = let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+  ignore (if raw == Obj.magic (HxRuntime.hx_null) then let __assign_8 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_8;
+    __assign_8
+  ) else if HxString.isNull (raw : string) then let __assign_9 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+    tempMaybeString := __assign_9;
+    __assign_9
+  ) else let __assign_10 = Obj.magic (raw : string) in (
+    tempMaybeString := __assign_10;
+    __assign_10
+  ));
+  ignore (if !tempMaybeString == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let trimmed = (StringTools.trim (!tempMaybeString : string) : string) in (
     ignore (if HxString.length trimmed = 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let lower = (HxString.toLowerCase trimmed () : string) in let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
       ignore (match lower with
-        | "external-host" -> let __assign_7 = Obj.magic ("external-host" : string) in (
-          tempResult := __assign_7;
-          __assign_7
+        | "external-host" -> let __assign_11 = Obj.magic ("external-host" : string) in (
+          tempResult := __assign_11;
+          __assign_11
         )
-        | "inproc" -> let __assign_8 = Obj.magic ("inproc" : string) in (
-          tempResult := __assign_8;
-          __assign_8
+        | "inproc" -> let __assign_12 = Obj.magic ("inproc" : string) in (
+          tempResult := __assign_12;
+          __assign_12
         )
         | _ -> HxType.hx_throw_typed_rtti (Obj.repr (("invalid macro runtime mode `" ^ HxString.toStdString raw) ^ "` (expected inproc|external-host)")) ["Dynamic"; "String"]);
       !tempResult
     )
   )
-) in Obj.magic __fallback_result_10 with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+) in Obj.magic __fallback_result_14 with
+  | HxRuntime.Hx_return __ret_13 -> Obj.obj __ret_13
 
 let resolve = fun explicitMode -> try let __fallback_result_4 = let fromFlag = (normalize (explicitMode : string) : string) in (
   ignore (if fromFlag != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (fromFlag : string))) else ());

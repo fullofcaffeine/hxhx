@@ -1,5 +1,6 @@
 package hxhx;
 
+import hxhx.runtime.NullableRuntimeString;
 #if !hxhx_stage0_no_external_macro_host
 import hxhx.macro.MacroHostClient;
 import hxhx.macro.MacroState;

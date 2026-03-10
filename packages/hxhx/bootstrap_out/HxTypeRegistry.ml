@@ -86,6 +86,7 @@ let init () : unit =
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
   ignore (HxType.class_ "haxe.ValueException");
+  ignore (HxType.class_ "haxe._CallStack.CallStack_Impl_");
   ignore (HxType.class_ "haxe.format.JsonPrinter");
   ignore (HxType.class_ "haxe.io.BytesBuffer");
   ignore (HxType.class_ "haxe.io.FPHelper");
@@ -110,18 +111,18 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.Stage3Compiler");
   ignore (HxType.class_ "hxhx.macro.BuildFieldSnapshotPayload");
   ignore (HxType.class_ "hxhx.macro.InProcGeneratedEntrypoints");
-  ignore (HxType.class_ "hxhx.macro.InProcMacroEffectSink");
   ignore (HxType.class_ "hxhx.macro.InProcMacroRuntime");
   ignore (HxType.class_ "hxhx.macro.MacroHostClient");
   ignore (HxType.class_ "hxhx.macro.MacroHostSession");
   ignore (HxType.class_ "hxhx.macro.MacroLocalImports");
   ignore (HxType.class_ "hxhx.macro.MacroProtocol");
+  ignore (HxType.class_ "hxhx.macro.MacroResolvedModuleScanner");
   ignore (HxType.class_ "hxhx.macro.MacroRuntimeMode");
-  ignore (HxType.class_ "hxhx.macro.MacroRuntimeSession");
   ignore (HxType.class_ "hxhx.macro.MacroState");
   ignore (HxType.class_ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem");
   ignore (HxType.class_ "hxhx.macro._InProcMacroRuntime.InProcMacroSession");
   ignore (HxType.class_ "hxhx.macro._MacroHostClient.MacroClient");
+  ignore (HxType.class_ "hxhx.runtime.NullableRuntimeString");
   ignore (HxType.class_ "ocaml._Buffer.Buffer_Impl_");
   ignore (HxType.class_ "sys.io.File");
   ignore (HxType.class_ "sys.io.FileInput");
@@ -147,6 +148,7 @@ let init () : unit =
   ignore (HxType.enum_ "HxTokenKind");
   ignore (HxType.enum_ "HxVisibility");
   ignore (HxType.enum_ "_HxConditionalCompilation.Token");
+  ignore (HxType.enum_ "haxe.StackItem");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
   ignore (HxType.enum_ "sys.thread.NextEventTime");
   HxType.register_enum_ctors "HxDefaultValue" [ "NoDefault"; "Default" ];
@@ -157,6 +159,7 @@ let init () : unit =
   HxType.register_enum_ctors "HxTokenKind" [ "TEof"; "TIdent"; "TString"; "TInt"; "TFloat"; "TKeyword"; "TLBrace"; "TRBrace"; "TLParen"; "TRParen"; "TSemicolon"; "TColon"; "TDot"; "TComma"; "TOther" ];
   HxType.register_enum_ctors "HxVisibility" [ "Public"; "Private" ];
   HxType.register_enum_ctors "_HxConditionalCompilation.Token" [ "TIdent"; "TString"; "TNot"; "TAnd"; "TOr"; "TLParen"; "TRParen"; "TEq"; "TNeq"; "TEof" ];
+  HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
   HxType.register_enum_ctors "hxhx.macro._MacroHostClient.MacroHostReadResult" [ "ReadLine"; "ReadEof"; "ReadError" ];
   HxType.register_enum_ctors "sys.thread.NextEventTime" [ "Now"; "Never"; "AnyTime"; "At" ];
   HxType.register_enum_ctor "HxDefaultValue" "NoDefault" (fun (_args : Obj.t HxArray.t) ->
@@ -638,6 +641,33 @@ let init () : unit =
   HxType.register_enum_ctor "_HxConditionalCompilation.Token" "TEof" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (HxConditionalCompilation.TEof)
   );
+  HxType.register_enum_ctor "haxe.StackItem" "CFunction" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_CallStack.CFunction)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "Module" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'm' for haxe.StackItem.Module" in
+    Obj.repr (Haxe_CallStack.Module a0)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "FilePos" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createEnum: missing ctor arg 's' for haxe.StackItem.FilePos" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'file' for haxe.StackItem.FilePos" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'line' for haxe.StackItem.FilePos" in
+    let a3 = if len > 3 then (HxArray.get args 3) else HxRuntime.hx_null in
+    Obj.repr (Haxe_CallStack.FilePos (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "Method" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'classname' for haxe.StackItem.Method" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'method' for haxe.StackItem.Method" in
+    Obj.repr (Haxe_CallStack.Method (a0, a1))
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "LocalFunction" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else HxRuntime.hx_null in
+    Obj.repr (Haxe_CallStack.LocalFunction a0)
+  );
   HxType.register_enum_ctor "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadLine" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'line' for hxhx.macro._MacroHostClient.MacroHostReadResult.ReadLine" in
@@ -1089,6 +1119,9 @@ let init () : unit =
     let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
     Obj.repr (Haxe_ValueException.create a0 a1 a2)
   );
+  HxType.register_class_ctor "haxe._CallStack.CallStack_Impl_" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_CallStack.create ())
+  );
   HxType.register_class_ctor "haxe.format.JsonPrinter" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
     let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createInstance: missing ctor arg 'replacer' for haxe.format.JsonPrinter" in
@@ -1192,6 +1225,9 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.macro.MacroProtocol" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_macro_MacroProtocol.create ())
   );
+  HxType.register_class_ctor "hxhx.macro.MacroResolvedModuleScanner" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_macro_MacroResolvedModuleScanner.create ())
+  );
   HxType.register_class_ctor "hxhx.macro.MacroRuntimeMode" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_macro_MacroRuntimeMode.create ())
   );
@@ -1224,6 +1260,9 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createInstance: missing ctor arg 'proc' for hxhx.macro._MacroHostClient.MacroClient" in
     Obj.repr (Hxhx_macro_MacroHostClient.macroclient_create a0)
+  );
+  HxType.register_class_ctor "hxhx.runtime.NullableRuntimeString" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_runtime_NullableRuntimeString.create ())
   );
   HxType.register_class_ctor "sys.io.File" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Sys_io_File.create ())
@@ -1380,6 +1419,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
   HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
+  HxType.register_class_empty_ctor "haxe._CallStack.CallStack_Impl_" (fun () -> Obj.repr (Haxe_CallStack.__empty ()));
   HxType.register_class_empty_ctor "haxe.format.JsonPrinter" (fun () -> Obj.repr (Haxe_format_JsonPrinter.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.BytesBuffer" (fun () -> Obj.repr (Haxe_io_BytesBuffer.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
@@ -1409,11 +1449,13 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.macro.MacroHostSession" (fun () -> Obj.repr (Hxhx_macro_MacroHostClient.macrohostsession___empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroLocalImports" (fun () -> Obj.repr (Hxhx_macro_MacroLocalImports.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroProtocol" (fun () -> Obj.repr (Hxhx_macro_MacroProtocol.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.macro.MacroResolvedModuleScanner" (fun () -> Obj.repr (Hxhx_macro_MacroResolvedModuleScanner.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroRuntimeMode" (fun () -> Obj.repr (Hxhx_macro_MacroRuntimeMode.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroState" (fun () -> Obj.repr (Hxhx_macro_MacroState.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" (fun () -> Obj.repr (Hxhx_macro_BuildFieldSnapshotPayload.buildfieldpayloaditem___empty ()));
   HxType.register_class_empty_ctor "hxhx.macro._InProcMacroRuntime.InProcMacroSession" (fun () -> Obj.repr (Hxhx_macro_InProcMacroRuntime.inprocmacrosession___empty ()));
   HxType.register_class_empty_ctor "hxhx.macro._MacroHostClient.MacroClient" (fun () -> Obj.repr (Hxhx_macro_MacroHostClient.macroclient___empty ()));
+  HxType.register_class_empty_ctor "hxhx.runtime.NullableRuntimeString" (fun () -> Obj.repr (Hxhx_runtime_NullableRuntimeString.__empty ()));
   HxType.register_class_empty_ctor "sys.io.File" (fun () -> Obj.repr (Sys_io_File.__empty ()));
   HxType.register_class_empty_ctor "sys.io.FileInput" (fun () -> Obj.repr (Sys_io_FileInput.__empty ()));
   HxType.register_class_empty_ctor "sys.io.FileOutput" (fun () -> Obj.repr (Sys_io_FileOutput.__empty ()));
@@ -1474,7 +1516,7 @@ let init () : unit =
   HxType.register_class_static_fields "MacroExpandedProgram" [];
   HxType.register_class_instance_fields "MacroStage" [];
   HxType.register_class_static_fields "MacroStage" [ "expand"; "expandProgram" ];
-  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "depsForParsedModule"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "index"; "loadModuleByPath"; "markResolvedAlready"; "onMissingType"; "pending"; "resolveModuleFile"; "typeNotFoundTried"; "visited" ];
+  HxType.register_class_instance_fields "ModuleLoader" [ "classPaths"; "defines"; "depsForParsedModule"; "dirEntryCache"; "drainNewModules"; "ensureTypeAvailable"; "index"; "invokeOnMissingType"; "loadModuleByPath"; "markResolvedAlready"; "onMissingType"; "pending"; "resolveModuleFile"; "typeNotFoundTried"; "visited" ];
   HxType.register_class_static_fields "ModuleLoader" [ "candidateModulePaths"; "implicitQualifiedTypeDeps"; "normalizeImport" ];
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];
@@ -1596,6 +1638,8 @@ let init () : unit =
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
   HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
   HxType.register_class_static_fields "haxe.ValueException" [];
+  HxType.register_class_instance_fields "haxe._CallStack.CallStack_Impl_" [];
+  HxType.register_class_static_fields "haxe._CallStack.CallStack_Impl_" [ "asArray"; "callStack"; "copy"; "equalItems"; "exceptionStack"; "get"; "get_length"; "itemToString"; "nativeToHaxe"; "parseFileLine"; "subtract"; "toString" ];
   HxType.register_class_instance_fields "haxe.format.JsonPrinter" [ "appendIndent"; "appendNewline"; "buffer"; "depth"; "indentUnit"; "pretty"; "quote"; "replacer"; "writeArray"; "writeObject"; "writeValue" ];
   HxType.register_class_static_fields "haxe.format.JsonPrinter" [ "print" ];
   HxType.register_class_instance_fields "haxe.io.BytesBuffer" [ "add"; "addByte"; "addBytes"; "addDouble"; "addFloat"; "addInt32"; "addInt64"; "addString"; "b"; "getBytes"; "get_length" ];
@@ -1644,8 +1688,6 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.macro.BuildFieldSnapshotPayload" [ "encodeParsedModule" ];
   HxType.register_class_instance_fields "hxhx.macro.InProcGeneratedEntrypoints" [];
   HxType.register_class_static_fields "hxhx.macro.InProcGeneratedEntrypoints" [ "emitBuildFunction"; "escapeOcamlString"; "expandExpr"; "parseStringLiteralCallArg"; "run" ];
-  HxType.register_class_instance_fields "hxhx.macro.InProcMacroEffectSink" [ "addClassPath"; "definedValue"; "emitBuildFields"; "emitOcamlModule"; "registerAfterGenerateHook"; "registerAfterTypingHook"; "registerOnGenerateHook"; "setDefine" ];
-  HxType.register_class_static_fields "hxhx.macro.InProcMacroEffectSink" [];
   HxType.register_class_instance_fields "hxhx.macro.InProcMacroRuntime" [];
   HxType.register_class_static_fields "hxhx.macro.InProcMacroRuntime" [ "builtinTypeDesc"; "isBuiltin"; "openSession"; "parseOneStringLiteralArg"; "withoutBuiltinPrefix" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroHostClient" [];
@@ -1656,18 +1698,20 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.macro.MacroLocalImports" [ "encodePayloadFromSourceFile"; "encodeUsingsPayloadFromSourceFile"; "readScope" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroProtocol" [];
   HxType.register_class_static_fields "hxhx.macro.MacroProtocol" [ "decodeLenValue"; "encodeLen"; "escapePayload"; "kvGet"; "kvParse"; "splitN"; "unescapePayload" ];
+  HxType.register_class_instance_fields "hxhx.macro.MacroResolvedModuleScanner" [];
+  HxType.register_class_static_fields "hxhx.macro.MacroResolvedModuleScanner" [ "encodeContextGetTypePayload"; "gatherCurrentDefines"; "hasKeywordAt"; "isIdentChar"; "parseAbstractSemantics"; "parseTypeParamNames"; "parseTypedefSemantics"; "previousWord"; "readFilteredResolvedModuleSource"; "readIdent"; "scanBalancedText"; "scanResolvedModuleFields"; "scanResolvedModuleImports"; "scanResolvedModuleTypeSpans"; "scanResolvedModuleTypes"; "scanResolvedTypeSemantics"; "scanResolvedTypeStaticFields"; "scanTopLevelTypeTerminator"; "skipBlockComment"; "skipLineComment"; "skipQuotedText"; "skipWhitespaceText"; "splitLinesPreserveNewlines"; "splitTopLevelTypeParts" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroRuntimeMode" [];
   HxType.register_class_static_fields "hxhx.macro.MacroRuntimeMode" [ "emitMarker"; "normalize"; "openSession"; "resolve" ];
-  HxType.register_class_instance_fields "hxhx.macro.MacroRuntimeSession" [ "close"; "expandExpr"; "run"; "runHook"; "runTypeNotFoundHook" ];
-  HxType.register_class_static_fields "hxhx.macro.MacroRuntimeSession" [];
   HxType.register_class_instance_fields "hxhx.macro.MacroState" [];
   HxType.register_class_static_fields "hxhx.macro.MacroState" [ "addClassPath"; "addMessage"; "addResource"; "afterGenerateHookIds"; "afterTypingHookIds"; "buildFieldsByModule"; "buildFieldsPayload"; "classPaths"; "clearBuildFields"; "clearCurrentPos"; "clearLocalContext"; "clearMainExprText"; "compilerArgs"; "compilerTargetName"; "compilerVersion"; "copyUniqueTrimmedStrings"; "customMetadataEntries"; "debugEnabled"; "defined"; "definedValue"; "defines"; "emitBuildFields"; "emitHxModule"; "emitOcamlModule"; "explicitCurrentPos"; "explicitLocalContext"; "explicitMainExprText"; "generatedHxDir"; "generatedHxModules"; "getBuildFieldsPayload"; "getCompilerConfigurationSnapshot"; "getCurrentPos"; "getExpectedTypeText"; "getGeneratedHxDir"; "getGeneratedHxModuleSource"; "getLocalMethod"; "getLocalModule"; "getLocalTypeText"; "getMainExprText"; "getOcamlModuleSource"; "getResource"; "globalMetadataRules"; "hasArg"; "hasGeneratedHxModules"; "includeModule"; "includedModules"; "isBuildMetadata"; "listAfterGenerateHookIds"; "listAfterTypingHookIds"; "listAppliedTypeMetadata"; "listBuildFields"; "listCallArgumentExprTexts"; "listClassPaths"; "listCustomMetadataEntries"; "listDefineNames"; "listDefinesPairsSorted"; "listGeneratedHxModuleNames"; "listGlobalMetadataRules"; "listIncludedModules"; "listLocalTVars"; "listMessages"; "listModuleDependencies"; "listOcamlModuleNames"; "listOnGenerateHookIds"; "listOnTypeNotFoundHookIds"; "listResourceNames"; "listResourcesPairsSorted"; "matchesMetadataPathFilter"; "messages"; "moduleDependencies"; "nextSyntheticLocalTVarId"; "normalizeExprTexts"; "normalizeLocalTVars"; "normalizeOptionalText"; "ocamlModules"; "onGenerateHookIds"; "onTypeNotFoundHookIds"; "optimizeEnabled"; "parseCompilerVersionFromDefines"; "registerCustomMetadata"; "registerGlobalMetadata"; "registerHook"; "registerModuleDependency"; "replaceMessages"; "reset"; "resources"; "seedCompilerConfiguration"; "seedFromCliDefines"; "setBuildFieldsPayload"; "setCurrentPos"; "setDefine"; "setGeneratedHxDir"; "setLocalContext"; "setMainExprText"; "sortStringsInPlace"; "stdPaths"; "supportsUnicode"; "verboseEnabled" ];
   HxType.register_class_instance_fields "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" [ "args"; "bodyText"; "initText"; "isFinal"; "isStatic"; "kind"; "max"; "metadata"; "min"; "name"; "propertyGet"; "propertySet"; "returnTypeHint"; "typeHint"; "visibility" ];
   HxType.register_class_static_fields "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" [];
-  HxType.register_class_instance_fields "hxhx.macro._InProcMacroRuntime.InProcMacroSession" [ "addClassPath"; "afterGenerateHooks"; "afterTypingHooks"; "close"; "definedValue"; "emitBuildFields"; "emitOcamlModule"; "expandExpr"; "onGenerateHooks"; "registerAfterGenerateHook"; "registerAfterTypingHook"; "registerOnGenerateHook"; "run"; "runHook"; "runTypeNotFoundHook"; "setDefine" ];
-  HxType.register_class_static_fields "hxhx.macro._InProcMacroRuntime.InProcMacroSession" [];
+  HxType.register_class_instance_fields "hxhx.macro._InProcMacroRuntime.InProcMacroSession" [ "addClassPath"; "afterGenerateHooks"; "afterTypingHooks"; "close"; "definedValue"; "effectSink"; "emitBuildFields"; "emitOcamlModule"; "expandExpr"; "onGenerateHooks"; "registerAfterGenerateHook"; "registerAfterTypingHook"; "registerOnGenerateHook"; "run"; "runHook"; "runTypeNotFoundHook"; "setDefine" ];
+  HxType.register_class_static_fields "hxhx.macro._InProcMacroRuntime.InProcMacroSession" [ "builtinTypeDescExpr"; "isBuiltinExpr"; "parseIncludeStringLiteralArg"; "withoutBuiltinPrefixExpr" ];
   HxType.register_class_instance_fields "hxhx.macro._MacroHostClient.MacroClient" [ "call"; "close"; "drainStderr"; "ensureNoTimeout"; "failTimeout"; "handleInboundReq"; "hostIdleTimeoutSecs"; "hostTotalTimeoutSecs"; "nextId"; "proc"; "readLineForPhase"; "readLineWithTimeout"; "replyErr"; "replyOk"; "timeoutTriggered" ];
   HxType.register_class_static_fields "hxhx.macro._MacroHostClient.MacroClient" [ "TRACE"; "TRACE_HOST"; "connect"; "encodeCallArgumentsPayload"; "encodeLocalImportsPayload"; "encodeLocalTVarsPayload"; "encodeLocalUsingsPayload"; "gatherMacroContextClassPaths"; "optionalText"; "parseTimeoutSeconds"; "resolveMacroContextBuildFile"; "resolveMacroContextPath" ];
+  HxType.register_class_instance_fields "hxhx.runtime.NullableRuntimeString" [];
+  HxType.register_class_static_fields "hxhx.runtime.NullableRuntimeString" [ "normalize"; "trimToEmpty" ];
   HxType.register_class_instance_fields "ocaml._Buffer.Buffer_Impl_" [];
   HxType.register_class_static_fields "ocaml._Buffer.Buffer_Impl_" [ "_new"; "addString"; "contents"; "create"; "length" ];
   HxType.register_class_instance_fields "sys.io.File" [];
@@ -1850,18 +1894,18 @@ let init () : unit =
   HxType.register_class_tags "hxhx.Stage3Compiler" [ "hxhx.Stage3Compiler" ];
   HxType.register_class_tags "hxhx.macro.BuildFieldSnapshotPayload" [ "hxhx.macro.BuildFieldSnapshotPayload" ];
   HxType.register_class_tags "hxhx.macro.InProcGeneratedEntrypoints" [ "hxhx.macro.InProcGeneratedEntrypoints" ];
-  HxType.register_class_tags "hxhx.macro.InProcMacroEffectSink" [ "hxhx.macro.InProcMacroEffectSink" ];
   HxType.register_class_tags "hxhx.macro.InProcMacroRuntime" [ "hxhx.macro.InProcMacroRuntime" ];
   HxType.register_class_tags "hxhx.macro.MacroHostClient" [ "hxhx.macro.MacroHostClient" ];
-  HxType.register_class_tags "hxhx.macro.MacroHostSession" [ "hxhx.macro.MacroHostSession"; "hxhx.macro.MacroRuntimeSession" ];
+  HxType.register_class_tags "hxhx.macro.MacroHostSession" [ "hxhx.macro.MacroHostSession" ];
   HxType.register_class_tags "hxhx.macro.MacroLocalImports" [ "hxhx.macro.MacroLocalImports" ];
   HxType.register_class_tags "hxhx.macro.MacroProtocol" [ "hxhx.macro.MacroProtocol" ];
+  HxType.register_class_tags "hxhx.macro.MacroResolvedModuleScanner" [ "hxhx.macro.MacroResolvedModuleScanner" ];
   HxType.register_class_tags "hxhx.macro.MacroRuntimeMode" [ "hxhx.macro.MacroRuntimeMode" ];
-  HxType.register_class_tags "hxhx.macro.MacroRuntimeSession" [ "hxhx.macro.MacroRuntimeSession" ];
   HxType.register_class_tags "hxhx.macro.MacroState" [ "hxhx.macro.MacroState" ];
   HxType.register_class_tags "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" [ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" ];
-  HxType.register_class_tags "hxhx.macro._InProcMacroRuntime.InProcMacroSession" [ "hxhx.macro.InProcMacroEffectSink"; "hxhx.macro.MacroRuntimeSession"; "hxhx.macro._InProcMacroRuntime.InProcMacroSession" ];
+  HxType.register_class_tags "hxhx.macro._InProcMacroRuntime.InProcMacroSession" [ "hxhx.macro._InProcMacroRuntime.InProcMacroSession" ];
   HxType.register_class_tags "hxhx.macro._MacroHostClient.MacroClient" [ "hxhx.macro._MacroHostClient.MacroClient" ];
+  HxType.register_class_tags "hxhx.runtime.NullableRuntimeString" [ "hxhx.runtime.NullableRuntimeString" ];
   HxType.register_class_tags "ocaml._Buffer.Buffer_Impl_" [ "ocaml._Buffer.Buffer_Impl_" ];
   HxType.register_class_tags "sys.io.File" [ "sys.io.File" ];
   HxType.register_class_tags "sys.io.FileInput" [ "haxe.io.Input"; "sys.io.FileInput" ];

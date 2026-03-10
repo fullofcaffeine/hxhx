@@ -7,7 +7,7 @@
      behavior that matches most targets. *)
 
 let length (s : string) : int =
-  String.length s
+  Stdlib.String.length s
 
 let hx_null_string : string = Obj.magic HxRuntime.hx_null
 
@@ -39,28 +39,28 @@ let equals (a : string) (b : string) : bool =
   else if not (isRealStringObj oa) || not (isRealStringObj ob) then
     false
   else
-    String.equal a b
+    Stdlib.String.equal a b
 
 let toUpperCase (s : string) () : string =
-  String.uppercase_ascii s
+  Stdlib.String.uppercase_ascii s
 
 let toLowerCase (s : string) () : string =
-  String.lowercase_ascii s
+  Stdlib.String.lowercase_ascii s
 
 let charAt (s : string) (index : int) : string =
-  let len = String.length s in
+  let len = Stdlib.String.length s in
   if index < 0 || index >= len then
     ""
   else
-    String.sub s index 1
+    Stdlib.String.sub s index 1
 
-(* Haxe: String.charCodeAt returns Null<Int> and yields null on OOB. *)
+(* Haxe: Stdlib.String.charCodeAt returns Null<Int> and yields null on OOB. *)
 let charCodeAt (s : string) (index : int) : Obj.t =
-  let len = String.length s in
+  let len = Stdlib.String.length s in
   if index < 0 || index >= len then
     HxRuntime.hx_null
   else
-    Obj.repr (Char.code s.[index])
+    Obj.repr (Char.code (Stdlib.String.get s (index)))
 
 (* `StringTools.fastCodeAt()` uses `untyped s.cca(index)` on a number of targets.
    We represent `String` as a plain OCaml `string`, so there is no real `.cca`
@@ -74,22 +74,22 @@ let cca (s : string) (index : int) : int =
   if isNull s then
     -1
   else
-    let len = String.length s in
+    let len = Stdlib.String.length s in
     if index < 0 || index >= len then
       -1
     else
-      Char.code s.[index]
+      Char.code (Stdlib.String.get s (index))
 
 let starts_with_at (s : string) (sub : string) (i : int) : bool =
-  let slen = String.length s in
-  let nlen = String.length sub in
+  let slen = Stdlib.String.length s in
+  let nlen = Stdlib.String.length sub in
   if i < 0 || i + nlen > slen then
     false
   else
     let rec loop j =
       if j >= nlen then
         true
-      else if s.[i + j] = sub.[j] then
+      else if (Stdlib.String.get s (i + j)) = (Stdlib.String.get sub (j)) then
         loop (j + 1)
       else
         false
@@ -104,8 +104,8 @@ let unwrap_optional_int (v : int) (default : int) : int =
     v
 
 let indexOf (s : string) (sub : string) (startIndex : int) : int =
-  let slen = String.length s in
-  let nlen = String.length sub in
+  let slen = Stdlib.String.length s in
+  let nlen = Stdlib.String.length sub in
   let startIndex = unwrap_optional_int startIndex 0 in
   if startIndex > slen then
     -1
@@ -126,8 +126,8 @@ let indexOf (s : string) (sub : string) (startIndex : int) : int =
   )
 
 let lastIndexOf (s : string) (sub : string) (startIndex : int) : int =
-  let slen = String.length s in
-  let nlen = String.length sub in
+  let slen = Stdlib.String.length s in
+  let nlen = Stdlib.String.length sub in
   let startIndex = unwrap_optional_int startIndex slen in
   if nlen = 0 then (
     let idx = if startIndex < 0 then slen else startIndex in
@@ -157,21 +157,21 @@ let lastIndexOf (s : string) (sub : string) (startIndex : int) : int =
 
 let split (s : string) (delimiter : string) : string HxArray.t =
   let out = HxArray.create () in
-  let slen = String.length s in
-  let dlen = String.length delimiter in
+  let slen = Stdlib.String.length s in
+  let dlen = Stdlib.String.length delimiter in
   if dlen = 0 then (
     for i = 0 to slen - 1 do
-      ignore (HxArray.push out (String.sub s i 1))
+      ignore (HxArray.push out (Stdlib.String.sub s i 1))
     done;
     out
   ) else (
     let rec loop start =
       let idx = indexOf s delimiter start in
       if idx < 0 then (
-        ignore (HxArray.push out (String.sub s start (slen - start)));
+        ignore (HxArray.push out (Stdlib.String.sub s start (slen - start)));
         out
       ) else (
-        ignore (HxArray.push out (String.sub s start (idx - start)));
+        ignore (HxArray.push out (Stdlib.String.sub s start (idx - start)));
         loop (idx + dlen)
       )
     in
@@ -179,7 +179,7 @@ let split (s : string) (delimiter : string) : string HxArray.t =
   )
 
 let substr (s : string) (pos : int) (len : int) : string =
-  let slen = String.length s in
+  let slen = Stdlib.String.length s in
   let len = unwrap_optional_int len (-1) in
   let p =
     if pos < 0 then
@@ -197,10 +197,10 @@ let substr (s : string) (pos : int) (len : int) : string =
     else
       let max_len = slen - p in
       let l2 = if l > max_len then max_len else l in
-      String.sub s p l2
+      Stdlib.String.sub s p l2
 
 let substring (s : string) (startIndex : int) (endIndex : int) : string =
-  let slen = String.length s in
+  let slen = Stdlib.String.length s in
   let endIndex = unwrap_optional_int endIndex slen in
   let s0 = if startIndex < 0 then 0 else startIndex in
   let e0 =
@@ -210,7 +210,7 @@ let substring (s : string) (startIndex : int) (endIndex : int) : string =
   if a >= slen || b <= a then
     ""
   else
-    String.sub s a (b - a)
+    Stdlib.String.sub s a (b - a)
 
 let toString (s : string) () : string =
   s
@@ -219,7 +219,7 @@ let fromCharCode (code : int) : string =
   if code < 0 || code > 255 then
     ""
   else
-    String.make 1 (Char.chr code)
+    Stdlib.String.make 1 (Char.chr code)
 
 (* URL encoding/decoding used by Haxe Serializer/Unserializer.
 
@@ -247,12 +247,12 @@ let hex_upper (n : int) : char =
     Char.chr (Char.code 'A' + (n - 10))
 
 let urlEncode (s : string) : string =
-  let len = String.length s in
+  let len = Stdlib.String.length s in
   let b = Buffer.create (len * 3) in
   for i = 0 to len - 1 do
-    let code = Char.code s.[i] in
+    let code = Char.code (Stdlib.String.get s (i)) in
     if is_unreserved code then
-      Buffer.add_char b s.[i]
+      Buffer.add_char b (Stdlib.String.get s (i))
     else (
       Buffer.add_char b '%';
       Buffer.add_char b (hex_upper ((code lsr 4) land 0xF));
@@ -273,19 +273,19 @@ let hex_value (c : char) : int =
     -1
 
 let urlDecode (s : string) : string =
-  let len = String.length s in
+  let len = Stdlib.String.length s in
   let b = Buffer.create len in
   let rec loop i =
     if i >= len then
       ()
     else
-      match s.[i] with
+      match (Stdlib.String.get s (i)) with
       | '+' ->
           Buffer.add_char b ' ';
           loop (i + 1)
       | '%' when i + 2 < len ->
-          let hi = hex_value s.[i + 1] in
-          let lo = hex_value s.[i + 2] in
+          let hi = hex_value (Stdlib.String.get s (i + 1)) in
+          let lo = hex_value (Stdlib.String.get s (i + 2)) in
           if hi >= 0 && lo >= 0 then (
             Buffer.add_char b (Char.chr ((hi lsl 4) lor lo));
             loop (i + 3)

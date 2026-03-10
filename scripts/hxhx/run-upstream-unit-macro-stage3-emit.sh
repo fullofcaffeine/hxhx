@@ -62,6 +62,8 @@ fi
 HXHX_BIN="${HXHX_BIN:-}"
 if [ -z "$HXHX_BIN" ] || [ ! -x "$HXHX_BIN" ]; then
   HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+elif [[ "$HXHX_BIN" != /* ]]; then
+  HXHX_BIN="$ROOT/$HXHX_BIN"
 fi
 
 # Stage3 emit rung executes `--macro Macro.init()`, which requires a macro host.

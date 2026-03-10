@@ -4,185 +4,17 @@
 
 let __reflaxe_ocaml__ = ()
 
-type inprocmacrosession_t = { __hx_type : Obj.t; mutable afterTypingHooks : (unit -> unit) HxArray.t; mutable onGenerateHooks : (unit -> unit) HxArray.t; mutable afterGenerateHooks : (unit -> unit) HxArray.t; run : Obj.t -> string -> string; runHook : Obj.t -> string -> int -> unit; runTypeNotFoundHook : Obj.t -> int -> string -> bool; expandExpr : Obj.t -> string -> string; setDefine : Obj.t -> string -> string -> unit; definedValue : Obj.t -> string -> string; addClassPath : Obj.t -> string -> unit; emitOcamlModule : Obj.t -> string -> string -> unit; emitBuildFields : Obj.t -> string -> string -> unit; registerAfterTypingHook : Obj.t -> (unit -> unit) -> unit; registerOnGenerateHook : Obj.t -> (unit -> unit) -> unit; registerAfterGenerateHook : Obj.t -> (unit -> unit) -> unit; close : Obj.t -> unit -> unit }
+type inprocmacrosession_t = { __hx_type : Obj.t; mutable afterTypingHooks : (unit -> unit) HxArray.t; mutable onGenerateHooks : (unit -> unit) HxArray.t; mutable afterGenerateHooks : (unit -> unit) HxArray.t; mutable effectSink : Obj.t }
 
-let inprocmacrosession___ctor = fun (self : inprocmacrosession_t) () -> ignore (ignore ((
-  ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
-    (Obj.magic self : inprocmacrosession_t).afterGenerateHooks <- __assign_1;
-    __assign_1
-  ));
-  ignore (let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
-    (Obj.magic self : inprocmacrosession_t).onGenerateHooks <- __assign_3;
-    __assign_3
-  ));
-  let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
-    (Obj.magic self : inprocmacrosession_t).afterTypingHooks <- __assign_5;
-    __assign_5
-  )
-)))
+let inprocmacrosession___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._InProcMacroRuntime.InProcMacroSession"; afterTypingHooks = Obj.magic (HxRuntime.hx_null); onGenerateHooks = Obj.magic (HxRuntime.hx_null); afterGenerateHooks = Obj.magic (HxRuntime.hx_null); effectSink = Obj.magic (HxRuntime.hx_null) } : inprocmacrosession_t)
 
-let inprocmacrosession_run__impl = fun (self : inprocmacrosession_t) (expr : string) -> try let __fallback_result_34 = let tempString = ref ("" : string) in (
-  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_10 = ("" : string) in (
-    tempString := __assign_10;
-    __assign_10
-  ) else let __assign_11 = (expr : string) in (
-    tempString := __assign_11;
-    __assign_11
-  ));
-  let e = (StringTools.trim (!tempString : string) : string) in (
-    ignore (if HxString.length e = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.run: missing expr") ["Dynamic"; "String"]) else ());
-    ignore (if StringTools.startsWith (e : string) ("include(" : string) && StringTools.endsWith (e : string) (")" : string) then ignore (let inside = (StringTools.trim (HxString.substr e (HxString.length "include(") (HxInt.sub (HxInt.sub (HxString.length e) (HxString.length "include(")) 1) : string) : string) in let moduleName = (try let __fallback_result_12 = (
-      ignore (if inside == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      let t = (StringTools.trim (inside : string) : string) in (
-        ignore (if HxString.length t < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-        let q = HxString.charCodeAt t 0 in (
-          ignore (if not (let __nullable_7 = q in if __nullable_7 == HxRuntime.hx_null then false else Obj.obj __nullable_7 = 34) && not (let __nullable_8 = q in if __nullable_8 == HxRuntime.hx_null then false else Obj.obj __nullable_8 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-          ignore (if not (let __nullable_9 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_10 = q in if __nullable_9 == HxRuntime.hx_null then __nullable_9 == HxRuntime.hx_null && __nullable_10 == HxRuntime.hx_null else not (__nullable_10 == HxRuntime.hx_null) && Obj.obj __nullable_9 = Obj.obj __nullable_10) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-          let body = (HxString.substr t 1 (HxInt.sub (HxString.length t) 2) : string) in let body = (StringTools.replace (body : string) ("\\\\\\\\" : string) ("\\\\" : string) : string) in let body = (StringTools.replace (body : string) ("\\\\\\\"" : string) ("\\\"" : string) : string) in let body = (StringTools.replace (body : string) ("\\\\'" : string) ("'" : string) : string) in body
-        )
-      )
-    ) in Obj.magic __fallback_result_12 with
-      | HxRuntime.Hx_return __ret_11 -> Obj.obj __ret_11) in if moduleName != Obj.magic (HxRuntime.hx_null) && HxString.length moduleName > 0 then ignore ((
-      ignore (Hxhx_macro_MacroState.includeModule (moduleName : string));
-      raise (HxRuntime.Hx_return (Obj.repr "include=ok"))
-    )) else ()) else ());
-    let generated = (Hxhx_macro_InProcGeneratedEntrypoints.run (e : string) (Obj.magic self) : string) in (
-      ignore (if generated != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (generated : string))) else ());
-      ignore (if not (StringTools.startsWith (e : string) ("BuiltinMacros." : string) || StringTools.startsWith (e : string) ("hxhxmacrohost.BuiltinMacros." : string)) then raise (HxRuntime.Hx_return (Obj.repr ("ran:" ^ HxString.toStdString e : string))) else ());
-      let builtin = (if StringTools.startsWith (e : string) ("BuiltinMacros." : string) then HxString.substr e (HxString.length "BuiltinMacros.") ((HxString.length e) - (HxString.length "BuiltinMacros.")) else if StringTools.startsWith (e : string) ("hxhxmacrohost.BuiltinMacros." : string) then HxString.substr e (HxString.length "hxhxmacrohost.BuiltinMacros.") ((HxString.length e) - (HxString.length "hxhxmacrohost.BuiltinMacros.")) else e : string) in let tempResult = ref ("" : string) in (
-        ignore (match builtin with
-          | "addCpFromEnv()" -> let cp = (HxSys.getEnv "HXHX_ADD_CP" : string) in if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim (cp : string)) > 0 then (
-            ignore (Hxhx_macro_MacroState.addClassPath (cp : string));
-            let __assign_13 = ("addCp=ok" : string) in (
-              tempResult := __assign_13;
-              __assign_13
-            )
-          ) else let __assign_14 = ("addCp=skip" : string) in (
-            tempResult := __assign_14;
-            __assign_14
-          )
-          | "dumpDefines()" -> (
-            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_ENUM" : string) ("1" : string));
-            let defs = Obj.magic (Hxhx_macro_MacroState.listDefinesPairsSorted ()) in let map = HxMap.create_string () in let _g = ref 0 in (
-              ignore (while !_g < HxArray.length defs do ignore (let kv = Obj.magic (HxArray.get (Obj.magic defs) (!_g)) in (
-                ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-                  ignore (_g := __new_16);
-                  __new_16
-                ));
-                HxMap.set_string map (HxArray.get (Obj.magic kv) 0) (HxArray.get (Obj.magic kv) 1)
-              )) done);
-              let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_17 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
-                  tempMaybeString := __assign_17;
-                  __assign_17
-                ) else let __assign_18 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                  tempMaybeString := __assign_18;
-                  __assign_18
-                ));
-                let flagMap = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                  ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_19 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
-                    tempMaybeString1 := __assign_19;
-                    __assign_19
-                  ) else let __assign_20 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                    tempMaybeString1 := __assign_20;
-                    __assign_20
-                  ));
-                  let enumMap = (!tempMaybeString1 : string) in let tempMaybeString2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                    ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_21 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
-                      tempMaybeString2 := __assign_21;
-                      __assign_21
-                    ) else let __assign_22 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                      tempMaybeString2 := __assign_22;
-                      __assign_22
-                    ));
-                    let flagGet = (!tempMaybeString2 : string) in let tempMaybeString3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
-                      ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_23 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
-                        tempMaybeString3 := __assign_23;
-                        __assign_23
-                      ) else let __assign_24 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-                        tempMaybeString3 := __assign_24;
-                        __assign_24
-                      ));
-                      let enumGet = (!tempMaybeString3 : string) in let __assign_25 = ((((((("defines:flag_map=" ^ HxString.toStdString (HxString.toStdString flagMap)) ^ ";flag_get=") ^ HxString.toStdString (HxString.toStdString flagGet)) ^ ";enum_map=") ^ HxString.toStdString (HxString.toStdString enumMap)) ^ ";enum_get=") ^ HxString.toStdString (HxString.toStdString enumGet) : string) in (
-                        tempResult := __assign_25;
-                        __assign_25
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-          | "fail()" -> HxType.hx_throw_typed_rtti (Obj.repr "intentional macro host failure (for position payload tests)") ["Dynamic"; "String"]
-          | "genHxModule()" -> (
-            ignore (Hxhx_macro_MacroState.emitHxModule ("Gen" : string) ("class Gen {}" : string));
-            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_HXGEN" : string) ("1" : string));
-            let __assign_26 = ("genHx=ok" : string) in (
-              tempResult := __assign_26;
-              __assign_26
-            )
-          )
-          | "genModule()" -> (
-            ignore (Hxhx_macro_MacroState.emitOcamlModule ("HxHxGen" : string) ("let generated : string = \"builtin:String\"" : string));
-            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_GEN" : string) ("1" : string));
-            let __assign_27 = ("genModule=ok" : string) in (
-              tempResult := __assign_27;
-              __assign_27
-            )
-          )
-          | "readFlag()" -> let __assign_28 = ("flag=" ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue ("HXHX_FLAG" : string)) : string) in (
-            tempResult := __assign_28;
-            __assign_28
-          )
-          | "registerHooks()" -> let afterTypingId = HxArray.length ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) in (
-            ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) (fun () -> ignore (Hxhx_macro_MacroState.setDefine ("HXHX_AFTER_TYPING" : string) ("1" : string))));
-            ignore (Hxhx_macro_MacroState.registerHook ("afterTyping" : string) afterTypingId);
-            let onGenerateId = HxArray.length ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) in (
-              ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) (fun () -> ignore ((
-                ignore (Hxhx_macro_MacroState.emitOcamlModule ("HxHxHook" : string) ("let hook_generated : int = 1" : string));
-                Hxhx_macro_MacroState.setDefine ("HXHX_ON_GENERATE" : string) ("1" : string)
-              ))));
-              ignore (Hxhx_macro_MacroState.registerHook ("onGenerate" : string) onGenerateId);
-              let __assign_29 = ("hooks=ok" : string) in (
-                tempResult := __assign_29;
-                __assign_29
-              )
-            )
-          )
-          | "smoke()" -> (
-            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_SMOKE" : string) ("1" : string));
-            let tempString1 = ref ("" : string) in (
-              ignore (if Hxhx_macro_MacroState.defined ("HXHX_SMOKE" : string) then let __assign_30 = ("yes" : string) in (
-                tempString1 := __assign_30;
-                __assign_30
-              ) else let __assign_31 = ("no" : string) in (
-                tempString1 := __assign_31;
-                __assign_31
-              ));
-              let __assign_32 = ((("smoke:type=builtin:String" : string) ^ ";define=") ^ HxString.toStdString (!tempString1) : string) in (
-                tempResult := __assign_32;
-                __assign_32
-              )
-            )
-          )
-          | _ -> let __assign_12 = ("ran:" ^ HxString.toStdString e : string) in (
-            tempResult := __assign_12;
-            __assign_12
-          ));
-        !tempResult
-      )
-    )
-  )
-) in Obj.magic __fallback_result_34 with
-  | HxRuntime.Hx_return __ret_33 -> Obj.obj __ret_33
-
-let inprocmacrosession_runHook__impl = fun (self : inprocmacrosession_t) (kind : string) (id : int) -> ignore (ignore (let tempString = ref ("" : string) in (
-  ignore (if kind == Obj.magic (HxRuntime.hx_null) then let __assign_35 = ("" : string) in (
+let inprocmacrosession_runHook = fun self (kind : string) (id : int) -> ignore (ignore (let tempString = ref ("" : string) in (
+  ignore (if kind == Obj.magic (HxRuntime.hx_null) then let __assign_34 = ("" : string) in (
+    tempString := __assign_34;
+    __assign_34
+  ) else let __assign_35 = (kind : string) in (
     tempString := __assign_35;
     __assign_35
-  ) else let __assign_36 = (kind : string) in (
-    tempString := __assign_36;
-    __assign_36
   ));
   let _g = (!tempString : string) in match _g with
     | "afterGenerate" -> ignore ((
@@ -200,24 +32,24 @@ let inprocmacrosession_runHook__impl = fun (self : inprocmacrosession_t) (kind :
     | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr ("macro.runHook: unknown kind: " ^ HxString.toStdString kind)) ["Dynamic"; "String"])
 )))
 
-let inprocmacrosession_runTypeNotFoundHook__impl = fun (self : inprocmacrosession_t) (id : int) (typePath : string) -> (
+let inprocmacrosession_runTypeNotFoundHook = fun self (id : int) (typePath : string) -> (
   ignore self;
-  try let __fallback_result_38 = (
+  try let __fallback_result_37 = (
     ignore (if id <> -1 || HxString.equals typePath "__hxhx_never__" then raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     false
-  ) in Obj.magic __fallback_result_38 with
-    | HxRuntime.Hx_return __ret_37 -> Obj.obj __ret_37
+  ) in Obj.magic __fallback_result_37 with
+    | HxRuntime.Hx_return __ret_36 -> Obj.obj __ret_36
 )
 
-let inprocmacrosession_expandExpr__impl = fun (self : inprocmacrosession_t) (expr : string) -> (
+let inprocmacrosession_expandExpr = fun self (expr : string) -> (
   ignore self;
-  try let __fallback_result_43 = let tempString = ref ("" : string) in (
-    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_39 = ("" : string) in (
+  try let __fallback_result_42 = let tempString = ref ("" : string) in (
+    ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_38 = ("" : string) in (
+      tempString := __assign_38;
+      __assign_38
+    ) else let __assign_39 = (expr : string) in (
       tempString := __assign_39;
       __assign_39
-    ) else let __assign_40 = (expr : string) in (
-      tempString := __assign_40;
-      __assign_40
     ));
     let e = (StringTools.trim (!tempString : string) : string) in (
       ignore (if HxString.length e = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.expandExpr: empty expr") ["Dynamic"; "String"]) else ());
@@ -225,83 +57,274 @@ let inprocmacrosession_expandExpr__impl = fun (self : inprocmacrosession_t) (exp
         ignore (if generated != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (generated : string))) else ());
         let tempResult = ref ("" : string) in (
           ignore (match e with
-            | "HelperMacros.getCompilationDate()" | "unit.HelperMacros.getCompilationDate()" -> let __assign_41 = ("\"<compilation-date>\"" : string) in (
-              tempResult := __assign_41;
-              __assign_41
+            | "HelperMacros.getCompilationDate()" | "unit.HelperMacros.getCompilationDate()" -> let __assign_40 = ("\"<compilation-date>\"" : string) in (
+              tempResult := __assign_40;
+              __assign_40
             )
             | _ -> HxType.hx_throw_typed_rtti (Obj.repr ("macro.expandExpr: expr not registered: " ^ HxString.toStdString e)) ["Dynamic"; "String"]);
           !tempResult
         )
       )
     )
-  ) in Obj.magic __fallback_result_43 with
-    | HxRuntime.Hx_return __ret_42 -> Obj.obj __ret_42
+  ) in Obj.magic __fallback_result_42 with
+    | HxRuntime.Hx_return __ret_41 -> Obj.obj __ret_41
 )
 
-let inprocmacrosession_setDefine__impl = fun (self : inprocmacrosession_t) (name : string) (value : string) -> ignore ((
+let inprocmacrosession_setDefine = fun self (name : string) (value : string) -> ignore ((
   ignore self;
   ignore (Hxhx_macro_MacroState.setDefine (name : string) (value : string))
 ))
 
-let inprocmacrosession_definedValue__impl = fun (self : inprocmacrosession_t) (name : string) -> (
+let inprocmacrosession_definedValue = fun self (name : string) -> (
   ignore self;
   Hxhx_macro_MacroState.definedValue (name : string)
 )
 
-let inprocmacrosession_addClassPath__impl = fun (self : inprocmacrosession_t) (path : string) -> ignore ((
+let inprocmacrosession_addClassPath = fun self (path : string) -> ignore ((
   ignore self;
   ignore (Hxhx_macro_MacroState.addClassPath (path : string))
 ))
 
-let inprocmacrosession_emitOcamlModule__impl = fun (self : inprocmacrosession_t) (name : string) (source : string) -> ignore ((
+let inprocmacrosession_emitOcamlModule = fun self (name : string) (source : string) -> ignore ((
   ignore self;
   ignore (Hxhx_macro_MacroState.emitOcamlModule (name : string) (source : string))
 ))
 
-let inprocmacrosession_emitBuildFields__impl = fun (self : inprocmacrosession_t) (modulePath : string) (membersSource : string) -> ignore ((
+let inprocmacrosession_emitBuildFields = fun self (modulePath : string) (membersSource : string) -> ignore ((
   ignore self;
   ignore (Hxhx_macro_MacroState.emitBuildFields (modulePath : string) (membersSource : string))
 ))
 
-let inprocmacrosession_registerAfterTypingHook__impl = fun (self : inprocmacrosession_t) (cb : unit -> unit) -> ignore (ignore (let id = HxArray.length ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) in (
+let inprocmacrosession_registerAfterTypingHook = fun self (cb : unit -> unit) -> ignore (ignore (let id = HxArray.length ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) in (
   ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) cb);
   Hxhx_macro_MacroState.registerHook ("afterTyping" : string) id
 )))
 
-let inprocmacrosession_registerOnGenerateHook__impl = fun (self : inprocmacrosession_t) (cb : unit -> unit) -> ignore (ignore (let id = HxArray.length ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) in (
+let inprocmacrosession_registerOnGenerateHook = fun self (cb : unit -> unit) -> ignore (ignore (let id = HxArray.length ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) in (
   ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) cb);
   Hxhx_macro_MacroState.registerHook ("onGenerate" : string) id
 )))
 
-let inprocmacrosession_registerAfterGenerateHook__impl = fun (self : inprocmacrosession_t) (cb : unit -> unit) -> ignore (ignore (let id = HxArray.length ((Obj.magic self : inprocmacrosession_t).afterGenerateHooks) in (
+let inprocmacrosession_registerAfterGenerateHook = fun self (cb : unit -> unit) -> ignore (ignore (let id = HxArray.length ((Obj.magic self : inprocmacrosession_t).afterGenerateHooks) in (
   ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).afterGenerateHooks) cb);
   Hxhx_macro_MacroState.registerHook ("afterGenerate" : string) id
 )))
 
-let inprocmacrosession_close__impl = fun (self : inprocmacrosession_t) () -> ignore ((
-  ignore self;
-  ignore ()
-))
-
-let inprocmacrosession_create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._InProcMacroRuntime.InProcMacroSession"; afterTypingHooks = (let __arr_7 = HxArray.create () in __arr_7); onGenerateHooks = (let __arr_8 = HxArray.create () in __arr_8); afterGenerateHooks = (let __arr_9 = HxArray.create () in __arr_9); run = (fun o a0 -> Obj.magic (inprocmacrosession_run__impl (Obj.magic o) (Obj.magic a0))); runHook = (fun o a0 a1 -> Obj.magic (inprocmacrosession_runHook__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); runTypeNotFoundHook = (fun o a0 a1 -> Obj.magic (inprocmacrosession_runTypeNotFoundHook__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); expandExpr = (fun o a0 -> Obj.magic (inprocmacrosession_expandExpr__impl (Obj.magic o) (Obj.magic a0))); setDefine = (fun o a0 a1 -> Obj.magic (inprocmacrosession_setDefine__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); definedValue = (fun o a0 -> Obj.magic (inprocmacrosession_definedValue__impl (Obj.magic o) (Obj.magic a0))); addClassPath = (fun o a0 -> Obj.magic (inprocmacrosession_addClassPath__impl (Obj.magic o) (Obj.magic a0))); emitOcamlModule = (fun o a0 a1 -> Obj.magic (inprocmacrosession_emitOcamlModule__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); emitBuildFields = (fun o a0 a1 -> Obj.magic (inprocmacrosession_emitBuildFields__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); registerAfterTypingHook = (fun o a0 -> Obj.magic (inprocmacrosession_registerAfterTypingHook__impl (Obj.magic o) (Obj.magic a0))); registerOnGenerateHook = (fun o a0 -> Obj.magic (inprocmacrosession_registerOnGenerateHook__impl (Obj.magic o) (Obj.magic a0))); registerAfterGenerateHook = (fun o a0 -> Obj.magic (inprocmacrosession_registerAfterGenerateHook__impl (Obj.magic o) (Obj.magic a0))); close = (fun o () -> Obj.magic (inprocmacrosession_close__impl (Obj.magic o) (Obj.magic ()))) } : inprocmacrosession_t) in (
+let inprocmacrosession_create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro._InProcMacroRuntime.InProcMacroSession"; afterTypingHooks = Obj.magic (HxRuntime.hx_null); onGenerateHooks = Obj.magic (HxRuntime.hx_null); afterGenerateHooks = Obj.magic (HxRuntime.hx_null); effectSink = Obj.magic (HxRuntime.hx_null) } : inprocmacrosession_t) in (
   ignore (ignore ((
     ignore (let __assign_1 = Obj.magic (let __arr_2 = HxArray.create () in __arr_2) in (
-      (Obj.magic self : inprocmacrosession_t).afterGenerateHooks <- __assign_1;
+      (Obj.magic self : inprocmacrosession_t).afterTypingHooks <- __assign_1;
       __assign_1
     ));
     ignore (let __assign_3 = Obj.magic (let __arr_4 = HxArray.create () in __arr_4) in (
       (Obj.magic self : inprocmacrosession_t).onGenerateHooks <- __assign_3;
       __assign_3
     ));
-    let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
-      (Obj.magic self : inprocmacrosession_t).afterTypingHooks <- __assign_5;
+    ignore (let __assign_5 = Obj.magic (let __arr_6 = HxArray.create () in __arr_6) in (
+      (Obj.magic self : inprocmacrosession_t).afterGenerateHooks <- __assign_5;
       __assign_5
+    ));
+    let __assign_7 = Obj.magic (let __anon_8 = HxAnon.create () in (
+      ignore (HxAnon.set __anon_8 "setDefine" (Obj.repr (fun a0 a1 -> inprocmacrosession_setDefine self a0 a1)));
+      ignore (HxAnon.set __anon_8 "definedValue" (Obj.repr (fun a0 -> inprocmacrosession_definedValue self a0)));
+      ignore (HxAnon.set __anon_8 "addClassPath" (Obj.repr (fun a0 -> inprocmacrosession_addClassPath self a0)));
+      ignore (HxAnon.set __anon_8 "emitOcamlModule" (Obj.repr (fun a0 a1 -> inprocmacrosession_emitOcamlModule self a0 a1)));
+      ignore (HxAnon.set __anon_8 "emitBuildFields" (Obj.repr (fun a0 a1 -> inprocmacrosession_emitBuildFields self a0 a1)));
+      ignore (HxAnon.set __anon_8 "registerAfterTypingHook" (Obj.repr (fun a0 -> inprocmacrosession_registerAfterTypingHook self a0)));
+      ignore (HxAnon.set __anon_8 "registerOnGenerateHook" (Obj.repr (fun a0 -> inprocmacrosession_registerOnGenerateHook self a0)));
+      ignore (HxAnon.set __anon_8 "registerAfterGenerateHook" (Obj.repr (fun a0 -> inprocmacrosession_registerAfterGenerateHook self a0)));
+      __anon_8
+    )) in (
+      (Obj.magic self : inprocmacrosession_t).effectSink <- __assign_7;
+      __assign_7
     )
   )));
   self
 )
 
-let inprocmacrosession___empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro._InProcMacroRuntime.InProcMacroSession"; afterTypingHooks = (let __arr_7 = HxArray.create () in __arr_7); onGenerateHooks = (let __arr_8 = HxArray.create () in __arr_8); afterGenerateHooks = (let __arr_9 = HxArray.create () in __arr_9); run = (fun o a0 -> Obj.magic (inprocmacrosession_run__impl (Obj.magic o) (Obj.magic a0))); runHook = (fun o a0 a1 -> Obj.magic (inprocmacrosession_runHook__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); runTypeNotFoundHook = (fun o a0 a1 -> Obj.magic (inprocmacrosession_runTypeNotFoundHook__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); expandExpr = (fun o a0 -> Obj.magic (inprocmacrosession_expandExpr__impl (Obj.magic o) (Obj.magic a0))); setDefine = (fun o a0 a1 -> Obj.magic (inprocmacrosession_setDefine__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); definedValue = (fun o a0 -> Obj.magic (inprocmacrosession_definedValue__impl (Obj.magic o) (Obj.magic a0))); addClassPath = (fun o a0 -> Obj.magic (inprocmacrosession_addClassPath__impl (Obj.magic o) (Obj.magic a0))); emitOcamlModule = (fun o a0 a1 -> Obj.magic (inprocmacrosession_emitOcamlModule__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); emitBuildFields = (fun o a0 a1 -> Obj.magic (inprocmacrosession_emitBuildFields__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); registerAfterTypingHook = (fun o a0 -> Obj.magic (inprocmacrosession_registerAfterTypingHook__impl (Obj.magic o) (Obj.magic a0))); registerOnGenerateHook = (fun o a0 -> Obj.magic (inprocmacrosession_registerOnGenerateHook__impl (Obj.magic o) (Obj.magic a0))); registerAfterGenerateHook = (fun o a0 -> Obj.magic (inprocmacrosession_registerAfterGenerateHook__impl (Obj.magic o) (Obj.magic a0))); close = (fun o () -> Obj.magic (inprocmacrosession_close__impl (Obj.magic o) (Obj.magic ()))) } : inprocmacrosession_t)
+let inprocmacrosession_close = fun self () -> ignore ((
+  ignore self;
+  ignore ()
+))
+
+let inprocmacrosession_parseIncludeStringLiteralArg = fun s -> try let __fallback_result_48 = (
+  ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+  let t = (StringTools.trim (s : string) : string) in (
+    ignore (if HxString.length t < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    let q = HxString.charCodeAt t 0 in (
+      ignore (if not (let __nullable_43 = q in if __nullable_43 == HxRuntime.hx_null then false else Obj.obj __nullable_43 = 34) && not (let __nullable_44 = q in if __nullable_44 == HxRuntime.hx_null then false else Obj.obj __nullable_44 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_45 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_46 = q in if __nullable_45 == HxRuntime.hx_null then __nullable_45 == HxRuntime.hx_null && __nullable_46 == HxRuntime.hx_null else not (__nullable_46 == HxRuntime.hx_null) && Obj.obj __nullable_45 = Obj.obj __nullable_46) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      let body = (HxString.substr t 1 (HxInt.sub (HxString.length t) 2) : string) in let body = (StringTools.replace (body : string) ("\\\\" : string) ("\\" : string) : string) in let body = (StringTools.replace (body : string) ("\\\"" : string) ("\"" : string) : string) in let body = (StringTools.replace (body : string) ("\\'" : string) ("'" : string) : string) in body
+    )
+  )
+) in Obj.magic __fallback_result_48 with
+  | HxRuntime.Hx_return __ret_47 -> Obj.obj __ret_47
+
+let inprocmacrosession_isBuiltinExpr = fun expr -> StringTools.startsWith (expr : string) ("BuiltinMacros." : string) || StringTools.startsWith (expr : string) ("hxhxmacrohost.BuiltinMacros." : string)
+
+let inprocmacrosession_withoutBuiltinPrefixExpr = fun expr -> try let __fallback_result_50 = (
+  ignore (if StringTools.startsWith (expr : string) ("BuiltinMacros." : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr expr (HxString.length "BuiltinMacros.") (-1) : string))) else ());
+  ignore (if StringTools.startsWith (expr : string) ("hxhxmacrohost.BuiltinMacros." : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr expr (HxString.length "hxhxmacrohost.BuiltinMacros.") (-1) : string))) else ());
+  expr
+) in Obj.magic __fallback_result_50 with
+  | HxRuntime.Hx_return __ret_49 -> Obj.obj __ret_49
+
+let inprocmacrosession_builtinTypeDescExpr = fun name -> let tempResult = ref ("" : string) in (
+  ignore (match name with
+    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_52 = ("builtin:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_52;
+      __assign_52
+    )
+    | _ -> let __assign_51 = ("unknown:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_51;
+      __assign_51
+    ));
+  !tempResult
+)
+
+let inprocmacrosession_run = fun self (expr : string) -> try let __fallback_result_33 = let tempString = ref ("" : string) in (
+  ignore (if expr == Obj.magic (HxRuntime.hx_null) then let __assign_9 = ("" : string) in (
+    tempString := __assign_9;
+    __assign_9
+  ) else let __assign_10 = (expr : string) in (
+    tempString := __assign_10;
+    __assign_10
+  ));
+  let e = (StringTools.trim (!tempString : string) : string) in (
+    ignore (if HxString.length e = 0 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "macro.run: missing expr") ["Dynamic"; "String"]) else ());
+    ignore (if StringTools.startsWith (e : string) ("include(" : string) && StringTools.endsWith (e : string) (")" : string) then ignore (let inside = (StringTools.trim (HxString.substr e (HxString.length "include(") (HxInt.sub (HxInt.sub (HxString.length e) (HxString.length "include(")) 1) : string) : string) in let moduleName = (inprocmacrosession_parseIncludeStringLiteralArg (inside : string) : string) in if moduleName != Obj.magic (HxRuntime.hx_null) && HxString.length moduleName > 0 then ignore ((
+      ignore (Hxhx_macro_MacroState.includeModule (moduleName : string));
+      raise (HxRuntime.Hx_return (Obj.repr "include=ok"))
+    )) else ()) else ());
+    let generated = (Hxhx_macro_InProcGeneratedEntrypoints.run (e : string) ((Obj.magic self : inprocmacrosession_t).effectSink) : string) in (
+      ignore (if generated != Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (generated : string))) else ());
+      ignore (if not (inprocmacrosession_isBuiltinExpr (e : string)) then raise (HxRuntime.Hx_return (Obj.repr ("ran:" ^ HxString.toStdString e : string))) else ());
+      let builtin = (inprocmacrosession_withoutBuiltinPrefixExpr (e : string) : string) in let tempResult = ref ("" : string) in (
+        ignore (match builtin with
+          | "addCpFromEnv()" -> let cp = (HxSys.getEnv "HXHX_ADD_CP" : string) in if cp != Obj.magic (HxRuntime.hx_null) && HxString.length (StringTools.trim (cp : string)) > 0 then (
+            ignore (Hxhx_macro_MacroState.addClassPath (cp : string));
+            let __assign_12 = ("addCp=ok" : string) in (
+              tempResult := __assign_12;
+              __assign_12
+            )
+          ) else let __assign_13 = ("addCp=skip" : string) in (
+            tempResult := __assign_13;
+            __assign_13
+          )
+          | "dumpDefines()" -> (
+            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_ENUM" : string) ("1" : string));
+            let defs = Obj.magic (Hxhx_macro_MacroState.listDefinesPairsSorted ()) in let map = HxMap.create_string () in let _g = ref 0 in (
+              ignore (while !_g < HxArray.length defs do ignore (let kv = Obj.magic (HxArray.get (Obj.magic defs) (!_g)) in (
+                ignore (let __old_14 = !_g in let __new_15 = HxInt.add __old_14 1 in (
+                  ignore (_g := __new_15);
+                  __new_15
+                ));
+                HxMap.set_string map (HxArray.get (Obj.magic kv) 0) (HxArray.get (Obj.magic kv) 1)
+              )) done);
+              let tempMaybeString = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_16 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
+                  tempMaybeString := __assign_16;
+                  __assign_16
+                ) else let __assign_17 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                  tempMaybeString := __assign_17;
+                  __assign_17
+                ));
+                let flagMap = (!tempMaybeString : string) in let tempMaybeString1 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                  ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_18 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
+                    tempMaybeString1 := __assign_18;
+                    __assign_18
+                  ) else let __assign_19 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                    tempMaybeString1 := __assign_19;
+                    __assign_19
+                  ));
+                  let enumMap = (!tempMaybeString1 : string) in let tempMaybeString2 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                    ignore (if HxMap.exists_string map "HXHX_FLAG" then let __assign_20 = Obj.magic (HxMap.get_string map "HXHX_FLAG" : string) in (
+                      tempMaybeString2 := __assign_20;
+                      __assign_20
+                    ) else let __assign_21 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                      tempMaybeString2 := __assign_21;
+                      __assign_21
+                    ));
+                    let flagGet = (!tempMaybeString2 : string) in let tempMaybeString3 = ref (Obj.magic (HxRuntime.hx_null) : string) in (
+                      ignore (if HxMap.exists_string map "HXHX_ENUM" then let __assign_22 = Obj.magic (HxMap.get_string map "HXHX_ENUM" : string) in (
+                        tempMaybeString3 := __assign_22;
+                        __assign_22
+                      ) else let __assign_23 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+                        tempMaybeString3 := __assign_23;
+                        __assign_23
+                      ));
+                      let enumGet = (!tempMaybeString3 : string) in let __assign_24 = ((((((("defines:flag_map=" ^ HxString.toStdString (HxString.toStdString flagMap)) ^ ";flag_get=") ^ HxString.toStdString (HxString.toStdString flagGet)) ^ ";enum_map=") ^ HxString.toStdString (HxString.toStdString enumMap)) ^ ";enum_get=") ^ HxString.toStdString (HxString.toStdString enumGet) : string) in (
+                        tempResult := __assign_24;
+                        __assign_24
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+          | "fail()" -> HxType.hx_throw_typed_rtti (Obj.repr "intentional macro host failure (for position payload tests)") ["Dynamic"; "String"]
+          | "genHxModule()" -> (
+            ignore (Hxhx_macro_MacroState.emitHxModule ("Gen" : string) ("class Gen {}" : string));
+            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_HXGEN" : string) ("1" : string));
+            let __assign_25 = ("genHx=ok" : string) in (
+              tempResult := __assign_25;
+              __assign_25
+            )
+          )
+          | "genModule()" -> (
+            ignore (Hxhx_macro_MacroState.emitOcamlModule ("HxHxGen" : string) (("let generated : string = \"" ^ HxString.toStdString (inprocmacrosession_builtinTypeDescExpr ("String" : string))) ^ "\"" : string));
+            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_GEN" : string) ("1" : string));
+            let __assign_26 = ("genModule=ok" : string) in (
+              tempResult := __assign_26;
+              __assign_26
+            )
+          )
+          | "readFlag()" -> let __assign_27 = ("flag=" ^ HxString.toStdString (Hxhx_macro_MacroState.definedValue ("HXHX_FLAG" : string)) : string) in (
+            tempResult := __assign_27;
+            __assign_27
+          )
+          | "registerHooks()" -> let afterTypingId = HxArray.length ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) in (
+            ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).afterTypingHooks) (fun () -> ignore (Hxhx_macro_MacroState.setDefine ("HXHX_AFTER_TYPING" : string) ("1" : string))));
+            ignore (Hxhx_macro_MacroState.registerHook ("afterTyping" : string) afterTypingId);
+            let onGenerateId = HxArray.length ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) in (
+              ignore (HxArray.push ((Obj.magic self : inprocmacrosession_t).onGenerateHooks) (fun () -> ignore ((
+                ignore (Hxhx_macro_MacroState.emitOcamlModule ("HxHxHook" : string) ("let hook_generated : int = 1" : string));
+                Hxhx_macro_MacroState.setDefine ("HXHX_ON_GENERATE" : string) ("1" : string)
+              ))));
+              ignore (Hxhx_macro_MacroState.registerHook ("onGenerate" : string) onGenerateId);
+              let __assign_28 = ("hooks=ok" : string) in (
+                tempResult := __assign_28;
+                __assign_28
+              )
+            )
+          )
+          | "smoke()" -> (
+            ignore (Hxhx_macro_MacroState.setDefine ("HXHX_SMOKE" : string) ("1" : string));
+            let tempString1 = ref ("" : string) in (
+              ignore (if Hxhx_macro_MacroState.defined ("HXHX_SMOKE" : string) then let __assign_29 = ("yes" : string) in (
+                tempString1 := __assign_29;
+                __assign_29
+              ) else let __assign_30 = ("no" : string) in (
+                tempString1 := __assign_30;
+                __assign_30
+              ));
+              let __assign_31 = ((("smoke:type=" ^ HxString.toStdString (inprocmacrosession_builtinTypeDescExpr ("String" : string))) ^ ";define=") ^ HxString.toStdString (!tempString1) : string) in (
+                tempResult := __assign_31;
+                __assign_31
+              )
+            )
+          )
+          | _ -> let __assign_11 = ("ran:" ^ HxString.toStdString e : string) in (
+            tempResult := __assign_11;
+            __assign_11
+          ));
+        !tempResult
+      )
+    )
+  )
+) in Obj.magic __fallback_result_33 with
+  | HxRuntime.Hx_return __ret_32 -> Obj.obj __ret_32
 
 (* Generated by reflaxe.ocaml (WIP) *)
 (* Haxe type: hxhx.macro.InProcMacroRuntime *)
@@ -318,44 +341,45 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InPro
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroRuntime" } : t)
 
 let openSession = fun () -> let impl = Obj.magic (inprocmacrosession_create ()) in let __anon_1 = HxAnon.create () in (
-  ignore (HxAnon.set __anon_1 "run" (Obj.repr (fun a0 -> inprocmacrosession_run__impl impl a0)));
-  ignore (HxAnon.set __anon_1 "runHook" (Obj.repr (fun a0 a1 -> inprocmacrosession_runHook__impl impl a0 a1)));
-  ignore (HxAnon.set __anon_1 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> inprocmacrosession_runTypeNotFoundHook__impl impl a0 a1)));
-  ignore (HxAnon.set __anon_1 "expandExpr" (Obj.repr (fun a0 -> inprocmacrosession_expandExpr__impl impl a0)));
-  ignore (HxAnon.set __anon_1 "close" (Obj.repr (fun () -> inprocmacrosession_close__impl impl ())));
-  __anon_1)
+  ignore (HxAnon.set __anon_1 "run" (Obj.repr (fun a0 -> inprocmacrosession_run impl a0)));
+  ignore (HxAnon.set __anon_1 "runHook" (Obj.repr (fun a0 a1 -> inprocmacrosession_runHook impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> inprocmacrosession_runTypeNotFoundHook impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "expandExpr" (Obj.repr (fun a0 -> inprocmacrosession_expandExpr impl a0)));
+  ignore (HxAnon.set __anon_1 "close" (Obj.repr (fun () -> inprocmacrosession_close impl ())));
+  __anon_1
+)
 
-let parseOneStringLiteralArg = fun s -> try let __fallback_result_6 = (
+let parseOneStringLiteralArg = fun s -> try let __fallback_result_7 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
   let t = (StringTools.trim (s : string) : string) in (
     ignore (if HxString.length t < 2 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
     let q = HxString.charCodeAt t 0 in (
-      ignore (if not (let __nullable_1 = q in if __nullable_1 == HxRuntime.hx_null then false else Obj.obj __nullable_1 = 34) && not (let __nullable_2 = q in if __nullable_2 == HxRuntime.hx_null then false else Obj.obj __nullable_2 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-      ignore (if not (let __nullable_3 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_4 = q in if __nullable_3 == HxRuntime.hx_null then __nullable_3 == HxRuntime.hx_null && __nullable_4 == HxRuntime.hx_null else not (__nullable_4 == HxRuntime.hx_null) && Obj.obj __nullable_3 = Obj.obj __nullable_4) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_2 = q in if __nullable_2 == HxRuntime.hx_null then false else Obj.obj __nullable_2 = 34) && not (let __nullable_3 = q in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 = 39) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      ignore (if not (let __nullable_4 = HxString.charCodeAt t (HxInt.sub (HxString.length t) 1) in let __nullable_5 = q in if __nullable_4 == HxRuntime.hx_null then __nullable_4 == HxRuntime.hx_null && __nullable_5 == HxRuntime.hx_null else not (__nullable_5 == HxRuntime.hx_null) && Obj.obj __nullable_4 = Obj.obj __nullable_5) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
       let body = (HxString.substr t 1 (HxInt.sub (HxString.length t) 2) : string) in let body = (StringTools.replace (body : string) ("\\\\" : string) ("\\" : string) : string) in let body = (StringTools.replace (body : string) ("\\\"" : string) ("\"" : string) : string) in let body = (StringTools.replace (body : string) ("\\'" : string) ("'" : string) : string) in body
     )
   )
-) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+) in Obj.magic __fallback_result_7 with
+  | HxRuntime.Hx_return __ret_6 -> Obj.obj __ret_6
 
 let builtinTypeDesc = fun name -> let tempResult = ref ("" : string) in (
   ignore (match name with
-    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_8 = ("builtin:" ^ HxString.toStdString name : string) in (
+    | "Bool" | "Float" | "Int" | "String" | "Void" -> let __assign_9 = ("builtin:" ^ HxString.toStdString name : string) in (
+      tempResult := __assign_9;
+      __assign_9
+    )
+    | _ -> let __assign_8 = ("unknown:" ^ HxString.toStdString name : string) in (
       tempResult := __assign_8;
       __assign_8
-    )
-    | _ -> let __assign_7 = ("unknown:" ^ HxString.toStdString name : string) in (
-      tempResult := __assign_7;
-      __assign_7
     ));
   !tempResult
 )
 
 let isBuiltin = fun expr -> StringTools.startsWith (expr : string) ("BuiltinMacros." : string) || StringTools.startsWith (expr : string) ("hxhxmacrohost.BuiltinMacros." : string)
 
-let withoutBuiltinPrefix = fun expr -> try let __fallback_result_10 = (
+let withoutBuiltinPrefix = fun expr -> try let __fallback_result_11 = (
   ignore (if StringTools.startsWith (expr : string) ("BuiltinMacros." : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr expr (HxString.length "BuiltinMacros.") (-1) : string))) else ());
   ignore (if StringTools.startsWith (expr : string) ("hxhxmacrohost.BuiltinMacros." : string) then raise (HxRuntime.Hx_return (Obj.repr (HxString.substr expr (HxString.length "hxhxmacrohost.BuiltinMacros.") (-1) : string))) else ());
   expr
-) in Obj.magic __fallback_result_10 with
-  | HxRuntime.Hx_return __ret_9 -> Obj.obj __ret_9
+) in Obj.magic __fallback_result_11 with
+  | HxRuntime.Hx_return __ret_10 -> Obj.obj __ret_10

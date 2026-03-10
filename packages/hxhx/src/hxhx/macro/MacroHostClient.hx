@@ -1,5 +1,7 @@
 package hxhx.macro;
 
+import hxhx.runtime.NullableRuntimeString;
+
 private typedef RuntimeResolvedTypeSnapshot = {
 	final name:String;
 	final kind:String;

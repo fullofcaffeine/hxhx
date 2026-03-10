@@ -70,17 +70,17 @@ type field_decl = {
 }
 
 let starts_with (s : string) (prefix : string) : bool =
-  let sl = String.length s in
-  let pl = String.length prefix in
-  sl >= pl && String.sub s 0 pl = prefix
+  let sl = Stdlib.String.length s in
+  let pl = Stdlib.String.length prefix in
+  sl >= pl && Stdlib.String.sub s 0 pl = prefix
 
 let split_non_empty_lines (s : string) : string list =
-  let lines = String.split_on_char '\n' s in
+  let lines = Stdlib.String.split_on_char '\n' s in
   List.filter (fun l -> l <> "") lines
 
 let escape_payload (s : string) : string =
-  let b = Buffer.create (String.length s) in
-  String.iter
+  let b = Buffer.create (Stdlib.String.length s) in
+  Stdlib.String.iter
     (fun c ->
       match c with
       | '\\' -> Buffer.add_string b "\\\\"
@@ -92,16 +92,16 @@ let escape_payload (s : string) : string =
   Buffer.contents b
 
 let unescape_payload (s : string) : string =
-  let b = Buffer.create (String.length s) in
+  let b = Buffer.create (Stdlib.String.length s) in
   let i = ref 0 in
-  while !i < String.length s do
-    match s.[!i] with
+  while !i < Stdlib.String.length s do
+    match (Stdlib.String.get s (!i)) with
     | '\\' ->
-        if !i + 1 >= String.length s then (
+        if !i + 1 >= Stdlib.String.length s then (
           Buffer.add_char b '\\';
           i := !i + 1)
         else (
-          match s.[!i + 1] with
+          match (Stdlib.String.get s (!i + 1)) with
           | 'n' ->
               Buffer.add_char b '\n';
               i := !i + 2
@@ -125,19 +125,19 @@ let unescape_payload (s : string) : string =
 
 let parse_len_payload (s : string) : string =
   (* s is "<len>:<payload...>" (payload may contain spaces). *)
-  match String.index_opt s ':' with
+  match Stdlib.String.index_opt s ':' with
   | None -> failwith "HxHxNativeParser: missing ':' in len payload"
   | Some colon ->
-      let len_s = String.sub s 0 colon in
-      let payload = String.sub s (colon + 1) (String.length s - colon - 1) in
+      let len_s = Stdlib.String.sub s 0 colon in
+      let payload = Stdlib.String.sub s (colon + 1) (Stdlib.String.length s - colon - 1) in
       let expected = int_of_string len_s in
-      if String.length payload < expected then
+      if Stdlib.String.length payload < expected then
         failwith "HxHxNativeParser: payload shorter than expected length"
-      else unescape_payload (String.sub payload 0 expected)
+      else unescape_payload (Stdlib.String.sub payload 0 expected)
 
 let parse_tok_line (l : string) : token =
   (* tok <kind> <index> <line> <col> <len>:<payload> *)
-  let parts = String.split_on_char ' ' l in
+  let parts = Stdlib.String.split_on_char ' ' l in
   match parts with
   | "tok" :: kind :: idx_s :: line_s :: col_s :: rest ->
       let at =
@@ -147,7 +147,7 @@ let parse_tok_line (l : string) : token =
           col = int_of_string col_s;
         }
       in
-      let payload = String.concat " " rest in
+      let payload = Stdlib.String.concat " " rest in
       let value = parse_len_payload payload in
       (match kind with
       | "kw" -> Kw (value, at)
@@ -155,8 +155,8 @@ let parse_tok_line (l : string) : token =
       | "string" -> String (value, at)
       | "regex" -> Regex (value, at)
       | "sym" ->
-          if String.length value = 0 then failwith "HxHxNativeParser: empty sym";
-          Sym (value.[0], at)
+          if Stdlib.String.length value = 0 then failwith "HxHxNativeParser: empty sym";
+          Sym (Stdlib.String.get value (0), at)
       | "eof" -> Eof at
       | _ -> failwith ("HxHxNativeParser: unknown tok kind: " ^ kind))
   | _ -> failwith ("HxHxNativeParser: invalid tok line: " ^ l)
@@ -219,7 +219,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
   in
   let expect_sym (c : char) =
     if token_eq_sym (cur ()) c then bump ()
-    else raise (Parse_error (pos_of (cur ()), "expected symbol: " ^ String.make 1 c))
+    else raise (Parse_error (pos_of (cur ()), "expected symbol: " ^ Stdlib.String.make 1 c))
   in
   let read_ident () : string =
     match cur () with
@@ -243,7 +243,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
       bump ();
       parts := !parts @ [ read_ident () ]
     done;
-    String.concat "." !parts
+    Stdlib.String.concat "." !parts
   in
 
   let read_import_path () : string =
@@ -262,7 +262,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           done_ := true
       | _ -> parts := !parts @ [ read_ident () ]
     done;
-    String.concat "." !parts
+    Stdlib.String.concat "." !parts
   in
 
   let package_path = ref "" in
@@ -312,7 +312,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
     | Ident (s, _) -> s
     | String (s, _) -> "\"" ^ s ^ "\""
     | Regex (s, _) -> s
-    | Sym (c, _) -> String.make 1 c
+    | Sym (c, _) -> Stdlib.String.make 1 c
     | Eof _ -> ""
   in
 
@@ -333,7 +333,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           cur_default_hint := None;
           reading_type := false
       | Some name ->
-          let ty_raw = String.concat "" !cur_type_parts |> String.trim in
+          let ty_raw = Stdlib.String.concat "" !cur_type_parts |> Stdlib.String.trim in
           let ty =
             if ty_raw <> "" then ty_raw
             else match !cur_default_hint with Some h -> h | None -> ""
@@ -451,7 +451,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
             Buffer.add_string parts (tok_to_text tok);
             bump ()
       done;
-      let txt = Buffer.contents parts |> String.trim in
+      let txt = Buffer.contents parts |> Stdlib.String.trim in
       if txt = "" then None else Some txt)
     else None
   in
@@ -546,7 +546,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
             Buffer.add_string parts (tok_to_text tok);
             bump ()
       done;
-      let s = Buffer.contents parts |> String.trim in
+      let s = Buffer.contents parts |> Stdlib.String.trim in
       if s = "" then None else Some s
     in
     match cur () with
@@ -598,8 +598,8 @@ let parse_module_from_tokens (src : string) (toks : token array)
           | None -> None
           | Some end_idx ->
               if body_start < 0 || end_idx < body_start then None
-              else if end_idx > String.length src then None
-              else Some (String.sub src body_start (end_idx - body_start))
+              else if end_idx > Stdlib.String.length src then None
+              else Some (Stdlib.String.sub src body_start (end_idx - body_start))
         in
         (!found_str, !found_ident, !found_expr, body_src)
     | Kw ("return", _) -> (
@@ -685,7 +685,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
           Buffer.add_string parts (tok_to_text tok);
           bump ()
     done;
-    let s = Buffer.contents parts |> String.trim in
+    let s = Buffer.contents parts |> Stdlib.String.trim in
     if s = "" then None else Some s
   in
 
@@ -832,7 +832,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
                     do
                       ()
                     done;
-                    let s = Buffer.contents parts |> String.trim in
+                    let s = Buffer.contents parts |> Stdlib.String.trim in
                     if s = "" then None else Some s)
                   else None
                 in
@@ -915,7 +915,7 @@ let parse_module_from_tokens (src : string) (toks : token array)
                     do
                       ()
                     done;
-                    let s = Buffer.contents parts |> String.trim in
+                    let s = Buffer.contents parts |> Stdlib.String.trim in
                     if s = "" then None else Some s)
                   else None
                 in
@@ -1077,7 +1077,7 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
           | Some s -> parts := !parts @ [ s ]
           | None -> ()
         done;
-        String.concat "." !parts
+        Stdlib.String.concat "." !parts
   in
 
   let read_import_path () : string =
@@ -1098,7 +1098,7 @@ let parse_module_header_only (toks : token array) (expected_main_class : string 
               | Some s -> parts := !parts @ [ s ]
               | None -> done_ := true)
         done;
-        String.concat "." !parts
+        Stdlib.String.concat "." !parts
   in
 
   let package_path = ref "" in
@@ -1166,16 +1166,16 @@ let encode_ast_lines (package_path : string) (imports : string list)
     (class_name : string) (header_only : bool) (has_toplevel_main : bool)
     (has_static_main : bool) (methods : method_decl list) (fields : field_decl list) : string =
   let pkg_enc = escape_payload package_path in
-  let imports_payload = String.concat "|" imports in
+  let imports_payload = Stdlib.String.concat "|" imports in
   let imports_enc = escape_payload imports_payload in
   let cls_enc = escape_payload class_name in
   let header_only_s = if header_only then "1" else "0" in
   let toplevel_s = if has_toplevel_main then "1" else "0" in
   let base =
     [
-      Printf.sprintf "ast package %d:%s" (String.length pkg_enc) pkg_enc;
-      Printf.sprintf "ast imports %d:%s" (String.length imports_enc) imports_enc;
-      Printf.sprintf "ast class %d:%s" (String.length cls_enc) cls_enc;
+      Printf.sprintf "ast package %d:%s" (Stdlib.String.length pkg_enc) pkg_enc;
+      Printf.sprintf "ast imports %d:%s" (Stdlib.String.length imports_enc) imports_enc;
+      Printf.sprintf "ast class %d:%s" (Stdlib.String.length cls_enc) cls_enc;
       Printf.sprintf "ast header_only 1:%s" header_only_s;
       Printf.sprintf "ast toplevel_main 1:%s" toplevel_s;
       "ast static_main " ^ if has_static_main then "1" else "0";
@@ -1188,12 +1188,12 @@ let encode_ast_lines (package_path : string) (imports : string list)
           match m.visibility with Public -> "public" | Private -> "private"
         in
         let static_s = if m.is_static then "1" else "0" in
-        let args_payload = String.concat "," (List.map fst m.args) in
+        let args_payload = Stdlib.String.concat "," (List.map fst m.args) in
         let argtypes_payload =
           m.args
           |> List.filter_map (fun (n, t) ->
                  match t with None -> None | Some ty -> Some (n ^ ":" ^ ty))
-          |> String.concat ","
+          |> Stdlib.String.concat ","
         in
         let ret_payload = match m.return_type_hint with None -> "" | Some s -> s in
         let retstr_payload = match m.return_string with None -> "" | Some s -> s in
@@ -1201,7 +1201,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
         let retexpr_payload = match m.return_expr with None -> "" | Some s -> s in
         (* Bootstrap note: payload is a '|' separated list and is not itself escaped for '|'. *)
         let payload =
-          String.concat "|"
+          Stdlib.String.concat "|"
             [
               m.name;
               vis;
@@ -1215,7 +1215,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
             ]
         in
         let enc = escape_payload payload in
-        Printf.sprintf "ast method %d:%s" (String.length enc) enc)
+        Printf.sprintf "ast method %d:%s" (Stdlib.String.length enc) enc)
       methods
   in
   let encode_field_payload (f : field_decl) : string =
@@ -1234,7 +1234,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
     fields
     |> List.map (fun (f : field_decl) ->
            let enc = escape_payload (encode_field_payload f) in
-           Printf.sprintf "ast field %d:%s" (String.length enc) enc)
+           Printf.sprintf "ast field %d:%s" (Stdlib.String.length enc) enc)
   in
   let static_final_lines =
     fields
@@ -1253,7 +1253,7 @@ let encode_ast_lines (package_path : string) (imports : string list)
               - Avoids `|` collisions in the initializer expression text. *)
            let payload = f.name ^ "\n" ^ vis ^ "\n" ^ static_s ^ "\n" ^ hint ^ "\n" ^ init in
            let enc = escape_payload payload in
-           Printf.sprintf "ast static_final %d:%s" (String.length enc) enc)
+           Printf.sprintf "ast static_final %d:%s" (Stdlib.String.length enc) enc)
   in
   let body_lines =
     methods
@@ -1269,14 +1269,14 @@ let encode_ast_lines (package_path : string) (imports : string list)
                   `ast method`'s field separators). *)
                let payload = m.name ^ "\n" ^ body in
                let enc = escape_payload payload in
-               Some (Printf.sprintf "ast method_body %d:%s" (String.length enc) enc))
+               Some (Printf.sprintf "ast method_body %d:%s" (Stdlib.String.length enc) enc))
   in
-  String.concat "\n"
+  Stdlib.String.concat "\n"
     (base @ field_lines @ static_final_lines @ method_lines @ body_lines)
 
 let encode_err_line (p : pos) (msg : string) : string =
   let enc = escape_payload msg in
-  Printf.sprintf "err %d %d %d %d:%s" p.index p.line p.col (String.length enc) enc
+  Printf.sprintf "err %d %d %d %d:%s" p.index p.line p.col (Stdlib.String.length enc) enc
 
 let strip_terminal_ok (lex_stream : string) : string =
   let lines = split_non_empty_lines lex_stream in
@@ -1285,7 +1285,7 @@ let strip_terminal_ok (lex_stream : string) : string =
       (fun l -> l <> "ok" && not (starts_with l "hxhx_frontend_v="))
       lines
   in
-  String.concat "\n" kept
+  Stdlib.String.concat "\n" kept
 
 let parse_module_decl_common (src : string) (expected_main_class : string option) :
     string =
@@ -1301,21 +1301,21 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
     let lex_stream = HxHxNativeLexer.tokenize src in
     match decode_lexer_stream lex_stream with
     | Error msg ->
-        String.concat "\n"
+        Stdlib.String.concat "\n"
           [
             "hxhx_frontend_v=2";
             encode_err_line { index = 0; line = 0; col = 0 } msg;
           ]
     | Ok ((_toks, Some _err_line)) ->
         (* Lexer already emitted a protocol error; pass it through under parser protocol header. *)
-        String.concat "\n" [ "hxhx_frontend_v=2"; strip_terminal_ok lex_stream ]
+        Stdlib.String.concat "\n" [ "hxhx_frontend_v=2"; strip_terminal_ok lex_stream ]
     | Ok ((toks, None)) -> (
         let base = strip_terminal_ok lex_stream in
         try
           let package_path, imports, has_toplevel_main, class_name, has_static_main, methods, fields =
             parse_module_from_tokens src toks expected_main_class
           in
-          String.concat "\n"
+          Stdlib.String.concat "\n"
             [
               "hxhx_frontend_v=2";
               base;
@@ -1331,7 +1331,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
               let package_path, imports, has_toplevel_main, class_name =
                 parse_module_header_only toks expected_main_class
               in
-              String.concat "\n"
+              Stdlib.String.concat "\n"
                 [
                   "hxhx_frontend_v=2";
                   base;
@@ -1340,14 +1340,14 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
                   "ok";
                 ]
             else
-              String.concat "\n"
+              Stdlib.String.concat "\n"
                 [ "hxhx_frontend_v=2"; base; encode_err_line p msg ]
         | _exn ->
             if header_only_enabled () then
               let package_path, imports, has_toplevel_main, class_name =
                 parse_module_header_only toks expected_main_class
               in
-              String.concat "\n"
+              Stdlib.String.concat "\n"
                 [
                   "hxhx_frontend_v=2";
                   base;
@@ -1357,7 +1357,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
                 ]
             else
               (* Surface the failure as a parse error to keep Stage1 deterministic. *)
-              String.concat "\n"
+              Stdlib.String.concat "\n"
                 [
                   "hxhx_frontend_v=2";
                   base;
@@ -1365,7 +1365,7 @@ let parse_module_decl_common (src : string) (expected_main_class : string option
                     "HxHxNativeParser: failed to parse module";
                 ])
   with exn ->
-    String.concat "\n"
+    Stdlib.String.concat "\n"
       [
         "hxhx_frontend_v=2";
         encode_err_line { index = 0; line = 0; col = 0 } (Printexc.to_string exn);
@@ -1376,7 +1376,7 @@ let parse_module_decl (src : string) : string = parse_module_decl_common src Non
 let parse_module_decl_with_expected (src : string) (expected_main_class : string) :
     string =
   let expected =
-    let s = String.trim expected_main_class in
+    let s = Stdlib.String.trim expected_main_class in
     if s = "" then None else Some s
   in
   parse_module_decl_common src expected

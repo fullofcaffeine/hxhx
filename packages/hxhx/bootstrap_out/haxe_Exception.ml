@@ -56,8 +56,8 @@ let unwrap__impl = fun (self : t) () -> (Obj.magic self : t).__nativeException
 
 let toString__impl = fun (self : t) () -> (Obj.magic self : t).get_message (Obj.magic self) ()
 
-let details__impl = fun (self : t) () -> let tempResult = ref ("" : string) in (
-  ignore (if (Obj.magic self : t).get_previous (Obj.magic self) () == Obj.magic (HxRuntime.hx_null) then let tempRight = ref ("" : string) in (
+let details__impl = fun (self : t) () -> try let __fallback_result_30 = (
+  ignore (if (Obj.magic self : t).get_previous (Obj.magic self) () == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight = ref ("" : string) in (
     ignore (let tmp = (Obj.magic self : t).get_stack (Obj.magic self) () in if tmp == Obj.magic (HxRuntime.hx_null) then let __assign_13 = ("null" : string) in (
       tempRight := __assign_13;
       __assign_13
@@ -65,53 +65,48 @@ let details__impl = fun (self : t) () -> let tempResult = ref ("" : string) in (
       tempRight := __assign_14;
       __assign_14
     ));
-    let __assign_15 = (("Exception: " ^ HxString.toStdString ((Obj.magic self : t).toString (Obj.magic self) ())) ^ HxString.toStdString (!tempRight) : string) in (
-      tempResult := __assign_15;
-      __assign_15
-    )
-  ) else let result = ref ("" : string) in let e = ref (Obj.magic self) in let prev = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : t) in (
-    ignore (while !e != Obj.magic (HxRuntime.hx_null) do ignore ((
+    raise (HxRuntime.Hx_return (Obj.repr (("Exception: " ^ HxString.toStdString ((Obj.magic self : t).toString (Obj.magic self) ())) ^ HxString.toStdString (!tempRight))))
+  )) else ());
+  let result = ref ("" : string) in let current = ref (Obj.magic self) in let prev = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : t) in (
+    ignore (while !current != Obj.magic (HxRuntime.hx_null) do ignore ((
       ignore (if !prev == Obj.magic (HxRuntime.hx_null) then ignore (let tempRight1 = ref ("" : string) in (
-        ignore (let tmp = let __obj_16 = !e in (Obj.magic __obj_16 : t).get_stack (Obj.magic __obj_16) () in if tmp == Obj.magic (HxRuntime.hx_null) then let __assign_17 = ("null" : string) in (
+        ignore (let tmp = let __obj_15 = !current in (Obj.magic __obj_15 : t).get_stack (Obj.magic __obj_15) () in if tmp == Obj.magic (HxRuntime.hx_null) then let __assign_16 = ("null" : string) in (
+          tempRight1 := __assign_16;
+          __assign_16
+        ) else let __assign_17 = (Haxe_CallStack.toString tmp : string) in (
           tempRight1 := __assign_17;
           __assign_17
-        ) else let __assign_18 = (Haxe_CallStack.toString tmp : string) in (
-          tempRight1 := __assign_18;
-          __assign_18
         ));
-        let __assign_19 = ((("Exception: " ^ HxString.toStdString (let __obj_20 = !e in (Obj.magic __obj_20 : t).get_message (Obj.magic __obj_20) ())) ^ HxString.toStdString (!tempRight1)) ^ HxString.toStdString (!result) : string) in (
-          result := __assign_19;
-          __assign_19
+        let __assign_18 = ((("Exception: " ^ HxString.toStdString (let __obj_19 = !current in (Obj.magic __obj_19 : t).get_message (Obj.magic __obj_19) ())) ^ HxString.toStdString (!tempRight1)) ^ HxString.toStdString (!result) : string) in (
+          result := __assign_18;
+          __assign_18
         )
-      )) else ignore (let prevStack = Haxe_CallStack.subtract (Obj.magic (let __obj_21 = !e in (Obj.magic __obj_21 : t).get_stack (Obj.magic __obj_21) ())) (let __obj_22 = !prev in (Obj.magic __obj_22 : t).get_stack (Obj.magic __obj_22) ()) in let tempString = ref ("" : string) in (
-        ignore (if prevStack == Obj.magic (HxRuntime.hx_null) then let __assign_23 = ("null" : string) in (
+      )) else ignore (let prevStack = Haxe_CallStack.subtract (Obj.magic (let __obj_20 = !current in (Obj.magic __obj_20 : t).get_stack (Obj.magic __obj_20) ())) (let __obj_21 = !prev in (Obj.magic __obj_21 : t).get_stack (Obj.magic __obj_21) ()) in let tempString = ref ("" : string) in (
+        ignore (if prevStack == Obj.magic (HxRuntime.hx_null) then let __assign_22 = ("null" : string) in (
+          tempString := __assign_22;
+          __assign_22
+        ) else let __assign_23 = (Haxe_CallStack.toString prevStack : string) in (
           tempString := __assign_23;
           __assign_23
-        ) else let __assign_24 = (Haxe_CallStack.toString prevStack : string) in (
-          tempString := __assign_24;
-          __assign_24
         ));
-        let __assign_25 = (((("Exception: " ^ HxString.toStdString (let __obj_26 = !e in (Obj.magic __obj_26 : t).get_message (Obj.magic __obj_26) ())) ^ HxString.toStdString (!tempString)) ^ "\n\nNext ") ^ HxString.toStdString (!result) : string) in (
-          result := __assign_25;
-          __assign_25
+        let __assign_24 = (((("Exception: " ^ HxString.toStdString (let __obj_25 = !current in (Obj.magic __obj_25 : t).get_message (Obj.magic __obj_25) ())) ^ HxString.toStdString (!tempString)) ^ "\n\nNext ") ^ HxString.toStdString (!result) : string) in (
+          result := __assign_24;
+          __assign_24
         )
       )));
-      ignore (let __assign_27 = Obj.magic (Obj.magic (!e)) in (
-        prev := __assign_27;
-        __assign_27
+      ignore (let __assign_26 = Obj.magic (Obj.magic (!current)) in (
+        prev := __assign_26;
+        __assign_26
       ));
-      let __assign_28 = Obj.magic (Obj.magic (let __obj_29 = !e in (Obj.magic __obj_29 : t).get_previous (Obj.magic __obj_29) ())) in (
-        e := __assign_28;
-        __assign_28
+      let __assign_27 = Obj.magic (Obj.magic (let __obj_28 = !current in (Obj.magic __obj_28 : t).get_previous (Obj.magic __obj_28) ())) in (
+        current := __assign_27;
+        __assign_27
       )
     )) done);
-    let __assign_30 = (!result : string) in (
-      tempResult := __assign_30;
-      __assign_30
-    )
-  ));
-  !tempResult
-)
+    !result
+  )
+) in Obj.magic __fallback_result_30 with
+  | HxRuntime.Hx_return __ret_29 -> Obj.obj __ret_29
 
 let __shiftStack__impl = fun (self : t) () -> ignore (ignore (let __obj_31 = self in let __old_32 = (Obj.magic __obj_31 : t).__skipStack in let __new_33 = HxInt.add __old_32 1 in (
   ignore ((Obj.magic __obj_31 : t).__skipStack <- __new_33);

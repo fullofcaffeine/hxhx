@@ -33,8 +33,8 @@ let is_ident_cont (c : char) : bool =
   is_ident_start c || ('0' <= c && c <= '9')
 
 let escape_payload (s : string) : string =
-  let b = Buffer.create (String.length s) in
-  String.iter
+  let b = Buffer.create (Stdlib.String.length s) in
+  Stdlib.String.iter
     (fun c ->
       match c with
       | '\\' -> Buffer.add_string b "\\\\"
@@ -46,7 +46,7 @@ let escape_payload (s : string) : string =
   Buffer.contents b
 
 let tokenize (src : string) : string =
-  let len = String.length src in
+  let len = Stdlib.String.length src in
   let idx = ref 0 in
   let line = ref 1 in
   let col = ref 1 in
@@ -55,7 +55,7 @@ let tokenize (src : string) : string =
   let eof () = !idx >= len in
   let peek (off : int) : char option =
     let i = !idx + off in
-    if i < 0 || i >= len then None else Some (String.get src i)
+    if i < 0 || i >= len then None else Some (Stdlib.String.get src i)
   in
   let bump () : char =
     match peek 0 with
@@ -78,14 +78,14 @@ let tokenize (src : string) : string =
     let enc = escape_payload payload in
     add_line
       (Printf.sprintf "tok %s %d %d %d %d:%s" kind at_idx at_line at_col
-         (String.length enc) enc)
+         (Stdlib.String.length enc) enc)
   in
   let add_err (at_idx : int) (at_line : int) (at_col : int) (message : string)
       =
     let enc = escape_payload message in
     add_line
       (Printf.sprintf "err %d %d %d %d:%s" at_idx at_line at_col
-         (String.length enc) enc)
+         (Stdlib.String.length enc) enc)
   in
 
   add_line "hxhx_frontend_v=1";
@@ -136,7 +136,7 @@ let tokenize (src : string) : string =
     do
       ignore (bump ())
     done;
-    String.sub src start (!idx - start)
+    Stdlib.String.sub src start (!idx - start)
   in
 
   let read_quoted_string (quote : char) : string =
@@ -198,7 +198,7 @@ let tokenize (src : string) : string =
     do
       ignore (bump ())
     done;
-    String.sub src start (!idx - start)
+    Stdlib.String.sub src start (!idx - start)
   in
 
   let rec loop () =
@@ -249,7 +249,7 @@ let tokenize (src : string) : string =
              This keeps the lexer permissive while the parser only cares about
              a very small subset of punctuation. *)
           ignore (bump ());
-          add_tok "sym" at_idx at_line at_col (String.make 1 c);
+          add_tok "sym" at_idx at_line at_col (Stdlib.String.make 1 c);
           loop ()
       | None ->
           add_tok "eof" !idx !line !col "";

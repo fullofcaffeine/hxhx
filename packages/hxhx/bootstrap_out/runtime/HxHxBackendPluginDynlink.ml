@@ -14,7 +14,7 @@
 *)
 
 let normalize_token ~(field : string) (value : string) : string =
-  let token = String.trim value in
+  let token = Stdlib.String.trim value in
   if token = "" then
     invalid_arg ("HxHxBackendPluginDynlink." ^ field ^ " is required");
   token
