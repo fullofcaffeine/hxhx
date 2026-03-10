@@ -98,6 +98,18 @@ jobs:
       - name: Fetch upstream Haxe checkout (vendor/haxe)
         run: bash scripts/vendor/fetch-haxe-upstream.sh
 
+      - name: Build shared hxhx binary
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/full1/eval-native
+          HXHX_STAGE0_PREFER_NATIVE=1 HXHX_STAGE0_OCAML_BUILD=native bash scripts/hxhx/build-hxhx.sh | tee .artifacts/full1/eval-native/build-hxhx.stdout.log
+          HXHX_BIN="$(tail -n 1 .artifacts/full1/eval-native/build-hxhx.stdout.log)"
+          if [ ! -x "${HXHX_BIN}" ] && [ ! -f "${HXHX_BIN}" ]; then
+            echo "Resolved HXHX_BIN does not exist: ${HXHX_BIN}" >&2
+            exit 1
+          fi
+          echo "HXHX_BIN=${HXHX_BIN}" >> "$GITHUB_ENV"
+
       - name: Run Full1 native eval/interp runner
         run: node scripts/ci/run-full1-eval-native.js
 

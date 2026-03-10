@@ -98,15 +98,16 @@ class M14RuntimeStage3CliMacroIntegrationTest {
 			assertTrue(built.length > 0, "expected build-hxhx to print an executable path");
 			built;
 		};
-		final quotedHxCmd = StringTools.endsWith(hxBin, ".bc")
-			? ("ocamlrun " + shellQuote(hxBin))
-			: shellQuote(hxBin);
-		final run = runShell(
-			"HAXE_STD_PATH=" + shellQuote(Path.join([repoRoot, "vendor", "haxe", "std"])) + " timeout 20s " +
-			quotedHxCmd + " --hxhx-stage3 -C " + shellQuote(Path.normalize(Path.join([repoRoot, projectRoot]))) +
-			" -cp src -main Main -lib utest --interp --hxhx-no-emit --macro " + shellQuote("0"),
-			repoRoot
-		);
+		final quotedHxCmd = StringTools.endsWith(hxBin, ".bc") ? ("ocamlrun " + shellQuote(hxBin)) : shellQuote(hxBin);
+		final run = runShell("HAXE_STD_PATH="
+			+ shellQuote(Path.join([repoRoot, "vendor", "haxe", "std"]))
+			+ " timeout 20s "
+			+ quotedHxCmd
+			+ " --hxhx-stage3 -C "
+			+ shellQuote(Path.normalize(Path.join([repoRoot, projectRoot])))
+			+ " -cp src -main Main -lib utest --interp --hxhx-no-emit --macro "
+			+ shellQuote("0"),
+			repoRoot);
 		if (run.code != 0)
 			fail("stage3 cli macro executable failed:\nSTDOUT:\n" + run.stdout + "\nSTDERR:\n" + run.stderr + "\nEXIT:" + run.code);
 

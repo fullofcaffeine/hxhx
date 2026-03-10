@@ -97,6 +97,7 @@ function main() {
   env.HAXE_UPSTREAM_DIR = parsed.upstreamDir
   env.HXHX_FORBID_STAGE0 = env.HXHX_FORBID_STAGE0 || '1'
   delete env.HXHX_ALLOW_STAGE0
+  const hxhxBin = String(env.HXHX_BIN || '').trim()
 
   const command = ['bash', 'scripts/hxhx/run-upstream-unit-macro-native.sh']
   const result = run(command[0], command.slice(1), { cwd: parsed.root, env })
@@ -118,6 +119,7 @@ function main() {
       command,
       stage0_forbidden: env.HXHX_FORBID_STAGE0 === '1',
       macro_runtime_mode: String(env.HXHX_MACRO_RUNTIME_MODE || 'default(inproc)'),
+      hxhx_bin: hxhxBin || null,
     },
     result: {
       exit_code: result.status == null ? -1 : result.status,
