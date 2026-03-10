@@ -23,6 +23,30 @@ const fs = require('fs')
 const path = require('path')
 const cp = require('child_process')
 
+function latestMtimeMs(root) {
+  if (!fs.existsSync(root)) return 0
+  let latest = 0
+  const stack = [root]
+  while (stack.length > 0) {
+    const current = stack.pop()
+    const stat = fs.statSync(current)
+    if (stat.mtimeMs > latest) latest = stat.mtimeMs
+    if (!stat.isDirectory()) continue
+    for (const name of fs.readdirSync(current))
+      stack.push(path.join(current, name))
+  }
+  return latest
+}
+
+function latestMtimeMsMany(paths) {
+  let latest = 0
+  for (const current of paths) {
+    const value = latestMtimeMs(current)
+    if (value > latest) latest = value
+  }
+  return latest
+}
+
 function fail(message) {
   console.error(`[full1-eval-native] ERROR: ${message}`)
   process.exit(1)
@@ -67,6 +91,13 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true })
 }
 
+function resolveExecutable(root, maybePath) {
+  const text = String(maybePath || '').trim()
+  if (!text) return ''
+  if (path.isAbsolute(text)) return text
+  return path.resolve(root, text)
+}
+
 function writeFile(filePath, contents) {
   fs.writeFileSync(filePath, contents, 'utf8')
 }
@@ -78,6 +109,52 @@ function run(command, args, options) {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 64,
   })
+}
+
+function resolveCachedHxhxBin(root) {
+  const buildDir = path.join(root, '.tmp/full1-eval-native-hxhx')
+  const candidates = [
+    path.join(buildDir, '_build/default/out.bc'),
+    path.join(buildDir, '_build/default/out.exe'),
+  ]
+  const cached = candidates.find((candidate) => fs.existsSync(candidate))
+  if (!cached) {
+    return { buildDir, bin: '' }
+  }
+
+  const bootstrapMtime = latestMtimeMs(path.join(root, 'packages/hxhx/bootstrap_out'))
+  const sourceMtime = latestMtimeMsMany([
+    path.join(root, 'packages/hxhx/src'),
+    path.join(root, 'packages/hxhx-core/src'),
+    path.join(root, 'packages/reflaxe.ocaml/src'),
+    path.join(root, 'packages/reflaxe.ocaml/std'),
+    path.join(root, 'scripts/hxhx/build-hxhx.sh'),
+  ])
+  const cachedMtime = fs.statSync(cached).mtimeMs
+  if (cachedMtime < bootstrapMtime)
+    return { buildDir, bin: '' }
+  if (cachedMtime < sourceMtime)
+    return { buildDir, bin: '' }
+  return { buildDir, bin: cached }
+}
+
+function buildCachedHxhxBin(root, env, buildDir) {
+  ensureDir(path.dirname(buildDir))
+  const buildEnv = {
+    ...env,
+    HXHX_BOOTSTRAP_BUILD_DIR: buildDir,
+  }
+  const result = run('bash', ['scripts/hxhx/build-hxhx.sh'], { cwd: root, env: buildEnv })
+  if (result.status !== 0) {
+    const stdout = String(result.stdout || '')
+    const stderr = String(result.stderr || '')
+    throw new Error(`failed to build cached HXHX_BIN (exit=${result.status})\n${stdout}\n${stderr}`)
+  }
+  const lines = String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean)
+  const resolved = lines.length > 0 ? lines[lines.length - 1].trim() : ''
+  if (!resolved || !fs.existsSync(resolved))
+    throw new Error(`cached HXHX_BIN build did not produce a valid path: ${resolved || '<empty>'}`)
+  return resolved
 }
 
 function main() {
@@ -97,7 +174,12 @@ function main() {
   env.HAXE_UPSTREAM_DIR = parsed.upstreamDir
   env.HXHX_FORBID_STAGE0 = env.HXHX_FORBID_STAGE0 || '1'
   delete env.HXHX_ALLOW_STAGE0
-  const hxhxBin = String(env.HXHX_BIN || '').trim()
+  let hxhxBin = resolveExecutable(parsed.root, env.HXHX_BIN || '')
+  if (hxhxBin.length === 0) {
+    const cached = resolveCachedHxhxBin(parsed.root)
+    hxhxBin = cached.bin || buildCachedHxhxBin(parsed.root, env, cached.buildDir)
+  }
+  env.HXHX_BIN = hxhxBin
 
   const command = ['bash', 'scripts/hxhx/run-upstream-unit-macro-native.sh']
   const result = run(command[0], command.slice(1), { cwd: parsed.root, env })

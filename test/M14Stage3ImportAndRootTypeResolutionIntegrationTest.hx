@@ -24,10 +24,14 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 		final tmpRoot = haxe.io.Path.normalize('.tmp/m14_stage3_import_and_root_type_resolution_' + Std.string(Date.now().getTime()));
 		final srcDir = haxe.io.Path.join([tmpRoot, 'src']);
 		final outDir = haxe.io.Path.join([tmpRoot, 'out']);
+		final haxeSrcDir = haxe.io.Path.join([tmpRoot, 'src_haxe']);
+		final haxeOutDir = haxe.io.Path.join([tmpRoot, 'out_haxe']);
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		FileSystem.createDirectory(srcDir);
+		FileSystem.createDirectory(haxeSrcDir);
 		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'utest']));
+		FileSystem.createDirectory(haxe.io.Path.join([haxeSrcDir, 'haxe']));
 
 		final assertHx = haxe.io.Path.join([srcDir, 'utest', 'Assert.hx']);
 		File.saveContent(assertHx, [
@@ -85,6 +89,27 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');
 			assertTrue(ocaml.indexOf('Unit_Type.') < 0, 'Found bad package-local qualification `Unit_Type`.');
 			assertTrue(ocaml.indexOf('Haxe_Sys.') < 0, 'Found bad same-package qualification `Haxe_Sys`.');
+
+			final haxeMainHx = haxe.io.Path.join([haxeSrcDir, 'haxe', 'Main.hx']);
+			final haxeSrc = [
+				'package haxe;',
+				'class Main {',
+				'  public static function stamp():Float {',
+				'    return Sys.time();',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(haxeMainHx, haxeSrc);
+			final haxeParsed = ParserStage.parse(haxeSrc, haxeMainHx);
+			final haxeTyped = TyperStage.typeModule(haxeParsed);
+			final haxeExpanded = MacroStage.expandProgram([haxeTyped], []);
+			EmitterStage.emitToDir(haxeExpanded, haxeOutDir, true, false);
+
+			final haxeMainMl = haxe.io.Path.join([haxeOutDir, 'Haxe_Main.ml']);
+			assertTrue(FileSystem.exists(haxeMainMl), 'Expected Haxe_Main.ml in emitted output.');
+			final haxeOcaml = File.getContent(haxeMainMl);
+			assertTrue(haxeOcaml.indexOf('HxSys.time') >= 0, 'Expected same-package `Sys.time()` to lower to HxSys runtime seam.');
+			assertTrue(haxeOcaml.indexOf('Haxe_Sys.') < 0, 'Found bad same-package `Haxe_Sys` qualification in package haxe output.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

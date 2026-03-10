@@ -446,6 +446,28 @@ class EmitterStage {
 		}
 	}
 
+	/**
+		Recognize root stdlib `Sys` when it arrives as a type-path receiver.
+
+		Why
+		- Inside `package haxe`, frontend parsing/typing can present `Sys.time()` as a type-path-like
+		  receiver rather than a bare `EIdent("Sys")`.
+		- If we miss that shape, the generic type-path lowering qualifies it to `Haxe_Sys.time`,
+		  but no such module exists in our runtime. The real seam is always `HxSys.*`.
+
+		What
+		- Accept only the root `Sys` provider shapes that should lower to runtime intrinsics.
+		- Do not generalize this to arbitrary package-qualified `*.Sys` names, because that would
+		  blur root stdlib semantics with unrelated user code.
+	**/
+	static function isRootSysReceiverExpr(e:HxExpr):Bool {
+		return switch (e) {
+			case EIdent("Sys") | EIdent("Haxe_Sys"):
+				true;
+			case _: final parts = tryExtractTypePathPartsFromExpr(e); parts != null && parts.length == 1 && parts[0] == "Sys";
+		}
+	}
+
 	static function isTypePathExpr(e:HxExpr):Bool {
 		final parts = tryExtractTypePathPartsFromExpr(e);
 		return parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1]);
@@ -1834,12 +1856,12 @@ class EmitterStage {
 							+ ") ("
 							+ exprToOcaml(args[1], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(EIdent("Sys"), "println") if (args.length == 1):
+					case EField(sysObj, "println") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "print_endline ("
 							+ exprToOcamlString(args[0], tyByIdent, arityByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass,
 								callSigByCallee)
 							+ ")";
-					case EField(ECall(EField(EIdent("Sys"), "stdout"), []), "flush") if (args.length == 0):
+					case EField(ECall(EField(sysObj, "stdout"), []), "flush") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(flush stdout)";
 					// Stage 3 bring-up: `Sys.command(cmd, ?args)` is used by upstream RunCi to execute
 					// the `haxe` toolchain (and a few shell snippets like `export FOO=1 && ...`).
@@ -1848,11 +1870,11 @@ class EmitterStage {
 					// an external runtime layer. The shim itself decides whether to use `/usr/bin/env`
 					// or a shell (`/bin/sh -c`) based on whether `args` is empty and the command looks
 					// like it contains shell operators.
-					case EField(EIdent("Sys"), "command") if (args.length == 1):
+					case EField(sysObj, "command") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "HxBootProcess.command ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ") (HxBootArray.create ())";
-					case EField(EIdent("Sys"), "command") if (args.length == 2):
+					case EField(sysObj, "command") if (args.length == 2 && isRootSysReceiverExpr(sysObj)):
 						// `Sys.command(cmd, null)` occurs in upstream `runci.System.runSysTest`.
 						// In our bring-up model, `null` lowers to the `HxRuntime.hx_null` sentinel, so coerce to an empty
 						// `HxBootArray` at runtime to avoid segfaulting in the shim.
@@ -1866,23 +1888,21 @@ class EmitterStage {
 							+ rawCmd
 							+ ") __arr)";
 					// Stage 3 bring-up: basic env/CWD helpers used by upstream RunCi orchestration.
-					case EField(EIdent("Sys"), "getEnv") if (args.length == 1):
+					case EField(sysObj, "getEnv") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "HxSys.getEnv ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ ")";
-					case EField(EIdent("Sys"), "time") if (args.length == 0):
+					case EField(sysObj, "time") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(HxSys.time ())";
-					case EField(EIdent("Haxe_Sys"), "time") if (args.length == 0):
-						return "(HxSys.time ())";
-					case EField(EIdent("Sys"), "environment") if (args.length == 0):
+					case EField(sysObj, "environment") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(HxSys.environment ())";
-					case EField(EIdent("Sys"), "args") if (args.length == 0):
+					case EField(sysObj, "args") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						// Haxe: Sys.args() excludes argv[0].
 						return "(let __argv = Stdlib.Sys.argv in "
 							+ "let __len = Stdlib.Array.length __argv in "
 							+ "if __len <= 1 then HxBootArray.create () "
 							+ "else HxBootArray.of_list (Stdlib.Array.to_list (Stdlib.Array.sub __argv 1 (__len - 1))))";
-					case EField(EIdent("Sys"), "putEnv") if (args.length == 2):
+					case EField(sysObj, "putEnv") if (args.length == 2 && isRootSysReceiverExpr(sysObj)):
 						// Haxe: `Sys.putEnv(name, value)` accepts null for removal.
 						// Our runtime provides the option-based API; bridge through the hx_null sentinel.
 						final rawName = exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass);
@@ -1894,13 +1914,13 @@ class EmitterStage {
 							+ "HxSys.putEnv ("
 							+ rawName
 							+ ") __opt)";
-					case EField(EIdent("Sys"), "setCwd") if (args.length == 1):
+					case EField(sysObj, "setCwd") if (args.length == 1 && isRootSysReceiverExpr(sysObj)):
 						return "(Stdlib.Sys.chdir ("
 							+ exprToOcaml(args[0], arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass)
 							+ "))";
-					case EField(EIdent("Sys"), "getCwd") if (args.length == 0):
+					case EField(sysObj, "getCwd") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						return "(Stdlib.Sys.getcwd ())";
-					case EField(EIdent("Sys"), "systemName") if (args.length == 0):
+					case EField(sysObj, "systemName") if (args.length == 0 && isRootSysReceiverExpr(sysObj)):
 						// Keep this compatible with older OCaml runtimes (e.g. 4.13) where `Unix.uname`
 						// is not available.
 						//
@@ -4373,6 +4393,10 @@ class EmitterStage {
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(shimPath,
 					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
+					+ "let fold it f first =\n"
+					+ "  let acc = ref first in\n"
+					+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
+					+ "  !acc\n"
 					+ "let has _ _ = false\n"
 					+ "let exists _ _ = false\n"
 					+ "let iter _ _ = ()\n"
