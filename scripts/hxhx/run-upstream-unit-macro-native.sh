@@ -61,6 +61,10 @@ unset HXHX_FORCE_STAGE0 || true
 unset HXHX_MACRO_HOST_FORCE_STAGE0 || true
 unset HXHX_MACRO_HOST_ENTRYPOINTS || true
 unset HXHX_MACRO_HOST_EXTRA_CP || true
+# Gate1 / Full1 native eval should not inherit expression-macro bring-up allowlists.
+# Upstream compile-macro.hxml does not rely on HXHX_EXPR_MACROS, and a stray inherited value
+# can corrupt the Stage3 emit path by forcing unrelated expression-macro expansion.
+unset HXHX_EXPR_MACROS || true
 
 # Stage3 bring-up relies on an explicit std root.
 #
