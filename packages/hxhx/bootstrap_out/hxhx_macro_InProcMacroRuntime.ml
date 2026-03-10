@@ -317,7 +317,13 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.InPro
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.InProcMacroRuntime" } : t)
 
-let openSession = fun () -> inprocmacrosession_create ()
+let openSession = fun () -> let impl = Obj.magic (inprocmacrosession_create ()) in let __anon_1 = HxAnon.create () in (
+  ignore (HxAnon.set __anon_1 "run" (Obj.repr (fun a0 -> inprocmacrosession_run__impl impl a0)));
+  ignore (HxAnon.set __anon_1 "runHook" (Obj.repr (fun a0 a1 -> inprocmacrosession_runHook__impl impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> inprocmacrosession_runTypeNotFoundHook__impl impl a0 a1)));
+  ignore (HxAnon.set __anon_1 "expandExpr" (Obj.repr (fun a0 -> inprocmacrosession_expandExpr__impl impl a0)));
+  ignore (HxAnon.set __anon_1 "close" (Obj.repr (fun () -> inprocmacrosession_close__impl impl ())));
+  __anon_1)
 
 let parseOneStringLiteralArg = fun s -> try let __fallback_result_6 = (
   ignore (if s == Obj.magic (HxRuntime.hx_null) then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

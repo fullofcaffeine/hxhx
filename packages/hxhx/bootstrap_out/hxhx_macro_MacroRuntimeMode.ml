@@ -14,10 +14,17 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "hxhx.macro.Macro
 let __empty = fun () -> ({ __hx_type = HxType.class_ "hxhx.macro.MacroRuntimeMode" } : t)
 
 let openSession = fun mode -> try let __fallback_result_6 = match mode with
-  | "external-host" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Hxhx_macro_MacroHostClient.openSession ()))))
-  | "inproc" -> raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (Hxhx_macro_InProcMacroRuntime.openSession ()))))
+  | "external-host" -> ignore (let impl = Obj.magic (Hxhx_macro_MacroHostClient.openSession ()) in raise (HxRuntime.Hx_return (Obj.repr (let __anon_5 = HxAnon.create () in (
+    ignore (HxAnon.set __anon_5 "run" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_run__impl impl a0)));
+    ignore (HxAnon.set __anon_5 "runHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runHook__impl impl a0 a1)));
+    ignore (HxAnon.set __anon_5 "runTypeNotFoundHook" (Obj.repr (fun a0 a1 -> Hxhx_macro_MacroHostClient.macrohostsession_runTypeNotFoundHook__impl impl a0 a1)));
+    ignore (HxAnon.set __anon_5 "expandExpr" (Obj.repr (fun a0 -> Hxhx_macro_MacroHostClient.macrohostsession_expandExpr__impl impl a0)));
+    ignore (HxAnon.set __anon_5 "close" (Obj.repr (fun () -> Hxhx_macro_MacroHostClient.macrohostsession_close__impl impl ())));
+    __anon_5
+  )))))
+  | "inproc" -> raise (HxRuntime.Hx_return (Obj.repr (Hxhx_macro_InProcMacroRuntime.openSession ())))
   | _ -> ignore (HxType.hx_throw_typed_rtti (Obj.repr (("invalid macro runtime mode `" ^ HxString.toStdString mode) ^ "` (expected inproc|external-host)")) ["Dynamic"; "String"]) in Obj.magic __fallback_result_6 with
-  | HxRuntime.Hx_return __ret_5 -> Obj.obj __ret_5
+  | HxRuntime.Hx_return __ret_5 -> Obj.magic __ret_5
 
 let emitMarker = fun mode -> ignore (print_endline ("hxhx_macro_runtime_mode=" ^ HxString.toStdString mode))
 

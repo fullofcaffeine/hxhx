@@ -98,6 +98,7 @@
     "test:m14:runtime-applied-type-metadata": "haxe test/m14_runtime_applied_type_metadata_integration_test.hxml",
     "test:m14:runtime-callstack": "haxe test/m14_runtime_callstack_integration_test.hxml",
     "test:m14:runtime-macro-session-call": "haxe test/m14_runtime_macro_session_call_integration_test.hxml",
+    "test:m14:runtime-stage3-cli-macro": "haxe test/m14_runtime_stage3_cli_macro_integration_test.hxml",
     "test:m14:stage3-global-build-metadata": "haxe test/m14_stage3_global_build_metadata_integration_test.hxml && neko .tmp/m14_stage3_global_build_metadata_integration_test.n",
     "test:m14:stage3-on-type-not-found": "haxe test/m14_stage3_on_type_not_found_integration_test.hxml",
     "test:m14:macro-host-timeout": "mkdir -p .tmp && haxe test/m14_macro_host_timeout_integration_test.hxml && neko .tmp/m14_macro_host_timeout_integration_test.n",

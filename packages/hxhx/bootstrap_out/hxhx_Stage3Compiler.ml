@@ -1939,7 +1939,7 @@ let dispatchOnTypeNotFoundHooks = fun macroSession typePath -> try let __fallbac
       ignore (while !_g < _g1 do ignore (let i = let __old_438 = !_g in let __new_439 = HxInt.add __old_438 1 in (
         ignore (_g := __new_439);
         __old_438
-      ) in if (Obj.magic macroSession : Hxhx_macro_MacroRuntimeSession.t).runTypeNotFoundHook (Obj.magic macroSession) (HxArray.get (Obj.magic hooks) i) (typePath : string) then ignore ((
+      ) in if (Obj.obj (HxAnon.get (Obj.magic macroSession) "runTypeNotFoundHook") : int -> string -> bool) (HxArray.get (Obj.magic hooks) i) (typePath : string) then ignore ((
         ignore (print_endline ((("hook_onTypeNotFound[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString typePath));
         raise (HxRuntime.Hx_return (Obj.repr true))
       )) else ()) done);
@@ -2263,11 +2263,11 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                       ignore (if runHaxelibMacros then ignore (let _g = ref 0 in let _g1 = HxArray.length (!tempArray3) in while !_g < _g1 do ignore (let i = let __old_514 = !_g in let __new_515 = HxInt.add __old_514 1 in (
                                         ignore (_g := __new_515);
                                         __old_514
-                                      ) in print_endline ((("lib_macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (let __obj_516 = !macroSession in (Obj.magic __obj_516 : Hxhx_macro_MacroRuntimeSession.t).run (Obj.magic __obj_516) (HxArray.get (Obj.magic (!tempArray3)) i : string)))) done) else ());
+                                      ) in print_endline ((("lib_macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (let __obj_516 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_516) "run") : string -> string) (HxArray.get (Obj.magic (!tempArray3)) i : string)))) done) else ());
                                       let _g = ref 0 in let _g1 = HxArray.length parsedMacros in while !_g < _g1 do ignore (let i = let __old_517 = !_g in let __new_518 = HxInt.add __old_517 1 in (
                                         ignore (_g := __new_518);
                                         __old_517
-                                      ) in print_endline ((("macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (let __obj_519 = !macroSession in (Obj.magic __obj_519 : Hxhx_macro_MacroRuntimeSession.t).run (Obj.magic __obj_519) (HxArray.get (Obj.magic parsedMacros) i : string)))) done
+                                      ) in print_endline ((("macro_run[" ^ string_of_int i) ^ "]=") ^ HxString.toStdString (let __obj_519 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_519) "run") : string -> string) (HxArray.get (Obj.magic parsedMacros) i : string)))) done
                                     ) with
                                       | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                       | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
@@ -2276,7 +2276,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                         ignore e;
                                         (
                                           ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                            ignore (let __obj_523 = !macroSession in (Obj.magic __obj_523 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_523) ());
+                                            ignore (let __obj_523 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_523) "close") : unit -> unit) ());
                                             let __assign_524 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                               macroSession := __assign_524;
                                               __assign_524
@@ -2289,7 +2289,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                         ignore e;
                                         (
                                           ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                            ignore (let __obj_526 = !macroSession in (Obj.magic __obj_526 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_526) ());
+                                            ignore (let __obj_526 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_526) "close") : unit -> unit) ());
                                             let __assign_527 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                               macroSession := __assign_527;
                                               __assign_527
@@ -2414,7 +2414,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                           ignore e;
                                           (
                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                              ignore (let __obj_554 = !macroSession in (Obj.magic __obj_554 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_554) ());
+                                              ignore (let __obj_554 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_554) "close") : unit -> unit) ());
                                               let __assign_555 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                 macroSession := __assign_555;
                                                 __assign_555
@@ -2427,7 +2427,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                           ignore e;
                                           (
                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                              ignore (let __obj_557 = !macroSession in (Obj.magic __obj_557 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_557) ());
+                                              ignore (let __obj_557 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_557) "close") : unit -> unit) ());
                                               let __assign_558 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                 macroSession := __assign_558;
                                                 __assign_558
@@ -2448,7 +2448,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (let __obj_565 = !macroSession in (Obj.magic __obj_565 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_565) ());
+                                                ignore (let __obj_565 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_565) "close") : unit -> unit) ());
                                                 let __assign_566 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                   macroSession := __assign_566;
                                                   __assign_566
@@ -2460,7 +2460,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (let __obj_563 = !macroSession in (Obj.magic __obj_563 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_563) ());
+                                                ignore (let __obj_563 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_563) "close") : unit -> unit) ());
                                                 let __assign_564 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                   macroSession := __assign_564;
                                                   __assign_564
@@ -2473,7 +2473,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (let __obj_570 = !macroSession in (Obj.magic __obj_570 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_570) ());
+                                                ignore (let __obj_570 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_570) "close") : unit -> unit) ());
                                                 let __assign_571 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                   macroSession := __assign_571;
                                                   __assign_571
@@ -2485,7 +2485,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                             ignore e;
                                             (
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (let __obj_568 = !macroSession in (Obj.magic __obj_568 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_568) ());
+                                                ignore (let __obj_568 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_568) "close") : unit -> unit) ());
                                                 let __assign_569 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                   macroSession := __assign_569;
                                                   __assign_569
@@ -2553,7 +2553,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                   ignore e;
                                                   (
                                                     ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                      ignore (let __obj_587 = !macroSession in (Obj.magic __obj_587 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_587) ());
+                                                      ignore (let __obj_587 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_587) "close") : unit -> unit) ());
                                                       let __assign_588 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                         macroSession := __assign_588;
                                                         __assign_588
@@ -2566,7 +2566,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                   ignore e;
                                                   (
                                                     ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                      ignore (let __obj_590 = !macroSession in (Obj.magic __obj_590 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_590) ());
+                                                      ignore (let __obj_590 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_590) "close") : unit -> unit) ());
                                                       let __assign_591 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                         macroSession := __assign_591;
                                                         __assign_591
@@ -2597,7 +2597,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                       __old_594
                                                     ) in let expr = (HxArray.get (Obj.magic exprs) i : string) in (
                                                       ignore (print_endline ((((("build_macro[" ^ HxString.toStdString modulePath) ^ "][") ^ string_of_int i) ^ "]=") ^ HxString.toStdString expr));
-                                                      try print_endline ((((("build_macro_run[" ^ HxString.toStdString modulePath) ^ "][") ^ string_of_int i) ^ "]=") ^ HxString.toStdString (let __obj_596 = !macroSession in (Obj.magic __obj_596 : Hxhx_macro_MacroRuntimeSession.t).run (Obj.magic __obj_596) (expr : string))) with
+                                                      try print_endline ((((("build_macro_run[" ^ HxString.toStdString modulePath) ^ "][") ^ string_of_int i) ^ "]=") ^ HxString.toStdString (let __obj_596 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_596) "run") : string -> string) (expr : string))) with
                                                         | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                         | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                         | HxRuntime.Hx_return __ret_597 -> raise (HxRuntime.Hx_return __ret_597)
@@ -2605,7 +2605,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                           ignore e;
                                                           (
                                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                              ignore (let __obj_600 = !macroSession in (Obj.magic __obj_600 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_600) ());
+                                                              ignore (let __obj_600 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_600) "close") : unit -> unit) ());
                                                               let __assign_601 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                 macroSession := __assign_601;
                                                                 __assign_601
@@ -2618,7 +2618,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                           ignore e;
                                                           (
                                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                              ignore (let __obj_603 = !macroSession in (Obj.magic __obj_603 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_603) ());
+                                                              ignore (let __obj_603 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_603) "close") : unit -> unit) ());
                                                               let __assign_604 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                 macroSession := __assign_604;
                                                                 __assign_604
@@ -2646,7 +2646,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                             ignore e;
                                                             (
                                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                                ignore (let __obj_609 = !macroSession in (Obj.magic __obj_609 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_609) ());
+                                                                ignore (let __obj_609 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_609) "close") : unit -> unit) ());
                                                                 let __assign_610 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                   macroSession := __assign_610;
                                                                   __assign_610
@@ -2659,7 +2659,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                             ignore e;
                                                             (
                                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                                ignore (let __obj_612 = !macroSession in (Obj.magic __obj_612 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_612) ());
+                                                                ignore (let __obj_612 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_612) "close") : unit -> unit) ());
                                                                 let __assign_613 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                   macroSession := __assign_613;
                                                                   __assign_613
@@ -2755,7 +2755,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                           ignore (if not (typeOnly) && HxArray.length exprMacros > 0 then ignore ((
                                             ignore (if !macroSession == Obj.magic (HxRuntime.hx_null) then ignore ((
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (let __obj_631 = !macroSession in (Obj.magic __obj_631 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_631) ());
+                                                ignore (let __obj_631 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_631) "close") : unit -> unit) ());
                                                 let __assign_632 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                   macroSession := __assign_632;
                                                   __assign_632
@@ -2838,7 +2838,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_646 = !macroSession in (Obj.magic __obj_646 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_646) ());
+                                                        ignore (let __obj_646 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_646) "close") : unit -> unit) ());
                                                         let __assign_647 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_647;
                                                           __assign_647
@@ -2850,7 +2850,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_644 = !macroSession in (Obj.magic __obj_644 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_644) ());
+                                                        ignore (let __obj_644 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_644) "close") : unit -> unit) ());
                                                         let __assign_645 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_645;
                                                           __assign_645
@@ -2863,7 +2863,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_651 = !macroSession in (Obj.magic __obj_651 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_651) ());
+                                                        ignore (let __obj_651 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_651) "close") : unit -> unit) ());
                                                         let __assign_652 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_652;
                                                           __assign_652
@@ -2875,7 +2875,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_649 = !macroSession in (Obj.magic __obj_649 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_649) ());
+                                                        ignore (let __obj_649 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_649) "close") : unit -> unit) ());
                                                         let __assign_650 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_650;
                                                           __assign_650
@@ -2919,7 +2919,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 ignore (_g := __new_662);
                                                 __old_661
                                               ) in (
-                                                ignore (try let __obj_663 = !macroSession in (Obj.magic __obj_663 : Hxhx_macro_MacroRuntimeSession.t).runHook (Obj.magic __obj_663) ("afterTyping" : string) (HxArray.get (Obj.magic hooks) i) with
+                                                ignore (try let __obj_663 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_663) "runHook") : string -> int -> unit) ("afterTyping" : string) (HxArray.get (Obj.magic hooks) i) with
                                                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                   | HxRuntime.Hx_return __ret_664 -> raise (HxRuntime.Hx_return __ret_664)
@@ -2927,7 +2927,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_667 = !macroSession in (Obj.magic __obj_667 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_667) ());
+                                                        ignore (let __obj_667 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_667) "close") : unit -> unit) ());
                                                         let __assign_668 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_668;
                                                           __assign_668
@@ -2940,7 +2940,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_670 = !macroSession in (Obj.magic __obj_670 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_670) ());
+                                                        ignore (let __obj_670 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_670) "close") : unit -> unit) ());
                                                         let __assign_671 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_671;
                                                           __assign_671
@@ -2955,7 +2955,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 ignore (_g := __new_673);
                                                 __old_672
                                               ) in (
-                                                ignore (try let __obj_674 = !macroSession in (Obj.magic __obj_674 : Hxhx_macro_MacroRuntimeSession.t).runHook (Obj.magic __obj_674) ("onGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
+                                                ignore (try let __obj_674 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_674) "runHook") : string -> int -> unit) ("onGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
                                                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                   | HxRuntime.Hx_return __ret_675 -> raise (HxRuntime.Hx_return __ret_675)
@@ -2963,7 +2963,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_678 = !macroSession in (Obj.magic __obj_678 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_678) ());
+                                                        ignore (let __obj_678 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_678) "close") : unit -> unit) ());
                                                         let __assign_679 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_679;
                                                           __assign_679
@@ -2976,7 +2976,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_681 = !macroSession in (Obj.magic __obj_681 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_681) ());
+                                                        ignore (let __obj_681 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_681) "close") : unit -> unit) ());
                                                         let __assign_682 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_682;
                                                           __assign_682
@@ -2991,7 +2991,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 ignore (_g := __new_684);
                                                 __old_683
                                               ) in (
-                                                ignore (try let __obj_685 = !macroSession in (Obj.magic __obj_685 : Hxhx_macro_MacroRuntimeSession.t).runHook (Obj.magic __obj_685) ("afterGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
+                                                ignore (try let __obj_685 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_685) "runHook") : string -> int -> unit) ("afterGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
                                                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                   | HxRuntime.Hx_return __ret_686 -> raise (HxRuntime.Hx_return __ret_686)
@@ -2999,7 +2999,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_689 = !macroSession in (Obj.magic __obj_689 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_689) ());
+                                                        ignore (let __obj_689 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_689) "close") : unit -> unit) ());
                                                         let __assign_690 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_690;
                                                           __assign_690
@@ -3012,7 +3012,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_692 = !macroSession in (Obj.magic __obj_692 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_692) ());
+                                                        ignore (let __obj_692 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_692) "close") : unit -> unit) ());
                                                         let __assign_693 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_693;
                                                           __assign_693
@@ -3024,7 +3024,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 print_endline (("hook_afterGenerate[" ^ string_of_int i) ^ "]=ok")
                                               )) done) else ());
                                               ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                ignore (let __obj_694 = !macroSession in (Obj.magic __obj_694 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_694) ());
+                                                ignore (let __obj_694 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_694) "close") : unit -> unit) ());
                                                 let __assign_695 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                   macroSession := __assign_695;
                                                   __assign_695
@@ -3049,7 +3049,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_701 = !macroSession in (Obj.magic __obj_701 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_701) ());
+                                                        ignore (let __obj_701 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_701) "close") : unit -> unit) ());
                                                         let __assign_702 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_702;
                                                           __assign_702
@@ -3061,7 +3061,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_699 = !macroSession in (Obj.magic __obj_699 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_699) ());
+                                                        ignore (let __obj_699 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_699) "close") : unit -> unit) ());
                                                         let __assign_700 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_700;
                                                           __assign_700
@@ -3074,7 +3074,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_706 = !macroSession in (Obj.magic __obj_706 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_706) ());
+                                                        ignore (let __obj_706 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_706) "close") : unit -> unit) ());
                                                         let __assign_707 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_707;
                                                           __assign_707
@@ -3086,7 +3086,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_704 = !macroSession in (Obj.magic __obj_704 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_704) ());
+                                                        ignore (let __obj_704 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_704) "close") : unit -> unit) ());
                                                         let __assign_705 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_705;
                                                           __assign_705
@@ -3108,7 +3108,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 ignore (_g := __new_711);
                                                 __old_710
                                               ) in (
-                                                ignore (try let __obj_712 = !macroSession in (Obj.magic __obj_712 : Hxhx_macro_MacroRuntimeSession.t).runHook (Obj.magic __obj_712) ("afterTyping" : string) (HxArray.get (Obj.magic hooks) i) with
+                                                ignore (try let __obj_712 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_712) "runHook") : string -> int -> unit) ("afterTyping" : string) (HxArray.get (Obj.magic hooks) i) with
                                                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                   | HxRuntime.Hx_return __ret_713 -> raise (HxRuntime.Hx_return __ret_713)
@@ -3116,7 +3116,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_716 = !macroSession in (Obj.magic __obj_716 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_716) ());
+                                                        ignore (let __obj_716 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_716) "close") : unit -> unit) ());
                                                         let __assign_717 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_717;
                                                           __assign_717
@@ -3129,7 +3129,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_719 = !macroSession in (Obj.magic __obj_719 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_719) ());
+                                                        ignore (let __obj_719 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_719) "close") : unit -> unit) ());
                                                         let __assign_720 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_720;
                                                           __assign_720
@@ -3144,7 +3144,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 ignore (_g := __new_722);
                                                 __old_721
                                               ) in (
-                                                ignore (try let __obj_723 = !macroSession in (Obj.magic __obj_723 : Hxhx_macro_MacroRuntimeSession.t).runHook (Obj.magic __obj_723) ("onGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
+                                                ignore (try let __obj_723 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_723) "runHook") : string -> int -> unit) ("onGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
                                                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                   | HxRuntime.Hx_return __ret_724 -> raise (HxRuntime.Hx_return __ret_724)
@@ -3152,7 +3152,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_727 = !macroSession in (Obj.magic __obj_727 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_727) ());
+                                                        ignore (let __obj_727 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_727) "close") : unit -> unit) ());
                                                         let __assign_728 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_728;
                                                           __assign_728
@@ -3165,7 +3165,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_730 = !macroSession in (Obj.magic __obj_730 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_730) ());
+                                                        ignore (let __obj_730 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_730) "close") : unit -> unit) ());
                                                         let __assign_731 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_731;
                                                           __assign_731
@@ -3180,7 +3180,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                 ignore (_g := __new_733);
                                                 __old_732
                                               ) in (
-                                                ignore (try let __obj_734 = !macroSession in (Obj.magic __obj_734 : Hxhx_macro_MacroRuntimeSession.t).runHook (Obj.magic __obj_734) ("afterGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
+                                                ignore (try let __obj_734 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_734) "runHook") : string -> int -> unit) ("afterGenerate" : string) (HxArray.get (Obj.magic hooks) i) with
                                                   | HxRuntime.Hx_break -> raise (HxRuntime.Hx_break)
                                                   | HxRuntime.Hx_continue -> raise (HxRuntime.Hx_continue)
                                                   | HxRuntime.Hx_return __ret_735 -> raise (HxRuntime.Hx_return __ret_735)
@@ -3188,7 +3188,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_738 = !macroSession in (Obj.magic __obj_738 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_738) ());
+                                                        ignore (let __obj_738 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_738) "close") : unit -> unit) ());
                                                         let __assign_739 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_739;
                                                           __assign_739
@@ -3201,7 +3201,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                     ignore e;
                                                     (
                                                       ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                        ignore (let __obj_741 = !macroSession in (Obj.magic __obj_741 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_741) ());
+                                                        ignore (let __obj_741 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_741) "close") : unit -> unit) ());
                                                         let __assign_742 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                           macroSession := __assign_742;
                                                           __assign_742
@@ -3240,7 +3240,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                       ignore e;
                                                       (
                                                         ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                          ignore (let __obj_751 = !macroSession in (Obj.magic __obj_751 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_751) ());
+                                                          ignore (let __obj_751 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_751) "close") : unit -> unit) ());
                                                           let __assign_752 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                             macroSession := __assign_752;
                                                             __assign_752
@@ -3253,7 +3253,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                       ignore e;
                                                       (
                                                         ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                          ignore (let __obj_754 = !macroSession in (Obj.magic __obj_754 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_754) ());
+                                                          ignore (let __obj_754 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_754) "close") : unit -> unit) ());
                                                           let __assign_755 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                             macroSession := __assign_755;
                                                             __assign_755
@@ -3274,7 +3274,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                         ignore e;
                                                         (
                                                           ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                            ignore (let __obj_760 = !macroSession in (Obj.magic __obj_760 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_760) ());
+                                                            ignore (let __obj_760 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_760) "close") : unit -> unit) ());
                                                             let __assign_761 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                               macroSession := __assign_761;
                                                               __assign_761
@@ -3287,7 +3287,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                         ignore e;
                                                         (
                                                           ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                            ignore (let __obj_763 = !macroSession in (Obj.magic __obj_763 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_763) ());
+                                                            ignore (let __obj_763 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_763) "close") : unit -> unit) ());
                                                             let __assign_764 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                               macroSession := __assign_764;
                                                               __assign_764
@@ -3300,7 +3300,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                       ignore (if isTrueEnv ("HXHX_TRACE_BACKEND_SELECTION" : string) then ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore (print_endline "backend_selected_impl=<unknown>") else ignore (print_endline ("backend_selected_impl=" ^ HxString.toStdString (Obj.obj (HxAnon.get selected "implId"))))) else ());
                                                       ignore (if selected == Obj.magic (HxRuntime.hx_null) then ignore ((
                                                         ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                          ignore (let __obj_765 = !macroSession in (Obj.magic __obj_765 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_765) ());
+                                                          ignore (let __obj_765 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_765) "close") : unit -> unit) ());
                                                           let __assign_766 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                             macroSession := __assign_766;
                                                             __assign_766
@@ -3319,7 +3319,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                         ignore (if !noEmit then ignore ((
                                                           ignore (if not (supportsNoEmit) then ignore ((
                                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                              ignore (let __obj_769 = !macroSession in (Obj.magic __obj_769 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_769) ());
+                                                              ignore (let __obj_769 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_769) "close") : unit -> unit) ());
                                                               let __assign_770 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                 macroSession := __assign_770;
                                                                 __assign_770
@@ -3382,7 +3382,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                               )
                                                             )) done);
                                                             ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                              ignore (let __obj_779 = !macroSession in (Obj.magic __obj_779 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_779) ());
+                                                              ignore (let __obj_779 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_779) "close") : unit -> unit) ());
                                                               let __assign_780 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                 macroSession := __assign_780;
                                                                 __assign_780
@@ -3420,7 +3420,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                               ignore e;
                                                               (
                                                                 ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                                  ignore (let __obj_789 = !macroSession in (Obj.magic __obj_789 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_789) ());
+                                                                  ignore (let __obj_789 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_789) "close") : unit -> unit) ());
                                                                   let __assign_790 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                     macroSession := __assign_790;
                                                                     __assign_790
@@ -3433,7 +3433,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                               ignore e;
                                                               (
                                                                 ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                                  ignore (let __obj_792 = !macroSession in (Obj.magic __obj_792 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_792) ());
+                                                                  ignore (let __obj_792 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_792) "close") : unit -> unit) ());
                                                                   let __assign_793 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                                     macroSession := __assign_793;
                                                                     __assign_793
@@ -3446,7 +3446,7 @@ let runOne = fun args -> try let __fallback_result_799 = let tempStruct = ref (O
                                                           ignore (print_endline ("outDir=" ^ HxString.toStdString outAbs));
                                                           ignore (if (Obj.magic (!emitted) : Backend_EmitResult.t).builtExecutable then ignore (print_endline ("exe=" ^ HxString.toStdString ((Obj.magic (!emitted) : Backend_EmitResult.t).entryPath))) else ignore (print_endline ("artifact=" ^ HxString.toStdString ((Obj.magic (!emitted) : Backend_EmitResult.t).entryPath))));
                                                           ignore (if !macroSession != Obj.magic (HxRuntime.hx_null) then ignore ((
-                                                            ignore (let __obj_794 = !macroSession in (Obj.magic __obj_794 : Hxhx_macro_MacroRuntimeSession.t).close (Obj.magic __obj_794) ());
+                                                            ignore (let __obj_794 = !macroSession in (Obj.obj (HxAnon.get (Obj.magic __obj_794) "close") : unit -> unit) ());
                                                             let __assign_795 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
                                                               macroSession := __assign_795;
                                                               __assign_795

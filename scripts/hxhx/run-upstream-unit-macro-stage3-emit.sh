@@ -59,12 +59,15 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
   export HAXE_STD_PATH="$UPSTREAM_DIR/std"
 fi
 
-HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+HXHX_BIN="${HXHX_BIN:-}"
+if [ -z "$HXHX_BIN" ] || [ ! -x "$HXHX_BIN" ]; then
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
 
 # Stage3 emit rung executes `--macro Macro.init()`, which requires a macro host.
 #
 # Use the repo's committed bootstrap macro host snapshot by default so this rung stays stage0-free.
-if [ -z "${HXHX_MACRO_HOST_EXE:-}" ]; then
+if [ -z "${HXHX_MACRO_HOST_EXE:-}" ] || [ ! -x "${HXHX_MACRO_HOST_EXE:-}" ]; then
   HXHX_MACRO_HOST_EXE="$("$ROOT/scripts/hxhx/build-hxhx-macro-host.sh" | tail -n 1)"
   export HXHX_MACRO_HOST_EXE
 fi

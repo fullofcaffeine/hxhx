@@ -50,6 +50,12 @@
       "notes": "Repo-authored non-inline implementation preserving upstream API."
     },
     {
+      "path": "packages/reflaxe.ocaml/std/_std/haxe/CallStack.hx",
+      "provenanceKind": "repo_authored_override",
+      "upstreamOraclePath": "vendor/haxe/std/haxe/CallStack.hx",
+      "notes": "Repo-authored staged override that breaks generated OCaml module cycles by routing stack formatting to target-owned runtime helpers."
+    },
+    {
       "path": "packages/reflaxe.ocaml/std/_std/Sys.hx",
       "provenanceKind": "upstream_std_sync",
       "upstreamOraclePath": "vendor/haxe/std/Sys.hx",
