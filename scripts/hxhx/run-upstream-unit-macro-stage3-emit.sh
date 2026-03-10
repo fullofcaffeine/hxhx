@@ -151,12 +151,18 @@ fi
 prepare_haxelib_hxml utest
 
 echo "== Gate 1 (stage3 emit rung): upstream tests/unit/compile-macro.hxml"
+STAGE3_OUT_DIR="${HXHX_STAGE3_EMIT_OUT_DIR:-}"
 set +e
 out="$(
   cd "$UPSTREAM_DIR/tests/unit"
-  rm -rf out_hxhx_unit_macro_stage3_emit
+  if [ -z "$STAGE3_OUT_DIR" ]; then
+    STAGE3_OUT_DIR="$(mktemp -d out_hxhx_unit_macro_stage3_emit.XXXXXX)"
+  else
+    rm -rf "$STAGE3_OUT_DIR"
+    mkdir -p "$STAGE3_OUT_DIR"
+  fi
   HAXELIB_BIN="$HAXELIB_RESOLVED" \
-    "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out out_hxhx_unit_macro_stage3_emit 2>&1
+    "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out "$STAGE3_OUT_DIR" 2>&1
 )"
 code="$?"
 set -e

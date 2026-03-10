@@ -24,11 +24,11 @@ let status_to_code (st : process_status) : int =
   | WSTOPPED s -> 128 + s
 
 let command_needs_shell (cmd : string) : bool =
-  let len = String.length cmd in
+  let len = Stdlib.String.length cmd in
   let rec loop i =
     if i >= len then false
     else
-      match cmd.[i] with
+      match Stdlib.String.get cmd i with
       | ' ' | '\t' | '\n' | '\r' | '&' | '|' | ';' | '<' | '>' | '(' | ')' | '$' | '`' -> true
       | _ -> loop (i + 1)
   in
@@ -145,14 +145,14 @@ let stderrReadAll (p : t) : string =
   | None -> ""
 
 let read_line (buf : string) (pos : int) : (string * int) =
-  let len = String.length buf in
+  let len = Stdlib.String.length buf in
   if pos >= len then ("", len)
   else
     let rec find_nl i =
-      if i >= len then i else if buf.[i] = '\n' then i else find_nl (i + 1)
+      if i >= len then i else if Stdlib.String.get buf i = '\n' then i else find_nl (i + 1)
     in
     let nl = find_nl pos in
-    if nl >= len then (String.sub buf pos (len - pos), len) else (String.sub buf pos (nl - pos), nl + 1)
+    if nl >= len then (Stdlib.String.sub buf pos (len - pos), len) else (Stdlib.String.sub buf pos (nl - pos), nl + 1)
 
 let stdoutReadLine (p : t) : string =
   match p.stdout_all with

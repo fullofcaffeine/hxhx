@@ -143,6 +143,10 @@ function buildCachedHxhxBin(root, env, buildDir) {
   const buildEnv = {
     ...env,
     HXHX_BOOTSTRAP_BUILD_DIR: buildDir,
+    // Local/native eval diagnosis should prefer the byte bootstrap path by default.
+    // The native bootstrap path is still valuable, but it is too expensive and too
+    // stall-prone around EmitterStage.ml to be the default feedback loop here.
+    HXHX_BOOTSTRAP_PREFER_NATIVE: env.HXHX_BOOTSTRAP_PREFER_NATIVE || '0',
   }
   const result = run('bash', ['scripts/hxhx/build-hxhx.sh'], { cwd: root, env: buildEnv })
   if (result.status !== 0) {

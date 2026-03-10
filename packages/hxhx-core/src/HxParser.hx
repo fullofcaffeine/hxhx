@@ -1895,20 +1895,59 @@ class HxParser {
 	}
 
 	function parseVarStmt(pos:HxPos):HxStmt {
-		// `var name[:Type] [= expr];`
-		final name = readIdent("variable name");
-		var typeHint = "";
-		if (cur.kind.match(TColon)) {
-			bump();
-			typeHint = readTypeHintText(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || isOtherChar("="));
+		// `var a[:T] [= expr], b[:U] [= expr];`
+		//
+		// Why
+		// - Upstream Haxe tests use grouped declarators heavily, e.g. `var a:Int64, b:Int64;`.
+		// - Dropping tail declarators makes later assignments unbound in Stage3 emission.
+		//
+		// How
+		// - Parse each declarator here.
+		// - In statement-list contexts, callers flatten grouped declarators into the surrounding list.
+		// - In single-statement contexts (e.g. `if (...) var a, b;`), we keep them wrapped in
+		//   a local block so branch-local scope remains correct.
+		function parseSingleVarDecl():HxStmt {
+			final name = readIdent("variable name");
+			var typeHint = "";
+			if (cur.kind.match(TColon)) {
+				bump();
+				typeHint = readTypeHintText(() -> cur.kind.match(TComma) || cur.kind.match(TSemicolon) || cur.kind.match(TEof) || isOtherChar("="));
+			}
+
+			var init:Null<HxExpr> = null;
+			if (acceptOtherChar("=")) {
+				init = parseExpr(() -> cur.kind.match(TComma) || cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
+			}
+			return SVar(name, typeHint, init, pos);
 		}
 
-		var init:Null<HxExpr> = null;
-		if (acceptOtherChar("=")) {
-			init = parseExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TEof) || cur.kind.match(TRBrace));
+		final decls = new Array<HxStmt>();
+		decls.push(parseSingleVarDecl());
+		while (cur.kind.match(TComma)) {
+			bump();
+			decls.push(parseSingleVarDecl());
 		}
 		syncToStmtEnd();
-		return SVar(name, typeHint, init, pos);
+		return decls.length == 1 ? decls[0] : SBlock(decls, pos);
+	}
+
+	function parseStmtInto(out:Array<HxStmt>, stop:() -> Bool):Void {
+		if (out == null || stop())
+			return;
+		switch (cur.kind) {
+			case TKeyword(KVar), TKeyword(KFinal):
+				final pos = cur.pos;
+				bump();
+				switch (parseVarStmt(pos)) {
+					case SBlock(stmts, _):
+						for (stmt in stmts)
+							out.push(stmt);
+					case stmt:
+						out.push(stmt);
+				}
+			case _:
+				out.push(parseStmt(stop));
+		}
 	}
 
 	function parseStmt(stop:() -> Bool):HxStmt {
@@ -1921,7 +1960,7 @@ class HxParser {
 				bump();
 				final ss = new Array<HxStmt>();
 				while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
-					ss.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+					parseStmtInto(ss, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
 				}
 				expect(TRBrace, "'}'");
 				SBlock(ss, pos);
@@ -1997,8 +2036,8 @@ class HxParser {
 
 						final stmts = new Array<HxStmt>();
 						while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof) && !cur.kind.match(TKeyword(KCase)) && !cur.kind.match(TKeyword(KDefault))) {
-							stmts.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase))
-								|| cur.kind.match(TKeyword(KDefault))));
+							parseStmtInto(stmts,
+								() -> cur.kind.match(TRBrace) || cur.kind.match(TEof) || cur.kind.match(TKeyword(KCase)) || cur.kind.match(TKeyword(KDefault)));
 						}
 						patterns.push(pat);
 						bodies.push(SBlock(stmts, pos));
@@ -2048,7 +2087,7 @@ class HxParser {
 					bump();
 					final stmts = new Array<HxStmt>();
 					while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
-						stmts.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+						parseStmtInto(stmts, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
 					}
 					if (cur.kind.match(TRBrace))
 						bump();
@@ -2086,7 +2125,7 @@ class HxParser {
 						bump();
 						final stmts = new Array<HxStmt>();
 						while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
-							stmts.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+							parseStmtInto(stmts, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
 						}
 						if (cur.kind.match(TRBrace))
 							bump();
@@ -2245,7 +2284,7 @@ class HxParser {
 					bump();
 					return out;
 				case _:
-					out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+					parseStmtInto(out, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
 			}
 		}
 	}
@@ -2304,7 +2343,7 @@ class HxParser {
 					out.push(SExpr(EUnsupported("stray_rbrace"), HxPos.unknown()));
 				case _:
 					try {
-						out.push(parseStmt(() -> cur.kind.match(TRBrace) || cur.kind.match(TEof)));
+						parseStmtInto(out, () -> cur.kind.match(TRBrace) || cur.kind.match(TEof));
 						0; // ensure try/catch has a concrete, consistent expression type across targets
 					} catch (_:HxParseError) {
 						if (Sys.getEnv("HXHX_TRACE_BODY_STMT_PARSE_ERROR") == "1") {

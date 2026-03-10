@@ -56,7 +56,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'    return Sys.time();',
 			'  }',
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
-			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n);',
+			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
 			'  }',
 			'  static function main() {',
 			'    check(Main, "main");',
@@ -83,12 +83,20 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'Expected explicit imported short name `Assert` to resolve to the imported provider.');
 			assertTrue(ocaml.indexOf('Lambda.has') >= 0, 'Expected root stdlib short name to remain `Lambda.has`.');
 			assertTrue(ocaml.indexOf('Type.getClassFields') >= 0, 'Expected root stdlib short name to remain `Type.getClassFields`.');
+			assertTrue(ocaml.indexOf('Type.getEnum') >= 0, 'Expected root stdlib short name to remain `Type.getEnum`.');
+			assertTrue(ocaml.indexOf('Reflect.compare') >= 0, 'Expected root stdlib short name to remain `Reflect.compare`.');
 			assertTrue(ocaml.indexOf('HxSys.time') >= 0, 'Expected `Sys.time()` to lower to the HxSys runtime seam.');
 			assertTrue(ocaml.indexOf('Unit_CallStack.') < 0, 'Found bad package-local qualification `Unit_CallStack`.');
 			assertTrue(ocaml.indexOf('Unit_Assert.') < 0, 'Found bad package-local qualification `Unit_Assert`.');
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');
 			assertTrue(ocaml.indexOf('Unit_Type.') < 0, 'Found bad package-local qualification `Unit_Type`.');
+			assertTrue(ocaml.indexOf('Unit_Reflect.') < 0, 'Found bad package-local qualification `Unit_Reflect`.');
 			assertTrue(ocaml.indexOf('Haxe_Sys.') < 0, 'Found bad same-package qualification `Haxe_Sys`.');
+			final typeShim = haxe.io.Path.join([outDir, 'Type.ml']);
+			assertTrue(FileSystem.exists(typeShim), 'Expected Type.ml bootstrap import shim.');
+			final typeShimOcaml = File.getContent(typeShim);
+			assertTrue(typeShimOcaml.indexOf('include HxType') >= 0, 'Expected root Type shim to target HxType.');
+			assertTrue(typeShimOcaml.indexOf('Haxe_macro_Type') < 0, 'Found bad root Type shim targeting haxe.macro.Type.');
 
 			final haxeMainHx = haxe.io.Path.join([haxeSrcDir, 'haxe', 'Main.hx']);
 			final haxeSrc = [

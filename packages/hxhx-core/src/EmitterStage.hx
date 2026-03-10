@@ -4558,7 +4558,7 @@ class EmitterStage {
 			- This keeps the resolver narrow: we only exempt known root providers, not arbitrary
 			  uppercase identifiers.
 		**/
-		for (rootProvider in ["Type", "Lambda", "CallStack", "Xml", "Sys"])
+		for (rootProvider in ["Type", "Lambda", "CallStack", "Reflect", "Xml", "Sys"])
 			runtimeModuleNames.set(rootProvider, true);
 		// Stage 3 bring-up: keep the `Haxe_Int64.ml` shim authoritative.
 		//
@@ -6512,6 +6512,26 @@ class EmitterStage {
 				sys.io.File.saveContent(shimPath, "(* hxhx(stage3) bootstrap import shim: CallStack = haxe.CallStack *)\n" + "include Haxe_CallStack\n");
 				generatedPaths.push(shimFile);
 			}
+		}
+
+		// Stage 3 bring-up: root stdlib `Type.*` calls in emitted runtime code must resolve to the
+		// target runtime helper module (`HxType`), not to `haxe.macro.Type`.
+		//
+		// Why
+		// - Generic short-import alias generation can see `import haxe.macro.Type` in macro-side
+		//   modules and otherwise create `Type.ml = Haxe_macro_Type`.
+		// - That breaks runtime stdlib consumers such as upstream unit/utest code, which expect the
+		//   root `Type` module (`Type.getEnum`, `Type.getClassFields`, ...).
+		//
+		// Keep the bootstrap output honest by forcing the root short-name shim to `HxType`.
+		{
+			final shimName = "Type";
+			final shimFile = shimName + ".ml";
+			final shimPath = haxe.io.Path.join([outAbs, shimFile]);
+			final shimBody = "(* hxhx(stage3) bootstrap import shim: Type = HxType *)\n" + "include HxType\n";
+			sys.io.File.saveContent(shimPath, shimBody);
+			if (generatedPaths.indexOf(shimFile) == -1)
+				generatedPaths.push(shimFile);
 		}
 
 		// Stage 3 bring-up: explicit import short-name shims.
