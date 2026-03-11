@@ -629,6 +629,32 @@ class EmitterStage {
 		return keysValue == null ? null : cast keysValue;
 	}
 
+	/**
+		Conservatively treat a trailing `Rest<T>` / `haxe.Rest<T>` parameter like a rest arg.
+
+		Why
+		- Upstream stdlib/extern surfaces frequently model variadics as a typed trailing
+		  `Rest<T>` parameter instead of parser-level `...args` syntax.
+		- Stage3 call-site lowering already knows how to pack a rest tail once `hasRest`
+		  is true; the missing seam was signature recovery, not call emission.
+
+		How
+		- Prefer the parser-level rest flag when present.
+		- Otherwise inspect the last parameter type hint and recognize the narrow upstream
+		  forms we need for Haxe 4.3.7 compatibility.
+	**/
+	static inline function isRestLikeArg(arg:HxFunctionArg):Bool {
+		if (arg == null)
+			return false;
+		if (HxFunctionArg.getIsRest(arg))
+			return true;
+		final hint = StringTools.trim(HxFunctionArg.getTypeHint(arg));
+		return hint == "Rest"
+			|| StringTools.startsWith(hint, "Rest<")
+			|| StringTools.startsWith(hint, "haxe.Rest<")
+			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
+	}
+
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
 			?currentPackagePath:String, ?moduleNameByPkgAndClass:Map<String, String>, ?callSigByCallee:Map<String, EmitterCallSig>):String {
 		final tyByIdentRaw = tyByIdent;
@@ -4393,6 +4419,8 @@ class EmitterStage {
 			if (!sys.FileSystem.exists(shimPath)) {
 				sys.io.File.saveContent(shimPath,
 					"(* hxhx(stage3) bootstrap shim: Lambda *)\n"
+					+ "let array it =\n"
+					+ "  HxBootArray.of_list (List.of_seq (it : _ Seq.t))\n"
 					+ "let fold it f first =\n"
 					+ "  let acc = ref first in\n"
 					+ "  Seq.iter (fun x -> acc := f x !acc) (it : _ Seq.t);\n"
@@ -4912,7 +4940,7 @@ class EmitterStage {
 					//   markings on earlier parameters (which would otherwise pack all args).
 					var hasRest = false;
 					var fixedCount = argCount;
-					if (argCount > 0 && HxFunctionArg.getIsRest(fnArgs[argCount - 1])) {
+					if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
 						hasRest = true;
 						fixedCount = argCount - 1;
 					}
@@ -5254,7 +5282,7 @@ class EmitterStage {
 						final argCount = fnArgs == null ? 0 : fnArgs.length;
 						var hasRest = false;
 						var fixedCount = argCount;
-						if (argCount > 0 && HxFunctionArg.getIsRest(fnArgs[argCount - 1])) {
+						if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
 							hasRest = true;
 							fixedCount = argCount - 1;
 						}

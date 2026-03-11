@@ -48,6 +48,10 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'package unit;',
 			'import haxe.CallStack;',
 			'import utest.Assert;',
+			'extern class RestExtern {',
+			'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
+			'  static function coalesce<T>(left:T, right:T):T;',
+			'}',
 			'class Main {',
 			'  static function render():String {',
 			'    return CallStack.toString([]);',
@@ -55,13 +59,24 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function stamp():Float {',
 			'    return Sys.time();',
 			'  }',
+			'  static function sumRest(prefix:Int, rest:haxe.Rest<Int>):Int {',
+			'    return prefix + rest.length;',
+			'  }',
+			'  static function useRest():Int {',
+			'    return sumRest(1);',
+			'  }',
+			'  static function useExternRest():Dynamic {',
+			'    return RestExtern.code("extern");',
+			'  }',
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
-			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
+			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Lambda.array(Type.getClassFields(c)) != null && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
 			'  }',
 			'  static function main() {',
 			'    check(Main, "main");',
 			'    render();',
 			'    stamp();',
+			'    useRest();',
+			'    useExternRest();',
 			'  }',
 			'}',
 		].join("\n");
@@ -82,10 +97,15 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			assertTrue(ocaml.indexOf('Utest_Assert.contains') >= 0 || ocaml.indexOf('Assert.contains') >= 0,
 				'Expected explicit imported short name `Assert` to resolve to the imported provider.');
 			assertTrue(ocaml.indexOf('Lambda.has') >= 0, 'Expected root stdlib short name to remain `Lambda.has`.');
+			assertTrue(ocaml.indexOf('Lambda.array') >= 0, 'Expected root stdlib short name to remain `Lambda.array`.');
 			assertTrue(ocaml.indexOf('Type.getClassFields') >= 0, 'Expected root stdlib short name to remain `Type.getClassFields`.');
 			assertTrue(ocaml.indexOf('Type.getEnum') >= 0, 'Expected root stdlib short name to remain `Type.getEnum`.');
 			assertTrue(ocaml.indexOf('Reflect.compare') >= 0, 'Expected root stdlib short name to remain `Reflect.compare`.');
 			assertTrue(ocaml.indexOf('HxSys.time') >= 0, 'Expected `Sys.time()` to lower to the HxSys runtime seam.');
+			assertTrue(ocaml.indexOf('sumRest (1) (HxBootArray.create ())') >= 0,
+				'Expected trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
+			assertTrue(ocaml.indexOf('RestExtern.code ("extern") (HxBootArray.create ())') >= 0,
+				'Expected extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
 			assertTrue(ocaml.indexOf('Unit_CallStack.') < 0, 'Found bad package-local qualification `Unit_CallStack`.');
 			assertTrue(ocaml.indexOf('Unit_Assert.') < 0, 'Found bad package-local qualification `Unit_Assert`.');
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');

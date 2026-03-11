@@ -464,6 +464,33 @@ class HxParser {
 		}
 	}
 
+	function skipBalancedAngles():Void {
+		// Called when current token is '<' and the caller wants to skip a balanced generic group.
+		var depth = 0;
+		while (true) {
+			switch (cur.kind) {
+				case TEof:
+					fail("Unterminated angle bracket group");
+				case TOther(c) if (c == "<".code):
+					depth++;
+					bump();
+				case TOther(c) if (c == ">".code):
+					depth--;
+					bump();
+					if (depth <= 0)
+						return;
+				case TLParen:
+					bump();
+					skipBalancedParens();
+				case TLBrace:
+					bump();
+					skipBalancedBraces();
+				case _:
+					bump();
+			}
+		}
+	}
+
 	function skipBalancedBraces():Void {
 		// Called when current token is '{' already consumed by caller.
 		var depth = 1;
@@ -489,6 +516,10 @@ class HxParser {
 	function readTypeHintText(stop:() -> Bool):String {
 		// Bootstrap: type hints are kept as raw text until we implement a full type grammar.
 		final parts = new Array<String>();
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var angleDepth = 0;
+		var bracketDepth = 0;
 		while (true) {
 			// Special-case structural/anonymous type hints that begin with `{ ... }`.
 			//
@@ -498,7 +529,8 @@ class HxParser {
 			// In this case, the first `{` is part of the *type hint*, not the function body.
 			// Our callers often use `stop()` predicates that stop on `{` (body start), so we
 			// allow a leading `{` to be consumed into the type-hint text.
-			if (stop() && !(parts.length == 0 && cur.kind.match(TLBrace)))
+			final atTopLevel = parenDepth == 0 && braceDepth == 0 && angleDepth == 0 && bracketDepth == 0;
+			if (atTopLevel && stop() && !(parts.length == 0 && cur.kind.match(TLBrace)))
 				break;
 			switch (cur.kind) {
 				case TEof:
@@ -520,9 +552,12 @@ class HxParser {
 					bump();
 				case TLParen:
 					parts.push("(");
+					parenDepth++;
 					bump();
 				case TRParen:
 					parts.push(")");
+					if (parenDepth > 0)
+						parenDepth--;
 					bump();
 				case TDot:
 					parts.push(".");
@@ -535,15 +570,30 @@ class HxParser {
 					bump();
 				case TLBrace:
 					parts.push("{");
+					braceDepth++;
 					bump();
 				case TRBrace:
 					parts.push("}");
+					if (braceDepth > 0)
+						braceDepth--;
 					bump();
 				case TSemicolon:
 					parts.push(";");
 					bump();
 				case TOther(c):
-					parts.push(String.fromCharCode(c));
+					final ch = String.fromCharCode(c);
+					parts.push(ch);
+					switch (ch) {
+						case "<":
+							angleDepth++;
+						case ">":
+							if (angleDepth > 0) angleDepth--;
+						case "[":
+							bracketDepth++;
+						case "]":
+							if (bracketDepth > 0) bracketDepth--;
+						case _:
+					}
 					bump();
 			}
 		}
@@ -1894,7 +1944,7 @@ class HxParser {
 			bump();
 	}
 
-	function parseVarStmt(pos:HxPos):HxStmt {
+	function parseVarDecls(pos:HxPos):Array<HxStmt> {
 		// `var a[:T] [= expr], b[:U] [= expr];`
 		//
 		// Why
@@ -1928,26 +1978,27 @@ class HxParser {
 			decls.push(parseSingleVarDecl());
 		}
 		syncToStmtEnd();
+		return decls;
+	}
+
+	function parseVarStmt(pos:HxPos):HxStmt {
+		final decls = parseVarDecls(pos);
 		return decls.length == 1 ? decls[0] : SBlock(decls, pos);
 	}
 
 	function parseStmtInto(out:Array<HxStmt>, stop:() -> Bool):Void {
 		if (out == null || stop())
 			return;
-		switch (cur.kind) {
-			case TKeyword(KVar), TKeyword(KFinal):
-				final pos = cur.pos;
-				bump();
-				switch (parseVarStmt(pos)) {
-					case SBlock(stmts, _):
-						for (stmt in stmts)
-							out.push(stmt);
-					case stmt:
-						out.push(stmt);
-				}
-			case _:
-				out.push(parseStmt(stop));
+		final isVarDecl = cur.kind.match(TKeyword(KVar)) || cur.kind.match(TKeyword(KFinal));
+		if (isVarDecl) {
+			final pos = cur.pos;
+			bump();
+			final decls = parseVarDecls(pos);
+			for (stmt in decls)
+				out.push(stmt);
+			return;
 		}
+		out.push(parseStmt(stop));
 	}
 
 	function parseStmt(stop:() -> Bool):HxStmt {
@@ -2419,6 +2470,13 @@ class HxParser {
 			case _:
 				readIdent("function name");
 		}
+		// Generic function declarations can carry a type-parameter group immediately after the
+		// function name, e.g. `static function coalesce<T>(left:T, right:T):T;`.
+		//
+		// Drop the `<...>` group in this bootstrap parser, matching the existing constructor
+		// behavior for `new Foo<Bar>(...)`. Stage3 only needs the callable surface here.
+		if (isOtherChar("<"))
+			skipBalancedAngles();
 		expect(TLParen, "'('");
 
 		final args = new Array<HxFunctionArg>();
