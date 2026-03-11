@@ -31,6 +31,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 		FileSystem.createDirectory(srcDir);
 		FileSystem.createDirectory(haxeSrcDir);
 		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'utest']));
+		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'php']));
 		FileSystem.createDirectory(haxe.io.Path.join([haxeSrcDir, 'haxe']));
 
 		final assertHx = haxe.io.Path.join([srcDir, 'utest', 'Assert.hx']);
@@ -40,6 +41,14 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  public static function contains(v:Dynamic, values:Dynamic, pos:Dynamic):Bool {',
 			'    return true;',
 			'  }',
+			'}',
+		].join("\n"));
+
+		final phpSyntaxHx = haxe.io.Path.join([srcDir, 'php', 'Syntax.hx']);
+		File.saveContent(phpSyntaxHx, [
+			'package php;',
+			'extern class Syntax {',
+			'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
 			'}',
 		].join("\n"));
 
@@ -68,6 +77,9 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function useExternRest():Dynamic {',
 			'    return RestExtern.code("extern");',
 			'  }',
+			'  static function usePhpRest():Dynamic {',
+			'    return php.Syntax.code("php extern");',
+			'  }',
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
 			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Lambda.array(Type.getClassFields(c)) != null && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
 			'  }',
@@ -77,6 +89,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'    stamp();',
 			'    useRest();',
 			'    useExternRest();',
+			'    usePhpRest();',
 			'  }',
 			'}',
 		].join("\n");
@@ -106,6 +119,8 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'Expected trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
 			assertTrue(ocaml.indexOf('RestExtern.code ("extern") (HxBootArray.create ())') >= 0,
 				'Expected extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
+			assertTrue(ocaml.indexOf('Php_Syntax.code ("php extern") (HxBootArray.create ())') >= 0,
+				'Expected packaged extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
 			assertTrue(ocaml.indexOf('Unit_CallStack.') < 0, 'Found bad package-local qualification `Unit_CallStack`.');
 			assertTrue(ocaml.indexOf('Unit_Assert.') < 0, 'Found bad package-local qualification `Unit_Assert`.');
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');

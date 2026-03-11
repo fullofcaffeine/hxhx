@@ -129,6 +129,8 @@ class EmitterStage {
 	**/
 	static var currentOcamlModuleName:Null<String> = null;
 
+	static var currentModuleFilePath:Null<String> = null;
+
 	/**
 		Import-based rewrite for `Int64.<field>` in the current module.
 
@@ -429,6 +431,124 @@ class EmitterStage {
 		if (trimmed.length == 0)
 			return "Unknown";
 		return ocamlModuleNameFromTypePathParts(trimmed.split("."));
+	}
+
+	static function resolveImportedModuleFileFromContext(filePath:String, modulePath:String):Null<String> {
+		if (filePath == null || filePath.length == 0 || modulePath == null || modulePath.length == 0)
+			return null;
+		final rel = modulePath.split(".").join("/") + ".hx";
+		var dir = haxe.io.Path.directory(filePath);
+		final seen:Map<String, Bool> = new Map();
+		while (dir != null && dir.length > 0 && !seen.exists(dir)) {
+			seen.set(dir, true);
+			final direct = haxe.io.Path.join([dir, rel]);
+			if (sys.FileSystem.exists(direct))
+				return direct;
+			final stdPath = haxe.io.Path.join([dir, "std", rel]);
+			if (sys.FileSystem.exists(stdPath))
+				return stdPath;
+			final parent = haxe.io.Path.directory(dir);
+			if (parent == null || parent == dir)
+				break;
+			dir = parent;
+		}
+		return null;
+	}
+
+	static function resolveQualifiedModuleFileFromContext(filePath:String, parts:Array<String>):Null<String> {
+		if (filePath == null || filePath.length == 0 || parts == null || parts.length == 0)
+			return null;
+		for (i in 0...parts.length) {
+			final end = parts.length - i;
+			final modulePath = parts.slice(0, end).join(".");
+			final resolved = resolveImportedModuleFileFromContext(filePath, modulePath);
+			if (resolved != null)
+				return resolved;
+		}
+		return null;
+	}
+
+	static function expectedMainClassFromFilePath(filePath:Null<String>):Null<String> {
+		if (filePath == null || filePath.length == 0)
+			return null;
+		final base = haxe.io.Path.withoutExtension(haxe.io.Path.withoutDirectory(filePath));
+		final trimmed = StringTools.trim(base);
+		return (trimmed.length > 0 && trimmed != "Unknown") ? trimmed : null;
+	}
+
+	static function moduleNameForScannedDecl(decl:HxModuleDecl, moduleTypeName:Null<String>, typeName:String):String {
+		final pkgRaw = decl == null ? "" : HxModuleDecl.getPackagePath(decl);
+		final pkg = pkgRaw == null ? "" : StringTools.trim(pkgRaw);
+		final parts = (pkg.length == 0 ? [] : pkg.split("."));
+		final modName = moduleTypeName == null ? "" : StringTools.trim(moduleTypeName);
+		if (modName.length > 0 && modName != "Unknown" && typeName != modName)
+			parts.push(modName);
+		parts.push(typeName);
+		return ocamlModuleNameFromTypePathParts(parts);
+	}
+
+	static function callSigFromFunction(fn:HxFunctionDecl):EmitterCallSig {
+		final fnArgs = HxFunctionDecl.getArgs(fn);
+		final argCount = fnArgs == null ? 0 : fnArgs.length;
+		final needsReceiver = !HxFunctionDecl.getIsStatic(fn);
+		var hasRest = false;
+		var fixedCount = argCount;
+		if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
+			hasRest = true;
+			fixedCount = argCount - 1;
+		}
+		var requiredCount = 0;
+		for (i in 0...fixedCount) {
+			final a = fnArgs[i];
+			final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
+				case Default(_): true;
+				case _: false;
+			};
+			if (!HxFunctionArg.getIsOptional(a) && !hasDefault)
+				requiredCount += 1;
+		}
+		if (needsReceiver) {
+			fixedCount += 1;
+			requiredCount += 1;
+		}
+		return {
+			expected: fixedCount + (hasRest ? 1 : 0),
+			required: requiredCount,
+			fixed: fixedCount,
+			hasRest: hasRest,
+			needsReceiver: needsReceiver
+		};
+	}
+
+	static function resolveQualifiedModuleCallSig(currentFilePath:String, parts:Array<String>, field:String, loweredField:String):Null<EmitterCallSig> {
+		if (currentFilePath == null || currentFilePath.length == 0 || parts == null || parts.length == 0)
+			return null;
+		final resolvedFile = resolveQualifiedModuleFileFromContext(currentFilePath, parts);
+		if (resolvedFile == null || !sys.FileSystem.exists(resolvedFile))
+			return null;
+		try {
+			final source = sys.io.File.getContent(resolvedFile);
+			final parsed = ParserStage.parse(source, resolvedFile);
+			final decl = parsed.getDecl();
+			final moduleTypeName = expectedMainClassFromFilePath(resolvedFile);
+			for (cls in HxModuleDecl.getClasses(decl)) {
+				final className = HxClassDecl.getName(cls);
+				if (className == null || className.length == 0 || className == "Unknown")
+					continue;
+				final modName = moduleNameForScannedDecl(decl, moduleTypeName, className);
+				final baseModName = ocamlModuleNameFromTypePathParts(parts);
+				if (modName != baseModName)
+					continue;
+				for (fn in HxClassDecl.getFunctions(cls)) {
+					final fnNameRaw = HxFunctionDecl.getName(fn);
+					if (fnNameRaw == null || fnNameRaw.length == 0)
+						continue;
+					if (ocamlValueIdent(fnNameRaw) == loweredField || fnNameRaw == field)
+						return callSigFromFunction(fn);
+				}
+			}
+		} catch (_:haxe.Exception) {} catch (_:String) {}
+		return null;
 	}
 
 	static function tryExtractTypePathPartsFromExpr(e:HxExpr):Null<Array<String>> {
@@ -2264,10 +2384,73 @@ class EmitterStage {
 								final lowered = ocamlValueIdent(name);
 								final byLowered = callSigFor(lowered);
 								byLowered != null ? byLowered : callSigFor(name);
-							case EField(_obj, name):
+							case EField(obj, name):
 								final lowered = ocamlValueIdent(name);
 								final byLowered = callSigFor(lowered);
-								byLowered != null ? byLowered : callSigFor(name);
+								if (byLowered != null) {
+									byLowered;
+								} else {
+									final byName = callSigFor(name);
+									if (byName != null) {
+										byName;
+									} else {
+										var qualified:Null<EmitterCallSig> = null;
+										switch (obj) {
+											case EIdent(typeName):
+												final importedModule = staticImportModule(typeName);
+												if (importedModule != null && importedModule.length > 0) {
+													qualified = callSigFor(importedModule + "." + lowered);
+													if (qualified == null)
+														qualified = callSigFor(importedModule + "." + name);
+												}
+											case _:
+										}
+										if (qualified == null) {
+											final parts = tryExtractTypePathPartsFromExpr(obj);
+											if (parts != null && parts.length > 0 && isUpperStart(parts[parts.length - 1])) {
+												var modName = ocamlModuleNameFromTypePathParts(parts);
+												var resolvedByModuleIndex = false;
+												if (moduleNameByPkgAndClassRaw != null) {
+													final raw = parts.join(".");
+													var cur = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
+													while (true) {
+														final key = cur + ":" + raw;
+														final local = moduleNameForKey(key);
+														if (local != null && local.length > 0) {
+															modName = local;
+															resolvedByModuleIndex = true;
+															break;
+														}
+														if (cur.length == 0)
+															break;
+														final lastDot = cur.lastIndexOf(".");
+														cur = lastDot < 0 ? "" : cur.substr(0, lastDot);
+													}
+													if (!resolvedByModuleIndex
+														&& !isKnownModuleName(modName)
+														&& modName == ocamlModuleNameFromTypePathParts(parts)
+														&& parts.length == 1) {
+														final curPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
+														if (curPkg.length > 0) {
+															final qualifiedParts = curPkg.split(".");
+															for (p in parts)
+																qualifiedParts.push(p);
+															modName = ocamlModuleNameFromTypePathParts(qualifiedParts);
+														}
+													}
+												}
+												if (parts.length == 1 && parts[0] == "Int64" && currentImportInt64 != null && currentImportInt64.length > 0)
+													modName = currentImportInt64;
+												qualified = callSigFor(modName + "." + lowered);
+												if (qualified == null)
+													qualified = callSigFor(modName + "." + name);
+												if (qualified == null && currentModuleFilePath != null && currentModuleFilePath.length > 0)
+													qualified = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, name, lowered);
+											}
+										}
+										qualified;
+									}
+								}
 							case _:
 								null;
 						};
@@ -4893,6 +5076,49 @@ class EmitterStage {
 		// - Qualified: `ModuleName.fn`
 		// - (Module-local unqualified keys are added per-module in `emitModule`.)
 		final globalCallSigByCallee:Map<String, EmitterCallSig> = new Map();
+		final importedSigModulesSeen:Map<String, Bool> = new Map();
+		function recordFunctionSig(modName:String, fn:HxFunctionDecl):Void {
+			final fnNameRaw = HxFunctionDecl.getName(fn);
+			if (fnNameRaw == null || fnNameRaw.length == 0)
+				return;
+			final fnArgs = HxFunctionDecl.getArgs(fn);
+			final argCount = fnArgs == null ? 0 : fnArgs.length;
+			final needsReceiver = !HxFunctionDecl.getIsStatic(fn);
+			var hasRest = false;
+			var fixedCount = argCount;
+			if (argCount > 0 && isRestLikeArg(fnArgs[argCount - 1])) {
+				hasRest = true;
+				fixedCount = argCount - 1;
+			}
+			var requiredCount = 0;
+			for (i in 0...fixedCount) {
+				final a = fnArgs[i];
+				final hasDefault = switch (HxFunctionArg.getDefaultValue(a)) {
+					case Default(_): true;
+					case _: false;
+				};
+				if (!HxFunctionArg.getIsOptional(a) && !hasDefault)
+					requiredCount += 1;
+			}
+			if (needsReceiver) {
+				fixedCount += 1;
+				requiredCount += 1;
+			}
+			final sig0:EmitterCallSig = {
+				expected: fixedCount + (hasRest ? 1 : 0),
+				required: requiredCount,
+				fixed: fixedCount,
+				hasRest: hasRest,
+				needsReceiver: needsReceiver
+			};
+			final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
+			globalCallSigByCallee.set(key0, sig0);
+			final aliasShorts = aliasShortsByTarget.get(modName);
+			if (aliasShorts != null) {
+				for (short in aliasShorts)
+					globalCallSigByCallee.set(short + "." + ocamlValueIdent(fnNameRaw), sig0);
+			}
+		}
 		for (tm in typedModules) {
 			final decl = tm.getParsed().getDecl();
 			final moduleTypeName = moduleTypeNameFor(tm);
@@ -4961,24 +5187,35 @@ class EmitterStage {
 						requiredCount += 1;
 					}
 
-					final expected = fixedCount + (hasRest ? 1 : 0);
 					_EmitterStageDebug.traceCallSig(modName, ocamlValueIdent(fnNameRaw), fnArgs, requiredCount, fixedCount, hasRest, needsReceiver);
-					final sig0:EmitterCallSig = {
-						expected: expected,
-						required: requiredCount,
-						fixed: fixedCount,
-						hasRest: hasRest,
-						needsReceiver: needsReceiver
-					};
-					final key0 = modName + "." + ocamlValueIdent(fnNameRaw);
-					globalCallSigByCallee.set(key0, sig0);
-					final aliasShorts = aliasShortsByTarget.get(modName);
-					if (aliasShorts != null) {
-						for (short in aliasShorts) {
-							globalCallSigByCallee.set(short + "." + ocamlValueIdent(fnNameRaw), sig0);
-						}
-					}
+					recordFunctionSig(modName, fn);
 				}
+			}
+			final tmFilePath = tm.getParsed().getFilePath();
+			for (rawImport in tm.getEnv().getImports()) {
+				if (rawImport == null)
+					continue;
+				final imp = StringTools.trim(rawImport);
+				if (imp.length == 0 || StringTools.endsWith(imp, ".*") || importedSigModulesSeen.exists(imp))
+					continue;
+				final resolvedImportFile = resolveImportedModuleFileFromContext(tmFilePath, imp);
+				if (resolvedImportFile == null || !sys.FileSystem.exists(resolvedImportFile))
+					continue;
+				importedSigModulesSeen.set(imp, true);
+				try {
+					final importedSource = sys.io.File.getContent(resolvedImportFile);
+					final importedParsed = ParserStage.parse(importedSource, resolvedImportFile);
+					final importedDecl = importedParsed.getDecl();
+					final importedModuleTypeName = expectedMainClassFromFile(resolvedImportFile);
+					for (importedCls in HxModuleDecl.getClasses(importedDecl)) {
+						final importedClassName = HxClassDecl.getName(importedCls);
+						if (importedClassName == null || importedClassName.length == 0 || importedClassName == "Unknown")
+							continue;
+						final importedModName = moduleNameForDecl(importedDecl, importedModuleTypeName, importedClassName);
+						for (fn in HxClassDecl.getFunctions(importedCls))
+							recordFunctionSig(importedModName, fn);
+					}
+				} catch (_:haxe.Exception) {} catch (_:String) {}
 			}
 		}
 
@@ -5212,12 +5449,14 @@ class EmitterStage {
 
 			function emitMainClass():Null<String> {
 				final prevOcamlModule = currentOcamlModuleName;
+				final prevModuleFilePath = currentModuleFilePath;
 				final prevInt64 = currentImportInt64;
 				final prevInstanceFieldsByTypePath = currentInstanceFieldsByTypePath;
 				final prevInstanceMethodsByTypePath = currentInstanceMethodsByTypePath;
 				final moduleFilePath = tm.getParsed().getFilePath();
 				final mainClassName = HxClassDecl.getName(mainClass);
 				currentOcamlModuleName = mainModuleName;
+				currentModuleFilePath = moduleFilePath;
 				currentImportInt64 = importInt64;
 				try {
 					final parsedFns = HxClassDecl.getFunctions(mainClass);
@@ -6226,18 +6465,21 @@ class EmitterStage {
 					final mlPath = haxe.io.Path.join([outAbs, mainModuleName + ".ml"]);
 					sys.io.File.saveContent(mlPath, out.join("\n"));
 					currentOcamlModuleName = prevOcamlModule;
+					currentModuleFilePath = prevModuleFilePath;
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
 					return mainModuleName + ".ml";
 				} catch (e:TyperError) {
 					currentOcamlModuleName = prevOcamlModule;
+					currentModuleFilePath = prevModuleFilePath;
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
 					throw e;
 				} catch (e:String) {
 					currentOcamlModuleName = prevOcamlModule;
+					currentModuleFilePath = prevModuleFilePath;
 					currentImportInt64 = prevInt64;
 					currentInstanceFieldsByTypePath = prevInstanceFieldsByTypePath;
 					currentInstanceMethodsByTypePath = prevInstanceMethodsByTypePath;
