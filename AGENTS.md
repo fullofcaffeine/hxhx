@@ -47,9 +47,11 @@ Agent policy:
   - Do not substitute indirect `ps`/artifact polling for actual session completion.
   - Report progress only on real session transitions: command exit, next-step handoff, genuine stall, or concrete failure output.
   - If background execution is unavoidable, record the exact command, PID, log path, and expected completion artifact before stepping away.
+  - When wrapping a long-running gate command in shell, use strict shell mode (`set -euo pipefail`) so failures cannot be masked by later commands or trailing `echo` lines.
 - For long-running attached sessions, do not wait indefinitely on silence alone.
   - Set a bounded silent-check window up front.
   - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.
+  - The attached session output remains the primary truth source. Use external process/artifact checks only to supplement it, never to override a newer session exit or failure.
   - If the checkpoint does not produce a concrete reason to keep waiting, stop waiting and switch to the next bounded experiment or escalation path.
 - For long-running local commands, prefer a single resumable session over ad-hoc backgrounding.
   - Keep the process attached to one persistent session when possible and resume by polling that same session.
