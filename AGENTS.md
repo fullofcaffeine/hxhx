@@ -43,6 +43,10 @@ Agent policy:
 - If the user says to stop on `thinking:xhigh`, stop immediately when that threshold is reached and ask the user before continuing.
   - Do not silently continue `thinking:xhigh` implementation work.
   - Do not substitute Oracle or extended reasoning for that approval; ask first.
+- For long-running local commands that are the gate to the next engineering step, keep one attached or explicitly resumable session as the source of truth.
+  - Do not substitute indirect `ps`/artifact polling for actual session completion.
+  - Report progress only on real session transitions: command exit, next-step handoff, genuine stall, or concrete failure output.
+  - If background execution is unavoidable, record the exact command, PID, log path, and expected completion artifact before stepping away.
 - For long-running local commands, prefer a single resumable session over ad-hoc backgrounding.
   - Keep the process attached to one persistent session when possible and resume by polling that same session.
   - If backgrounding is unavoidable, record the exact command, PID, log path, and expected completion artifact before moving on.

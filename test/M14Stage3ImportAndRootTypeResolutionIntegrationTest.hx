@@ -26,13 +26,17 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 		final outDir = haxe.io.Path.join([tmpRoot, 'out']);
 		final haxeSrcDir = haxe.io.Path.join([tmpRoot, 'src_haxe']);
 		final haxeOutDir = haxe.io.Path.join([tmpRoot, 'out_haxe']);
+		final phpSrcDir = haxe.io.Path.join([tmpRoot, 'src_php']);
+		final phpOutDir = haxe.io.Path.join([tmpRoot, 'out_php']);
 		deleteRecursive(tmpRoot);
 		FileSystem.createDirectory(tmpRoot);
 		FileSystem.createDirectory(srcDir);
 		FileSystem.createDirectory(haxeSrcDir);
+		FileSystem.createDirectory(phpSrcDir);
 		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'utest']));
 		FileSystem.createDirectory(haxe.io.Path.join([srcDir, 'php']));
 		FileSystem.createDirectory(haxe.io.Path.join([haxeSrcDir, 'haxe']));
+		FileSystem.createDirectory(haxe.io.Path.join([phpSrcDir, 'php']));
 
 		final assertHx = haxe.io.Path.join([srcDir, 'utest', 'Assert.hx']);
 		File.saveContent(assertHx, [
@@ -153,6 +157,34 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			final haxeOcaml = File.getContent(haxeMainMl);
 			assertTrue(haxeOcaml.indexOf('HxSys.time') >= 0, 'Expected same-package `Sys.time()` to lower to HxSys runtime seam.');
 			assertTrue(haxeOcaml.indexOf('Haxe_Sys.') < 0, 'Found bad same-package `Haxe_Sys` qualification in package haxe output.');
+
+			final phpSyntaxLocalHx = haxe.io.Path.join([phpSrcDir, 'php', 'Syntax.hx']);
+			File.saveContent(phpSyntaxLocalHx, [
+				'package php;',
+				'extern class Syntax {',
+				'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
+				'}',
+			].join("\n"));
+			final phpBootHx = haxe.io.Path.join([phpSrcDir, 'php', 'Boot.hx']);
+			final phpBootSrc = [
+				'package php;',
+				'class Boot {',
+				'  public static function getPrefix():Dynamic {',
+				'    return Syntax.code("self::PHP_PREFIX");',
+				'  }',
+				'}',
+			].join("\n");
+			File.saveContent(phpBootHx, phpBootSrc);
+			final phpParsed = ParserStage.parse(phpBootSrc, phpBootHx);
+			final phpTyped = TyperStage.typeModule(phpParsed);
+			final phpExpanded = MacroStage.expandProgram([phpTyped], []);
+			EmitterStage.emitToDir(phpExpanded, phpOutDir, true, false);
+
+			final phpBootMl = haxe.io.Path.join([phpOutDir, 'Php_Boot.ml']);
+			assertTrue(FileSystem.exists(phpBootMl), 'Expected Php_Boot.ml in emitted output.');
+			final phpOcaml = File.getContent(phpBootMl);
+			assertTrue(phpOcaml.indexOf('Php_Syntax.code ("self::PHP_PREFIX") (HxBootArray.create ())') >= 0,
+				'Expected same-package short type `Syntax.code(...)` to lower with an explicit empty HxBootArray.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

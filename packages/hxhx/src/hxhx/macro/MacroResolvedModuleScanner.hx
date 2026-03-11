@@ -1738,15 +1738,18 @@ class MacroResolvedModuleScanner {
 		parts.push(MacroProtocol.encodeLen("c", Std.string(metadata.length)));
 		for (i in 0...metadata.length)
 			parts.push(MacroProtocol.encodeLen("md" + i, metadata[i]));
-		parts.push(MacroProtocol.encodeLen("pc", Std.string({
+		var matchedTypeParamCount = 0;
+		{
 			var matched:Null<RuntimeResolvedTypeSnapshot> = null;
 			for (entry in resolvedTypes)
 				if (entry.name == targetTypeName) {
 					matched = entry;
 					break;
 				}
-			matched == null ? 0 : matched.typeParamNames.length;
-		})));
+			if (matched != null)
+				matchedTypeParamCount = matched.typeParamNames.length;
+		}
+		parts.push(MacroProtocol.encodeLen("pc", Std.string(matchedTypeParamCount)));
 		{
 			var matched:Null<RuntimeResolvedTypeSnapshot> = null;
 			for (entry in resolvedTypes)

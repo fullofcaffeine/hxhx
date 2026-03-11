@@ -531,13 +531,17 @@ class EmitterStage {
 			final parsed = ParserStage.parse(source, resolvedFile);
 			final decl = parsed.getDecl();
 			final moduleTypeName = expectedMainClassFromFilePath(resolvedFile);
+			final targetTypeName = parts[parts.length - 1];
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final className = HxClassDecl.getName(cls);
 				if (className == null || className.length == 0 || className == "Unknown")
 					continue;
-				final modName = moduleNameForScannedDecl(decl, moduleTypeName, className);
-				final baseModName = ocamlModuleNameFromTypePathParts(parts);
-				if (modName != baseModName)
+				// Same-package short type references (`Syntax.code(...)` inside `package php`) resolve to
+				// the sibling module file via `resolveQualifiedModuleFileFromContext`, but `parts` still
+				// only contains the short type path (`["Syntax"]`). Matching on the resolved file's OCaml
+				// module name would reject the correct file (`Php_Syntax` != `Syntax`) and lose rest/optional
+				// signature recovery. Once the file is resolved, select the target declaration by type name.
+				if (className != targetTypeName)
 					continue;
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					final fnNameRaw = HxFunctionDecl.getName(fn);
