@@ -47,6 +47,10 @@ Agent policy:
   - Do not substitute indirect `ps`/artifact polling for actual session completion.
   - Report progress only on real session transitions: command exit, next-step handoff, genuine stall, or concrete failure output.
   - If background execution is unavoidable, record the exact command, PID, log path, and expected completion artifact before stepping away.
+- For long-running attached sessions, do not wait indefinitely on silence alone.
+  - Set a bounded silent-check window up front.
+  - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.
+  - If the checkpoint does not produce a concrete reason to keep waiting, stop waiting and switch to the next bounded experiment or escalation path.
 - For long-running local commands, prefer a single resumable session over ad-hoc backgrounding.
   - Keep the process attached to one persistent session when possible and resume by polling that same session.
   - If backgrounding is unavoidable, record the exact command, PID, log path, and expected completion artifact before moving on.
