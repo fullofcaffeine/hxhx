@@ -2,6 +2,10 @@
 
 This guide is for users who want to keep using upstream Haxe while targeting OCaml through `reflaxe.ocaml`.
 
+Canonical product contract:
+
+- `docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md`
+
 ## What this gives you
 
 - Upstream Haxe CLI/workflow.

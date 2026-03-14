@@ -20,6 +20,8 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 
 - Glossary (plain language): `docs/00-project/GLOSSARY.md`
 - CI workflows and gate meaning: `docs/00-project/CI_GATES.md`
+- `reflaxe.ocaml` product contract: `docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md`
+- Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Public `Scoped 1.0` / `Full 1.0` claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - Weekly scheduled-gate audit runbook: `docs/00-project/WEEKLY_CI_EVIDENCE.md`
 - Delegated vs native execution modes: `docs/02-user-guide/concepts/execution_modes.md`

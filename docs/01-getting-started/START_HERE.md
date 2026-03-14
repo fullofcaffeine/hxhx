@@ -59,6 +59,7 @@ haxe -cp src -main Main -lib reflaxe.ocaml -D ocaml_output=out -D ocaml_build=na
 
 Read:
 - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
+- `docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md`
 - `packages/reflaxe.ocaml/README.md`
 - `docs/02-user-guide/concepts/execution_modes.md`
 
@@ -97,6 +98,7 @@ bash scripts/hxhx/promote-backend-plugin.sh \
 ```
 
 Read:
+- `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
 - `docs/01-getting-started/REFLAXE_ELIXIR_TODO_PROMOTION_PILOT.md`
 - `docs/02-user-guide/HXHX_PROMOTION_HOST_ADAPTERS.md`

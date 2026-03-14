@@ -7,6 +7,10 @@ This guide explains two common goals from scratch:
 
 Use this page when you are new to the repo and need a clear “which path should I take?” answer.
 
+Canonical promotion contract:
+
+- `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
+
 ## Pick the right outcome
 
 | Goal | Use this path | Result |
