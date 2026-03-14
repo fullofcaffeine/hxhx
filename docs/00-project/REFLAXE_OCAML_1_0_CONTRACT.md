@@ -108,6 +108,11 @@ Required marker set:
   - source of truth:
     - `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.md`
     - `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.json`
+- `RO_TARGET_PERF_CREDIBLE:PASS`
+  - target-level performance evidence exists for upstream `haxe 4.3.7 + reflaxe.ocaml`
+  - source of truth:
+    - `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
+    - `docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json`
 - `RO_PRODUCTION_DOCS:PASS`
   - operator-facing install/use/troubleshooting docs exist and match reality
 - `RO_PRODUCTION_READY:PASS`

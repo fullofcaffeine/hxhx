@@ -85,6 +85,7 @@ Defaults stay `HXHX_BOOTSTRAP_STAGE0_HAXE_POLICY=prefer-native` and `HXHX_DUNE_J
   - `packages/reflaxe.ocaml/README.md`
   - `docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md`
   - `docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md`
+  - `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
 - **Native promotion workflow (Reflaxe -> native plugin/builtin host adapters)**
   - `docs/01-getting-started/PROMOTE_REFLAXE_TO_NATIVE.md`
   - `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`

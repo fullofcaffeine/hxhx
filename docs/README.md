@@ -23,6 +23,7 @@ Use this page as the docs index. If you are new, start with `docs/01-getting-sta
 - `reflaxe.ocaml` product contract: `docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md`
 - `reflaxe.ocaml` upstream-Haxe validation matrix: `docs/00-project/REFLAXE_OCAML_HAXE_4_3_7_MATRIX.md`
 - `reflaxe.ocaml` runtime/stdlib closure audit: `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.md`
+- `reflaxe.ocaml` performance credibility baseline: `docs/00-project/REFLAXE_OCAML_PERF_CREDIBILITY.md`
 - Reflaxe promotion matrix contract: `docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md`
 - Public `Scoped 1.0` / `Full 1.0` claim checklist: `docs/00-project/PUBLIC_1_0_CHECKLIST.md`
 - Weekly scheduled-gate audit runbook: `docs/00-project/WEEKLY_CI_EVIDENCE.md`

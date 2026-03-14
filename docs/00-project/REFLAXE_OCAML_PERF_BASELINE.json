@@ -1,0 +1,118 @@
+{
+  "marker": "RO_TARGET_PERF_CREDIBLE:PASS",
+  "lastAudited": "2026-03-13",
+  "baselineHost": {
+    "platform": "darwin-arm64",
+    "cpus": 12,
+    "haxe": "4.3.7",
+    "dune": "3.21.0",
+    "ocamlc": "5.4.0",
+    "notes": "Local reference workstation; use for bounded expectations and regression tracking, not cross-host absolute promises."
+  },
+  "runner": "node scripts/ci/run-reflaxe-ocaml-perf.js",
+  "artifact": ".artifacts/reflaxe-ocaml/perf/summary.json",
+  "scenarios": [
+    {
+      "id": "ro-perf-01",
+      "kind": "build_native",
+      "title": "build-macro native build throughput",
+      "exampleDir": "packages/reflaxe.ocaml/examples/build-macro",
+      "outDir": "out",
+      "executableRelativePath": "out/_build/default/out.exe",
+      "buildReps": 3,
+      "compileArgs": ["build.hxml", "-D", "ocaml_build=native"],
+      "thresholds": {
+        "buildMedianMs": { "value": 1606, "maxRegressionPct": 75 },
+        "generatedMlBytes": { "value": 600860, "maxRegressionPct": 25 },
+        "executableBytes": { "value": 1876600, "maxRegressionPct": 25 }
+      }
+    },
+    {
+      "id": "ro-perf-02",
+      "kind": "build_native",
+      "title": "file-io native build throughput",
+      "exampleDir": "packages/reflaxe.ocaml/examples/file-io",
+      "outDir": "out",
+      "executableRelativePath": "out/_build/default/out.exe",
+      "buildReps": 3,
+      "compileArgs": ["build.hxml", "-D", "ocaml_build=native"],
+      "thresholds": {
+        "buildMedianMs": { "value": 1712, "maxRegressionPct": 75 },
+        "generatedMlBytes": { "value": 645352, "maxRegressionPct": 25 },
+        "executableBytes": { "value": 2039864, "maxRegressionPct": 25 }
+      }
+    },
+    {
+      "id": "ro-perf-03",
+      "kind": "build_native",
+      "title": "ocaml-native-collections build throughput",
+      "exampleDir": "packages/reflaxe.ocaml/examples/ocaml-native-collections",
+      "outDir": "out",
+      "executableRelativePath": "out/_build/default/out.exe",
+      "buildReps": 3,
+      "compileArgs": ["build.hxml", "-D", "ocaml_build=native"],
+      "thresholds": {
+        "buildMedianMs": { "value": 1753, "maxRegressionPct": 75 },
+        "generatedMlBytes": { "value": 615061, "maxRegressionPct": 25 },
+        "executableBytes": { "value": 1939880, "maxRegressionPct": 25 }
+      }
+    },
+    {
+      "id": "ro-perf-04",
+      "kind": "build_native",
+      "title": "loop-control native build throughput",
+      "exampleDir": "packages/reflaxe.ocaml/examples/loop-control",
+      "outDir": "out",
+      "executableRelativePath": "out/_build/default/out.exe",
+      "buildReps": 3,
+      "compileArgs": ["build.hxml", "-D", "ocaml_build=native"],
+      "thresholds": {
+        "buildMedianMs": { "value": 1673, "maxRegressionPct": 75 },
+        "generatedMlBytes": { "value": 603756, "maxRegressionPct": 25 },
+        "executableBytes": { "value": 1876584, "maxRegressionPct": 25 }
+      }
+    },
+    {
+      "id": "ro-perf-05",
+      "kind": "runtime_bench",
+      "title": "portable profile native runtime hot loop",
+      "exampleDir": "packages/reflaxe.ocaml/examples/hxhx-native-reflaxe-bench",
+      "outDir": "out",
+      "executableRelativePath": "out/_build/default/out.exe",
+      "buildReps": 3,
+      "runReps": 9,
+      "iterations": 200000,
+      "compileArgs": ["build.hxml", "-lib", "reflaxe.ocaml", "-D", "ocaml_output=out", "-D", "ocaml_build=native", "-D", "ocaml_profile=portable"],
+      "runArgv": ["out/_build/default/out.exe"],
+      "thresholds": {
+        "buildMedianMs": { "value": 1683, "maxRegressionPct": 75 },
+        "runMedianMs": { "value": 14, "maxRegressionPct": 100 },
+        "generatedMlBytes": { "value": 605286, "maxRegressionPct": 25 },
+        "executableBytes": { "value": 1942760, "maxRegressionPct": 25 }
+      }
+    },
+    {
+      "id": "ro-perf-06",
+      "kind": "runtime_bench",
+      "title": "metal profile native runtime hot loop",
+      "exampleDir": "packages/reflaxe.ocaml/examples/hxhx-native-reflaxe-bench",
+      "outDir": "out",
+      "executableRelativePath": "out/_build/default/out.exe",
+      "buildReps": 3,
+      "runReps": 9,
+      "iterations": 200000,
+      "compileArgs": ["build.hxml", "-lib", "reflaxe.ocaml", "-D", "ocaml_output=out", "-D", "ocaml_build=native", "-D", "ocaml_profile=metal"],
+      "runArgv": ["out/_build/default/out.exe"],
+      "thresholds": {
+        "buildMedianMs": { "value": 1519, "maxRegressionPct": 75 },
+        "runMedianMs": { "value": 15, "maxRegressionPct": 100 },
+        "generatedMlBytes": { "value": 501632, "maxRegressionPct": 25 },
+        "executableBytes": { "value": 1942760, "maxRegressionPct": 25 }
+      }
+    }
+  ],
+  "profileComparisonThresholds": {
+    "runMedianPctOfPortable": { "value": 107, "maxRegressionPct": 35 },
+    "buildMedianPctOfPortable": { "value": 90, "maxRegressionPct": 35 }
+  }
+}
