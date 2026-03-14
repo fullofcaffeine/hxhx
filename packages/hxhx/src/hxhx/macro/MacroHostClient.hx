@@ -939,9 +939,10 @@ private class MacroClient {
 		parts.push(MacroProtocol.encodeLen("c", Std.string(entries.length)));
 		for (i in 0...entries.length) {
 			final entry = entries[i];
+			final entryId:Int = entry.id == null ? 0 : entry.id;
 			parts.push(MacroProtocol.encodeLen("n" + i, entry.name));
 			parts.push(MacroProtocol.encodeLen("t" + i, entry.typeText));
-			parts.push(MacroProtocol.encodeLen("id" + i, Std.string(entry.id == null ? 0 : entry.id)));
+			parts.push(MacroProtocol.encodeLen("id" + i, Std.string(entryId)));
 			parts.push(MacroProtocol.encodeLen("cap" + i, entry.capture == true ? "1" : "0"));
 			parts.push(MacroProtocol.encodeLen("st" + i, entry.isStatic == true ? "1" : "0"));
 		}

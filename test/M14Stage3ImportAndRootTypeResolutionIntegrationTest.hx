@@ -53,6 +53,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'package php;',
 			'extern class Syntax {',
 			'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
+			'  static function codeLowered(code:String, args:Array<Dynamic>):Dynamic;',
 			'}',
 		].join("\n"));
 
@@ -84,6 +85,9 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'  static function usePhpRest():Dynamic {',
 			'    return php.Syntax.code("php extern");',
 			'  }',
+			'  static function usePhpLoweredRest():Dynamic {',
+			'    return php.Syntax.codeLowered("php lowered extern");',
+			'  }',
 			'  static function check(c:Class<Dynamic>, n:String):Bool {',
 			'    return Assert.contains(n, [], null) && Lambda.has(Type.getClassFields(c), n) && Lambda.array(Type.getClassFields(c)) != null && Type.getEnum(Type.typeof(n)) != null && Reflect.compare(n, n) == 0;',
 			'  }',
@@ -94,6 +98,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			'    useRest();',
 			'    useExternRest();',
 			'    usePhpRest();',
+			'    usePhpLoweredRest();',
 			'  }',
 			'}',
 		].join("\n");
@@ -125,6 +130,8 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'Expected extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
 			assertTrue(ocaml.indexOf('Php_Syntax.code ("php extern") (HxBootArray.create ())') >= 0,
 				'Expected packaged extern trailing `Rest<T>` parameter calls to lower to an explicit empty HxBootArray.');
+			assertTrue(ocaml.indexOf('Php_Syntax.codeLowered ("php lowered extern") (HxBootArray.create ())') >= 0,
+				'Expected packaged lowered variadic extern calls to lower to an explicit empty HxBootArray.');
 			assertTrue(ocaml.indexOf('Unit_CallStack.') < 0, 'Found bad package-local qualification `Unit_CallStack`.');
 			assertTrue(ocaml.indexOf('Unit_Assert.') < 0, 'Found bad package-local qualification `Unit_Assert`.');
 			assertTrue(ocaml.indexOf('Unit_Lambda.') < 0, 'Found bad package-local qualification `Unit_Lambda`.');
@@ -163,6 +170,7 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'package php;',
 				'extern class Syntax {',
 				'  static function code(code:String, args:haxe.Rest<Dynamic>):Dynamic;',
+				'  static function codeLowered(code:String, args:Array<Dynamic>):Dynamic;',
 				'}',
 			].join("\n"));
 			final phpBootHx = haxe.io.Path.join([phpSrcDir, 'php', 'Boot.hx']);
@@ -171,6 +179,9 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 				'class Boot {',
 				'  public static function getPrefix():Dynamic {',
 				'    return Syntax.code("self::PHP_PREFIX");',
+				'  }',
+				'  public static function getPrefixLowered():Dynamic {',
+				'    return Syntax.codeLowered("self::PHP_PREFIX");',
 				'  }',
 				'}',
 			].join("\n");
@@ -185,6 +196,8 @@ class M14Stage3ImportAndRootTypeResolutionIntegrationTest {
 			final phpOcaml = File.getContent(phpBootMl);
 			assertTrue(phpOcaml.indexOf('Php_Syntax.code ("self::PHP_PREFIX") (HxBootArray.create ())') >= 0,
 				'Expected same-package short type `Syntax.code(...)` to lower with an explicit empty HxBootArray.');
+			assertTrue(phpOcaml.indexOf('Php_Syntax.codeLowered ("self::PHP_PREFIX") (HxBootArray.create ())') >= 0,
+				'Expected lowered same-package short type `Syntax.codeLowered(...)` to lower with an explicit empty HxBootArray.');
 		} catch (e:Dynamic) {
 			thrown = e;
 		}

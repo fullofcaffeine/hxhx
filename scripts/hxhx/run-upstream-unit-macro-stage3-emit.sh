@@ -60,10 +60,18 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
 fi
 
 HXHX_BIN="${HXHX_BIN:-}"
-if [ -z "$HXHX_BIN" ] || [ ! -x "$HXHX_BIN" ]; then
-  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
-elif [[ "$HXHX_BIN" != /* ]]; then
+if [ -n "$HXHX_BIN" ] && [[ "$HXHX_BIN" != /* ]]; then
   HXHX_BIN="$ROOT/$HXHX_BIN"
+fi
+
+if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
+  HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
+
+if [ ! -x "$HXHX_BIN" ]; then
+  HXHX_BIN_RUNNER=(ocamlrun "$HXHX_BIN")
+else
+  HXHX_BIN_RUNNER=("$HXHX_BIN")
 fi
 
 # Stage3 emit rung executes `--macro Macro.init()`, which requires a macro host.
@@ -151,6 +159,9 @@ fi
 prepare_haxelib_hxml utest
 
 echo "== Gate 1 (stage3 emit rung): upstream tests/unit/compile-macro.hxml"
+: "${HXHX_TRACE_STAGE3_DRIVER:=1}"
+: "${HXHX_TRACE_STAGE3_MODULE_EMIT:=1}"
+export HXHX_TRACE_STAGE3_DRIVER HXHX_TRACE_STAGE3_MODULE_EMIT
 STAGE3_OUT_DIR="${HXHX_STAGE3_EMIT_OUT_DIR:-}"
 set +e
 out="$(
@@ -162,7 +173,7 @@ out="$(
     mkdir -p "$STAGE3_OUT_DIR"
   fi
   HAXELIB_BIN="$HAXELIB_RESOLVED" \
-    "$HXHX_BIN" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out "$STAGE3_OUT_DIR" 2>&1
+    "${HXHX_BIN_RUNNER[@]}" --hxhx-stage3 --hxhx-emit-full-bodies compile-macro.hxml --hxhx-out "$STAGE3_OUT_DIR" 2>&1
 )"
 code="$?"
 set -e

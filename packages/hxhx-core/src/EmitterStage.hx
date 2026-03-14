@@ -72,12 +72,47 @@ private class _EmitterStageDebug {
 				for (a in args) {
 					final nm = HxFunctionArg.getName(a);
 					final kind = HxFunctionArg.getIsRest(a) ? "rest" : "fixed";
-					parts.push(nm + ":" + kind);
+					final hint = StringTools.trim(HxFunctionArg.getTypeHint(a));
+					parts.push(nm + ":" + kind + (hint.length == 0 ? "" : (":" + hint)));
 				}
 			}
 			Sys.stderr()
 				.writeString("callsig " + modName + "." + fnName + " required=" + required + " fixed=" + fixed + " hasRest=" + (hasRest ? "1" : "0")
 					+ " needsReceiver=" + (needsReceiver ? "1" : "0") + " args=[" + parts.join(",") + "]\n");
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
+	}
+
+	/**
+		Emit a debug trace for Stage3 module emission progress.
+
+		Why
+		- Some Stage3 bring-up failures currently surface as hard crashes during module emission.
+		- A narrow per-module trace lets us identify the last module reached without perturbing
+		  normal stdout-based gate markers.
+
+		How
+		- Gated by `HXHX_TRACE_STAGE3_MODULE_EMIT=1`.
+		- Written to stderr so the existing stdout markers remain stable.
+	**/
+	static inline function traceStage3Enabled():Bool {
+		final enabled = Sys.getEnv("HXHX_TRACE_STAGE3_MODULE_EMIT");
+		return enabled == "1" || enabled == "true" || enabled == "yes";
+	}
+
+	public static function traceStage3Phase(label:String):Void {
+		if (!traceStage3Enabled())
+			return;
+		try {
+			Sys.stderr().writeString("stage3_emit_phase=" + label + "\n");
+		} catch (_:haxe.io.Error) {} catch (_:String) {}
+	}
+
+	public static function traceStage3Module(label:String, moduleName:String, filePath:Null<String>):Void {
+		if (!traceStage3Enabled())
+			return;
+		try {
+			final fileTag = filePath == null ? "<unknown>" : filePath;
+			Sys.stderr().writeString("stage3_emit[" + label + "]=" + moduleName + " file=" + fileTag + "\n");
 		} catch (_:haxe.io.Error) {} catch (_:String) {}
 	}
 }
@@ -113,6 +148,13 @@ private class _ModuleNameEntry {
 }
 
 class EmitterStage {
+	static var moduleInitTrace:Bool = traceModuleInit();
+
+	static function traceModuleInit():Bool {
+		_EmitterStageDebug.traceStage3Phase("emitter_module_init");
+		return true;
+	}
+
 	/**
 		The OCaml compilation unit we are currently emitting.
 
@@ -231,6 +273,33 @@ class EmitterStage {
 	**/
 	static var currentOcamlProfile:String = backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Portable);
 
+	static inline function traceEmitToDirEntry(label:String):Void {
+		_EmitterStageDebug.traceStage3Phase(label);
+	}
+
+	static function requireEmitToDirOutAbs(outDir:String):String {
+		traceEmitToDirEntry("emitToDir_before_validate");
+		if (outDir == null || StringTools.trim(outDir).length == 0)
+			throw "stage3 emitter: missing outDir";
+		traceEmitToDirEntry("emitToDir_before_normalize");
+		final outAbs = haxe.io.Path.normalize(outDir);
+		traceEmitToDirEntry("emitToDir_after_normalize");
+		return outAbs;
+	}
+
+	static function installEmitToDirProfile(ocamlProfile:backend.OcamlProfile):Void {
+		traceEmitToDirEntry("emitToDir_before_profile_define");
+		currentOcamlProfile = backend.OcamlProfile.toDefineValue(ocamlProfile);
+		traceEmitToDirEntry("emitToDir_after_profile");
+	}
+
+	static function ensureEmitToDirOutDir(outAbs:String):Void {
+		traceEmitToDirEntry("emitToDir_before_outdir_ensure");
+		if (!sys.FileSystem.exists(outAbs))
+			sys.FileSystem.createDirectory(outAbs);
+		traceEmitToDirEntry("emitToDir_after_outdir");
+	}
+
 	/**
 		Portable auto-metalization plan for the active emit invocation.
 
@@ -250,6 +319,23 @@ class EmitterStage {
 	static var currentPortableMetalizationPlan:Null<backend.ocaml.PortableMetalizationPlan> = null;
 
 	static var currentPortableMetalizationRegionKey:Null<String> = null;
+
+	public static function installPortableMetalizationPlan(plan:Null<backend.ocaml.PortableMetalizationPlan>):{previousPlan:Null<backend.ocaml.PortableMetalizationPlan>, previousRegionKey:Null<String>} {
+		_EmitterStageDebug.traceStage3Phase("portable_plan_install");
+		final scope = {
+			previousPlan: currentPortableMetalizationPlan,
+			previousRegionKey: currentPortableMetalizationRegionKey
+		};
+		currentPortableMetalizationPlan = plan;
+		currentPortableMetalizationRegionKey = null;
+		return scope;
+	}
+
+	public static function restorePortableMetalizationPlan(scope:{previousPlan:Null<backend.ocaml.PortableMetalizationPlan>, previousRegionKey:Null<String>}):Void {
+		_EmitterStageDebug.traceStage3Phase("portable_plan_restore");
+		currentPortableMetalizationPlan = scope.previousPlan;
+		currentPortableMetalizationRegionKey = scope.previousRegionKey;
+	}
 
 	static inline function isMetalProfileActive():Bool {
 		return currentOcamlProfile == backend.OcamlProfile.toDefineValue(backend.OcamlProfile.Metal);
@@ -288,20 +374,18 @@ class EmitterStage {
 	public static function emitToDirWithPortableMetalizationPlan(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false,
 			buildExecutable:Bool = true, ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable,
 			?portableMetalizationPlan:backend.ocaml.PortableMetalizationPlan):String {
-		final previousPlan = currentPortableMetalizationPlan;
-		final previousRegionKey = currentPortableMetalizationRegionKey;
-		currentPortableMetalizationPlan = portableMetalizationPlan;
-		currentPortableMetalizationRegionKey = null;
+		_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_install");
+		final scope = installPortableMetalizationPlan(portableMetalizationPlan);
 		var entryPath = "";
 		try {
+			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_before_emitToDir");
 			entryPath = emitToDir(p, outDir, emitFullBodies, buildExecutable, ocamlProfile);
+			_EmitterStageDebug.traceStage3Phase("portable_plan_wrapper_after_emitToDir");
 		} catch (error:haxe.Exception) {
-			currentPortableMetalizationPlan = previousPlan;
-			currentPortableMetalizationRegionKey = previousRegionKey;
+			restorePortableMetalizationPlan(scope);
 			throw error;
 		}
-		currentPortableMetalizationPlan = previousPlan;
-		currentPortableMetalizationRegionKey = previousRegionKey;
+		restorePortableMetalizationPlan(scope);
 		return entryPath;
 	}
 
@@ -766,6 +850,14 @@ class EmitterStage {
 		- Prefer the parser-level rest flag when present.
 		- Otherwise inspect the last parameter type hint and recognize the narrow upstream
 		  forms we need for Haxe 4.3.7 compatibility.
+		- Also accept the lowered compatibility shape used by some extern/runtime surfaces
+		  during bring-up: trailing `args:Array<...>` with dynamic-ish element types.
+
+		Why this extra rule is acceptable
+		- It is intentionally narrow: only the final parameter, only `args`/`rest`-style
+		  names, and only dynamic element arrays.
+		- This recovers packaged variadic extern semantics like `php.Syntax.code(...)`
+		  without treating arbitrary trailing arrays as variadics.
 	**/
 	static inline function isRestLikeArg(arg:HxFunctionArg):Bool {
 		if (arg == null)
@@ -773,10 +865,19 @@ class EmitterStage {
 		if (HxFunctionArg.getIsRest(arg))
 			return true;
 		final hint = StringTools.trim(HxFunctionArg.getTypeHint(arg));
+		final compactHint = StringTools.replace(hint, " ", "");
+		final name = HxFunctionArg.getName(arg);
+		final lowerName = name == null ? "" : name.toLowerCase();
+		final isNamedRestCarrier = lowerName == "args" || lowerName == "rest" || StringTools.startsWith(lowerName, "rest");
+		final dynName = "Dyn" + "amic";
+		final anyName = "Any";
+		final arrayOfDyn = "Array<" + dynName + ">";
+		final arrayOfAny = "Array<" + anyName + ">";
 		return hint == "Rest"
 			|| StringTools.startsWith(hint, "Rest<")
 			|| StringTools.startsWith(hint, "haxe.Rest<")
-			|| StringTools.startsWith(hint, "haxe.extern.Rest<");
+			|| StringTools.startsWith(hint, "haxe.extern.Rest<")
+			|| (isNamedRestCarrier && (compactHint == arrayOfDyn || compactHint == arrayOfAny));
 	}
 
 	static function exprToOcamlString(e:HxExpr, ?tyByIdent:Map<String, TyType>, ?arityByIdent:Map<String, Int>, ?staticImportByIdent:Map<String, String>,
@@ -948,6 +1049,36 @@ class EmitterStage {
 				if (entry.key == key)
 					return entry.moduleName;
 			return null;
+		}
+
+		function resolveQualifiedModuleCallSigByEmittedModuleName(moduleName:String, field:String, loweredField:String):Null<EmitterCallSig> {
+			if (moduleName == null || moduleName.length == 0 || currentModuleFilePath == null || currentModuleFilePath.length == 0)
+				return null;
+			final currentPkg = currentPackagePath == null ? "" : StringTools.trim(currentPackagePath);
+			var bestSamePkg:Null<EmitterCallSig> = null;
+			var bestAny:Null<EmitterCallSig> = null;
+			for (entry in currentModuleNameEntries) {
+				if (entry.moduleName != moduleName)
+					continue;
+				final colon = entry.key.indexOf(":");
+				final pkg = colon < 0 ? "" : entry.key.substr(0, colon);
+				final raw = colon < 0 ? entry.key : entry.key.substr(colon + 1);
+				if (raw.length == 0)
+					continue;
+				final parts = raw.split(".");
+				if (parts.length == 0)
+					continue;
+				final resolved = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, field, loweredField);
+				if (resolved == null)
+					continue;
+				if (pkg == currentPkg)
+					return resolved;
+				if (bestSamePkg == null && StringTools.startsWith(currentPkg, pkg) && pkg.length > 0)
+					bestSamePkg = resolved;
+				if (bestAny == null)
+					bestAny = resolved;
+			}
+			return bestSamePkg != null ? bestSamePkg : bestAny;
 		}
 
 		inline function callSigFor(callee:String):Null<EmitterCallSig> {
@@ -2448,6 +2579,8 @@ class EmitterStage {
 												qualified = callSigFor(modName + "." + lowered);
 												if (qualified == null)
 													qualified = callSigFor(modName + "." + name);
+												if (qualified == null)
+													qualified = resolveQualifiedModuleCallSigByEmittedModuleName(modName, name, lowered);
 												if (qualified == null && currentModuleFilePath != null && currentModuleFilePath.length > 0)
 													qualified = resolveQualifiedModuleCallSig(currentModuleFilePath, parts, name, lowered);
 											}
@@ -4408,12 +4541,10 @@ class EmitterStage {
 	**/
 	public static function emitToDir(p:MacroExpandedProgram, outDir:String, emitFullBodies:Bool = false, buildExecutable:Bool = true,
 			ocamlProfile:backend.OcamlProfile = backend.OcamlProfile.Portable):String {
-		if (outDir == null || StringTools.trim(outDir).length == 0)
-			throw "stage3 emitter: missing outDir";
-		final outAbs = haxe.io.Path.normalize(outDir);
-		currentOcamlProfile = backend.OcamlProfile.toDefineValue(ocamlProfile);
-		if (!sys.FileSystem.exists(outAbs))
-			sys.FileSystem.createDirectory(outAbs);
+		traceEmitToDirEntry("emitToDir_enter");
+		final outAbs = requireEmitToDirOutAbs(outDir);
+		installEmitToDirProfile(ocamlProfile);
+		ensureEmitToDirOutDir(outAbs);
 
 		function uniqStrings(xs:Array<String>):Array<String> {
 			if (xs == null || xs.length <= 1)
@@ -4733,7 +4864,9 @@ class EmitterStage {
 			generatedPaths.push(shimName + ".ml");
 		}
 
+		_EmitterStageDebug.traceStage3Phase("before_typed_modules");
 		final typedModules = p.getTypedModules();
+		_EmitterStageDebug.traceStage3Phase("after_typed_modules:" + typedModules.length);
 		if (typedModules.length == 0)
 			throw "stage3 emitter: empty typed module graph";
 
@@ -4756,6 +4889,10 @@ class EmitterStage {
 		final runtimeModuleNames:Map<String, Bool> = new Map();
 		for (p0 in runtimePaths)
 			runtimeModuleNames.set(runtimeModuleNameFromPath(p0), true);
+		var runtimeModuleCount = 0;
+		for (_ in runtimeModuleNames.keys())
+			runtimeModuleCount++;
+		_EmitterStageDebug.traceStage3Phase("after_runtime_module_names:" + runtimeModuleCount);
 		/**
 			Known root provider units that Stage3 emits or relies on during bootstrap.
 
@@ -5252,6 +5389,7 @@ class EmitterStage {
 			if (className == null || className.length == 0 || className == "Unknown")
 				return {files: [], rootMain: null};
 			final mainModuleName = moduleNameForDecl(decl, moduleTypeName, className);
+			_EmitterStageDebug.traceStage3Module("module", mainModuleName, tm.getParsed().getFilePath());
 			final isRuntimeProvided = runtimeModuleNames.exists(mainModuleName);
 
 			// Import-driven resolution for `Int64.<field>` (Haxe `haxe.Int64` vs OCaml stdlib `Int64`).
@@ -6514,6 +6652,7 @@ class EmitterStage {
 					continue;
 				if (nm == className)
 					continue;
+				_EmitterStageDebug.traceStage3Module("stub", moduleNameForDecl(decl, moduleTypeName, nm), tm.getParsed().getFilePath());
 				final p = emitStubClass(c);
 				if (p != null)
 					files.push(p);

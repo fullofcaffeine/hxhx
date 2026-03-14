@@ -34,6 +34,14 @@ class OcamlStage3Backend implements IBackend {
 
 	final delegate:TargetCoreBackend;
 
+	static inline function traceEnabled():Bool {
+		final raw = Sys.getEnv("HXHX_TRACE_STAGE3_DRIVER");
+		if (raw == null)
+			return false;
+		final s = StringTools.trim(raw).toLowerCase();
+		return s == "1" || s == "true" || s == "yes" || s == "on";
+	}
+
 	public function id():String {
 		return delegate.id();
 	}
@@ -82,6 +90,8 @@ class OcamlStage3Backend implements IBackend {
 	}
 
 	public static function emitBridge(backend:OcamlStage3Backend, program:GenIrProgram, context:BackendContext):EmitResult {
+		if (traceEnabled())
+			Sys.println("stage3_driver=ocaml_emitBridge_before_emit");
 		return backend.emit(program, context);
 	}
 
@@ -90,6 +100,8 @@ class OcamlStage3Backend implements IBackend {
 	}
 
 	public function emit(program:GenIrProgram, context:BackendContext):EmitResult {
+		if (traceEnabled())
+			Sys.println("stage3_driver=ocaml_backend_before_delegate_emit");
 		return delegate.emit(program, context);
 	}
 }

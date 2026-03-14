@@ -75,8 +75,18 @@ if [ -z "${HAXE_STD_PATH:-}" ] && [ -d "$UPSTREAM_DIR/std" ]; then
 fi
 
 HXHX_BIN="${HXHX_BIN:-}"
-if [ -z "$HXHX_BIN" ] || [ ! -x "$HXHX_BIN" ]; then
+if [ -n "$HXHX_BIN" ] && [[ "$HXHX_BIN" != /* ]]; then
+  HXHX_BIN="$ROOT/$HXHX_BIN"
+fi
+
+if [ -z "$HXHX_BIN" ] || [ ! -f "$HXHX_BIN" ]; then
   HXHX_BIN="$("$ROOT/scripts/hxhx/build-hxhx.sh" | tail -n 1)"
+fi
+
+if [ ! -x "$HXHX_BIN" ]; then
+  HXHX_BIN_RUNNER=(ocamlrun "$HXHX_BIN")
+else
+  HXHX_BIN_RUNNER=("$HXHX_BIN")
 fi
 
 if [ -z "${HXHX_MACRO_HOST_EXE:-}" ] || [ ! -x "${HXHX_MACRO_HOST_EXE:-}" ]; then
@@ -115,4 +125,5 @@ echo "== Gate 1 (native attempt): upstream tests/unit/compile-macro.hxml (via hx
 # - The Stage3 emitter is intentionally non-semantic in places; the goal here is to ensure we can
 #   compile and execute upstream-shaped workloads end-to-end without invoking stage0 `haxe`.
 # - Darwin SIGSEGV skip mode has been removed; the stage3 rung should now pass directly.
-bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-upstream-unit-macro-stage3-emit.sh"
+HXHX_BIN="$HXHX_BIN" HXHX_BIN_RUNNER="${HXHX_BIN_RUNNER[*]}" \
+  bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-upstream-unit-macro-stage3-emit.sh"

@@ -531,7 +531,11 @@ class MacroResolvedModuleScanner {
 		if (modulePack.length > 0)
 			modulePack.pop();
 		final typeSpans = scanResolvedModuleTypeSpans(path);
+		#if hxhx_stage0_diag_shallow_resolved_module_payloads
+		final typeSemantics = new Map<String, RuntimeResolvedTypeSemantics>();
+		#else
 		final typeSemantics = scanResolvedTypeSemantics(path);
+		#end
 		inline function fullTypePath(name:String):String {
 			return modulePack.length == 0 ? name : modulePack.join(".") + "." + name;
 		}
@@ -549,7 +553,11 @@ class MacroResolvedModuleScanner {
 				typeParamNames: [],
 				underlyingTypeText: null
 			};
+			#if hxhx_stage0_diag_shallow_resolved_module_payloads
+			final staticFields = [];
+			#else
 			final staticFields = scanResolvedTypeStaticFields(path, trimmed, kind);
+			#end
 			out.push({
 				name: trimmed,
 				kind: kind,
@@ -604,7 +612,11 @@ class MacroResolvedModuleScanner {
 					metadata: mainMetadata,
 					typeParamNames: [],
 					underlyingTypeText: null,
+					#if hxhx_stage0_diag_shallow_resolved_module_payloads
+					staticFields: [],
+					#else
 					staticFields: scanResolvedTypeStaticFields(path, mainName, "class"),
+					#end
 					file: path,
 					min: 0,
 					max: 0
@@ -1192,6 +1204,9 @@ class MacroResolvedModuleScanner {
 		  for methods and rely on `field.type` for the useful signature path.
 	**/
 	public static function scanResolvedModuleFields(path:String):Array<RuntimeResolvedModuleFieldSnapshot> {
+		#if hxhx_stage0_diag_shallow_resolved_module_payloads
+		return [];
+		#end
 		final out = new Array<RuntimeResolvedModuleFieldSnapshot>();
 		final filtered = readFilteredResolvedModuleSource(path);
 		if (filtered.length == 0)

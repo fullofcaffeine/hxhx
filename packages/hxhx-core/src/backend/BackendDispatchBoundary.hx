@@ -19,6 +19,14 @@ import backend.ocaml.OcamlStage3Backend;
 	- Do not spread backend `Dynamic`/`cast` recovery through Stage3 compiler logic.
 **/
 class BackendDispatchBoundary {
+	static inline function traceEnabled():Bool {
+		final raw = Sys.getEnv("HXHX_TRACE_STAGE3_DRIVER");
+		if (raw == null)
+			return false;
+		final s = StringTools.trim(raw).toLowerCase();
+		return s == "1" || s == "true" || s == "yes" || s == "on";
+	}
+
 	/**
 		Expose an interface-typed backend as a runtime dispatch value.
 	**/
@@ -86,21 +94,33 @@ class BackendDispatchBoundary {
 	**/
 	public static function emit(backend:IBackend, program:GenIrProgram, context:BackendContext):EmitResult {
 		#if reflaxe
+		if (traceEnabled())
+			Sys.println("stage3_driver=dispatch_before_asDispatchValue");
 		final dispatchValue = asDispatchValue(backend);
+		if (traceEnabled())
+			Sys.println("stage3_driver=dispatch_after_asDispatchValue");
 		#if !hxhx_stage0_ocaml_only
 		if (Std.isOfType(dispatchValue, JsBackend)) {
+			if (traceEnabled())
+				Sys.println("stage3_driver=dispatch_branch_js");
 			final jsBackend = requireJsBackend(dispatchValue);
 			return JsBackend.emitBridge(jsBackend, program, context);
 		}
 		#end
 		if (Std.isOfType(dispatchValue, OcamlStage3Backend)) {
+			if (traceEnabled())
+				Sys.println("stage3_driver=dispatch_branch_ocaml");
 			final ocamlBackend = requireOcamlBackend(dispatchValue);
 			return OcamlStage3Backend.emitBridge(ocamlBackend, program, context);
 		}
 		if (Std.isOfType(dispatchValue, TargetCoreBackend)) {
+			if (traceEnabled())
+				Sys.println("stage3_driver=dispatch_branch_target_core");
 			final targetCoreBackend = requireTargetCoreBackend(dispatchValue);
 			return TargetCoreBackend.emitBridge(targetCoreBackend, program, context);
 		}
+		if (traceEnabled())
+			Sys.println("stage3_driver=dispatch_branch_reflective");
 		return emitReflective(dispatchValue, program, context);
 		#else
 		return backend.emit(program, context);

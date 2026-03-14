@@ -198,11 +198,6 @@ class Stage3Compiler {
 		return BackendRegistry.requireForTarget(backendId);
 	}
 
-	static function emitWithBackend(backend:IBackend, expanded:Dynamic, context:BackendContext):EmitResult {
-		final expandedProgram = GenIrBoundary.fromDynamic(expanded);
-		return BackendDispatchBoundary.emit(backend, expandedProgram, context);
-	}
-
 	/**
 		Extract `--wait <mode>` from raw Stage3 args.
 
@@ -2062,7 +2057,13 @@ class Stage3Compiler {
 		for (name in hxhx.macro.MacroState.listOcamlModuleNames()) {
 			generated.push({name: name, source: hxhx.macro.MacroState.getOcamlModuleSource(name)});
 		}
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=before_expand typed_modules=" + typedModules.length + " generated_modules=" + generated.length);
+		}
 		final expanded = MacroStage.expandProgram(typedModules, generated);
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=after_expand");
+		}
 		final providerDefines = allDefines.copy();
 		for (name in hxhx.macro.MacroState.listDefineNames()) {
 			final value = hxhx.macro.MacroState.definedValue(name);
@@ -2073,16 +2074,28 @@ class Stage3Compiler {
 			}
 		}
 		try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_load_dynamic_backend_providers");
+			}
 			loadDynamicBackendProviders(providerDefines);
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_load_dynamic_backend_providers");
+			}
 		} catch (e:String) {
 			closeMacroSession();
 			return error("backend provider setup failed: " + e);
 		}
 		final backend = try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_resolve_builtin_backend id=" + backendId);
+			}
 			resolveBuiltinBackend(backendId);
 		} catch (e:String) {
 			closeMacroSession();
 			return error("backend setup failed: " + e);
+		}
+		if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+			Sys.println("stage3_driver=after_resolve_builtin_backend");
 		}
 		final selected = BackendRegistry.descriptorForTarget(backendId);
 		if (isTrueEnv("HXHX_TRACE_BACKEND_SELECTION")) {
@@ -2167,13 +2180,42 @@ class Stage3Compiler {
 
 		var emitted = new EmitResult("", [], false);
 		try {
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=before_output_file_hint");
+			}
 			final outputFileHint = if (supportsCustomOutputFile && jsOutputHintRaw != null && jsOutputHintRaw.length > 0) {
 				Path.isAbsolute(jsOutputHintRaw) ? Path.normalize(jsOutputHintRaw) : absFromCwd(cwd, jsOutputHintRaw);
 			} else {
 				null;
 			}
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_output_file_hint");
+				Sys.println("stage3_driver=before_backend_context");
+			}
 			final context = new BackendContext(outAbs, outputFileHint, parsedMain, emitFullBodies, supportsBuildExecutable, definesMap);
-			emitted = emitWithBackend(backend, cast expanded, context);
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_backend_context");
+				Sys.println("stage3_driver=before_emit_trace_backend_id");
+			}
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_emit_trace_backend_id");
+				Sys.println("stage3_driver=before_emit backend=" + backendId + " typed_modules=" + typedModules.length + " out=" + outAbs);
+			}
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=emitWithBackend_before_genir_boundary");
+			}
+			final expandedProgram = GenIrBoundary.fromDynamic(cast expanded);
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=emitWithBackend_after_genir_boundary");
+				Sys.println("stage3_driver=emitWithBackend_before_dispatch_boundary");
+			}
+			emitted = BackendDispatchBoundary.emit(backend, expandedProgram, context);
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=emitWithBackend_after_dispatch_boundary");
+			}
+			if (isTrueEnv("HXHX_TRACE_STAGE3_DRIVER")) {
+				Sys.println("stage3_driver=after_emit entry=" + emitted.entryPath + " built_executable=" + bool01(emitted.builtExecutable));
+			}
 		} catch (e:String) {
 			closeMacroSession();
 			return error("emit failed: " + e);

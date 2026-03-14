@@ -53,6 +53,13 @@ Agent policy:
   - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.
   - The attached session output remains the primary truth source. Use external process/artifact checks only to supplement it, never to override a newer session exit or failure.
   - If the checkpoint does not produce a concrete reason to keep waiting, stop waiting and switch to the next bounded experiment or escalation path.
+  - Do not stop monitoring a gate session just because it is still running.
+  - Keep polling that same attached session until one of these happens:
+    - the command exits successfully,
+    - the command fails,
+    - the command reaches an explicit next-phase handoff that becomes the new gate,
+    - or a bounded checkpoint proves the session is no longer the right gate to wait on.
+  - For user-facing progress, report only real transitions. "Still running" is not a sufficient stopping point for the monitoring loop.
 - For long-running local commands, prefer a single resumable session over ad-hoc backgrounding.
   - Keep the process attached to one persistent session when possible and resume by polling that same session.
   - If backgrounding is unavoidable, record the exact command, PID, log path, and expected completion artifact before moving on.
