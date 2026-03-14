@@ -74,5 +74,6 @@ vendor/reflaxe-elixir/
 .DS_Store
 
 # Local CI artifacts
+.artifacts/
 gitleaks
 gitleaks.tar.gz
