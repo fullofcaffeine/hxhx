@@ -5,6 +5,7 @@ This guide is for users who want to keep using upstream Haxe while targeting OCa
 Canonical product contract:
 
 - `docs/00-project/REFLAXE_OCAML_1_0_CONTRACT.md`
+- `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
 
 ## What this gives you
 
@@ -82,3 +83,9 @@ Without it, target output is not selected.
 - `hxhx` is the primary compiler product in this repo.
 - `reflaxe.ocaml` remains independently useful with upstream Haxe.
 - We keep both in one repo right now because active development is still tightly coupled.
+
+## Next doc
+
+For the production-oriented install/use/troubleshooting path, use:
+
+- `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`

@@ -115,6 +115,8 @@ Required marker set:
     - `docs/00-project/REFLAXE_OCAML_PERF_BASELINE.json`
 - `RO_PRODUCTION_DOCS:PASS`
   - operator-facing install/use/troubleshooting docs exist and match reality
+  - source of truth:
+    - `docs/01-getting-started/REFLAXE_OCAML_PRODUCTION.md`
 - `RO_PRODUCTION_READY:PASS`
   - aggregate marker emitted only when the required product-level inputs are satisfied
 
