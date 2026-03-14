@@ -59,44 +59,70 @@ class JsonPrinter {
 			resolved = Reflect.callMethod(null, replacer, [key, value]);
 		}
 
-		switch (Type.typeof(resolved)) {
-			case TUnknown:
-				quote("???");
-			case TObject:
-				writeObject(resolved, Reflect.fields(resolved));
-			case TInt:
-				buffer.add(Std.string(resolved));
-			case TFloat:
-				final floatValue = Std.parseFloat(Std.string(resolved));
-				buffer.add(Math.isFinite(floatValue) ? Std.string(floatValue) : "null");
-			case TFunction:
-				quote("<fun>");
-			case TClass(classType):
-				if (classType == String) {
-					quote(Std.string(resolved));
-				} else if (classType == Array) {
-					final arrayValue:Array<Dynamic> = cast resolved;
-					writeArray(arrayValue);
-				} else if (classType == haxe.ds.StringMap) {
-					final mapValue:haxe.ds.StringMap<Dynamic> = cast resolved;
-					final objectValue = {};
-					for (field in mapValue.keys()) {
-						Reflect.setField(objectValue, field, mapValue.get(field));
-					}
-					writeObject(objectValue, Reflect.fields(objectValue));
-				} else if (classType == Date) {
-					quote(Std.string(resolved));
-				} else {
-					final objectFields = Type.getInstanceFields(Type.getClass(resolved));
-					writeObject(resolved, objectFields);
-				}
-			case TEnum(_):
-				buffer.add(Std.string(Type.enumIndex(resolved)));
-			case TBool:
-				buffer.add(resolved == true ? "true" : "false");
-			case TNull:
-				buffer.add("null");
+		if (resolved == null) {
+			buffer.add("null");
+			return;
 		}
+
+		if (Reflect.isFunction(resolved)) {
+			quote("<fun>");
+			return;
+		}
+
+		if (Std.isOfType(resolved, String)) {
+			quote(Std.string(resolved));
+			return;
+		}
+
+		if (Std.isOfType(resolved, Bool)) {
+			buffer.add(resolved == true ? "true" : "false");
+			return;
+		}
+
+		if (Std.isOfType(resolved, Int)) {
+			buffer.add(Std.string(resolved));
+			return;
+		}
+
+		if (Std.isOfType(resolved, Float)) {
+			final floatValue = Std.parseFloat(Std.string(resolved));
+			buffer.add(Math.isFinite(floatValue) ? Std.string(floatValue) : "null");
+			return;
+		}
+
+		if (Std.isOfType(resolved, Array)) {
+			final arrayValue:Array<Dynamic> = cast resolved;
+			writeArray(arrayValue);
+			return;
+		}
+
+		if (Std.isOfType(resolved, haxe.ds.StringMap)) {
+			final mapValue:haxe.ds.StringMap<Dynamic> = cast resolved;
+			final objectValue = {};
+			for (field in mapValue.keys()) {
+				Reflect.setField(objectValue, field, mapValue.get(field));
+			}
+			writeObject(objectValue, Reflect.fields(objectValue));
+			return;
+		}
+
+		final className = Type.getClassName(Type.getClass(resolved));
+		if (className == "Date") {
+			quote(Std.string(resolved));
+			return;
+		}
+
+		if (Reflect.isEnumValue(resolved)) {
+			buffer.add(Std.string(Type.enumIndex(cast resolved)));
+			return;
+		}
+
+		if (Reflect.isObject(resolved)) {
+			writeObject(resolved, Reflect.fields(resolved));
+			return;
+		}
+
+		quote("???");
 	}
 
 	function writeArray(values:Array<Dynamic>):Void {
