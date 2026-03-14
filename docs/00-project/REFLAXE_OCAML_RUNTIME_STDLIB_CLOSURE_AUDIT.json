@@ -1,0 +1,90 @@
+{
+  "haxeCompatibilityBaseline": "4.3.7",
+  "marker": "RO_RUNTIME_STDLIB_CLOSURE:PASS",
+  "allowedStatuses": [
+    "covered",
+    "scoped_out"
+  ],
+  "entries": [
+    {
+      "id": "ro-closure-01",
+      "title": "Portable surface contract",
+      "status": "covered",
+      "summary": "Portable Haxe-first surface is explicitly documented and scoped through the compatibility matrix and stdlib coverage plan.",
+      "references": [
+        "docs/02-user-guide/COMPATIBILITY_MATRIX.md",
+        "docs/02-user-guide/STDLIB_COVERAGE_PLAN.md",
+        "docs/02-user-guide/STDLIB_PORTABLE_PARITY_MATRIX.md"
+      ]
+    },
+    {
+      "id": "ro-closure-02",
+      "title": "OCaml-native surface contract",
+      "status": "covered",
+      "summary": "The opt-in `ocaml.*` surface is explicitly documented and treated as non-portable target-specific API.",
+      "references": [
+        "docs/02-user-guide/COMPATIBILITY_MATRIX.md",
+        "docs/02-user-guide/OCAML_NATIVE_MODE.md"
+      ]
+    },
+    {
+      "id": "ro-closure-03",
+      "title": "Target-owned runtime module inventory",
+      "status": "covered",
+      "summary": "Runtime modules and portable/metal status are explicitly inventoried so target-owned runtime responsibilities are visible.",
+      "references": [
+        "docs/02-user-guide/OCAML_RUNTIME_CAPABILITY_MATRIX.md"
+      ]
+    },
+    {
+      "id": "ro-closure-04",
+      "title": "Core target-owned stdlib overrides",
+      "status": "covered",
+      "summary": "Core override/runtime-backed modules needed by the declared scope are named and cross-linked to implementation surfaces.",
+      "references": [
+        "docs/02-user-guide/COMPATIBILITY_MATRIX.md",
+        "docs/02-user-guide/STDLIB_COVERAGE_PLAN.md",
+        "docs/00-project/STDLIB_PROVENANCE_LEDGER.json"
+      ]
+    },
+    {
+      "id": "ro-closure-05",
+      "title": "Build and dune integration",
+      "status": "covered",
+      "summary": "The declared product scope includes deterministic OCaml output and dune-based build integration, documented from the user-facing guides.",
+      "references": [
+        "packages/reflaxe.ocaml/README.md",
+        "docs/01-getting-started/REFLAXE_OCAML_WITH_UPSTREAM_HAXE.md",
+        "docs/02-user-guide/COMPATIBILITY_MATRIX.md"
+      ]
+    },
+    {
+      "id": "ro-closure-06",
+      "title": "Upstream-Haxe validation examples",
+      "status": "covered",
+      "summary": "Representative repo-owned examples now define the declared upstream-Haxe product matrix for compile/build/run validation.",
+      "references": [
+        "docs/00-project/REFLAXE_OCAML_HAXE_4_3_7_MATRIX.md",
+        "docs/00-project/REFLAXE_OCAML_HAXE_4_3_7_MATRIX.json"
+      ]
+    },
+    {
+      "id": "ro-closure-07",
+      "title": "Multi-host promotion proofs",
+      "status": "scoped_out",
+      "summary": "Promotion paths are a separate product/workflow concern and are owned by the promotion matrix contract, not by the standalone target-closure audit.",
+      "references": [
+        "docs/00-project/REFLAXE_PROMOTION_MATRIX_CONTRACT.md"
+      ]
+    },
+    {
+      "id": "ro-closure-08",
+      "title": "Strict hxhx compiler-equivalence proof",
+      "status": "scoped_out",
+      "summary": "Strict hxhx Full 1.0 equivalence is a separate compiler claim and must not be smuggled into the target-product closure audit.",
+      "references": [
+        "docs/00-project/FULL_1_0_CONTRACT.md"
+      ]
+    }
+  ]
+}

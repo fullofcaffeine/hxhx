@@ -100,8 +100,14 @@ Required marker set:
 
 - `RO_HAXE_4_3_7_MATRIX:PASS`
   - upstream `haxe 4.3.7` validation matrix for the declared target scope
+  - source of truth:
+    - `docs/00-project/REFLAXE_OCAML_HAXE_4_3_7_MATRIX.md`
+    - `docs/00-project/REFLAXE_OCAML_HAXE_4_3_7_MATRIX.json`
 - `RO_RUNTIME_STDLIB_CLOSURE:PASS`
   - target-owned stdlib/runtime/lowering closure audit is complete for the declared scope
+  - source of truth:
+    - `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.md`
+    - `docs/00-project/REFLAXE_OCAML_RUNTIME_STDLIB_CLOSURE_AUDIT.json`
 - `RO_PRODUCTION_DOCS:PASS`
   - operator-facing install/use/troubleshooting docs exist and match reality
 - `RO_PRODUCTION_READY:PASS`
