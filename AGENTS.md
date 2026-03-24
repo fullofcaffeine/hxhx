@@ -48,6 +48,10 @@ Agent policy:
   - Report progress only on real session transitions: command exit, next-step handoff, genuine stall, or concrete failure output.
   - If background execution is unavoidable, record the exact command, PID, log path, and expected completion artifact before stepping away.
   - When wrapping a long-running gate command in shell, use strict shell mode (`set -euo pipefail`) so failures cannot be masked by later commands or trailing `echo` lines.
+- For shell build/orchestration scripts, do not embed large inline Python patch engines.
+  - Keep shell responsible for orchestration, environment, and process control.
+  - If structural multiline rewrites or regex-heavy file surgery are necessary, move them into a dedicated helper script with a stable CLI and call that helper from shell.
+  - If a shell script starts accumulating heredoc Python for generated-source patching, stop and extract it before adding more.
 - For long-running attached sessions, do not wait indefinitely on silence alone.
   - Set a bounded silent-check window up front.
   - After that window, perform an active checkpoint: verify the exact child process, whether the expected artifact changed recently, and whether the session is still the right gate to wait on.
@@ -102,6 +106,23 @@ hxhx --ocaml-eval -main Main -cp src
 # Native linked lane
 hxhx --ocaml -main Main -cp src --hxhx-no-emit
 ```
+
+## Autonomy Policy
+
+- If you're working towards goals, do **not** end your turn. This allows for continuous autonomous work.
+- The user will interrupt you when required, but they will mostly provide steering messages.
+- Do not pester the user by ending your turn after a unit of work, as that requires them to keep nudging you to keep working.
+- You **must** continue working autonomously towards any known objectives until the user interrupts you.
+- Do **not** end your turn until there is absolutely nothing left to do.
+
+## Commit Cadence
+
+- Commit in small, reviewable slices whenever a bounded seam is green.
+  - Examples: one regression + one fix, one workflow/doc contract update, one bootstrap-smoke repair.
+- Do **not** let unrelated fixes, docs, runner changes, and bootstrap experiments pile into one large local batch unless the work is genuinely inseparable.
+- If the worktree starts spanning multiple concerns, stop and split it before taking the next seam.
+- When touching CI/workflow or release-contract surfaces, check the corresponding GitHub workflow status before and after the local change so "appropriate and passing" is measured against the real runners, not only local assumptions.
+- Prefer one commit per verified step over one commit per long session.
 
 ## Landing the Plane (Session Completion)
 
