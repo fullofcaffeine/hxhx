@@ -57,17 +57,18 @@ class M5ClassIntegrationTest {
 		final yArg = createRe.matched(2);
 		// Codegen may introduce a temp assignment to preserve Haxe assignment-expression semantics.
 		assertMatchesEither(pointMl, [
-			new EReg("self\\.x <- " + xArg, ""),
-			new EReg("let __assign_[0-9]+ = " + xArg + " in \\(\\s*self\\.x <- __assign_[0-9]+;", "")
+			new EReg("(?:self|\\(Obj\\.magic self : t\\))\\.x <- " + xArg, ""),
+			new EReg("let __assign_[0-9]+ = " + xArg + " in \\(\\s*(?:self|\\(Obj\\.magic self : t\\))\\.x <- __assign_[0-9]+;", "")
 		], "ctor assigns x");
 		assertMatchesEither(pointMl, [
-			new EReg("self\\.y <- " + yArg, ""),
-			new EReg("let __assign_[0-9]+ = " + yArg + " in \\(\\s*self\\.y <- __assign_[0-9]+;", "")
+			new EReg("(?:self|\\(Obj\\.magic self : t\\))\\.y <- " + yArg, ""),
+			new EReg("let __assign_[0-9]+ = " + yArg + " in \\(\\s*(?:self|\\(Obj\\.magic self : t\\))\\.y <- __assign_[0-9]+;", "")
 		], "ctor assigns y");
 		assertContains(pointMl, "incX = fun self () ->", "instance method incX");
 		assertMatchesEither(pointMl, [
-			new EReg("self\\.x <- HxInt\\.add \\(self\\.x\\) 1", ""),
-			new EReg("let __assign_[0-9]+ = HxInt\\.add \\(self\\.x\\) 1 in \\(\\s*self\\.x <- __assign_[0-9]+;", "")
+			new EReg("(?:self|\\(Obj\\.magic self : t\\))\\.x <- HxInt\\.add \\((?:self|\\(Obj\\.magic self : t\\))\\.x\\) 1", ""),
+			new EReg("let __assign_[0-9]+ = HxInt\\.add \\((?:self|\\(Obj\\.magic self : t\\))\\.x\\) 1 in \\(\\s*(?:self|\\(Obj\\.magic self : t\\))\\.x <- __assign_[0-9]+;",
+				"")
 		], "incX updates field");
 
 		final mainPath = outDir + "/ClassMain.ml";
@@ -75,8 +76,8 @@ class M5ClassIntegrationTest {
 			throw "missing output: " + mainPath;
 		final mainMl = sys.io.File.getContent(mainPath);
 		assertContains(mainMl, "Point.create 1 2", "new -> create");
-		assertContains(mainMl, "Point.incX p ()", "method call (no args)");
-		assertContains(mainMl, "Point.add p 3 4", "method call (args)");
-		assertContains(mainMl, "Point.sum p ()", "method call returning int");
+		assertMatchesEither(mainMl, [~/Point\.incX p \(\)/, ~/Point\.incX \(Obj\.magic p\) \(\)/], "method call (no args)");
+		assertMatchesEither(mainMl, [~/Point\.add p 3 4/, ~/Point\.add \(Obj\.magic p\) 3 4/], "method call (args)");
+		assertMatchesEither(mainMl, [~/Point\.sum p \(\)/, ~/Point\.sum \(Obj\.magic p\) \(\)/], "method call returning int");
 	}
 }
