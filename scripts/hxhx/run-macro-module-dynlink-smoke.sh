@@ -86,11 +86,14 @@ build_native_macro_artifact() {
 build_native_macro_artifact "$good_src" "$good_artifact" "native_macro_good"
 build_native_macro_artifact "$bad_src" "$bad_artifact" "native_macro_bad"
 
-client_src="$tmp_root/Main.hx"
+mkdir -p "$tmp_root/dynlinksmoke"
+client_src="$tmp_root/dynlinksmoke/DynlinkSmokeMain.hx"
 cat >"$client_src" <<'HX'
+package dynlinksmoke;
+
 import hxhx.macro.MacroHostClient;
 
-class Main {
+class DynlinkSmokeMain {
 	static function fail(message:String):Void {
 		throw message;
 	}
@@ -149,7 +152,7 @@ client_output="$(
   HXHX_MACRO_HOST_EXE="$HXHX_MACRO_HOST_EXE_RESOLVED" \
     HXHX_NATIVE_MACRO_GOOD="$good_artifact" \
     HXHX_NATIVE_MACRO_BAD="$bad_artifact" \
-    haxe -cp "$tmp_root" -cp "$ROOT/packages/hxhx/src" -main Main --interp 2>&1
+    haxe -cp "$tmp_root" -cp "$ROOT/packages/hxhx/src" -cp "$ROOT/packages/hxhx-core/src" -main dynlinksmoke.DynlinkSmokeMain --interp 2>&1
 )"
 client_code="$?"
 set -e

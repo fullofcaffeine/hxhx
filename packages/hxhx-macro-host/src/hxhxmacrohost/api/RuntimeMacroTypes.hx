@@ -515,31 +515,14 @@ class RuntimeMacroTypes {
 
 	static function anonymousComplexField(field:ClassField):Field {
 		final fieldType = field == null ? null : toComplexType(field.type);
+		final fieldRuntimeType:Type = field == null ? TDynamic(null) : field.type;
 		final fieldKind:FieldType = switch (field == null ? null : field.kind) {
 			case FMethod(_):
 				FFun({
-					args: switch (field.type) {
-						case TFun(args, _):
-							[
-								for (arg in args)
-									{
-										name: arg.name,
-										opt: arg.opt,
-										type: toComplexType(arg.t),
-										value: null
-									}
-							];
-						case _:
-							[];
-					},
+					args: functionFieldArgs(fieldRuntimeType),
 					expr: null,
 					params: [],
-					ret: switch (field.type) {
-						case TFun(_, ret):
-							toComplexType(ret);
-						case _:
-							null;
-					}
+					ret: functionFieldReturnType(fieldRuntimeType)
 				});
 			case FVar(_, write):
 				write == AccNever ? FProp("default", "never", fieldType, null) : FVar(fieldType, null);
@@ -553,6 +536,33 @@ class RuntimeMacroTypes {
 			access: [],
 			kind: fieldKind,
 			pos: field == null || field.pos == null ? defaultPos() : field.pos};
+	}
+
+	static function functionFieldArgs(t:Type):Array<FunctionArg> {
+		return switch (t) {
+			case TFun(args, _):
+				[
+					for (arg in args)
+						{
+							name: arg.name,
+							opt: arg.opt,
+							type: toComplexType(arg.t),
+							value: null,
+							meta: []
+						}
+				];
+			case _:
+				[];
+		}
+	}
+
+	static function functionFieldReturnType(t:Type):Null<ComplexType> {
+		return switch (t) {
+			case TFun(_, ret):
+				toComplexType(ret);
+			case _:
+				null;
+		}
 	}
 
 	static function stripLeadingMetadataEntries(text:String):String {

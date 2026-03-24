@@ -95,8 +95,12 @@ class HostToCompilerRpc {
 	}
 
 	public static function call(method:String, tail:String):String {
-		if (localHandler != null)
-			return localHandler(method, tail);
+		if (localHandler != null) {
+			// Keep the optional test-local handler on the same dynamic-call boundary used elsewhere.
+			// Native OCaml lowering currently stores nullable function values as raw `Obj.t`, so
+			// direct `localHandler(method, tail)` can degrade into applying an untyped value.
+			return cast Reflect.callMethod(null, cast localHandler, [method, tail]);
+		}
 		final id = nextId--;
 		if (traceEnabled())
 			writeTraceLine("[hxhx macro host rpc] -> " + method + (tail == null || tail.length == 0 ? "" : (" " + summarizeTail(tail))));
