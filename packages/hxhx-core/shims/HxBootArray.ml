@@ -62,6 +62,15 @@ let copy (a : 'a t) : 'a t =
 let concat (a : 'a t) (b : 'a t) : 'a t =
   HxArray.concat a b
 
+let indexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+  HxArray.indexOf a x fromIndex
+
+let lastIndexOf (a : 'a t) (x : 'a) (fromIndex : int) : int =
+  HxArray.lastIndexOf a x fromIndex
+
+let slice (a : 'a t) (pos : int) (end_ : int) : 'a t =
+  HxArray.slice a pos end_
+
 let map (a : 'a t) (f : 'a -> 'b) : 'b t =
   HxArray.map a f
 
