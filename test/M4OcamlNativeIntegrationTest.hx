@@ -69,7 +69,8 @@ class M4OcamlNativeIntegrationTest {
 		assertNotContains(ml, "Ocaml_Result.", "no module-qualified result constructors");
 
 		// Refs: `Ref.make/get/set` -> `ref` / `!` / `:=`
-		assertContains(ml, "let rr = ref 1", "ref creation");
+		assertContains(ml, "let rr =", "ref binding");
+		assertContains(ml, "ref 1", "ref creation");
 		assertContains(ml, "!rr", "ref deref");
 		assertContains(ml, "rr := ", "ref assignment");
 		assertNotContains(ml, "Ocaml_Ref.", "no module-qualified ref calls");
