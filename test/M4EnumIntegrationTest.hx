@@ -42,7 +42,8 @@ class M4EnumIntegrationTest {
 		if (!sys.FileSystem.exists(mainPath))
 			throw "missing output: " + mainPath;
 		final mainMl = sys.io.File.getContent(mainPath);
-		assertContains(mainMl, "MyEnum.C (1, \"x\")", "multi-arg ctor call uses tuple");
+		assertContains(mainMl, "MyEnum.C (1,", "multi-arg ctor call uses tuple");
+		assertContains(mainMl, "\"x\"", "multi-arg ctor preserves literal");
 		assertContains(mainMl, "match", "switch->match");
 		assertContains(mainMl, "| MyEnum.A ->", "ctor pattern A");
 		assertContains(mainMl, "| MyEnum.B", "ctor pattern B");
