@@ -317,6 +317,12 @@ if ! is_true "$HXHX_FORCE_STAGE0" && [ -d "$BOOTSTRAP_DIR" ] && [ -f "$BOOTSTRAP
     bash "$ROOT/scripts/hxhx/hydrate-bootstrap-shards.sh" "$BOOTSTRAP_BUILD_DIR" >&2
   fi
 
+  if [ -f "$BOOTSTRAP_BUILD_DIR/backend_js_JsTargetCore.ml" ]; then
+    python3 "$ROOT/scripts/hxhx/bootstrap_patch_helper.py" \
+      patch-js-target-core-native-js-lib-externs \
+      "$BOOTSTRAP_BUILD_DIR/backend_js_JsTargetCore.ml"
+  fi
+
   (
     cd "$BOOTSTRAP_BUILD_DIR"
     if [ "$HXHX_BOOTSTRAP_HEARTBEAT" != "0" ] || [ "$HXHX_BOOTSTRAP_BUILD_TIMEOUT_SECS" != "0" ]; then

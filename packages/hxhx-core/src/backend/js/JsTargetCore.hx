@@ -94,6 +94,29 @@ class JsTargetCore implements ITargetCore {
 		return parts.length == 0 ? fullName : parts[parts.length - 1];
 	}
 
+	static inline function isNativeJsLibExtern(fullName:String):Bool {
+		return fullName != null && StringTools.startsWith(fullName, "js.lib.");
+	}
+
+	static function nativeJsLibGlobalRef(fullName:String):String {
+		final suffix = fullName.substr("js.lib.".length);
+		final parts = suffix.split(".");
+		var expr = "globalThis";
+		var guard = "(globalThis != null)";
+		for (i in 0...parts.length) {
+			final part = parts[i];
+			if (part == null || part.length == 0)
+				continue;
+			final globalPart = switch ([i, part]) {
+				case [0, "intl"]: "Intl";
+				case _: part;
+			};
+			expr += "[" + JsNameMangler.quoteString(globalPart) + "]";
+			guard = "(" + guard + " && " + expr + " != null)";
+		}
+		return "(" + guard + " ? " + expr + " : {})";
+	}
+
 	static function emitRuntimePrelude(writer:JsWriter):Void {
 		writer.writeln("var __hx_classes = Object.create(null);");
 		writer.writeln("var Type = {");
@@ -136,13 +159,19 @@ class JsTargetCore implements ITargetCore {
 	}
 
 	static function emitClass(writer:JsWriter, unit:JsClassUnit, classRefs:haxe.ds.StringMap<String>, simpleNameRefs:haxe.ds.StringMap<String>):Void {
-		writer.writeln("var " + unit.jsRef + " = {};");
+		if (isNativeJsLibExtern(unit.fullName)) {
+			writer.writeln("var " + unit.jsRef + " = " + nativeJsLibGlobalRef(unit.fullName) + ";");
+		} else {
+			writer.writeln("var " + unit.jsRef + " = {};");
+		}
 		writer.writeln(unit.jsRef + ".__hx_name = " + JsNameMangler.quoteString(unit.fullName) + ";");
 		writer.writeln("__hx_classes[" + JsNameMangler.quoteString(unit.fullName) + "] = " + unit.jsRef + ";");
 		final simple = simpleName(unit.fullName);
 		if (simpleNameRefs.get(simple) == unit.jsRef) {
 			writer.writeln("__hx_classes[" + JsNameMangler.quoteString(simple) + "] = " + unit.jsRef + ";");
 		}
+		if (isNativeJsLibExtern(unit.fullName))
+			return;
 		final staticScope = new JsFunctionScope(classRefs);
 
 		for (field in HxClassDecl.getFields(unit.decl)) {
@@ -266,8 +295,12 @@ class JsTargetCore implements ITargetCore {
 		emitRuntimePrelude(writer);
 		final classRefs = buildClassRefs(classes.bySimpleName, classes.byFullName);
 
-		for (unit in classes.units) {
-			emitClass(writer, unit, classRefs, classes.bySimpleName);
+		for (emitNative in [true, false]) {
+			for (unit in classes.units) {
+				if (isNativeJsLibExtern(unit.fullName) != emitNative)
+					continue;
+				emitClass(writer, unit, classRefs, classes.bySimpleName);
+			}
 		}
 
 		final mainRef = resolveMainRef(context.mainModule, classes.bySimpleName, classes.byFullName);
