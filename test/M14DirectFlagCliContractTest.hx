@@ -71,6 +71,28 @@ class M14DirectFlagCliContractTest {
 		return false;
 	}
 
+	static function countArgPair(args:Array<String>, key:String, value:String):Int {
+		var count = 0;
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == key && i + 1 < args.length && args[i + 1] == value)
+				count += 1;
+			i += 1;
+		}
+		return count;
+	}
+
+	static function countDefine(args:Array<String>, defineValue:String):Int {
+		var count = 0;
+		var i = 0;
+		while (i < args.length) {
+			if (args[i] == "-D" && i + 1 < args.length && args[i + 1] == defineValue)
+				count += 1;
+			i += 1;
+		}
+		return count;
+	}
+
 	static function plan(args:Array<String>):Dynamic {
 		return CliRouting.plan(args, args.copy());
 	}
@@ -120,7 +142,11 @@ class M14DirectFlagCliContractTest {
 		final hxmlPath = tmpDir + "/build.hxml";
 		File.saveContent(hxmlPath, "-lib reflaxe.ocaml\n-D ocaml_output=custom_out\n--no-output\n");
 		final evalFromHxml = plan(["--ocaml-eval", hxmlPath, "-main", "Main"]);
+		assertEquals(evalFromHxml.lane, "stage0-ocaml-eval", "ocaml eval hxml lane");
 		assertIntEquals(countArgPair(evalFromHxml.forwarded, "--library", "reflaxe.ocaml"), 0, "ocaml eval hxml duplicate library injection");
 		assertTrue(!hasDefine(evalFromHxml.forwarded, "ocaml_output=out"), "ocaml eval hxml keeps explicit output define");
+		assertIntEquals(countDefine(evalFromHxml.forwarded, "ocaml_output=custom_out"), 0, "ocaml eval hxml avoids duplicate explicit output define");
+		assertTrue(!hasToken(evalFromHxml.forwarded, "--no-output"), "ocaml eval hxml avoids duplicate no-output token");
+		assertTrue(hasDefine(evalFromHxml.forwarded, "reflaxe-target=ocaml"), "ocaml eval hxml still injects reflaxe target define");
 	}
 }
