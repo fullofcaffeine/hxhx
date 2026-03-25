@@ -13,20 +13,20 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> let e = ref (MyEnum.C (1, "x")) in match !e with
-  | MyEnum.A -> ignore (let __assign_1 = MyEnum.B 2 in (
+let main = fun () -> ignore (let e = ref (Obj.magic (MyEnum.C (1, ("x" : string)))) in match !e with
+  | MyEnum.A -> ignore (let __assign_1 = Obj.magic (MyEnum.B 2) in (
     e := __assign_1;
     __assign_1
   ))
-  | MyEnum.B _p0 -> ignore (let _g = _p0 in let i = _g in let __assign_2 = MyEnum.C (i, "y") in (
+  | MyEnum.B _p0 -> ignore (let _g = _p0 in let i = _g in let __assign_2 = Obj.magic (MyEnum.C (i, ("y" : string))) in (
     e := __assign_2;
     __assign_2
   ))
-  | MyEnum.C (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = _p1 in (
+  | MyEnum.C (_p0, _p1) -> ignore (let _g = _p0 in let _g1 = (_p1 : string) in (
     ignore _g;
     ignore _g1;
-    let __assign_3 = MyEnum.A in (
+    let __assign_3 = Obj.magic (MyEnum.A) in (
       e := __assign_3;
       __assign_3
     )
-  ))
+  )))

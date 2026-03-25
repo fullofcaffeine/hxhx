@@ -6,18 +6,18 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable a : int array; mutable h : (string, int) Stdlib.Hashtbl.t }
 
-let create = fun a2 h2 -> let self = ({ __hx_type = HxType.class_ "Box"; a = Obj.magic (); h = Obj.magic () } : t) in (
-  ignore ((
+let create = fun a2 h2 -> let self = ({ __hx_type = HxType.class_ "Box"; a = Obj.magic (HxRuntime.hx_null); h = Obj.magic (HxRuntime.hx_null) } : t) in (
+  ignore (ignore ((
     ignore (let __assign_1 = a2 in (
-      self.a <- __assign_1;
+      (Obj.magic self : t).a <- __assign_1;
       __assign_1
     ));
     let __assign_2 = h2 in (
-      self.h <- __assign_2;
+      (Obj.magic self : t).h <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "Box"; a = Obj.magic (); h = Obj.magic () } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "Box"; a = Obj.magic (HxRuntime.hx_null); h = Obj.magic (HxRuntime.hx_null) } : t)

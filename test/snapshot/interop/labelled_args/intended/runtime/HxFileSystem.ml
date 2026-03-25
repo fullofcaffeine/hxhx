@@ -47,12 +47,12 @@ let fullPath (relPath : string) : string =
   Unix.realpath relPath
 
 let normalize_sep (p : string) : string =
-  String.map (fun c -> if c = '\\' then '/' else c) p
+  Stdlib.String.map (fun c -> if c = '\\' then '/' else c) p
 
 let normalize_path (p : string) : string =
   let p = normalize_sep p in
-  let is_abs = String.length p > 0 && p.[0] = '/' in
-  let parts = String.split_on_char '/' p in
+  let is_abs = Stdlib.String.length p > 0 && (Stdlib.String.get p (0)) = '/' in
+  let parts = Stdlib.String.split_on_char '/' p in
   let rec step stack = function
     | [] -> stack
     | "" :: rest -> step stack rest
@@ -65,7 +65,7 @@ let normalize_path (p : string) : string =
     | x :: rest -> step (x :: stack) rest
   in
   let rev = List.rev (step [] parts) in
-  let body = String.concat "/" rev in
+  let body = Stdlib.String.concat "/" rev in
   if is_abs then "/" ^ body else body
 
 let absolutePath (relPath : string) : string =

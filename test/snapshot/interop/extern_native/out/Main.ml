@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> (
+let main = fun () -> ignore ((
   ignore (Native.Mod.hello_world ());
   Native.Other.goodbye ()
-)
+))

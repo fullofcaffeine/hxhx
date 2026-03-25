@@ -13,18 +13,18 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> let args = HxSys.args () in (
+let main = fun () -> ignore (let args = Obj.magic (HxSys.args ()) in (
   ignore (print_endline (string_of_int (HxArray.length args)));
   ignore (print_endline (string_of_float (HxSys.time ())));
   ignore (print_endline (string_of_float (HxSys.cpuTime ())));
-  let p = "tmp.txt" in (
-    ignore (HxFile.saveContent p "hello");
-    ignore (print_endline (HxString.toStdString (HxFile.getContent p)));
+  let p = ("tmp.txt" : string) in (
+    ignore (HxFile.saveContent (p : string) ("hello" : string));
+    ignore (print_endline (HxString.toStdString (HxFile.getContent (p : string))));
     let st = HxFileSystem.stat p in (
       ignore (print_endline (string_of_int (st.size)));
       ignore (print_endline (string_of_bool (st.mtime == Obj.magic (HxRuntime.hx_null))));
-      ignore (print_endline (string_of_bool (Date.getTime (st.mtime) () > float_of_int 0)));
+      ignore (print_endline (string_of_bool (Date.getTime (Obj.magic (st.mtime)) () > float_of_int 0)));
       print_endline (string_of_bool (HxFileSystem.exists p))
     )
   )
-)
+))

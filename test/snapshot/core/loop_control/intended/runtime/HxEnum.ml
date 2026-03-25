@@ -62,10 +62,11 @@ let name_opt (v : Obj.t) : string option =
   else
     None
 
-let unbox_or_obj (expected : string) (v : Obj.t) : Obj.t =
-  if is_box v then
-    let name : string = Obj.obj (Obj.field v 1) in
-    if name = expected then Obj.field v 2 else v
+let unbox_or_obj (expected : string) (v : 'a) : 'a =
+  let raw = Obj.repr v in
+  if is_box raw then
+    let name : string = Obj.obj (Obj.field raw 1) in
+    if name = expected then Obj.obj (Obj.field raw 2) else v
   else
     v
 

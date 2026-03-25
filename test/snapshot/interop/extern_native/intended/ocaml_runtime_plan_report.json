@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 2,
+  "tokenScanFallbackEnabled": false,
+  "selectionMode": "full",
+  "trackedModules": [],
+  "inclusionReasons": [
+    {
+      "module": "Date",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "EReg",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxAnon",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxArray",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxBacktrace",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxBytes",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxEnum",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxFPHelper",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxFile",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxFileStream",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxFileSystem",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxInt",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxIterator",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxMap",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxProcess",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxReflect",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxRuntime",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxStdio",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxString",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxSys",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxThread",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "HxType",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "Math",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "Std",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    },
+    {
+      "module": "haxe_CallStack",
+      "reasons": [
+        "full_runtime_mode"
+      ]
+    }
+  ],
+  "runtimeDebugLaneEnabled": false,
+  "profile": "portable",
+  "selectedFeatures": [
+    "Date",
+    "EReg",
+    "HxAnon",
+    "HxArray",
+    "HxBacktrace",
+    "HxBytes",
+    "HxEnum",
+    "HxFPHelper",
+    "HxFile",
+    "HxFileStream",
+    "HxFileSystem",
+    "HxInt",
+    "HxIterator",
+    "HxMap",
+    "HxProcess",
+    "HxReflect",
+    "HxRuntime",
+    "HxStdio",
+    "HxString",
+    "HxSys",
+    "HxThread",
+    "HxType",
+    "Math",
+    "Std",
+    "haxe_CallStack"
+  ],
+  "runtimeInferenceDisabled": false,
+  "manualModules": [],
+  "selectedModules": [
+    "Date",
+    "EReg",
+    "HxAnon",
+    "HxArray",
+    "HxBacktrace",
+    "HxBytes",
+    "HxEnum",
+    "HxFPHelper",
+    "HxFile",
+    "HxFileStream",
+    "HxFileSystem",
+    "HxInt",
+    "HxIterator",
+    "HxMap",
+    "HxProcess",
+    "HxReflect",
+    "HxRuntime",
+    "HxStdio",
+    "HxString",
+    "HxSys",
+    "HxThread",
+    "HxType",
+    "Math",
+    "Std",
+    "haxe_CallStack"
+  ],
+  "availableModules": [
+    "Date",
+    "EReg",
+    "HxAnon",
+    "HxArray",
+    "HxBacktrace",
+    "HxBytes",
+    "HxEnum",
+    "HxFPHelper",
+    "HxFile",
+    "HxFileStream",
+    "HxFileSystem",
+    "HxInt",
+    "HxIterator",
+    "HxMap",
+    "HxProcess",
+    "HxReflect",
+    "HxRuntime",
+    "HxStdio",
+    "HxString",
+    "HxSys",
+    "HxThread",
+    "HxType",
+    "Math",
+    "Std",
+    "haxe_CallStack"
+  ],
+  "runtimeMode": "full"
+}

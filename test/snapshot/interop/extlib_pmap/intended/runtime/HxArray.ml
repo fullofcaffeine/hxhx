@@ -296,6 +296,7 @@ let set (a : 'a t) (i : int) (v : 'a) : 'a =
         )
 
 let push_obj_store_value (a : 'a t) (raw : Obj.t) : int =
+  ignore (ensure_obj_store a);
   ensure_capacity a (a.length + 1);
   (match a.store with
   | ObjStore data -> Stdlib.Array.set data a.length raw

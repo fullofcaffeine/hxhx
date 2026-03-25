@@ -46,41 +46,41 @@ let parseInt (x : string) : Obj.t =
   if x == hx_null_string then
     HxRuntime.hx_null
   else
-    let len = String.length x in
+    let len = Stdlib.String.length x in
     let i = ref 0 in
-    while !i < len && is_space x.[!i] do
+    while !i < len && is_space (Stdlib.String.get x (!i)) do
       incr i
     done;
     if !i >= len then
       HxRuntime.hx_null
     else
       let sign_start = !i in
-      if x.[!i] = '+' || x.[!i] = '-' then incr i;
-      if !i + 1 < len && x.[!i] = '0' && (x.[!i + 1] = 'x' || x.[!i + 1] = 'X') then (
+      if (Stdlib.String.get x (!i)) = '+' || (Stdlib.String.get x (!i)) = '-' then incr i;
+      if !i + 1 < len && (Stdlib.String.get x (!i)) = '0' && (Stdlib.String.get x (!i + 1) = 'x' || (Stdlib.String.get x (!i + 1)) = 'X') then (
         (* Hex: include optional sign + 0x prefix, then scan hex digits. *)
         i := !i + 2;
         let digits_start = !i in
-        while !i < len && is_hex_digit x.[!i] do
+        while !i < len && is_hex_digit (Stdlib.String.get x (!i)) do
           incr i
         done;
         if !i = digits_start then
           (* Haxe says this is "unspecified"; returning null is a safe default. *)
           HxRuntime.hx_null
         else
-          let s = String.sub x sign_start (!i - sign_start) in
+          let s = Stdlib.String.sub x sign_start (!i - sign_start) in
           match Stdlib.int_of_string_opt s with
           | Some v -> Obj.repr v
           | None -> HxRuntime.hx_null)
       else (
         (* Decimal: scan digits; stop at first invalid character. *)
         let digits_start = !i in
-        while !i < len && is_digit x.[!i] do
+        while !i < len && is_digit (Stdlib.String.get x (!i)) do
           incr i
         done;
         if !i = digits_start then
           HxRuntime.hx_null
         else
-          let s = String.sub x sign_start (!i - sign_start) in
+          let s = Stdlib.String.sub x sign_start (!i - sign_start) in
           match Stdlib.int_of_string_opt s with
           | Some v -> Obj.repr v
           | None -> HxRuntime.hx_null)
@@ -89,28 +89,28 @@ let parseFloat (x : string) : float =
   if x == hx_null_string then
     nan
   else
-    let len = String.length x in
+    let len = Stdlib.String.length x in
     let i = ref 0 in
-    while !i < len && is_space x.[!i] do
+    while !i < len && is_space (Stdlib.String.get x (!i)) do
       incr i
     done;
     if !i >= len then
       nan
     else
       let start = !i in
-      if x.[!i] = '+' || x.[!i] = '-' then incr i;
+      if (Stdlib.String.get x (!i)) = '+' || (Stdlib.String.get x (!i)) = '-' then incr i;
 
       let digits_before_start = !i in
-      while !i < len && is_digit x.[!i] do
+      while !i < len && is_digit (Stdlib.String.get x (!i)) do
         incr i
       done;
       let has_digits_before = !i > digits_before_start in
 
-      let has_dot = !i < len && x.[!i] = '.' in
+      let has_dot = !i < len && (Stdlib.String.get x (!i)) = '.' in
       if has_dot then incr i;
 
       let digits_after_start = !i in
-      while !i < len && is_digit x.[!i] do
+      while !i < len && is_digit (Stdlib.String.get x (!i)) do
         incr i
       done;
       let has_digits_after = has_dot && !i > digits_after_start in
@@ -120,11 +120,11 @@ let parseFloat (x : string) : float =
       else (
         (* Exponent: include only if it has at least one digit. Otherwise stop before 'e'. *)
         let end_before_exp = !i in
-        if !i < len && (x.[!i] = 'e' || x.[!i] = 'E') then (
+        if !i < len && (Stdlib.String.get x (!i) = 'e' || (Stdlib.String.get x (!i)) = 'E') then (
           let exp_i = ref (!i + 1) in
-          if !exp_i < len && (x.[!exp_i] = '+' || x.[!exp_i] = '-') then incr exp_i;
+          if !exp_i < len && (Stdlib.String.get x (!exp_i) = '+' || (Stdlib.String.get x (!exp_i)) = '-') then incr exp_i;
           let exp_digits_start = !exp_i in
-          while !exp_i < len && is_digit x.[!exp_i] do
+          while !exp_i < len && is_digit (Stdlib.String.get x (!exp_i)) do
             incr exp_i
           done;
           if !exp_i > exp_digits_start then
@@ -134,7 +134,7 @@ let parseFloat (x : string) : float =
         else
           ();
 
-        let s = String.sub x start (!i - start) in
+        let s = Stdlib.String.sub x start (!i - start) in
         try float_of_string s with _ -> nan)
 
 let () =

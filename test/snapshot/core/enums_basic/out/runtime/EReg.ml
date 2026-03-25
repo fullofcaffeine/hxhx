@@ -26,30 +26,30 @@ type t =
 
 let is_global (opt : string) : bool =
   let rec loop i =
-    if i >= String.length opt then false
-    else if opt.[i] = 'g' then true
+    if i >= Stdlib.String.length opt then false
+    else if (Stdlib.String.get opt (i)) = 'g' then true
     else loop (i + 1)
   in
   loop 0
 
 let is_casefold (opt : string) : bool =
   let rec loop i =
-    if i >= String.length opt then false
-    else if opt.[i] = 'i' then true
+    if i >= Stdlib.String.length opt then false
+    else if (Stdlib.String.get opt (i)) = 'i' then true
     else loop (i + 1)
   in
   loop 0
 
 let translate_pattern (p : string) : string =
   (* Translate common PCRE-ish constructs to OCaml Str (Emacs) syntax. *)
-  let buf = Buffer.create (String.length p * 2) in
-  let len = String.length p in
+  let buf = Buffer.create (Stdlib.String.length p * 2) in
+  let len = Stdlib.String.length p in
   let rec loop i in_class =
     if i >= len then ()
     else
-      let c = p.[i] in
+      let c = (Stdlib.String.get p (i)) in
       if c = '\\' && i + 1 < len then (
-        let n = p.[i + 1] in
+        let n = (Stdlib.String.get p (i + 1)) in
         (* PCRE escapes we can map. *)
         (match n with
         | 'd' -> Buffer.add_string buf "[0-9]"
@@ -125,7 +125,7 @@ let matchSub (self : t) (s : string) (pos : int) (len : int) : bool =
     if raw == HxRuntime.hx_null then -1 else len
   in
   let limit =
-    if len < 0 then String.length s else min (String.length s) (pos + len)
+    if len < 0 then Stdlib.String.length s else min (Stdlib.String.length s) (pos + len)
   in
   try
     ignore (Str.search_forward self.re s pos);
@@ -147,7 +147,7 @@ let matched (self : t) (n : int) : string =
       if n < 0 || n >= Stdlib.Array.length st.groups then ""
       else
         let b, e = Stdlib.Array.get st.groups n in
-        if b < 0 || e < b then "" else String.sub st.src b (e - b)
+        if b < 0 || e < b then "" else Stdlib.String.sub st.src b (e - b)
 
 let matchedLeft (self : t) () : string =
   match self.last with
@@ -156,7 +156,7 @@ let matchedLeft (self : t) () : string =
       if Stdlib.Array.length st.groups = 0 then ""
       else
         let b, _ = Stdlib.Array.get st.groups 0 in
-        if b <= 0 then "" else String.sub st.src 0 b
+        if b <= 0 then "" else Stdlib.String.sub st.src 0 b
 
 let matchedRight (self : t) () : string =
   match self.last with
@@ -165,8 +165,8 @@ let matchedRight (self : t) () : string =
       if Stdlib.Array.length st.groups = 0 then ""
       else
         let _, e = Stdlib.Array.get st.groups 0 in
-        if e >= String.length st.src then ""
-        else String.sub st.src e (String.length st.src - e)
+        if e >= Stdlib.String.length st.src then ""
+        else Stdlib.String.sub st.src e (Stdlib.String.length st.src - e)
 
 let matchedPos (self : t) () : Obj.t =
   match self.last with
@@ -182,36 +182,36 @@ let matchedPos (self : t) () : Obj.t =
 
 let split (self : t) (s : string) : string HxArray.t =
   let out = HxArray.create () in
-  let len_s = String.length s in
+  let len_s = Stdlib.String.length s in
   let rec loop from =
     try
       ignore (Str.search_forward self.re s from);
       let b = Str.group_beginning 0 in
       let e = Str.group_end 0 in
-      ignore (HxArray.push out (String.sub s from (b - from)));
+      ignore (HxArray.push out (Stdlib.String.sub s from (b - from)));
       if self.global then (
         let next = if e = b then min len_s (e + 1) else e in
         if next <= len_s then loop next else ())
       else (
-        ignore (HxArray.push out (String.sub s e (len_s - e)));
+        ignore (HxArray.push out (Stdlib.String.sub s e (len_s - e)));
         raise Exit)
     with
     | Not_found ->
-        ignore (HxArray.push out (String.sub s from (len_s - from)))
+        ignore (HxArray.push out (Stdlib.String.sub s from (len_s - from)))
     | Exit -> ()
   in
   loop 0;
   out
 
 let expand_replacement (self : t) (by : string) : string =
-  let buf = Buffer.create (String.length by + 16) in
-  let len = String.length by in
+  let buf = Buffer.create (Stdlib.String.length by + 16) in
+  let len = Stdlib.String.length by in
   let rec loop i =
     if i >= len then ()
     else
-      let c = by.[i] in
+      let c = (Stdlib.String.get by (i)) in
       if c = '$' && i + 1 < len then (
-        let n = by.[i + 1] in
+        let n = (Stdlib.String.get by (i + 1)) in
         (match n with
         | '$' ->
             Buffer.add_char buf '$';
@@ -232,7 +232,7 @@ let expand_replacement (self : t) (by : string) : string =
   Buffer.contents buf
 
 let replace (self : t) (s : string) (by : string) : string =
-  let len_s = String.length s in
+  let len_s = Stdlib.String.length s in
   let buf = Buffer.create (len_s + 32) in
   let rec loop from =
     try
@@ -240,20 +240,20 @@ let replace (self : t) (s : string) (by : string) : string =
       set_last self s;
       let b = Str.group_beginning 0 in
       let e = Str.group_end 0 in
-      Buffer.add_string buf (String.sub s from (b - from));
+      Buffer.add_string buf (Stdlib.String.sub s from (b - from));
       Buffer.add_string buf (expand_replacement self by);
       if self.global then (
         let next = if e = b then min len_s (e + 1) else e in
         if next <= len_s then loop next else ())
-      else Buffer.add_string buf (String.sub s e (len_s - e))
+      else Buffer.add_string buf (Stdlib.String.sub s e (len_s - e))
     with Not_found ->
-      Buffer.add_string buf (String.sub s from (len_s - from))
+      Buffer.add_string buf (Stdlib.String.sub s from (len_s - from))
   in
   loop 0;
   Buffer.contents buf
 
 let map (self : t) (s : string) (f : t -> string) : string =
-  let len_s = String.length s in
+  let len_s = Stdlib.String.length s in
   let buf = Buffer.create (len_s + 32) in
   let rec loop from =
     try
@@ -261,28 +261,28 @@ let map (self : t) (s : string) (f : t -> string) : string =
       set_last self s;
       let b = Str.group_beginning 0 in
       let e = Str.group_end 0 in
-      Buffer.add_string buf (String.sub s from (b - from));
+      Buffer.add_string buf (Stdlib.String.sub s from (b - from));
       Buffer.add_string buf (f self);
       if self.global then (
         let next = if e = b then min len_s (e + 1) else e in
         if next <= len_s then loop next else ())
-      else Buffer.add_string buf (String.sub s e (len_s - e))
+      else Buffer.add_string buf (Stdlib.String.sub s e (len_s - e))
     with Not_found ->
-      Buffer.add_string buf (String.sub s from (len_s - from))
+      Buffer.add_string buf (Stdlib.String.sub s from (len_s - from))
   in
   loop 0;
   Buffer.contents buf
 
 let escape (s : string) : string =
   (* Escape common metacharacters for inclusion in a Haxe regex literal. *)
-  let buf = Buffer.create (String.length s * 2) in
+  let buf = Buffer.create (Stdlib.String.length s * 2) in
   let is_meta = function
     | '\\' | '.' | '+' | '*' | '?' | '^' | '$' | '(' | ')' | '[' | ']' | '{'
     | '}' | '|' ->
         true
     | _ -> false
   in
-  String.iter
+  Stdlib.String.iter
     (fun c ->
       if is_meta c then Buffer.add_char buf '\\';
       Buffer.add_char buf c)

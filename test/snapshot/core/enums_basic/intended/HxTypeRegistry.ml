@@ -5,9 +5,11 @@
 let init () : unit =
   ignore (HxType.class_ "Main");
   ignore (HxType.class_ "StringBuf");
+  ignore (HxType.class_ "StringTools");
   ignore (HxType.class_ "haxe.Exception");
   ignore (HxType.class_ "haxe.NativeStackTrace");
   ignore (HxType.class_ "haxe.ValueException");
+  ignore (HxType.class_ "haxe._CallStack.CallStack_Impl_");
   ignore (HxType.class_ "haxe.io.BytesBuffer");
   ignore (HxType.class_ "haxe.io.FPHelper");
   ignore (HxType.class_ "haxe.io.Input");
@@ -17,7 +19,9 @@ let init () : unit =
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioInput");
   ignore (HxType.class_ "sys.io._Stdio.OcamlStdioOutput");
   ignore (HxType.enum_ "MyEnum");
+  ignore (HxType.enum_ "haxe.StackItem");
   HxType.register_enum_ctors "MyEnum" [ "A"; "B"; "C" ];
+  HxType.register_enum_ctors "haxe.StackItem" [ "CFunction"; "Module"; "FilePos"; "Method"; "LocalFunction" ];
   HxType.register_enum_ctor "MyEnum" "A" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (MyEnum.A)
   );
@@ -32,11 +36,41 @@ let init () : unit =
     let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 's' for MyEnum.C" in
     Obj.repr (MyEnum.C (a0, a1))
   );
+  HxType.register_enum_ctor "haxe.StackItem" "CFunction" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_CallStack.CFunction)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "Module" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'm' for haxe.StackItem.Module" in
+    Obj.repr (Haxe_CallStack.Module a0)
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "FilePos" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else failwith "Type.createEnum: missing ctor arg 's' for haxe.StackItem.FilePos" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'file' for haxe.StackItem.FilePos" in
+    let a2 = if len > 2 then Obj.obj ((HxArray.get args 2)) else failwith "Type.createEnum: missing ctor arg 'line' for haxe.StackItem.FilePos" in
+    let a3 = if len > 3 then (HxArray.get args 3) else HxRuntime.hx_null in
+    Obj.repr (Haxe_CallStack.FilePos (a0, a1, a2, a3))
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "Method" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'classname' for haxe.StackItem.Method" in
+    let a1 = if len > 1 then Obj.obj ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'method' for haxe.StackItem.Method" in
+    Obj.repr (Haxe_CallStack.Method (a0, a1))
+  );
+  HxType.register_enum_ctor "haxe.StackItem" "LocalFunction" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then (HxArray.get args 0) else HxRuntime.hx_null in
+    Obj.repr (Haxe_CallStack.LocalFunction a0)
+  );
   HxType.register_class_ctor "Main" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Main.create ())
   );
   HxType.register_class_ctor "StringBuf" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (StringBuf.create ())
+  );
+  HxType.register_class_ctor "StringTools" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (StringTools.create ())
   );
   HxType.register_class_ctor "haxe.Exception" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -54,6 +88,9 @@ let init () : unit =
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else Obj.magic HxRuntime.hx_null in
     let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
     Obj.repr (Haxe_ValueException.create a0 a1 a2)
+  );
+  HxType.register_class_ctor "haxe._CallStack.CallStack_Impl_" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Haxe_CallStack.create ())
   );
   HxType.register_class_ctor "haxe.io.BytesBuffer" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Haxe_io_BytesBuffer.create ())
@@ -82,9 +119,11 @@ let init () : unit =
   );
   HxType.register_class_empty_ctor "Main" (fun () -> Obj.repr (Main.__empty ()));
   HxType.register_class_empty_ctor "StringBuf" (fun () -> Obj.repr (StringBuf.__empty ()));
+  HxType.register_class_empty_ctor "StringTools" (fun () -> Obj.repr (StringTools.__empty ()));
   HxType.register_class_empty_ctor "haxe.Exception" (fun () -> Obj.repr (Haxe_Exception.__empty ()));
   HxType.register_class_empty_ctor "haxe.NativeStackTrace" (fun () -> Obj.repr (Haxe_NativeStackTrace.__empty ()));
   HxType.register_class_empty_ctor "haxe.ValueException" (fun () -> Obj.repr (Haxe_ValueException.__empty ()));
+  HxType.register_class_empty_ctor "haxe._CallStack.CallStack_Impl_" (fun () -> Obj.repr (Haxe_CallStack.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.BytesBuffer" (fun () -> Obj.repr (Haxe_io_BytesBuffer.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.FPHelper" (fun () -> Obj.repr (Haxe_io_FPHelper.__empty ()));
   HxType.register_class_empty_ctor "haxe.io.Input" (fun () -> Obj.repr (Haxe_io_Input.__empty ()));
@@ -96,12 +135,16 @@ let init () : unit =
   HxType.register_class_static_fields "Main" [ "main" ];
   HxType.register_class_instance_fields "StringBuf" [ "add"; "addChar"; "addSub"; "buf"; "get_length"; "toString" ];
   HxType.register_class_static_fields "StringBuf" [];
+  HxType.register_class_instance_fields "StringTools" [];
+  HxType.register_class_static_fields "StringTools" [ "_hexUpper"; "_hexValue"; "_isUrlUnreserved"; "_quoteUnixArgOcaml"; "_quoteWinArgOcaml"; "_urlDecodeOcaml"; "_urlEncodeOcaml"; "_winMetaCharactersOcaml"; "contains"; "endsWith"; "fastCodeAt"; "hex"; "htmlEscape"; "htmlUnescape"; "isEof"; "isSpace"; "iterator"; "keyValueIterator"; "lpad"; "ltrim"; "quoteUnixArg"; "quoteWinArg"; "replace"; "rpad"; "rtrim"; "startsWith"; "trim"; "unsafeCodeAt"; "urlDecode"; "urlEncode"; "utf16CodePointAt"; "winMetaCharacters" ];
   HxType.register_class_instance_fields "haxe.Exception" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap" ];
   HxType.register_class_static_fields "haxe.Exception" [ "caught"; "thrown" ];
   HxType.register_class_instance_fields "haxe.NativeStackTrace" [];
   HxType.register_class_static_fields "haxe.NativeStackTrace" [ "callStack"; "exceptionStack"; "parseFileLine"; "saveStack"; "toHaxe" ];
   HxType.register_class_instance_fields "haxe.ValueException" [ "__exceptionMessage"; "__exceptionStack"; "__nativeException"; "__nativeStack"; "__previousException"; "__shiftStack"; "__skipStack"; "__unshiftStack"; "details"; "get_message"; "get_native"; "get_previous"; "get_stack"; "toString"; "unwrap"; "value" ];
   HxType.register_class_static_fields "haxe.ValueException" [];
+  HxType.register_class_instance_fields "haxe._CallStack.CallStack_Impl_" [];
+  HxType.register_class_static_fields "haxe._CallStack.CallStack_Impl_" [ "asArray"; "callStack"; "copy"; "equalItems"; "exceptionStack"; "get"; "get_length"; "itemToString"; "nativeToHaxe"; "parseFileLine"; "subtract"; "toString" ];
   HxType.register_class_instance_fields "haxe.io.BytesBuffer" [ "add"; "addByte"; "addBytes"; "addDouble"; "addFloat"; "addInt32"; "addInt64"; "addString"; "b"; "getBytes"; "get_length" ];
   HxType.register_class_static_fields "haxe.io.BytesBuffer" [];
   HxType.register_class_instance_fields "haxe.io.FPHelper" [];
@@ -130,13 +173,11 @@ let init () : unit =
   HxType.register_class_tags "haxe.Exception" [ "haxe.Exception" ];
   HxType.register_class_tags "haxe.Int64Helper" [ "haxe.Int64Helper" ];
   HxType.register_class_tags "haxe.NativeStackTrace" [ "haxe.NativeStackTrace" ];
-  HxType.register_class_tags "haxe.SysTools" [ "haxe.SysTools" ];
   HxType.register_class_tags "haxe.ValueException" [ "haxe.Exception"; "haxe.ValueException" ];
   HxType.register_class_tags "haxe._CallStack.CallStack_Impl_" [ "haxe._CallStack.CallStack_Impl_" ];
   HxType.register_class_tags "haxe._Int32.Int32_Impl_" [ "haxe._Int32.Int32_Impl_" ];
   HxType.register_class_tags "haxe._Int64.Int64_Impl_" [ "haxe._Int64.Int64_Impl_" ];
   HxType.register_class_tags "haxe._Int64.___Int64" [ "haxe._Int64.___Int64" ];
-  HxType.register_class_tags "haxe.ds._ReadOnlyArray.ReadOnlyArray_Impl_" [ "haxe.ds._ReadOnlyArray.ReadOnlyArray_Impl_" ];
   HxType.register_class_tags "haxe.exceptions.NotImplementedException" [ "haxe.Exception"; "haxe.exceptions.NotImplementedException"; "haxe.exceptions.PosException" ];
   HxType.register_class_tags "haxe.exceptions.PosException" [ "haxe.Exception"; "haxe.exceptions.PosException" ];
   HxType.register_class_tags "haxe.io.BytesBuffer" [ "haxe.io.BytesBuffer" ];

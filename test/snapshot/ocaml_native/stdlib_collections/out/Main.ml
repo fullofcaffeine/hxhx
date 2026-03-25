@@ -13,34 +13,40 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> let a = Stdlib.Array.make 3 1 in (
+let main = fun () -> ignore (let a = Stdlib.Array.make 3 1 in (
   ignore (Stdlib.Array.set a 0 42);
   let b = Stdlib.Array.map (fun x -> HxInt.add x 1) a in (
-    ignore (Stdlib.Array.iter (fun x -> ()) b);
-    let random = HxRuntime.hx_null in let tempHashtbl1 = ref (Obj.magic ()) in (
-      ignore (if random == HxRuntime.hx_null then let __assign_1 = Stdlib.Hashtbl.create 16 in (
+    ignore (Stdlib.Array.iter (fun x -> (
+      ignore x;
+      ignore ()
+    )) b);
+    let random = (HxRuntime.hx_null : Obj.t) in let tempHashtbl1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+      ignore (if random == HxRuntime.hx_null then let __assign_1 = Obj.magic (Stdlib.Hashtbl.create 16) in (
         tempHashtbl1 := __assign_1;
         __assign_1
-      ) else let __assign_2 = Stdlib.Hashtbl.create ?random:(let __optarg_3 = Obj.repr random in if __optarg_3 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_3)) 16 in (
+      ) else let __assign_2 = Obj.magic (Stdlib.Hashtbl.create ?random:(let __optarg_3 = Obj.repr random in if __optarg_3 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_3)) 16) in (
         tempHashtbl1 := __assign_2;
         __assign_2
       ));
-      let tempHashtbl = !tempHashtbl1 in (
+      let tempHashtbl = Obj.magic (!tempHashtbl1) in (
         ignore (Stdlib.Hashtbl.add tempHashtbl "k" 123);
         ignore (Stdlib.Hashtbl.replace tempHashtbl "k" 124);
         ignore (Stdlib.Hashtbl.remove tempHashtbl "missing");
         ignore (Stdlib.Hashtbl.find_opt tempHashtbl "missing");
         ignore (Stdlib.Hashtbl.find tempHashtbl "k");
         ignore (Stdlib.Hashtbl.create ?random:(let __optarg_4 = Obj.repr (HxRuntime.box_bool true) in if __optarg_4 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_4)) 16);
-        let bytes = Stdlib.Bytes.of_string "hi" in let fill = Stdlib.Char.chr 97 in let tempBytes = Stdlib.Bytes.make 3 fill in let len = Stdlib.Bytes.length bytes in (
+        let bytes = Stdlib.Bytes.of_string ("hi" : string) in let fill = Stdlib.Char.chr 97 in let tempBytes = Stdlib.Bytes.make 3 fill in let len = Stdlib.Bytes.length bytes in (
           ignore (Stdlib.Bytes.sub tempBytes 0 len);
           ignore (Stdlib.Bytes.to_string bytes);
           let a2 = Stdlib.Seq.return 1 in let b2 = Stdlib.Seq.return 2 in let tempSeq = Stdlib.Seq.append a2 b2 in (
-            ignore (let xs = Stdlib.Seq.map (fun x -> HxInt.add x 1) tempSeq in Stdlib.Seq.iter (fun x -> ()) xs);
+            ignore (let xs = Stdlib.Seq.map (fun x -> HxInt.add x 1) tempSeq in Stdlib.Seq.iter (fun x -> (
+              ignore x;
+              ignore ()
+            )) xs);
             Box.create a tempHashtbl
           )
         )
       )
     )
   )
-)
+))

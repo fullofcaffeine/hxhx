@@ -117,7 +117,7 @@ let parse_int (s : string) : int option =
   try Some (int_of_string s) with _ -> None
 
 let parse_hms (s : string) : (int * int * int) option =
-  match String.split_on_char ':' s with
+  match Stdlib.String.split_on_char ':' s with
   | [ hh; mm; ss ] -> (
       match (parse_int hh, parse_int mm, parse_int ss) with
       | Some h, Some m, Some sec -> Some (h, m, sec)
@@ -125,7 +125,7 @@ let parse_hms (s : string) : (int * int * int) option =
   | _ -> None
 
 let parse_ymd (s : string) : (int * int * int) option =
-  match String.split_on_char '-' s with
+  match Stdlib.String.split_on_char '-' s with
   | [ yyyy; mm; dd ] -> (
       match (parse_int yyyy, parse_int mm, parse_int dd) with
       | Some y, Some mon, Some day -> Some (y, mon, day)
@@ -133,11 +133,11 @@ let parse_ymd (s : string) : (int * int * int) option =
   | _ -> None
 
 let fromString (s_raw : string) : t =
-  let s = String.trim s_raw in
-  if String.length s = 0 then invalid_date_format s_raw
-  else if String.contains s '-' then
+  let s = Stdlib.String.trim s_raw in
+  if Stdlib.String.length s = 0 then invalid_date_format s_raw
+  else if Stdlib.String.contains s '-' then
     (* Local date, optionally with local time. *)
-    let parts = String.split_on_char ' ' s in
+    let parts = Stdlib.String.split_on_char ' ' s in
     let date_part, time_part =
       match parts with
       | [ d ] -> (d, None)
@@ -159,7 +159,7 @@ let fromString (s_raw : string) : t =
     in
     (* Month is 1-based in the string, but our `create` expects 0-based. *)
     create y (mon - 1) day hour min sec
-  else if String.contains s ':' then
+  else if Stdlib.String.contains s ':' then
     (* Time relative to UTC epoch. *)
     match parse_hms s with
     | None -> invalid_date_format s_raw

@@ -18,6 +18,6 @@ let map = fun f xs -> Stdlib.Seq.map f xs
 
 let filter = fun p xs -> Stdlib.Seq.filter p xs
 
-let iter = fun f xs -> Stdlib.Seq.iter f xs
+let iter = fun f xs -> ignore (Stdlib.Seq.iter f xs)
 
 let foldLeft = fun f init xs -> Stdlib.Seq.fold_left f init xs

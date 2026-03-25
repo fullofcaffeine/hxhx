@@ -13,7 +13,10 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.NativeStack
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "haxe.NativeStackTrace" } : t)
 
-let saveStack = fun _exception -> ()
+let saveStack = fun _exception -> (
+  ignore _exception;
+  ignore ()
+)
 
 let callStack = fun () -> let __anon_1 = HxAnon.create () in (
   ignore (HxAnon.set __anon_1 "skip" (Obj.repr 1));
@@ -27,12 +30,12 @@ let exceptionStack = fun () -> let __anon_2 = HxAnon.create () in (
   __anon_2
 )
 
-let parseFileLine = fun line -> try let fileNeedle = "file \"" in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
-  ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+let parseFileLine = fun line -> try let __fallback_result_15 = let fileNeedle = ("file \"" : string) in let fileStart0 = HxString.indexOf line fileNeedle 0 in (
+  ignore (if fileStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
   let fileStart = HxInt.add fileStart0 (HxString.length fileNeedle) in let fileEnd = HxString.indexOf line "\"" fileStart in (
-    ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-    let file = HxString.substr line fileStart (HxInt.sub fileEnd fileStart) in let lineNeedle = "line " in let lineStart0 = HxString.indexOf line lineNeedle fileEnd in (
-      ignore (if lineStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+    ignore (if fileEnd < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
+    let file = (HxString.substr line fileStart (HxInt.sub fileEnd fileStart) : string) in let lineNeedle = ("line " : string) in let lineStart0 = HxString.indexOf line lineNeedle fileEnd in (
+      ignore (if lineStart0 < 0 then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
       let i = HxInt.add lineStart0 (HxString.length lineNeedle) in let j = ref i in (
         ignore (try while !j < HxString.length line do try ignore (let c = HxString.charCodeAt line (!j) in (
           ignore (if (let __nullable_3 = c in let __nullable_4 = 48 in if __nullable_3 == HxRuntime.hx_null then false else Obj.obj __nullable_3 < __nullable_4) || (let __nullable_5 = c in let __nullable_6 = 57 in if __nullable_5 == HxRuntime.hx_null then false else Obj.obj __nullable_5 > __nullable_6) then raise (HxRuntime.Hx_break) else ());
@@ -43,7 +46,7 @@ let parseFileLine = fun line -> try let fileNeedle = "file \"" in let fileStart0
         )) with
           | HxRuntime.Hx_continue -> () done with
           | HxRuntime.Hx_break -> ());
-        ignore (if !j = i then raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+        ignore (if !j = i then raise (HxRuntime.Hx_return (Obj.repr (HxRuntime.hx_null))) else ());
         let ln = ref 0 in let _g = ref i in let _g1 = !j in (
           ignore (while !_g < _g1 do ignore (let k = let __old_9 = !_g in let __new_10 = HxInt.add __old_9 1 in (
             ignore (_g := __new_10);
@@ -61,23 +64,23 @@ let parseFileLine = fun line -> try let fileNeedle = "file \"" in let fileStart0
       )
     )
   )
-) with
-  | HxRuntime.Hx_return __ret_14 -> Obj.obj __ret_14
+) in Obj.magic __fallback_result_15 with
+  | HxRuntime.Hx_return __ret_14 -> Obj.magic __ret_14
 
-let toHaxe = fun nativeStackTrace skip -> let native = nativeStackTrace in let toSkip = ref (HxInt.add skip (Obj.obj (HxAnon.get native "skip"))) in let out = HxArray.create () in let _g = ref 0 in let _g1 = Obj.obj (HxAnon.get native "stack") in (
-  ignore (try while !_g < HxArray.length _g1 do try ignore (let line = HxArray.get _g1 (!_g) in (
-    ignore (let __old_15 = !_g in let __new_16 = HxInt.add __old_15 1 in (
-      ignore (_g := __new_16);
-      __new_16
+let toHaxe = fun nativeStackTrace skip -> let native = nativeStackTrace in let toSkip = ref (HxInt.add skip (Obj.obj (HxAnon.get native "skip"))) in let out = Obj.magic (HxArray.create ()) in let _g = ref 0 in let _g1 = Obj.magic (Obj.obj (HxAnon.get native "stack")) in (
+  ignore (try while !_g < HxArray.length _g1 do try ignore (let line = (HxArray.get (Obj.magic _g1) (!_g) : string) in (
+    ignore (let __old_16 = !_g in let __new_17 = HxInt.add __old_16 1 in (
+      ignore (_g := __new_17);
+      __new_17
     ));
     ignore (if !toSkip > 0 then ignore ((
-      ignore (let __old_17 = !toSkip in let __new_18 = HxInt.add __old_17 (-1) in (
-        ignore (toSkip := __new_18);
-        __old_17
+      ignore (let __old_18 = !toSkip in let __new_19 = HxInt.add __old_18 (-1) in (
+        ignore (toSkip := __new_19);
+        __old_18
       ));
       raise (HxRuntime.Hx_continue)
     )) else ());
-    let loc = parseFileLine line in if loc != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out (Haxe_CallStack.FilePos (Obj.magic (HxRuntime.hx_null), Obj.obj (HxAnon.get loc "file"), Obj.obj (HxAnon.get loc "line"), HxRuntime.hx_null))) else ignore (HxArray.push out (Haxe_CallStack.Module line))
+    let loc = parseFileLine (line : string) in if loc != Obj.magic (HxRuntime.hx_null) then ignore (HxArray.push out (Haxe_CallStack.FilePos (Obj.obj (HxEnum.unbox_or_obj "haxe.StackItem" (Obj.magic (HxRuntime.hx_null))), (Obj.obj (HxAnon.get loc "file") : string), Obj.obj (HxAnon.get loc "line"), HxRuntime.hx_null))) else ignore (HxArray.push out (Haxe_CallStack.Module (line : string)))
   )) with
     | HxRuntime.Hx_continue -> () done with
     | HxRuntime.Hx_break -> ());

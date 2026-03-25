@@ -7,35 +7,35 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t; mutable x : int; mutable y : int }
 
 let create = fun x2 y2 -> let self = ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t) in (
-  ignore ((
+  ignore (ignore ((
     ignore (let __assign_1 = x2 in (
-      self.x <- __assign_1;
+      (Obj.magic self : t).x <- __assign_1;
       __assign_1
     ));
     let __assign_2 = y2 in (
-      self.y <- __assign_2;
+      (Obj.magic self : t).y <- __assign_2;
       __assign_2
     )
-  ));
+  )));
   self
 )
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Point"; x = 0; y = 0 } : t)
 
-let incX = fun self () -> ignore (let __assign_3 = HxInt.add (self.x) 1 in (
-  self.x <- __assign_3;
+let incX = fun self () -> ignore (ignore (let __assign_3 = HxInt.add ((Obj.magic self : t).x) 1 in (
+  (Obj.magic self : t).x <- __assign_3;
   __assign_3
-))
+)))
 
-let add = fun self (dx : int) (dy : int) -> ignore ((
-  ignore (let __assign_4 = HxInt.add (self.x) dx in (
-    self.x <- __assign_4;
+let add = fun self (dx : int) (dy : int) -> ignore (ignore ((
+  ignore (let __assign_4 = HxInt.add ((Obj.magic self : t).x) dx in (
+    (Obj.magic self : t).x <- __assign_4;
     __assign_4
   ));
-  let __assign_5 = HxInt.add (self.y) dy in (
-    self.y <- __assign_5;
+  let __assign_5 = HxInt.add ((Obj.magic self : t).y) dy in (
+    (Obj.magic self : t).y <- __assign_5;
     __assign_5
   )
-))
+)))
 
-let sum = fun self () -> HxInt.add (self.x) (self.y)
+let sum = fun self () -> HxInt.add ((Obj.magic self : t).x) ((Obj.magic self : t).y)

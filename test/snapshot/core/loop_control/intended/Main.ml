@@ -13,7 +13,7 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> let i = ref 0 in let sum = ref 0 in (
+let main = fun () -> ignore (let i = ref 0 in let sum = ref 0 in (
   ignore (try while true do try ignore ((
     ignore (let __old_1 = !i in let __new_2 = HxInt.add __old_1 1 in (
       ignore (i := __new_2);
@@ -50,4 +50,4 @@ let main = fun () -> let i = ref 0 in let sum = ref 0 in (
     ignore (if !innerCount <> 6 then ignore (HxType.hx_throw_typed_rtti (Obj.repr "bad innerCount") ["Dynamic"; "String"]) else ());
     print_endline "OK loop_control"
   )
-)
+))

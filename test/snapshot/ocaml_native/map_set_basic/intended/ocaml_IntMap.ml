@@ -20,6 +20,6 @@ let find = fun k m -> OcamlNativeIntMap.find k m
 
 let findOpt = fun k m -> OcamlNativeIntMap.find_opt k m
 
-let iter = fun f m -> OcamlNativeIntMap.iter f m
+let iter = fun f m -> ignore (OcamlNativeIntMap.iter f m)
 
 let fold = fun f m init -> OcamlNativeIntMap.fold f m init

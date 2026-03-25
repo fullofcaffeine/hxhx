@@ -16,4 +16,4 @@ let remove = fun x s -> OcamlNativeIntSet.remove x s
 
 let mem = fun x s -> OcamlNativeIntSet.mem x s
 
-let iter = fun f s -> OcamlNativeIntSet.iter f s
+let iter = fun f s -> ignore (OcamlNativeIntSet.iter f s)

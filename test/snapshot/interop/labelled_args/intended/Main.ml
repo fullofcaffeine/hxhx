@@ -13,8 +13,8 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> (
+let main = fun () -> ignore ((
   ignore (Native.Mod.f ~x:1 2 ?z:(let __optarg_1 = Obj.repr (Obj.repr 3) in if __optarg_1 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_1)));
   ignore (Native.Mod.f ~x:1 2 ?z:None);
   Native.Mod.f ~x:1 2
-)
+))

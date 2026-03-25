@@ -6,24 +6,24 @@ let __reflaxe_ocaml__ = ()
 
 let _new = fun v -> v
 
-let create = fun size random -> let tempHashtbl = ref (Obj.magic ()) in (
-  ignore (if random == HxRuntime.hx_null then let __assign_1 = Stdlib.Hashtbl.create size in (
+let create = fun size random -> let tempHashtbl = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
+  ignore (if random == HxRuntime.hx_null then let __assign_1 = Obj.magic (Stdlib.Hashtbl.create size) in (
     tempHashtbl := __assign_1;
     __assign_1
-  ) else let __assign_2 = Stdlib.Hashtbl.create ?random:(let __optarg_3 = Obj.repr random in if __optarg_3 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_3)) size in (
+  ) else let __assign_2 = Obj.magic (Stdlib.Hashtbl.create ?random:(let __optarg_3 = Obj.repr random in if __optarg_3 == HxRuntime.hx_null then None else Some (Obj.obj __optarg_3)) size) in (
     tempHashtbl := __assign_2;
     __assign_2
   ));
-  !tempHashtbl
+  Obj.magic (!tempHashtbl)
 )
 
 let length = fun t -> Stdlib.Hashtbl.length t
 
-let add = fun t k v -> Stdlib.Hashtbl.add t k v
+let add = fun t k v -> ignore (Stdlib.Hashtbl.add t k v)
 
-let replace = fun t k v -> Stdlib.Hashtbl.replace t k v
+let replace = fun t k v -> ignore (Stdlib.Hashtbl.replace t k v)
 
-let remove = fun t k -> Stdlib.Hashtbl.remove t k
+let remove = fun t k -> ignore (Stdlib.Hashtbl.remove t k)
 
 let mem = fun t k -> Stdlib.Hashtbl.mem t k
 

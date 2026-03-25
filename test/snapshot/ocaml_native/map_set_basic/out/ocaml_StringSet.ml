@@ -10,10 +10,10 @@ let empty = fun () -> OcamlNativeStringSet.empty
 
 let isEmpty = fun s -> OcamlNativeStringSet.is_empty s
 
-let add = fun x s -> OcamlNativeStringSet.add x s
+let add = fun x s -> OcamlNativeStringSet.add (x : string) s
 
-let remove = fun x s -> OcamlNativeStringSet.remove x s
+let remove = fun x s -> OcamlNativeStringSet.remove (x : string) s
 
-let mem = fun x s -> OcamlNativeStringSet.mem x s
+let mem = fun x s -> OcamlNativeStringSet.mem (x : string) s
 
-let iter = fun f s -> OcamlNativeStringSet.iter f s
+let iter = fun f s -> ignore (OcamlNativeStringSet.iter f s)

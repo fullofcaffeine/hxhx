@@ -13,14 +13,14 @@ let create = fun () -> let self = ({ __hx_type = HxType.class_ "Main" } : t) in 
 
 let __empty = fun () -> ({ __hx_type = HxType.class_ "Main" } : t)
 
-let main = fun () -> let sm = OcamlNativeStringMap.empty in let sm = OcamlNativeStringMap.add "a" 1 sm in (
-  ignore (OcamlNativeStringMap.find_opt "a" sm);
-  ignore (OcamlNativeStringMap.mem "a" sm);
+let main = fun () -> ignore (let sm = OcamlNativeStringMap.empty in let sm = OcamlNativeStringMap.add ("a" : string) 1 sm in (
+  ignore (OcamlNativeStringMap.find_opt ("a" : string) sm);
+  ignore (OcamlNativeStringMap.mem ("a" : string) sm);
   let im = OcamlNativeIntMap.empty in let im = OcamlNativeIntMap.add 1 "x" im in (
     ignore (OcamlNativeIntMap.find_opt 1 im);
-    let ss = OcamlNativeStringSet.empty in let ss = OcamlNativeStringSet.add "a" ss in (
-      ignore (OcamlNativeStringSet.mem "a" ss);
+    let ss = OcamlNativeStringSet.empty in let ss = OcamlNativeStringSet.add ("a" : string) ss in (
+      ignore (OcamlNativeStringSet.mem ("a" : string) ss);
       let iset = OcamlNativeIntSet.empty in let iset = OcamlNativeIntSet.add 1 iset in OcamlNativeIntSet.mem 1 iset
     )
   )
-)
+))

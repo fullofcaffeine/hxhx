@@ -10,16 +10,16 @@ let empty = fun () -> OcamlNativeStringMap.empty
 
 let isEmpty = fun m -> OcamlNativeStringMap.is_empty m
 
-let add = fun k v m -> OcamlNativeStringMap.add k v m
+let add = fun k v m -> OcamlNativeStringMap.add (k : string) v m
 
-let remove = fun k m -> OcamlNativeStringMap.remove k m
+let remove = fun k m -> OcamlNativeStringMap.remove (k : string) m
 
-let mem = fun k m -> OcamlNativeStringMap.mem k m
+let mem = fun k m -> OcamlNativeStringMap.mem (k : string) m
 
-let find = fun k m -> OcamlNativeStringMap.find k m
+let find = fun k m -> OcamlNativeStringMap.find (k : string) m
 
-let findOpt = fun k m -> OcamlNativeStringMap.find_opt k m
+let findOpt = fun k m -> OcamlNativeStringMap.find_opt (k : string) m
 
-let iter = fun f m -> OcamlNativeStringMap.iter f m
+let iter = fun f m -> ignore (OcamlNativeStringMap.iter f m)
 
 let fold = fun f m init -> OcamlNativeStringMap.fold f m init

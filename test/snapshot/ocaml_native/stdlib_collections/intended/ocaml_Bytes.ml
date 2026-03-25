@@ -10,7 +10,7 @@ let make = fun len fill -> Stdlib.Bytes.make len fill
 
 let length = fun b -> Stdlib.Bytes.length b
 
-let ofString = fun s -> Stdlib.Bytes.of_string s
+let ofString = fun s -> Stdlib.Bytes.of_string (s : string)
 
 let toString = fun b -> Stdlib.Bytes.to_string b
 

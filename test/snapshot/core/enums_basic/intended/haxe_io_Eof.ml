@@ -7,7 +7,7 @@ let __reflaxe_ocaml__ = ()
 type t = { __hx_type : Obj.t }
 
 let create = fun () -> let self = ({ __hx_type = HxType.class_ "haxe.io.Eof" } : t) in (
-  ignore ();
+  ignore (ignore ());
   self
 )
 

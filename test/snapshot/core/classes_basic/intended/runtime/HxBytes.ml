@@ -153,8 +153,8 @@ let toHex (b : t) () : string =
   let hex = "0123456789abcdef" in
   for i = 0 to len - 1 do
     let v = get b i in
-    Bytes.set out (i * 2) hex.[v lsr 4];
-    Bytes.set out (i * 2 + 1) hex.[v land 15]
+    Bytes.set out (i * 2) (Stdlib.String.get hex (v lsr 4));
+    Bytes.set out (i * 2 + 1) (Stdlib.String.get hex (v land 15))
   done;
   Bytes.to_string out
 
@@ -169,13 +169,13 @@ let hex_nibble (c : char) : int option =
   | _ -> None
 
 let ofHex (s : string) : t =
-  let len = String.length s in
+  let len = Stdlib.String.length s in
   if len land 1 <> 0 then invalid_hex "Not a hex string (odd number of digits)"
   else
     let out = alloc (len lsr 1) in
     for i = 0 to (len lsr 1) - 1 do
-      let hi = s.[i * 2] in
-      let lo = s.[i * 2 + 1] in
+      let hi = (Stdlib.String.get s (i * 2)) in
+      let lo = (Stdlib.String.get s (i * 2 + 1)) in
       match (hex_nibble hi, hex_nibble lo) with
       | Some h, Some l -> set out i (((h lsl 4) lor l) land 0xFF)
       | _ -> invalid_hex "Not a hex string"

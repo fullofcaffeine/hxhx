@@ -6,71 +6,71 @@ let __reflaxe_ocaml__ = ()
 
 type t = { __hx_type : Obj.t; mutable bigEndian : bool; set_bigEndian : Obj.t -> bool -> bool; writeByte : Obj.t -> int -> unit; writeBytes : Obj.t -> HxBytes.t -> int -> int -> int; flush : Obj.t -> unit -> unit; close : Obj.t -> unit -> unit; write : Obj.t -> HxBytes.t -> unit; writeFullBytes : Obj.t -> HxBytes.t -> int -> int -> unit; prepare : Obj.t -> int -> unit; writeInput : Obj.t -> Haxe_io_Input.t -> Obj.t -> unit; writeString : Obj.t -> string -> Obj.t -> unit; writeFloat : Obj.t -> float -> unit; writeDouble : Obj.t -> float -> unit; writeInt8 : Obj.t -> int -> unit; writeUInt8 : Obj.t -> int -> unit; writeInt16 : Obj.t -> int -> unit; writeUInt16 : Obj.t -> int -> unit; writeInt24 : Obj.t -> int -> unit; writeUInt24 : Obj.t -> int -> unit; writeInt32 : Obj.t -> int -> unit; mutable h : Obj.t; seek : Obj.t -> int -> Sys_io_FileSeek.fileseek -> unit; tell : Obj.t -> unit -> int }
 
-let __ctor = fun (self : t) h2 -> ignore (let __assign_1 = h2 in (
-  self.h <- __assign_1;
+let __ctor = fun (self : t) h2 -> ignore (ignore (let __assign_1 = Obj.magic h2 in (
+  (Obj.magic self : t).h <- __assign_1;
   __assign_1
-))
+)))
 
-let close__impl = fun (self : t) () -> ignore (HxFileStream.close_out (self.h))
+let close__impl = fun (self : t) () -> ignore (ignore (HxFileStream.close_out ((Obj.magic self : t).h)))
 
-let flush__impl = fun (self : t) () -> ignore (HxFileStream.flush_out (self.h))
+let flush__impl = fun (self : t) () -> ignore (ignore (HxFileStream.flush_out ((Obj.magic self : t).h)))
 
-let writeByte__impl = fun (self : t) (c : int) -> ignore (HxFileStream.write_byte (self.h) c)
+let writeByte__impl = fun (self : t) (c : int) -> ignore (ignore (HxFileStream.write_byte ((Obj.magic self : t).h) c))
 
-let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try (
+let writeBytes__impl = fun (self : t) (buf : HxBytes.t) (pos : int) (len : int) -> try let __fallback_result_5 = (
   ignore (if len <= 0 then raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
   let _g = ref 0 in let _g1 = len in (
     ignore (while !_g < _g1 do ignore (let i = let __old_2 = !_g in let __new_3 = HxInt.add __old_2 1 in (
       ignore (_g := __new_3);
       __old_2
-    ) in self.writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
+    ) in (Obj.magic self : t).writeByte (Obj.magic self) (HxBytes.get buf (HxInt.add pos i))) done);
     len
   )
-) with
+) in Obj.magic __fallback_result_5 with
   | HxRuntime.Hx_return __ret_4 -> Obj.obj __ret_4
 
-let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (let tempNumber = ref 0 in (
+let seek__impl = fun (self : t) (p : int) (pos : Sys_io_FileSeek.fileseek) -> ignore (ignore (let tempNumber = ref (0 : int) in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_5 = 0 in (
-      tempNumber := __assign_5;
-      __assign_5
-    )
-    | Sys_io_FileSeek.SeekCur -> let __assign_6 = 1 in (
+    | Sys_io_FileSeek.SeekBegin -> let __assign_6 = 0 in (
       tempNumber := __assign_6;
       __assign_6
     )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_7 = 2 in (
+    | Sys_io_FileSeek.SeekCur -> let __assign_7 = 1 in (
       tempNumber := __assign_7;
       __assign_7
+    )
+    | Sys_io_FileSeek.SeekEnd -> let __assign_8 = 2 in (
+      tempNumber := __assign_8;
+      __assign_8
     ));
-  HxFileStream.seek_out (self.h) p (!tempNumber)
-))
+  HxFileStream.seek_out ((Obj.magic self : t).h) p (!tempNumber)
+)))
 
-let tell__impl = fun (self : t) () -> HxFileStream.tell_out (self.h)
+let tell__impl = fun (self : t) () -> HxFileStream.tell_out ((Obj.magic self : t).h)
 
-let create = fun h2 -> let self = ({ __hx_type = HxType.class_ "sys.io.FileOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Output.set_bigEndian__impl (Obj.magic o) a0); writeByte = (fun o a0 -> writeByte__impl (Obj.magic o) a0); writeBytes = (fun o a0 a1 a2 -> writeBytes__impl (Obj.magic o) a0 a1 a2); flush = (fun o () -> flush__impl (Obj.magic o) ()); close = (fun o () -> close__impl (Obj.magic o) ()); write = (fun o a0 -> Haxe_io_Output.write__impl (Obj.magic o) a0); writeFullBytes = (fun o a0 a1 a2 -> Haxe_io_Output.writeFullBytes__impl (Obj.magic o) a0 a1 a2); prepare = (fun o a0 -> Haxe_io_Output.prepare__impl (Obj.magic o) a0); writeInput = (fun o a0 a1 -> Haxe_io_Output.writeInput__impl (Obj.magic o) a0 a1); writeString = (fun o a0 a1 -> Haxe_io_Output.writeString__impl (Obj.magic o) a0 a1); writeFloat = (fun o a0 -> Haxe_io_Output.writeFloat__impl (Obj.magic o) a0); writeDouble = (fun o a0 -> Haxe_io_Output.writeDouble__impl (Obj.magic o) a0); writeInt8 = (fun o a0 -> Haxe_io_Output.writeInt8__impl (Obj.magic o) a0); writeUInt8 = (fun o a0 -> Haxe_io_Output.writeUInt8__impl (Obj.magic o) a0); writeInt16 = (fun o a0 -> Haxe_io_Output.writeInt16__impl (Obj.magic o) a0); writeUInt16 = (fun o a0 -> Haxe_io_Output.writeUInt16__impl (Obj.magic o) a0); writeInt24 = (fun o a0 -> Haxe_io_Output.writeInt24__impl (Obj.magic o) a0); writeUInt24 = (fun o a0 -> Haxe_io_Output.writeUInt24__impl (Obj.magic o) a0); writeInt32 = (fun o a0 -> Haxe_io_Output.writeInt32__impl (Obj.magic o) a0); h = Obj.magic (); seek = (fun o a0 a1 -> seek__impl (Obj.magic o) a0 a1); tell = (fun o () -> tell__impl (Obj.magic o) ()) } : t) in (
-  ignore (let __assign_1 = h2 in (
-    self.h <- __assign_1;
+let create = fun h2 -> let self = ({ __hx_type = HxType.class_ "sys.io.FileOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); h = Obj.magic (HxRuntime.hx_null); seek = (fun o a0 a1 -> Obj.magic (seek__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); tell = (fun o () -> Obj.magic (tell__impl (Obj.magic o) (Obj.magic ()))) } : t) in (
+  ignore (ignore (let __assign_1 = Obj.magic h2 in (
+    (Obj.magic self : t).h <- __assign_1;
     __assign_1
-  ));
+  )));
   self
 )
 
-let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Haxe_io_Output.set_bigEndian__impl (Obj.magic o) a0); writeByte = (fun o a0 -> writeByte__impl (Obj.magic o) a0); writeBytes = (fun o a0 a1 a2 -> writeBytes__impl (Obj.magic o) a0 a1 a2); flush = (fun o () -> flush__impl (Obj.magic o) ()); close = (fun o () -> close__impl (Obj.magic o) ()); write = (fun o a0 -> Haxe_io_Output.write__impl (Obj.magic o) a0); writeFullBytes = (fun o a0 a1 a2 -> Haxe_io_Output.writeFullBytes__impl (Obj.magic o) a0 a1 a2); prepare = (fun o a0 -> Haxe_io_Output.prepare__impl (Obj.magic o) a0); writeInput = (fun o a0 a1 -> Haxe_io_Output.writeInput__impl (Obj.magic o) a0 a1); writeString = (fun o a0 a1 -> Haxe_io_Output.writeString__impl (Obj.magic o) a0 a1); writeFloat = (fun o a0 -> Haxe_io_Output.writeFloat__impl (Obj.magic o) a0); writeDouble = (fun o a0 -> Haxe_io_Output.writeDouble__impl (Obj.magic o) a0); writeInt8 = (fun o a0 -> Haxe_io_Output.writeInt8__impl (Obj.magic o) a0); writeUInt8 = (fun o a0 -> Haxe_io_Output.writeUInt8__impl (Obj.magic o) a0); writeInt16 = (fun o a0 -> Haxe_io_Output.writeInt16__impl (Obj.magic o) a0); writeUInt16 = (fun o a0 -> Haxe_io_Output.writeUInt16__impl (Obj.magic o) a0); writeInt24 = (fun o a0 -> Haxe_io_Output.writeInt24__impl (Obj.magic o) a0); writeUInt24 = (fun o a0 -> Haxe_io_Output.writeUInt24__impl (Obj.magic o) a0); writeInt32 = (fun o a0 -> Haxe_io_Output.writeInt32__impl (Obj.magic o) a0); h = Obj.magic (); seek = (fun o a0 a1 -> seek__impl (Obj.magic o) a0 a1); tell = (fun o () -> tell__impl (Obj.magic o) ()) } : t)
+let __empty = fun () -> ({ __hx_type = HxType.class_ "sys.io.FileOutput"; bigEndian = false; set_bigEndian = (fun o a0 -> Obj.magic (Haxe_io_Output.set_bigEndian__impl (Obj.magic o) (Obj.magic a0))); writeByte = (fun o a0 -> Obj.magic (writeByte__impl (Obj.magic o) (Obj.magic a0))); writeBytes = (fun o a0 a1 a2 -> Obj.magic (writeBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); flush = (fun o () -> Obj.magic (flush__impl (Obj.magic o) (Obj.magic ()))); close = (fun o () -> Obj.magic (close__impl (Obj.magic o) (Obj.magic ()))); write = (fun o a0 -> Obj.magic (Haxe_io_Output.write__impl (Obj.magic o) (Obj.magic a0))); writeFullBytes = (fun o a0 a1 a2 -> Obj.magic (Haxe_io_Output.writeFullBytes__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1) (Obj.magic a2))); prepare = (fun o a0 -> Obj.magic (Haxe_io_Output.prepare__impl (Obj.magic o) (Obj.magic a0))); writeInput = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeInput__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeString = (fun o a0 a1 -> Obj.magic (Haxe_io_Output.writeString__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); writeFloat = (fun o a0 -> Obj.magic (Haxe_io_Output.writeFloat__impl (Obj.magic o) (Obj.magic a0))); writeDouble = (fun o a0 -> Obj.magic (Haxe_io_Output.writeDouble__impl (Obj.magic o) (Obj.magic a0))); writeInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt8__impl (Obj.magic o) (Obj.magic a0))); writeUInt8 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt8__impl (Obj.magic o) (Obj.magic a0))); writeInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt16__impl (Obj.magic o) (Obj.magic a0))); writeUInt16 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt16__impl (Obj.magic o) (Obj.magic a0))); writeInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt24__impl (Obj.magic o) (Obj.magic a0))); writeUInt24 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeUInt24__impl (Obj.magic o) (Obj.magic a0))); writeInt32 = (fun o a0 -> Obj.magic (Haxe_io_Output.writeInt32__impl (Obj.magic o) (Obj.magic a0))); h = Obj.magic (HxRuntime.hx_null); seek = (fun o a0 a1 -> Obj.magic (seek__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))); tell = (fun o () -> Obj.magic (tell__impl (Obj.magic o) (Obj.magic ()))) } : t)
 
-let seekKind = fun pos -> let tempResult = ref 0 in (
+let seekKind = fun pos -> let tempResult = ref (0 : int) in (
   ignore (match pos with
-    | Sys_io_FileSeek.SeekBegin -> let __assign_8 = 0 in (
-      tempResult := __assign_8;
-      __assign_8
-    )
-    | Sys_io_FileSeek.SeekCur -> let __assign_9 = 1 in (
+    | Sys_io_FileSeek.SeekBegin -> let __assign_9 = 0 in (
       tempResult := __assign_9;
       __assign_9
     )
-    | Sys_io_FileSeek.SeekEnd -> let __assign_10 = 2 in (
+    | Sys_io_FileSeek.SeekCur -> let __assign_10 = 1 in (
       tempResult := __assign_10;
       __assign_10
+    )
+    | Sys_io_FileSeek.SeekEnd -> let __assign_11 = 2 in (
+      tempResult := __assign_11;
+      __assign_11
     ));
   !tempResult
 )

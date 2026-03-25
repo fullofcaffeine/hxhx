@@ -1,0 +1,21 @@
+{
+  "metalFallbackAllowed": false,
+  "requestedProfile": null,
+  "strictUserBoundaries": false,
+  "schemaVersion": 2,
+  "atomicSemantics": "emulated",
+  "portableNativeSurfacePolicy": "warn",
+  "verifier": {
+    "violations": [
+      "portable_native_surface"
+    ],
+    "mode": "reflaxe_stage0_macro",
+    "laneModules": [],
+    "strictScope": "disabled",
+    "violationCount": 1,
+    "enabled": true,
+    "result": "violations_reported"
+  },
+  "normalizedProfile": "portable",
+  "runtimeMode": "full"
+}

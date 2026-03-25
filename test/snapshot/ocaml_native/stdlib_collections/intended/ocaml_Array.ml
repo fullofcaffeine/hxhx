@@ -14,10 +14,10 @@ let length = fun a -> Stdlib.Array.length a
 
 let get = fun a i -> Stdlib.Array.get a i
 
-let set = fun a i v -> Stdlib.Array.set a i v
+let set = fun a i v -> ignore (Stdlib.Array.set a i v)
 
 let map = fun f a -> Stdlib.Array.map f a
 
-let iter = fun f a -> Stdlib.Array.iter f a
+let iter = fun f a -> ignore (Stdlib.Array.iter f a)
 
 let fold_left = fun f init a -> Stdlib.Array.fold_left f init a
